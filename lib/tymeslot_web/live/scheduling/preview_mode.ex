@@ -40,6 +40,17 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
   def claimed?(_params), do: false
 
   @doc """
+  True when the page is the owner's verified preview of their own booking
+  page (`:owner_preview`, set only for an owner-bound preview token). Such a
+  page simulates a booking rather than persisting it, so the rules guarding
+  real bookings (the public rate limit, an invitation-only type's gate) do
+  not apply to it. A bare `?preview=` claim never makes it true.
+  """
+  @spec owner_preview?(Phoenix.LiveView.Socket.t()) :: boolean()
+  def owner_preview?(%Phoenix.LiveView.Socket{assigns: assigns}),
+    do: assigns[:owner_preview] == true
+
+  @doc """
   Builds the path to an owner preview of `username`'s booking page.
 
   Carries both halves of the contract: the display claim and a freshly signed,

@@ -50,6 +50,7 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
           phx-change="preview_accent"
           class="flex items-center gap-2"
         >
+          <%!-- raw-input: native colour swatch (type=color) styled as a small fixed-size button beside the hex box --%>
           <input
             id="setting-swatch-email_brand_accent"
             type="color"
@@ -71,6 +72,7 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
           }
         >
           <input type="hidden" name="key" value="email_brand_accent" />
+          <%!-- raw-input: compact w-32 hex box inline with the small Save button, styled by SettingRow.text_input_classes like the other admin row controls --%>
           <input
             id="setting-input-email_brand_accent"
             type="text"
@@ -160,6 +162,7 @@ defmodule TymeslotWeb.AdminLive.Components.EmailBranding do
             {if @logo_url,
               do: dgettext("dashboard_admin", "Replace"),
               else: dgettext("dashboard_admin", "Upload")}
+            <%!-- raw-input: sr-only file picker inside the styled Upload button label, driven by the EmailLogoUpload hook --%>
             <input
               id="email-logo-picker"
               type="file"

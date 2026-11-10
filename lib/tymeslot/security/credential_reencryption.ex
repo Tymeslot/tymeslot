@@ -24,6 +24,7 @@ defmodule Tymeslot.Security.CredentialReencryption do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Invitations
   alias Tymeslot.Meetings
   alias Tymeslot.Polls
   alias Tymeslot.Profiles
@@ -51,6 +52,7 @@ defmodule Tymeslot.Security.CredentialReencryption do
     Webhooks,
     Meetings,
     Polls,
+    Invitations,
     Profiles,
     PendingFlow
   ]

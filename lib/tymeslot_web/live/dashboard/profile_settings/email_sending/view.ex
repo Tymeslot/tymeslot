@@ -343,6 +343,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.EmailSending.View do
               if(@value == value, do: "bg-cyan-50 border-cyan-200", else: "border-transparent")
             ]}
           >
+            <%!-- raw-input: native radio inside a dropdown option label; input/1 adds its own field layout --%>
             <input
               id={"smtp-security-option-#{value}"}
               type="radio"

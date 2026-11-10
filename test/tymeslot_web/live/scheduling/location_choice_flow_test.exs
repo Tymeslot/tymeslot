@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       rather than creating a half-addressed meeting.
     * Submitting persists the chosen location on the meeting, verified by
       reading the row back.
-    * A meeting type with a single location renders no picker at all, and
+    * A meeting type with a single location asking nothing renders no picker, and
       still records that location on the booking.
     * A reschedule offers the same picker, opened on where the meeting
       already is, and moving it persists on the existing meeting. With a

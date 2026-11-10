@@ -88,21 +88,17 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
             class="mb-6 flex items-end gap-2"
           >
             <input type="hidden" name="integration_id" value={@integration.id} />
-            <div class="flex-1">
-              <label for={"#{@id}-name"} class="label">
-                {dgettext("dashboard_calendar_providers", "Name")}
-              </label>
-              <input
-                id={"#{@id}-name"}
-                type="text"
-                name="name"
-                value={@integration.name}
-                required
-                maxlength="100"
-                autocomplete="off"
-                class="input"
-              />
-            </div>
+            <.input
+              id={"#{@id}-name"}
+              type="text"
+              name="name"
+              label={dgettext("dashboard_calendar_providers", "Name")}
+              value={@integration.name}
+              required
+              maxlength="100"
+              autocomplete="off"
+              class="flex-1"
+            />
             <.action_button type="submit" variant={:secondary}>
               {dgettext("dashboard_calendar_providers", "Rename")}
             </.action_button>

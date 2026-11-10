@@ -60,6 +60,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
             style={"background-color: #{@initial_hex}"}
           >
           </div>
+          <%!-- raw-input: compact hex box under the swatch preview, read and written by the colour picker hook through data-cp --%>
           <input
             data-cp="hex"
             type="text"
@@ -73,6 +74,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
         </div>
       </div>
 
+      <%!-- raw-input: hue range slider of the colour picker, styled by .custom-colour-picker-hue --%>
       <input
         data-cp="hue"
         type="range"

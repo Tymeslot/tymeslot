@@ -318,6 +318,150 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
   end
 
   # ===========================================================================
+  # Picking candidate times from the week
+  # ===========================================================================
+
+  describe "Picking candidate times from the week" do
+    setup :setup_host
+
+    setup %{user: user} do
+      # Tomorrow, 10:00 to 11:00 UTC, in a calendar of the host's.
+      day = Date.add(Date.utc_today(), 1)
+
+      insert(:provider_calendar_event,
+        calendar_integration: insert(:calendar_integration, user: user),
+        start_at: DateTime.new!(day, ~T[10:00:00], "Etc/UTC"),
+        end_at: DateTime.new!(day, ~T[11:00:00], "Etc/UTC")
+      )
+
+      # Picking a time runs the clash check, which asks the provider.
+      TestMocks.setup_calendar_mocks()
+
+      %{day: Date.to_iso8601(day)}
+    end
+
+    defp open_form(conn) do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      view |> element("button", "New poll") |> render_click()
+      # Abidjan keeps UTC all year, so the grid reads as the event does.
+      change_form(view, %{"timezone" => "Africa/Abidjan", "duration" => "30"})
+      view
+    end
+
+    defp change_form(view, params) do
+      view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_change()
+      render_async(view)
+    end
+
+    defp status(view, at) do
+      view
+      |> element("[data-testid='poll-availability-week'] button[data-at='#{at}']")
+      |> render()
+      |> then(&Regex.run(~r/data-status="([a-z_]*)"/, &1, capture: :all_but_first))
+      |> List.first()
+    end
+
+    test "shows the host busy where a meeting of the poll's length would clash",
+         %{conn: conn, day: day} do
+      view = open_form(conn)
+
+      assert status(view, "#{day}T10:00") == "busy"
+      assert status(view, "#{day}T10:30") == "busy"
+      assert status(view, "#{day}T11:00") == "free"
+      assert status(view, "#{day}T09:30") == "free"
+
+      # An hour-long meeting at 09:30 would run into the event.
+      change_form(view, %{"duration" => "60"})
+      assert status(view, "#{day}T09:30") == "busy"
+    end
+
+    test "draws the week in the poll's timezone", %{conn: conn, day: day} do
+      view = open_form(conn)
+      change_form(view, %{"timezone" => "Asia/Kolkata"})
+
+      # 10:00 UTC is 15:30 in Kolkata, which keeps no daylight saving time.
+      assert status(view, "#{day}T15:30") == "busy"
+      assert status(view, "#{day}T10:00") == "free"
+    end
+
+    test "adds a clicked time as a candidate, and removes it on a second click",
+         %{conn: conn, day: day} do
+      view = open_form(conn)
+      cell = "[data-testid='poll-availability-week'] button[data-at='#{day}T14:00']"
+
+      view |> element(cell) |> render_click()
+      render_async(view)
+      assert has_element?(view, "input[type='datetime-local'][value='#{day}T14:00']")
+      assert has_element?(view, cell <> "[aria-pressed='true']")
+
+      view |> element(cell) |> render_click()
+      render_async(view)
+      refute has_element?(view, "input[type='datetime-local'][value='#{day}T14:00']")
+    end
+
+    test "judges a duration still being typed as one step rather than failing",
+         %{conn: conn, day: day} do
+      view = open_form(conn)
+      change_form(view, %{"duration" => "0"})
+
+      assert status(view, "#{day}T10:30") == "busy"
+      assert status(view, "#{day}T09:30") == "free"
+    end
+
+    test "removes a candidate typed off the half hour from the step it shows on",
+         %{conn: conn, day: day} do
+      view = open_form(conn)
+      view |> element("button", "Add time") |> render_click()
+      change_form(view, %{"slots" => %{"0" => "#{day}T14:15"}})
+
+      cell = "[data-testid='poll-availability-week'] button[data-at='#{day}T14:00']"
+      assert has_element?(view, cell <> "[aria-pressed='true']")
+
+      view |> element(cell) |> render_click()
+      render_async(view)
+
+      refute has_element?(view, "input[type='datetime-local'][value='#{day}T14:15']")
+      refute has_element?(view, "input[type='datetime-local'][value='#{day}T14:00']")
+    end
+
+    # Tonga is always a day ahead of Pago Pago, so whatever the host's own
+    # clock reads, one of the two is on a different date from it.
+    test "opens the week on today in the poll's timezone when it changes", %{conn: conn} do
+      view = open_form(conn)
+
+      for zone <- ["Pacific/Tongatapu", "Pacific/Pago_Pago"] do
+        change_form(view, %{"timezone" => zone})
+        today = zone |> DateTime.now!() |> DateTime.to_date()
+
+        assert has_element?(view, "button[data-at='#{today}T12:00']")
+        refute has_element?(view, "button[data-at='#{Date.add(today, -1)}T12:00']")
+      end
+    end
+
+    test "widens the hours shown to take in a late candidate", %{conn: conn, day: day} do
+      view = open_form(conn)
+      refute has_element?(view, "button[data-at='#{day}T21:00']")
+
+      view |> element("button", "Add time") |> render_click()
+      change_form(view, %{"slots" => %{"0" => "#{day}T21:00"}})
+
+      assert has_element?(view, "button[data-at='#{day}T21:00'][aria-pressed='true']")
+    end
+
+    test "marks where voting closes", %{conn: conn, day: day} do
+      view = open_form(conn)
+      refute has_element?(view, "[data-testid='poll-deadline-marker']")
+
+      change_form(view, %{"deadline" => "#{day}T09:15"})
+
+      assert has_element?(
+               view,
+               "button[data-at='#{day}T09:00'] [data-testid='poll-deadline-marker']"
+             )
+    end
+  end
+
+  # ===========================================================================
   # Updates on new votes
   # ===========================================================================
 

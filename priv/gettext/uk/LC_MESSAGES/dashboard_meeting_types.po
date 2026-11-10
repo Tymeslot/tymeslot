@@ -355,6 +355,7 @@ msgid "Cancelled"
 msgstr "Скасовано"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/events_list_component.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
 #, elixir-autogen, elixir-format
 msgid "Copy link"
 msgstr "Копіювати посилання"
@@ -464,3 +465,184 @@ msgstr "На жодній сторінці бронювання; доступн�
 #, elixir-autogen, elixir-format
 msgid "Booking link"
 msgstr "Посилання для бронювання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Available"
+msgstr "Доступне"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booked as %{email}"
+msgstr "Заброньовано як %{email}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booked for %{time}"
+msgstr "Заброньовано на %{time}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Create invitation link"
+msgstr "Створити посилання із запрошенням"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Email (optional)"
+msgstr "Електронна пошта (необов’язково)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Expired"
+msgstr "Термін минув"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Expires %{date}"
+msgstr "Діє до %{date}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation link copied!"
+msgstr "Посилання із запрошенням скопійовано!"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links"
+msgstr "Посилання із запрошенням"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links are off for this type."
+msgstr "Посилання із запрошенням вимкнено для цього типу зустрічі."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation only"
+msgstr "Лише за запрошенням"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/revoke_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "It will stop working. Any appointment already booked stays booked."
+msgstr "Воно перестане працювати. Уже заброньовані зустрічі залишаться заброньованими."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Link expires on (optional)"
+msgstr "Посилання діє до (необов’язково)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Name (optional)"
+msgstr "Ім’я (необов’язково)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "No invitations yet. Create one link per person you want to invite."
+msgstr "Запрошень ще немає. Створіть одне посилання для кожної людини, яку хочете запросити."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "On no booking page; booked only through the invitation links you send"
+msgstr "На жодній сторінці бронювання; бронювання лише за посиланнями із запрошенням, які ви надсилаєте"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Reopen"
+msgstr "Відкрити знову"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Revoke"
+msgstr "Відкликати"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/revoke_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Revoke link"
+msgstr "Відкликати посилання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/revoke_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Revoke this link?"
+msgstr "Відкликати це посилання?"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Revoked"
+msgstr "Відкликано"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "That invitation can't be changed."
+msgstr "Це запрошення не можна змінити."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Unnamed invitation"
+msgstr "Запрошення без імені"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Used"
+msgstr "Використано"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Each link books one appointment. Tymeslot sends no email: copy the link and send it yourself."
+msgstr "Кожне посилання бронює одну зустріч. Tymeslot не надсилає листів: скопіюйте посилання й надішліть його самі."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Appointment cancelled"
+msgstr "Зустріч скасовано"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Copy link for %{name}"
+msgstr "Копіювати посилання для %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not create the invitation link."
+msgstr "Не вдалося створити посилання із запрошенням."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "If the appointment is cancelled, the link can be used again."
+msgstr "Якщо зустріч скасовано, посилання можна використати знову."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Reopen link"
+msgstr "Відкрити посилання знову"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Reopen link for %{name}"
+msgstr "Відкрити посилання знову для %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Reusable after cancellation"
+msgstr "Можна використати знову після скасування"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Revoke link for %{name}"
+msgstr "Відкликати посилання для %{name}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This link can't be shown. Revoke it and create a new one."
+msgstr "Це посилання неможливо показати. Відкличте його та створіть нове."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "Showing the latest 100 invitations."
+msgstr "Показано 100 найновіших запрошень."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/invitations_component.ex
+#, elixir-autogen, elixir-format
+msgid "This link has expired, so it can't be reopened. Create a new one instead."
+msgstr "Термін дії цього посилання минув, тому його неможливо відкрити знову. Натомість створіть нове."

@@ -178,7 +178,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             phx-target={@myself}
             class="flex gap-2"
           >
-            <input
+            <.input
               type="email"
               id="create-guest-email-input"
               name="email"
@@ -186,7 +186,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               phx-change="update_create_guest_input"
               phx-target={@myself}
               placeholder="colleague@example.com"
-              class="flex-1 rounded-token-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
+              class="flex-1 min-w-0"
             />
             <.action_button type="submit" variant={:secondary} size={:sm}>
               {dgettext("dashboard_calendar_events", "Add")}
@@ -300,6 +300,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           phx-target={@myself}
           class="flex flex-wrap items-center gap-1 text-token-sm text-tymeslot-600"
         >
+          <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
           <input
             type="date"
             id="create-event-start-date"
@@ -307,6 +308,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             value={@creating_event.date}
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
+          <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
           <input
             :if={!@creating_event[:all_day]}
             type="time"
@@ -318,6 +320,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
           <span class="text-tymeslot-400">&ndash;</span>
+          <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
           <input
             type="date"
             id="create-event-end-date"
@@ -325,6 +328,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             value={@creating_event.end_date}
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
+          <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
           <input
             :if={!@creating_event[:all_day]}
             type="time"
@@ -472,7 +476,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             phx-target={@myself}
             class="flex gap-2"
           >
-            <input
+            <.input
               type="email"
               id="create-attendee-email"
               name="email"
@@ -480,7 +484,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               phx-change="update_create_attendee_input"
               phx-target={@myself}
               placeholder="attendee@example.com"
-              class="flex-1 rounded-token-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
+              class="flex-1 min-w-0"
             />
             <.action_button type="submit" variant={:secondary} size={:sm}>
               {dgettext("dashboard_calendar_events", "Add")}

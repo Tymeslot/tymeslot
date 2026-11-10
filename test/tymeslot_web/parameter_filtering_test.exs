@@ -58,6 +58,7 @@ defmodule TymeslotWeb.ParameterFilteringTest do
        }
      }},
     {"the password reset form", %{"token" => @secret, "password" => @secret}},
+    {"an invitation link's invite parameter", %{"invite" => @secret}},
     {"an OAuth token exchange", %{"access_token" => @secret, "refresh_token" => @secret}}
   ]
 

@@ -11,7 +11,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  use TymeslotWeb.Components.CoreComponents, only: [button_classes: 2, icon: 1]
+  use TymeslotWeb.Components.CoreComponents, only: [button_classes: 2, icon: 1, input: 1]
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Profiles
@@ -79,24 +79,16 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
               "Shown on your booking page and in confirmations sent to clients."
             )}
           </p>
-          <input
+          <.input
             type="text"
             id="full_name"
             name="full_name"
             value={Map.get(@form_data, "full_name", "")}
+            errors={FormValidationHelpers.field_errors(@form_errors, :full_name)}
             phx-debounce="300"
-            class={[
-              "input",
-              if(FormValidationHelpers.field_errors(@form_errors, :full_name) != [],
-                do: "input-error"
-              )
-            ]}
             placeholder={dgettext("onboarding_wizard", "e.g. Jane Smith")}
             autocomplete="name"
           />
-          <%= for message <- FormValidationHelpers.field_errors(@form_errors, :full_name) do %>
-            <p class="mt-2 text-token-sm text-red-600 font-bold">{message}</p>
-          <% end %>
         </div>
 
         <%!-- Booking link: the host is a fixed prefix, the username follows --%>
@@ -127,6 +119,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
             >
               {@link_host}/
             </span>
+            <%!-- raw-input: borderless username box inside .onboarding-link-field, which draws the field round the fixed host prefix --%>
             <input
               type="text"
               id="username"

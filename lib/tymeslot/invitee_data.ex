@@ -2,7 +2,8 @@ defmodule Tymeslot.InviteeData do
   @moduledoc """
   Erasure and retention of the personal data invitees give a host: the
   people who book a meeting, take a group seat, are added as a guest, or
-  answer a poll, and the people a host lists on a draft poll.
+  answer a poll, the people a host lists on a draft poll, and the people a
+  host addresses an invitation link to.
 
   Two paths remove it, and both anonymise rather than delete, so a host's
   meeting history and statistics (time, meeting type, status, how the booking
@@ -16,10 +17,15 @@ defmodule Tymeslot.InviteeData do
       years by default). It clears every meeting that ended before the window,
       with its seats, guests and booking payments, and the participants of
       every poll whose last proposed time did. A draft poll last saved before
-      the window loses the invitees it held.
+      the window loses the invitees it held, and an invitation link last
+      changed before it, whose meetings all ended before it, loses the name
+      and email it was addressed to; the link itself is kept.
 
   A draft poll's invitees are not yet participants, so an erasure takes the
-  person off the draft's list rather than anonymising them.
+  person off the draft's list rather than anonymising them. An invitation
+  link addressed to the person, or that they booked through (whatever name
+  or address it was addressed to), loses its name and email but keeps its
+  token and status, so the host's list of links still adds up.
 
   An erasure removes only that person's own entries. The guests a booker
   added are people in their own right and are left as they are, until their
@@ -48,6 +54,7 @@ defmodule Tymeslot.InviteeData do
           guests: non_neg_integer(),
           poll_participants: non_neg_integer(),
           draft_polls: non_neg_integer(),
+          invitations: non_neg_integer(),
           booking_payments: non_neg_integer(),
           deliveries: non_neg_integer()
         }
@@ -71,7 +78,9 @@ defmodule Tymeslot.InviteeData do
 
   @doc """
   Anonymises the invitee data of meetings and polls that ended more than
-  `days` days ago, and clears the invitees of drafts last saved before then. Returns `{anonymised_count, nil}`, the shape
+  `days` days ago, and clears the invitees of drafts and the names and
+  emails of invitation links left before then. Returns
+  `{anonymised_count, nil}`, the shape
   `DataRetentionWorker` expects; a window that is not a positive number of
   days anonymises nothing.
   """
@@ -93,8 +102,9 @@ defmodule Tymeslot.InviteeData do
       )
 
     draft_polls = count(Queries.clear_draft_invitees_saved_before(cutoff))
+    invitations = count(Queries.clear_invitations_before(cutoff, now))
 
-    {meetings + poll_participants + draft_polls, nil}
+    {meetings + poll_participants + draft_polls + invitations, nil}
   end
 
   def anonymise_expired(_days), do: {0, nil}
@@ -141,6 +151,7 @@ defmodule Tymeslot.InviteeData do
       guests: count(Queries.scrub_guests({:ids, Enum.map(guests, &elem(&1, 0))}, now)),
       poll_participants: count(Queries.scrub_poll_participants(poll_participant_ids, now)),
       draft_polls: count(Queries.remove_draft_invitee(email, scope)),
+      invitations: count(Queries.scrub_invitations(email, meeting_ids, scope, now)),
       booking_payments: count(Queries.scrub_booking_payments({:email, email, scope}, now)),
       deliveries: Queries.delete_deliveries(touched_meetings)
     }

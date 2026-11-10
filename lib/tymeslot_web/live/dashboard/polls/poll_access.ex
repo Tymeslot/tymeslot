@@ -44,6 +44,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollAccess do
       <legend class="label mb-1">{dgettext("dashboard_polls", "Who can vote")}</legend>
 
       <div class="flex items-start gap-2 text-token-sm">
+        <%!-- raw-input: native radio beside its label and description block; <.input> gives a radio text-field styling and drops checked --%>
         <input
           type="radio"
           id={"#{@id}-anyone"}
@@ -70,6 +71,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollAccess do
       </div>
 
       <div class="flex items-start gap-2 text-token-sm">
+        <%!-- raw-input: native radio beside its label and description block; <.input> gives a radio text-field styling and drops checked --%>
         <input
           type="radio"
           id={"#{@id}-invited"}

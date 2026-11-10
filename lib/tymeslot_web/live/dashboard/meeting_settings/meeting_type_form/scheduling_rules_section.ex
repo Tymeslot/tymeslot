@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SchedulingRulesS
             <label for={"#{@id}-#{f.field}"} class="block text-token-sm font-medium text-tymeslot-700">
               {f.label}
             </label>
-            <input
+            <.input
               type="number"
               id={"#{@id}-#{f.field}"}
               name={"meeting_type[#{f.field}]"}
@@ -88,7 +88,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SchedulingRulesS
               max={f.range.last}
               step="1"
               placeholder={dgettext("dashboard_meeting_form", "Use schedule")}
-              class="input"
               aria-describedby={"#{@id}-#{f.field}-hint"}
               phx-change="update_scheduling_rules"
               phx-debounce="500"

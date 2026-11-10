@@ -9,7 +9,8 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
 
   Client-side validation here is for fast UX feedback only — the authoritative
   sanitisation (self-exclusion, de-dup, cap) is re-applied server-side in
-  `Tymeslot.Meetings.Guests.sanitize_emails/2` before persistence.
+  `Tymeslot.Meetings.Guests.sanitize_emails/3` before persistence, with the
+  meeting type's own limit (`Tymeslot.Meetings.Guests.limit_for/1`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -30,7 +31,7 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
     |> assign(:guest_input, "")
     |> assign(:guest_error, nil)
     |> assign(:guests_open, false)
-    |> assign(:max_guests, Guests.max_guests())
+    |> assign(:max_guests, Guests.default_booking_limit())
     |> assign(:guest_cap_visible, true)
   end
 
@@ -217,7 +218,7 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   defp validate("", _emails, _socket), do: {:error, blank_message()}
 
   defp validate(email, emails, socket) do
-    max_guests = socket.assigns[:max_guests] || Guests.max_guests()
+    max_guests = socket.assigns[:max_guests] || Guests.default_booking_limit()
 
     cond do
       length(emails) >= max_guests ->

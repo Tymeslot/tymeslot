@@ -23,9 +23,22 @@ defmodule TymeslotWeb.Themes.Shared.GuestBookingTest do
   end
 
   describe "seat_cap/1" do
-    test "solo types keep the flat guest cap" do
+    test "solo types keep the public page's default guest cap" do
       assigns = %{meeting_type: %Tymeslot.MeetingTypes.MeetingTypeSchema{max_participants: 1}}
-      assert GuestBooking.seat_cap(assigns) == Guests.max_guests()
+      assert GuestBooking.seat_cap(assigns) == Guests.default_booking_limit()
+    end
+
+    test "a meeting type's own limit may go above the default, up to the overall limit" do
+      above_default = Guests.default_booking_limit() + 5
+
+      assigns = %{
+        meeting_type: %Tymeslot.MeetingTypes.MeetingTypeSchema{
+          max_participants: 1,
+          max_guests_per_booking: above_default
+        }
+      }
+
+      assert GuestBooking.seat_cap(assigns) == above_default
     end
 
     test "group types cap at seats_left minus the booker's own seat" do
@@ -39,7 +52,7 @@ defmodule TymeslotWeb.Themes.Shared.GuestBookingTest do
         available_slots: [%{time: "09:00", seats_left: 400, capacity: 500}]
       }
 
-      assert GuestBooking.seat_cap(assigns) == Guests.max_guests()
+      assert GuestBooking.seat_cap(assigns) == Guests.default_booking_limit()
     end
 
     test "the meeting type's own guest limit caps a solo booking" do
@@ -75,7 +88,7 @@ defmodule TymeslotWeb.Themes.Shared.GuestBookingTest do
 
     test "falls back to the flat cap when the selected slot is unknown" do
       assert GuestBooking.seat_cap(group_assigns(4, %{selected_time: "23:45"})) ==
-               Guests.max_guests()
+               Guests.default_booking_limit()
     end
   end
 

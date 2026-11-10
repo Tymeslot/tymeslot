@@ -78,6 +78,12 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
     {"1h", Keyword.fetch!(@poll_limits, :invitations_per_host_hour), @hour},
     {"1d", Keyword.fetch!(@poll_limits, :invitations_per_host_day), @day}
   ]
+  # Invitation links a host creates for invitation-only meeting types.
+  @invitation_limits Application.compile_env!(:tymeslot, :invitation_limits)
+  @invitation_tiers [
+    {"1h", Keyword.fetch!(@invitation_limits, :per_host_hour), @hour},
+    {"1d", Keyword.fetch!(@invitation_limits, :per_host_day), @day}
+  ]
   @poll_recipient_tiers [
     {"1h", Keyword.fetch!(@poll_limits, :per_recipient_hour), @hour},
     {"1d", Keyword.fetch!(@poll_limits, :per_recipient_day), @day}
@@ -284,6 +290,16 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
               window_ms: @minute,
               operation: "seat management"
             ],
+            # A host's invitation link, `/invite/:token`. Keyed on the client:
+            # each token is single-use, so what is worth bounding is somebody
+            # working through guessed or harvested links.
+            booking_invitation: [
+              prefix: "booking_invitation",
+              scope: :source,
+              limit: 30,
+              window_ms: @minute,
+              operation: "invitation link"
+            ],
             # A poll's public write actions, sized to a handful of legitimate
             # submissions a minute.
             poll_register: [
@@ -301,6 +317,13 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
               window_ms: @minute,
               operation: "poll vote",
               log: false
+            ],
+            invitation_create: [
+              prefix: "invitation_create:user",
+              scope: :user,
+              tiers: @invitation_tiers,
+              operation: "invitation link",
+              action: dgettext_noop("errors", "invitation links")
             ],
             poll_host_invitations: [
               prefix: "poll_invitations:user",

@@ -19,7 +19,11 @@ defmodule TymeslotWeb.Themes.Quill.Payment.Cancelled do
       legal_links={assigns[:legal_links]}
       testid="quill-payment-cancelled"
     >
-      <PaymentReturnComponents.cancelled_body rebook_path={assigns[:rebook_path]} />
+      <PaymentReturnComponents.cancelled_body
+        rebook_path={assigns[:rebook_path]}
+        invitation_held={assigns[:invitation_held] || false}
+        invitation_withheld={assigns[:invitation_withheld] || false}
+      />
     </Page.page>
     """
   end

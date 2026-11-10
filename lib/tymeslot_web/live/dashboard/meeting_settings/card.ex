@@ -73,7 +73,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               {@type.name}
             </h2>
             <Feedback.pill
-              :if={if(is_nil(@unlisted), do: @type.is_private, else: @unlisted)}
+              :if={invitation_only?(@type)}
+              icon="hero-envelope-mini"
+              title={
+                dgettext(
+                  "dashboard_meeting_types",
+                  "On no booking page; booked only through the invitation links you send"
+                )
+              }
+              data-testid="invitation-only"
+            >
+              {dgettext("dashboard_meeting_types", "Invitation only")}
+            </Feedback.pill>
+            <Feedback.pill
+              :if={
+                not invitation_only?(@type) and
+                  if(is_nil(@unlisted), do: @type.is_private, else: @unlisted)
+              }
               icon="hero-eye-slash-mini"
               title={
                 dgettext(
@@ -314,6 +330,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
         }
     end
   end
+
+  defp invitation_only?(%{invitation_only: true}), do: true
+  defp invitation_only?(_type), do: false
 
   # A group type waits for a session open for registration; a one-to-one
   # type for an offered time a booker can pick now.

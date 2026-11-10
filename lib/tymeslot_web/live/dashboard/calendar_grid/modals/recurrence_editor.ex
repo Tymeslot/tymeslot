@@ -131,6 +131,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
         phx-target={@myself}
         class={["space-y-2", @custom && "hidden"]}
       >
+        <%!-- raw-input: compact text-xs repeat select heading the rule controls in the compact detail line --%>
         <select
           name="freq"
           aria-label={dgettext("dashboard_calendar_repeat", "Repeat")}
@@ -151,6 +152,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
               "dashboard_calendar_repeat",
               "Every"
             )}</label>
+            <%!-- raw-input: narrow number field inside the "Every N weeks" sentence row --%>
             <input
               type="number"
               name="interval"
@@ -186,6 +188,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
                 end
               ]}
             >
+              <%!-- raw-input: checkbox drawn by the weekday chip label around it --%>
               <input
                 type="checkbox"
                 name="by_day[]"
@@ -199,6 +202,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
           </div>
 
           <div :if={@freq in [:monthly, :yearly]}>
+            <%!-- raw-input: compact text-xs select matching the other rule controls in the compact detail line --%>
             <select
               name="on"
               aria-label={dgettext("dashboard_calendar_repeat", "Repeats on")}
@@ -222,6 +226,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
           </p>
 
           <div class="flex flex-wrap items-center gap-2">
+            <%!-- raw-input: compact inline select sharing a wrapping row with the count or until control --%>
             <select
               name="end_type"
               class="rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
@@ -238,6 +243,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
             </select>
 
             <div :if={@end_type == "count"} class="flex items-center gap-1.5">
+              <%!-- raw-input: narrow number field inside the "After N occurrences" sentence row --%>
               <input
                 type="number"
                 name="count"
@@ -255,6 +261,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
               )}</span>
             </div>
 
+            <%!-- raw-input: compact inline date field sharing a wrapping row with the end type select --%>
             <input
               :if={@end_type == "until"}
               type="date"

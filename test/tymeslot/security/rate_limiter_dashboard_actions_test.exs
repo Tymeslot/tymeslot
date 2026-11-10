@@ -244,7 +244,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
   end
 
   # ---------------------------------------------------------------------------
-  # check(:dashboard_add_guests, _) — 20 per 10 minutes
+  # check(:dashboard_add_guests, _) — 10 per 10 minutes
   # ---------------------------------------------------------------------------
 
   describe "check(:dashboard_add_guests, _)" do
@@ -252,7 +252,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
       user_id = 11_870
       other_user_id = 11_871
 
-      for _i <- 1..20 do
+      for _i <- 1..10 do
         assert :ok = RateLimiter.check(:dashboard_add_guests, user_id)
       end
 
@@ -265,27 +265,26 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
   end
 
   # ---------------------------------------------------------------------------
-  # check(:dashboard_quick_add_meeting, _) — 20 per 10 minutes
+  # check(:dashboard_quick_add_meeting, _) — 10 per 10 minutes
   # ---------------------------------------------------------------------------
 
   describe "check(:dashboard_quick_add_meeting, _)" do
     test "blocks requests exceeding the limit" do
       user_id = 11_880
 
-      for _i <- 1..20 do
+      for _i <- 1..10 do
         assert :ok = RateLimiter.check(:dashboard_quick_add_meeting, user_id)
       end
 
       assert {:error, :rate_limited, message} =
                RateLimiter.check(:dashboard_quick_add_meeting, user_id)
 
-      assert message =~ "20"
       assert message =~ "10 minutes"
       assert message =~ "quick add meeting"
     end
 
     test "is scoped per user" do
-      for _i <- 1..20, do: RateLimiter.check(:dashboard_quick_add_meeting, 11_881)
+      for _i <- 1..10, do: RateLimiter.check(:dashboard_quick_add_meeting, 11_881)
 
       assert {:error, :rate_limited, _message} =
                RateLimiter.check(:dashboard_quick_add_meeting, 11_881)
@@ -296,7 +295,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
     test "resets after clearing bucket" do
       user_id = 11_883
 
-      for _i <- 1..20, do: RateLimiter.check(:dashboard_quick_add_meeting, user_id)
+      for _i <- 1..10, do: RateLimiter.check(:dashboard_quick_add_meeting, user_id)
 
       assert {:error, :rate_limited, _message} =
                RateLimiter.check(:dashboard_quick_add_meeting, user_id)

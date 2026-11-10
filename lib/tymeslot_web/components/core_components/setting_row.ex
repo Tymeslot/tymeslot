@@ -73,6 +73,7 @@ defmodule TymeslotWeb.Components.CoreComponents.SettingRow do
             if(@disabled, do: "cursor-not-allowed", else: "cursor-pointer")
           ]}
         >
+          <%!-- raw-input: this row is itself a design-system primitive; the checkbox sits inside the card-wide label and is named by aria-labelledby, which a field wrapper would break --%>
           <input
             type="checkbox"
             id={@id}
