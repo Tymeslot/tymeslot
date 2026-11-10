@@ -199,6 +199,21 @@ const stopVideoPlayback = (video) => {
   try { video.preload = 'none'; } catch (e) {}
 };
 
+// On a small screen, plays each video's `-mobile` source. The `media`
+// attributes on the `<source>` elements normally pick it already, and
+// assigning `src` regardless restarts the element's load: the video already
+// playing is torn down and fetched again, and in headless WebKit on Linux that
+// teardown blocked the page's main thread for up to 27 seconds, right as the
+// LiveView joined. Only a browser that ignores `media` still needs the swap.
+export const preferMobileSource = (videos) => {
+  videos.forEach((video) => {
+    const mobile = Array.from(video.querySelectorAll('source'))
+      .find((source) => (source.getAttribute('src') || '').includes('-mobile'));
+
+    if (mobile && video.currentSrc !== mobile.src) video.src = mobile.getAttribute('src');
+  });
+};
+
 // Quill video hook - simple video background with fallback
 export const QuillVideo = {
   mounted() {
@@ -369,16 +384,7 @@ export const AuthVideo = {
       }
     });
 
-    // Select appropriate video quality based on screen size
-    if (isSmallScreen) {
-      [{ el: video1, sources: video1.querySelectorAll('source') },
-       { el: video2, sources: video2.querySelectorAll('source') }].forEach(({ el, sources }) => {
-        sources.forEach(source => {
-          const src = source.getAttribute('src');
-          if (src && src.includes('-mobile')) el.src = src;
-        });
-      });
-    }
+    if (isSmallScreen) preferMobileSource([video1, video2]);
 
     // Battery-aware loading
     if ('getBattery' in navigator) {
@@ -533,16 +539,7 @@ export const RhythmVideo = {
 
     this._rhythmConnectionCleanup = setupConnectionFallback(connection, applyFallback);
 
-    // Select appropriate video quality based on screen size
-    if (isSmallScreen) {
-      [{ el: video1, sources: video1.querySelectorAll('source') },
-       { el: video2, sources: video2.querySelectorAll('source') }].forEach(({ el, sources }) => {
-        sources.forEach(source => {
-          const src = source.getAttribute('src');
-          if (src && src.includes('-mobile')) el.src = src;
-        });
-      });
-    }
+    if (isSmallScreen) preferMobileSource([video1, video2]);
 
     // Video crossfade logic
     let currentVideo = video1;
