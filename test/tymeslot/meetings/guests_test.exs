@@ -10,18 +10,20 @@ defmodule Tymeslot.Meetings.GuestsTest do
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Workers.EmailWorker
 
-  describe "sanitize_emails/2" do
+  describe "sanitize_emails/3" do
     test "trims, downcases and de-duplicates" do
       assert Guests.sanitize_emails(
                ["  Alice@Example.com ", "alice@example.com", "bob@example.com"],
-               "host@example.com"
+               "host@example.com",
+               10
              ) == ["alice@example.com", "bob@example.com"]
     end
 
     test "drops blanks and invalid addresses" do
       assert Guests.sanitize_emails(
                ["", "  ", "not-an-email", "ok@example.com"],
-               "host@example.com"
+               "host@example.com",
+               10
              ) ==
                ["ok@example.com"]
     end
@@ -29,20 +31,21 @@ defmodule Tymeslot.Meetings.GuestsTest do
     test "excludes the primary attendee's own email (case-insensitively)" do
       assert Guests.sanitize_emails(
                ["Primary@Example.com", "guest@example.com"],
-               "primary@example.com"
+               "primary@example.com",
+               10
              ) ==
                ["guest@example.com"]
     end
 
-    test "caps the list at max_guests" do
-      emails = for n <- 1..(Guests.max_guests() + 5), do: "guest#{n}@example.com"
-      result = Guests.sanitize_emails(emails, "host@example.com")
+    test "caps the list at the limit it is given, keeping the earliest" do
+      emails = for n <- 1..5, do: "guest#{n}@example.com"
 
-      assert length(result) == Guests.max_guests()
+      assert Guests.sanitize_emails(emails, "host@example.com", 2) ==
+               ["guest1@example.com", "guest2@example.com"]
     end
 
     test "tolerates non-list input" do
-      assert Guests.sanitize_emails(nil, "host@example.com") == []
+      assert Guests.sanitize_emails(nil, "host@example.com", 10) == []
     end
   end
 
@@ -111,9 +114,9 @@ defmodule Tymeslot.Meetings.GuestsTest do
 
   describe "valid_email?/1" do
     # The forms that collect guest addresses ask this, so it has to agree with
-    # what `sanitize_emails/2` keeps: an address the form accepted and the
+    # what `sanitize_emails/3` keeps: an address the form accepted and the
     # booking then dropped would vanish without a word.
-    test "agrees with sanitize_emails/2 on every address" do
+    test "agrees with sanitize_emails/3 on every address" do
       candidates = [
         "ok@example.com",
         "not-an-email",
@@ -124,7 +127,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
         "someone@example.con"
       ]
 
-      kept = Guests.sanitize_emails(candidates, nil)
+      kept = Guests.sanitize_emails(candidates, nil, length(candidates))
 
       assert Enum.filter(candidates, &Guests.valid_email?/1) == kept
       assert "ok@example.com" in kept

@@ -91,13 +91,12 @@ defmodule Tymeslot.Meetings.Guests do
 
   Trims and downcases each entry, drops blanks and anything that fails email
   validation, removes the primary attendee's own address, de-duplicates, and
-  caps the result at `limit`: `max_guests/0` unless given, so a booking from
-  the public page passes its own (`limit_for/1`). Always returns a list —
-  never raises.
+  caps the result at `limit`: `max_guests/0` for the host's own meetings,
+  `limit_for/1` for a booking from the public page. The limit has no default,
+  so a new caller has to choose, and a public path cannot inherit the host's
+  ceiling by leaving it out. Always returns a list — never raises.
   """
   @spec sanitize_emails([String.t()] | nil, String.t() | nil, pos_integer()) :: [String.t()]
-  def sanitize_emails(emails, primary_email, limit \\ @max_guests)
-
   def sanitize_emails(emails, primary_email, limit) when is_list(emails) do
     primary = normalize(primary_email)
 
@@ -113,7 +112,7 @@ defmodule Tymeslot.Meetings.Guests do
 
   @doc """
   Whether `email` is an address a guest can be invited at: the same rule
-  `sanitize_emails/2` applies, so a form that checks an address with this
+  `sanitize_emails/3` applies, so a form that checks an address with this
   never offers one the booking would then drop.
   """
   @spec valid_email?(term()) :: boolean()
@@ -235,7 +234,7 @@ defmodule Tymeslot.Meetings.Guests do
 
     additions =
       emails
-      |> sanitize_emails(meeting.attendee_email)
+      |> sanitize_emails(meeting.attendee_email, @max_guests)
       |> Enum.reject(&MapSet.member?(known, &1))
 
     cond do
