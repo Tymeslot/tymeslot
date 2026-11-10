@@ -37,8 +37,9 @@ defmodule CredoChecks.UseCoreInputs do
 
   # Hidden inputs are ignored, as they are often used for CSRF or internal
   # state. The attribute is looked for in the whole tag, which the formatter
-  # may have wrapped over several lines.
-  @hidden_regex ~r/\stype=["']hidden["']/i
+  # may have wrapped over several lines, written either as a plain value or as
+  # a literal expression (`type={"hidden"}`).
+  @hidden_regex ~r/\stype=(?:["']hidden["']|\{\s*"hidden"\s*\})/i
 
   # A raw control that `input/1` cannot render (a radio drawn as an option
   # card, a file input behind a styled button) is exempted where it stands,

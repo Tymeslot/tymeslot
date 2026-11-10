@@ -400,7 +400,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
         </span>
       </div>
       <input type="hidden" name={@name} value={@value} />
-      <.input type="text" value={@value} disabled icon="hero-lock-closed" title={@tooltip} />
+      <%!-- The tooltip sits on a wrapper: a disabled control receives no
+           pointer events in some browsers, so a title on it may never show. --%>
+      <div title={@tooltip}>
+        <.input type="text" value={@value} disabled icon="hero-lock-closed" />
+      </div>
     </div>
     """
   end

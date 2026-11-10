@@ -205,6 +205,36 @@ defmodule CredoChecks.UseCoreInputsTest do
       |> assert_issue(fn issue -> assert issue.line_no == 6 end)
     end
 
+    test "leaves a hidden input whose type is an expression alone" do
+      ~S'''
+      defmodule TymeslotWeb.SomeLive do
+        def render(assigns) do
+          ~H"""
+          <input type={"hidden"} name="_csrf_token" value={@token} />
+          """
+        end
+      end
+      '''
+      |> check()
+      |> refute_issues()
+    end
+
+    test "leaves a tag inside a HEEx comment alone" do
+      ~S'''
+      defmodule TymeslotWeb.SomeLive do
+        def render(assigns) do
+          ~H"""
+          <%!-- An earlier version drew a raw
+               <select name="unit"> here. --%>
+          <.input type="select" name="unit" options={@units} />
+          """
+        end
+      end
+      '''
+      |> check()
+      |> refute_issues()
+    end
+
     test "leaves a comment that mentions a tag alone" do
       """
       defmodule TymeslotWeb.SomeLive do
