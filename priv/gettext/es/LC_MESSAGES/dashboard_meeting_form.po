@@ -888,3 +888,18 @@ msgid "Without a number of your own, each booking may bring up to %{count} guest
 msgid_plural "Without a number of your own, each booking may bring up to %{count} guests. Set one to allow fewer, or up to %{max}."
 msgstr[0] "Sin un número propio, cada reserva puede incluir hasta %{count} invitado. Define menos o hasta %{max}."
 msgstr[1] "Sin un número propio, cada reserva puede incluir hasta %{count} invitados. Define menos o hasta %{max}."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Hidden from your booking pages. Each invitation link books one appointment."
+msgstr "Oculto en tus páginas de reservas. Cada enlace de invitación sirve para reservar una cita."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links work only for one-to-one meeting types."
+msgstr "Los enlaces de invitación solo funcionan con tipos de reunión individuales."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Only people with an invitation link can book"
+msgstr "Solo pueden reservar las personas con un enlace de invitación"

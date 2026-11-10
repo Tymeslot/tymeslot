@@ -130,7 +130,11 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   defp body(%{page: :payment_cancelled} = assigns) do
     ~H"""
     <MeetingPageBodies.status_icon icon="hero-x-circle" tone="danger" />
-    <PaymentReturnComponents.cancelled_body rebook_path={@rebook_path} />
+    <PaymentReturnComponents.cancelled_body
+      rebook_path={@rebook_path}
+      invitation_held={assigns[:invitation_held] || false}
+      invitation_withheld={assigns[:invitation_withheld] || false}
+    />
     """
   end
 

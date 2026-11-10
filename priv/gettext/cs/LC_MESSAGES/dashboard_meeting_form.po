@@ -893,3 +893,18 @@ msgid_plural "Without a number of your own, each booking may bring up to %{count
 msgstr[0] "Bez vlastního počtu může každá rezervace přivést až %{count} hosta. Nastavte méně, nebo až %{max}."
 msgstr[1] "Bez vlastního počtu může každá rezervace přivést až %{count} hosty. Nastavte méně, nebo až %{max}."
 msgstr[2] "Bez vlastního počtu může každá rezervace přivést až %{count} hostů. Nastavte méně, nebo až %{max}."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Hidden from your booking pages. Each invitation link books one appointment."
+msgstr "Skryto na vašich rezervačních stránkách. Každý odkaz na pozvání rezervuje jednu schůzku."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_rules.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links work only for one-to-one meeting types."
+msgstr "Odkazy na pozvání fungují jen u individuálních typů schůzek."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/visibility_section.ex
+#, elixir-autogen, elixir-format
+msgid "Only people with an invitation link can book"
+msgstr "Rezervovat mohou jen lidé s odkazem na pozvání"

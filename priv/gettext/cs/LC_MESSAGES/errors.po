@@ -365,37 +365,37 @@ msgstr "Tento obrázek je příliš velký (%{size} megapixelů). Nahrajte pros�
 msgid "We are busy processing other uploads. Please try again in a moment."
 msgstr "Právě zpracováváme jiná nahrání. Zkuste to prosím za chvíli znovu."
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "a group meeting type cannot ask each booker for their phone number"
 msgstr "skupinový typ schůzky nemůže žádat každého rezervujícího o jeho telefonní číslo"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "a group meeting type must offer exactly one location"
 msgstr "skupinový typ schůzky musí nabízet právě jedno místo"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "a group meeting type's in-person location must name a venue"
 msgstr "osobní místo skupinového typu schůzky musí uvádět místo konání"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "a group meeting type's in-person location must name exactly one venue"
 msgstr "osobní místo skupinového typu schůzky musí uvádět právě jedno místo konání"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "a group meeting type's video call must use exactly one provider"
 msgstr "videohovor skupinového typu schůzky musí používat právě jednoho poskytovatele"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require approval"
 msgstr "skupinové rezervace nemohou vyžadovat schválení"
 
-#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require payment"
 msgstr "skupinové rezervace nemohou vyžadovat platbu"
@@ -470,7 +470,7 @@ msgstr "Je nutné připojit Stripe"
 msgid "Work hours not found"
 msgstr "Pracovní doba nebyla nalezena"
 
-#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a confirmed meeting at this time."
 msgstr "V tuto dobu už máte potvrzenou schůzku."
@@ -870,3 +870,18 @@ msgstr "je již adresou jedné z vašich rezervačních stránek"
 #, elixir-autogen, elixir-format
 msgid "is already the address of one of your meeting types"
 msgstr "je již adresou jednoho z vašich typů schůzek"
+
+#: lib/tymeslot/meeting_types/group_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation links work only for one-to-one meeting types."
+msgstr "Odkazy na pozvání fungují jen u typů individuálních schůzek."
+
+#: lib/tymeslot/invitations/invitation_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be in the future"
+msgstr "musí být v budoucnosti"
+
+#: lib/tymeslot/security/rate_limiter/limits.ex
+#, elixir-autogen, elixir-format
+msgid "invitation links"
+msgstr "odkazy na pozvání"

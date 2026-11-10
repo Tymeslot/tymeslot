@@ -19,6 +19,7 @@ defmodule Tymeslot.SignedToken do
           | :booking_preview
           | :cursor_page
           | :slack_oauth_state
+          | :checkout_return
 
   @purposes %{
     embed_session: [salt: "embed_session", max_age: 6 * 3600],
@@ -36,7 +37,12 @@ defmodule Tymeslot.SignedToken do
     # cursor in the wild.
     cursor_page: [salt: "cursor-page:v1", max_age: :infinity],
     # Ten minutes to finish the Slack install it was issued for.
-    slack_oauth_state: [salt: "slack_oauth_state", max_age: 600]
+    slack_oauth_state: [salt: "slack_oauth_state", max_age: 600],
+    # Proves a visitor to a paid booking's checkout-cancelled page came back
+    # from that booking's own Stripe Checkout: the token rides in the cancel
+    # URL only Stripe and the guest's browser see. A day outlasts the longest
+    # checkout Stripe allows.
+    checkout_return: [salt: "checkout return", max_age: 24 * 3600]
   }
 
   @doc "Signs `payload` for `purpose`."

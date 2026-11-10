@@ -45,6 +45,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Live.Shared.Flash
 
   require Logger
@@ -147,7 +148,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
   # type, and exempting it would hand every attacker a one-parameter bypass of
   # the limit. An unbacked claim is refused later, but it still costs an
   # outbound reCAPTCHA verification, so it stays rate-limited.
-  defp preview_submission?(socket), do: socket.assigns[:owner_preview] == true
+  defp preview_submission?(socket), do: PreviewMode.owner_preview?(socket)
 
   defp check_rate_limit(socket) do
     if preview_submission?(socket) do

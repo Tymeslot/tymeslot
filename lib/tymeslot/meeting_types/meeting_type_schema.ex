@@ -9,7 +9,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   import Tymeslot.ChangesetValidators.SchedulingPolicy, only: [validate_scheduling_policy: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
-  alias Tymeslot.MeetingTypes.GroupLocationRule
+  alias Tymeslot.MeetingTypes.GroupValidation
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
@@ -27,6 +27,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           icon: String.t() | nil,
           is_active: boolean(),
           is_private: boolean(),
+          invitation_only: boolean(),
           slug: String.t() | nil,
           show_as_free: boolean(),
           allow_video: boolean(),
@@ -74,6 +75,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:icon, :string)
     field(:is_active, :boolean, default: true)
     field(:is_private, :boolean, default: false)
+    # Bookable only through a single-use invitation link (`Tymeslot.Invitations`).
+    field(:invitation_only, :boolean, default: false)
     field(:slug, :string)
     field(:show_as_free, :boolean, default: false)
     field(:allow_video, :boolean, default: false)
@@ -199,6 +202,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :icon,
       :is_active,
       :is_private,
+      :invitation_only,
       :slug,
       :show_as_free,
       :allow_video,
@@ -249,7 +253,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_calendar_destination()
     |> ReminderValidation.validate_changeset()
     |> PaymentValidation.validate_changeset(opts)
-    |> validate_group_rules()
+    |> GroupValidation.validate_changeset()
     |> unique_constraint([:user_id, :name],
       error_key: :name,
       message: dgettext_noop("errors", "You already have a meeting type with this name")
@@ -307,7 +311,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     changeset = meeting_type |> change() |> put_embed(:locations, locations)
 
     if group?(meeting_type) and left_without_venue?(meeting_type, venue_id),
-      do: add_error(changeset, :locations, group_location_message(:address_after_booking)),
+      do: add_error(changeset, :locations, GroupValidation.venue_required_message()),
       else: changeset
   end
 
@@ -333,12 +337,16 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   end
 
   @doc """
-  Focused changeset for toggling private visibility, without re-validating
-  unrelated fields (e.g. video integration).
+  Focused changeset for changing a meeting type's visibility (`is_private`
+  and `invitation_only`), without re-validating unrelated fields (e.g. video
+  integration). An invitation-only type must stay one-to-one, which is the one
+  rule checked here.
   """
   @spec visibility_changeset(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
   def visibility_changeset(meeting_type, attrs) do
-    cast(meeting_type, attrs, [:is_private])
+    meeting_type
+    |> cast(attrs, [:is_private, :invitation_only])
+    |> GroupValidation.validate_invitation_only_not_group()
   end
 
   @doc """
@@ -505,86 +513,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
         changeset
     end
   end
-
-  # What a group type (more than one participant per slot) cannot also be.
-  # Everyone in a group slot shares one meeting row, so nothing about that
-  # row may be decided per booker:
-  #
-  #   * payment: per-seat payment is out of scope;
-  #   * approval: the approval flow answers one booker's request for a whole
-  #     meeting, and a shared slot has no single booker to answer;
-  #   * the location: see `GroupLocationRule`;
-  #   * further lengths: see `Lengths.validate_changeset/1`.
-  #
-  # Read with `get_field/2` so a change to either side (the limit, or the
-  # other setting) is caught.
-  #
-  # The messages are msgids of the `errors` domain, registered here with
-  # `dgettext_noop/2` and translated where the form shows them, like Ecto's
-  # own validator messages (`TymeslotWeb.Gettext.EctoErrorMsgids`).
-  defp validate_group_rules(changeset) do
-    if group_limit?(get_field(changeset, :max_participants)) do
-      changeset
-      |> refuse_for_group(
-        :payment_required,
-        dgettext_noop("errors", "group bookings cannot require payment")
-      )
-      |> refuse_for_group(
-        :requires_approval,
-        dgettext_noop("errors", "group bookings cannot require approval")
-      )
-      |> validate_group_location()
-    else
-      changeset
-    end
-  end
-
-  defp group_limit?(max), do: is_integer(max) and max > 1
-
-  defp refuse_for_group(changeset, field, message) do
-    if get_field(changeset, field) == true,
-      do: add_error(changeset, :max_participants, message),
-      else: changeset
-  end
-
-  # The effective options, including the single fallback option a type with
-  # no stored list offers, so a group type cannot slip through on the
-  # "address arranged after booking" fallback.
-  defp validate_group_location(changeset) do
-    offered = %{
-      locations: get_field(changeset, :locations),
-      allow_video: get_field(changeset, :allow_video),
-      video_integration_id: get_field(changeset, :video_integration_id)
-    }
-
-    case GroupLocationRule.check_meeting_type(offered) do
-      :ok -> changeset
-      {:error, reason} -> add_error(changeset, :locations, group_location_message(reason))
-    end
-  end
-
-  defp group_location_message(:not_single_location),
-    do: dgettext_noop("errors", "a group meeting type must offer exactly one location")
-
-  defp group_location_message(:provider_choice),
-    do: dgettext_noop("errors", "a group meeting type's video call must use exactly one provider")
-
-  defp group_location_message(:venue_choice),
-    do:
-      dgettext_noop(
-        "errors",
-        "a group meeting type's in-person location must name exactly one venue"
-      )
-
-  defp group_location_message(:address_after_booking),
-    do: dgettext_noop("errors", "a group meeting type's in-person location must name a venue")
-
-  defp group_location_message(:booker_phone),
-    do:
-      dgettext_noop(
-        "errors",
-        "a group meeting type cannot ask each booker for their phone number"
-      )
 
   @doc """
   True when the meeting type accepts more than one participant per slot.

@@ -482,6 +482,7 @@ config :phoenix, :filter_parameters, [
   "api_key",
   "webhook_url",
   "custom_meeting_url",
+  "invite",
   "value"
 ]
 
@@ -594,6 +595,12 @@ config :tymeslot, :payment_rate_limits,
   max_attempts: 5,
   # Time window in milliseconds (10 minutes)
   window_ms: 600_000
+
+# Invitation links one host may create for invitation-only meeting types.
+# Read at compile time: set it in build config, never in config/runtime.exs.
+config :tymeslot, :invitation_limits,
+  per_host_hour: 60,
+  per_host_day: 300
 
 # Poll email rate limits, counted per address emailed (see
 # Tymeslot.Polls.EmailLimits). A deployment overrides any key in its own
