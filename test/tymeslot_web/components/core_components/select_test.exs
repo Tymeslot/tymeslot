@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Components.CoreComponents.SelectTest do
 
   import Phoenix.LiveViewTest
 
+  alias Phoenix.Component
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Select
 
@@ -59,6 +60,21 @@ defmodule TymeslotWeb.Components.CoreComponents.SelectTest do
 
       assert value_of(doc) == ["10"]
       assert text_of(doc) == "Ten"
+    end
+
+    test "selects false as a value, given directly or by a form field" do
+      options = [{"No", false}, {"Yes", true}]
+
+      doc = render_select(options: options, value: false)
+      assert value_of(doc) == ["false"]
+      assert text_of(doc) == "No"
+
+      form = Component.to_form(%{"public" => false}, as: :page)
+      doc = render_select(options: options, field: form[:public], value: nil, prompt: "Pick")
+
+      assert value_of(doc) == ["false"]
+      assert text_of(doc) == "No"
+      assert doc |> LazyHTML.query("option[value='false'][selected]") |> Enum.count() == 1
     end
 
     test "reads a label from an option group" do

@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Select do
   def select(%{field: %FormField{} = field} = assigns) do
     assigns
     |> assign(field: nil, name: assigns[:name] || field.name)
-    |> assign(value: assigns[:value] || field.value)
+    |> assign(value: if(is_nil(assigns[:value]), do: field.value, else: assigns.value))
     |> assign(errors: (assigns[:errors] || []) ++ field.errors)
     |> select()
   end
@@ -204,10 +204,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Select do
   end
 
   # Mirrors what a browser would post: the option matching `value`, else the
-  # prompt's empty value, else the first option.
+  # prompt's empty value, else the first option. `false` is a value like any
+  # other; only nil is none.
   defp selected(%{options: options, value: value, prompt: prompt}) do
     normalised = Enum.flat_map(options, &flatten_option/1)
-    wanted = value && to_string(value)
+    wanted = if is_nil(value), do: nil, else: to_string(value)
 
     case Enum.find(normalised, fn {_label, option_value} -> option_value == wanted end) do
       {label, option_value} -> {option_value, label}
