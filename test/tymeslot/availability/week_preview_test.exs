@@ -328,6 +328,134 @@ defmodule Tymeslot.Availability.WeekPreviewTest do
     end
   end
 
+  describe "time off in awkward weeks" do
+    test "a period over several days empties each of them and no others", %{monday: monday} do
+      profile = host()
+
+      insert(:time_off_period,
+        profile: profile,
+        starts_on: Date.add(monday, 1),
+        ends_on: Date.add(monday, 3)
+      )
+
+      stub_events(
+        for day <- [monday, Date.add(monday, 2), Date.add(monday, 4)],
+            do: event_at(day, ~T[10:00:00], ~T[11:00:00])
+      )
+
+      assert {:ok, %{days: days, first_busy: first_busy}} =
+               Availability.week_preview(profile, today: monday)
+
+      [mon, tue, wed, thu, fri | _weekend] = days
+
+      for away <- [tue, wed, thu] do
+        assert {away.slots, away.busy} == {[], []}
+      end
+
+      assert mon.busy == [{~T[10:00:00], ~T[11:00:00]}]
+      assert fri.busy == [{~T[10:00:00], ~T[11:00:00]}]
+      refute "10:00" in mon.slots
+      assert "09:00" in fri.slots
+      assert first_busy == %{date: monday, start: ~T[10:00:00]}
+    end
+
+    # The clocks change at 01:00 on the last Sunday of March and of October
+    # (the day is 23 or 25 hours long), which must not shift the hours a
+    # part-day period takes out, nor stretch an all-day one into its neighbours.
+    for {label, monday_iso} <- [{"March", "2027-03-22"}, {"October", "2027-10-25"}] do
+      @monday Date.from_iso8601!(monday_iso)
+
+      test "a part-day period on the Europe/London #{label} clock change takes out its own hours" do
+        monday = @monday
+        sunday = Date.add(monday, 6)
+        ClockHelpers.freeze_clock(DateTime.new!(Date.add(monday, -1), ~T[00:00:00], "Etc/UTC"))
+        zone = "Europe/London"
+        profile = host(timezone: zone, days: Enum.to_list(1..7))
+
+        insert(:time_off_period,
+          profile: profile,
+          starts_on: sunday,
+          ends_on: sunday,
+          start_time: ~T[09:00:00],
+          end_time: ~T[12:00:00]
+        )
+
+        stub_events([event_at(sunday, ~T[11:00:00], ~T[14:00:00], zone: zone)])
+
+        assert {:ok, %{days: days}} = Availability.week_preview(profile, today: monday)
+        change_day = List.last(days)
+
+        assert change_day.date == sunday
+        assert change_day.busy == [{~T[12:00:00], ~T[14:00:00]}]
+        refute "10:00" in change_day.slots
+        assert "15:00" in change_day.slots
+      end
+
+      test "an all-day period across the Europe/London #{label} clock change spares the days around it" do
+        monday = @monday
+        saturday = Date.add(monday, 5)
+        ClockHelpers.freeze_clock(DateTime.new!(Date.add(monday, -1), ~T[00:00:00], "Etc/UTC"))
+        zone = "Europe/London"
+        profile = host(timezone: zone, days: Enum.to_list(1..7))
+
+        insert(:time_off_period,
+          profile: profile,
+          starts_on: saturday,
+          ends_on: Date.add(saturday, 2)
+        )
+
+        stub_events(
+          for day <- [Date.add(monday, 4), saturday, Date.add(saturday, 1)],
+              do: event_at(day, ~T[10:00:00], ~T[11:00:00], zone: zone)
+        )
+
+        assert {:ok, %{days: [mon, _tue, _wed, _thu, fri, sat, sun]}} =
+                 Availability.week_preview(profile, today: monday)
+
+        for away <- [sat, sun], do: assert({away.slots, away.busy} == {[], []})
+        assert fri.busy == [{~T[10:00:00], ~T[11:00:00]}]
+        assert "09:00" in mon.slots
+      end
+    end
+
+    # Saturday 20:00 to 02:00 on Sunday, owner in UTC.
+    @night %{
+      is_available: true,
+      start_time: ~T[20:00:00],
+      end_time: ~T[02:00:00],
+      ends_next_day: true
+    }
+
+    test "an all-day period on the morning an overnight window runs into removes its tail",
+         %{monday: monday} do
+      saturday = Date.add(monday, 5)
+      sunday = Date.add(monday, 6)
+      profile = host(days: [6], hours: @night)
+      insert(:time_off_period, profile: profile, starts_on: sunday, ends_on: sunday)
+      stub_events([event_at(saturday, ~T[21:00:00], ~T[22:00:00])])
+
+      assert {:ok, %{days: days}} = Availability.week_preview(profile, today: monday)
+      [sat, sun] = Enum.take(days, -2)
+
+      assert "20:00" in sat.slots
+      assert sat.busy == [{~T[21:00:00], ~T[22:00:00]}]
+      assert {sun.slots, sun.busy} == {[], []}
+    end
+
+    test "an all-day period on the night an overnight window opens takes its evening",
+         %{monday: monday} do
+      saturday = Date.add(monday, 5)
+      profile = host(days: [6], hours: @night)
+      insert(:time_off_period, profile: profile, starts_on: saturday, ends_on: saturday)
+      stub_events([event_at(saturday, ~T[21:00:00], ~T[22:00:00])])
+
+      assert {:ok, %{days: days}} = Availability.week_preview(profile, today: monday)
+      sat = Enum.at(days, 5)
+
+      assert {sat.slots, sat.busy} == {[], []}
+    end
+  end
+
   test "busy blocks are in the host's timezone", %{monday: monday} do
     # 12:30 UTC on Sunday is just after midnight on Monday in Auckland, in or out of DST.
     ClockHelpers.freeze_clock(DateTime.new!(Date.add(monday, -1), ~T[12:30:00], "Etc/UTC"))

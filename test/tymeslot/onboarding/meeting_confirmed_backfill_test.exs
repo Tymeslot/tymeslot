@@ -61,6 +61,48 @@ defmodule Tymeslot.Onboarding.MeetingConfirmedBackfillTest do
     assert confirmed_at(no_meeting_type) == nil
   end
 
+  describe "a meeting type whose locations are not the one seeded place" do
+    # The column is nullable and was added after rows existed, so a host can
+    # hold no list at all or an empty one. Neither is a seeded default.
+    defp set_locations(user, value) do
+      Repo.query!("UPDATE meeting_types SET locations = #{value} WHERE user_id = $1", [user.id])
+    end
+
+    test "a missing or empty list counts as an edited default" do
+      missing = mid_onboarding([])
+      empty = mid_onboarding([])
+      untouched = mid_onboarding([])
+      set_locations(missing, "NULL")
+      set_locations(empty, "ARRAY[]::jsonb[]")
+
+      MigrationRunner.replay!(@version)
+
+      assert %DateTime{} = confirmed_at(missing)
+      assert %DateTime{} = confirmed_at(empty)
+      assert confirmed_at(untouched) == nil
+    end
+
+    test "a default whose one in-person place is bound to a venue is still the default" do
+      # The migration's moduledoc defines a default as a name, a duration and
+      # one in-person location; the venues a location lists are not part of it.
+      user = insert(:user, onboarding_completed_at: nil)
+      venue = insert(:venue, user: user)
+      add_meeting_type(user, locations: [in_person_location([venue])])
+
+      MigrationRunner.replay!(@version)
+
+      assert confirmed_at(user) == nil
+    end
+
+    test "two places, even both in person, are no longer the seeded default" do
+      user = mid_onboarding(locations: [in_person_location(), in_person_location()])
+
+      MigrationRunner.replay!(@version)
+
+      assert %DateTime{} = confirmed_at(user)
+    end
+  end
+
   describe "the earlier pair of seeded defaults" do
     test "a host still on both is not stamped" do
       user = mid_onboarding(name: "15 Minutes", duration_minutes: 15)
