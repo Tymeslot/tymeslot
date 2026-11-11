@@ -130,7 +130,9 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
 
   A no-op when no live row exists (a replay), and when the row was connected
   after `event_at` (an event from before a reconnect). An event in the same
-  second as the connection counts as applying.
+  second as the connection counts as applying. Both are checked again on the
+  row locked inside the transaction, so a host who disconnects and reconnects
+  another account while the event is handled keeps the new connection.
   """
   @spec handle_deauthorized(stripe_account_id :: String.t(), event_at :: DateTime.t()) ::
           :ok | {:error, term()}
@@ -145,12 +147,28 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
         else
           pending = BookingPaymentQueries.list_pending_for_host(user_id)
 
-          with {:ok, _cancelled_count} <-
-                 user_id
-                 |> retire(pending, fn _account -> :ok end)
-                 |> announce_after_commit(),
-               do: :ok
+          user_id
+          |> retire(pending, &still_deauthorized!(&1, stripe_account_id, event_at))
+          |> announce_after_commit()
+          |> case do
+            {:ok, _cancelled_count} -> :ok
+            {:error, :superseded} -> :ok
+            {:error, _reason} = error -> error
+          end
         end
+    end
+  end
+
+  # Runs on the row locked inside the transaction. A row that is gone, holds
+  # another account, or was connected after the event has replaced the one the
+  # event is about, so the whole retirement is rolled back.
+  defp still_deauthorized!(locked, stripe_account_id, event_at) do
+    case locked do
+      %ConnectAccountSchema{stripe_account_id: ^stripe_account_id} = account ->
+        if connected_after?(account, event_at), do: Repo.rollback(:superseded), else: :ok
+
+      _replaced_or_gone ->
+        Repo.rollback(:superseded)
     end
   end
 
