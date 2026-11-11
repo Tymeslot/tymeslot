@@ -34,10 +34,11 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
   @doc """
   Schedules the revocation of `stripe_account_id` to run in `delay_seconds`.
 
-  There is one pending job per account: scheduling again while one waits moves
-  its time, so the latest caller decides when the revocation is due (`0` for
-  now). A job already running or completed does not count, and a new one is
-  inserted.
+  There is one pending job per account: scheduling again while one waits,
+  scheduled or retrying, moves its time, so the latest caller decides when the
+  revocation is due (`0` for now). A job already due (`available`) keeps its
+  time, as Oban cannot move it back to scheduled. A job already running or
+  completed does not count, and a new one is inserted.
   """
   @spec schedule(String.t(), non_neg_integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
   def schedule(stripe_account_id, delay_seconds) when is_binary(stripe_account_id) do
@@ -49,7 +50,7 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
         keys: [:stripe_account_id],
         states: [:available, :scheduled, :retryable]
       ],
-      replace: [scheduled: [:scheduled_at]]
+      replace: [scheduled: [:scheduled_at], retryable: [:scheduled_at]]
     )
     |> Oban.insert()
   end

@@ -7,8 +7,11 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccountTest do
   import Mox
   import Tymeslot.AdminAlertsCaptureHelpers
 
+  alias Ecto.Changeset
+  alias Oban.Job
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
+  alias Tymeslot.Repo
 
   setup :verify_on_exit!
   setup :capture_admin_alerts
@@ -76,5 +79,24 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccountTest do
 
     assert alert.reason_code == :oauth_failed
     assert is_integer(alert.oban_job_id)
+  end
+
+  describe "schedule/2" do
+    test "moves a job that is waiting to retry, so a disconnect's delay is not cut short" do
+      assert {:ok, first} = DeauthorizeConnectAccount.schedule("acct_RETRY", 0)
+
+      soon = DateTime.add(DateTime.utc_now(), 30)
+
+      first
+      |> Changeset.change(state: "retryable", attempt: 1, scheduled_at: soon)
+      |> Repo.update!()
+
+      assert {:ok, _job} = DeauthorizeConnectAccount.schedule("acct_RETRY", 35 * 60)
+
+      job = Repo.get!(Job, first.id)
+      assert job.state == "retryable"
+
+      assert_in_delta DateTime.diff(job.scheduled_at, DateTime.utc_now(:second)), 35 * 60, 60
+    end
   end
 end
