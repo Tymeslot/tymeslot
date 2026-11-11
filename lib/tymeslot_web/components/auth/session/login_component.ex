@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
                 <button
                   type="button"
                   phx-click="navigate_to"
-                  phx-value-state="reset_password"
+                  phx-value-to="reset_password"
                   class="btn-link bg-transparent"
                 >
                   {dgettext("auth", "Forgot password?")}
@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
             <.auth_footer
               prompt={dgettext("auth", "Don't have an account?")}
               phx-click="navigate_to"
-              phx-value-state="signup"
+              phx-value-to="signup"
               link_text={dgettext("auth", "Sign up")}
             />
           <% end %>

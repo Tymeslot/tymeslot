@@ -69,7 +69,7 @@ defmodule TymeslotWeb.AdminLive do
   # --- Settings tab events ---
 
   @impl Phoenix.LiveView
-  def handle_event("set_setting", %{"key" => key, "state" => state}, socket) do
+  def handle_event("set_setting", %{"key" => key, "enabled" => state}, socket) do
     with {:ok, atom_key} <- parse_setting_key(key),
          :boolean <- Formatters.kind(atom_key),
          {:ok, parsed} <- parse_setting_value(state) do

@@ -323,7 +323,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       type="button"
       phx-click="set_setting"
       phx-value-key={@key}
-      phx-value-state={@state}
+      phx-value-enabled={@state}
       disabled={@active or @locked}
       aria-pressed={to_string(@active)}
       aria-disabled={@locked}

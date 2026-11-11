@@ -175,7 +175,7 @@ defmodule TymeslotWeb.AdminLiveTest do
 
       # The Disabled tag is active because the effective value is false.
       assert html =~
-               ~s(phx-value-key="registration_enabled" phx-value-state="false" disabled)
+               ~s(phx-value-key="registration_enabled" phx-value-enabled="false" disabled)
     end
 
     test "each setting row shows a description with a recommended value", %{conn: conn} do
@@ -230,7 +230,7 @@ defmodule TymeslotWeb.AdminLiveTest do
       {:ok, _lv, html} = live(conn, ~p"/admin/settings")
 
       assert html =~
-               ~s(phx-value-key="password_auth_enabled" phx-value-state="false" disabled)
+               ~s(phx-value-key="password_auth_enabled" phx-value-enabled="false" disabled)
 
       assert html =~ "Cannot disable password authentication"
     end
@@ -365,7 +365,7 @@ defmodule TymeslotWeb.AdminLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/admin/settings")
 
       html =
-        render_click(lv, "set_setting", %{"key" => "password_auth_enabled", "state" => "false"})
+        render_click(lv, "set_setting", %{"key" => "password_auth_enabled", "enabled" => "false"})
 
       assert html =~ "at least one admin signs in with email and password"
       # The setting did not actually change.
@@ -402,7 +402,7 @@ defmodule TymeslotWeb.AdminLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/admin/settings")
 
-      render_click(lv, "set_setting", %{"key" => "oauth_auth_enabled", "state" => "false"})
+      render_click(lv, "set_setting", %{"key" => "oauth_auth_enabled", "enabled" => "false"})
 
       # Scope the assertions to the flash itself: the static page always carries
       # the phrase "email and password" in the password-auth toggle description
@@ -424,7 +424,7 @@ defmodule TymeslotWeb.AdminLiveTest do
   defp setting_tag(lv, key, state) do
     element(
       lv,
-      ~s|button[phx-click="set_setting"][phx-value-key="#{key}"][phx-value-state="#{state}"]|
+      ~s|button[phx-click="set_setting"][phx-value-key="#{key}"][phx-value-enabled="#{state}"]|
     )
   end
 

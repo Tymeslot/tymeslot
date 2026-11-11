@@ -30,7 +30,7 @@ defmodule TymeslotWeb.E2E.PasswordResetTest do
       session
       |> visit("/auth/login")
       |> wait_for_live()
-      |> click(css("button[phx-value-state='reset_password']"))
+      |> click(css("button[phx-value-to='reset_password']"))
       |> fill_in(text_field("email"), with: user.email)
       |> click(css("button[type='submit']"))
 

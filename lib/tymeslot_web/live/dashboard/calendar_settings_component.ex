@@ -266,7 +266,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   def handle_event(
         "set_calendar_state",
-        %{"integration_id" => id, "calendar_id" => cal_id, "state" => state},
+        %{"integration_id" => id, "calendar_id" => cal_id, "use" => state},
         socket
       )
       when is_map_key(@calendar_states, state) do
