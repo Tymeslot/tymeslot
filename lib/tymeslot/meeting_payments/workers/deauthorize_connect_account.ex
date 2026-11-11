@@ -14,6 +14,11 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
   attempts spans days. When the last one fails, an admin alert names the
   account, since Tymeslot would otherwise keep access to an account it has no
   row for with nobody told.
+
+  Revoking needs `STRIPE_CONNECT_CLIENT_ID`. Without it nothing is sent to
+  Stripe and the attempt fails, retried and finally alerted like any other
+  failure, so an operator who sets the variable within the retry window still
+  gets the access revoked.
   """
 
   use Oban.Worker,
@@ -32,6 +37,7 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.StripeAdapter
+  alias Tymeslot.MeetingPayments.StripeConnectOAuth
 
   @doc """
   Schedules the revocation of `stripe_account_id` to run in `delay_seconds`.
@@ -75,6 +81,12 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
   end
 
   defp revoke(job, stripe_account_id) do
+    if StripeConnectOAuth.configured?(),
+      do: request_revocation(job, stripe_account_id),
+      else: fail(job, stripe_account_id, :oauth_not_configured)
+  end
+
+  defp request_revocation(job, stripe_account_id) do
     case StripeAdapter.deauthorize_account(stripe_account_id) do
       :ok ->
         :ok
@@ -89,17 +101,19 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
 
         {:cancel, :controlled_account}
 
-      {:error, :oauth_failed} = error ->
-        if job.attempt >= job.max_attempts, do: alert(job, stripe_account_id)
-        error
+      {:error, :oauth_failed} ->
+        fail(job, stripe_account_id, :oauth_failed)
     end
   end
 
-  # The reason is the adapter's own atom, never anything read from Stripe's
-  # response, so no detail of it reaches the alert.
-  defp alert(job, stripe_account_id) do
-    reason = :oauth_failed
+  defp fail(job, stripe_account_id, reason) do
+    if job.attempt >= job.max_attempts, do: alert(job, stripe_account_id, reason)
+    {:error, reason}
+  end
 
+  # The reason is this module's or the adapter's own atom, never anything read
+  # from Stripe's response, so no detail of it reaches the alert.
+  defp alert(job, stripe_account_id, reason) do
     Logger.error("Revoking a Stripe connection failed for good",
       stripe_account_id: stripe_account_id,
       reason: LogFormat.reason(reason)

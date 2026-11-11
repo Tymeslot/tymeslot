@@ -95,6 +95,36 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccountTest do
     assert is_integer(alert.oban_job_id)
   end
 
+  describe "without STRIPE_CONNECT_CLIENT_ID" do
+    setup do
+      previous = Application.get_env(:tymeslot, :stripe_connect_client_id)
+      Application.delete_env(:tymeslot, :stripe_connect_client_id)
+      on_exit(fn -> Application.put_env(:tymeslot, :stripe_connect_client_id, previous) end)
+    end
+
+    # No expectation: verify_on_exit! and Mox fail the test on any call, so
+    # nothing is sent to Stripe with an empty client ID.
+    test "fails without calling Stripe, so the job retries" do
+      assert {:error, :oauth_not_configured} =
+               perform_job(DeauthorizeConnectAccount, %{"stripe_account_id" => "acct_NOID"},
+                 attempt: 1
+               )
+
+      refute_received {:send_alert, _type, _payload}
+    end
+
+    @tag :capture_log
+    test "alerts an admin on the last attempt" do
+      assert {:error, :oauth_not_configured} =
+               perform_job(DeauthorizeConnectAccount, %{"stripe_account_id" => "acct_NOID"},
+                 attempt: 20
+               )
+
+      assert_received {:send_alert, :connect_revocation_failed,
+                       %{stripe_account_id: "acct_NOID", reason_code: :oauth_not_configured}}
+    end
+  end
+
   describe "schedule/2" do
     test "moves a job that is waiting to retry, so a disconnect's delay is not cut short" do
       assert {:ok, first} = DeauthorizeConnectAccount.schedule("acct_RETRY", 0)

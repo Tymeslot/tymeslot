@@ -998,10 +998,10 @@ msgstr "Запрошення на адресу %{email} скасовано."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
-msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment: without them the toggle stays locked. Hosts connect their Stripe account with STRIPE_CONNECT_CLIENT_ID: without it, hosts who are already connected keep working, but no new host can connect."
-msgstr "Дозволити організаторам на цьому екземплярі приймати платежі від клієнтів через Stripe Connect. Потребує налаштування змінних середовища STRIPE_SECRET_KEY та STRIPE_CONNECT_WEBHOOK_SECRET: без них перемикач залишатиметься заблокованим. Організатори підключають свій обліковий запис Stripe через STRIPE_CONNECT_CLIENT_ID: без цієї змінної вже підключені організатори продовжують працювати, але новий організатор підключитися не зможе."
+msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Also set STRIPE_CONNECT_CLIENT_ID, or no new host can connect a Stripe account."
+msgstr "Налаштуйте змінні середовища STRIPE_SECRET_KEY та STRIPE_CONNECT_WEBHOOK_SECRET, щоб увімкнути оплату зустрічей. Налаштуйте також STRIPE_CONNECT_CLIENT_ID, інакше жоден новий організатор не зможе підключити обліковий запис Stripe."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
-msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Also set STRIPE_CONNECT_CLIENT_ID, or no new host can connect a Stripe account."
-msgstr "Налаштуйте змінні середовища STRIPE_SECRET_KEY та STRIPE_CONNECT_WEBHOOK_SECRET, щоб увімкнути оплату зустрічей. Налаштуйте також STRIPE_CONNECT_CLIENT_ID, інакше жоден новий організатор не зможе підключити обліковий запис Stripe."
+msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment: without them the toggle stays locked. Hosts connect their Stripe account with STRIPE_CONNECT_CLIENT_ID: without it, hosts who are already connected keep taking payments, but no new host can connect, and a host who disconnects keeps Tymeslot's access to their Stripe account until it is set."
+msgstr "Дозволити організаторам на цьому екземплярі приймати платежі від клієнтів через Stripe Connect. Потребує налаштування змінних середовища STRIPE_SECRET_KEY та STRIPE_CONNECT_WEBHOOK_SECRET: без них перемикач залишатиметься заблокованим. Організатори підключають свій обліковий запис Stripe через STRIPE_CONNECT_CLIENT_ID: без цієї змінної вже підключені організатори й далі приймають платежі, але новий організатор підключитися не зможе, а якщо організатор від'єднається, Tymeslot зберігатиме доступ до його облікового запису Stripe, доки змінну не буде налаштовано."

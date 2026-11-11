@@ -998,10 +998,10 @@ msgstr "Pozvání odeslané na adresu %{email} bylo zrušeno."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
-msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment: without them the toggle stays locked. Hosts connect their Stripe account with STRIPE_CONNECT_CLIENT_ID: without it, hosts who are already connected keep working, but no new host can connect."
-msgstr "Umožní hostitelům na této instanci přijímat platby od zájemců o rezervaci přes Stripe Connect. Vyžaduje nastavené STRIPE_SECRET_KEY a STRIPE_CONNECT_WEBHOOK_SECRET v prostředí: bez nich zůstane přepínač zamčený. Hostitelé připojují svůj účet Stripe pomocí STRIPE_CONNECT_CLIENT_ID: bez ní už připojení hostitelé fungují dál, ale nový hostitel se připojit nemůže."
+msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Also set STRIPE_CONNECT_CLIENT_ID, or no new host can connect a Stripe account."
+msgstr "Platby za schůzky zapnete nastavením STRIPE_SECRET_KEY a STRIPE_CONNECT_WEBHOOK_SECRET v prostředí. Nastavte také STRIPE_CONNECT_CLIENT_ID, jinak žádný nový hostitel nebude moci připojit účet Stripe."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
-msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Also set STRIPE_CONNECT_CLIENT_ID, or no new host can connect a Stripe account."
-msgstr "Platby za schůzky zapnete nastavením STRIPE_SECRET_KEY a STRIPE_CONNECT_WEBHOOK_SECRET v prostředí. Nastavte také STRIPE_CONNECT_CLIENT_ID, jinak žádný nový hostitel nebude moci připojit účet Stripe."
+msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment: without them the toggle stays locked. Hosts connect their Stripe account with STRIPE_CONNECT_CLIENT_ID: without it, hosts who are already connected keep taking payments, but no new host can connect, and a host who disconnects keeps Tymeslot's access to their Stripe account until it is set."
+msgstr "Umožní hostitelům na této instanci přijímat platby od zájemců o rezervaci přes Stripe Connect. Vyžaduje nastavené STRIPE_SECRET_KEY a STRIPE_CONNECT_WEBHOOK_SECRET v prostředí: bez nich zůstane přepínač zamčený. Hostitelé připojují svůj účet Stripe pomocí STRIPE_CONNECT_CLIENT_ID: bez ní už připojení hostitelé dál přijímají platby, ale nový hostitel se připojit nemůže a u hostitele, který se odpojí, si Tymeslot ponechá přístup k jeho účtu Stripe, dokud nebude proměnná nastavena."
