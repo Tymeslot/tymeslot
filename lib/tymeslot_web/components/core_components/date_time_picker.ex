@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePicker do
 
   alias Phoenix.HTML.FormField
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Components.CoreComponents.DateTimePicker.Value
   alias TymeslotWeb.Components.Shared.PickerPreferences
   alias TymeslotWeb.Components.Shared.TimeOptions
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -62,7 +63,9 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePicker do
 
   @doc """
   Renders a date and a time as one field, posting `YYYY-MM-DDTHH:MM` once both
-  are known, and nothing until then, as `datetime-local` does.
+  are known. Until then it posts the half it has (`YYYY-MM-DD` or `THH:MM`) and
+  shows what is missing under itself, so a form refuses the value rather than
+  read it as blank: `DateTimePicker.Value.parse/1` reads it.
   """
   picker_attrs()
   @spec datetime_picker(map()) :: Phoenix.LiveView.Rendered.t()
@@ -81,13 +84,15 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePicker do
     time_format = PickerPreferences.time_format(assigns.time_format, locale)
     week_start = PickerPreferences.week_start(assigns.week_start)
     value = iso_value(assigns[:value])
-    error_id = assigns.errors != [] && "#{assigns.id}-error"
+    errors = field_errors(assigns.kind, value, assigns.errors)
+    error_id = errors != [] && "#{assigns.id}-error"
 
     assigns =
       assign(
         assigns,
         Map.merge(split_rest(assigns.rest, error_id), %{
           value: value,
+          errors: errors,
           error_id: error_id,
           native_type: Map.fetch!(@native_types, assigns.kind),
           field_name: assigns.label || assigns.rest[:"aria-label"] || default_name(assigns.kind),
@@ -362,9 +367,21 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePicker do
   defp default_name(:time), do: dgettext("common", "Time")
   defp default_name(:datetime), do: dgettext("common", "Date and time")
 
+  # A half-filled date and time is the field's own error. Whatever the form
+  # said of it was said of a value it could not read, so this replaces it.
+  defp field_errors(:datetime, value, errors) do
+    case Value.unfinished(value) do
+      nil -> errors
+      reason -> [Value.message(reason)]
+    end
+  end
+
+  defp field_errors(_kind, _value, errors), do: errors
+
   # What the hook needs and the page has already said once in its language.
-  defp config(%{kind: kind}, locale, time_format, week_start) do
+  defp config(%{kind: kind, today: today}, locale, time_format, week_start) do
     %{locale: locale, weekStart: if(week_start == :sunday, do: 0, else: 1)}
+    |> maybe_merge(iso_bound(today) != nil, fn -> %{today: iso_bound(today)} end)
     |> maybe_merge(kind != :time, fn -> date_config(locale) end)
     |> maybe_merge(kind != :date, fn -> time_config(time_format) end)
   end

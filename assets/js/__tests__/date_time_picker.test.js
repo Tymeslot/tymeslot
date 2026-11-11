@@ -136,10 +136,10 @@ function markup(kind, value, attrs = "") {
       <input id="p-native" data-picker-native style="display: none" ${attrs} />`;
 }
 
-function field(kind, value, attrs = "") {
+function field(kind, value, attrs = "", extraConfig = {}) {
   document.body.innerHTML = `
     <form id="host" phx-submit="save">
-      <div id="p-field" data-picker-kind="${kind}" data-picker-config='${JSON.stringify(config)}'>
+      <div id="p-field" data-picker-kind="${kind}" data-picker-config='${JSON.stringify({ ...config, ...extraConfig })}'>
         ${markup(kind, value, attrs)}
       </div>
     </form>`;
@@ -180,6 +180,8 @@ describe("the DateTimePicker hook", () => {
       return matches.call(this, selector);
     });
     Element.prototype.scrollIntoView = vi.fn();
+    // jsdom has no form submission; Enter's submit is asserted where it matters.
+    vi.spyOn(HTMLFormElement.prototype, "requestSubmit").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -356,12 +358,14 @@ describe("the DateTimePicker hook", () => {
     expect(onForm).not.toHaveBeenCalled();
   });
 
-  test("Enter takes the typed value, and leaves a form with no submit alone", () => {
+  test("Enter takes the typed value and submits the form explicitly", () => {
     const hook = field("date", "");
     const date = part(hook);
     const seen = listenInput();
+    const form = document.querySelector("#host");
+    const requestSubmit = vi.fn();
 
-    document.querySelector("#host").removeAttribute("phx-submit");
+    form.requestSubmit = requestSubmit;
     date.text.value = "1/2/2026";
 
     const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
@@ -370,6 +374,39 @@ describe("the DateTimePicker hook", () => {
 
     expect(seen).toEqual(["2026-02-01"]);
     expect(event.defaultPrevented).toBe(true);
+    expect(requestSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  test("Enter takes the typed value, and leaves a form with no submit alone", () => {
+    const hook = field("date", "");
+    const date = part(hook);
+    const seen = listenInput();
+
+    const form = document.querySelector("#host");
+    const requestSubmit = vi.fn();
+
+    form.removeAttribute("phx-submit");
+    form.requestSubmit = requestSubmit;
+    date.text.value = "1/2/2026";
+
+    const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+
+    date.text.dispatchEvent(event);
+
+    expect(seen).toEqual(["2026-02-01"]);
+    expect(event.defaultPrevented).toBe(true);
+    expect(requestSubmit).not.toHaveBeenCalled();
+  });
+
+  test("the calendar opens on, and marks, the page's today rather than the device's", () => {
+    const hook = field("date", "", "", { today: "2030-05-20" });
+    const date = part(hook);
+
+    date.trigger.click();
+
+    expect(date.panel.querySelector("[data-picker-month]").textContent).toBe("May 2030");
+    expect(date.panel.querySelector('[aria-current="date"]').dataset.date).toBe("2030-05-20");
+    expect(document.activeElement.dataset.date).toBe("2030-05-20");
   });
 
   test("the time list posts HH:MM and marks the current time", () => {
@@ -387,18 +424,40 @@ describe("the DateTimePicker hook", () => {
     expect(time.text.value).toBe("09:15");
   });
 
-  test("a combined field posts nothing until both halves are chosen", () => {
+  test("a combined field posts the half it has, so the server can say what is missing", () => {
     const hook = field("datetime", "");
     const seen = listenInput();
 
     hook.setPart("date", "2026-11-14");
 
-    expect(seen).toEqual([]);
+    expect(seen).toEqual(["2026-11-14"]);
     expect(part(hook, "time").text.value).toBe("");
 
     hook.setPart("time", "10:15");
 
-    expect(seen).toEqual(["2026-11-14T10:15"]);
+    expect(seen).toEqual(["2026-11-14", "2026-11-14T10:15"]);
+  });
+
+  test("composeValue tells blank, a date alone, a time alone and both apart", () => {
+    const hook = field("datetime", "");
+
+    expect(hook.composeValue()).toBe("");
+
+    hook.state = { date: "2026-11-14", time: "" };
+    expect(hook.composeValue()).toBe("2026-11-14");
+
+    hook.state = { date: "", time: "10:15" };
+    expect(hook.composeValue()).toBe("T10:15");
+
+    hook.state = { date: "2026-11-14", time: "10:15" };
+    expect(hook.composeValue()).toBe("2026-11-14T10:15");
+  });
+
+  test("a half-filled value from the server shows the half it has", () => {
+    const hook = field("datetime", "T10:15");
+
+    expect(part(hook, "date").text.value).toBe("");
+    expect(hook.state).toEqual({ date: "", time: "10:15" });
   });
 
   test("an empty time list opens on 09:00 without choosing it, and Tab leaves it unchosen", () => {

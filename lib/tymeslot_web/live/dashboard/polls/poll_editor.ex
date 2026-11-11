@@ -290,6 +290,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   end
 
   defp save(socket, params) do
+    case PollFormErrors.finished_times(params, "new_times") do
+      :ok ->
+        save_details(socket, params)
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :errors, PollFormErrors.errors_for(reason, :new_times))}
+    end
+  end
+
+  defp save_details(socket, params) do
     %{poll: poll, user_id: user_id} = socket.assigns
 
     attrs = save_attrs(params, socket.assigns)

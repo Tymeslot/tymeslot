@@ -39,7 +39,7 @@ msgstr[1] ""
 msgid "Add any context for your guests"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Add at least one candidate time"
 msgstr ""

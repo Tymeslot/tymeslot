@@ -138,6 +138,13 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePickerTest do
       PickerPreferences.put_week_start(:sunday)
       assert %{"weekStart" => 0} = config(date(id: "d", name: "n", value: "", label: "L"))
     end
+
+    test "passes the page's today to the calendar, and leaves it to the device without one" do
+      refute Map.has_key?(config(date(id: "d", name: "n", value: "", label: "L")), "today")
+
+      assert %{"today" => "2026-11-15"} =
+               config(date(id: "d", name: "n", value: "", label: "L", today: ~D[2026-11-15]))
+    end
   end
 
   describe "time_picker/1" do
@@ -194,6 +201,31 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePickerTest do
                  "[name='n']",
                  "value"
                )
+    end
+
+    test "keeps a date with no time, and says under the field that the time is missing" do
+      html = datetime(id: "c", name: "n", value: "2026-11-14", label: "L", errors: ["is invalid"])
+
+      assert ["2026-11-14"] == attribute(html, "[name='n']", "value")
+      assert ["14 Nov 2026"] == attribute(html, "#c", "value")
+      assert ["true"] == attribute(html, "#c-time", "aria-invalid")
+
+      assert html |> LazyHTML.from_fragment() |> LazyHTML.query("#c-error") |> LazyHTML.text() =~
+               "Add a time"
+
+      refute html =~ "is invalid"
+    end
+
+    test "keeps a time with no date, and says the date is missing" do
+      html = datetime(id: "c", name: "n", value: "T14:30", label: "L", time_format: "24h")
+
+      assert ["14:30"] == attribute(html, "#c-time", "value")
+      assert html =~ "Add a date"
+    end
+
+    test "shows no error for a complete or a blank value" do
+      refute datetime(id: "c", name: "n", value: "2026-11-14T14:30", label: "L") =~ "c-error"
+      refute datetime(id: "c", name: "n", value: "", label: "L") =~ "c-error"
     end
 
     test "names the time half so it is not read as a second copy of the date" do

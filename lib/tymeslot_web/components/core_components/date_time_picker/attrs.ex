@@ -27,6 +27,14 @@ defmodule TymeslotWeb.Components.CoreComponents.DateTimePicker.Attrs do
 
       attr :max, :any, default: nil, doc: "the latest ISO date (or `HH:MM` time) offered"
 
+      attr :today, :any,
+        default: nil,
+        doc: """
+        today's date where the page counts days (a `Date` or ISO date), so the
+        calendar marks and opens on the day `min` and `max` were drawn from;
+        defaults to the viewer's device date
+        """
+
       attr :variant, :atom,
         default: :default,
         values: [:default, :compact, :inline],

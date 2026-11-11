@@ -243,6 +243,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
             field={@form[:expires_on]}
             label={dgettext("dashboard_meeting_types", "Link expires on (optional)")}
             min={Date.to_iso8601(today(@timezone))}
+            today={today(@timezone)}
           />
         </div>
         <input

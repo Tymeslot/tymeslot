@@ -421,3 +421,13 @@ msgstr "Předchozí měsíc"
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr "Čas"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker/value.ex
+#, elixir-autogen, elixir-format
+msgid "Add a date"
+msgstr "Doplňte datum"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker/value.ex
+#, elixir-autogen, elixir-format
+msgid "Add a time"
+msgstr "Doplňte čas"

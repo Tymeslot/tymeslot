@@ -373,7 +373,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   defp create(socket, params) do
     intent = if params["intent"] == "draft", do: :draft, else: :publish
 
-    with {:ok, invitees} <- parse_invitees(params),
+    with :ok <- PollFormErrors.finished_times(params, "slots"),
+         {:ok, invitees} <- parse_invitees(params),
          attrs = Map.put(build_attrs(params, socket), :invitees, invitees),
          {:ok, poll} <- save(intent, socket.assigns.draft, socket.assigns.current_user.id, attrs) do
       Flash.info(saved_message(intent, poll, invitees))
@@ -640,9 +641,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   defp errors_for({:rate_limited, _remaining} = reason),
     do: %{invitees: [PollInvite.error_message(reason)]}
-
-  defp errors_for(:no_slots),
-    do: %{slots: [dgettext("dashboard_polls", "Add at least one candidate time")]}
 
   defp errors_for(%Changeset{} = changeset), do: PollFormErrors.changeset_errors(changeset)
   defp errors_for(reason), do: PollFormErrors.errors_for(reason, :slots)

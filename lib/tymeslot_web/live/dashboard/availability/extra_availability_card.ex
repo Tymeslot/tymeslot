@@ -59,6 +59,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ExtraAvailabilityCard do
             label={dgettext("dashboard_availability", "Date")}
             value={@form["date"]}
             min={Date.to_iso8601(@today)}
+            today={@today}
             required
           />
           <.time_picker

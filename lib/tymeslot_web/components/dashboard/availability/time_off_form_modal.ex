@@ -40,8 +40,8 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
   values as strings, `:errors`, a map of field to message rendered under the
   field it belongs to, `:min_starts_on`/`:min_ends_on` and
   `:max_starts_on`/`:max_ends_on`, the earliest and latest date each picker
-  offers, and `:conflicts`, the bookings that already sit inside the dates as
-  they currently stand.
+  offers, `:today`, the host's today they are drawn from, and `:conflicts`,
+  the bookings that already sit inside the dates as they currently stand.
 
   The bounds are a hint, not a guard: a typed or pasted date outside them
   still posts, and the changeset is what refuses it. They are here so the
@@ -92,6 +92,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
               value={Map.get(@period_data, :starts_on, "")}
               min={Map.get(@period_data, :min_starts_on)}
               max={Map.get(@period_data, :max_starts_on)}
+              today={Map.get(@period_data, :today)}
               label={dgettext("dashboard_availability", "First day away")}
               errors={field_errors(@period_data, :starts_on)}
             />
@@ -101,6 +102,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
               value={Map.get(@period_data, :ends_on, "")}
               min={Map.get(@period_data, :min_ends_on)}
               max={Map.get(@period_data, :max_ends_on)}
+              today={Map.get(@period_data, :today)}
               label={dgettext("dashboard_availability", "Last day away")}
               errors={field_errors(@period_data, :ends_on)}
             />

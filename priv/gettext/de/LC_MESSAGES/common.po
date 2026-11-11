@@ -416,3 +416,13 @@ msgstr "Vorheriger Monat"
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr "Uhrzeit"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker/value.ex
+#, elixir-autogen, elixir-format
+msgid "Add a date"
+msgstr "Datum angeben"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker/value.ex
+#, elixir-autogen, elixir-format
+msgid "Add a time"
+msgstr "Uhrzeit angeben"

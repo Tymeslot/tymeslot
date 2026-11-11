@@ -293,6 +293,67 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       assert Polls.list_polls(user.id) == []
     end
 
+    # A date picked with no time used to post nothing, and the poll was
+    # created with no deadline at all.
+    test "refuses a deadline with a date and no time, and says the time is missing", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+      deadline_day = Date.utc_today() |> Date.add(3) |> Date.to_iso8601()
+
+      fields = %{"poll" => %{"title" => "Launch planning"}}
+
+      pickers = %{
+        "poll" => %{
+          "duration" => "30",
+          "timezone" => "Europe/Tallinn",
+          "deadline" => deadline_day,
+          "slots" => %{"0" => "#{date}T09:00"}
+        }
+      }
+
+      view |> form("form[phx-submit='create_poll']", fields) |> render_change(pickers)
+      view |> form("form[phx-submit='create_poll']", fields) |> render_submit(pickers)
+
+      assert view |> element("[id^='poll-deadline-'][id$='-error']") |> render() =~ "Add a time"
+
+      assert Polls.list_polls(user.id) == []
+    end
+
+    test "refuses a candidate time with a date and no time, rather than drop the row", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+
+      fields = %{"poll" => %{"title" => "Launch planning"}}
+
+      pickers = %{
+        "poll" => %{
+          "duration" => "30",
+          "timezone" => "Europe/Tallinn",
+          "slots" => %{"0" => "#{date}T09:00", "1" => date}
+        }
+      }
+
+      view |> form("form[phx-submit='create_poll']", fields) |> render_change(pickers)
+      view |> form("form[phx-submit='create_poll']", fields) |> render_submit(pickers)
+
+      assert view |> element("[id$='-slot-1-field']") |> render() =~ "Add a time"
+      refute view |> element("[id$='-slot-0-field']") |> render() =~ "Add a time"
+      assert Polls.list_polls(user.id) == []
+    end
+
     # A changeset refusal reaches the form in the host's language, like the
     # form's own copy around it.
     test "shows a refused title in the host's language", %{conn: conn, user: user} do

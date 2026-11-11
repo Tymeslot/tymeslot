@@ -143,12 +143,16 @@ export const DateTimePicker = {
     return { date, time: time.slice(0, 5) };
   },
 
+  // A half-filled date and time posts the half it has (`2026-11-14`, or
+  // `T14:30`), so the server can tell a field left blank from one left
+  // unfinished and say what is missing, rather than read it as blank.
   composeValue() {
     const { date, time } = this.state;
 
     if (this.kind === "date") return date;
     if (this.kind === "time") return time;
-    return date !== "" && time !== "" ? `${date}T${time}` : "";
+    if (time === "") return date;
+    return `${date}T${time}`;
   },
 
   // A patch writes the server's value back over the hidden input. If the
@@ -233,12 +237,17 @@ export const DateTimePicker = {
     target.focus();
   },
 
-  // Enter takes what was typed and lets the form submit, if it has a submit to
-  // run: a form that only `phx-change`s has nothing to do with it.
+  // Enter takes what was typed and submits the form, if it has a submit to
+  // run: a form that only `phx-change`s has nothing to do with it. The submit
+  // is explicit, as implicit submission depends on how the browser counts the
+  // form's text fields.
   handleTextKey(part, event) {
     if (event.key === "Enter") {
+      event.preventDefault();
       this.commitText(part);
-      if (!part.text.form?.hasAttribute("phx-submit")) event.preventDefault();
+
+      const form = part.text.form;
+      if (form?.hasAttribute("phx-submit")) form.requestSubmit();
     } else if (event.key === "ArrowDown") {
       event.preventDefault();
       this.show(part);
@@ -342,8 +351,14 @@ export const DateTimePicker = {
   // ---- The date dialog ---------------------------------------------------
 
   prepareDatePanel(part) {
-    part.activeDate = parseIso(this.state.date) ? this.state.date : this.clampToRange(todayIso());
+    part.activeDate = parseIso(this.state.date) ? this.state.date : this.clampToRange(this.today());
     this.renderMonth(part);
+  },
+
+  // The page's today where it gave one (the day its bounds were drawn from, in
+  // the host's timezone), else the device's.
+  today() {
+    return this.config.today || todayIso();
   },
 
   // Today, unless the field cannot take it: then the nearest day it can.
@@ -361,7 +376,7 @@ export const DateTimePicker = {
     const { monthHeadings, weekStart, locale } = this.config;
     const heading = part.panel.querySelector("[data-picker-month]");
     const body = part.panel.querySelector("[data-picker-days]");
-    const today = todayIso();
+    const today = this.today();
     const dateLabel = new Intl.DateTimeFormat(locale, { dateStyle: "full", timeZone: "UTC" });
     const rows = [];
 
