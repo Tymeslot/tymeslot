@@ -316,7 +316,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
         dgettext("dashboard_calendar_providers", "Use of %{calendar}", calendar: name(@calendar))
       }
       on_change={push("set_calendar_state", @integration_id, @calendar.id, @target)}
-      param="state"
+      param="use"
     >
       <:option
         value="off"

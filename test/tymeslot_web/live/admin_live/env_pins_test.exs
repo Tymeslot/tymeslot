@@ -34,7 +34,7 @@ defmodule TymeslotWeb.AdminLive.EnvPinsTest do
     for state <- ["true", "false"] do
       assert has_element?(
                lv,
-               ~s|button[phx-value-key="registration_enabled"][phx-value-state="#{state}"][aria-disabled="true"]|
+               ~s|button[phx-value-key="registration_enabled"][phx-value-enabled="#{state}"][aria-disabled="true"]|
              )
     end
   end
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.AdminLive.EnvPinsTest do
 
     assert has_element?(
              lv,
-             ~s|button[phx-value-key="registration_enabled"][phx-value-state="false"][aria-describedby="setting-registration_enabled-false-lock-reason"]|
+             ~s|button[phx-value-key="registration_enabled"][phx-value-enabled="false"][aria-describedby="setting-registration_enabled-false-lock-reason"]|
            )
 
     assert has_element?(
@@ -85,7 +85,7 @@ defmodule TymeslotWeb.AdminLive.EnvPinsTest do
     {:ok, lv, _html} = live(conn, ~p"/admin/settings")
 
     html =
-      render_click(lv, "set_setting", %{"key" => "registration_enabled", "state" => "false"})
+      render_click(lv, "set_setting", %{"key" => "registration_enabled", "enabled" => "false"})
 
     assert html =~ "Set by the REGISTRATION_ENABLED environment variable"
     assert Application.get_env(:tymeslot, :registration_enabled) == true

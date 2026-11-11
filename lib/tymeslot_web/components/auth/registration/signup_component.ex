@@ -156,7 +156,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
         <.auth_footer
           prompt={dgettext("auth", "Already have an account?")}
           phx-click="navigate_to"
-          phx-value-state="login"
+          phx-value-to="login"
           link_text={dgettext("auth", "Log in")}
         />
       </:footer>

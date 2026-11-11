@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.ConnectCta do
 
   Stateless function component rendered by `PaymentsSettingsComponent`. Posts
   to the Stripe Connect onboarding endpoint via a plain form (not a LiveView
-  event) so the controller can issue the OAuth redirect.
+  event) so the controller can redirect the host to Stripe's authorisation page.
   """
 
   use TymeslotWeb, :html
@@ -17,13 +17,12 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.ConnectCta do
       <p class="text-tymeslot-700 mb-6">
         {dgettext(
           "dashboard_payments",
-          "Connect Stripe to start charging for meetings. Money goes directly to your Stripe account."
+          "Connect your Stripe account, or create one, to charge for meetings. Money goes directly to your Stripe account."
         )}
       </p>
       <%!--
-        Opening Stripe takes a moment (two Stripe API calls before the
-        redirect). `data-submit-loading` lets the global submit handler show a
-        spinner and disable the button so a slow redirect cannot be rage-clicked.
+        `data-submit-loading` lets the global submit handler show a spinner and
+        disable the button, so a slow redirect to Stripe cannot be rage-clicked.
       --%>
       <form
         id="stripe-connect-form"

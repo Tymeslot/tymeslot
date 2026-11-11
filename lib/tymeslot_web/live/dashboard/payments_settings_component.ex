@@ -92,10 +92,12 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
         <%!--
           The operational sections (currency, payments, stats) only make sense
           once onboarding is submitted. While the account is still
-          `:incomplete`, the StatusCard shows the Continue-onboarding prompt
-          instead. Disconnect stays available either way: an account Stripe has
-          closed or rejected can never finish onboarding, and disconnecting is
-          how the host starts again with a new one.
+          `:incomplete`, the StatusCard shows its connect prompt (or the link to
+          finish in Stripe) instead. Disconnect stays available once the row
+          holds an account: one Stripe has closed or rejected can never finish
+          onboarding, and disconnecting is how the host starts again with a new
+          one. A placeholder row (a host who cancelled at Stripe) holds none, so
+          there is nothing to disconnect.
         --%>
         <div :if={not needs_onboarding?(@connect_account)} class="space-y-8">
           <.currency_selector account={@connect_account} myself={@myself} />
@@ -103,7 +105,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
           <.lifetime_stats stats={@stats} account={@connect_account} />
         </div>
 
-        <.disconnect_zone myself={@myself} />
+        <.disconnect_zone :if={not is_nil(@connect_account.stripe_account_id)} myself={@myself} />
       </div>
 
       <.refund_modal

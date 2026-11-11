@@ -488,13 +488,25 @@ if config_env() == :prod do
     if stripe_connect_webhook_secret do
       config :tymeslot, :stripe_connect_webhook_secret, stripe_connect_webhook_secret
     end
+
+    # Stripe Connect client ID (`ca_...`): needed to start a new OAuth
+    # connection; hosts already connected keep working without it.
+    stripe_connect_client_id = String.trim(System.get_env("STRIPE_CONNECT_CLIENT_ID", ""))
+
+    if stripe_connect_client_id != "" do
+      config :tymeslot, :stripe_connect_client_id, stripe_connect_client_id
+    else
+      Logger.warning(
+        "STRIPE_CONNECT_CLIENT_ID not set: hosts cannot connect a Stripe account by OAuth"
+      )
+    end
   end
 end
 
 # Self-host opt-in for the meeting-payments feature. Off by default — flipping
 # MEETING_PAYMENTS_ENABLED=true requires the instance owner to register their
-# instance as a Stripe platform and supply STRIPE_SECRET_KEY plus
-# STRIPE_CONNECT_WEBHOOK_SECRET above. The optional application fee is taken
+# instance as a Stripe platform and supply STRIPE_SECRET_KEY,
+# STRIPE_CONNECT_WEBHOOK_SECRET and STRIPE_CONNECT_CLIENT_ID above. The optional application fee is taken
 # from each charge in basis points (0–10000); defaults to 0 so no platform cut
 # is taken unless the operator explicitly sets one.
 case String.downcase(System.get_env("MEETING_PAYMENTS_ENABLED", "false")) do
@@ -503,12 +515,6 @@ case String.downcase(System.get_env("MEETING_PAYMENTS_ENABLED", "false")) do
 
   _ ->
     :ok
-end
-
-case System.get_env("MEETING_PAYMENTS_DEFAULT_COUNTRY") do
-  nil -> :ok
-  "" -> :ok
-  code -> config :tymeslot, :meeting_payments_default_country, String.downcase(code)
 end
 
 case System.get_env("MEETING_PAYMENTS_APPLICATION_FEE_BP") do
@@ -561,6 +567,14 @@ if config_env() in [:dev, :test] do
   config :tymeslot,
          :stripe_connect_webhook_secret,
          System.get_env("STRIPE_CONNECT_WEBHOOK_SECRET")
+
+  # Dev only: config/test.exs pins a fake value, which an exported real
+  # client ID must not override.
+  with :dev <- config_env(),
+       client_id when client_id != "" <-
+         String.trim(System.get_env("STRIPE_CONNECT_CLIENT_ID", "")) do
+    config :tymeslot, :stripe_connect_client_id, client_id
+  end
 end
 
 # Telegram integration feature flags (Core defaults)

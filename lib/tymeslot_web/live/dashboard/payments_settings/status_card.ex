@@ -9,11 +9,12 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
 
   Two states are distinct on purpose:
 
-    * `:incomplete`: the host started connecting but has not finished Stripe
-      onboarding (`details_submitted: false`). There is nothing for Stripe to
-      review yet, so the card shows a "Finish connecting Stripe" prompt with
-      a Continue-onboarding button that re-POSTs to `/dashboard/payments/connect`
-      for a fresh Stripe AccountLink.
+    * `:incomplete`: Stripe has no submitted details yet (`details_submitted:
+      false`), so there is nothing for it to review. The action depends on the
+      row. Without `oauth_connected_at` (a placeholder or a legacy row) the
+      card posts to `/dashboard/payments/connect` to start the OAuth
+      connection; with it, the host is linked to their Stripe dashboard to
+      finish setup, as Account Links are not used for OAuth connections.
     * `:pending_review`: onboarding *is* submitted but charges/payouts are not
       yet enabled, i.e. Stripe is genuinely reviewing the account.
 
@@ -45,7 +46,19 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
       notice_tone={notice_tone(@state)}
     >
       <:icon><.icon name="hero-credit-card" class="w-6 h-6" /></:icon>
-      <:actions :if={@state == :incomplete}>
+      <:actions :if={@state == :incomplete and oauth_connected?(@account)}>
+        <%!-- Account Links are not used for OAuth connections, so the rest happens in Stripe itself. --%>
+        <.action_link
+          href="https://dashboard.stripe.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          variant={:primary}
+          size={:sm}
+        >
+          {dgettext("dashboard_payments", "Finish setup in Stripe")}
+        </.action_link>
+      </:actions>
+      <:actions :if={@state == :incomplete and not oauth_connected?(@account)}>
         <%!--
           `data-submit-loading` shows a spinner and disables the button while the
           Stripe redirect is being prepared, preventing rage-clicks on a slow open.
@@ -62,7 +75,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
             <span data-submit-spinner class="hidden items-center gap-2">
               <.spinner /> {dgettext("dashboard_payments", "Connecting…")}
             </span>
-            <span data-submit-label>{dgettext("dashboard_payments", "Continue onboarding")}</span>
+            <span data-submit-label>
+              {dgettext("dashboard_payments", "Connect your Stripe account")}
+            </span>
           </.action_button>
         </form>
       </:actions>
@@ -79,6 +94,12 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   @spec needs_onboarding?(map()) :: boolean()
   def needs_onboarding?(account),
     do: MeetingPayments.connect_display_state(account) == :incomplete
+
+  # Only a row made by the OAuth connection has `oauth_connected_at`; a legacy
+  # row (opened through Stripe's hosted onboarding) has none. A placeholder with
+  # no Stripe account never reaches this card.
+  defp oauth_connected?(%{oauth_connected_at: %DateTime{}}), do: true
+  defp oauth_connected?(_account), do: false
 
   # ── Display mapping (state → tone/title/message) ───────────────────
 
@@ -128,12 +149,19 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
         "Stripe is reviewing your account. Charges switch on automatically once approved."
       )
 
-  defp state_message(_account, :incomplete),
-    do:
+  defp state_message(account, :incomplete) do
+    if oauth_connected?(account) do
       dgettext(
         "dashboard_payments",
-        "You started connecting Stripe but haven't finished onboarding yet. Continue to start accepting payments."
+        "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
       )
+    else
+      dgettext(
+        "dashboard_payments",
+        "Your Stripe account is not connected yet. Connect it to start accepting payments."
+      )
+    end
+  end
 
   defp state_message(_account, :deleted),
     do:

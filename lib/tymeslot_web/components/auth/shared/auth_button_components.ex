@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Shared.Auth.ButtonComponents do
         :value,
         :"phx-click",
         :"phx-submit",
-        :"phx-value-state",
+        :"phx-value-to",
         :"data-confirm",
         :"aria-label",
         :"aria-describedby"

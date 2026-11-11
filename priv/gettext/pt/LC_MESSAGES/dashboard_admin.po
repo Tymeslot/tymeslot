@@ -391,11 +391,6 @@ msgstr "Pontuação mínima do reCAPTCHA v3 (0,0–1,0) para aceitar um cadastro
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
-msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
-msgstr "Defina STRIPE_SECRET_KEY e STRIPE_CONNECT_WEBHOOK_SECRET no ambiente para ativar os pagamentos em reuniões. Sem as credenciais de plataforma, o fluxo de cadastro do Stripe Connect não consegue começar."
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex
-#, elixir-autogen, elixir-format
 msgid "Show the \"Continue with GitHub\" button on login and signup. Requires GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to be set in the environment."
 msgstr "Mostra o botão “Continuar com o GitHub” no login e no cadastro. Exige GITHUB_CLIENT_ID e GITHUB_CLIENT_SECRET definidos no ambiente."
 
@@ -434,11 +429,6 @@ msgstr "Não é possível desativar a autenticação por senha enquanto pelo men
 #, elixir-autogen, elixir-format
 msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint - no raw IP is stored. Off by default; review your privacy policy before enabling."
 msgstr "Coleta análises que respeitam a privacidade nas páginas de agendamento desta instância: visualizações, origem do tráfego (UTM/referenciador) e conversão. Conta visitantes únicos com um identificador sem cookies, renovado diariamente; o endereço IP em si nunca é armazenado. Desativado por padrão; revise sua política de privacidade antes de ativar."
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex
-#, elixir-autogen, elixir-format
-msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment - without them the toggle stays locked."
-msgstr "Permite que os anfitriões desta instância recebam pagamentos de quem agenda pelo Stripe Connect. Exige STRIPE_SECRET_KEY e STRIPE_CONNECT_WEBHOOK_SECRET definidos no ambiente; sem essas variáveis, a opção fica bloqueada."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -1005,3 +995,13 @@ msgstr "O link do convite deixará de funcionar e a conta convidada será removi
 #, elixir-autogen, elixir-format
 msgid "The invitation to %{email} is cancelled."
 msgstr "O convite para %{email} foi cancelado."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment: without them the toggle stays locked. Hosts connect their Stripe account with STRIPE_CONNECT_CLIENT_ID: without it, hosts who are already connected keep working, but no new host can connect."
+msgstr "Permite que os anfitriões desta instância recebam pagamentos de quem agenda pelo Stripe Connect. Exige STRIPE_SECRET_KEY e STRIPE_CONNECT_WEBHOOK_SECRET definidos no ambiente; sem essas variáveis, a opção fica bloqueada. Os anfitriões conectam a conta Stripe com STRIPE_CONNECT_CLIENT_ID; sem essa variável, os anfitriões já conectados continuam funcionando, mas nenhum novo anfitrião consegue se conectar."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex
+#, elixir-autogen, elixir-format
+msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Also set STRIPE_CONNECT_CLIENT_ID, or no new host can connect a Stripe account."
+msgstr "Defina STRIPE_SECRET_KEY e STRIPE_CONNECT_WEBHOOK_SECRET no ambiente para ativar os pagamentos em reuniões. Defina também STRIPE_CONNECT_CLIENT_ID; caso contrário, nenhum novo anfitrião consegue conectar uma conta Stripe."
