@@ -201,6 +201,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
           />{DashboardFormat.title(event.summary)}
           <.tooltip
             :if={EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)}
+            isolated
             text={
               EventBadges.guest_badge_title(
                 EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)

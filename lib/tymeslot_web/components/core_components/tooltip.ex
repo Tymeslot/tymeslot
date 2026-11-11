@@ -31,9 +31,20 @@ defmodule TymeslotWeb.Components.CoreComponents.Tooltip do
   On touch, tapping a control that cannot act (`aria-disabled`, `disabled`,
   read-only, or no control at all) toggles the bubble; a control that does act
   shows it on a long press.
+
+  `isolated` keeps that tap to the tooltip: for a badge inside a clickable
+  element (a calendar event), so tapping the badge shows its bubble without
+  also opening the element. The element's own accessible name should then
+  carry the badge's information, since keyboard and screen-reader users reach
+  the element, not the badge.
   """
   attr :id, :string, default: nil, doc: "id of the bubble, for `aria-describedby`"
   attr :text, :any, default: nil, doc: "the tooltip text; no bubble when nil or empty"
+
+  attr :isolated, :boolean,
+    default: false,
+    doc: "on touch, a tap on the trigger does not reach an enclosing clickable element"
+
   slot :inner_block, required: true
 
   @spec tooltip(map()) :: Phoenix.LiveView.Rendered.t()
@@ -45,13 +56,16 @@ defmodule TymeslotWeb.Components.CoreComponents.Tooltip do
 
   def tooltip(%{text: text} = assigns) when text in [nil, "", false] do
     ~H"""
-    <span class="tooltip-anchor" data-tooltip>{render_slot(@inner_block, nil)}</span>
+    <span class="tooltip-anchor" data-tooltip data-tooltip-isolated={@isolated}>{render_slot(
+      @inner_block,
+      nil
+    )}</span>
     """
   end
 
   def tooltip(assigns) do
     ~H"""
-    <span class="tooltip-anchor" data-tooltip>
+    <span class="tooltip-anchor" data-tooltip data-tooltip-isolated={@isolated}>
       {render_slot(@inner_block, @id)}<span
         id={@id}
         role="tooltip"

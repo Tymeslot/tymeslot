@@ -120,6 +120,70 @@ describe('tooltip', () => {
     expect(bubble.hidePopover).toHaveBeenCalledTimes(1)
   })
 
+  describe('an isolated anchor inside a clickable parent', () => {
+    const NESTED = (isolated) => `
+      <div id="card" role="button" tabindex="0">
+        Event
+        <span data-tooltip ${isolated ? 'data-tooltip-isolated' : ''}>
+          <span id="badge" role="img" aria-label="Locked"></span>
+          <span role="tooltip" popover="manual">Locked</span>
+        </span>
+      </div>`
+
+    function setup(isolated) {
+      document.body.innerHTML = NESTED(isolated)
+      const card = document.getElementById('card')
+      const badge = document.getElementById('badge')
+      const bubble = document.querySelector('[role="tooltip"]')
+      bubble.showPopover = vi.fn()
+      const opened = vi.fn()
+      card.addEventListener('click', opened)
+      return { card, badge, bubble, opened }
+    }
+
+    it('a tap on the badge shows the bubble and does not reach the parent', () => {
+      const { badge, bubble, opened } = setup(true)
+
+      pointer('pointerdown', badge, { pointerType: 'touch' })
+      pointer('pointerup', badge, { pointerType: 'touch' })
+      const click = new MouseEvent('click', { bubbles: true, cancelable: true })
+      badge.dispatchEvent(click)
+
+      expect(bubble.showPopover).toHaveBeenCalledTimes(1)
+      expect(opened).not.toHaveBeenCalled()
+      expect(click.defaultPrevented).toBe(true)
+    })
+
+    it('without the attribute the tap still reaches the parent', () => {
+      const { badge, opened } = setup(false)
+
+      pointer('pointerdown', badge, { pointerType: 'touch' })
+      badge.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+      expect(opened).toHaveBeenCalledTimes(1)
+    })
+
+    it('a tap elsewhere on the parent still opens it', () => {
+      const { card, badge, opened } = setup(true)
+
+      pointer('pointerdown', badge, { pointerType: 'touch' })
+      badge.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+      pointer('pointerdown', card, { pointerType: 'touch' })
+      card.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+      expect(opened).toHaveBeenCalledTimes(1)
+    })
+
+    it('a mouse click on the badge still reaches the parent', () => {
+      const { badge, opened } = setup(true)
+
+      pointer('pointerdown', badge, { pointerType: 'mouse' })
+      badge.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+      expect(opened).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it('shows on a long press when the control can act, and swallows the click', () => {
     const { control, bubble } = mount(BUTTON)
 

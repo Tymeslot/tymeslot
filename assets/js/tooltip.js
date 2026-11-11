@@ -14,6 +14,9 @@
  * - Touch: a tap toggles the bubble on a control that cannot act
  *   (aria-disabled, disabled, read-only, or no control at all); a control
  *   that does act shows it on a long press, since a tap is its action.
+ *   An anchor marked `data-tooltip-isolated` keeps that tap to itself: its
+ *   click goes no further, so a badge inside a clickable card shows its bubble
+ *   without also opening the card.
  *
  * Scrolling or resizing moves the bubble with its control. A LiveView patch can strip the inline placement from an open bubble, so
  * the placement is restored from a small observer while it is open.
@@ -35,6 +38,7 @@ let showTimer = null
 let pressTimer = null
 let dismissed = null // anchor closed by Escape, until it is left
 let swallowClick = false
+let isolatedTap = null // anchor whose touch tap must not reach its ancestors
 
 const anchorOf = (node) => node instanceof Element ? node.closest('[data-tooltip]') : null
 const bubbleOf = (anchor) => anchor.querySelector(':scope > [role="tooltip"]')
@@ -154,6 +158,7 @@ function onFocusOut(event) {
 
 function onPointerDown(event) {
   swallowClick = false
+  isolatedTap = null
   const anchor = anchorOf(event.target)
 
   if (event.pointerType !== 'touch') {
@@ -173,10 +178,10 @@ function onPointerDown(event) {
       swallowClick = true
       show(anchor)
     }, LONG_PRESS)
-  } else if (open && open.anchor === anchor) {
-    hide()
   } else {
-    show(anchor)
+    if (anchor.hasAttribute('data-tooltip-isolated')) isolatedTap = anchor
+    if (open && open.anchor === anchor) hide()
+    else show(anchor)
   }
 }
 
@@ -186,7 +191,9 @@ function clearPress() {
 }
 
 function onClick(event) {
-  if (!swallowClick) return
+  const isolated = isolatedTap !== null && anchorOf(event.target) === isolatedTap
+  isolatedTap = null
+  if (!swallowClick && !isolated) return
   swallowClick = false
   event.preventDefault()
   event.stopPropagation()

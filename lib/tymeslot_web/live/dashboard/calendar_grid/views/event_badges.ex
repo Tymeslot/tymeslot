@@ -6,6 +6,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
 
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
 
+  # ---------- Event accessible name ----------
+
+  @doc """
+  The accessible name of an event block, carrying what its badges say.
+
+  The block is the control keyboard and screen-reader users reach, and its
+  `aria-label` replaces the badges inside it, so their guest count and seat
+  lock are spelled out here rather than left to the badges' tooltips.
+  """
+  @spec event_label(String.t(), map() | nil, boolean()) :: String.t()
+  def event_label(base, guest_summary, locked) do
+    [
+      base,
+      guest_summary && guest_badge_title(guest_summary),
+      locked && Shared.seat_lock_message()
+    ]
+    |> Enum.filter(&is_binary/1)
+    |> Enum.join(". ")
+  end
+
   # ---------- Seat lock indicator ----------
 
   @doc """
@@ -25,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
   @spec seat_lock_badge(map()) :: Phoenix.LiveView.Rendered.t()
   def seat_lock_badge(assigns) do
     ~H"""
-    <.tooltip :if={@locked} text={Shared.seat_lock_message()}>
+    <.tooltip :if={@locked} text={Shared.seat_lock_message()} isolated>
       <span
         role="img"
         aria-label={Shared.seat_lock_message()}
@@ -45,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
   @spec event_guest_badge(map()) :: Phoenix.LiveView.Rendered.t()
   def event_guest_badge(assigns) do
     ~H"""
-    <.tooltip :if={@summary} text={guest_badge_title(@summary)}>
+    <.tooltip :if={@summary} text={guest_badge_title(@summary)} isolated>
       <span
         role="img"
         aria-label={guest_badge_title(@summary)}
