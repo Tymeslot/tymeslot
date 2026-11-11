@@ -485,6 +485,21 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
     assert has_element?(view, "#onboarding-step-heading-choose_theme")
   end
 
+  test "a Continue the account cannot record stays on the step with a flash, not a field error",
+       %{conn: conn} do
+    %{user: user} = new_host()
+    view = open_step(conn, user)
+
+    # The account is gone by the time the stamp is written.
+    Repo.delete!(user)
+    view |> element("button[phx-click='next_step']") |> render_click()
+
+    assert has_element?(view, "#onboarding-step-heading-meeting")
+    refute has_element?(view, "#onboarding-step-heading-choose_theme")
+    assert render(view) =~ "Your meeting couldn&#39;t be saved. Please try again."
+    refute has_element?(view, "#meeting-location-error")
+  end
+
   describe "malformed events" do
     test "params that are missing or not strings leave the session running", %{conn: conn} do
       %{user: user} = new_host()

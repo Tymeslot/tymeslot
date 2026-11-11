@@ -27,6 +27,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
 
   alias Ecto.Changeset
   alias Phoenix.Component
+  alias Phoenix.LiveView
   alias Tymeslot.Availability
   alias Tymeslot.Onboarding
   alias Tymeslot.Onboarding.MeetingSetup
@@ -501,7 +502,8 @@ defmodule TymeslotWeb.OnboardingLive.MeetingHandlers do
   defp confirm_step(socket) do
     case Onboarding.confirm_meeting_step(socket.assigns.current_user) do
       {:ok, user} -> {:ok, Component.assign(socket, :current_user, user)}
-      {:error, _reason} -> {:error, put_error(socket, :location, message(:save, :failed))}
+      # Not a field's fault: say so in the flash, as the other steps do.
+      {:error, _reason} -> {:error, LiveView.put_flash(socket, :error, message(:save, :failed))}
     end
   end
 
