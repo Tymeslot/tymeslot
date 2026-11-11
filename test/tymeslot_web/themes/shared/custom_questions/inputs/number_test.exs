@@ -21,4 +21,14 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.NumberTest do
     html = render_input(%{"type" => "number", "label" => "Age"}, 42)
     assert html =~ ~s(value="42")
   end
+
+  test "a question that cannot go negative asks for the decimal keypad" do
+    html = render_input(%{"type" => "number", "label" => "Age", "min" => 0})
+    assert html =~ ~s(inputmode="decimal")
+  end
+
+  test "a question with no lower bound keeps the phone's number keyboard, minus key included" do
+    refute render_input(%{"type" => "number", "label" => "Balance"}) =~ "inputmode"
+    refute render_input(%{"type" => "number", "label" => "Balance", "min" => -5}) =~ "inputmode"
+  end
 end

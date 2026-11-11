@@ -69,6 +69,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
         phx-submit="update_basic_settings"
         class="onboarding-form"
         id="profile-form"
+        novalidate
       >
         <%!-- Full name --%>
         <div class="onboarding-form-group">
@@ -155,6 +156,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
           phx-change="validate_avatar"
           phx-drop-target={@uploads.avatar.ref}
           class="flex items-center gap-4 mt-1"
+          novalidate
         >
           <div
             :if={@profile && @profile.avatar}

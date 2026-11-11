@@ -540,9 +540,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RepeatPatternsLiveViewTest do
   end
 
   defp pick(lv, fields) do
+    {selects, others} = Map.split(fields, ~w(freq on end_type))
+
     lv
-    |> form("#recurrence-editor-form-update_event_recurrence", fields)
-    |> render_change()
+    |> form("#recurrence-editor-form-update_event_recurrence", others)
+    |> render_change(selects)
   end
 
   # A write to a whole series closes the event once it has answered; wait

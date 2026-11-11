@@ -230,7 +230,7 @@ defmodule TymeslotWeb.AdminLiveTest do
       {:ok, _lv, html} = live(conn, ~p"/admin/settings")
 
       assert html =~
-               ~s(phx-value-key="password_auth_enabled" phx-value-state="false" disabled)
+               ~s(phx-value-key="password_auth_enabled" phx-value-state="false" aria-pressed="false" aria-disabled="true")
 
       assert html =~ "Cannot disable password authentication"
     end
@@ -301,15 +301,15 @@ defmodule TymeslotWeb.AdminLiveTest do
 
     test "submitting a malformed admin alert email surfaces an inline error",
          %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+      {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
-      html =
-        render_submit(lv, "save_setting", %{
-          "key" => "admin_alert_email",
-          "value" => "not-an-email"
-        })
+      render_submit(lv, "save_setting", %{
+        "key" => "admin_alert_email",
+        "value" => "not-an-email"
+      })
 
-      assert html =~ "valid email address"
+      assert has_element?(lv, "#setting-error-admin_alert_email", "valid email address")
+      assert has_element?(lv, "#setting-input-admin_alert_email[value='not-an-email']")
     end
 
     test "submitting a blank admin alert email clears the override",

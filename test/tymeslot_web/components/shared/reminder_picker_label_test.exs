@@ -70,4 +70,44 @@ defmodule TymeslotWeb.Components.Shared.ReminderPickerLabelTest do
       refute html =~ "30 minutes"
     end
   end
+
+  describe "the reminder cap" do
+    test "shows why the add buttons are disabled and links the buttons to it" do
+      html =
+        render_component(&ReminderPicker.reminder_picker/1, %{
+          reminders: [%{value: 30, unit: "minutes"}],
+          max_reminders: 1,
+          new_reminder_value: "",
+          new_reminder_unit: "minutes",
+          reminder_error: nil,
+          description: "One reminder.",
+          myself: nil
+        })
+
+      doc = Floki.parse_document!(html)
+
+      assert doc |> Floki.find("#reminder-limit-hint") |> Floki.text() =~
+               "Maximum of 1 reminder allowed"
+
+      assert [_first | _rest] =
+               Floki.find(doc, "button[disabled][aria-describedby='reminder-limit-hint']")
+
+      assert Floki.find(doc, "button[title]") == []
+    end
+
+    test "says nothing while more can be added" do
+      html =
+        render_component(&ReminderPicker.reminder_picker/1, %{
+          reminders: [],
+          max_reminders: 3,
+          new_reminder_value: "",
+          new_reminder_unit: "minutes",
+          reminder_error: nil,
+          description: "Add reminders.",
+          myself: nil
+        })
+
+      refute html =~ "Maximum of"
+    end
+  end
 end

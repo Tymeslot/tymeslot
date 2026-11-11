@@ -3,11 +3,12 @@ defmodule CredoChecks.UseCoreInputs do
   Ensures that core components are used instead of raw HTML input tags or standard Phoenix form helpers.
 
   Raw `<input>`, `<textarea>`, and `<select>` tags, as well as `Phoenix.HTML.Form` helpers,
-  should be avoided in favor of standardized components in `TymeslotWeb.Components.CoreComponents`.
+  should be avoided in favor of standardized components in `TymeslotWeb.Components.CoreComponents`
+  (`input/1`, and `select/1` for a select).
 
   Tags are read whole, so one whose attributes the formatter has wrapped onto
-  the following lines is caught too. A control `input/1` cannot render is
-  exempted by a `<%!-- raw-input: <reason> --%>` comment directly above it.
+  the following lines is caught too. A control the core components cannot render
+  is exempted by a `<%!-- raw-input: <reason> --%>` comment directly above it.
   """
 
   use Credo.Check,
@@ -41,7 +42,7 @@ defmodule CredoChecks.UseCoreInputs do
   # a literal expression (`type={"hidden"}`).
   @hidden_regex ~r/\stype=(?:["']hidden["']|\{\s*"hidden"\s*\})/i
 
-  # A raw control that `input/1` cannot render (a radio drawn as an option
+  # A raw control the core components cannot render (a radio drawn as an option
   # card, a file input behind a styled button) is exempted where it stands,
   # by a HEEx comment directly above the tag that says why:
   #
@@ -79,13 +80,15 @@ defmodule CredoChecks.UseCoreInputs do
         not Regex.match?(@hidden_regex, text),
         not exempt?(comment) do
       format_issue(issue_meta,
-        message:
-          "Avoid using raw `<#{tag}>` tags. Use `TymeslotWeb.Components.CoreComponents.Forms.input/1` instead.",
+        message: "Avoid using raw `<#{tag}>` tags. Use #{component_for(tag)} instead.",
         line_no: line_no,
         trigger: "<#{tag}"
       )
     end
   end
+
+  defp component_for("select"), do: "`TymeslotWeb.Components.CoreComponents.Select.select/1`"
+  defp component_for(_tag), do: "`TymeslotWeb.Components.CoreComponents.Forms.input/1`"
 
   defp exempt?(nil), do: false
   defp exempt?(comment), do: Regex.match?(@exemption_regex, comment)
@@ -175,11 +178,16 @@ defmodule CredoChecks.UseCoreInputs do
   end
 
   defp helper_issue(issue_meta, helper, meta, trigger) do
-    component = if helper == :label, do: "label/1", else: "input/1"
+    component =
+      case helper do
+        :label -> "Forms.label/1"
+        :select -> "Select.select/1"
+        _other -> "Forms.input/1"
+      end
 
     format_issue(issue_meta,
       message:
-        "Avoid using `Phoenix.HTML.Form.#{helper}/3` helpers. Use `TymeslotWeb.Components.CoreComponents.Forms.#{component}` instead.",
+        "Avoid using `Phoenix.HTML.Form.#{helper}/3` helpers. Use `TymeslotWeb.Components.CoreComponents.#{component}` instead.",
       line_no: meta[:line],
       trigger: trigger
     )

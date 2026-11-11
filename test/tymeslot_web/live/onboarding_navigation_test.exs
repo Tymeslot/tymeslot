@@ -13,6 +13,8 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
   import Tymeslot.AuthTestHelpers
   import TymeslotWeb.OnboardingTestHelpers
 
+  alias Tymeslot.Repo
+  alias TymeslotWeb.OnboardingLive
   alias TymeslotWeb.OnboardingLive.NavigationHandlers
 
   setup :verify_on_exit!
@@ -204,6 +206,146 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
 
   # The address names the step on screen, so a reload lands where the host
   # was and the browser's Back and Forward move through the steps.
+  # The look and the live step wait until the host has been through the
+  # meeting step, however they try to get there.
+  describe "the meeting step gate" do
+    test "a typed /onboarding/ready lands on the meeting until it is confirmed", %{conn: conn} do
+      {:ok, view, _html} =
+        live(host_conn(conn, username: true, calendar: true), "/onboarding/ready")
+
+      assert step_title(view) == "Your meeting"
+      refute has_element?(view, "#onboarding-finish")
+    end
+
+    test "a typed later step patches back to the meeting", %{conn: conn} do
+      {:ok, view, _html} =
+        live(host_conn(conn, username: true, calendar: true), ~p"/onboarding/meeting")
+
+      for step <- ~w(ready choose_theme) do
+        render_patch(view, "/onboarding/#{step}")
+        assert_patch(view, ~p"/onboarding/meeting")
+        assert step_title(view) == "Your meeting"
+      end
+    end
+
+    test "the first paint draws the meeting too, not the step that was typed", %{conn: conn} do
+      html =
+        host_conn(conn, username: true, calendar: true)
+        |> get("/onboarding/ready")
+        |> html_response(200)
+
+      assert html =~ ~s(id="onboarding-meeting-step")
+    end
+
+    test "Continue on the meeting step opens the later steps, for good", %{conn: conn} do
+      user = host_user(username: true, calendar: true)
+      conn = log_in_user(setup_onboarding_session(conn), user)
+      {:ok, view, _html} = live(conn, ~p"/onboarding/meeting")
+      assert Repo.reload!(user).onboarding_meeting_confirmed_at == nil
+
+      click_continue(view)
+
+      assert step_title(view) == "Your look"
+      assert %DateTime{} = Repo.reload!(user).onboarding_meeting_confirmed_at
+
+      {:ok, reloaded, _html} = live(conn, "/onboarding/ready")
+      assert step_title(reloaded) == "You're live"
+
+      {:ok, resumed, _html} = live(conn, "/onboarding")
+      assert step_title(resumed) == "Your look"
+    end
+
+    test "a meeting step left in error is not confirmed", %{conn: conn} do
+      user = host_user(username: true, calendar: true)
+      conn = log_in_user(setup_onboarding_session(conn), user)
+      {:ok, view, _html} = live(conn, ~p"/onboarding/meeting")
+
+      render_change(view, "meeting_change", %{"meeting" => %{"name" => "  "}})
+      render_click(view, "next_step", %{})
+
+      assert step_title(view) == "Your meeting"
+      assert Repo.reload!(user).onboarding_meeting_confirmed_at == nil
+    end
+
+    # What the migration stamps for a host mid-onboarding whose meeting type
+    # is no longer the seeded default.
+    test "an account already marked as confirmed is not sent back", %{conn: conn} do
+      user =
+        host_user(
+          username: true,
+          calendar: true,
+          onboarding_meeting_confirmed_at: DateTime.utc_now(:second)
+        )
+
+      conn = log_in_user(setup_onboarding_session(conn), user)
+
+      {:ok, view, _html} = live(conn, "/onboarding/ready")
+      assert step_title(view) == "You're live"
+    end
+
+    test "a completed onboarding counts as confirmed without the marker", %{conn: conn} do
+      user =
+        host_user(
+          username: true,
+          calendar: true,
+          onboarding_completed_at: DateTime.utc_now(:second)
+        )
+
+      assert user.onboarding_meeting_confirmed_at == nil
+      conn = log_in_user(setup_onboarding_session(conn), user)
+
+      # The live step stays open for an hour after completion.
+      {:ok, view, _html} = live(conn, "/onboarding/ready")
+      assert step_title(view) == "You're live"
+    end
+
+    test "the share-step return flag cannot skip a meeting never confirmed", %{conn: conn} do
+      {:ok, view, _html} =
+        live(
+          host_conn(conn, username: true, calendar: true),
+          "/onboarding/connect_calendar?return=share"
+        )
+
+      click_continue(view)
+
+      assert step_title(view) == "Your meeting"
+    end
+
+    # The debug routes exist to look at any step on demand. They are mounted
+    # only where `:dev_routes` is set, so the handler is driven directly, on
+    # the disconnected render where the landing step is chosen.
+    test "a debug route opens the later steps, the real route does not" do
+      user = insert(:user, onboarding_completed_at: nil)
+      profile = insert(:profile, user: user, username: "debughost")
+
+      landing = fn live_action ->
+        socket = %Phoenix.LiveView.Socket{
+          assigns: %{
+            __changed__: %{},
+            flash: %{},
+            current_user: user,
+            profile: profile,
+            booking_page_live: true,
+            patched_step: nil,
+            live_action: live_action
+          }
+        }
+
+        {:noreply, socket} =
+          OnboardingLive.handle_params(
+            %{"step" => "ready"},
+            "http://localhost:4000/onboarding/ready",
+            socket
+          )
+
+        socket.assigns.current_step
+      end
+
+      assert landing.(:debug_step) == :ready
+      assert landing.(nil) == :meeting
+    end
+  end
+
   describe "the address follows the step" do
     test "Continue patches the address to each step in turn", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
@@ -354,15 +496,21 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
 
   # A logged-in host who has not finished onboarding, with a saved username
   # and a bookable calendar when asked for.
-  defp host_conn(conn, opts \\ []) do
-    user = insert(:user, onboarding_completed_at: nil)
+  defp host_conn(conn, opts \\ []),
+    do: log_in_user(setup_onboarding_session(conn), host_user(opts))
 
-    if opts[:username],
+  # `:username` and `:calendar` set up those halves of the account; anything
+  # else is an attribute of the user.
+  defp host_user(opts) do
+    {setup, attrs} = Keyword.split(opts, [:username, :calendar])
+    user = insert(:user, Keyword.put_new(attrs, :onboarding_completed_at, nil))
+
+    if setup[:username],
       do: insert(:profile, user: user, username: "host#{System.unique_integer([:positive])}")
 
-    if opts[:calendar], do: insert(:calendar_integration, user: user)
+    if setup[:calendar], do: insert(:calendar_integration, user: user)
 
-    log_in_user(setup_onboarding_session(conn), user)
+    user
   end
 
   describe "progress indicator" do

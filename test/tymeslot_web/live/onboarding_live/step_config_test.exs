@@ -34,7 +34,27 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
     end
 
     test "a host with a username and a bookable calendar resumes at the meeting" do
-      assert StepConfig.resume_step(%{username: "ada", bookable_calendar?: true}) == :meeting
+      assert StepConfig.resume_step(%{
+               username: "ada",
+               bookable_calendar?: true,
+               meeting_confirmed?: false
+             }) == :meeting
+    end
+
+    test "a host who has confirmed the meeting resumes at the look" do
+      assert StepConfig.resume_step(%{
+               username: "ada",
+               bookable_calendar?: true,
+               meeting_confirmed?: true
+             }) == :choose_theme
+    end
+
+    test "a confirmed meeting does not open anything a calendar has to open first" do
+      assert StepConfig.resume_step(%{
+               username: "ada",
+               bookable_calendar?: false,
+               meeting_confirmed?: true
+             }) == :connect_calendar
     end
   end
 
@@ -49,8 +69,15 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
       refute StepConfig.reachable?(:ready, :profile)
     end
 
-    test "every step is reachable once the host resumes at the meeting" do
-      assert Enum.all?(StepConfig.steps(), &StepConfig.reachable?(&1, :meeting))
+    test "the look and the live step wait for the meeting" do
+      assert StepConfig.reachable?(:connect_calendar, :meeting)
+      assert StepConfig.reachable?(:meeting, :meeting)
+      refute StepConfig.reachable?(:choose_theme, :meeting)
+      refute StepConfig.reachable?(:ready, :meeting)
+    end
+
+    test "every step is reachable once the host resumes at the look" do
+      assert Enum.all?(StepConfig.steps(), &StepConfig.reachable?(&1, :choose_theme))
     end
   end
 

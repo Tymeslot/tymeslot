@@ -60,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
       class="bg-white border border-tymeslot-200 rounded-token-xl shadow-lg p-3 w-72"
     >
       <:trigger>
-        <%!-- `title` keeps the full period readable when it truncates. --%>
+        <%!-- native-title: keeps the full period readable when it truncates. --%>
         <span
           id="calendar-period-label"
           class="min-w-0 text-token-sm md:text-token-base font-semibold text-tymeslot-800 truncate"

@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Test.FixtureTheme.EmblemPanel do
       </button>
       <form
         :if={@uploads[:fixture_emblem_path]}
+        novalidate
         id="fixture-emblem-upload"
         phx-change="upload_asset"
         phx-submit="upload_asset"

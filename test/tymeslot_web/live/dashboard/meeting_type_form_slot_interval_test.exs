@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormSlotIntervalTest do
   defp selected_slot_interval_option(html) do
     html
     |> Floki.parse_document!()
-    |> Floki.find(~s|select[name="meeting_type[slot_interval]"] option[selected]|)
+    |> Floki.find(~s|select[data-name="meeting_type[slot_interval]"] option[selected]|)
   end
 
   defp selected_slot_interval_value(html) do
@@ -67,11 +67,11 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormSlotIntervalTest do
 
       html = open_edit_form(view, meeting_type)
 
-      assert has_element?(view, ~s|select[name="meeting_type[slot_interval]"]|)
+      assert has_element?(view, ~s|select[data-name="meeting_type[slot_interval]"]|)
 
       document = Floki.parse_document!(html)
 
-      options = Floki.find(document, ~s|select[name="meeting_type[slot_interval]"] option|)
+      options = Floki.find(document, ~s|select[data-name="meeting_type[slot_interval]"] option|)
 
       assert Enum.any?(options, &(Floki.text(&1) =~ "Same as meeting length"))
 
@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormSlotIntervalTest do
       open_edit_form(view, meeting_type)
 
       view
-      |> element(~s|select[name="meeting_type[slot_interval]"]|)
+      |> element(~s|input[type=hidden][name="meeting_type[slot_interval]"]|)
       |> render_change(%{"meeting_type" => %{"slot_interval" => "20"}})
 
       assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).slot_interval_minutes == 20
@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormSlotIntervalTest do
       open_edit_form(view, meeting_type)
 
       view
-      |> element(~s|select[name="meeting_type[slot_interval]"]|)
+      |> element(~s|input[type=hidden][name="meeting_type[slot_interval]"]|)
       |> render_change(%{"meeting_type" => %{"slot_interval" => ""}})
 
       updated = MeetingTypes.get_meeting_type(meeting_type.id, user.id)
@@ -159,7 +159,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormSlotIntervalTest do
       refute has_element?(view, custom_input_selector())
 
       view
-      |> element(~s|select[name="meeting_type[slot_interval]"]|)
+      |> element(~s|input[type=hidden][name="meeting_type[slot_interval]"]|)
       |> render_change(%{"meeting_type" => %{"slot_interval" => "custom"}})
 
       assert has_element?(view, custom_input_selector())
@@ -178,7 +178,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormSlotIntervalTest do
       open_edit_form(view, meeting_type)
 
       view
-      |> element(~s|select[name="meeting_type[slot_interval]"]|)
+      |> element(~s|input[type=hidden][name="meeting_type[slot_interval]"]|)
       |> render_change(%{"meeting_type" => %{"slot_interval" => "custom"}})
 
       view
@@ -199,7 +199,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormSlotIntervalTest do
       open_edit_form(view, meeting_type)
 
       view
-      |> element(~s|select[name="meeting_type[slot_interval]"]|)
+      |> element(~s|input[type=hidden][name="meeting_type[slot_interval]"]|)
       |> render_change(%{"meeting_type" => %{"slot_interval" => "custom"}})
 
       html =
@@ -221,7 +221,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormSlotIntervalTest do
       assert has_element?(view, custom_input_selector())
 
       view
-      |> element(~s|select[name="meeting_type[slot_interval]"]|)
+      |> element(~s|input[type=hidden][name="meeting_type[slot_interval]"]|)
       |> render_change(%{"meeting_type" => %{"slot_interval" => "15"}})
 
       refute has_element?(view, custom_input_selector())
@@ -240,7 +240,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormSlotIntervalTest do
 
       html =
         view
-        |> element(~s|select[name="meeting_type[slot_interval]"]|)
+        |> element(~s|input[type=hidden][name="meeting_type[slot_interval]"]|)
         |> render_change(%{"meeting_type" => %{"slot_interval" => "5"}})
 
       # The point of the hint: five minutes and sixty minutes are the same
@@ -312,7 +312,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormSlotIntervalTest do
       open_edit_form(view, meeting_type)
 
       view
-      |> element(~s|select[name="meeting_type[slot_interval]"]|)
+      |> element(~s|input[type=hidden][name="meeting_type[slot_interval]"]|)
       |> render_change(%{"meeting_type" => %{"slot_interval" => "custom"}})
 
       html =

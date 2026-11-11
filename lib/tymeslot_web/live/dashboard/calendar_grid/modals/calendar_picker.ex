@@ -47,6 +47,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
           <% is_selected = fn cal ->
             is_active_integration and calendar_selected?(cal.id, @selected_calendar_id, fallback_id)
           end %>
+          <%!-- native-title: repeats the calendar name, which can truncate. --%>
           <button
             :for={cal <- calendars}
             type="button"

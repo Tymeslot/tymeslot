@@ -78,6 +78,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollReminders do
       phx-submit="poll_add_reminder"
       phx-target={@myself}
       data-testid="poll-reminders-form"
+      novalidate
     >
       <ReminderPicker.reminder_picker
         reminders={@state.reminders}

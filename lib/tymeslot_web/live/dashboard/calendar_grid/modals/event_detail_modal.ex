@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       "A live seat is held on this event's meeting, so its time, attendees and deletion are not editable here."
 
   attr :attendee_input, :string, default: ""
+  attr :attendee_error, :string, default: nil
   attr :pending_attendees, :list, default: []
   attr :video_integrations, :list, default: []
   attr :pending_notification, :boolean, default: false
@@ -134,8 +135,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-target={@myself}
           phx-submit="update_event_title"
           class="pr-8"
+          novalidate
         >
-          <%!-- raw-input: event title edited in place, drawn as the panel heading --%>
+          <%!-- raw-input: event title edited in place, drawn as the panel heading
+               native-title: repeats the title in the field, which can truncate. --%>
           <input
             type="text"
             id="event-title-input"
@@ -191,26 +194,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-change="update_event_all_day_range"
           phx-target={@myself}
           class="flex flex-wrap items-center gap-1 text-token-sm"
+          novalidate
         >
-          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
-          <input
-            type="date"
+          <.date_picker
             id="event-all-day-start"
             name="start-date"
             value={@selected_event.start_date && Date.to_iso8601(@selected_event.start_date)}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "Start date")}
           />
           <span class="text-tymeslot-400">&ndash;</span>
           <%!-- end_date is stored exclusively; show the inclusive last day. --%>
-          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
-          <input
-            type="date"
+          <.date_picker
             id="event-all-day-end"
             name="end-date"
             value={
               @selected_event.end_date && Date.to_iso8601(Date.add(@selected_event.end_date, -1))
             }
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "End date")}
           />
         </form>
         <form
@@ -219,39 +221,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-change="update_event_time"
           phx-target={@myself}
           class="flex flex-wrap items-center gap-1 text-token-sm"
+          novalidate
         >
-          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
-          <input
-            type="date"
+          <.date_picker
             id="event-start-date"
             name="start-date"
             value={start_parts.date}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "Start date")}
           />
-          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
-          <input
-            type="time"
+          <.time_picker
             id="event-start-time"
             name="start-time"
             value={start_parts.time}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "Start time")}
           />
           <span class="text-tymeslot-400">&ndash;</span>
-          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
-          <input
-            type="date"
+          <.date_picker
             id="event-end-date"
             name="end-date"
             value={end_parts.date}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "End date")}
           />
-          <%!-- raw-input: date and time edited in place inside one flowing sentence, drawn as plain text --%>
-          <input
-            type="time"
+          <.time_picker
             id="event-end-time"
             name="end-time"
             value={end_parts.time}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_events", "End time")}
           />
           <span class="text-token-xs font-normal text-tymeslot-400 ml-1">{Helpers.tz_abbr(
             @user_timezone,
@@ -349,6 +348,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         attendees={@attendees}
         pending_attendees={@pending_attendees}
         attendee_input={@attendee_input}
+        attendee_error={@attendee_error}
         myself={@myself}
       />
 

@@ -150,6 +150,7 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
         id="invite-user-form"
         phx-submit="invite_user"
         class="flex flex-col gap-3 sm:flex-row sm:items-start"
+        novalidate
       >
         <div class="flex-1">
           <.input

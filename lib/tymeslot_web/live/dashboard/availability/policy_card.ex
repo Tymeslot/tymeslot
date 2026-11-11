@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
       </p>
 
       <%!-- Tag-based Selection --%>
-      <form id={@form_id} phx-change={@event} phx-debounce="300" phx-target={@myself}>
+      <form id={@form_id} phx-change={@event} phx-debounce="300" phx-target={@myself} novalidate>
         <div
           class="flex flex-wrap items-center gap-3"
           role="group"
@@ -165,6 +165,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 min={@range.first}
                 max={@range.last}
                 step="5"
+                inputmode="numeric"
                 value={@buffer_value}
                 name={@param}
                 aria-labelledby={"#{@form_id}-label"}
@@ -223,6 +224,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
         phx-change="update_advance_booking_days"
         phx-debounce="300"
         phx-target={@myself}
+        novalidate
       >
         <div class="flex flex-wrap items-center gap-3">
           <%!-- Quick preset tags --%>
@@ -253,6 +255,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 min="1"
                 max="365"
                 step="1"
+                inputmode="numeric"
                 value={@booking_days}
                 name="advance_booking_days"
                 class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-token-xl"
@@ -313,6 +316,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
         phx-change="update_min_advance_hours"
         phx-debounce="300"
         phx-target={@myself}
+        novalidate
       >
         <div class="flex flex-wrap items-center gap-3">
           <%!-- Quick preset tags --%>
@@ -343,6 +347,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 min="0"
                 max="168"
                 step="1"
+                inputmode="numeric"
                 value={@notice_hours}
                 name="min_advance_hours"
                 class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-token-xl"

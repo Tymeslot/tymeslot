@@ -66,22 +66,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
         phx-submit={@add_event}
         phx-target={@myself}
         class="flex flex-wrap items-center gap-2"
+        novalidate
       >
-        <%!-- raw-input: compact text-xs select sharing one inline row with the other select and a small Add button --%>
-        <select
+        <.select
+          id="add-reminder-minutes"
           name="minutes"
-          class="rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
-        >
-          <option :for={{minutes, label} <- @presets} value={minutes}>{label}</option>
-        </select>
-        <%!-- raw-input: compact text-xs select sharing one inline row with the other select and a small Add button --%>
-        <select
+          class="w-40"
+          compact
+          aria-label={dgettext("dashboard_calendar_events", "Reminder time")}
+          options={Enum.map(@presets, fn {minutes, label} -> {label, minutes} end)}
+        />
+        <.select
+          id="add-reminder-method"
           name="method"
-          class="rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
-        >
-          <option value="popup">{dgettext("dashboard_calendar_events", "Notification")}</option>
-          <option value="email">{dgettext("dashboard_calendar_events", "Email")}</option>
-        </select>
+          class="w-36"
+          compact
+          aria-label={dgettext("dashboard_calendar_events", "Reminder method")}
+          options={[
+            {dgettext("dashboard_calendar_events", "Notification"), "popup"},
+            {dgettext("dashboard_calendar_events", "Email"), "email"}
+          ]}
+        />
         <.action_button type="submit" variant={:secondary} size={:sm}>
           {dgettext("dashboard_calendar_events", "Add reminder")}
         </.action_button>

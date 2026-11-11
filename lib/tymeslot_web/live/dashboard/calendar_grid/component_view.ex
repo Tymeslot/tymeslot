@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
             reader users meet: the input is out of the tab order and the
             accessibility tree. It must stay rendered (no `hidden`), or neither
             the drop target nor the button's `click()` reaches it. --%>
-      <form id="import-ics-upload" phx-change="validate_ics_import" phx-target={@myself}>
+      <form id="import-ics-upload" phx-change="validate_ics_import" phx-target={@myself} novalidate>
         <.live_file_input
           upload={@uploads.ics_file}
           class="sr-only"
@@ -188,6 +188,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
         <SettingsModal.settings_modal
           :if={@show_settings}
           preferences={@preferences}
+          desktop_permission={@desktop_permission}
+          desktop_permission_refused={@desktop_permission_refused}
           myself={@myself}
         />
         <ShortcutsHelpModal.shortcuts_help_modal
@@ -206,6 +208,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           editable={EditWorkflow.event_editable?(assigns, @selected_event)}
           time_locked={MapSet.member?(@group_booking_uids, @selected_event.uid)}
           attendee_input={@attendee_input}
+          attendee_error={@attendee_error}
           pending_attendees={@pending_attendees}
           video_integrations={@video_integrations}
           pending_notification={@pending_notification}

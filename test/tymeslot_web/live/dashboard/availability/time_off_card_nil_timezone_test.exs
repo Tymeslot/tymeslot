@@ -60,11 +60,11 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardNilTimezoneTest do
 
         html =
           view
-          |> form("#time-off-form-modal-form", %{
+          |> form("#time-off-form-modal-form", %{})
+          |> render_change(%{
             "starts_on" => Date.to_iso8601(day),
             "ends_on" => Date.to_iso8601(Date.add(day, 1))
           })
-          |> render_change()
 
         shown = Calendar.strftime(day, "%A %-d %B") <> ", 12:30 AM"
         assert html =~ ~r/#{shown}\s*<\/span><span class="font-medium">Night call/

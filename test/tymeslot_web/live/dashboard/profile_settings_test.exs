@@ -407,6 +407,17 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       assert updated_profile.username == "new-username"
     end
 
+    test "a refused username stays in the field to correct", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      view
+      |> form("#username-form-container form", %{username: "x"})
+      |> render_submit()
+
+      assert has_element?(view, "#username-form-container [role=alert]")
+      assert has_element?(view, "#username-form-container input[name=username][value=x]")
+    end
+
     test "checks username availability", %{conn: conn} do
       insert(:profile, username: "taken-username")
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")

@@ -39,6 +39,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
         phx-change="search"
         phx-target={@myself}
         class="relative"
+        novalidate
       >
         <span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-tymeslot-400">
           <.icon name="hero-magnifying-glass-mini" class="w-4 h-4" />

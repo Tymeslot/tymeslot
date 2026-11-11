@@ -81,7 +81,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStepTest do
       })
 
     assert swatch_tag(html, "cobalt") =~ ~s(aria-label="Kobalt")
-    assert swatch_tag(html, "cobalt") =~ ~s(title="Kobalt")
+    assert html =~ ~s(>Kobalt</span>)
     # A name the catalogue has no translation for, here the brand, stays as given.
     assert swatch_tag(html, "tymeslot") =~ ~s(aria-label="Tymeslot")
   end

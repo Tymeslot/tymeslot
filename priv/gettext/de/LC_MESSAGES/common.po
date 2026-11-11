@@ -376,3 +376,53 @@ msgstr "Ihre Sitzung hat sich geändert, seit diese Seite geöffnet wurde. Bitte
 #, elixir-autogen, elixir-format
 msgid "%{language}, change language"
 msgstr "%{language}, Sprache ändern"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Time unit"
+msgstr "Zeiteinheit"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Choose date"
+msgstr "Datum wählen"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Choose time"
+msgstr "Uhrzeit wählen"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr "Datum"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Date and time"
+msgstr "Datum und Uhrzeit"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Next month"
+msgstr "Nächster Monat"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Previous month"
+msgstr "Vorheriger Monat"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Time"
+msgstr "Uhrzeit"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker/value.ex
+#, elixir-autogen, elixir-format
+msgid "Add a date"
+msgstr "Datum angeben"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker/value.ex
+#, elixir-autogen, elixir-format
+msgid "Add a time"
+msgstr "Uhrzeit angeben"

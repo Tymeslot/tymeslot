@@ -895,6 +895,7 @@ msgstr "Weitere Gäste (optional)"
 msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
 msgstr "Die Sprache aller E-Mails zu diesem Termin – für den Gast und alle weiteren Eingeladenen."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} is already invited."
@@ -905,6 +906,7 @@ msgstr "%{email} ist bereits eingeladen."
 msgid "%{email} is already the main guest."
 msgstr "%{email} ist bereits der Hauptgast."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} is not a valid email address."
@@ -1015,3 +1017,37 @@ msgid "The latest update could not be emailed to this guest. Let them know anoth
 msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
 msgstr[0] "Die letzte Änderung konnte diesem Gast nicht per E-Mail zugestellt werden. Informieren Sie ihn auf anderem Weg."
 msgstr[1] "Die letzte Änderung konnte diesen Gästen nicht per E-Mail zugestellt werden. Informieren Sie sie auf anderem Weg."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder method"
+msgstr "Erinnerungsart"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder time"
+msgstr "Erinnerungszeit"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "End date"
+msgstr "Enddatum"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "End time"
+msgstr "Endzeit"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Start date"
+msgstr "Startdatum"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Start time"
+msgstr "Startzeit"

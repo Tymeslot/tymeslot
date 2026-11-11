@@ -118,6 +118,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
               pointer events so empty band area still navigates the cell beneath;
               each bar re-enables them to open the event. --%>
         <div class="absolute inset-0 pointer-events-none">
+          <%!-- native-title: repeats the bar's text, which can truncate. The
+               full event title is in the event's detail view. --%>
           <div
             :for={seg <- @segments}
             class={"absolute px-1 flex items-center text-token-xs font-medium text-white truncate cursor-pointer pointer-events-auto #{bar_round_class(seg)} #{Helpers.color_for_event(@assigns_ref, seg.event)}"}
@@ -196,20 +198,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
             src="/images/brand/logo.svg"
             alt=""
             class="inline-block w-3 h-3 opacity-60 mr-0.5 align-text-bottom"
-          />{DashboardFormat.title(event.summary)}<span
+          />{DashboardFormat.title(event.summary)}
+          <.tooltip
             :if={EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)}
-            class={[
-              "inline-block w-1.5 h-1.5 rounded-token-full ml-0.5 align-middle",
-              EventBadges.guest_dot_tone(
-                EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)
-              )
-            ]}
-            title={
+            isolated
+            text={
               EventBadges.guest_badge_title(
                 EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)
               )
             }
-          ></span>
+          >
+            <span
+              role="img"
+              aria-label={
+                EventBadges.guest_badge_title(
+                  EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)
+                )
+              }
+              class={[
+                "inline-block w-1.5 h-1.5 rounded-token-full ml-0.5 align-middle",
+                EventBadges.guest_dot_tone(
+                  EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)
+                )
+              ]}
+            ></span>
+          </.tooltip>
         </div>
         <div :if={length(@chips) > 3} class="text-token-xs font-medium text-tymeslot-500 mt-0.5">
           {dngettext("dashboard_calendar", "+%{count} more", "+%{count} more", length(@chips) - 3,

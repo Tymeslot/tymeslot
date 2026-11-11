@@ -16,7 +16,8 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  use TymeslotWeb.Components.CoreComponents, only: [icon: 1, input: 1, segmented_control: 1]
+  use TymeslotWeb.Components.CoreComponents,
+    only: [icon: 1, input: 1, segmented_control: 1, select: 1, tooltip: 1]
 
   alias Tymeslot.Onboarding.MeetingSetup
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -53,6 +54,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
         phx-change="meeting_change"
         phx-submit="meeting_save"
         class="onboarding-form"
+        novalidate
       >
         <div class="onboarding-form-group">
           <.input
@@ -213,25 +215,25 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           aria-label={dgettext("onboarding_wizard", "Days you take bookings")}
           aria-describedby={@meeting_errors[:hours] && "meeting-hours-error"}
         >
-          <button
-            :for={day <- 1..7}
-            type="button"
-            id={"meeting-day-#{day}"}
-            phx-click="hours_toggle_day"
-            phx-value-day={day}
-            aria-pressed={to_string(day in @hours_form.days)}
-            title={LocaleFormat.format_weekday_name(day, @locale, :full)}
-            class={[
-              "min-h-11 min-w-0 rounded-token-lg border text-token-sm font-semibold transition-colors",
-              "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400",
-              if(day in @hours_form.days,
-                do: "bg-turquoise-700 border-turquoise-700 text-white",
-                else: "bg-white border-tymeslot-200 text-tymeslot-500 hover:bg-tymeslot-50"
-              )
-            ]}
-          >
-            {LocaleFormat.format_weekday_name(day, @locale, :short)}
-          </button>
+          <.tooltip :for={day <- 1..7} text={LocaleFormat.format_weekday_name(day, @locale, :full)}>
+            <button
+              type="button"
+              id={"meeting-day-#{day}"}
+              phx-click="hours_toggle_day"
+              phx-value-day={day}
+              aria-pressed={to_string(day in @hours_form.days)}
+              class={[
+                "min-h-11 min-w-0 rounded-token-lg border text-token-sm font-semibold transition-colors",
+                "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400",
+                if(day in @hours_form.days,
+                  do: "bg-turquoise-700 border-turquoise-700 text-white",
+                  else: "bg-white border-tymeslot-200 text-tymeslot-500 hover:bg-tymeslot-50"
+                )
+              ]}
+            >
+              {LocaleFormat.format_weekday_name(day, @locale, :short)}
+            </button>
+          </.tooltip>
         </div>
 
         <form
@@ -239,9 +241,9 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
           id="meeting-hours-form"
           phx-change="hours_change"
           class="grid grid-cols-2 gap-3 mt-2"
+          novalidate
         >
-          <.input
-            type="select"
+          <.select
             id="meeting-hours-start"
             name="hours[start]"
             value={@hours_form.start}
@@ -250,8 +252,7 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStep do
             aria-describedby={@meeting_errors[:hours] && "meeting-hours-error"}
             phx-debounce="300"
           />
-          <.input
-            type="select"
+          <.select
             id="meeting-hours-end"
             name="hours[end]"
             value={@hours_form.end}

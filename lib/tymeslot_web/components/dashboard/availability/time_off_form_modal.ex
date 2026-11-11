@@ -20,9 +20,11 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.DateTimePicker
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.CoreComponents.Modal
+  alias TymeslotWeb.Components.CoreComponents.Select
   alias TymeslotWeb.Components.Shared.TimeOptions
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -38,8 +40,8 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
   values as strings, `:errors`, a map of field to message rendered under the
   field it belongs to, `:min_starts_on`/`:min_ends_on` and
   `:max_starts_on`/`:max_ends_on`, the earliest and latest date each picker
-  offers, and `:conflicts`, the bookings that already sit inside the dates as
-  they currently stand.
+  offers, `:today`, the host's today they are drawn from, and `:conflicts`,
+  the bookings that already sit inside the dates as they currently stand.
 
   The bounds are a hint, not a guard: a typed or pasted date outside them
   still posts, and the changeset is what refuses it. They are here so the
@@ -80,34 +82,34 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
         phx-change="validate_time_off"
         phx-submit="save_time_off"
         phx-target={@myself}
+        novalidate
       >
         <div class="space-y-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Forms.input
-              type="date"
+            <DateTimePicker.date_picker
               id={"#{@id}-starts-on"}
               name="starts_on"
               value={Map.get(@period_data, :starts_on, "")}
               min={Map.get(@period_data, :min_starts_on)}
               max={Map.get(@period_data, :max_starts_on)}
+              today={Map.get(@period_data, :today)}
               label={dgettext("dashboard_availability", "First day away")}
               errors={field_errors(@period_data, :starts_on)}
             />
-            <Forms.input
-              type="date"
+            <DateTimePicker.date_picker
               id={"#{@id}-ends-on"}
               name="ends_on"
               value={Map.get(@period_data, :ends_on, "")}
               min={Map.get(@period_data, :min_ends_on)}
               max={Map.get(@period_data, :max_ends_on)}
+              today={Map.get(@period_data, :today)}
               label={dgettext("dashboard_availability", "Last day away")}
               errors={field_errors(@period_data, :ends_on)}
             />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Forms.input
-              type="select"
+            <Select.select
               id={"#{@id}-start-time"}
               name="start_time"
               value={Map.get(@period_data, :start_time, "")}
@@ -115,8 +117,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
               label={dgettext("dashboard_availability", "Away from (first day)")}
               errors={field_errors(@period_data, :start_time)}
             />
-            <Forms.input
-              type="select"
+            <Select.select
               id={"#{@id}-end-time"}
               name="end_time"
               value={Map.get(@period_data, :end_time, "")}

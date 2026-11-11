@@ -225,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       open_slack_tab(view)
 
-      view |> element("button[title='Delete']") |> render_click()
+      view |> element("button[aria-label^='Delete ']") |> render_click()
       assert render(view) =~ "Delete Slack integration"
 
       view |> element("#delete-slack-modal button", "Delete Integration") |> render_click()
@@ -243,7 +243,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       open_slack_tab(view)
 
-      view |> element("button[title='Delete']") |> render_click()
+      view |> element("button[aria-label^='Delete ']") |> render_click()
       view |> element("#delete-slack-modal button", "Cancel") |> render_click()
 
       refute render(view) =~ "Slack integration deleted"

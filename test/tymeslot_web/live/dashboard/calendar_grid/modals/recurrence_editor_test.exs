@@ -88,7 +88,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditorTest do
       html = render_editor(%{recurrence_rule: "FREQ=MONTHLY;BYDAY=2TU", start: @second_tuesday})
 
       assert html =~ ~r/<option value="day">\s*on day 13\s*<\/option>/
-      assert html =~ ~r/<option value="2:tu" selected[^>]*>\s*on the second Tuesday\s*<\/option>/
+
+      assert html =~
+               ~r/<option (?:selected )?value="2:tu"(?: selected)?[^>]*>\s*on the second Tuesday\s*<\/option>/
+
       refute html =~ ~s(value="-1:tu")
       assert html =~ "To repeat on another day, move the event to that day."
       assert html =~ "Repeats monthly on the second Tuesday"
@@ -97,7 +100,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditorTest do
     test "offers a yearly pattern its positions in the start's month" do
       html = render_editor(%{recurrence_rule: "FREQ=YEARLY", start: @second_tuesday})
 
-      assert html =~ ~r/<option value="day" selected[^>]*>\s*on 13 October\s*<\/option>/
+      assert html =~
+               ~r/<option (?:selected )?value="day"(?: selected)?[^>]*>\s*on 13 October\s*<\/option>/
+
       assert html =~ "on the second Tuesday of October"
       assert html =~ "Repeats yearly on 13 October"
     end

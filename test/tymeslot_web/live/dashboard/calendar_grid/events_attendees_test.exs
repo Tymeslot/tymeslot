@@ -290,7 +290,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
         |> element("form[phx-submit=add_event_attendee]")
         |> render_submit(%{"email" => "not-an-email"})
 
-      refute html =~ "not-an-email"
+      assert html =~ "not-an-email is not a valid email address."
+      refute html =~ ">not-an-email<"
     end
   end
 
@@ -322,7 +323,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
         |> element("#calendar-grid")
         |> render_hook("add_event_attendee", %{"email" => "not-an-email"})
 
-      refute html =~ "not-an-email"
+      assert html =~ "not-an-email is not a valid email address."
+      refute html =~ ">not-an-email<"
     end
 
     test "rejects duplicate of existing attendee", %{conn: conn, event: event} do
@@ -337,7 +339,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
         |> render_hook("add_event_attendee", %{"email" => "existing@example.com"})
 
       # Listed once still, and not invited a second time.
-      assert occurrences(html, "existing@example.com") == before
+      assert html =~ "is already invited."
+      assert occurrences(html, "existing@example.com") == before + 1
       refute render(lv) =~ "Attendee added and invited."
     end
 
@@ -368,7 +371,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
         |> element("#calendar-grid")
         |> render_hook("add_event_attendee", %{"email" => "mixed.case@example.com"})
 
-      assert occurrences(html_after, "mixed.case@example.com") == count_before
+      assert html_after =~ "is already invited."
+      # The refusal names the address once; no chip is added.
+      assert occurrences(html_after, "mixed.case@example.com") == count_before + 1
     end
 
     test "rejects duplicate of newly-added attendee", %{conn: conn, event: event} do
@@ -391,7 +396,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
         |> render_hook("add_event_attendee", %{"email" => "unique-new@example.com"})
 
       second_count = length(String.split(html_after_second, "unique-new@example.com")) - 1
-      assert second_count == first_count
+      assert html_after_second =~ "is already invited."
+      # The refusal names the address once; no second chip is added.
+      assert second_count == first_count + 1
     end
   end
 
@@ -399,6 +406,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
     setup %{user: user} do
       _integration = insert(:calendar_integration, user: user, is_active: true)
       :ok
+    end
+
+    test "a refused attendee is explained beside the field", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_create_form(lv)
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("add_create_attendee", %{"email" => "not-an-email"})
+
+      assert has_element?(lv, "#create-attendee-email-error", "is not a valid email address")
     end
 
     test "adds an attendee to the create form", %{conn: conn} do

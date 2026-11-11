@@ -11,15 +11,15 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   re-add errors from the live changeset and defeat the clear-on-type
   behaviour.
 
-  `required` renders on the control, so the browser blocks an empty submit
-  with its own message before the server sees it. A form that shows its own
-  error messages for empty fields sets `novalidate` on the `<form>`: the
-  attribute still tells assistive technology the field is required, and the
-  empty submission reaches the server, which answers with the app's message.
-  `novalidate` switches off every native constraint on the form, not only
-  `required`: `type="email"` and `type="url"`, `minlength`/`maxlength`,
-  `pattern` and `min`/`max`/`step` all go unchecked too, so the server must
-  validate each of them itself.
+  `required` renders on the control so assistive technology announces it, but
+  forms set `novalidate` so the browser does not block the submit with its own
+  bubble, in the browser's language rather than the user's: the submission
+  reaches the server, which answers with the app's inline error. A form that
+  does so must render an inline error for every constraint it carries:
+  `novalidate` switches off every native check, not only `required`, so
+  `type="email"` and `type="url"`, `minlength`, `pattern` and `min`/`max`/`step`
+  go unchecked too and the server must validate each one itself. `maxlength`
+  still limits typing. `CredoChecks.NoBrowserValidation` keeps it that way.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -49,17 +49,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
 
   attr :type, :string,
     default: "text",
-    values:
-      ~w(checkbox color date datetime-local email file month number password range radio search select tel text textarea time url week)
+    values: ~w(checkbox color email file number password range radio search tel text textarea url)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :errors, :list, default: []
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
-  attr :prompt, :string, default: nil, doc: "placeholder option shown in select inputs"
-  attr :options, :list, doc: "the options to render for select inputs"
-  attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
 
   attr :required, :boolean, default: false
   attr :disabled, :boolean, default: false
@@ -91,6 +87,15 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   slot :description, doc: "Optional helper text rendered between the label and the input."
 
   @spec input(map()) :: Phoenix.LiveView.Rendered.t()
+  def input(%{type: "select"}) do
+    raise ArgumentError, ~s|<.input type="select"> is gone: use <.select> instead|
+  end
+
+  def input(%{type: type}) when type in ~w(date time datetime-local month week) do
+    raise ArgumentError,
+          ~s|<.input type="#{type}"> is gone: use <.date_picker>, <.time_picker> or <.datetime_picker>|
+  end
+
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     assigns
     |> assign(field: nil, id: assigns[:id] || field.id)
@@ -120,6 +125,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
         assigns.errors
         |> error_aria(error_id)
         |> Map.merge(html_constraints(assigns))
+        |> Map.merge(number_keypad(assigns))
         |> disabled_attr(assigns.disabled)
         |> required_attr(assigns.required)
         |> Map.merge(assigns.rest)
@@ -164,11 +170,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
           has_leading_icon={@icon || render_slot(@leading_icon)}
           has_trailing_icon={render_slot(@trailing_icon)}
           validate_on_blur={@validate_on_blur}
-          options={assigns[:options]}
-          prompt={@prompt}
-          multiple={@multiple}
           hidden_input={@hidden_input}
           maxlength={@maxlength}
+          rows={@rows}
           rest={@rest}
         />
 
@@ -177,13 +181,6 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
             {render_slot(@trailing_icon)}
           </div>
         <% end %>
-
-        <%!-- Chevron for the native select, whose own arrow `appearance-none` hides --%>
-        <TymeslotWeb.Components.CoreComponents.Icons.icon
-          :if={@type == "select"}
-          name="hero-chevron-down"
-          class="select-chevron absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 stroke-[2.5] text-tymeslot-500 pointer-events-none"
-        />
 
         {render_slot(@inner_block)}
       </div>
@@ -214,35 +211,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   defp error_aria(_errors, error_id),
     do: %{"aria-invalid" => "true", "aria-describedby" => error_id}
 
-  defp input_element(%{type: "select"} = assigns) do
-    assigns = assign_new(assigns, :rest, fn -> %{} end)
-
-    ~H"""
-    <select
-      id={@id}
-      name={@name}
-      multiple={@multiple}
-      class={[
-        "input appearance-none",
-        @has_leading_icon && "input-with-icon",
-        @has_trailing_icon && "input-with-trailing-icon",
-        @errors != [] && "input-error"
-      ]}
-      {@rest}
-    >
-      <%= if @prompt do %>
-        <option value="">{@prompt}</option>
-      <% end %>
-      {Phoenix.HTML.Form.options_for_select(@options, @value)}
-    </select>
-    """
-  end
-
   defp input_element(%{type: "textarea"} = assigns) do
-    assigns =
-      assigns
-      |> assign_new(:rest, fn -> %{} end)
-      |> assign_new(:rows, fn -> 4 end)
+    assigns = assign_new(assigns, :rest, fn -> %{} end)
 
     ~H"""
     <textarea
@@ -252,7 +222,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       placeholder={@placeholder}
       maxlength={@maxlength}
       class={[
-        "input min-h-[120px] py-3",
+        "input py-3",
         @has_leading_icon && "input-with-icon",
         @has_trailing_icon && "input-with-trailing-icon",
         @errors != [] && "input-error"
@@ -333,6 +303,31 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   defp required_attr(rest, true), do: Map.put(rest, :required, true)
   defp required_attr(rest, _required), do: rest
 
+  # A phone picks its keypad from `inputmode`. A field that can go negative
+  # asks for none, because the numeric and decimal pads on iOS have no minus
+  # key; `type="number"` alone gets a keyboard that does.
+  defp number_keypad(%{type: "number"} = assigns) do
+    cond do
+      not non_negative?(assigns[:min]) -> %{}
+      fractional_step?(assigns[:step]) -> %{inputmode: "decimal"}
+      true -> %{inputmode: "numeric"}
+    end
+  end
+
+  defp number_keypad(_assigns), do: %{}
+
+  defp non_negative?(nil), do: false
+
+  defp non_negative?(min) do
+    case Float.parse(to_string(min)) do
+      {number, _rest} -> number >= 0
+      :error -> false
+    end
+  end
+
+  defp fractional_step?(nil), do: false
+  defp fractional_step?(step), do: to_string(step) == "any" or to_string(step) =~ "."
+
   defp html_constraints(assigns) do
     Map.reject(
       Map.new(@html_constraints, &{&1, assigns[&1]}),
@@ -345,13 +340,14 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   @doc """
   Renders a label.
   """
+  attr :id, :any, default: nil
   attr :for, :any, default: nil
   slot :inner_block, required: true
 
   @spec label(map()) :: Phoenix.LiveView.Rendered.t()
   def label(assigns) do
     ~H"""
-    <label for={@for} class="label">
+    <label id={@id} for={@for} class="label">
       {render_slot(@inner_block)}
     </label>
     """
@@ -461,6 +457,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   attr :for, :any, required: true
   attr :id, :string, default: nil
   attr :class, :string, default: ""
+
+  attr :novalidate, :boolean,
+    default: true,
+    doc: "false leaves the browser's own validation bubbles on; see the moduledoc"
+
   attr :rest, :global, include: ~w(phx-change phx-submit phx-target)
   slot :inner_block, required: true
 
@@ -471,6 +472,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       for={@for}
       id={@id}
       class={["space-y-6", @class]}
+      novalidate={@novalidate}
       {@rest}
     >
       {render_slot(@inner_block, @for)}

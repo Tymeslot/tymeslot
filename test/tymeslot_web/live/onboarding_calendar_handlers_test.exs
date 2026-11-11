@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
   import Tymeslot.Factory
   import TymeslotWeb.OnboardingTestHelpers
 
+  alias Tymeslot.Onboarding
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.OnboardingLive.CalendarHandlers
   alias TymeslotWeb.OnboardingLive.NavigationHandlers
@@ -539,6 +540,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
     user = insert(:user, onboarding_completed_at: nil)
     insert(:profile, user: user, username: "calhost#{System.unique_integer([:positive])}")
     insert(:calendar_integration, user: user)
+    {:ok, _confirmed} = Onboarding.confirm_meeting_step(user)
     log_in_user(conn, user)
   end
 end

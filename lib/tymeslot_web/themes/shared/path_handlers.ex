@@ -389,7 +389,12 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # token, the rest from the theme context. Carrying `theme` is safe here
   # because a bare `theme=` is no longer a preview claim
   # (`PreviewMode.claimed?/1`); the embed selected it and must keep it.
-  defp put_embed_params(params, socket) do
+  @doc """
+  Adds the embed parameters of a verified embedded page to `params`; a page
+  that is not embedded leaves them untouched.
+  """
+  @spec put_embed_params(map(), Phoenix.LiveView.Socket.t()) :: map()
+  def put_embed_params(params, socket) do
     if socket.assigns[:embedded] do
       params
       |> Map.put("embed", "1")

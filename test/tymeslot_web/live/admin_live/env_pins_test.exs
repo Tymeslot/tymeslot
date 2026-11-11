@@ -34,7 +34,7 @@ defmodule TymeslotWeb.AdminLive.EnvPinsTest do
     for state <- ["true", "false"] do
       assert has_element?(
                lv,
-               ~s|button[phx-value-key="registration_enabled"][phx-value-state="#{state}"][disabled]|
+               ~s|button[phx-value-key="registration_enabled"][phx-value-state="#{state}"][aria-disabled="true"]|
              )
     end
   end
@@ -44,7 +44,13 @@ defmodule TymeslotWeb.AdminLive.EnvPinsTest do
 
     assert has_element?(
              lv,
-             ~s|button[phx-value-key="registration_enabled"][phx-value-state="false"][title*="REGISTRATION_ENABLED"]|
+             ~s|button[phx-value-key="registration_enabled"][phx-value-state="false"][aria-describedby="setting-registration_enabled-false-lock-reason"]|
+           )
+
+    assert has_element?(
+             lv,
+             "#setting-registration_enabled-false-lock-reason[role='tooltip']",
+             "REGISTRATION_ENABLED"
            )
   end
 

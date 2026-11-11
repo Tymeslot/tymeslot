@@ -542,6 +542,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: Preferences.handle_toggle_preference(params, socket, :desktop_reminders_enabled)
 
   @impl Phoenix.LiveComponent
+  def handle_event("desktop_reminders_permission", params, socket),
+    do: Preferences.handle_desktop_permission(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("enable_desktop_reminders", params, socket),
+    do: Preferences.handle_enable_desktop_reminders(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("set_mobile_view", params, socket),
     do: Navigation.handle_set_mobile_view(params, socket)
 

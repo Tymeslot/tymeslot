@@ -156,6 +156,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
           phx-change="validate_avatar"
           phx-target={@myself}
           class="flex flex-col items-center gap-4"
+          novalidate
         >
           <div class="w-full">
             <%= if @uploads && @uploads[:avatar] do %>

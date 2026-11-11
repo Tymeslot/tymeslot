@@ -47,10 +47,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
           {:error, :rate_limited, _message} = error ->
             Shared.flash_guard_error(socket, error)
 
+          # `with` hands back the value that failed: `false` from the address
+          # check, `true` from the already-present one.
+          false ->
+            {:noreply, assign(socket, :attendee_error, invalid_attendee_message(email))}
+
+          true ->
+            {:noreply,
+             assign(
+               socket,
+               :attendee_error,
+               dgettext("dashboard_calendar_events", "%{email} is already invited.", email: email)
+             )}
+
           _invalid ->
             {:noreply, socket}
         end
     end
+  end
+
+  # An empty submit is not a refusal worth a message; the field is optional.
+  defp invalid_attendee_message(""), do: nil
+
+  defp invalid_attendee_message(email) do
+    dgettext("dashboard_calendar_events", "%{email} is not a valid email address.", email: email)
   end
 
   defp add_attendee(socket, event, attendees, email) do
@@ -63,6 +83,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
     |> assign(:selected_event, updated_event)
     |> assign(:events, updated_events)
     |> assign(:attendee_input, "")
+    |> assign(:attendee_error, nil)
     |> Helpers.precompute_derived()
     |> EditWorkflow.update_event_async(event, %{attendees: new_attendees}, notify: :membership)
   end
@@ -229,7 +250,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
   @spec handle_update_attendee_input(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_attendee_input(%{"email" => value}, socket) do
-    {:noreply, assign(socket, :attendee_input, value)}
+    {:noreply, socket |> assign(:attendee_input, value) |> assign(:attendee_error, nil)}
   end
 
   @spec handle_remove_pending_attendee(map(), Phoenix.LiveView.Socket.t()) ::
@@ -249,7 +270,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
          |> assign(:pending_attendees, [])
          |> assign(:confirm_discard_attendees, false)
          |> assign(:selected_event, nil)
-         |> assign(:attendee_input, "")}
+         |> assign(:attendee_input, "")
+         |> assign(:attendee_error, nil)}
 
       socket.assigns.creating_event != nil ->
         {:noreply,

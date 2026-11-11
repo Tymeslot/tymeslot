@@ -137,12 +137,8 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       end
 
       view
-      |> form("form[phx-change='update_day_hours']", %{
-        "day" => "1",
-        "start" => "09:00",
-        "end" => "17:00"
-      })
-      |> render_change()
+      |> form("form[phx-change='update_day_hours']", %{"day" => "1"})
+      |> render_change(%{"start" => "09:00", "end" => "17:00"})
 
       html = render(view)
       assert html =~ "Monday hours updated"
@@ -173,9 +169,13 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       assert has_element?(view, "#add-break-form-1[novalidate]")
 
       # Each label names its control for assistive technology.
-      for field <- ~w(label start end) do
+      assert has_element?(view, "label[for='add-break-label-1']")
+      assert has_element?(view, "#add-break-label-1[name='label']")
+
+      for field <- ~w(start end) do
         assert has_element?(view, "label[for='add-break-#{field}-1']")
-        assert has_element?(view, "#add-break-#{field}-1[name='#{field}']")
+        assert has_element?(view, "#add-break-form-1 select#add-break-#{field}-1")
+        assert has_element?(view, "#add-break-form-1 input[type=hidden][name='#{field}']")
       end
     end
 
@@ -202,13 +202,8 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       |> render_click()
 
       view
-      |> form("form[phx-submit='add_break']", %{
-        "day" => "1",
-        "start" => "12:00",
-        "end" => "13:00",
-        "label" => "Lunch"
-      })
-      |> render_submit()
+      |> form("form[phx-submit='add_break']", %{"day" => "1", "label" => "Lunch"})
+      |> render_submit(%{"start" => "12:00", "end" => "13:00"})
 
       html = render(view)
       assert html =~ "Break added"
@@ -232,13 +227,8 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       |> render_click()
 
       view
-      |> form("form[phx-submit='add_break']", %{
-        "day" => "1",
-        "start" => "12:00",
-        "end" => "13:00",
-        "label" => "Lunch"
-      })
-      |> render_submit()
+      |> form("form[phx-submit='add_break']", %{"day" => "1", "label" => "Lunch"})
+      |> render_submit(%{"start" => "12:00", "end" => "13:00"})
 
       day = WeeklySchedule.get_day_availability(schedule.id, 1)
       [break] = breaks_for_day(day.id)
@@ -274,13 +264,8 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       |> render_click()
 
       view
-      |> form("form[phx-submit='add_break']", %{
-        "day" => "1",
-        "start" => "12:00",
-        "end" => "13:00",
-        "label" => "Lunch"
-      })
-      |> render_submit()
+      |> form("form[phx-submit='add_break']", %{"day" => "1", "label" => "Lunch"})
+      |> render_submit(%{"start" => "12:00", "end" => "13:00"})
 
       day = WeeklySchedule.get_day_availability(schedule.id, 1)
       [break] = breaks_for_day(day.id)
@@ -309,13 +294,8 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       |> render_click()
 
       view
-      |> form("form[phx-submit='add_break']", %{
-        "day" => "1",
-        "start" => "15:00",
-        "end" => "15:30",
-        "label" => ""
-      })
-      |> render_submit()
+      |> form("form[phx-submit='add_break']", %{"day" => "1", "label" => ""})
+      |> render_submit(%{"start" => "15:00", "end" => "15:30"})
 
       html = render(view)
       assert html =~ "Break added"
