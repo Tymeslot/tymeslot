@@ -48,9 +48,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
        `paid` is not overwritten), transition the linked `awaiting_payment`
        meeting to `expired`, then soft-delete the connect_account row.
 
-  For an account the host connected through OAuth, the removal also schedules
-  the revocation of Tymeslot's access to their Stripe account, 35 minutes
-  later (see `schedule_revocation/1`); a reconnection in the meantime cancels
+  The removal also schedules the revocation of Tymeslot's access to the
+  host's Stripe account, 35 minutes later (see `schedule_revocation/1`); a reconnection in the meantime cancels
   it in effect, since the worker leaves a connected account alone.
 
   Returns `{:ok, %{cancelled_count: n, outstanding_refunds_count: m}}` on
@@ -232,19 +231,17 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
   A later disconnect of the same account pushes back a revocation still
   pending, so the delay always runs from the most recent disconnect.
 
-  Only an account the host connected through OAuth is revoked. A legacy
-  account was created by the platform, and Stripe refuses to deauthorise
-  those, so nothing is enqueued for it, nor for `nil`.
+  Every account is revoked, including a legacy one the platform created
+  before OAuth: Stripe accepts those too (the worker cancels the job should it
+  refuse one as platform-controlled). Nothing is enqueued for `nil` or a row
+  with no Stripe account.
 
   Must run inside the transaction that removes the row: a failed insert rolls
   the transaction back, so the row is never removed with no revocation
   scheduled.
   """
   @spec schedule_revocation(ConnectAccountSchema.t() | nil) :: :ok
-  def schedule_revocation(%ConnectAccountSchema{
-        stripe_account_id: stripe_account_id,
-        oauth_connected_at: %DateTime{}
-      })
+  def schedule_revocation(%ConnectAccountSchema{stripe_account_id: stripe_account_id})
       when is_binary(stripe_account_id) do
     case DeauthorizeConnectAccount.schedule(stripe_account_id, @revoke_delay_seconds) do
       {:ok, _job} -> :ok

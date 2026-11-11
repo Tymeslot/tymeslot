@@ -43,6 +43,20 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccountTest do
   end
 
   @tag :capture_log
+  test "cancels without alerting when Stripe refuses a platform-controlled account" do
+    expect(StripeAdapterMock, :deauthorize_account, fn "acct_CTL" ->
+      {:error, :controlled_account}
+    end)
+
+    assert {:cancel, :controlled_account} =
+             perform_job(DeauthorizeConnectAccount, %{"stripe_account_id" => "acct_CTL"},
+               attempt: 20
+             )
+
+    refute_received {:send_alert, _type, _payload}
+  end
+
+  @tag :capture_log
   test "discards a job with malformed args" do
     assert {:discard, _reason} = perform_job(DeauthorizeConnectAccount, %{})
   end

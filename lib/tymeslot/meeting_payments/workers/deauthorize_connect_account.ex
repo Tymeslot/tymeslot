@@ -1,9 +1,11 @@
 defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
   @moduledoc """
-  Revokes the platform's access to a Stripe account a host connected through
-  OAuth that Tymeslot no longer holds: one it refused, or one the host
-  disconnected (or whose owner was deleted), which is scheduled after a delay
-  so a checkout session still open can be refunded first.
+  Revokes the platform's access to a Stripe account Tymeslot no longer holds:
+  one it refused, or one the host disconnected (or whose owner was deleted),
+  which is scheduled after a delay so a checkout session still open can be
+  refunded first. Accounts created by the platform before OAuth are revoked
+  too; should Stripe refuse one as platform-controlled, the job is cancelled
+  with a warning, since no retry can change that.
 
   An account that has a live row by the time this runs has been connected
   again, by the same host or another, and is left alone.
@@ -79,6 +81,13 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
 
       {:error, :not_connected} ->
         :ok
+
+      {:error, :controlled_account} ->
+        Logger.warning("Stripe refused to revoke a platform-controlled account",
+          stripe_account_id: stripe_account_id
+        )
+
+        {:cancel, :controlled_account}
 
       {:error, :oauth_failed} = error ->
         if job.attempt >= job.max_attempts, do: alert(job, stripe_account_id)

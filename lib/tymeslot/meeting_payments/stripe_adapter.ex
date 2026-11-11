@@ -19,8 +19,10 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
   @callback exchange_oauth_code(code :: String.t()) ::
               {:ok, %{stripe_user_id: String.t()}}
               | {:error, :invalid_grant | :oauth_failed}
+  # `:controlled_account` is Stripe refusing for good to revoke an account the
+  # platform controls; retrying cannot change it.
   @callback deauthorize_account(stripe_account_id :: String.t()) ::
-              :ok | {:error, :not_connected | :oauth_failed}
+              :ok | {:error, :not_connected | :controlled_account | :oauth_failed}
   @callback create_checkout_session(params :: map(), opts :: keyword()) ::
               {:ok, map()} | {:error, term()}
   @callback retrieve_checkout_session(session_id :: String.t(), opts :: keyword()) ::
@@ -47,7 +49,8 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
     Telemetry.span_stripe(:exchange_oauth_code, nil, fn -> impl().exchange_oauth_code(code) end)
   end
 
-  @spec deauthorize_account(String.t()) :: :ok | {:error, :not_connected | :oauth_failed}
+  @spec deauthorize_account(String.t()) ::
+          :ok | {:error, :not_connected | :controlled_account | :oauth_failed}
   def deauthorize_account(stripe_account_id) do
     Telemetry.span_stripe(:deauthorize_account, stripe_account_id, fn ->
       impl().deauthorize_account(stripe_account_id)
@@ -228,21 +231,29 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
 
   defp revocation_result(200, %{"stripe_user_id" => id}, id), do: :ok
 
+  defp revocation_result(_status, %{"error" => "no_deauth_on_controlled_account"}, _id),
+    do: {:error, :controlled_account}
+
   defp revocation_result(_status, %{"error" => "invalid_client", "error_description" => d}, _id)
-       when is_binary(d) do
-    if account_not_connected?(d), do: {:error, :not_connected}, else: {:error, :oauth_failed}
-  end
+       when is_binary(d),
+       do: classify_invalid_client(String.downcase(d))
 
   defp revocation_result(_status, _body, _id), do: {:error, :oauth_failed}
 
   # `invalid_client` also covers a foreign client ID, a key/client-ID mode
-  # mismatch and `no_deauth_on_controlled_account`; only the description tells
-  # a genuinely disconnected account apart.
-  defp account_not_connected?(description) do
-    description = String.downcase(description)
+  # mismatch and an account the platform controls; only the description tells
+  # them apart. Anything unrecognised stays `:oauth_failed`, which is retried.
+  defp classify_invalid_client(description) do
+    cond do
+      description =~ "not connected" or description =~ "does not exist" ->
+        {:error, :not_connected}
 
-    String.contains?(description, "not connected") or
-      String.contains?(description, "does not exist")
+      description =~ "controlled" ->
+        {:error, :controlled_account}
+
+      true ->
+        {:error, :oauth_failed}
+    end
   end
 
   # Returns `{:ok, status, decoded_map}`, or `:error`. The only things logged

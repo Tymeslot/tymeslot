@@ -149,14 +149,19 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
       )
     end
 
-    test "disconnecting a legacy account does not attempt revocation" do
+    test "disconnecting a legacy account schedules its revocation too" do
       user = insert(:user)
       insert(:connect_account, user: user, stripe_account_id: "acct_LEG")
 
       assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
 
       refute ConnectAccountQueries.live_for_user(user.id)
-      refute_enqueued(worker: DeauthorizeConnectAccount)
+
+      assert_enqueued(
+        worker: DeauthorizeConnectAccount,
+        args: %{stripe_account_id: "acct_LEG"},
+        scheduled_at: {DateTime.add(DateTime.utc_now(:second), 35 * 60), delta: 60}
+      )
     end
 
     test "reconnecting the same account before revocation keeps it" do

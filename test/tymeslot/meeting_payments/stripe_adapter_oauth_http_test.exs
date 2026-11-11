@@ -231,6 +231,23 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
       assert {:error, :not_connected} = Stripity.deauthorize_account("acct_X")
     end
 
+    test "a refusal for a platform-controlled account is controlled_account" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        json(conn, 400, %{"error" => "no_deauth_on_controlled_account"})
+      end)
+
+      assert {:error, :controlled_account} = Stripity.deauthorize_account("acct_X")
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        json(conn, 401, %{
+          "error" => "invalid_client",
+          "error_description" => "You cannot deauthorize a controlled account"
+        })
+      end)
+
+      assert {:error, :controlled_account} = Stripity.deauthorize_account("acct_X")
+    end
+
     test "invalid_client for any other reason is oauth_failed" do
       ReqTest.stub(:tymeslot_http, fn conn ->
         json(conn, 401, %{

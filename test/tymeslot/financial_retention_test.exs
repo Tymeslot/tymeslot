@@ -51,13 +51,13 @@ defmodule Tymeslot.FinancialRetentionTest do
                Oban.drain_queue(queue: :payments, with_scheduled: true)
     end
 
-    test "does not attempt revocation for a legacy account" do
+    test "schedules revocation for a legacy account too" do
       user = insert(:user)
       insert(:connect_account, user: user, stripe_account_id: "acct_OLD")
 
       assert :ok = FinancialRetention.anonymise_host(user.id)
 
-      refute_enqueued(worker: DeauthorizeConnectAccount)
+      assert_enqueued(worker: DeauthorizeConnectAccount, args: %{stripe_account_id: "acct_OLD"})
     end
 
     test "scrubs attendee PII, retains host PII, soft-deletes connect, touches both tables" do

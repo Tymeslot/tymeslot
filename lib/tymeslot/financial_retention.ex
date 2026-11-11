@@ -32,9 +32,8 @@ defmodule Tymeslot.FinancialRetention do
       the full rationale.
     * `ConnectAccountQueries.soft_delete_for_user/2` — marks the host's
       Stripe Connect account row as `deleted`, nilifies `user_id`, and
-      records `deleted_at`. For an account the host connected through
-      Stripe's authorisation page, it also schedules the revocation of
-      Tymeslot's access to that account
+      records `deleted_at`. It also schedules the revocation of Tymeslot's
+      access to that Stripe account
       (`ConnectAccountRetirement.schedule_revocation/1`), in the same
       transaction.
 
