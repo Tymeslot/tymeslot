@@ -220,6 +220,11 @@ config :tymeslot, :email_service, Tymeslot.EmailServiceMock
 config :tymeslot, :transcoder, Tymeslot.Media.TranscoderMock
 config :tymeslot, :health_check_module, Tymeslot.Integrations.HealthCheckMock
 
+# Flag a CalDAV integration on the first rejected sync, as before the
+# threshold existed, so tests about what flagging does need not first fail
+# the sync three times. The threshold itself is tested with its own value.
+config :tymeslot, :caldav_reauth_after_failed_cycles, 1
+
 # MiroTalk test configuration
 config :tymeslot, :mirotalk_api,
   api_key: "test-api-key",

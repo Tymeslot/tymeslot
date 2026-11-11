@@ -54,6 +54,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   @default_cause :credentials_undecryptable
 
   @discard_reason "Credentials require reauthentication"
+  @default_password_rejection_threshold 3
 
   @key_missing_discard_reason "Credentials are encrypted under a key missing from the keyring"
 
@@ -118,6 +119,34 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   """
   @spec discard_reason() :: String.t()
   def discard_reason, do: @discard_reason
+
+  @doc """
+  How many consecutive failures, ending in a credential rejection, a
+  password-based (CalDAV-family) integration must see before it is flagged
+  for reconnection. Three by default; configurable via
+  `:caldav_reauth_after_failed_cycles`, where `1` restores flagging on the
+  first rejection.
+
+  A CalDAV server can answer a single request with a 401 it does not mean: a
+  shared host under load or mid-maintenance briefly loses its authentication
+  backend, and every account on it gets one 401 at the same moment. A flag is
+  costly to raise by mistake, because a flagged integration is neither synced
+  nor probed back to health, so only its owner reconnecting clears it, and
+  bookings are not written to it in the meantime. An OAuth grant that is
+  refused is a different matter (the grant really is gone), so this does not
+  apply to OAuth providers.
+
+  Shared by the CalDAV sync worker, which counts failed sync cycles, and the
+  health probe, which counts consecutive hard failures.
+  """
+  @spec password_rejection_threshold() :: pos_integer()
+  def password_rejection_threshold do
+    Application.get_env(
+      :tymeslot,
+      :caldav_reauth_after_failed_cycles,
+      @default_password_rejection_threshold
+    )
+  end
 
   @doc """
   The reason an Oban job is discarded with when its integration's credentials
