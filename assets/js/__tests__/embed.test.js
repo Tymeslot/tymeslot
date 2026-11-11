@@ -1410,6 +1410,66 @@ describe('chrome text in the embed\'s language', () => {
     expect(container.textContent).toContain('Le widget de réservation met trop de temps')
   })
 
+  describe('without a data-locale', () => {
+    let languages
+    let language
+
+    beforeEach(() => {
+      languages = vi.spyOn(window.navigator, 'languages', 'get')
+      language = vi.spyOn(window.navigator, 'language', 'get')
+    })
+
+    afterEach(() => {
+      languages.mockRestore()
+      language.mockRestore()
+      document.documentElement.removeAttribute('lang')
+    })
+
+    const buttonLabel = () => {
+      window.TymeslotBooking.initFloating('alice', {})
+      return document.getElementById('tymeslot-floating-button').getAttribute('aria-label')
+    }
+
+    test('follows the visitor\'s browser language', () => {
+      languages.mockReturnValue(['de-AT', 'en'])
+      language.mockReturnValue('de-AT')
+      expect(buttonLabel()).toBe('Termin buchen')
+    })
+
+    test('takes the first supported browser language', () => {
+      languages.mockReturnValue(['ja', 'fr-CA', 'de'])
+      expect(buttonLabel()).toBe('Réserver un rendez-vous')
+    })
+
+    test('falls back to navigator.language when navigator.languages is empty', () => {
+      languages.mockReturnValue([])
+      language.mockReturnValue('pl')
+      expect(buttonLabel()).toBe('Zarezerwuj spotkanie')
+    })
+
+    test('uses the page\'s html lang when no browser language is supported', () => {
+      languages.mockReturnValue(['ja'])
+      document.documentElement.setAttribute('lang', 'es-ES')
+      expect(buttonLabel()).toBe('Reservar una reunión')
+    })
+
+    test('an explicit locale beats the browser and the page', () => {
+      languages.mockReturnValue(['de'])
+      document.documentElement.setAttribute('lang', 'fr')
+      window.TymeslotBooking.initFloating('alice', { locale: 'it' })
+      expect(document.getElementById('tymeslot-floating-button').getAttribute('aria-label')).toBe(
+        'Prenota una riunione'
+      )
+    })
+
+    test('is English when nothing supported is offered', () => {
+      languages.mockReturnValue(['ja'])
+      language.mockReturnValue('ja')
+      document.documentElement.setAttribute('lang', 'ko')
+      expect(buttonLabel()).toBe('Book a meeting')
+    })
+  })
+
   test('English remains the default wording', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)

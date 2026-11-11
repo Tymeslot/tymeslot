@@ -23,8 +23,10 @@
    * The words the script writes into the host's page. A static script cannot
    * reach the server's catalogues, so each supported locale (the list in
    * `config :tymeslot, :locales`) carries its few lines here. The locale is
-   * the embed's `data-locale` (or the `locale` option); anything else, or a
-   * regional form like `pt-BR`, resolves to its language, then to English.
+   * the embed's `data-locale` (or the `locale` option); without one, the
+   * visitor's browser languages (as the booking page itself chooses), then the
+   * host page's `<html lang>`, then English. A regional form like `pt-BR`
+   * resolves to its language.
    * The iframe's own `title` stays "Booking Widget" in every language: the
    * resize listener finds its iframes by it.
    */
@@ -112,9 +114,27 @@
     }
   };
 
+  function languageCode(locale) {
+    return String(locale || '').toLowerCase().split(/[-_]/)[0];
+  }
+
+  // The language the booking page in the iframe will use when the embed pins
+  // none: its server reads the visitor's Accept-Language, which the browser
+  // mirrors in navigator.languages (highest preference first). The host
+  // page's own <html lang> is the last hint before English.
+  function fallbackLanguages() {
+    const browser = (navigator.languages && navigator.languages.length)
+      ? Array.prototype.slice.call(navigator.languages)
+      : [navigator.language];
+    return browser.concat(document.documentElement.getAttribute('lang'));
+  }
+
   function text(key, locale) {
-    const code = String(locale || '').toLowerCase().split(/[-_]/)[0];
-    return (STRINGS[code] || STRINGS.en)[key] || STRINGS.en[key];
+    const candidates = [locale].concat(fallbackLanguages());
+    const code = candidates.map(languageCode).find(function(c) {
+      return Object.prototype.hasOwnProperty.call(STRINGS, c);
+    }) || 'en';
+    return STRINGS[code][key] || STRINGS.en[key];
   }
 
   /**
