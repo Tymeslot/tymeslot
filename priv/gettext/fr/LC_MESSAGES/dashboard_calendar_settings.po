@@ -566,3 +566,8 @@ msgstr "Les rappels sont activés, mais votre navigateur n’a pas encore autori
 #, elixir-autogen, elixir-format
 msgid "This browser does not support notifications."
 msgstr "Ce navigateur ne prend pas en charge les notifications."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+msgstr "Les rappels sont activés, mais votre navigateur bloque les notifications. Autorisez les notifications pour ce site dans les paramètres du navigateur et les rappels démarreront."

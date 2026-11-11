@@ -150,11 +150,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopRemindersLiveViewTest do
       assert has_element?(lv, "#desktop-reminders-grant", "Allow notifications")
     end
 
-    test "says blocked when the browser has denied it", %{conn: conn} do
+    test "says blocked when the browser has denied it, without asking to switch on again", %{
+      conn: conn
+    } do
       lv = open_settings(conn)
       html = component_event(lv, "desktop_reminders_permission", %{"permission" => "denied"})
 
-      assert html =~ "Blocked in your browser settings"
+      assert has_element?(lv, ~s(#desktop-reminders-switch[aria-checked="true"]))
+
+      assert has_element?(
+               lv,
+               "#desktop-permission-note",
+               "Reminders are on, but your browser is blocking notifications."
+             )
+
+      assert html =~ "Allow notifications for this site in your browser settings"
+      refute html =~ "switch reminders on again"
       refute has_element?(lv, "#desktop-reminders-grant")
     end
 

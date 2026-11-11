@@ -566,3 +566,8 @@ msgstr "I promemoria sono attivi, ma il browser non ha ancora consentito le noti
 #, elixir-autogen, elixir-format
 msgid "This browser does not support notifications."
 msgstr "Questo browser non supporta le notifiche."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+msgstr "I promemoria sono attivi, ma il browser blocca le notifiche. Consenti le notifiche per questo sito nelle impostazioni del browser e i promemoria inizieranno."

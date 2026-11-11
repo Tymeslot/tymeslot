@@ -566,3 +566,8 @@ msgstr "Die Erinnerungen sind eingeschaltet, aber Ihr Browser hat Benachrichtigu
 #, elixir-autogen, elixir-format
 msgid "This browser does not support notifications."
 msgstr "Dieser Browser unterstützt keine Benachrichtigungen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+msgstr "Die Erinnerungen sind eingeschaltet, aber Ihr Browser blockiert Benachrichtigungen. Erlauben Sie Benachrichtigungen für diese Website in den Browsereinstellungen, dann starten die Erinnerungen."

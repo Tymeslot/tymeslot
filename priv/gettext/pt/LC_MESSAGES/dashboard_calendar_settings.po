@@ -566,3 +566,8 @@ msgstr "Os lembretes estão ativados, mas o navegador ainda não permitiu as not
 #, elixir-autogen, elixir-format
 msgid "This browser does not support notifications."
 msgstr "Este navegador não oferece suporte a notificações."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+msgstr "Os lembretes estão ativados, mas o navegador está a bloquear as notificações. Permita as notificações deste site nas definições do navegador e os lembretes vão começar."

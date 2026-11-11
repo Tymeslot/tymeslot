@@ -572,3 +572,8 @@ msgstr "Připomínky jsou zapnuté, ale prohlížeč zatím oznámení nepovolil
 #, elixir-autogen, elixir-format
 msgid "This browser does not support notifications."
 msgstr "Tento prohlížeč oznámení nepodporuje."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+msgstr "Připomínky jsou zapnuté, ale prohlížeč blokuje oznámení. Povolte oznámení pro tento web v nastavení prohlížeče a připomínky se spustí."

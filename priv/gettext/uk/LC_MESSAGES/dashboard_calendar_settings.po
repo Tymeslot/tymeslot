@@ -571,3 +571,8 @@ msgstr "Нагадування увімкнено, але браузер ще н
 #, elixir-autogen, elixir-format
 msgid "This browser does not support notifications."
 msgstr "Цей браузер не підтримує сповіщення."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+msgstr "Нагадування увімкнено, але браузер блокує сповіщення. Дозвольте сповіщення для цього сайту в налаштуваннях браузера, і нагадування почнуться."

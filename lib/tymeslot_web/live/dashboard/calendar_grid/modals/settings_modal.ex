@@ -164,6 +164,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
   # What the browser's permission means for the switch above. A `default`
   # permission with reminders already on (a preference saved before the switch
   # asked) gets a button, which is the user gesture the request needs.
+  # Reminders saved as on while the browser blocks them: the switch already
+  # reads on, and the reminders check the permission each time they fire, so
+  # allowing the site in the browser is all it takes.
+  defp desktop_permission_note(%{permission: "denied", enabled: true} = assigns) do
+    ~H"""
+    <p id="desktop-permission-note" role="status" class="text-token-sm text-amber-700 -mt-3">
+      {dgettext(
+        "dashboard_calendar_settings",
+        "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+      )}
+    </p>
+    """
+  end
+
   defp desktop_permission_note(%{permission: "denied"} = assigns) do
     ~H"""
     <p id="desktop-permission-note" role="status" class="text-token-sm text-amber-700 -mt-3">

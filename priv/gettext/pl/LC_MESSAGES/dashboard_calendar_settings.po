@@ -569,3 +569,8 @@ msgstr "Przypomnienia są włączone, ale przeglądarka nie zezwoliła jeszcze n
 #, elixir-autogen, elixir-format
 msgid "This browser does not support notifications."
 msgstr "Ta przeglądarka nie obsługuje powiadomień."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+msgstr "Przypomnienia są włączone, ale przeglądarka blokuje powiadomienia. Zezwól na powiadomienia dla tej witryny w ustawieniach przeglądarki, a przypomnienia zaczną się pojawiać."
