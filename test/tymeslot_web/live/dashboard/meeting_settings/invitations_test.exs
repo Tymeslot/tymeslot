@@ -116,12 +116,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
 
     assert has_element?(view, "[data-testid='invitation-only']", "Invitation only")
 
-    # Why it is invitation only reaches keyboards and screen readers too.
+    # Why it is invitation only reaches keyboards and screen readers too: the
+    # tab stop is a named element whose description is the tooltip.
     tip = "meeting-type-#{type.id}-invitation-only-tip"
 
     assert has_element?(
              view,
-             "[data-testid='invitation-only'][tabindex='0'][aria-describedby='#{tip}']"
+             "[data-testid='invitation-only'][tabindex='0'][role='img']" <>
+               "[aria-label='Invitation only'][aria-describedby='#{tip}']"
            )
 
     assert has_element?(

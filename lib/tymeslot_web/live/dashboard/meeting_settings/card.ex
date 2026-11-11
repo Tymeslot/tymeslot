@@ -87,6 +87,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             >
               <Feedback.pill
                 tabindex="0"
+                role="img"
+                aria-label={dgettext("dashboard_meeting_types", "Invitation only")}
                 aria-describedby={tip}
                 icon="hero-envelope-mini"
                 data-testid="invitation-only"
@@ -110,6 +112,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             >
               <Feedback.pill
                 tabindex="0"
+                role="img"
+                aria-label={dgettext("dashboard_meeting_types", "Unlisted")}
                 aria-describedby={tip}
                 icon="hero-eye-slash-mini"
               >
@@ -124,6 +128,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             >
               <Feedback.pill
                 tabindex="0"
+                role="img"
+                aria-label={dgettext("dashboard_meeting_types", "No open dates")}
                 aria-describedby={tip}
                 tone={:warning}
                 icon="hero-calendar-mini"
@@ -155,7 +161,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               text={dgettext("dashboard_meeting_types", "Booking link")}
             >
               <Feedback.pill
-                tabindex="0"
                 aria-describedby={tip}
                 size={:sm}
                 icon="hero-link-mini"

@@ -391,7 +391,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
             text={dgettext("dashboard_polls", "This time clashes with an event on your calendar")}
           >
             <Feedback.pill
-              tabindex="0"
               aria-describedby={tip}
               tone={:warning}
               icon="hero-exclamation-triangle-mini"
