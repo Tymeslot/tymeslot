@@ -149,14 +149,14 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
           user_id
           |> retire(pending, &still_deauthorized!(&1, stripe_account_id, event_at))
           |> announce_after_commit()
-          |> case do
-            {:ok, _cancelled_count} -> :ok
-            {:error, :superseded} -> :ok
-            {:error, _reason} = error -> error
-          end
+          |> deauthorized_result()
         end
     end
   end
+
+  defp deauthorized_result({:ok, _cancelled_count}), do: :ok
+  defp deauthorized_result({:error, :superseded}), do: :ok
+  defp deauthorized_result({:error, _reason} = error), do: error
 
   # Runs on the row locked inside the transaction. A row that is gone, holds
   # another account, or was connected after the event has replaced the one the
