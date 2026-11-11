@@ -33,6 +33,10 @@ defmodule Tymeslot.Auth.Authentication do
           | {:error, atom(), String.t()}
           | {:error, :invalid_input, map()}
   def authenticate_user(email, password, opts \\ []) do
+    # PostgreSQL rejects a null byte in a string, so one left in the address
+    # would fail the lookup query instead of the sign-in.
+    email = strip_null_bytes(email)
+
     case Validation.validate_login_input(email, password) do
       :ok ->
         check_rate_limit_and_authenticate(email, password, opts)
@@ -41,6 +45,9 @@ defmodule Tymeslot.Auth.Authentication do
         {:error, :invalid_input, errors}
     end
   end
+
+  defp strip_null_bytes(email) when is_binary(email), do: String.replace(email, "\x00", "")
+  defp strip_null_bytes(email), do: email
 
   defp check_rate_limit_and_authenticate(email, password, opts) do
     RateLimit.with_limit(
