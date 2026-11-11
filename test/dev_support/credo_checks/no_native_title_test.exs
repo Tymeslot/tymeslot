@@ -11,6 +11,7 @@ Code.require_file(
 defmodule CredoChecks.NoNativeTitleTest do
   use Credo.Test.Case, async: false
 
+  alias Credo.SourceFile
   alias CredoChecks.NoNativeTitle
 
   @moduletag :dev_support
@@ -20,9 +21,10 @@ defmodule CredoChecks.NoNativeTitleTest do
     :ok
   end
 
-  defp issues(template, filename \\ "lib/tymeslot_web/example.ex") do
+  defp issues(template, filename \\ "lib/tymeslot_web/example.ex", preamble \\ "") do
     """
     defmodule TymeslotWeb.Example do
+      #{preamble}
       def render(assigns) do
         ~H\"\"\"
         #{template}
@@ -107,6 +109,93 @@ defmodule CredoChecks.NoNativeTitleTest do
              issues(~S|<Buttons.loading_button tooltip="Reason">Go</Buttons.loading_button>|)
 
     assert [] = issues(~S|<.action_button id="go" tooltip="Reason">Go</.action_button>|)
-    assert [] = issues(~S|<.action_button tooltip={@tooltip} {@rest}>Go</.action_button>|)
+  end
+
+  test "a wrapper's global spread can carry the caller's id; another spread cannot" do
+    template = ~S|<.action_button tooltip={@tooltip} {@rest}>Go</.action_button>|
+
+    assert [] = issues(template, "lib/tymeslot_web/example.ex", "attr :rest, :global")
+    assert [%{trigger: "tooltip="}] = issues(template)
+
+    assert [%{trigger: "tooltip="}] =
+             issues(~S|<.action_button tooltip="Reason" {@open_attrs}>Go</.action_button>|)
+  end
+
+  test "flags a title forwarded through any component's global attributes" do
+    assert [_] = issues(~S|<.input field={@form[:name]} title="Reason" />|)
+    assert [_] = issues(~S|<.select id="s" options={[]} title={@reason} />|)
+    assert [_] = issues(~S|<CoreComponents.input name="x" value="" title="Reason" />|)
+  end
+
+  test "leaves a component with no global attributes alone" do
+    assert [] = issues(~S|<.unknown_widget title="Heading" />|)
+  end
+
+  describe "forwarding_components/1" do
+    test "takes components with a global attribute and no title of their own" do
+      source = """
+      attr :rest, :global
+      def chip(assigns), do: assigns
+
+      attr :title, :string
+      attr :rest, :global
+      def panel(assigns), do: assigns
+
+      attr :label, :string
+      def plain(assigns), do: assigns
+      """
+
+      forwarding = NoNativeTitle.forwarding_components([source])
+
+      assert MapSet.member?(forwarding, "chip")
+      refute MapSet.member?(forwarding, "panel")
+      refute MapSet.member?(forwarding, "plain")
+      assert MapSet.member?(forwarding, "link")
+    end
+
+    test "leaves a name alone when any component of that name declares a title" do
+      forwarding =
+        NoNativeTitle.forwarding_components([
+          "attr :rest, :global\ndef card(assigns), do: assigns",
+          "attr :title, :string\ndef card(assigns), do: assigns"
+        ])
+
+      refute MapSet.member?(forwarding, "card")
+    end
+
+    test "the real components include the inputs and buttons, not the headings" do
+      forwarding =
+        NoNativeTitle.forwarding_components(Enum.map(Path.wildcard("lib/**/*.ex"), &File.read!/1))
+
+      for name <- ~w(input select action_button icon_button loading_button icon pill) do
+        assert MapSet.member?(forwarding, name), "expected #{name} to forward a title"
+      end
+
+      for name <- ~w(card confirm_modal section_header empty_state) do
+        refute MapSet.member?(forwarding, name), "expected #{name} to keep its title"
+      end
+    end
+  end
+
+  # Credo reads no `.heex` file, so the templates are checked here instead.
+  test "every .heex template under lib/ passes" do
+    files = Path.wildcard("lib/**/*.heex")
+    assert files != []
+
+    offenders =
+      Enum.flat_map(files, fn file ->
+        file
+        |> File.read!()
+        |> SourceFile.parse(file)
+        |> NoNativeTitle.run([])
+      end)
+
+    assert offenders == []
+  end
+
+  test "the .heex sweep finds a title in a template" do
+    source = SourceFile.parse(~S|<span title="Reason">x</span>|, "lib/example.html.heex")
+
+    assert [_] = NoNativeTitle.run(source, [])
   end
 end
