@@ -4,8 +4,9 @@
    Matches TymeslotWeb.Components.LanguageSwitcher, which emits the
    lang-switcher__* classes. Each theme sets the --lang-switcher-* colours in
    its variables.css and keeps its own treatment (blur, borders, shadows,
-   positioning, animation, sizes) in its modules/language-switcher.css,
-   imported right after this file.
+   positioning, animation, control padding) in its
+   modules/language-switcher.css, imported right after this file. The panel's
+   size is set here, for every theme.
    ========================================================================== */
 
 .lang-switcher__button {
@@ -29,11 +30,24 @@
   }
 }
 
+/* Two columns, so every language shows without scrolling on a short screen.
+   The width stops short of the screen edges, whichever corner holds the
+   button. */
 .lang-switcher__panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(var(--lang-switcher-panel-width), calc(100vw - 2 * var(--space-lg)));
   background: var(--lang-switcher-panel-surface);
   border: var(--border-width-thin) solid var(--lang-switcher-panel-line);
-  max-height: var(--dropdown-max-height);
+  max-height: var(--lang-switcher-panel-max-height);
   overflow-y: auto;
+}
+
+/* Too narrow for two columns of language names: a very small phone or embed. */
+@media (max-width: 340px) {
+  .lang-switcher__panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .lang-switcher__item {

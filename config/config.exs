@@ -348,15 +348,16 @@ config :tymeslot, TymeslotWeb.Gettext, default_locale: "en"
 # priv/gettext/TRANSLATING.md for the translator-facing side.
 config :tymeslot, :locales,
   supported: [
-    %{code: "en", name: "English", country_code: :gbr},
+    # Listed by each language's own name, the order the pickers show them in.
+    %{code: "cs", name: "Čeština", country_code: :cze},
     %{code: "de", name: "Deutsch", country_code: :deu},
+    %{code: "en", name: "English", country_code: :gbr},
+    %{code: "es", name: "Español", country_code: :esp},
     %{code: "fr", name: "Français", country_code: :fra},
     %{code: "it", name: "Italiano", country_code: :ita},
-    %{code: "uk", name: "Українська", country_code: :ukr},
-    %{code: "cs", name: "Čeština", country_code: :cze},
     %{code: "pl", name: "Polski", country_code: :pol},
     %{code: "pt", name: "Português (Brasil)", country_code: :bra},
-    %{code: "es", name: "Español", country_code: :esp}
+    %{code: "uk", name: "Українська", country_code: :ukr}
   ],
   default: "en"
 
