@@ -253,6 +253,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     |> maybe_put_query_param("reschedule_seat_token", socket.assigns[:reschedule_seat_token])
     |> Map.merge(invite_param(socket.assigns))
     |> put_choices(socket.assigns)
+    |> drop_spent_invite(socket.assigns)
   end
 
   # What a fresh booking forgets of them: everything built on the meeting
