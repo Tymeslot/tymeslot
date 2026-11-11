@@ -75,6 +75,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     socket
     |> assign(
       poll: poll,
+      poll_location: Polls.location(poll),
       tallies: Polls.tallies(poll),
       participant: participant,
       invalid_link: params["p"] not in [nil, ""] and is_nil(participant),
@@ -314,6 +315,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         socket
         |> assign(
           poll: poll,
+          poll_location: Polls.location(poll),
           tallies: Polls.tallies(poll),
           participant: reload_participant(poll, socket.assigns[:participant])
         )

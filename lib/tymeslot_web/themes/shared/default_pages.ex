@@ -103,6 +103,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
     ~H"""
     <PollVotingComponents.poll_content
       poll={@poll}
+      location={@poll_location}
       tallies={@tallies}
       voting_open={@voting_open}
       participant={@participant}

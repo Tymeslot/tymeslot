@@ -20,6 +20,7 @@ defmodule Tymeslot.Polls do
     Invitations,
     MeetingTypeRule,
     OpenPollLock,
+    PollLocation,
     PollParticipantQueries,
     PollParticipantSchema,
     PollQueries,
@@ -60,6 +61,12 @@ defmodule Tymeslot.Polls do
   When `:meeting_type_id` is given it is loaded scoped to `user_id`; the poll
   snapshots the type's name and duration unless those are given explicitly.
 
+  Where the meeting will be held is optional too: `:location_kind` with the
+  field that goes with it, as `Tymeslot.Polls.PollLocation.parse_choice/2`
+  builds them. A venue or video integration that is not the host's (or an
+  integration switched off) is `{:error, :location_not_found}`. Without a
+  location of its own, the poll takes its meeting type's.
+
   A host without a calendar connected is refused with `{:error, :no_calendar}`:
   the voting page stays closed until they have one.
   """
@@ -68,6 +75,7 @@ defmodule Tymeslot.Polls do
           | {:error,
              :meeting_type_not_found
              | :payment_required_type
+             | :location_not_found
              | :no_slots
              | :too_many_slots
              | :slot_in_past
@@ -93,6 +101,7 @@ defmodule Tymeslot.Polls do
           | {:error,
              :meeting_type_not_found
              | :payment_required_type
+             | :location_not_found
              | :too_many_slots
              | :slot_in_past
              | Ecto.Changeset.t()}
@@ -209,6 +218,14 @@ defmodule Tymeslot.Polls do
     |> Enum.filter(&match?({:ok, _meeting_type}, MeetingTypeRule.check(&1)))
   end
 
+  @doc "See `Tymeslot.Polls.PollLocation.options/1`."
+  @spec location_options(integer()) :: map()
+  defdelegate location_options(user_id), to: PollLocation, as: :options
+
+  @doc "See `Tymeslot.Polls.PollLocation.effective/1`."
+  @spec location(PollSchema.t()) :: PollLocation.t() | nil
+  defdelegate location(poll), to: PollLocation, as: :effective
+
   @doc """
   Counts the user's polls that are still open for votes. Drafts are not
   among them.
@@ -223,8 +240,8 @@ defmodule Tymeslot.Polls do
   and adds a candidate time at each of `new_starts`. Existing times are never
   changed. See `Tymeslot.Polls.Editing`.
 
-  Subscribers are notified, since the title, description, deadline and times
-  are all on the public voting page.
+  Subscribers are notified, since the title, description, location, deadline
+  and times are all on the public voting page.
   """
   @spec update_details(Ecto.UUID.t(), integer(), map(), [DateTime.t()]) ::
           {:ok, PollSchema.t()} | {:error, Editing.reason()}

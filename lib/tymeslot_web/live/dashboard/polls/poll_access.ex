@@ -11,6 +11,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollAccess do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Polls
+  alias Tymeslot.Polls.Invitations
   alias TymeslotWeb.Components.CoreComponents.Feedback
 
   @doc "The form value for whether a poll is invite-only."
@@ -22,6 +24,47 @@ defmodule TymeslotWeb.Dashboard.Polls.PollAccess do
   @spec invite_only?(term()) :: boolean()
   def invite_only?("invited"), do: true
   def invite_only?(_value), do: false
+
+  @doc """
+  The create form's choice once `params` arrive, and whether the host made
+  it: their choice, or until they make one, the default for the invitees
+  typed so far. The form always sends whichever radio is checked, and a
+  change event can carry the value the page showed before the server's
+  default flipped, so only a change the radio itself triggered (`target`)
+  is a choice. A submit (no target) keeps the host's choice, or else the
+  default. `assigns` are the form's, with `:access`, `:access_chosen?` and
+  `:invitees`.
+  """
+  @spec resolve(map(), [String.t()] | nil, map()) :: {String.t(), boolean()}
+  def resolve(%{"access" => value}, ["poll", "access"], _assigns)
+      when value in ["anyone", "invited"],
+      do: {value, true}
+
+  def resolve(_params, _target, %{access: shown, access_chosen?: true}), do: {shown, true}
+
+  def resolve(params, _target, assigns),
+    do: {default(Map.get(params, "invitees", assigns.invitees)), false}
+
+  # An unreadable list is still a list of people the host means to invite.
+  defp default(invitees_text) do
+    case Invitations.parse(invitees_text) do
+      {:ok, invitees} -> value(Polls.default_invite_only?(invitees))
+      {:error, _reason} -> value(true)
+    end
+  end
+
+  @doc "The create form's warning for `access` with the invitees typed so far."
+  @spec create_hint(String.t(), String.t() | nil) :: String.t() | nil
+  def create_hint("invited", invitees) do
+    if String.trim(invitees || "") == "" do
+      dgettext(
+        "dashboard_polls",
+        "Nobody can vote until you invite someone. You can also invite people after creating the poll."
+      )
+    end
+  end
+
+  def create_hint(_access, _invitees), do: nil
 
   attr :id, :string, required: true
   attr :name, :string, required: true

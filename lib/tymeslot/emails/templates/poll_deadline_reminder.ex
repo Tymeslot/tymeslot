@@ -14,6 +14,7 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
     Formatting,
     MjmlEmail,
     PollHost,
+    PollPlace,
     Sanitise,
     Styles,
     TemplateHelper,
@@ -38,7 +39,8 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
     deadline = formatted_deadline(poll, participant, locale)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      mjml_content = mjml_content(poll, host_name, deadline, voting_url)
+      place = PollPlace.line(poll)
+      mjml_content = mjml_content(poll, host_name, {deadline, place}, voting_url)
 
       html_body =
         TemplateHelper.compile_system_template(
@@ -64,13 +66,15 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
       |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
       |> subject(dgettext("emails_polls", "Reminder: vote on \"%{title}\"", title: poll.title))
       |> html_body(html_body)
-      |> text_body(build_text_body(poll, host_name, deadline, voting_url))
+      |> text_body(build_text_body(poll, host_name, {deadline, place}, voting_url))
     end)
   end
 
-  defp mjml_content(poll, host_name, deadline, voting_url) do
+  defp mjml_content(poll, host_name, {deadline, place}, voting_url) do
     """
     #{Text.centered_text(dgettext("emails_polls", "%{host} invited you to help pick a time for %{title}. Your vote is still outstanding.", host: host_name, title: poll.title), padding: "4px 0 12px 0")}
+
+    #{PollPlace.mjml(place)}
 
     #{deadline_block(deadline)}
 
@@ -91,12 +95,12 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
     """
   end
 
-  defp build_text_body(poll, host_name, deadline, voting_url) do
+  defp build_text_body(poll, host_name, {deadline, place}, voting_url) do
     """
     #{dgettext("emails_polls", "Reminder: vote on \"%{title}\"", title: poll.title)}
 
     #{dgettext("emails_polls", "%{host} invited you to help pick a time for %{title}. Your vote is still outstanding.", host: host_name, title: poll.title)}
-    #{deadline_text(deadline)}
+    #{PollPlace.text(place)}#{deadline_text(deadline)}
     #{dgettext("emails_polls", "Cast your vote:")}
     #{voting_url}
     """

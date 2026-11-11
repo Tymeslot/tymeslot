@@ -3,8 +3,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   LiveComponent for creating a poll, or saving it as a draft and coming back
   to it.
 
-  Owns the interactive create form: the meeting details and the candidate-slot
-  builder (each row a `datetime-local` input in the host's timezone). A row
+  Owns the interactive create form: the meeting details, where it will be
+  held (`PollLocationField`), and the candidate-slot builder (each row a `datetime-local` input in the host's timezone). A row
   whose time falls inside the host's time off, or clashes with an event in
   their calendar (`Tymeslot.Polls.SlotHealth`, checked off the LiveView
   process whenever the times change), carries a warning; neither stops the
@@ -33,9 +33,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.{HostAvailability, Invitations, PollSchema}
-  alias Tymeslot.Profiles
-  alias Tymeslot.Timezones
+  alias Tymeslot.Polls.{HostAvailability, Invitations, PollLocation, PollSchema}
 
   alias TymeslotWeb.Dashboard.Polls.{
     AvailabilityWeek,
@@ -48,6 +46,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     PollFormActions,
     PollFormErrors,
     PollInvite,
+    PollLocationField,
     PollReminders,
     PollsComponent,
     SlotWarnings
@@ -66,6 +65,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        title: "",
        description: "",
        meeting_type_id: "",
+       location_choice: "",
+       location_details: "",
+       type_location: nil,
+       type_location_for: "",
        duration: "30",
        deadline: "",
        notify_on_vote: true,
@@ -94,10 +97,15 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       if socket.assigns[:timezone] do
         socket
       else
-        assign(socket, :timezone, host_timezone(socket.assigns.profile))
+        assign(socket, :timezone, LocalTime.host_timezone(socket.assigns.profile))
       end
 
-    {:ok, socket |> load_draft() |> refresh_availability()}
+    {:ok,
+     socket
+     |> assign_new(:location_options, &Polls.location_options(&1.current_user.id))
+     |> load_draft()
+     |> assign_type_location()
+     |> refresh_availability()}
   end
 
   # Once per draft: the parent passes the same draft on every update, and the
@@ -173,13 +181,22 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             />
           </div>
 
+          <PollLocationField.field
+            id={"poll-location-#{@id}"}
+            choice={@location_choice}
+            details={@location_details}
+            options={@location_options}
+            type_location={@type_location}
+            errors={@errors}
+          />
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <.input
               type="select"
               name="poll[timezone]"
               label={dgettext("dashboard_polls", "Timezone")}
               value={@timezone}
-              options={timezone_options(@timezone)}
+              options={LocalTime.timezone_options(@timezone)}
               errors={error_list(@errors, :timezone)}
             />
 
@@ -234,7 +251,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             id={"poll-access-#{@id}"}
             name="poll[access]"
             value={@access}
-            hint={access_hint(@access, @invitees)}
+            hint={PollAccess.create_hint(@access, @invitees)}
           />
 
           <p :for={error <- error_list(@errors, :base)} class="form-error">{error}</p>
@@ -264,7 +281,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   def handle_event("form_change", %{"poll" => params} = event, socket) do
     meeting_type_id = Map.get(params, "meeting_type_id", socket.assigns.meeting_type_id)
     duration = resolve_duration(params, meeting_type_id, socket)
-    {access, access_chosen?} = resolve_access(params, event["_target"], socket)
+    {access, access_chosen?} = PollAccess.resolve(params, event["_target"], socket.assigns)
 
     {:noreply,
      socket
@@ -281,6 +298,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        timezone: Map.get(params, "timezone", socket.assigns.timezone),
        slots: CandidateTimes.merge(socket.assigns.slots, Map.get(params, "slots", %{}))
      )
+     |> assign(PollLocationField.form_state(params, socket.assigns))
+     |> assign_type_location()
      |> assign_time_off_keys()
      |> check_calendar()
      |> refresh_availability()}
@@ -504,7 +523,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   defp build_attrs(params, socket) do
     timezone = Map.get(params, "timezone", socket.assigns.timezone)
 
-    %{
+    params
+    |> PollLocationField.attrs()
+    |> Map.merge(%{
       title: Map.get(params, "title", ""),
       description: blank_to_nil(Map.get(params, "description")),
       timezone: timezone,
@@ -513,9 +534,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
       deadline_at: LocalTime.to_utc(Map.get(params, "deadline"), timezone),
       notify_on_vote: checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
       reminder_config: PollReminders.to_config(socket.assigns.reminder_picker),
-      invite_only: params |> resolve_access(nil, socket) |> elem(0) |> PollAccess.invite_only?(),
+      invite_only:
+        params |> PollAccess.resolve(nil, socket.assigns) |> elem(0) |> PollAccess.invite_only?(),
       slots: build_slots(Map.get(params, "slots", %{}), timezone)
-    }
+    })
   end
 
   defp parse_invitees(params) do
@@ -555,6 +577,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     Enum.find(meeting_types, &(Integer.to_string(&1.id) == to_string(id)))
   end
 
+  # The selected type's location, which the poll takes while it has none of
+  # its own, read again only when the type changes.
+  defp assign_type_location(%{assigns: %{meeting_type_id: id, type_location_for: id}} = socket),
+    do: socket
+
+  defp assign_type_location(%{assigns: %{meeting_types: types, meeting_type_id: id}} = socket) do
+    location = types |> selected_meeting_type(id) |> PollLocation.of_meeting_type()
+    assign(socket, type_location: location, type_location_for: id)
+  end
+
   defp meeting_type_options(meeting_types) do
     Enum.map(meeting_types, &{&1.name, &1.id})
   end
@@ -568,43 +600,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     end
   end
 
-  # --- Who can vote ---
-
-  # The host's choice, or until they make one, the default for the invitees
-  # typed so far. The form always sends whichever radio is checked, and a
-  # change event can carry the value the page showed before the server's
-  # default flipped, so only a change the radio itself triggered is a choice.
-  # A submit (no target) keeps the host's choice, or else the default.
-  defp resolve_access(%{"access" => value}, ["poll", "access"], _socket)
-       when value in ["anyone", "invited"],
-       do: {value, true}
-
-  defp resolve_access(_params, _target, %{assigns: %{access: shown, access_chosen?: true}}),
-    do: {shown, true}
-
-  defp resolve_access(params, _target, socket) do
-    {default_access(Map.get(params, "invitees", socket.assigns.invitees)), false}
-  end
-
-  # An unreadable list is still a list of people the host means to invite.
-  defp default_access(invitees_text) do
-    case Invitations.parse(invitees_text) do
-      {:ok, invitees} -> PollAccess.value(Polls.default_invite_only?(invitees))
-      {:error, _reason} -> PollAccess.value(true)
-    end
-  end
-
-  defp access_hint("invited", invitees) do
-    if String.trim(invitees || "") == "" do
-      dgettext(
-        "dashboard_polls",
-        "Nobody can vote until you invite someone. You can also invite people after creating the poll."
-      )
-    end
-  end
-
-  defp access_hint(_access, _invitees), do: nil
-
   # --- Misc ---
 
   defp checked?(params, key, default) do
@@ -617,28 +612,15 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   defp blank_to_nil(value) when value in [nil, ""], do: nil
   defp blank_to_nil(value), do: value
 
-  defp host_timezone(%{timezone: timezone}) when is_binary(timezone) and timezone != "",
-    do: timezone
-
-  defp host_timezone(_profile), do: Profiles.get_default_timezone()
-
-  # The picker lists the zones the app offers; a host whose profile holds
-  # another valid zone (`America/Detroit`, `Etc/UTC`) would otherwise see the
-  # first option selected and create the poll in the wrong zone.
-  defp timezone_options(selected) do
-    options = Timezones.all_options()
-
-    if Enum.any?(options, fn {_label, id} -> id == selected end) or not Timezones.valid?(selected),
-      do: options,
-      else: [{selected, selected} | options]
-  end
-
   defp errors_for({:invitees, reason}), do: %{invitees: [PollInvite.error_message(reason)]}
   defp errors_for(:poll_full), do: %{invitees: [PollInvite.error_message(:poll_full)]}
   defp errors_for(:no_username), do: %{invitees: [PollInvite.error_message(:no_username)]}
 
   defp errors_for({:rate_limited, _remaining} = reason),
     do: %{invitees: [PollInvite.error_message(reason)]}
+
+  defp errors_for(:location_not_found),
+    do: %{location_kind: [PollLocationField.not_found_message()]}
 
   defp errors_for(:no_slots),
     do: %{slots: [dgettext("dashboard_polls", "Add at least one candidate time")]}

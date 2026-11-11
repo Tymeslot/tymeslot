@@ -41,6 +41,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Poll.Voting do
             <div class="slide-content">
               <PollVotingComponents.poll_content
                 poll={@poll}
+                location={@poll_location}
                 tallies={@tallies}
                 voting_open={@voting_open}
                 participant={@participant}

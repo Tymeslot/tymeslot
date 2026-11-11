@@ -52,6 +52,24 @@ html.scheduling-app .poll-voting-timezone-icon {
   height: 0.875rem;
 }
 
+/* Where the meeting will be held: a line of its own under the description,
+   since an address can run long, with the icon saying what kind of place. */
+html.scheduling-app .poll-voting-location {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+html.scheduling-app .poll-voting-location-icon {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.125rem;
+}
+
 html.scheduling-app .poll-voting-greeting {
   font-size: var(--theme-font-size-sm);
   font-weight: 600;
