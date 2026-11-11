@@ -471,6 +471,11 @@ config :phoenix, :json_library, Jason
 # and cannot be narrowed, so it is filtered wholesale; nothing this app logs
 # needs to read it.
 #
+# "redirect_to" carries the page a signed-out visitor asked for through
+# sign-in (`TymeslotWeb.Plugs.ReturnTo`), query and all, so a host signed out
+# when Stripe sends them back would otherwise log the OAuth callback's code and
+# state inside it.
+#
 # This lives in compile-time config rather than runtime.exs so it holds at every
 # log level and in every environment. Production pins the level to :info, where
 # the "Parameters:" line is not emitted at all, but dev runs at :debug and a
@@ -486,7 +491,8 @@ config :phoenix, :filter_parameters, [
   "invite",
   "value",
   "code",
-  "state"
+  "state",
+  "redirect_to"
 ]
 
 # Precompressed siblings written by `mix phx.digest`, replacing the stock
