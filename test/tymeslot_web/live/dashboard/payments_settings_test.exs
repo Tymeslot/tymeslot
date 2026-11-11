@@ -314,14 +314,17 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       refute html =~ "Recent payments"
     end
 
-    test "a host who cancelled at Stripe is not offered a disconnect", %{conn: conn} do
+    test "a host who cancelled at Stripe sees the plain connect prompt", %{conn: conn} do
       user = create_onboarded_user()
-      insert(:connect_account, user: user, stripe_account_id: nil)
+      insert(:connect_account, user: user, stripe_account_id: nil, oauth_nonce: "pending")
 
       conn = log_in_user(conn, user)
       {:ok, view, html} = live(conn, "/dashboard/integrations?tab=payments")
 
-      assert has_element?(view, "#stripe-connect-continue-form")
+      assert has_element?(view, "#stripe-connect-form")
+      refute has_element?(view, "#stripe-connect-continue-form")
+      refute html =~ "Finish connecting Stripe"
+      refute html =~ "needs attention"
       refute has_element?(view, "button[phx-click=open_disconnect_modal]")
       refute html =~ "Disconnect your Stripe account"
     end

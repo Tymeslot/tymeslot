@@ -157,10 +157,21 @@ defmodule Tymeslot.MeetingPayments do
 
   @doc """
   Returns the live (non-deleted) Connect account for a user, or `nil`.
+
+  A row with no Stripe account yet is the placeholder written when the host
+  pressed Connect, and counts as no account: a host who cancelled at Stripe is
+  back where they started, not part-way through connecting.
   """
   @spec get_connect_account_for_user(integer()) :: account() | nil
-  def get_connect_account_for_user(user_id),
-    do: ConnectAccountQueries.live_for_user(user_id)
+  def get_connect_account_for_user(user_id) do
+    case ConnectAccountQueries.live_for_user(user_id) do
+      %{stripe_account_id: stripe_account_id} = account when is_binary(stripe_account_id) ->
+        account
+
+      _none_or_placeholder ->
+        nil
+    end
+  end
 
   @doc """
   Maps a Connect account (or `nil`) to its onboarding display state.

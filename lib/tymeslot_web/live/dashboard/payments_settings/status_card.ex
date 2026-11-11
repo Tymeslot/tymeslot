@@ -94,8 +94,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   def needs_onboarding?(account),
     do: MeetingPayments.connect_display_state(account) == :incomplete
 
-  # Only a row made by the OAuth connection has `oauth_connected_at`; a placeholder
-  # or a legacy row (opened through Stripe's hosted onboarding) has none.
+  # Only a row made by the OAuth connection has `oauth_connected_at`; a legacy
+  # row (opened through Stripe's hosted onboarding) has none. A placeholder with
+  # no Stripe account never reaches this card.
   defp oauth_connected?(%{oauth_connected_at: %DateTime{}}), do: true
   defp oauth_connected?(_account), do: false
 
