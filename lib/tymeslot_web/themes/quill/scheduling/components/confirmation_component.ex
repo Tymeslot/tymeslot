@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           <.icon name="hero-map-pin" class="confirmation-email-link w-4 h-4" />
                         </div>
                         <p class="text-sm text-white">
-                          {dgettext("booking", "Location")}:
+                          {dgettext("booking_confirmation", "Location")}:
                           <span class="confirmation-email-link font-semibold">
                             {BookingLocation.chosen_display(assigns)}
                           </span>
@@ -147,8 +147,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                         </div>
                         <p class="text-sm text-white">
                           {if ApprovalDisplay.awaiting_approval?(assigns),
-                            do: dgettext("booking", "Sent to"),
-                            else: dgettext("booking", "Confirmation sent to")}
+                            do: dgettext("booking_confirmation", "Sent to"),
+                            else: dgettext("booking_confirmation", "Confirmation sent to")}
                           <span class="confirmation-email-link font-semibold">
                             {@email}
                           </span>
@@ -165,7 +165,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           <.icon name="hero-users-mini" class="confirmation-email-link w-4 h-4" />
                         </div>
                         <p class="text-sm text-white">
-                          {dgettext("booking", "Guests")}:
+                          {dgettext("booking_confirmation", "Guests")}:
                           <span class="confirmation-email-link font-semibold">
                             {Enum.join(@guest_emails, ", ")}
                           </span>
@@ -189,8 +189,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     >
                       <.icon name="hero-calendar-days" class="calendar-download-icon" />
                       {if ApprovalDisplay.awaiting_approval?(assigns),
-                        do: dgettext("booking", "Add tentative hold to calendar"),
-                        else: dgettext("booking", "Add to calendar")}
+                        do: dgettext("booking_confirmation", "Add tentative hold to calendar"),
+                        else: dgettext("booking_confirmation", "Add to calendar")}
                     </a>
                     <button
                       type="button"
@@ -200,7 +200,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       data-intent="restart"
                       class="confirmation-restart-link"
                     >
-                      {dgettext("booking", "Schedule Another Meeting")}
+                      {dgettext("booking_confirmation", "Schedule Another Meeting")}
                     </button>
                   </div>
 
@@ -208,10 +208,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     {if ApprovalDisplay.awaiting_approval?(assigns),
                       do:
                         dgettext(
-                          "booking",
+                          "booking_confirmation",
                           "Changed your mind? Your request email has a link to withdraw it."
                         ),
-                      else: dgettext("booking", "Need to reschedule? Check your confirmation email.")}
+                      else:
+                        dgettext(
+                          "booking_confirmation",
+                          "Need to reschedule? Check your confirmation email."
+                        )}
                   </p>
                 </div>
               </.glass_morphism_card>
@@ -260,10 +264,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
     assigns =
       assigns
       |> assign(:grid_class, grid_class)
-      |> assign_new(:date_label, fn -> dgettext("booking", "Date") end)
-      |> assign_new(:time_label, fn -> dgettext("booking", "Time") end)
-      |> assign_new(:duration_label, fn -> dgettext("booking", "Duration") end)
-      |> assign_new(:timezone_label, fn -> dgettext("booking", "Timezone") end)
+      |> assign_new(:date_label, fn -> dgettext("booking_confirmation", "Date") end)
+      |> assign_new(:time_label, fn -> dgettext("booking_confirmation", "Time") end)
+      |> assign_new(:duration_label, fn -> dgettext("booking_confirmation", "Duration") end)
+      |> assign_new(:timezone_label, fn -> dgettext("booking_confirmation", "Timezone") end)
       |> assign_new(:formatted_date, fn -> LocalizationHelpers.format_date(assigns.date) end)
       |> assign_new(:formatted_time, fn -> LocalizationHelpers.format_slot_label(assigns.time) end)
       |> assign_new(:formatted_timezone, fn ->
@@ -318,7 +322,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   end
 
   defp split_paid_line do
-    line = dgettext("booking", "Paid %{amount}", amount: @amount_marker)
+    line = dgettext("booking_confirmation", "Paid %{amount}", amount: @amount_marker)
 
     case String.split(line, @amount_marker, parts: 2) do
       [before, rest] -> {before, rest}
@@ -332,9 +336,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   # ConfirmationText; only the wording is Quill's.
   defp headline(assigns) do
     case ConfirmationText.status(assigns) do
-      :held -> dgettext("booking", "Request sent!")
-      :rescheduled -> dgettext("booking", "Meeting Rescheduled!")
-      :confirmed -> dgettext("booking", "Meeting Confirmed!")
+      :held -> dgettext("booking_confirmation", "Request sent!")
+      :rescheduled -> dgettext("booking_confirmation", "Meeting Rescheduled!")
+      :confirmed -> dgettext("booking_confirmation", "Meeting Confirmed!")
     end
   end
 
@@ -344,13 +348,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
         ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :quill)
 
       :rescheduled ->
-        dgettext("booking", "%{name}, your meeting %{organizer} has been rescheduled.",
+        dgettext(
+          "booking_confirmation",
+          "%{name}, your meeting %{organizer} has been rescheduled.",
           name: assigns[:name],
           organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :quill)
         )
 
       :confirmed ->
-        dgettext("booking", "%{name}, your meeting %{organizer} is all set.",
+        dgettext("booking_confirmation", "%{name}, your meeting %{organizer} is all set.",
           name: assigns[:name],
           organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :quill)
         )

@@ -36,10 +36,10 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
     ~H"""
     <.card
       icon="hero-clock"
-      title={dgettext("dashboard_availability", "Scheduling Preferences")}
+      title={dgettext("dashboard_availability_policy", "Scheduling Preferences")}
       description={
         dgettext(
-          "dashboard_availability",
+          "dashboard_availability_policy",
           "These rules apply to every meeting type booked against this schedule."
         )
       }
@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
     ~H"""
     <div>
       <label class="label">
-        {dgettext("dashboard_availability", "Buffer Time")}
+        {dgettext("dashboard_availability_policy", "Buffer Time")}
       </label>
 
       <div class="space-y-6">
@@ -173,7 +173,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 placeholder="0"
               />
               <span class="pr-3 py-2 text-token-sm font-black text-turquoise-700">
-                {dgettext("dashboard_availability", "min")}
+                {dgettext("dashboard_availability_policy", "min")}
               </span>
             </div>
           <% else %>
@@ -184,7 +184,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
               phx-target={@myself}
               class="btn-tag-selector btn-tag-selector-primary"
             >
-              {dgettext("dashboard_availability", "Custom")}
+              {dgettext("dashboard_availability_policy", "Custom")}
             </button>
           <% end %>
         </div>
@@ -215,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
     ~H"""
     <div>
       <label class="label">
-        {dgettext("dashboard_availability", "How Far in Advance Can People Book")}
+        {dgettext("dashboard_availability_policy", "How Far in Advance Can People Book")}
       </label>
 
       <%!-- Tag-based Selection --%>
@@ -262,7 +262,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 placeholder="90"
               />
               <span class="pr-3 py-2 text-token-sm font-black text-turquoise-700">
-                {dgettext("dashboard_availability", "days")}
+                {dgettext("dashboard_availability_policy", "days")}
               </span>
             </div>
           <% else %>
@@ -273,7 +273,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
               phx-target={@myself}
               class="btn-tag-selector btn-tag-selector-primary"
             >
-              {dgettext("dashboard_availability", "Custom")}
+              {dgettext("dashboard_availability_policy", "Custom")}
             </button>
           <% end %>
         </div>
@@ -281,7 +281,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
 
       <p class="mt-4 text-token-sm text-tymeslot-500 font-bold">
         {dgettext(
-          "dashboard_availability",
+          "dashboard_availability_policy",
           "Maximum number of days into the future that appointments can be booked."
         )}
       </p>
@@ -307,7 +307,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
     ~H"""
     <div>
       <label class="label">
-        {dgettext("dashboard_availability", "Minimum Booking Notice")}
+        {dgettext("dashboard_availability_policy", "Minimum Booking Notice")}
       </label>
 
       <%!-- Tag-based Selection --%>
@@ -354,7 +354,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
                 placeholder="24"
               />
               <span class="pr-3 py-2 text-token-sm font-black text-turquoise-700">
-                {dgettext("dashboard_availability", "hours")}
+                {dgettext("dashboard_availability_policy", "hours")}
               </span>
             </div>
           <% else %>
@@ -365,7 +365,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
               phx-target={@myself}
               class="btn-tag-selector btn-tag-selector-primary"
             >
-              {dgettext("dashboard_availability", "Custom")}
+              {dgettext("dashboard_availability_policy", "Custom")}
             </button>
           <% end %>
         </div>
@@ -373,7 +373,7 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
 
       <p class="mt-4 text-token-sm text-tymeslot-500 font-bold">
         {dgettext(
-          "dashboard_availability",
+          "dashboard_availability_policy",
           "Minimum hours of notice required before an appointment can be booked."
         )}
       </p>
@@ -386,45 +386,45 @@ defmodule TymeslotWeb.Dashboard.Availability.PolicyCard do
   # tag, which is the failure we want to hear about.
 
   defp buffer_title(:buffer_before_minutes),
-    do: dgettext("dashboard_availability", "Before a new booking")
+    do: dgettext("dashboard_availability_policy", "Before a new booking")
 
   defp buffer_title(:buffer_after_minutes),
-    do: dgettext("dashboard_availability", "After a new booking")
+    do: dgettext("dashboard_availability_policy", "After a new booking")
 
   defp buffer_help(:buffer_before_minutes),
     do:
       dgettext(
-        "dashboard_availability",
+        "dashboard_availability_policy",
         "A new booking can start this long after your previous meeting ends, at the earliest."
       )
 
   defp buffer_help(:buffer_after_minutes),
     do:
       dgettext(
-        "dashboard_availability",
+        "dashboard_availability_policy",
         "A new booking must end at least this long before your next meeting starts."
       )
 
-  defp buffer_label(0), do: dgettext("dashboard_availability", "No buffer")
+  defp buffer_label(0), do: dgettext("dashboard_availability_policy", "No buffer")
 
   defp buffer_label(minutes),
-    do: dgettext("dashboard_availability", "%{minutes} min", minutes: minutes)
+    do: dgettext("dashboard_availability_policy", "%{minutes} min", minutes: minutes)
 
-  defp booking_days_label(7), do: dgettext("dashboard_availability", "1 week")
-  defp booking_days_label(14), do: dgettext("dashboard_availability", "2 weeks")
-  defp booking_days_label(30), do: dgettext("dashboard_availability", "1 month")
-  defp booking_days_label(60), do: dgettext("dashboard_availability", "2 months")
-  defp booking_days_label(90), do: dgettext("dashboard_availability", "3 months")
-  defp booking_days_label(180), do: dgettext("dashboard_availability", "6 months")
-  defp booking_days_label(365), do: dgettext("dashboard_availability", "1 year")
+  defp booking_days_label(7), do: dgettext("dashboard_availability_policy", "1 week")
+  defp booking_days_label(14), do: dgettext("dashboard_availability_policy", "2 weeks")
+  defp booking_days_label(30), do: dgettext("dashboard_availability_policy", "1 month")
+  defp booking_days_label(60), do: dgettext("dashboard_availability_policy", "2 months")
+  defp booking_days_label(90), do: dgettext("dashboard_availability_policy", "3 months")
+  defp booking_days_label(180), do: dgettext("dashboard_availability_policy", "6 months")
+  defp booking_days_label(365), do: dgettext("dashboard_availability_policy", "1 year")
 
-  defp notice_hours_label(0), do: dgettext("dashboard_availability", "instant")
-  defp notice_hours_label(1), do: dgettext("dashboard_availability", "1 hour")
-  defp notice_hours_label(3), do: dgettext("dashboard_availability", "3 hours")
-  defp notice_hours_label(4), do: dgettext("dashboard_availability", "4 hours")
-  defp notice_hours_label(6), do: dgettext("dashboard_availability", "6 hours")
-  defp notice_hours_label(12), do: dgettext("dashboard_availability", "12 hours")
-  defp notice_hours_label(24), do: dgettext("dashboard_availability", "1 day")
-  defp notice_hours_label(48), do: dgettext("dashboard_availability", "2 days")
-  defp notice_hours_label(168), do: dgettext("dashboard_availability", "1 week")
+  defp notice_hours_label(0), do: dgettext("dashboard_availability_policy", "instant")
+  defp notice_hours_label(1), do: dgettext("dashboard_availability_policy", "1 hour")
+  defp notice_hours_label(3), do: dgettext("dashboard_availability_policy", "3 hours")
+  defp notice_hours_label(4), do: dgettext("dashboard_availability_policy", "4 hours")
+  defp notice_hours_label(6), do: dgettext("dashboard_availability_policy", "6 hours")
+  defp notice_hours_label(12), do: dgettext("dashboard_availability_policy", "12 hours")
+  defp notice_hours_label(24), do: dgettext("dashboard_availability_policy", "1 day")
+  defp notice_hours_label(48), do: dgettext("dashboard_availability_policy", "2 days")
+  defp notice_hours_label(168), do: dgettext("dashboard_availability_policy", "1 week")
 end
