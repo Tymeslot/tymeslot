@@ -70,6 +70,16 @@
     @apply text-tymeslot-500;
   }
 
+  /* Read-only: a value shown for copying or reference. It keeps the focus ring,
+     since it stays reachable by keyboard, but does not light up on hover. */
+  .input[readonly] {
+    @apply text-tymeslot-600 bg-tymeslot-50 border-tymeslot-100 cursor-default;
+  }
+
+  .input[readonly]:hover {
+    @apply border-tymeslot-100 bg-tymeslot-50;
+  }
+
   /* Input Variants */
   .input-error {
     @apply border-red-200 bg-red-50 text-red-900;
@@ -88,6 +98,11 @@
   /* Checkbox Styling */
   .checkbox {
     @apply rounded border-2 border-tymeslot-200 text-turquoise-600 focus:ring-turquoise-500 transition-all;
+  }
+
+  /* Radio Styling */
+  .radio {
+    @apply border-2 border-tymeslot-200 text-turquoise-600 focus:ring-turquoise-500 transition-all;
   }
 
   /* Textarea */

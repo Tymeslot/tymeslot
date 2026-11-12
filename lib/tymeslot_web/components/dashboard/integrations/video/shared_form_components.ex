@@ -137,20 +137,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
         {dgettext("dashboard_video", "Server URL")}
       </label>
       <Tooltip.tooltip id={"#{@id}-tooltip"} text={@tooltip}>
-        <div class="relative">
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-tymeslot-300">
-            <Icons.icon name="hero-lock-closed" class="w-5 h-5" />
-          </div>
-          <%!-- raw-input: must stay readonly (not disabled) so keyboard and screen reader users reach it and the tooltip shows on focus; <.input> cannot carry readonly --%>
-          <input
-            type="text"
-            id={@id}
-            value={@value}
-            readonly
-            aria-describedby={@describedby}
-            class="input input-with-icon w-full cursor-not-allowed bg-tymeslot-100 text-tymeslot-600"
-          />
-        </div>
+        <%!-- readonly, not disabled, so keyboard and screen reader users reach it and the tooltip shows on focus --%>
+        <Forms.input
+          type="text"
+          id={@id}
+          value={@value}
+          icon="hero-lock-closed"
+          readonly
+          aria-describedby={@describedby}
+        />
       </Tooltip.tooltip>
       <p :if={@helper_text} id={"#{@id}-help"} class="mt-2 text-token-xs text-tymeslot-500">
         {@helper_text}

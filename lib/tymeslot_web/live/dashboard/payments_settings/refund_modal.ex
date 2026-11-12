@@ -86,8 +86,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
               {dgettext("dashboard_payments", "Refund type")}
             </legend>
             <label class="flex items-center gap-2 text-token-sm">
-              <%!-- raw-input: native radio inline with its label text; <.input> gives a radio text-field styling and drops checked --%>
-              <input
+              <.input
                 type="radio"
                 name="refund_type"
                 value="full"
@@ -99,8 +98,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
               )})
             </label>
             <label class="flex items-center gap-2 text-token-sm">
-              <%!-- raw-input: native radio inline with its label text; <.input> gives a radio text-field styling and drops checked --%>
-              <input
+              <.input
                 type="radio"
                 name="refund_type"
                 value="partial"

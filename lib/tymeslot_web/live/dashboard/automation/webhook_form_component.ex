@@ -166,13 +166,12 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
                 </span>
               </label>
               <div class="flex gap-2">
-                <%!-- raw-input: read-only token display in the row with the Copy and Regenerate buttons; <.input> cannot pass readonly --%>
-                <input
+                <.input
                   type="text"
+                  id="webhook_token_display"
                   value={@webhook.webhook_token}
                   readonly
-                  class="font-mono text-token-sm flex-1 px-4 py-2.5 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50 text-tymeslot-600 cursor-default"
-                  id="webhook_token_display"
+                  class="font-mono flex-1"
                 />
                 <.action_button
                   variant={:secondary}

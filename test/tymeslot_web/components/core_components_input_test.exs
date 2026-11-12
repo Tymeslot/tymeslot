@@ -205,4 +205,74 @@ defmodule TymeslotWeb.Components.CoreComponentsInputTest do
       assert LazyHTML.attribute(control, "required") == []
     end
   end
+
+  describe "radio" do
+    defp render_radio(attrs) do
+      html =
+        render_component(
+          fn assigns ->
+            ~H"""
+            <Forms.input type="radio" name="choice" {@attrs} />
+            """
+          end,
+          %{attrs: attrs}
+        )
+
+      LazyHTML.from_fragment(html)
+    end
+
+    test "a checked radio renders checked with its own value and no text-field styling" do
+      html = render_radio(id: "choice-full", value: "full", checked: true)
+      radio = LazyHTML.query(html, "input[type=radio]")
+
+      assert LazyHTML.attribute(radio, "checked") == [""]
+      assert LazyHTML.attribute(radio, "value") == ["full"]
+      refute "input" in String.split(hd(LazyHTML.attribute(radio, "class")))
+    end
+
+    test "an unchecked radio renders no checked attribute" do
+      radio = LazyHTML.query(render_radio(value: "partial", checked: false), "input")
+
+      assert LazyHTML.attribute(radio, "checked") == []
+    end
+
+    test "an unlabelled radio renders the bare control, with no wrapper or derived id" do
+      html = render_radio(value: "full")
+
+      assert Enum.empty?(LazyHTML.query(html, "div"))
+      assert Enum.empty?(LazyHTML.query(html, "label"))
+      assert LazyHTML.attribute(LazyHTML.query(html, "input"), "id") == []
+    end
+
+    test "a labelled radio sits inside its label, so a group sharing a name repeats no id" do
+      html = render_radio(value: "full", label: "Full refund")
+
+      assert Enum.count(LazyHTML.query(html, "label > input[type=radio]")) == 1
+      assert LazyHTML.text(LazyHTML.query(html, "label")) =~ "Full refund"
+      assert LazyHTML.attribute(LazyHTML.query(html, "input"), "id") == []
+    end
+  end
+
+  describe "readonly" do
+    defp render_readonly(readonly) do
+      render_component(
+        fn assigns ->
+          ~H"""
+          <Forms.input id="token" name="token" type="text" value="abc" readonly={@readonly} />
+          """
+        end,
+        %{readonly: readonly}
+      )
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("#token")
+    end
+
+    test "renders the attribute on the control" do
+      assert LazyHTML.attribute(render_readonly(true), "readonly") == [""]
+    end
+
+    test "readonly={false} leaves no attribute on the control" do
+      assert LazyHTML.attribute(render_readonly(false), "readonly") == []
+    end
+  end
 end

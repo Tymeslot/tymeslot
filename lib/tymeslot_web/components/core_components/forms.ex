@@ -38,6 +38,19 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
 
       <.input field={@form[:email]} type="email" label="Email" icon="hero-envelope" />
       <.input name="search" value="" label="Search" placeholder="Search..." />
+      <.input type="text" value={@token} readonly aria-label="Token" />
+
+  A `radio` renders the bare control, with no field wrapper and no id derived
+  from `name`: every radio in a group shares that name. Given a `label`, the
+  control sits inside an inline `<label>` with the text beside it; without
+  one, the caller supplies the surrounding label, which is how a radio with a
+  title and an explanation is built. `checked` selects it and `value` is
+  posted as given.
+
+      <label class="flex items-start gap-2">
+        <.input type="radio" name="choice" value="full" checked={@choice == "full"} />
+        <span><strong>Full refund.</strong> Refunds the remaining balance.</span>
+      </label>
   """
   attr :id, :any,
     default: nil,
@@ -55,10 +68,16 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :errors, :list, default: []
-  attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
+  attr :checked, :boolean, doc: "the checked flag for checkbox and radio inputs"
 
   attr :required, :boolean, default: false
   attr :disabled, :boolean, default: false
+
+  attr :readonly, :boolean,
+    default: false,
+    doc:
+      "shows a value that cannot be edited but stays focusable and announced, unlike `disabled`"
+
   attr :placeholder, :string, default: nil
   attr :icon, :string, default: nil, doc: "optional hero icon name rendered inside the input"
 
@@ -105,6 +124,42 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
     |> input()
   end
 
+  def input(%{type: "radio"} = assigns) do
+    assigns =
+      assigns
+      |> assign_new(:name, fn -> nil end)
+      |> assign_new(:id, fn -> nil end)
+      |> assign_new(:value, fn -> nil end)
+      |> assign_new(:checked, fn -> false end)
+
+    assigns =
+      assign(
+        assigns,
+        :rest,
+        assigns.errors
+        |> error_aria(nil)
+        |> disabled_attr(assigns.disabled)
+        |> required_attr(assigns.required)
+        |> Map.merge(assigns.rest)
+      )
+
+    ~H"""
+    <label :if={@label} class={["flex items-center gap-2 text-token-sm text-tymeslot-800", @class]}>
+      <.radio_element id={@id} name={@name} value={@value} checked={@checked} rest={@rest} />
+      {@label}
+    </label>
+    <.radio_element
+      :if={!@label}
+      id={@id}
+      name={@name}
+      value={@value}
+      checked={@checked}
+      class={@class}
+      rest={@rest}
+    />
+    """
+  end
+
   def input(assigns) do
     assigns =
       assigns
@@ -128,6 +183,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
         |> Map.merge(number_keypad(assigns))
         |> disabled_attr(assigns.disabled)
         |> required_attr(assigns.required)
+        |> readonly_attr(assigns.readonly)
         |> Map.merge(assigns.rest)
       )
 
@@ -284,6 +340,27 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
     """
   end
 
+  attr :id, :any, default: nil
+  attr :name, :any, default: nil
+  attr :value, :any, default: nil
+  attr :checked, :boolean, default: false
+  attr :class, :string, default: nil
+  attr :rest, :map, default: %{}
+
+  defp radio_element(assigns) do
+    ~H"""
+    <input
+      type="radio"
+      id={@id}
+      name={@name}
+      value={@value}
+      checked={@checked == true}
+      class={["radio w-4 h-4", @class]}
+      {@rest}
+    />
+    """
+  end
+
   # The HTML constraint attributes are *declared*, so `:global` never collects
   # them and they would otherwise be dropped on the floor: `input_element/1`
   # spreads `@rest` and nothing else. Folding them into `@rest` here is what
@@ -302,6 +379,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   # learns the field is required. See the moduledoc for `novalidate`.
   defp required_attr(rest, true), do: Map.put(rest, :required, true)
   defp required_attr(rest, _required), do: rest
+
+  # `readonly` is not a Phoenix global either. It keeps a displayed value
+  # (a token, a link, a locked setting) focusable and announced, which a
+  # disabled field is not.
+  defp readonly_attr(rest, true), do: Map.put(rest, :readonly, true)
+  defp readonly_attr(rest, _readonly), do: rest
 
   # A phone picks its keypad from `inputmode`. A field that can go negative
   # asks for none, because the numeric and decimal pads on iOS have no minus

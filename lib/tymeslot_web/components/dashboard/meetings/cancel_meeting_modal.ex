@@ -149,8 +149,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
       <div class="space-y-2">
         <label class="flex items-start gap-2">
-          <%!-- raw-input: refund-choice radio wrapped by its own label with a bold title and explanation; <.input> styles radios as text fields and cannot set checked --%>
-          <input
+          <Forms.input
             type="radio"
             name="cancel_refund_choice"
             value="full"
@@ -165,8 +164,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </label>
 
         <label class="flex items-start gap-2">
-          <%!-- raw-input: refund-choice radio wrapped by its own label with a bold title and explanation; <.input> styles radios as text fields and cannot set checked --%>
-          <input
+          <Forms.input
             type="radio"
             name="cancel_refund_choice"
             value="partial"
@@ -193,8 +191,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </div>
 
         <label class="flex items-start gap-2">
-          <%!-- raw-input: refund-choice radio wrapped by its own label with a bold title and explanation; <.input> styles radios as text fields and cannot set checked --%>
-          <input
+          <Forms.input
             type="radio"
             name="cancel_refund_choice"
             value="none"
