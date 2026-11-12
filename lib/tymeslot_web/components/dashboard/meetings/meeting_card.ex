@@ -44,6 +44,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
         guests: guest_list(assigns.meeting),
         group?: Helpers.group_meeting?(assigns.meeting),
         managed?: HostManaged.managed?(assigns.meeting),
+        from_poll?: from_poll?(assigns.meeting),
         participants: Helpers.participants(assigns.meeting),
         answered_fields: answered_fields(assigns.meeting),
         booking_page: booking_page(assigns.meeting)
@@ -87,13 +88,23 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               {dgettext("dashboard_bookings", "via %{page}", page: @booking_page.name)}
             </Feedback.pill>
             <Feedback.pill
-              :if={@managed?}
+              :if={@managed? and @from_poll?}
               tone={:brand}
               size={:sm}
               icon="hero-hand-raised"
               data-testid="poll-meeting-badge"
             >
               {dgettext("dashboard_bookings", "Poll")}
+            </Feedback.pill>
+            <%!-- Created by the host with no main participant (Quick Add). --%>
+            <Feedback.pill
+              :if={@managed? and not @from_poll?}
+              tone={:brand}
+              size={:sm}
+              icon="hero-user-group"
+              data-testid="host-managed-badge"
+            >
+              {dgettext("dashboard_bookings", "Managed by you")}
             </Feedback.pill>
             <Feedback.pill
               :if={@group?}
@@ -450,12 +461,17 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
     )
   end
 
-  # Read only when loaded: a meeting refreshed on its own (a dismissed sync
-  # banner) arrives without it, and shows no tag rather than crashing.
+  # A meeting the host manages either came from a poll they confirmed or was
+  # created with no main participant. Only the first is labelled a poll.
+  defp from_poll?(%{confirming_poll: %{id: _id}}), do: true
+  defp from_poll?(_meeting), do: false
+
   defp place(%{location_kind: :video}), do: nil
   defp place(%{location: location}) when is_binary(location) and location != "", do: location
   defp place(_meeting), do: nil
 
+  # Read only when loaded: a meeting refreshed on its own arrives without it,
+  # and shows no tag rather than crashing.
   defp booking_page(%{booking_page: %{name: _name} = page}), do: page
   defp booking_page(_meeting), do: nil
 end

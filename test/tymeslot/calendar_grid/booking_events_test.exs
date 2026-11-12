@@ -43,6 +43,23 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
     insert(:meeting, Map.merge(defaults, attrs))
   end
 
+  test "names nobody under a meeting the host manages" do
+    user = insert(:user)
+
+    # The attendee fields hold the first guest, who booked nothing.
+    insert_meeting(user, %{
+      title: "Quarterly planning",
+      attendee_name: "ada@example.com",
+      attendee_email: "ada@example.com",
+      managed_by_host: true
+    })
+
+    {start_dt, end_dt} = window()
+
+    assert [%BookingEvent{summary: "Quarterly planning", attendee_name: nil}] =
+             CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt)
+  end
+
   test "projects a live booking into the grid event shape" do
     user = insert(:user)
 

@@ -194,13 +194,16 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end)
   end
 
+  # The card is redrawn from the meeting as the list loads it, so it keeps its
+  # guests, participants and badges once the banner is gone.
   def handle_event("dismiss_calendar_sync_banner", %{"id" => meeting_id}, socket) do
-    case Meetings.dismiss_calendar_sync_status(meeting_id, socket.assigns.current_user.id) do
-      {:ok, updated_meeting} ->
-        {:noreply, LiveView.stream_insert(socket, :meetings, updated_meeting)}
+    user_id = socket.assigns.current_user.id
 
-      {:error, _reason} ->
-        {:noreply, socket}
+    with {:ok, _dismissed} <- Meetings.dismiss_calendar_sync_status(meeting_id, user_id),
+         {:ok, %{items: [meeting]}} <- Meetings.list_user_meeting(user_id, meeting_id) do
+      {:noreply, LiveView.stream_insert(socket, :meetings, meeting)}
+    else
+      _not_dismissed -> {:noreply, socket}
     end
   end
 
