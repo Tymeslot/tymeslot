@@ -31,8 +31,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.LocationFields do
       phx-target={@myself}
       onsubmit="return false;"
     >
-      <.input
-        type="select"
+      <.select
         id="create-location-choice"
         name="location_choice"
         label={dgettext("dashboard_calendar_location", "Location (optional)")}
