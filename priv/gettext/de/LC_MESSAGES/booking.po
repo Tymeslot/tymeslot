@@ -522,7 +522,7 @@ msgstr "Vorschausitzung abgelaufen. Laden Sie die Seite neu, um fortzufahren."
 msgid "Add to calendar"
 msgstr "Zum Kalender hinzufügen"
 
-#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#: lib/tymeslot_web/live/scheduling/entry_refusal.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
 msgstr "Ungültiger Termintyp"
@@ -1061,7 +1061,7 @@ msgstr "Sie buchen: %{meeting} (%{duration})"
 msgid "You're booking %{meeting} (%{duration}) with %{name}"
 msgstr "Sie buchen: %{meeting} (%{duration}) mit %{name}"
 
-#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#: lib/tymeslot_web/live/scheduling/entry_refusal.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting type has no times open for booking right now."
 msgstr "Für diesen Termintyp sind derzeit keine Zeiten buchbar."

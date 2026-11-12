@@ -522,7 +522,7 @@ msgstr ""
 msgid "Add to calendar"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#: lib/tymeslot_web/live/scheduling/entry_refusal.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
 msgstr ""
@@ -1061,7 +1061,7 @@ msgstr ""
 msgid "You're booking %{meeting} (%{duration}) with %{name}"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#: lib/tymeslot_web/live/scheduling/entry_refusal.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting type has no times open for booking right now."
 msgstr ""

@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   alias Tymeslot.BookingPages
   alias Tymeslot.MeetingTypes
+  alias TymeslotWeb.Live.Scheduling.EntryRefusal
   alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
 
@@ -431,12 +432,16 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   @doc """
   The query string parameters of a booking page's `params`: everything but
-  the route's own segments, and only the string-valued ones a URL can carry
+  the route's own segments and the entry refusal the page was sent with
+  (`EntryRefusal`), which said its piece on arrival and must not follow the
+  guest to the next step, and only the string-valued ones a URL can carry
   back.
   """
   @spec query_params(map()) :: %{String.t() => String.t()}
   def query_params(params) do
-    for {key, value} <- Map.drop(params, @path_params), is_binary(value), into: %{} do
+    for {key, value} <- Map.drop(params, [EntryRefusal.param() | @path_params]),
+        is_binary(value),
+        into: %{} do
       {key, value}
     end
   end

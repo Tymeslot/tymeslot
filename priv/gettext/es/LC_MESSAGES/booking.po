@@ -522,7 +522,7 @@ msgstr "La sesión de vista previa expiró. Vuelve a cargar la página para cont
 msgid "Add to calendar"
 msgstr "Agregar al calendario"
 
-#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#: lib/tymeslot_web/live/scheduling/entry_refusal.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
 msgstr "Tipo de reunión no válido"
@@ -1061,7 +1061,7 @@ msgstr "Vas a reservar: %{meeting} (%{duration})"
 msgid "You're booking %{meeting} (%{duration}) with %{name}"
 msgstr "Vas a reservar: %{meeting} (%{duration}) con %{name}"
 
-#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#: lib/tymeslot_web/live/scheduling/entry_refusal.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting type has no times open for booking right now."
 msgstr "Este tipo de reunión no tiene horarios disponibles para reservar en este momento."

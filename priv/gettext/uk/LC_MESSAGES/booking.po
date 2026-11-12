@@ -522,7 +522,7 @@ msgstr "Сеанс попереднього перегляду завершив�
 msgid "Add to calendar"
 msgstr "Додати до календаря"
 
-#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#: lib/tymeslot_web/live/scheduling/entry_refusal.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
 msgstr "Некоректний тип зустрічі"
@@ -1068,7 +1068,7 @@ msgstr "Ви бронюєте зустріч %{meeting} (%{duration})"
 msgid "You're booking %{meeting} (%{duration}) with %{name}"
 msgstr "Ви бронюєте зустріч %{meeting} (%{duration}) з %{name}"
 
-#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#: lib/tymeslot_web/live/scheduling/entry_refusal.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting type has no times open for booking right now."
 msgstr "Для цього типу зустрічі зараз немає вільного часу для бронювання."
