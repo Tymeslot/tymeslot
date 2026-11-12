@@ -158,6 +158,15 @@ Settled while translating; reuse rather than re-coining.
 | free time(s) (open bookable times shown on the page) | **freie Zeit** / **freie Zeiten**; a counted *open slot* is **Zeitfenster** (*%{count} freie Zeitfenster in dieser Woche*). Not *freier Termin*: *Termin* is the booked meeting. |
 | Apple Account (Apple's current name) | **Apple Account**, untranslated, as Apple's German UI writes it; strings that still say *Apple ID* keep **Apple-ID** |
 | a message the host sends to someone they know (wizard share text, *Hi %{name}, you can pick a time with me here*) | **du**: the only sanctioned exception to section 1, because the host is writing in their own voice to a contact. The wizard's own UI around it stays **Sie**. |
+| translation (noun; booking-page languages) | **Übersetzung** (plural **Übersetzungen**); *%{language} translations* → **Übersetzungen: %{language}**, *Your %{language} translations* → **Ihre Übersetzungen für %{language}**: `%{language}` is filled with the language's own name and can't be inflected or compounded |
+| translate | **übersetzen**; *%{translated}/%{total} translated* → **%{translated}/%{total} übersetzt** |
+| original language (the language the host writes their texts in) | **Originalsprache**; *in %{language}* → **in der Originalsprache (%{language})**; the original text is **das Original**, and the badge beside that language reads **Original** |
+| translation language (a language the host translates into) | **Übersetzungssprache** (plural **Übersetzungssprachen**) |
+| language switcher (the visitor-facing control on the booking page) | **Sprachauswahl** |
+| Outdated (a translation whose original changed) | **Veraltet**; *%{count} outdated* → **%{count} veraltet** |
+| Missing (a text not translated yet) | **Fehlt** as the status pill; attributive **fehlend** (*Nur fehlende oder veraltete*) |
+| Translated (status) | **Übersetzt** |
+| Review (the link to a language's review page) | **Prüfen** |
 
 **Weekday abbreviations:** Mo · Di · Mi · Do · Fr · Sa · So
 

@@ -102,6 +102,15 @@ Instructions and prompts take the **2nd-person-plural imperative** (`Вибер�
 | staff | **працівники** |
 | Agenda (calendar view) | **Розклад** |
 | Weekly Schedule (availability) | **Тижневий розклад** |
+| translation (noun; booking-page languages) | **переклад** (pl. **переклади**); *%{language} translations* → **Переклади: %{language}**, *Your %{language} translations* → **Ваші переклади (%{language})**: `%{language}` is filled with the language's own name and can't be declined |
+| translate | **перекласти** / **перекладати**; *%{translated}/%{total} translated* → **Перекладено %{translated}/%{total}** |
+| original language (the language the host writes their texts in) | **мова оригіналу**; *in %{language}* → **мовою оригіналу (%{language})**; the original text is **оригінал** (*в оригіналі*), and the badge beside that language reads **оригінал** |
+| translation language (a language the host translates into) | **мова перекладу** (pl. **мови перекладу**: *вашими мовами перекладу*) |
+| language switcher (the visitor-facing control on the booking page) | **перемикач мови** |
+| Outdated (a translation whose original changed) | **Застаріло** as the status; attributive **застарілий** (*%{count} застарілий текст / застарілі тексти / застарілих текстів*) |
+| Missing (a text not translated yet) | **Бракує** as the status pill; attributive **відсутній** (*Лише відсутні або застарілі*) |
+| Translated (status) | **Перекладено** |
+| Review (the link to a language's review page) | **Перевірити** |
 
 ### Booking pages (a host's extra pages)
 

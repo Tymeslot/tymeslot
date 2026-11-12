@@ -175,6 +175,15 @@ Settled while translating; reuse rather than re-coining.
 | in-person (location) | **di persona** |
 | unlisted | **Non elencato** |
 | Pending / Declined / Cancelled | **In attesa** / **Rifiutato** / **Annullato** |
+| translation (noun; booking-page languages) | **traduzione** (f., pl. **traduzioni**); *%{language} translations* → **Traduzioni: %{language}**, *Your %{language} translations* → **Le tue traduzioni (%{language})**: `%{language}` is filled with the language's own name, so it goes after a colon or in brackets, never after an article or *in* |
+| translate | **tradurre**; the participle agrees with *testi* (*%{translated}/%{total} tradotti*) |
+| original language (the language the host writes their texts in) | **lingua originale**; *in %{language}* → **nella lingua originale (%{language})**; the original text is **l'originale** (*nella versione originale*), and the badge beside that language reads **originale** |
+| translation language (a language the host translates into) | **lingua di traduzione** (pl. **lingue di traduzione**) |
+| language switcher (the visitor-facing control on the booking page) | **selettore della lingua** |
+| Outdated (a translation whose original changed) | **Da aggiornare** (invariable: *%{count} da aggiornare*, *sono da aggiornare*) |
+| Missing (a text not translated yet) | **Mancante** (pl. **mancanti**) |
+| Translated (status) | **Tradotto** |
+| Review (the link to a language's review page) | **Controlla** |
 
 **Weekday abbreviations:** Lun · Mar · Mer · Gio · Ven · Sab · Dom
 

@@ -204,7 +204,7 @@ msgstr "Název"
 #: lib/tymeslot_web/live/dashboard/languages_component.ex
 #, elixir-autogen, elixir-format
 msgid "No text is missing or outdated in this language."
-msgstr "V tomto jazyce žádný text nechybí ani není zastaralý."
+msgstr "V tomto jazyce žádný text nechybí a všechny jsou aktuální."
 
 #: lib/tymeslot_web/live/dashboard/languages_component.ex
 #, elixir-autogen, elixir-format
