@@ -101,8 +101,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   # A plain event's location is the text its calendar entry carries
   # (`creating.location`, which `EventCreation` writes to the provider): a
   # saved venue's one-line form (`Venues.display/1`), or what was typed in.
-  # The venue is looked up among the host's own, so one deleted while the
-  # form was open is refused rather than written as a stale name.
+  # The venue is read afresh among the host's own rather than from the list
+  # the grid loaded, so one deleted while the form was open is refused
+  # rather than written as a stale name.
   defp put_event_location(creating, socket) do
     case location_of(creating) do
       nil ->
@@ -112,9 +113,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
         {:ok, Map.put(creating, :location, place)}
 
       {:venue, venue_id} ->
-        case Enum.find(socket.assigns[:venues] || [], &(&1.id == venue_id)) do
-          nil -> {:error, :invalid_location}
-          venue -> {:ok, Map.put(creating, :location, Venues.display(venue))}
+        case Venues.get_venue(socket.assigns.current_user.id, venue_id) do
+          {:ok, venue} -> {:ok, Map.put(creating, :location, Venues.display(venue))}
+          {:error, :not_found} -> {:error, :invalid_location}
         end
     end
   end
