@@ -73,10 +73,13 @@
   /* Read-only: a value shown for copying or reference. It keeps the focus ring,
      since it stays reachable by keyboard, but does not light up on hover. */
   .input[readonly] {
-    @apply text-tymeslot-600 bg-tymeslot-50 border-tymeslot-100 cursor-default;
+    @apply text-tymeslot-600 cursor-default;
   }
 
-  .input[readonly]:hover {
+  /* :not(:focus), because a bare .input[readonly] matches .input:focus in
+     specificity and, coming later, would hide the focus border. */
+  .input[readonly]:not(:focus),
+  .input[readonly]:not(:focus):hover {
     @apply border-tymeslot-100 bg-tymeslot-50;
   }
 
@@ -100,9 +103,10 @@
     @apply rounded border-2 border-tymeslot-200 text-turquoise-600 focus:ring-turquoise-500 transition-all;
   }
 
-  /* Radio Styling */
+  /* Radio Styling. The ring is tymeslot-500 so an unchecked radio clears the
+     3:1 contrast a control's boundary needs against a white surface. */
   .radio {
-    @apply border-2 border-tymeslot-200 text-turquoise-600 focus:ring-turquoise-500 transition-all;
+    @apply border-tymeslot-500 text-turquoise-600 focus:ring-turquoise-500 transition-all;
   }
 
   /* Textarea */
