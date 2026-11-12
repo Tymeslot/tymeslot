@@ -273,6 +273,49 @@ defmodule TymeslotWeb.Live.Scheduling.EmbeddedRefusalRedirectTest do
       assert html =~ "Invalid meeting type"
     end
 
+    # A reload must not say it again: each theme's own patch as it connects
+    # rewrites the URL without the code.
+    for theme <- ~w(1 2 3 4) do
+      @tag :capture_log
+      test "the code comes off the URL once theme #{theme}'s embed has shown it", %{conn: conn} do
+        embed_query = String.replace(@embed_query, "theme=2", "theme=#{unquote(theme)}")
+        conn = conn |> embedded() |> get("/#{@username}/no-such-type?#{embed_query}")
+        to = redirected_to(conn, 302)
+
+        {:ok, view, _html} = conn |> recycle() |> embedded() |> live(to)
+
+        patched = assert_patch(view)
+        query = patched |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+        assert %URI{path: "/" <> @username} = URI.parse(patched)
+        refute Map.has_key?(query, "refused")
+        assert query["embed"] == "1"
+        assert query["theme"] == unquote(theme)
+        assert render(view) =~ "Invalid meeting type"
+      end
+    end
+
+    test "a step the refusal does not send the guest to ignores the code", %{
+      conn: conn,
+      user: user
+    } do
+      insert(:meeting_type,
+        user: user,
+        name: "Chat",
+        slug: "chat",
+        duration_minutes: 30,
+        is_active: true
+      )
+
+      body =
+        conn
+        |> embedded()
+        |> get("/#{@username}/chat?refused=invalid-type&#{@embed_query}")
+        |> html_response(200)
+
+      refute body =~ "Invalid meeting type"
+    end
+
     test "an unknown code says nothing", %{conn: conn} do
       body =
         conn

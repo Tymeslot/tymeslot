@@ -12,7 +12,10 @@ defmodule TymeslotWeb.Live.Scheduling.EntryRefusal do
   Inside an embed the flash never arrives: `EmbedTokenPlug` ignores the
   session on embed requests, so the cookie that would carry it is not
   written. There the redirect carries the reason in the URL instead
-  (`put_param/3`), and the page it lands on flashes it again (`flash/2`).
+  (`put_param/3`), and the profile it lands on flashes it again (`flash/2`).
+  The code does not outlive the arrival: the page's own patch as it connects
+  (`ChoicesInUrl`) rewrites the URL from the visitor's choices, which never
+  carry it, so a reload does not say it again.
 
   The parameter is a closed set of codes, each mapped to its translated copy
   on the server, so it can never put text of the URL's choosing on someone's
@@ -60,11 +63,12 @@ defmodule TymeslotWeb.Live.Scheduling.EntryRefusal do
   def put_param(query, _not_embedded, _reason), do: query
 
   @doc """
-  Flashes the refusal a redirect carried in `params`, on a verified embed
-  only. An unknown code, or a page that is not embedded, flashes nothing.
+  Flashes the refusal a redirect carried in `params`, on the profile of a
+  verified embed only, the one page a refusal sends the guest to. An unknown
+  code, another step, or a page that is not embedded flashes nothing.
   """
   @spec flash(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
-  def flash(%{assigns: %{embedded: true}} = socket, %{@param => code}) do
+  def flash(%{assigns: %{embedded: true, live_action: :overview}} = socket, %{@param => code}) do
     case Map.fetch(@reasons, code) do
       {:ok, reason} -> put(socket, reason)
       :error -> socket
