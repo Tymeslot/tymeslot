@@ -461,8 +461,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
     )
   end
 
-  # Read only when loaded: a meeting refreshed on its own (a dismissed sync
-  # banner) arrives without it, and shows no tag rather than crashing.
   # A meeting the host manages either came from a poll they confirmed or was
   # created with no main participant. Only the first is labelled a poll.
   defp from_poll?(%{confirming_poll: %{id: _id}}), do: true
@@ -472,6 +470,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   defp place(%{location: location}) when is_binary(location) and location != "", do: location
   defp place(_meeting), do: nil
 
+  # Read only when loaded: a meeting refreshed on its own arrives without it,
+  # and shows no tag rather than crashing.
   defp booking_page(%{booking_page: %{name: _name} = page}), do: page
   defp booking_page(_meeting), do: nil
 end
