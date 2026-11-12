@@ -121,9 +121,8 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   def discard_reason, do: @discard_reason
 
   @doc """
-  How many consecutive failures, ending in a credential rejection, a
-  password-based (CalDAV-family) integration must see before it is flagged
-  for reconnection. Three by default; configurable via
+  How many consecutive credential rejections a password-based (CalDAV-family)
+  integration must see before it is flagged for reconnection. Three by default; configurable via
   `:caldav_reauth_after_failed_cycles`, where `1` restores flagging on the
   first rejection.
 
@@ -136,8 +135,8 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   refused is a different matter (the grant really is gone), so this does not
   apply to OAuth providers.
 
-  Shared by the CalDAV sync worker, which counts failed sync cycles, and the
-  health probe, which counts consecutive hard failures.
+  Shared by the CalDAV sync worker, which counts consecutive rejected sync
+  cycles, and the health probe, which counts consecutive hard failures.
   """
   @spec password_rejection_threshold() :: pos_integer()
   def password_rejection_threshold do

@@ -19,22 +19,27 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   ## Auth errors (REQ-012)
 
-  A 401 or 403 flags the integration's `needs_reauth` field and returns
-  `{:discard, …}` — no retry, since the failure is permanent until the user
-  reconnects. If the DB write itself fails the worker returns `{:error, …}` so
-  Oban retries and takes another shot at recording the flag. The `is_active`
-  flag is left unchanged so the integration stays visible in the dashboard.
+  A 401 or 403 always discards the cycle, since retrying it seconds later
+  re-sends the same credentials to the same server. Whether it also flags the
+  integration's `needs_reauth` field depends on how long the rejection has
+  lasted: only the cycle that makes it
+  `ReauthHandling.password_rejection_threshold/0` consecutive rejected cycles
+  (three by default) flags; see that function for why one 401 is not believed.
+  Any cycle that ends otherwise, a timeout or server error included, breaks
+  the streak `HealthCheck.record_credential_rejection/2` counts, so a server
+  recovering from an outage is not believed on its first stray 401 either.
 
-  The flag is only raised once the rejection has lasted
-  `ReauthHandling.password_rejection_threshold/0` consecutive sync cycles
-  (three by default), the cycle that got the 401 included; see that function
-  for why one 401 is not believed. Flagging on that one answer is
-  unrecoverable without the owner: the sweep stops scheduling a flagged
-  integration, so the successful sync that would clear the flag
-  (`SyncHealth.record_outcome/2`) never comes. Until the threshold is reached
-  the cycle is discarded and counted like any other failure, so the next
-  scheduled sync tries again; a credential that really was revoked is flagged
-  a few cycles later.
+  Flagging on that one answer would be unrecoverable without the owner: the
+  sweep stops scheduling a flagged integration, so the successful sync that
+  would clear the flag (`SyncHealth.record_outcome/2`) never comes. Below the
+  threshold the cycle still counts toward the failed-sync badge like any
+  other failure, and the next scheduled sync tries again; a credential that
+  really was revoked is flagged a few cycles later.
+
+  Once flagged, the owner has to reconnect. If writing the flag fails the
+  worker returns `{:error, …}` so Oban retries and takes another shot at
+  recording it. The `is_active` flag is left unchanged so the integration
+  stays visible in the dashboard.
   """
 
   use Oban.Worker,
@@ -55,7 +60,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Management
-  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Workers.CalendarSyncJob
   alias Tymeslot.Workers.SyncRequest
@@ -89,6 +94,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # A server error or a server that never answered is retried by the next sync. The deletion circuit breaker
   # refusing a sync is recorded.
   @integration_gone "Integration not found"
+  @rejections [:unauthorized, :forbidden]
+
   @credentials_rejected "CalDAV server rejected credentials — reauthentication required"
   @credentials_rejected_unconfirmed "CalDAV server rejected credentials; retrying next sync before reauth"
   @calendar_gone "CalDAV booking calendar not found — user action required"
@@ -123,6 +130,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     integration
     |> Sync.run(force_full_fetch?)
     |> tap(&record_failure(integration, &1))
+    |> tap(&break_rejection_streak(integration, &1))
     |> handle_sync_result(integration)
   end
 
@@ -136,22 +144,20 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # an indefinite outage.
   defp handle_sync_result(:ok, _integration), do: :ok
 
-  # The server rejected the stored credentials. Retrying within the cycle
-  # re-sends the same credentials to the same server seconds later, so the
-  # cycle is discarded either way. What the streak decides is whether the
-  # rejection is believed yet: see "Auth errors" in the moduledoc. Below the
-  # threshold no `sync_error` is recorded either (`@recorded_elsewhere`): the
-  # sentence for a rejection asks the owner to reconnect, which one 401 does
-  # not justify.
+  # The server rejected the stored credentials. The cycle is discarded either
+  # way; the streak of rejected cycles decides whether the rejection is
+  # believed yet (see "Auth errors" in the moduledoc). Below the threshold no
+  # `sync_error` is recorded either (`@recorded_elsewhere`): the sentence for a
+  # rejection asks the owner to reconnect, which one 401 does not justify.
   defp handle_sync_result({:error, reason}, integration)
-       when reason in [:unauthorized, :forbidden] do
-    failed_cycles = prior_failed_cycles(integration) + 1
+       when reason in @rejections do
+    rejected_cycles = HealthCheck.record_credential_rejection(:calendar, integration)
     threshold = ReauthHandling.password_rejection_threshold()
 
-    if failed_cycles >= threshold do
+    if rejected_cycles >= threshold do
       Logger.warning("CalDAV sync unauthorised; flagging for reauth",
         calendar_integration_id: integration.id,
-        failed_cycles: failed_cycles
+        rejected_cycles: rejected_cycles
       )
 
       Management.flag_for_reconnection(
@@ -162,7 +168,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     else
       Logger.warning("CalDAV sync unauthorised; not flagging for reauth yet",
         calendar_integration_id: integration.id,
-        failed_cycles: failed_cycles,
+        rejected_cycles: rejected_cycles,
         threshold: threshold
       )
 
@@ -299,17 +305,14 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   defp record_failure(_integration, _result), do: :ok
 
-  # The streak `SyncHealth.record_outcome/2` keeps, read before this cycle's
-  # failure is added to it (that happens once this verdict is returned). Any
-  # failed cycle counts, not only rejections: a server that times out and then
-  # answers 401 has not synced for that long either. A missing row is an
-  # integration that has never failed.
-  defp prior_failed_cycles(integration) do
-    case IntegrationHealthStateQueries.get(:calendar, integration.id) do
-      {:ok, %{consecutive_sync_failures: count}} when is_integer(count) -> count
-      _no_failures -> 0
-    end
-  end
+  # A cycle that synced, or failed any other way, ends the run of rejections
+  # the threshold counts: a 401 after it starts a new run rather than
+  # confirming the old one.
+  defp break_rejection_streak(_integration, {:error, reason}) when reason in @rejections,
+    do: :ok
+
+  defp break_rejection_streak(integration, _result),
+    do: HealthCheck.clear_credential_rejections(:calendar, integration.id)
 
   # The discard reason is what an operator reads on the job record, so it keeps
   # the status the owner-facing sentence leaves out.

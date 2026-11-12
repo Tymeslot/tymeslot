@@ -181,6 +181,31 @@ defmodule Tymeslot.Integrations.HealthCheck do
   end
 
   @doc """
+  Records that a sync cycle ended with the server rejecting the stored
+  credentials, and returns how many consecutive cycles have now done so.
+
+  A separate streak from the one `record_sync_failure/2` keeps, because it
+  answers a narrower question: not whether the integration is syncing, but
+  whether the rejection is lasting enough to believe. Any cycle that ends
+  otherwise breaks it (`clear_credential_rejections/2`), and so does the owner
+  reconnecting (`mark_user_recovered/2`).
+  """
+  @spec record_credential_rejection(integration_type(), map()) :: pos_integer()
+  def record_credential_rejection(type, %{id: integration_id, user_id: user_id}) do
+    IntegrationHealthStateQueries.record_credential_rejection(type, integration_id, user_id)
+  end
+
+  @doc """
+  Breaks the streak `record_credential_rejection/2` counts. Idempotent and
+  safe to call when no row exists.
+  """
+  @spec clear_credential_rejections(integration_type(), integer()) :: :ok
+  def clear_credential_rejections(type, integration_id) do
+    IntegrationHealthStateQueries.clear_credential_rejections(type, integration_id)
+    :ok
+  end
+
+  @doc """
   Records that one sync cycle for this integration failed.
 
   A sync failure is the only evidence some outages produce. The scheduled
