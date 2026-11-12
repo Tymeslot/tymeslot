@@ -21,7 +21,10 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
     another reason gets the unhealthy email as usual, since the reauth path
     leaves `notification_sent_at` untouched.
   - Permanent auth failures (e.g. Google `invalid_grant`) bypass the 48-hour
-    threshold via the fast-path in `handle_check_result/5`: the integration is
+    threshold via the fast-path in `handle_check_result/5`. A CalDAV-family
+    calendar takes it only once `ReauthHandling.password_rejection_threshold/0`
+    consecutive hard failures have accumulated; until then its rejection counts
+    toward the badge like any other failure. On the fast-path the integration is
     flagged `needs_reauth: true`, which itself owns the notification (the
     reauth email, not the unhealthy one; see `ReauthHandling.flag_and_notify/3`)
     on the false to true transition, which the row decides. This fast-path
