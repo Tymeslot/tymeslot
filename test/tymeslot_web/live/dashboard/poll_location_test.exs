@@ -57,6 +57,23 @@ defmodule TymeslotWeb.Dashboard.PollLocationTest do
     )
   end
 
+  # The location, like the form's other pickers, posts from a hidden input
+  # the test cannot fill in; its value goes with the event instead.
+  @pickers ~w(timezone duration meeting_type_id slots deadline location)
+
+  defp change_form(view, selector, params) do
+    {pickers, fields} = Map.split(params, @pickers)
+    view |> form(selector, %{"poll" => fields}) |> render_change(%{"poll" => pickers})
+  end
+
+  defp submit_form(view, selector, params, extra \\ %{}) do
+    {pickers, fields} = Map.split(params, @pickers)
+
+    view
+    |> form(selector, %{"poll" => fields})
+    |> render_submit(Map.merge(%{"poll" => pickers}, extra))
+  end
+
   defp only_poll(user) do
     [poll] = Polls.list_polls(user.id)
     Repo.get!(PollSchema, poll.id)
@@ -67,30 +84,32 @@ defmodule TymeslotWeb.Dashboard.PollLocationTest do
          %{conn: conn, venue: venue, video: video} do
       view = open_form(conn)
 
-      assert has_element?(view, "select[name='poll[location]'] option[value='']", "No location")
+      assert has_element?(
+               view,
+               "select[data-name='poll[location]'] option[value='']",
+               "No location"
+             )
 
       assert has_element?(
                view,
-               "select[name='poll[location]'] option[value='video:#{video.id}']",
+               "select[data-name='poll[location]'] option[value='video:#{video.id}']",
                "Team Talk"
              )
 
       assert has_element?(
                view,
-               "select[name='poll[location]'] option[value='venue:#{venue.id}']",
+               "select[data-name='poll[location]'] option[value='venue:#{venue.id}']",
                "Harbour Hall"
              )
 
-      assert has_element?(view, "select[name='poll[location]'] option[value='custom']")
+      assert has_element?(view, "select[data-name='poll[location]'] option[value='custom']")
       refute has_element?(view, "input[name='poll[location_details]']")
     end
 
     test "saves a saved location with the poll", %{conn: conn, user: user, venue: venue} do
       view = open_form(conn)
 
-      view
-      |> form(@form, %{"poll" => poll_params(%{"location" => "venue:#{venue.id}"})})
-      |> render_submit()
+      submit_form(view, @form, poll_params(%{"location" => "venue:#{venue.id}"}))
 
       poll = only_poll(user)
       assert poll.location_kind == :in_person
@@ -101,7 +120,7 @@ defmodule TymeslotWeb.Dashboard.PollLocationTest do
          %{conn: conn, user: user} do
       view = open_form(conn)
 
-      view |> form(@form, %{"poll" => %{"location" => "custom"}}) |> render_change()
+      change_form(view, @form, poll_params(%{"location" => "custom"}))
       assert has_element?(view, "input[name='poll[location_details]']")
 
       view
@@ -118,11 +137,9 @@ defmodule TymeslotWeb.Dashboard.PollLocationTest do
     test "a place of their own left empty is pointed out where it is typed",
          %{conn: conn, user: user} do
       view = open_form(conn)
-      view |> form(@form, %{"poll" => %{"location" => "custom"}}) |> render_change()
+      change_form(view, @form, poll_params(%{"location" => "custom"}))
 
-      view
-      |> form(@form, %{"poll" => poll_params(%{"location" => "custom", "location_details" => ""})})
-      |> render_submit()
+      submit_form(view, @form, poll_params(%{"location" => "custom", "location_details" => ""}))
 
       assert Polls.list_polls(user.id) == []
       assert has_element?(view, "[data-testid='poll-location'] [role='alert']")
@@ -131,9 +148,7 @@ defmodule TymeslotWeb.Dashboard.PollLocationTest do
     test "saves a video call with the poll", %{conn: conn, user: user, video: video} do
       view = open_form(conn)
 
-      view
-      |> form(@form, %{"poll" => poll_params(%{"location" => "video:#{video.id}"})})
-      |> render_submit()
+      submit_form(view, @form, poll_params(%{"location" => "video:#{video.id}"}))
 
       assert %{location_kind: :video, video_integration_id: id} = only_poll(user)
       assert id == video.id
@@ -150,20 +165,18 @@ defmodule TymeslotWeb.Dashboard.PollLocationTest do
 
       view = open_form(conn)
 
-      view
-      |> form(@form, %{"poll" => %{"meeting_type_id" => "#{meeting_type.id}"}})
-      |> render_change()
+      change_form(view, @form, %{"meeting_type_id" => "#{meeting_type.id}"})
 
       assert has_element?(
                view,
-               "select[name='poll[location]'] option[value='']",
+               "select[data-name='poll[location]'] option[value='']",
                "From the meeting type: Harbour Hall"
              )
     end
 
     test "a draft opens with the location it was saved with", %{conn: conn, user: user} do
       view = open_form(conn)
-      view |> form(@form, %{"poll" => %{"location" => "custom"}}) |> render_change()
+      change_form(view, @form, poll_params(%{"location" => "custom"}))
 
       view
       |> form(@form, %{
@@ -177,7 +190,11 @@ defmodule TymeslotWeb.Dashboard.PollLocationTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
       view |> element("[data-testid='edit-draft']") |> render_click()
 
-      assert has_element?(view, "select[name='poll[location]'] option[value='custom'][selected]")
+      assert has_element?(
+               view,
+               "select[data-name='poll[location]'] option[value='custom'][selected]"
+             )
+
       assert has_element?(view, "input[name='poll[location_details]'][value='Boathouse']")
     end
   end
@@ -204,9 +221,7 @@ defmodule TymeslotWeb.Dashboard.PollLocationTest do
     test "changes where the meeting will be held", %{conn: conn, poll: poll, venue: venue} do
       view = open_editor(conn, poll)
 
-      view
-      |> form(@editor, %{"poll" => %{"location" => "venue:#{venue.id}"}})
-      |> render_submit()
+      submit_form(view, @editor, %{"location" => "venue:#{venue.id}"})
 
       assert %{location_kind: :in_person, venue_id: venue_id} = Repo.get!(PollSchema, poll.id)
       assert venue_id == venue.id
@@ -221,7 +236,7 @@ defmodule TymeslotWeb.Dashboard.PollLocationTest do
 
       assert has_element?(
                view,
-               "#{@editor} select[name='poll[location]'] option[value='custom'][selected]"
+               "#{@editor} select[data-name='poll[location]'] option[value='custom'][selected]"
              )
 
       assert has_element?(
