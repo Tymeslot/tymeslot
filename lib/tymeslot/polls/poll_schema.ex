@@ -6,7 +6,9 @@ defmodule Tymeslot.Polls.PollSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Clock
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.Reminders
@@ -15,6 +17,7 @@ defmodule Tymeslot.Polls.PollSchema do
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Token
   alias Tymeslot.Validation.Constraints
+  alias Tymeslot.Venues.VenueSchema
 
   @max_slots 40
   @max_participants 40
@@ -63,12 +66,21 @@ defmodule Tymeslot.Polls.PollSchema do
     field(:deadline_at, :utc_datetime)
     field(:timezone, :string)
     field(:confirmed_at, :utc_datetime)
+    # Where the meeting will be held, as the host chose it for this poll: a
+    # video call on `video_integration`, the saved `venue`, or the place in
+    # `location_details`. None leaves it to the meeting type, if the poll
+    # has one (`Tymeslot.Polls.PollLocation`).
+    field(:location_kind, Ecto.Enum, values: [:video, :in_person, :custom])
+    field(:location_details, :string)
+
     # One execution shares this nonsecret identity across all recipient copies.
     # It is never cast from user input or persisted with the poll.
     field(:email_sender, :any, virtual: true)
 
     belongs_to(:user, UserSchema, type: :id)
     belongs_to(:meeting_type, MeetingTypeSchema, type: :id)
+    belongs_to(:venue, VenueSchema, type: :id)
+    belongs_to(:video_integration, VideoIntegrationSchema, type: :id)
     belongs_to(:confirmed_meeting, MeetingSchema, type: :binary_id)
 
     has_many(:time_slots, PollTimeSlotSchema,
@@ -95,6 +107,8 @@ defmodule Tymeslot.Polls.PollSchema do
     timestamps(type: :utc_datetime)
   end
 
+  @location_fields [:location_kind, :location_details, :venue_id, :video_integration_id]
+
   @spec max_slots() :: pos_integer()
   def max_slots, do: @max_slots
 
@@ -119,6 +133,7 @@ defmodule Tymeslot.Polls.PollSchema do
       :invite_only,
       :reminder_config,
       :draft_invitees
+      | @location_fields
     ])
     |> validate_required([:user_id, :title, :duration_minutes, :timezone])
     |> validate_number(:duration_minutes, Constraints.poll_duration_minutes_opts())
@@ -126,11 +141,13 @@ defmodule Tymeslot.Polls.PollSchema do
     |> validate_description_length()
     |> validate_reminder_config()
     |> validate_future_deadline()
+    |> validate_location()
     |> put_new_token()
     |> Token.put_hash(:token, :token_hash)
     |> unique_constraint(:token_hash)
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:meeting_type_id)
+    |> location_constraints()
   end
 
   @doc """
@@ -138,8 +155,9 @@ defmodule Tymeslot.Polls.PollSchema do
 
   Covers the title, the description, whether the host is told about new votes,
   who can vote (`invite_only`), the voting deadline, the reminders before it,
-  and the meeting type whose calendar and video the confirmed meeting uses
-  (checked by `Tymeslot.Polls.Editing`, which knows the host). A deadline may
+  the meeting type whose calendar the confirmed meeting uses, and where it is
+  held (both checked by `Tymeslot.Polls.Editing`, which knows the host). A
+  location left out of `attrs` stays as it is. A deadline may
   be moved, removed, or set again after it passed, which reopens voting, but
   never into the past. The candidate times, duration and timezone stay as they are:
   guests voted against the slots they were shown, so changing those under an
@@ -157,6 +175,7 @@ defmodule Tymeslot.Polls.PollSchema do
       :deadline_at,
       :reminder_config,
       :meeting_type_id
+      | @location_fields
     ])
     |> start_updates_from_now()
     # `cast/3` already nils a whitespace-only string, so these have to tolerate
@@ -169,7 +188,9 @@ defmodule Tymeslot.Polls.PollSchema do
     |> validate_description_length()
     |> validate_future_deadline()
     |> validate_reminder_config()
+    |> validate_location()
     |> foreign_key_constraint(:meeting_type_id)
+    |> location_constraints()
   end
 
   @doc """
@@ -262,6 +283,48 @@ defmodule Tymeslot.Polls.PollSchema do
   end
 
   defp stringify(%{value: value, unit: unit}), do: %{"value" => value, "unit" => unit}
+
+  # Each kind keeps the one field that says where, and the others are
+  # cleared, so a poll switched from a venue to a video call does not carry
+  # the venue along. The host's ownership of the venue or integration is
+  # checked by the context, which knows the host (`PollLocation.check/2`).
+  defp validate_location(changeset) do
+    if Enum.any?(@location_fields, &Map.has_key?(changeset.changes, &1)),
+      do: settle_location(changeset, get_field(changeset, :location_kind)),
+      else: changeset
+  end
+
+  defp settle_location(changeset, nil), do: clear_location(changeset, @location_fields)
+
+  defp settle_location(changeset, :video) do
+    changeset
+    |> clear_location([:location_details, :venue_id])
+    |> validate_required([:video_integration_id])
+  end
+
+  defp settle_location(changeset, :in_person) do
+    changeset
+    |> clear_location([:location_details, :video_integration_id])
+    |> validate_required([:venue_id])
+  end
+
+  defp settle_location(changeset, :custom) do
+    changeset
+    |> clear_location([:venue_id, :video_integration_id])
+    |> update_change(:location_details, &trim_to_nil/1)
+    |> validate_required([:location_details])
+    |> validate_length(:location_details, max: CreateAdHoc.custom_location_max_length())
+  end
+
+  defp clear_location(changeset, fields),
+    do: Enum.reduce(fields, changeset, &put_change(&2, &1, nil))
+
+  defp location_constraints(changeset) do
+    changeset
+    |> foreign_key_constraint(:venue_id)
+    |> foreign_key_constraint(:video_integration_id)
+    |> check_constraint(:location_kind, name: :polls_location_kind_must_be_known)
+  end
 
   # The description becomes the confirmed meeting's organiser note, so it is
   # held to that limit from the start.

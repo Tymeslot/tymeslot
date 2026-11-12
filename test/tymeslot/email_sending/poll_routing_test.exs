@@ -72,6 +72,33 @@ defmodule Tymeslot.EmailSending.PollRoutingTest do
     end
   end
 
+  test "poll emails preserve the location in both bodies when using custom SMTP", context do
+    location = "Garden pavilion"
+
+    context.poll
+    |> Changeset.change(location_kind: :custom, location_details: location)
+    |> Repo.update!()
+
+    use_relay(context.certificates)
+
+    for {action, args} <- [
+          {"send_poll_invitation", %{"participant_id" => context.participant.id}},
+          {"send_poll_participant_link", %{"participant_id" => context.participant.id}},
+          {"send_poll_deadline_reminders", %{"poll_id" => context.poll.id}}
+        ] do
+      assert :ok = run(job(action, args))
+      body = message()
+      assert_brand(body)
+      assert body =~ ~r/^Reply-To:.*#{Regex.escape(context.owner.email)}/m
+
+      # The ASCII marker needs no charset conversion (and no optional iconv).
+      bodies = body |> :mimemail.decode(encoding: :none) |> text_bodies()
+
+      assert bodies["plain"] =~ "Where: #{location}"
+      assert bodies["html"] =~ location
+    end
+  end
+
   test "deadline reminders share the host sender and retry only the failed participant",
        context do
     other = insert(:poll_participant, poll: context.poll)
@@ -303,4 +330,14 @@ defmodule Tymeslot.EmailSending.PollRoutingTest do
 
   defp assert_brand(body),
     do: assert(body =~ ~r/^From:.*Poll brand.*<polls@brand\.example\.com>/m)
+
+  # Inline logos nest the HTML in multipart/related inside the alternatives.
+  @spec text_bodies(:mimemail.mimetuple()) :: %{optional(String.t()) => binary()}
+  defp text_bodies({"text", subtype, _headers, _parameters, body}), do: %{subtype => body}
+
+  defp text_bodies({_type, _subtype, _headers, _parameters, parts}) when is_list(parts) do
+    Enum.reduce(parts, %{}, fn part, bodies -> Map.merge(bodies, text_bodies(part)) end)
+  end
+
+  defp text_bodies(_part), do: %{}
 end

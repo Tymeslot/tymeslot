@@ -174,7 +174,6 @@ defmodule Tymeslot.Emails.UserSmtpDeliveryTest do
   test "a killed delivery caller terminates its socket task and frees the owner cap", context do
     use_relay(context.certificates, after_data: :silent)
     hold_connection_slots(context.sender.owner_id, Connections.limit() - 1)
-    before = MapSet.new(Task.Supervisor.children(Tymeslot.TaskSupervisor))
 
     {caller, caller_monitor} =
       spawn_monitor(fn ->
@@ -183,12 +182,14 @@ defmodule Tymeslot.Emails.UserSmtpDeliveryTest do
 
     assert_receive {:smtp_relay, {:message, _body}}, 1_000
 
-    [transport] =
-      Tymeslot.TaskSupervisor
-      |> Task.Supervisor.children()
-      |> Enum.reject(&MapSet.member?(before, &1))
-
+    assert {:links, [transport]} = Process.info(caller, :links)
     transport_monitor = Process.monitor(transport)
+
+    # Monitoring is asynchronous. This request acknowledges its installation
+    # before a linked exit from the caller can race it and report :noproc.
+    assert {:monitored_by, monitors} = Process.info(transport, :monitored_by)
+    assert self() in monitors
+
     Process.exit(caller, :kill)
     assert_receive {:DOWN, ^caller_monitor, :process, ^caller, :killed}
     assert_receive {:DOWN, ^transport_monitor, :process, ^transport, :killed}

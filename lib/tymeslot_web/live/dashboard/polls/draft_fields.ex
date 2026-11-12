@@ -1,14 +1,14 @@
 defmodule TymeslotWeb.Dashboard.Polls.DraftFields do
   @moduledoc """
   The create form's fields filled from a saved draft, so `PollForm` opens a
-  draft as the host left it: its details, its times as rows, and its invitees
-  back as the text they were typed from.
+  draft as the host left it: its details and location, its times as rows,
+  and its invitees back as the text they were typed from.
 
   The host chose who can vote when they saved, so the access choice comes back
   as made rather than following the invitee field again.
   """
 
-  alias Tymeslot.Polls.PollSchema
+  alias Tymeslot.Polls.{PollLocation, PollSchema}
   alias TymeslotWeb.Dashboard.Polls.{CandidateTimes, LocalTime, PollAccess, PollReminders}
 
   @doc "The `PollForm` assigns for `draft`."
@@ -21,11 +21,15 @@ defmodule TymeslotWeb.Dashboard.Polls.DraftFields do
         CandidateTimes.add(rows, counter, LocalTime.to_input(slot.start_time, timezone))
       end)
 
+    {location_choice, location_details} = PollLocation.choice(draft)
+
     [
       title: draft.title,
       description: draft.description || "",
       meeting_type_id:
         if(draft.meeting_type_id, do: Integer.to_string(draft.meeting_type_id), else: ""),
+      location_choice: location_choice,
+      location_details: location_details,
       duration: Integer.to_string(draft.duration_minutes),
       deadline: LocalTime.to_input(draft.deadline_at, timezone),
       notify_on_vote: draft.notify_on_vote,

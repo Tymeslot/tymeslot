@@ -235,3 +235,8 @@ msgstr "Choisissez une réponse pour au moins un horaire, puis enregistrez."
 #, elixir-autogen, elixir-format
 msgid "The meeting arranged through this poll has been cancelled."
 msgstr "La réunion organisée via ce sondage a été annulée."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_location.ex
+#, elixir-autogen, elixir-format
+msgid "Video call. The link follows once a time is confirmed."
+msgstr "Appel vidéo. Le lien suivra dès qu’un horaire sera confirmé."

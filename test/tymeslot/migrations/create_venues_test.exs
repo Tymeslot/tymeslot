@@ -24,6 +24,16 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
 
   @version 20_260_930_073_021
 
+  # `polls.venue_id`, added later, references venues, so that migration is
+  # stepped down first for this one's `down` to drop the table. The sandbox
+  # rolls both back with the test.
+  @poll_location_version 20_261_111_141_041
+
+  setup do
+    MigrationRunner.down!(@poll_location_version)
+    :ok
+  end
+
   defp put_raw_locations(meeting_type, locations) do
     Repo.query!("UPDATE meeting_types SET locations = $2::jsonb[] WHERE id = $1", [
       meeting_type.id,

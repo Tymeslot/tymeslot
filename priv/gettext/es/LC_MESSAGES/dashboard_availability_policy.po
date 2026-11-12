@@ -1,0 +1,207 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} min"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} cannot be more than %{max}"
+msgstr "%{setting} no puede ser más de %{max}"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} must be a whole number"
+msgstr "%{setting} debe ser un número entero"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} must be at least %{min}"
+msgstr "%{setting} debe ser como mínimo %{min}"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgstr "1 día"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgstr "1 hora"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 month"
+msgstr "1 mes"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 week"
+msgstr "1 semana"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 year"
+msgstr "1 año"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "12 hours"
+msgstr "12 horas"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "2 days"
+msgstr "2 días"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "2 months"
+msgstr "2 meses"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "2 weeks"
+msgstr "2 semanas"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "3 hours"
+msgstr "3 horas"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "3 months"
+msgstr "3 meses"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "4 hours"
+msgstr "4 horas"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "6 hours"
+msgstr "6 horas"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "6 months"
+msgstr "6 meses"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "A new booking can start this long after your previous meeting ends, at the earliest."
+msgstr "Tiempo mínimo entre el final de tu reunión anterior y el inicio de una nueva reserva."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "A new booking must end at least this long before your next meeting starts."
+msgstr "Tiempo mínimo entre el final de una nueva reserva y el inicio de tu próxima reunión."
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Advance booking days"
+msgstr "Días de antelación para reservar"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "After a new booking"
+msgstr "Después de una nueva reserva"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Before a new booking"
+msgstr "Antes de una nueva reserva"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer Time"
+msgstr "Tiempo de margen"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer after"
+msgstr "Margen después"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Buffer before"
+msgstr "Margen antes"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Custom"
+msgstr "Personalizado"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "How Far in Advance Can People Book"
+msgstr "Con cuánta antelación se puede reservar"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum number of days into the future that appointments can be booked."
+msgstr "Cuántos días por adelantado, como máximo, se puede reservar una cita."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum Booking Notice"
+msgstr "Antelación mínima para reservar"
+
+#: lib/tymeslot/availability/policy_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum advance hours"
+msgstr "Horas mínimas de antelación"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum hours of notice required before an appointment can be booked."
+msgstr "Cuántas horas antes, como mínimo, se debe reservar una cita."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "No buffer"
+msgstr "Sin margen"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling Preferences"
+msgstr "Preferencias de reserva"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "These rules apply to every meeting type booked against this schedule."
+msgstr "Estas reglas se aplican a todos los tipos de reunión que usan este horario."
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "days"
+msgstr "días"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "hours"
+msgstr "horas"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "instant"
+msgstr "al instante"
+
+#: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
+#, elixir-autogen, elixir-format
+msgid "min"
+msgstr "min"
