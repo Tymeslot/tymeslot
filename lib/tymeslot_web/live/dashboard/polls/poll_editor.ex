@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       meeting_type_id: poll.meeting_type_id,
       kept_meeting_type:
         kept_meeting_type(poll, socket.assigns.meeting_types, socket.assigns.user_id),
-      location_options: Polls.location_options(socket.assigns.user_id),
+      location_options: Polls.location_options(socket.assigns.user_id, poll),
       new_times: [],
       time_counter: 0,
       reminder_picker: PollReminders.new(PollSchema.reminders(poll)),

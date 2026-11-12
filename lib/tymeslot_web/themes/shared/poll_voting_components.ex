@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.PollVotingLocation
   alias TymeslotWeb.Themes.Shared.SecurityFields
 
   use TymeslotWeb.Components.CoreComponents, only: [honeypot_field: 1, icon: 1]
@@ -57,7 +58,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         <p :if={@poll.description && @poll.description != ""} class="poll-voting-description">
           {@poll.description}
         </p>
-        <.location location={@location} />
+        <PollVotingLocation.location location={@location} />
         <%!-- Slot rows show a compact date with no zone on it, so the zone has
               to be stated once here or every candidate time is unlabelled. It
               reads as a property of the poll rather than a sentence about it,
@@ -141,28 +142,6 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           />
       <% end %>
     </div>
-    """
-  end
-
-  attr :location, :map, required: true
-
-  # Where the meeting will be held, which may decide whether someone can come
-  # at all. A video call has no address yet: its room is created when the
-  # host confirms a time, and its link comes with the meeting.
-  defp location(%{location: nil} = assigns), do: ~H""
-
-  defp location(assigns) do
-    ~H"""
-    <p class="poll-voting-location" data-testid="poll-location">
-      <.icon
-        name={if @location.kind == :video, do: "hero-video-camera", else: "hero-map-pin"}
-        class="poll-voting-location-icon"
-      />
-      <span :if={@location.kind == :video}>
-        {dgettext("booking_polls", "Video call. The link follows once a time is confirmed.")}
-      </span>
-      <span :if={@location.kind != :video}>{@location.place}</span>
-    </p>
     """
   end
 

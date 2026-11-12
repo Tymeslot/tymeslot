@@ -68,17 +68,36 @@ defmodule Tymeslot.Polls.PollLocation do
   @doc """
   What the host's form offers: their video integrations that are switched
   on, and their saved venues, in the order of their Locations page.
+
+  Given the `poll` being edited, its own video integration is offered too
+  while it is switched off, as `check/3` lets it stay: otherwise the form
+  would show it unselected and saving the poll's other details would
+  quietly drop it.
   """
-  @spec options(integer()) :: %{
+  @spec options(integer(), PollSchema.t() | nil) :: %{
           videos: [%{id: integer(), name: String.t()}],
           venues: [%{id: integer(), name: String.t()}]
         }
-  def options(user_id) when is_integer(user_id) do
+  def options(user_id, poll \\ nil) when is_integer(user_id) do
+    active = Video.list_active_integrations(user_id)
+
     %{
-      videos: Enum.map(Video.list_active_integrations(user_id), &%{id: &1.id, name: &1.name}),
+      videos: Enum.map(active ++ kept_video(user_id, poll, active), &%{id: &1.id, name: &1.name}),
       venues: Enum.map(Venues.list_venues(user_id), &%{id: &1.id, name: &1.name})
     }
   end
+
+  defp kept_video(user_id, %PollSchema{location_kind: :video, video_integration_id: id}, active)
+       when is_integer(id) do
+    with false <- Enum.any?(active, &(&1.id == id)),
+         {:ok, integration} <- Video.get_integration(user_id, id) do
+      [integration]
+    else
+      _offered_or_gone -> []
+    end
+  end
+
+  defp kept_video(_user_id, _poll, _active), do: []
 
   @doc """
   The form's value for the poll's own location, and the place typed in for
@@ -105,8 +124,7 @@ defmodule Tymeslot.Polls.PollLocation do
   """
   @spec check(integer(), map(), PollSchema.t() | nil) :: :ok | {:error, :location_not_found}
   def check(user_id, attrs, poll \\ nil) do
-    case {value(attrs, :location_kind), value(attrs, :venue_id),
-          value(attrs, :video_integration_id)} do
+    case {kind(attrs, poll), value(attrs, :venue_id), value(attrs, :video_integration_id)} do
       {kind, venue_id, _video} when kind in [:in_person, "in_person"] ->
         check_venue(user_id, venue_id, poll)
 
@@ -142,6 +160,15 @@ defmodule Tymeslot.Polls.PollLocation do
   defp check_video(_user_id, _id, _poll), do: :ok
 
   defp value(attrs, key), do: Map.get(attrs, key, Map.get(attrs, Atom.to_string(key)))
+
+  # An id sent without a kind keeps the poll's, as the changeset keeps it.
+  defp kind(attrs, %PollSchema{location_kind: kind}) do
+    if Map.has_key?(attrs, :location_kind) or Map.has_key?(attrs, "location_kind"),
+      do: value(attrs, :location_kind),
+      else: kind
+  end
+
+  defp kind(attrs, nil), do: value(attrs, :location_kind)
 
   @doc """
   The location in force for `poll`: its own, or its meeting type's, or nil.

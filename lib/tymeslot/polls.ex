@@ -218,9 +218,9 @@ defmodule Tymeslot.Polls do
     |> Enum.filter(&match?({:ok, _meeting_type}, MeetingTypeRule.check(&1)))
   end
 
-  @doc "See `Tymeslot.Polls.PollLocation.options/1`."
-  @spec location_options(integer()) :: map()
-  defdelegate location_options(user_id), to: PollLocation, as: :options
+  @doc "See `Tymeslot.Polls.PollLocation.options/2`."
+  @spec location_options(integer(), PollSchema.t() | nil) :: map()
+  defdelegate location_options(user_id, poll \\ nil), to: PollLocation, as: :options
 
   @doc "See `Tymeslot.Polls.PollLocation.effective/1`."
   @spec location(PollSchema.t()) :: PollLocation.t() | nil

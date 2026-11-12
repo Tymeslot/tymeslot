@@ -236,7 +236,7 @@ msgstr "Elige una respuesta para al menos un horario y luego guarda."
 msgid "The meeting arranged through this poll has been cancelled."
 msgstr "Se canceló la reunión acordada mediante esta votación."
 
-#: lib/tymeslot_web/themes/shared/poll_voting_components.ex
+#: lib/tymeslot_web/themes/shared/poll_voting_location.ex
 #, elixir-autogen, elixir-format
 msgid "Video call. The link follows once a time is confirmed."
 msgstr "Videollamada. El enlace llegará en cuanto se confirme un horario."

@@ -300,6 +300,18 @@ defmodule Tymeslot.Polls.PollLocationTest do
       assert updated.title == "Board dinner, moved"
       assert updated.video_integration_id == video.id
     end
+
+    test "another host's venue sent without a kind is refused, as the poll's kind applies",
+         %{user: user} do
+      venue = insert(:venue, user: user)
+      {:ok, poll} = create_with(user, "venue:#{venue.id}")
+      foreign = insert(:venue, user: insert(:user))
+
+      assert {:error, :location_not_found} =
+               Polls.update_details(poll.id, user.id, %{"venue_id" => foreign.id})
+
+      assert Repo.get!(PollSchema, poll.id).venue_id == venue.id
+    end
   end
 
   defp string_keys(map), do: Map.new(map, fn {key, value} -> {Atom.to_string(key), value} end)

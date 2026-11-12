@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollLocationField do
 
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Polls.PollLocation
-  alias TymeslotWeb.Components.CoreComponents.Forms
+  alias TymeslotWeb.Components.CoreComponents.{Forms, Select}
   alias TymeslotWeb.Dashboard.Polls.PollFormErrors
 
   @doc """
@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollLocationField do
   attr :id, :string, required: true
   attr :choice, :string, required: true, doc: "the value chosen, as `poll[location]` posts it"
   attr :details, :string, required: true, doc: "the place typed in for a custom location"
-  attr :options, :map, required: true, doc: "`Tymeslot.Polls.location_options/1`"
+  attr :options, :map, required: true, doc: "`Tymeslot.Polls.location_options/2`"
 
   attr :type_location, :map,
     default: nil,
@@ -72,8 +72,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollLocationField do
   def field(assigns) do
     ~H"""
     <div class="space-y-2" data-testid="poll-location">
-      <Forms.input
-        type="select"
+      <Select.select
         id={"#{@id}-choice"}
         name="poll[location]"
         label={dgettext("dashboard_polls", "Location (optional)")}
@@ -88,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollLocationField do
             "Shown on the voting page and in the invitations. A video call gets its room when you confirm a time."
           )}
         </:description>
-      </Forms.input>
+      </Select.select>
       <Forms.input
         :if={@choice == "custom"}
         type="text"
