@@ -9,11 +9,11 @@ defmodule Tymeslot.Polls.Creation do
   The deadline nudge and the invitation emails are sent once it commits.
 
   A draft takes the same attributes and is held to the rules that cannot
-  change while it waits: its meeting type, at most `PollSchema.max_slots/0`
-  times, none of them already past. What publishing alone needs is checked
-  when it is published, against that moment: a calendar connected, at least
-  one time, every time and the deadline still ahead, and a username when
-  anyone is to be invited. Its invitees are held on the draft
+  change while it waits: its meeting type and location, at most
+  `PollSchema.max_slots/0` times, none of them already past. What publishing
+  alone needs is checked when it is published, against that moment: a
+  calendar connected, at least one time, every time and the deadline still
+  ahead, and a username when anyone is to be invited. Its invitees are held on the draft
   (`PollSchema.draft_invitees/1`) and only invited, emailed and counted
   against the poll email limits once it is published.
   """
@@ -26,6 +26,7 @@ defmodule Tymeslot.Polls.Creation do
     Invitations,
     MeetingTypeRule,
     OpenPollLock,
+    PollLocation,
     PollQueries,
     PollSchema,
     PollTimeSlotQueries,
@@ -97,6 +98,7 @@ defmodule Tymeslot.Polls.Creation do
     with :ok <- HostReadiness.ensure_calendar(user_id),
          :ok <- HostReadiness.ensure_username(user_id, Map.get(attrs, :invitees, [])),
          {:ok, attrs} <- apply_meeting_type(user_id, attrs),
+         :ok <- PollLocation.check(user_id, attrs),
          {:ok, slots} <- prepare_slots(attrs) do
       {:ok, attrs, slots}
     end
@@ -104,6 +106,7 @@ defmodule Tymeslot.Polls.Creation do
 
   defp prepare(user_id, attrs, :draft) do
     with {:ok, attrs} <- apply_meeting_type(user_id, attrs),
+         :ok <- PollLocation.check(user_id, attrs),
          {:ok, slots} <- prepare_draft_slots(attrs) do
       {:ok, attrs, slots}
     end
