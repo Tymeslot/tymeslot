@@ -8,7 +8,10 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Ignorer do
   `handle_event/3` clause matches, by the rule in
   `Tymeslot.Infrastructure.ErrorTracking.UnmatchedEvent`, and requests whose
   client closed the connection before the response was sent, by the rule in
-  `Tymeslot.Infrastructure.ErrorTracking.ClientClosure`. Last, it drops the
+  `Tymeslot.Infrastructure.ErrorTracking.ClientClosure`, and queries
+  PostgreSQL refused for a character it cannot store (a null byte a visitor
+  sent), by the rule in
+  `Tymeslot.Infrastructure.ErrorTracking.UnencodableInput`. Last, it drops the
   occurrences of one error beyond the per-minute cap of
   `Tymeslot.Infrastructure.ErrorTracking.Throttle`; asked last, so ignored
   noise never uses up an error's allowance.
@@ -24,6 +27,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Ignorer do
   alias Tymeslot.Infrastructure.ErrorTracking.ClientClosure
   alias Tymeslot.Infrastructure.ErrorTracking.ClientError
   alias Tymeslot.Infrastructure.ErrorTracking.Throttle
+  alias Tymeslot.Infrastructure.ErrorTracking.UnencodableInput
   alias Tymeslot.Infrastructure.ErrorTracking.UnmatchedEvent
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
@@ -34,6 +38,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Ignorer do
     ClientError.client_error_kind?(error.kind, context) or
       UnmatchedEvent.error?(error.kind, error.reason) or
       ClientClosure.error?(error.kind, error.reason, context) or
+      UnencodableInput.error?(error.kind, error.reason, context) or
       not Throttle.allow?(error.fingerprint)
   rescue
     exception ->

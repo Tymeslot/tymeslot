@@ -64,6 +64,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       pending_attendees: [],
       confirm_discard_attendees: false,
       attendee_input: "",
+      attendee_error: nil,
       notify_prompt: nil,
       pending_notification: false,
       # Guests of the event in the details whose latest update email could
@@ -90,6 +91,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       search_results: [],
       search_open: false,
       desktop_reminders_feed: [],
+      desktop_permission: nil,
+      desktop_permission_refused: false,
       _initialized: false
     }
   end

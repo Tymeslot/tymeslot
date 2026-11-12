@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
   attr :attendees, :list, default: []
   attr :pending_attendees, :list, default: []
   attr :attendee_input, :string, default: ""
+  attr :attendee_error, :string, default: nil
   attr :myself, :any, required: true
 
   @spec attendee_editor(map()) :: Phoenix.LiveView.Rendered.t()
@@ -52,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
               phx-target={@myself}
               class="w-4 h-4 rounded-token-full hover:bg-red-100 flex items-center justify-center transition-colors"
               aria-label={
-                dgettext("dashboard_calendar_events", "Remove %{email}", email: attendee.email)
+                dgettext("dashboard_calendar_modals", "Remove %{email}", email: attendee.email)
               }
             >
               <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
@@ -70,7 +71,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
               phx-value-email={email}
               phx-target={@myself}
               class="w-4 h-4 rounded-token-full hover:bg-amber-200 flex items-center justify-center transition-colors"
-              aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
+              aria-label={dgettext("dashboard_calendar_modals", "Remove %{email}", email: email)}
             >
               <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
             </button>
@@ -81,6 +82,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
           phx-submit="add_event_attendee"
           phx-target={@myself}
           class="flex gap-2"
+          novalidate
         >
           <%!-- raw-input: edit-in-place field drawn as plain text with an underline on hover, like the rest of the event detail panel --%>
           <input
@@ -94,12 +96,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
             class="flex-1 bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-600 px-0 py-0 placeholder:text-tymeslot-400 transition-colors cursor-text"
           />
           <.action_button type="submit" variant={:secondary} size={:sm}>
-            {dgettext("dashboard_calendar_events", "Add")}
+            {dgettext("dashboard_calendar_modals", "Add")}
           </.action_button>
         </form>
+        <p :if={@attendee_error} class="form-error" role="alert">{@attendee_error}</p>
         <p :if={@pending_attendees == []} class="text-token-xs text-tymeslot-400 mt-1">
           {dgettext(
-            "dashboard_calendar_events",
+            "dashboard_calendar_modals",
             "Each person will receive an invitation from your calendar provider."
           )}
         </p>
@@ -118,7 +121,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
         </div>
         <p :if={length(@attendees) > 5} class="text-token-xs text-tymeslot-400 mt-1">
           {dngettext(
-            "dashboard_calendar_events",
+            "dashboard_calendar_modals",
             "+%{count} more",
             "+%{count} more",
             length(@attendees) - 5

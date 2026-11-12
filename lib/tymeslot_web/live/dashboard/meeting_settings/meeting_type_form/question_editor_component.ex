@@ -231,18 +231,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             </:description>
           </.input>
 
-          <.input
+          <.select
             name="definition[type]"
             value={field_value(@changeset, :type)}
             id="definition_type"
-            type="select"
             label={dgettext("dashboard_meeting_questions", "Type")}
             options={type_options()}
           >
             <:description>
               {dgettext("dashboard_meeting_questions", "Controls how the booker enters their answer.")}
             </:description>
-          </.input>
+          </.select>
 
           <.input
             name="definition[required]"
@@ -296,26 +295,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               </.input>
             <% t when t in ~w(number date time) -> %>
               <div class="grid grid-cols-2 gap-3">
-                <.input
+                <.bound_input
+                  question_type={t}
                   name="definition[min]"
-                  value={field_value(@changeset, :min)}
                   id="definition_min"
-                  type={bound_input_type(t)}
+                  value={field_value(@changeset, :min)}
                   label={dgettext("dashboard_meeting_questions", "Min")}
                   errors={FormValidationHelpers.field_errors(@field_errors, :min)}
                 >
-                  <:description>{bound_min_hint(t)}</:description>
-                </.input>
-                <.input
+                  {bound_min_hint(t)}
+                </.bound_input>
+                <.bound_input
+                  question_type={t}
                   name="definition[max]"
-                  value={field_value(@changeset, :max)}
                   id="definition_max"
-                  type={bound_input_type(t)}
+                  value={field_value(@changeset, :max)}
                   label={dgettext("dashboard_meeting_questions", "Max")}
                   errors={FormValidationHelpers.field_errors(@field_errors, :max)}
                 >
-                  <:description>{bound_max_hint(t)}</:description>
-                </.input>
+                  {bound_max_hint(t)}
+                </.bound_input>
               </div>
             <% _ -> %>
               <%!-- No type-specific fields for short_text, yes_no, phone, url --%>
@@ -474,9 +473,38 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
   # The min/max inputs must match the question type so the browser renders a
   # native numeric/date/time picker and the stored bound is a value the
   # matching validator can parse.
-  defp bound_input_type("number"), do: "number"
-  defp bound_input_type("date"), do: "date"
-  defp bound_input_type("time"), do: "time"
+  attr :question_type, :string, required: true
+  attr :id, :string, required: true
+  attr :name, :string, required: true
+  attr :value, :any, required: true
+  attr :label, :string, required: true
+  attr :errors, :list, required: true
+  slot :inner_block, required: true
+
+  # A question's limit is entered with the control its answer uses.
+  defp bound_input(%{question_type: "number"} = assigns) do
+    ~H"""
+    <.input type="number" id={@id} name={@name} value={@value} label={@label} errors={@errors}>
+      <:description>{render_slot(@inner_block)}</:description>
+    </.input>
+    """
+  end
+
+  defp bound_input(%{question_type: "date"} = assigns) do
+    ~H"""
+    <.date_picker id={@id} name={@name} value={@value} label={@label} errors={@errors}>
+      <:description>{render_slot(@inner_block)}</:description>
+    </.date_picker>
+    """
+  end
+
+  defp bound_input(%{question_type: "time"} = assigns) do
+    ~H"""
+    <.time_picker id={@id} name={@name} value={@value} label={@label} errors={@errors}>
+      <:description>{render_slot(@inner_block)}</:description>
+    </.time_picker>
+    """
+  end
 
   defp bound_min_hint("number"),
     do: dgettext("dashboard_meeting_questions", "Lowest value the booker may enter.")

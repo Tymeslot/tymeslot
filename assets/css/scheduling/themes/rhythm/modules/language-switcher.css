@@ -102,13 +102,6 @@
     min-height: var(--min-touch-target);
   }
 
-  .lang-switcher__panel {
-    width: var(--container-xs);
-    max-height: var(--dropdown-max-height);
-    right: 0;
-    left: auto;
-  }
-
   .lang-switcher__item {
     padding: var(--space-sm) var(--space-sm);
     min-height: var(--min-touch-target);
@@ -124,20 +117,8 @@
     min-height: var(--min-touch-target);
   }
 
-  .lang-switcher__panel {
-    width: var(--container-sm);
-    max-height: var(--dropdown-max-height);
-  }
-
   .lang-switcher__item {
     padding: var(--space-sm) var(--space-md);
     min-height: var(--min-touch-target);
-  }
-}
-
-/* Desktop */
-@media (min-width: 768px) and (max-width: 1024px) {
-  .lang-switcher__panel {
-    width: var(--container-sm);
   }
 }

@@ -31,7 +31,7 @@ defmodule TymeslotWeb.AccountRestoreHTML do
 
         <.info_box :if={@error} variant={:error} class="mb-0 text-left">{@error}</.info_box>
 
-        <form method="post" action={~p"/auth/restore"}>
+        <form method="post" action={~p"/auth/restore"} novalidate>
           <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
           <.action_button type="submit" class="w-full">
             {dgettext("auth", "Restore my account")}
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.AccountRestoreHTML do
 
   defp sign_out(assigns) do
     ~H"""
-    <form method="post" action={~p"/auth/logout"}>
+    <form method="post" action={~p"/auth/logout"} novalidate>
       <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
       <input type="hidden" name="_method" value="delete" />
       <.action_button type="submit" variant={:secondary} class="w-full">

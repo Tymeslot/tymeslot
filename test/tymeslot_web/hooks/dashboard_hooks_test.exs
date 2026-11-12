@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.RouterHookConfigTest do
+defmodule TymeslotWeb.Hooks.DashboardHooksTest do
   use ExUnit.Case, async: false
   @moduletag :utils
 
@@ -6,7 +6,7 @@ defmodule TymeslotWeb.RouterHookConfigTest do
 
   alias TymeslotWeb.Hooks.AuthLiveSessionHook
   alias TymeslotWeb.Hooks.ClientInfoHook
-  alias TymeslotWeb.Router
+  alias TymeslotWeb.Hooks.DashboardHooks
 
   setup do
     original = Application.get_env(:tymeslot, :dashboard_additional_hooks)
@@ -30,7 +30,7 @@ defmodule TymeslotWeb.RouterHookConfigTest do
 
     Application.put_env(:tymeslot, :dashboard_additional_hooks, hooks)
 
-    assert Router.dashboard_additional_hooks() == hooks
+    assert DashboardHooks.dashboard_additional_hooks() == hooks
   end
 
   test "wraps a single hook value and logs a warning" do
@@ -40,7 +40,7 @@ defmodule TymeslotWeb.RouterHookConfigTest do
       capture_log(fn ->
         Application.put_env(:tymeslot, :dashboard_additional_hooks, hook)
 
-        assert Router.dashboard_additional_hooks() == [hook]
+        assert DashboardHooks.dashboard_additional_hooks() == [hook]
       end)
 
     assert log =~ "Expected :dashboard_additional_hooks to be a list, received a single hook"
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.RouterHookConfigTest do
     Application.put_env(:tymeslot, :dashboard_additional_hooks, "invalid")
 
     assert_raise ArgumentError, ~r/expected :dashboard_additional_hooks to be a list/, fn ->
-      Router.dashboard_additional_hooks()
+      DashboardHooks.dashboard_additional_hooks()
     end
   end
 
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.RouterHookConfigTest do
     ])
 
     assert_raise ArgumentError, ~r/unrecognised :dashboard_additional_hooks entry/, fn ->
-      Router.dashboard_additional_hooks()
+      DashboardHooks.dashboard_additional_hooks()
     end
   end
 
@@ -74,7 +74,17 @@ defmodule TymeslotWeb.RouterHookConfigTest do
     socket = %Phoenix.LiveView.Socket{endpoint: TymeslotWeb.Endpoint}
 
     assert_raise ArgumentError, ~r/unrecognised :dashboard_additional_hooks entry/, fn ->
-      Router.on_mount(:dashboard_hooks, %{}, %{}, socket)
+      DashboardHooks.on_mount(:dashboard, %{}, %{}, socket)
+    end
+  end
+
+  test "a mount through the onboarding chain applies the additional gates too" do
+    Application.put_env(:tymeslot, :dashboard_additional_hooks, ["MyApp.Hooks.Typo"])
+
+    socket = %Phoenix.LiveView.Socket{endpoint: TymeslotWeb.Endpoint}
+
+    assert_raise ArgumentError, ~r/unrecognised :dashboard_additional_hooks entry/, fn ->
+      DashboardHooks.on_mount(:onboarding, %{}, %{}, socket)
     end
   end
 
@@ -85,7 +95,7 @@ defmodule TymeslotWeb.RouterHookConfigTest do
         ClientInfoHook
       ])
 
-      assert :ok = Router.validate_additional_hooks!()
+      assert :ok = DashboardHooks.validate_additional_hooks!()
     end
 
     test "rejects a well-formed entry naming a module that does not exist" do
@@ -94,7 +104,7 @@ defmodule TymeslotWeb.RouterHookConfigTest do
       ])
 
       assert_raise ArgumentError, ~r/MyApp.Hooks.Mispelt, which does not define on_mount/, fn ->
-        Router.validate_additional_hooks!()
+        DashboardHooks.validate_additional_hooks!()
       end
     end
   end

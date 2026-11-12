@@ -328,11 +328,6 @@ msgstr "Prenota una riunione"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex
 #, elixir-autogen, elixir-format
-msgid "Booking system is currently unavailable."
-msgstr "Il sistema di prenotazione non è al momento disponibile."
-
-#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex
-#, elixir-autogen, elixir-format
 msgid "Schedule a meeting"
 msgstr "Pianifica una riunione"
 

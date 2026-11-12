@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.CalendarBlockingTest do
       # by the context.
       view
       |> option(0, "state", "block")
-      |> render_click(%{"state" => "show"})
+      |> render_click(%{"use" => "show"})
 
       assert %{selected: true, blocks_availability: true} = entry(integration, user, "work")
       assert has_element?(view, "[role='alert']", "always blocks your availability")
@@ -323,7 +323,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.CalendarBlockingTest do
       integration = exchange(user)
       view = open_manage_modal(conn, integration)
 
-      crafted_click(view, "#calendar-selection-calendar-1-state-show", %{"state" => "block"})
+      crafted_click(view, "#calendar-selection-calendar-1-state-show", %{"use" => "block"})
 
       crafted_click(view, "#calendar-selection-calendar-0-busy-true", %{"calendar_id" => "team"})
 

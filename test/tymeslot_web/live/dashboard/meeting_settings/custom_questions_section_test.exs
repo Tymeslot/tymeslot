@@ -59,10 +59,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       assert render(view) =~ "Add question"
 
       view
-      |> form("form[phx-submit='save']", %{
-        "definition" => %{"label" => "Company name", "type" => "short_text"}
-      })
-      |> render_submit()
+      |> form("form[phx-submit='save']", %{"definition" => %{"label" => "Company name"}})
+      |> render_submit(%{"definition" => %{"type" => "short_text"}})
 
       html = render(view)
       assert html =~ "Company name"
@@ -82,9 +80,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
 
       view
       |> form("form[phx-submit='save']", %{
-        "definition" => %{"label" => "Phone number", "type" => "phone", "required" => "true"}
+        "definition" => %{"label" => "Phone number", "required" => "true"}
       })
-      |> render_submit()
+      |> render_submit(%{"definition" => %{"type" => "phone"}})
 
       html = render(view)
       assert html =~ "Phone number"
@@ -102,10 +100,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       assert render(view) =~ "Add question"
 
       view
-      |> form("form[phx-submit='save']", %{
-        "definition" => %{"label" => "", "type" => "short_text"}
-      })
-      |> render_submit()
+      |> form("form[phx-submit='save']", %{"definition" => %{"label" => ""}})
+      |> render_submit(%{"definition" => %{"type" => "short_text"}})
 
       # The modal should stay open and show the validation error
       assert render(view) =~ "can&#39;t be blank"
@@ -145,14 +141,41 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       assert render(view) =~ "Edit question"
 
       view
-      |> form("form[phx-submit='save']", %{
-        "definition" => %{"label" => "New label", "type" => "short_text"}
-      })
-      |> render_submit()
+      |> form("form[phx-submit='save']", %{"definition" => %{"label" => "New label"}})
+      |> render_submit(%{"definition" => %{"type" => "short_text"}})
 
       html = render(view)
       assert html =~ "New label"
       refute html =~ "Old label"
+    end
+  end
+
+  describe "a question's limits" do
+    test "switching a question from Date to Time gives its limits a time picker of their own",
+         %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+      open_edit_form(view, meeting_type)
+      view |> element("button", "Add question") |> render_click()
+
+      editor = "form[phx-submit='save']"
+
+      view
+      |> form(editor, %{"definition" => %{"label" => "When"}})
+      |> render_change(%{"definition" => %{"type" => "date"}})
+
+      assert has_element?(view, "#definition_max-field[data-picker-kind='date']")
+      assert has_element?(view, "#definition_max-date-panel")
+
+      view
+      |> form(editor, %{"definition" => %{"label" => "When"}})
+      |> render_change(%{"definition" => %{"type" => "time"}})
+
+      # A new panel id: the date grid kept inside the old one by
+      # `phx-update="ignore"` cannot be reused as the time list.
+      assert has_element?(view, "#definition_max-field[data-picker-kind='time']")
+      assert has_element?(view, "#definition_max-time-panel[role='listbox']")
+      refute has_element?(view, "#definition_max-date-panel")
     end
   end
 
@@ -226,10 +249,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       assert render(view) =~ "Edit question"
 
       view
-      |> form("form[phx-change='validate']", %{
-        "definition" => %{"type" => "short_text"}
-      })
-      |> render_change()
+      |> form("form[phx-change='validate']")
+      |> render_change(%{"definition" => %{"type" => "short_text"}})
 
       html = render(view)
       assert html =~ "Changing the type will clear the configuration"
@@ -269,10 +290,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       |> render_click()
 
       view
-      |> form("form[phx-change='validate']", %{
-        "definition" => %{"type" => "short_text"}
-      })
-      |> render_change()
+      |> form("form[phx-change='validate']")
+      |> render_change(%{"definition" => %{"type" => "short_text"}})
 
       assert render(view) =~ "Changing the type will clear the configuration"
 
@@ -317,10 +336,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       |> render_click()
 
       view
-      |> form("form[phx-change='validate']", %{
-        "definition" => %{"type" => "short_text"}
-      })
-      |> render_change()
+      |> form("form[phx-change='validate']")
+      |> render_change(%{"definition" => %{"type" => "short_text"}})
 
       assert render(view) =~ "Changing the type will clear the configuration"
 
@@ -360,10 +377,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       |> render_click()
 
       view
-      |> form("form[phx-change='validate']", %{
-        "definition" => %{"type" => "single_select"}
-      })
-      |> render_change()
+      |> form("form[phx-change='validate']")
+      |> render_change(%{"definition" => %{"type" => "single_select"}})
 
       refute render(view) =~ "Changing the type will clear the configuration"
     end
@@ -384,8 +399,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       # Switch from the default short_text to single_select — nothing defined
       # yet, so this is not destructive.
       view
-      |> form("form[phx-change='validate']", %{"definition" => %{"type" => "single_select"}})
-      |> render_change()
+      |> form("form[phx-change='validate']")
+      |> render_change(%{"definition" => %{"type" => "single_select"}})
 
       refute render(view) =~ "Changing the type will clear the configuration"
 
@@ -396,10 +411,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       # Continue configuring the SAME question (edit the label) — the type is
       # unchanged, so no confirmation dialog should appear.
       view
-      |> form("form[phx-change='validate']", %{
-        "definition" => %{"type" => "single_select", "label" => "Favourite colour"}
-      })
-      |> render_change()
+      |> form("form[phx-change='validate']", %{"definition" => %{"label" => "Favourite colour"}})
+      |> render_change(%{"definition" => %{"type" => "single_select"}})
 
       refute render(view) =~ "Changing the type will clear the configuration"
     end
@@ -590,10 +603,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       assert render(view) =~ "Add question"
 
       view
-      |> form("form[phx-submit='save']", %{
-        "definition" => %{"label" => "Company", "type" => "short_text"}
-      })
-      |> render_submit()
+      |> form("form[phx-submit='save']", %{"definition" => %{"label" => "Company"}})
+      |> render_submit(%{"definition" => %{"type" => "short_text"}})
 
       assert render(view) =~ "Company"
 

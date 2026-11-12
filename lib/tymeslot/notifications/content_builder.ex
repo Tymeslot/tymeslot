@@ -7,6 +7,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Emails.RecipientLocale
+  alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.EmailSending.Sender
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Profiles
@@ -57,6 +58,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
 
       # Meeting details
       location: determine_location(meeting),
+      location_type: BookingRequestLocation.type(meeting),
       meeting_type: meeting.meeting_type,
 
       # URLs and links
@@ -87,8 +89,11 @@ defmodule Tymeslot.Notifications.ContentBuilder do
 
   # Private functions
 
+  # A named place wins over a video room, as in the emails
+  # (`BookingRequestLocation.place/1`).
   defp determine_location(meeting) do
     cond do
+      place = BookingRequestLocation.place(meeting) -> place
       meeting.meeting_url -> "Video Call"
       meeting.location -> meeting.location
       true -> "TBD"

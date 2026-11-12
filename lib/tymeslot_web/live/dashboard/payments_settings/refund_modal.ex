@@ -19,6 +19,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
 
   attr :payment, :map, required: true
   attr :submitting, :boolean, required: true
+  attr :error, :string, default: nil
+  attr :form, :map, default: %{type: "full", amount: ""}, doc: "what the host last submitted"
   attr :myself, :any, required: true
 
   @spec refund_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -70,7 +72,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
           )}
         </p>
 
-        <form id="refund-form" phx-submit="submit_refund" phx-target={@myself} class="space-y-4">
+        <form
+          id="refund-form"
+          phx-submit="submit_refund"
+          phx-target={@myself}
+          class="space-y-4"
+          novalidate
+        >
           <input type="hidden" name="payment_id" value={@payment.id} />
 
           <fieldset class="space-y-2">
@@ -78,12 +86,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
               {dgettext("dashboard_payments", "Refund type")}
             </legend>
             <label class="flex items-center gap-2 text-token-sm">
-              <%!-- raw-input: native radio inline with its label text; <.input> gives a radio text-field styling and drops checked --%>
-              <input
+              <.input
                 type="radio"
                 name="refund_type"
                 value="full"
-                checked
+                checked={@form.type == "full"}
                 phx-click={JS.set_attribute({"data-refund-type", "full"}, to: "#refund-form")}
               /> {dgettext("dashboard_payments", "Full refund")} ({format_amount(
                 MeetingPayments.refundable_remaining_cents(@payment),
@@ -91,11 +98,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
               )})
             </label>
             <label class="flex items-center gap-2 text-token-sm">
-              <%!-- raw-input: native radio inline with its label text; <.input> gives a radio text-field styling and drops checked --%>
-              <input
+              <.input
                 type="radio"
                 name="refund_type"
                 value="partial"
+                checked={@form.type == "partial"}
                 phx-click={JS.set_attribute({"data-refund-type", "partial"}, to: "#refund-form")}
               /> {dgettext("dashboard_payments", "Partial refund")}
             </label>
@@ -114,6 +121,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
             }
             step="0.01"
             placeholder="0.00"
+            value={@form.amount}
+            errors={List.wrap(@error)}
           >
             <:leading_icon>
               <span class="text-tymeslot-400 font-bold text-token-sm tracking-tight whitespace-nowrap">

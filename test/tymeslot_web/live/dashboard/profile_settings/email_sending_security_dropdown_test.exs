@@ -60,9 +60,21 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.EmailSendingSecurityDropdownTest
              "#smtp-security-dropdown-panel.brand-card[role='dialog'][aria-label='Connection security']"
            )
 
-    assert has_element?(view, "#smtp-security-option-starttls[type='radio'][checked]")
-    assert has_element?(view, "#smtp-security-option-implicit_tls[type='radio']")
+    for {mode, label} <- [
+          {"starttls", "Required STARTTLS (port 587)"},
+          {"implicit_tls", "Implicit TLS (port 465)"}
+        ] do
+      assert has_element?(
+               view,
+               "#smtp-security-option-#{mode}[type='radio'][name='smtp[security]'][value='#{mode}']"
+             )
+
+      assert has_element?(view, "label[for='smtp-security-option-#{mode}']", label)
+    end
+
+    assert has_element?(view, "#smtp-security-option-starttls[checked]")
     refute has_element?(view, "#smtp-security-option-implicit_tls[checked]")
+    refute has_element?(view, "#smtp-security-dropdown-panel input[type='hidden']")
     refute has_element?(view, "[name='smtp[port]']")
 
     view |> element("#smtp-security-dropdown") |> render_keydown(%{"key" => "Escape"})

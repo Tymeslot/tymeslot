@@ -49,16 +49,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.FeedControls do
     </.segmented_control>
     <%!-- Whether every event in the feed blocks time, also those it marks
          free (holiday feeds mark all of them free). --%>
-    <button
-      type="button"
-      phx-click="toggle_all_events_busy"
-      phx-value-id={@integration.id}
-      phx-target={@myself}
-      class={Helpers.tile_class(:neutral)}
-      aria-pressed={to_string(@integration.all_events_busy)}
-      disabled={@busy_inert?}
-      data-testid="all-events-busy-toggle"
-      title={
+    <.tooltip
+      :let={tip}
+      id={"all-events-busy-#{@integration.id}-tip"}
+      text={
         if @busy_inert?,
           do:
             dgettext(
@@ -72,11 +66,25 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.FeedControls do
             )
       }
     >
-      <.icon
-        name={if @integration.all_events_busy, do: "hero-check-circle", else: "hero-no-symbol"}
-        class="w-4 h-4"
-      /><span>{dgettext("dashboard_calendar_settings", "Every event busy")}</span>
-    </button>
+      <%!-- `aria-disabled` when inert, so it stays focusable to explain itself;
+           `Calendar.set_all_events_busy/3` refuses the change either way. --%>
+      <button
+        type="button"
+        phx-click={!@busy_inert? && "toggle_all_events_busy"}
+        phx-value-id={@integration.id}
+        phx-target={@myself}
+        class={[Helpers.tile_class(:neutral), @busy_inert? && "opacity-50"]}
+        aria-pressed={to_string(@integration.all_events_busy)}
+        aria-disabled={@busy_inert? && "true"}
+        aria-describedby={tip}
+        data-testid="all-events-busy-toggle"
+      >
+        <.icon
+          name={if @integration.all_events_busy, do: "hero-check-circle", else: "hero-no-symbol"}
+          class="w-4 h-4"
+        /><span>{dgettext("dashboard_calendar_settings", "Every event busy")}</span>
+      </button>
+    </.tooltip>
     """
   end
 end

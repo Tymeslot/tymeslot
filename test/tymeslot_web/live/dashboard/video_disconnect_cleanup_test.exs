@@ -246,7 +246,7 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
     # integration's name in its accessible label.
     assert has_element?(
              view,
-             "button[title='Delete'][aria-label='Delete #{integration.name}'][phx-target='#delete-video-modal']"
+             "button[aria-label='Delete #{integration.name}'][phx-target='#delete-video-modal']"
            )
 
     open_delete_modal(view, "delete-video-modal", integration.id)

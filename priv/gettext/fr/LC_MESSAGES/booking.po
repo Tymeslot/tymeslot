@@ -64,11 +64,6 @@ msgstr "Réservations ouvertes jusqu’à %{advance}"
 msgid "Calendar is loading slowly"
 msgstr "Le calendrier se charge lentement"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "Click to schedule your meeting"
-msgstr "Cliquez pour planifier votre réunion"
-
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex
 #, elixir-autogen, elixir-format
 msgid "Complete your payment in the new tab"
@@ -328,11 +323,6 @@ msgstr "Heure"
 msgid "Timezone"
 msgstr "Fuseau horaire"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "Verifying slot availability and creating your meeting..."
-msgstr "Vérification de la disponibilité du créneau et création de la réunion..."
-
 #: lib/tymeslot_web/themes/folio/scheduling/components/you_moment.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
@@ -532,7 +522,7 @@ msgstr "Session de prévisualisation expirée. Rechargez la page pour continuer.
 msgid "Add to calendar"
 msgstr "Ajouter au calendrier"
 
-#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#: lib/tymeslot_web/live/scheduling/entry_refusal.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
 msgstr "Type de réunion invalide"
@@ -1071,7 +1061,7 @@ msgstr "Vous réservez : %{meeting} (%{duration})"
 msgid "You're booking %{meeting} (%{duration}) with %{name}"
 msgstr "Vous réservez : %{meeting} (%{duration}) avec %{name}"
 
-#: lib/tymeslot_web/themes/shared/live_helpers/step_entry.ex
+#: lib/tymeslot_web/live/scheduling/entry_refusal.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting type has no times open for booking right now."
 msgstr "Ce type de réunion n’a aucun horaire disponible à la réservation pour le moment."

@@ -225,6 +225,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           id="onboarding-first-person-form"
           phx-change="first_person_change"
           phx-submit="first_person_change"
+          novalidate
         >
           <fieldset class="onboarding-form-group">
             <legend class="label mb-1">

@@ -97,18 +97,18 @@ defmodule TymeslotWeb.BookingPageAttributionJourneyTest do
     refute has_element?(dashboard, "##{dom_id(main_meeting)} [data-testid='booking-page-tag']")
 
     dashboard
-    |> form("#meetings-page-filter", %{"page" => Integer.to_string(page.id)})
-    |> render_change()
+    |> form("#meetings-page-filter")
+    |> render_change(%{"page" => Integer.to_string(page.id)})
 
     assert has_element?(dashboard, "##{dom_id(page_meeting)}")
     refute has_element?(dashboard, "##{dom_id(main_meeting)}")
 
-    dashboard |> form("#meetings-page-filter", %{"page" => "main"}) |> render_change()
+    dashboard |> form("#meetings-page-filter") |> render_change(%{"page" => "main"})
 
     assert has_element?(dashboard, "##{dom_id(main_meeting)}")
     refute has_element?(dashboard, "##{dom_id(page_meeting)}")
 
-    dashboard |> form("#meetings-page-filter", %{"page" => "all"}) |> render_change()
+    dashboard |> form("#meetings-page-filter") |> render_change(%{"page" => "all"})
 
     assert has_element?(dashboard, "##{dom_id(main_meeting)}")
     assert has_element?(dashboard, "##{dom_id(page_meeting)}")

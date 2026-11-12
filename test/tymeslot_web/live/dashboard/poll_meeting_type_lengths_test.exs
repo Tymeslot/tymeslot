@@ -53,13 +53,9 @@ defmodule TymeslotWeb.Dashboard.PollMeetingTypeLengthsTest do
 
     view
     |> form("form[phx-submit='create_poll']", %{
-      "poll" =>
-        Map.merge(
-          %{"title" => "Planning", "timezone" => "Etc/UTC", "slots" => %{"0" => "#{date}T09:00"}},
-          poll_params
-        )
+      "poll" => Map.merge(%{"title" => "Planning", "timezone" => "Etc/UTC"}, poll_params)
     })
-    |> render_submit()
+    |> render_submit(%{"poll" => %{"slots" => %{"0" => "#{date}T09:00"}}})
   end
 
   test "a type with several lengths offers them, and the poll takes the one chosen",

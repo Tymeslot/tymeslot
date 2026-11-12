@@ -381,3 +381,53 @@ msgstr "Ваш сеанс змінився відтоді, як цю сторі�
 #, elixir-autogen, elixir-format
 msgid "%{language}, change language"
 msgstr "%{language}, змінити мову"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Time unit"
+msgstr "Одиниця часу"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Choose date"
+msgstr "Вибрати дату"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Choose time"
+msgstr "Вибрати час"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr "Дата"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Date and time"
+msgstr "Дата й час"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Next month"
+msgstr "Наступний місяць"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Previous month"
+msgstr "Попередній місяць"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Time"
+msgstr "Час"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker/value.ex
+#, elixir-autogen, elixir-format
+msgid "Add a date"
+msgstr "Додайте дату"
+
+#: lib/tymeslot_web/components/core_components/date_time_picker/value.ex
+#, elixir-autogen, elixir-format
+msgid "Add a time"
+msgstr "Додайте час"

@@ -8,7 +8,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
   alias Phoenix.LiveView
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Appearance
+  alias Tymeslot.Locales.WeekStart
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Components.Shared.PickerPreferences
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading
@@ -16,6 +18,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
   alias TymeslotWeb.Live.Shared.Flash
 
   @allowed_preference_keys ~w(week_start_day time_format default_view show_week_numbers show_weekends desktop_reminders_enabled)a
+
+  # What `Notification.permission` can say, plus `unsupported` for a browser
+  # with no Notification API at all.
+  @notification_permissions ~w(default granted denied unsupported)
 
   # The preferences that change which days the grid shows. The grid loads
   # events for exactly those days, so changing one reloads them.
@@ -113,6 +119,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
   defp refresh_for(socket, _key), do: Helpers.precompute_derived(socket)
 
   defp notify_parent(:time_format, value), do: send(self(), {:time_format_updated, value})
+
+  # This component renders in the LiveView's process, so the pickers' week
+  # start can be set from here directly.
+  defp notify_parent(:week_start_day, value),
+    do: PickerPreferences.put_week_start(WeekStart.parse(value))
+
   defp notify_parent(_key, _value), do: :ok
 
   @spec handle_update_default_view(map(), Phoenix.LiveView.Socket.t()) ::
@@ -152,8 +164,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
     {:noreply, socket}
   end
 
+  @doc """
+  Flips a boolean preference. Desktop reminders are the exception: the plain
+  toggle only turns them off. Turning them on needs the browser's permission,
+  which only `handle_enable_desktop_reminders/2` knows about, so a click that
+  reaches this function while they are off (the permission hook not loaded
+  yet, or failed to load) changes nothing.
+  """
   @spec handle_toggle_preference(map(), Phoenix.LiveView.Socket.t(), atom()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_toggle_preference(
+        _params,
+        %{assigns: %{preferences: %{desktop_reminders_enabled: false}}} = socket,
+        :desktop_reminders_enabled
+      ),
+      do: {:noreply, socket}
+
   def handle_toggle_preference(_params, socket, key)
       when key in @allowed_preference_keys do
     user_id = socket.assigns.current_user.id
@@ -176,4 +202,46 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
   end
 
   def handle_toggle_preference(_params, socket, _key), do: {:noreply, socket}
+
+  @doc """
+  Records what the browser says about notification permission, as the
+  `DesktopReminderPermission` hook reports it when the settings modal opens.
+  The server cannot read it, so this is the only way the modal can say that
+  notifications are blocked.
+  """
+  @spec handle_desktop_permission(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_desktop_permission(%{"permission" => permission}, socket)
+      when permission in @notification_permissions do
+    {:noreply, assign(socket, :desktop_permission, permission)}
+  end
+
+  def handle_desktop_permission(_params, socket), do: {:noreply, socket}
+
+  @doc """
+  Turns desktop reminders on once the browser has answered the permission
+  request the click made. The preference is saved as on only for a granted
+  permission: a refused, dismissed or unsupported one would leave a switch
+  that reads on while no reminder can ever fire.
+  """
+  @spec handle_enable_desktop_reminders(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_enable_desktop_reminders(%{"permission" => "granted"}, socket) do
+    socket =
+      socket
+      |> assign(:desktop_permission, "granted")
+      |> assign(:desktop_permission_refused, false)
+
+    handle_update_preference(%{"option" => true}, socket, :desktop_reminders_enabled)
+  end
+
+  def handle_enable_desktop_reminders(%{"permission" => permission}, socket)
+      when permission in @notification_permissions do
+    {:noreply,
+     socket
+     |> assign(:desktop_permission, permission)
+     |> assign(:desktop_permission_refused, true)}
+  end
+
+  def handle_enable_desktop_reminders(_params, socket), do: {:noreply, socket}
 end

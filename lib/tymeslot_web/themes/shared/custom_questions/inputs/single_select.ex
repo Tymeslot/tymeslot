@@ -3,14 +3,13 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
   Single-choice answer.
 
   Renders as a stack of branded option cards when there are five or fewer
-  options, otherwise falls back to the global `<.input type="select">` for
-  compactness, inside a form: LiveView's client sends `phx-change` only from
-  an input that has a form, so a bare select would never commit the answer.
+  options, otherwise falls back to the core `<.select>` for compactness, inside
+  a form: LiveView's client sends `phx-change` only from an input that has a
+  form, so a bare select would never commit the answer.
 
-  The select is `appearance-none`, so its arrow is the chevron icon
-  `<.input>` draws over it; `shared/components/custom-questions.css`
-  restyles that icon for the booking page through the
-  `custom-question-select` wrapper. Its empty choice is the
+  `shared/components/select.css` themes its list from each theme's own tokens,
+  and `shared/components/custom-questions.css` restyles its chevron for the
+  booking page through the `custom-question-select` wrapper. Its empty choice is the
   `:select_prompt` voice line, worded by the theme `theme_key` names.
   """
   use Phoenix.Component
@@ -60,12 +59,12 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
       phx-target={@myself}
       data-fact="answer"
       data-question={@definition["id"]}
+      novalidate
     >
       <input type="hidden" name="question" value={@definition["id"]} />
       <div class="custom-question-select">
-        <.input
+        <.select
           id={"cq-input-#{@definition["id"]}"}
-          type="select"
           name="value"
           value={@value}
           options={Enum.map(@definition["options"], &{&1["label"], &1["key"]})}

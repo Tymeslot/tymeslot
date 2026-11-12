@@ -98,6 +98,25 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       assert ics_content =~ "Conference Room A"
     end
 
+    test "keeps a named place as the location of a meeting that also has a video room" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com",
+        location_type: :in_person,
+        location: "Head office (Main St 1)",
+        meeting_url: "https://meet.example.com/room123"
+      }
+
+      ics_content = IcsGenerator.generate_ics(meeting_details)
+
+      assert ics_content =~ "LOCATION;LANGUAGE=en:Head office (Main St 1)"
+      assert ics_content =~ "CONFERENCE;VALUE=URI"
+      refute ics_content =~ "Video Call"
+    end
+
     test "uses 'Video Call' as location when meeting_url is provided" do
       meeting_details = %{
         title: "Meeting",

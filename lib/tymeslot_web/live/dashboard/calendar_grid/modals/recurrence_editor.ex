@@ -130,21 +130,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
         phx-change={@change_event}
         phx-target={@myself}
         class={["space-y-2", @custom && "hidden"]}
+        novalidate
       >
-        <%!-- raw-input: compact text-xs repeat select heading the rule controls in the compact detail line --%>
-        <select
+        <.select
+          id={"#{@form_id}-freq"}
           name="freq"
+          compact
           aria-label={dgettext("dashboard_calendar_repeat", "Repeat")}
-          class="w-full rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
-        >
-          <option
-            :for={{value, label} <- @freq_options}
-            value={value}
-            selected={to_string(@freq) == value}
-          >
-            {label}
-          </option>
-        </select>
+          value={to_string(@freq)}
+          options={Enum.map(@freq_options, fn {value, label} -> {label, value} end)}
+        />
 
         <div :if={@freq != nil} class="space-y-2 pl-0.5">
           <div class="flex items-center gap-2">
@@ -156,6 +151,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
             <input
               type="number"
               name="interval"
+              inputmode="numeric"
               min="1"
               max={Pattern.max_number()}
               value={@interval}
@@ -202,20 +198,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
           </div>
 
           <div :if={@freq in [:monthly, :yearly]}>
-            <%!-- raw-input: compact text-xs select matching the other rule controls in the compact detail line --%>
-            <select
+            <.select
+              id={"#{@form_id}-on"}
               name="on"
+              compact
               aria-label={dgettext("dashboard_calendar_repeat", "Repeats on")}
-              class="w-full rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
-            >
-              <option
-                :for={{value, label, on} <- @on_options}
-                value={value}
-                selected={on == @on}
-              >
-                {label}
-              </option>
-            </select>
+              value={on_value(@on_options, @on)}
+              options={Enum.map(@on_options, fn {value, label, _on} -> {label, value} end)}
+            />
           </div>
 
           <p :if={@freq in [:weekly, :monthly, :yearly]} class="text-token-xs text-tymeslot-400">
@@ -226,27 +216,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
           </p>
 
           <div class="flex flex-wrap items-center gap-2">
-            <%!-- raw-input: compact inline select sharing a wrapping row with the count or until control --%>
-            <select
+            <.select
+              id={"#{@form_id}-end-type"}
               name="end_type"
-              class="rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
-            >
-              <option value="never" selected={@end_type == "never"}>
-                {dgettext("dashboard_calendar_repeat", "Never ends")}
-              </option>
-              <option value="count" selected={@end_type == "count"}>
-                {dgettext("dashboard_calendar_repeat", "After")}
-              </option>
-              <option value="until" selected={@end_type == "until"}>
-                {dgettext("dashboard_calendar_repeat", "On date")}
-              </option>
-            </select>
+              class="w-36"
+              compact
+              aria-label={dgettext("dashboard_calendar_repeat", "Ends")}
+              value={@end_type}
+              options={[
+                {dgettext("dashboard_calendar_repeat", "Never ends"), "never"},
+                {dgettext("dashboard_calendar_repeat", "After"), "count"},
+                {dgettext("dashboard_calendar_repeat", "On date"), "until"}
+              ]}
+            />
 
             <div :if={@end_type == "count"} class="flex items-center gap-1.5">
               <%!-- raw-input: narrow number field inside the "After N occurrences" sentence row --%>
               <input
                 type="number"
                 name="count"
+                inputmode="numeric"
                 min="1"
                 max={Pattern.max_number()}
                 value={@count}
@@ -261,13 +250,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
               )}</span>
             </div>
 
-            <%!-- raw-input: compact inline date field sharing a wrapping row with the end type select --%>
-            <input
+            <.date_picker
               :if={@end_type == "until"}
-              type="date"
+              id={"#{@form_id}-until"}
               name="until"
               value={@until}
-              class="rounded-token-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
+              variant={:compact}
+              aria-label={dgettext("dashboard_calendar_repeat", "Repeat until")}
             />
           </div>
         </div>
@@ -316,6 +305,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
   end
 
   defp on_options(_freq, _start_date), do: []
+
+  defp on_value(options, on),
+    do: Enum.find_value(options, fn {value, _label, option_on} -> option_on == on && value end)
 
   defp on_value(:day), do: "day"
   defp on_value({ordinal, kind}), do: "#{ordinal}:#{kind}"

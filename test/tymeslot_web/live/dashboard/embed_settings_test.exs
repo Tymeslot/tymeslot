@@ -313,9 +313,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       # explicit attribute; "default" produces a clean snippet with none.
       view
       |> form("form[phx-change='update_customisation']", %{
-        "customise" => %{"layout" => "column", "initial_height" => "500", "max_width" => "900"}
+        "customise" => %{"initial_height" => "500", "max_width" => "900"}
       })
-      |> render_change()
+      |> render_change(%{"customise" => %{"layout" => "column"}})
 
       view
       |> element("button[phx-click='copy_code'][phx-value-type='inline']")
@@ -461,10 +461,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
       view
-      |> form("form[phx-change='update_customisation']", %{
-        "customise" => %{"layout" => "default"}
-      })
-      |> render_change()
+      |> form("form[phx-change='update_customisation']")
+      |> render_change(%{"customise" => %{"layout" => "default"}})
 
       html = render(view)
 
@@ -486,10 +484,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
       view
-      |> form("form[phx-change='update_customisation']", %{
-        "customise" => %{"layout" => "column"}
-      })
-      |> render_change()
+      |> form("form[phx-change='update_customisation']")
+      |> render_change(%{"customise" => %{"layout" => "column"}})
 
       assert render(view) =~ "?layout=column"
     end

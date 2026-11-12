@@ -224,8 +224,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
         <.clock_change_notice notice={@session_notice} testid="session-clock-change" />
 
         <div class="flex flex-wrap items-end gap-3" data-testid="new-session">
-          <.input
-            type="date"
+          <.date_picker
             id={"new-session-date-#{@form_id}"}
             name="session[date]"
             label={dgettext("dashboard_meeting_fixed_dates", "Date")}
@@ -233,8 +232,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
             phx-change="update_session_input"
             phx-target={@myself}
           />
-          <.input
-            type="time"
+          <.time_picker
             id={"new-session-time-#{@form_id}"}
             name="session[time]"
             label={dgettext("dashboard_meeting_fixed_dates", "Time")}
@@ -242,8 +240,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
             phx-change="update_session_input"
             phx-target={@myself}
           />
-          <.input
-            type="datetime-local"
+          <.datetime_picker
             id={"new-session-closes-#{@form_id}"}
             name="session[closes_at]"
             label={dgettext("dashboard_meeting_fixed_dates", "Registration closes (optional)")}
@@ -335,8 +332,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
       <.clock_change_notice notice={@notice} testid="offered-time-clock-change" />
 
       <div class="flex flex-wrap items-end gap-3" data-testid="new-offered-time">
-        <.input
-          type="date"
+        <.date_picker
           id={"new-offered-time-date-#{@form_id}"}
           name="offered_time[date]"
           label={dgettext("dashboard_meeting_fixed_dates", "Date")}
@@ -344,8 +340,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
           phx-change="update_offered_time_input"
           phx-target={@myself}
         />
-        <.input
-          type="time"
+        <.time_picker
           id={"new-offered-time-time-#{@form_id}"}
           name="offered_time[time]"
           label={dgettext("dashboard_meeting_fixed_dates", "Time")}
@@ -402,20 +397,27 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
   defp session_editor(assigns) do
     ~H"""
     <div class="flex w-full flex-wrap items-end gap-2" data-testid="edit-session">
-      <.input
-        :for={
-          {field, type, label} <- [
-            {"date", "date", dgettext("dashboard_meeting_fixed_dates", "Date")},
-            {"time", "time", dgettext("dashboard_meeting_fixed_dates", "Time")},
-            {"closes_at", "datetime-local",
-             dgettext("dashboard_meeting_fixed_dates", "Registration closes")}
-          ]
-        }
-        type={type}
-        id={"edit-session-#{field}-#{@session.id}"}
-        name={"session_edit[#{field}]"}
-        label={label}
-        value={@editing.input[field]}
+      <.date_picker
+        id={"edit-session-date-#{@session.id}"}
+        name="session_edit[date]"
+        label={dgettext("dashboard_meeting_fixed_dates", "Date")}
+        value={@editing.input["date"]}
+        phx-change="update_session_edit"
+        phx-target={@myself}
+      />
+      <.time_picker
+        id={"edit-session-time-#{@session.id}"}
+        name="session_edit[time]"
+        label={dgettext("dashboard_meeting_fixed_dates", "Time")}
+        value={@editing.input["time"]}
+        phx-change="update_session_edit"
+        phx-target={@myself}
+      />
+      <.datetime_picker
+        id={"edit-session-closes_at-#{@session.id}"}
+        name="session_edit[closes_at]"
+        label={dgettext("dashboard_meeting_fixed_dates", "Registration closes")}
+        value={@editing.input["closes_at"]}
         phx-change="update_session_edit"
         phx-target={@myself}
       />

@@ -312,6 +312,17 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
     )
   end
 
+  @doc "Checks if a user has at least one meeting type with a price set."
+  @spec has_priced_meeting_types?(integer()) :: boolean()
+  def has_priced_meeting_types?(user_id) do
+    Repo.exists?(
+      from(mt in MeetingTypeSchema,
+        where:
+          mt.user_id == ^user_id and mt.payment_required == true and not is_nil(mt.price_cents)
+      )
+    )
+  end
+
   @doc """
   Gets a meeting type by ID, raising if not found.
   """

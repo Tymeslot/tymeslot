@@ -61,6 +61,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.BookingPageVisibilityTest do
     view |> element("button", "Done") |> render_click()
     # The card's badge is the type's one address, under the page listing it.
     assert has_element?(view, "[data-testid='meeting-type-link']", "/joern/einfachiso/iso-audit")
+    # Its tooltip only names the visible path, so it is no tab stop of its own.
+    refute has_element?(view, "[data-testid='meeting-type-link'][tabindex]")
     refute render(view) =~ "Unlisted"
   end
 
