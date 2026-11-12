@@ -156,4 +156,96 @@ defmodule Tymeslot.Meetings.QueriesTest do
       assert reloaded.start_time == held.start_time
     end
   end
+
+  describe "transition_from_awaiting_verification/2" do
+    test "the verification transition moves only a held booking" do
+      held = insert(:meeting, status: :awaiting_verification)
+      confirmed = insert(:meeting, status: :confirmed)
+
+      assert {:ok, %{status: :confirmed}} =
+               MeetingQueries.transition_from_awaiting_verification(held.id, status: :confirmed)
+
+      assert {:error, :not_awaiting_verification} =
+               MeetingQueries.transition_from_awaiting_verification(confirmed.id,
+                 status: :cancelled
+               )
+
+      assert Repo.reload!(confirmed).status == :confirmed
+    end
+
+    test "two transitions race and one wins" do
+      held = insert(:meeting, status: :awaiting_verification)
+
+      results =
+        for _attempt <- 1..2 do
+          MeetingQueries.transition_from_awaiting_verification(held.id, status: :confirmed)
+        end
+
+      assert Enum.count(results, &match?({:ok, _}, &1)) == 1
+      assert {:error, :not_awaiting_verification} in results
+    end
+
+    test "returns {:error, :slot_taken} when the target slot is occupied" do
+      organizer = insert(:user)
+      taken = DateTime.add(DateTime.utc_now(:second), 1, :day)
+
+      insert(:meeting,
+        organizer_user_id: organizer.id,
+        start_time: taken,
+        end_time: DateTime.add(taken, 3600, :second),
+        status: :confirmed
+      )
+
+      held_start = DateTime.add(taken, 7200, :second)
+
+      held =
+        insert(:meeting,
+          organizer_user_id: organizer.id,
+          start_time: held_start,
+          end_time: DateTime.add(held_start, 3600, :second),
+          status: :awaiting_verification
+        )
+
+      assert {:error, :slot_taken} =
+               MeetingQueries.transition_from_awaiting_verification(held.id,
+                 status: :confirmed,
+                 start_time: taken
+               )
+
+      assert Repo.reload!(held).status == :awaiting_verification
+    end
+  end
+
+  describe "list_expired_verifications/2" do
+    test "returns only lapsed held bookings, oldest first" do
+      now = DateTime.utc_now(:second)
+
+      newer =
+        insert(:meeting,
+          status: :awaiting_verification,
+          verification_deadline_at: DateTime.add(now, -60)
+        )
+
+      older =
+        insert(:meeting,
+          status: :awaiting_verification,
+          verification_deadline_at: DateTime.add(now, -600)
+        )
+
+      _future =
+        insert(:meeting,
+          status: :awaiting_verification,
+          verification_deadline_at: DateTime.add(now, 600)
+        )
+
+      _done =
+        insert(:meeting, status: :expired, verification_deadline_at: DateTime.add(now, -900))
+
+      assert [older.id, newer.id] ==
+               now |> MeetingQueries.list_expired_verifications(10) |> Enum.map(& &1.id)
+
+      assert [older.id] ==
+               now |> MeetingQueries.list_expired_verifications(1) |> Enum.map(& &1.id)
+    end
+  end
 end

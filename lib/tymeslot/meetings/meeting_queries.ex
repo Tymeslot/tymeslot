@@ -241,6 +241,41 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Moves a held-for-verification meeting onward, atomically.
+
+  One guarded `UPDATE ... WHERE id = $1 AND status = 'awaiting_verification'`,
+  so of two callers (the attendee's link and the expiry sweep, say) only the
+  first finds a row to change; the other gets `{:error, :not_awaiting_verification}`.
+  The unique index on confirmed-or-held slots has no `unique_constraint/3` to
+  translate it here, so a collision becomes `{:error, :slot_taken}`.
+  """
+  @spec transition_from_awaiting_verification(Ecto.UUID.t(), keyword()) ::
+          {:ok, Meeting.t()} | {:error, :not_awaiting_verification | :slot_taken}
+  def transition_from_awaiting_verification(meeting_id, changes) when is_list(changes) do
+    now = DateTime.utc_now(:second)
+
+    query =
+      from(m in Meeting,
+        where: m.id == ^meeting_id and m.status == :awaiting_verification,
+        select: m
+      )
+
+    case Repo.update_all(query, set: Keyword.put_new(changes, :updated_at, now)) do
+      {1, [meeting]} -> {:ok, meeting}
+      {0, _none} -> {:error, :not_awaiting_verification}
+    end
+  rescue
+    error in Postgrex.Error ->
+      case error.postgres do
+        %{code: :unique_violation, constraint: "unique_confirmed_meeting_per_organizer_at_time"} ->
+          {:error, :slot_taken}
+
+        _other ->
+          reraise error, __STACKTRACE__
+      end
+  end
+
+  @doc """
   Moves a meeting to `:cancelled`, atomically, unless it is already over.
 
   Like `transition_from_awaiting_approval/2`, the guard is in the `WHERE`
@@ -324,6 +359,20 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     |> MeetingState.where_awaiting_approval()
     |> where([m], not is_nil(m.approval_deadline_at) and m.approval_deadline_at <= ^now)
     |> order_by([m], asc: m.approval_deadline_at)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  @doc """
+  Held-for-verification meetings whose verification deadline has passed at
+  `now`, oldest deadline first, at most `limit`. Backs the expiry sweep.
+  """
+  @spec list_expired_verifications(DateTime.t(), pos_integer()) :: [Meeting.t()]
+  def list_expired_verifications(%DateTime{} = now, limit) when is_integer(limit) do
+    Meeting
+    |> MeetingState.where_awaiting_verification()
+    |> where([m], not is_nil(m.verification_deadline_at) and m.verification_deadline_at <= ^now)
+    |> order_by([m], asc: m.verification_deadline_at)
     |> limit(^limit)
     |> Repo.all()
   end

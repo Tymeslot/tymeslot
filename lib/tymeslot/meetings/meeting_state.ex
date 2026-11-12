@@ -2,7 +2,8 @@ defmodule Tymeslot.Meetings.MeetingState do
   @moduledoc """
   Single owner of predicates derived from a meeting's two independent state
   axes: `status` (the booking lifecycle — pending, awaiting_payment,
-  awaiting_approval, confirmed, cancelled, completed) and
+  awaiting_approval, awaiting_verification, confirmed, cancelled, completed)
+  and
   `reschedule_requested_at` (whether the organizer is currently awaiting the
   attendee to pick a new time). The two axes are orthogonal: an organizer
   reschedule request no longer overwrites `status`, so a `pending` or
@@ -23,6 +24,10 @@ defmodule Tymeslot.Meetings.MeetingState do
   # Held pending the host's manual approval. Occupies its slot like a pending
   # booking does, but is not a booking anyone has agreed to yet.
   @awaiting_approval :awaiting_approval
+  # Held until the attendee confirms their email address. Occupies its slot
+  # so nobody else can take it, but is not active: the booking does not exist
+  # for anyone yet, the organiser included.
+  @awaiting_verification :awaiting_verification
   @confirmed :confirmed
   @cancelled :cancelled
   @completed :completed
@@ -35,7 +40,17 @@ defmodule Tymeslot.Meetings.MeetingState do
   # Combined with `exclude_voided_slots/1`, this is the query-side mirror of
   # `slot_void?/1`: a meeting only actually blocks a time window while it
   # holds one of these statuses AND has no pending reschedule request.
-  @occupying_statuses [@confirmed, @pending, @awaiting_payment, @awaiting_approval]
+  #
+  # An unverified booking holds its slot (so the attendee's time cannot be
+  # taken while they check their inbox) but is not in `@active_statuses`,
+  # because nothing may act on it until the attendee has verified.
+  @occupying_statuses [
+    @confirmed,
+    @pending,
+    @awaiting_payment,
+    @awaiting_approval,
+    @awaiting_verification
+  ]
 
   # Statuses a booking is released in without taking place: cancelled, or a
   # request that expired unanswered. Releasing one deletes its video room.
@@ -50,6 +65,7 @@ defmodule Tymeslot.Meetings.MeetingState do
           :pending
           | :awaiting_payment
           | :awaiting_approval
+          | :awaiting_verification
           | :confirmed
           | :cancelled
           | :completed
@@ -312,5 +328,50 @@ defmodule Tymeslot.Meetings.MeetingState do
     query
     |> where([m], m.status == ^@confirmed)
     |> exclude_voided_slots()
+  end
+
+  @doc "Whether the meeting is held until the attendee verifies their email address."
+  @spec awaiting_verification?(Meeting.t() | map()) :: boolean()
+  def awaiting_verification?(%{status: @awaiting_verification}), do: true
+  def awaiting_verification?(_meeting), do: false
+
+  @doc """
+  Status counterpart of `awaiting_verification?/1`, for callers that hold the
+  status alone (the themes' assigns).
+  """
+  @spec awaiting_verification_status?(status() | nil) :: boolean()
+  def awaiting_verification_status?(@awaiting_verification), do: true
+  def awaiting_verification_status?(_status), do: false
+
+  @doc """
+  Whether the booking was gated behind email verification and never verified:
+  a deadline was set and `email_verified_at` is still empty. Read from the
+  columns rather than `status`, so a held booking that expired unverified
+  stays unverified.
+  """
+  @spec unverified?(Meeting.t() | map()) :: boolean()
+  def unverified?(%{verification_deadline_at: %DateTime{}, email_verified_at: nil}), do: true
+  def unverified?(_meeting), do: false
+
+  @doc """
+  Whether the organiser may see this meeting: the single definition of
+  organiser visibility, mirrored for queries by `where_visible_to_organiser/1`.
+  """
+  @spec visible_to_organiser?(Meeting.t() | map()) :: boolean()
+  def visible_to_organiser?(meeting), do: not unverified?(meeting)
+
+  @doc "Query-side counterpart of `awaiting_verification?/1`."
+  @spec where_awaiting_verification(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def where_awaiting_verification(query) do
+    where(query, [m], m.status == @awaiting_verification)
+  end
+
+  @doc """
+  Query-side counterpart of `visible_to_organiser?/1`. Assumes the meeting is
+  the query's first binding.
+  """
+  @spec where_visible_to_organiser(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def where_visible_to_organiser(query) do
+    where(query, [m], is_nil(m.verification_deadline_at) or not is_nil(m.email_verified_at))
   end
 end

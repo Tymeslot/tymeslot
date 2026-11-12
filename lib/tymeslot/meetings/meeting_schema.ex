@@ -82,6 +82,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           reschedule_requested_at: DateTime.t() | nil,
           approval_requested_at: DateTime.t() | nil,
           approval_deadline_at: DateTime.t() | nil,
+          verification_deadline_at: DateTime.t() | nil,
+          email_verified_at: DateTime.t() | nil,
           approval_resolved_at: DateTime.t() | nil,
           approval_declined_at: DateTime.t() | nil,
           approval_nudge_sent_at: DateTime.t() | nil,
@@ -249,8 +251,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # Grouped and read by `Tymeslot.Meetings.MeetingState`, which explains each
     # value; closed in the database by `meetings_status_must_be_known`.
     field(:status, Ecto.Enum,
-      values: ~w(pending awaiting_payment awaiting_approval confirmed cancelled completed
-                 expired reschedule_requested)a,
+      values: ~w(pending awaiting_payment awaiting_approval awaiting_verification confirmed
+                 cancelled completed expired reschedule_requested)a,
       default: :pending
     )
 
@@ -282,6 +284,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # through `Meetings.Approval.declined?/1` rather than matching on it.
     field(:approval_declined_at, :utc_datetime)
     field(:approval_nudge_sent_at, :utc_datetime)
+    # Email verification clock; see `Tymeslot.Meetings.EmailVerification`.
+    field(:verification_deadline_at, :utc_datetime)
+    field(:email_verified_at, :utc_datetime)
     # The host's optional note when declining. Absent whenever they gave no
     # reason, so it marks nothing on its own.
     field(:decline_reason, :string)
@@ -431,6 +436,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :reschedule_requested_at,
     :approval_requested_at,
     :approval_deadline_at,
+    :verification_deadline_at,
+    :email_verified_at,
     :approval_resolved_at,
     :approval_declined_at,
     :approval_nudge_sent_at,
