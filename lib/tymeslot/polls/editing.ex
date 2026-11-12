@@ -27,9 +27,12 @@ defmodule Tymeslot.Polls.Editing do
   Subscribers are told once the edit has committed.
 
   Existing times are never changed or removed here: they are what guests
-  voted against. A meeting type set here only chooses the calendar and video
-  provider the confirmed meeting uses; the poll keeps its own title and
+  voted against. A meeting type set here only chooses the calendar the
+  confirmed meeting uses, and its location while the poll has none of its
+  own (`Tymeslot.Polls.PollLocation`); the poll keeps its own title and
   times, and the type's schedule plays no part in confirming one of them.
+  A location changed here is shown from then on, on the voting page and in
+  the emails still to come; nobody is emailed about the change itself.
   """
 
   alias Ecto.{Changeset, Type}
@@ -38,6 +41,7 @@ defmodule Tymeslot.Polls.Editing do
   alias Tymeslot.Polls.{
     MeetingTypeRule,
     OpenPollLock,
+    PollLocation,
     PollParticipantQueries,
     PollQueries,
     PollSchema,
@@ -52,6 +56,7 @@ defmodule Tymeslot.Polls.Editing do
           | :voting_closed
           | :meeting_type_not_found
           | :payment_required_type
+          | :location_not_found
           | Changeset.t()
 
   @doc """
@@ -69,6 +74,7 @@ defmodule Tymeslot.Polls.Editing do
 
   defp write(poll, user_id, attrs, new_starts) do
     with :ok <- check_meeting_type(poll, attrs, user_id),
+         :ok <- PollLocation.check(user_id, attrs, poll),
          changeset = PollSchema.details_changeset(poll, attrs),
          {:ok, updated} <- PollQueries.update(changeset),
          :ok <- withdraw_requests(updated, changeset),

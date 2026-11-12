@@ -402,3 +402,13 @@ msgstr "Voici à nouveau votre lien pour voter sur %{title} pour %{host}. Les r�
 #, elixir-autogen, elixir-format
 msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it."
 msgstr "%{host} a annulé le sondage %{title}, aucune réunion n'en sera donc fixée."
+
+#: lib/tymeslot/emails/shared/poll_place.ex
+#, elixir-autogen, elixir-format
+msgid "Video call. You get the link once a time is confirmed."
+msgstr "Appel vidéo. Vous recevrez le lien dès qu’un horaire sera confirmé."
+
+#: lib/tymeslot/emails/shared/poll_place.ex
+#, elixir-autogen, elixir-format
+msgid "Where"
+msgstr "Où"

@@ -235,3 +235,8 @@ msgstr "Vyberte odpověď alespoň u jednoho termínu a pak uložte."
 #, elixir-autogen, elixir-format
 msgid "The meeting arranged through this poll has been cancelled."
 msgstr "Schůzka domluvená přes tuto anketu byla zrušena."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_location.ex
+#, elixir-autogen, elixir-format
+msgid "Video call. The link follows once a time is confirmed."
+msgstr "Videohovor. Odkaz přijde, jakmile bude termín potvrzen."

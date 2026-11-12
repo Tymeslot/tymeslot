@@ -4,7 +4,8 @@ defmodule Tymeslot.Polls.Confirm do
 
   Confirmation runs the winning slot through the regular ad-hoc booking path
   (`Bookings.CreateAdHoc`), so the resulting meeting gets the same calendar
-  sync, notifications and optional video provisioning as any other booking. On
+  sync, notifications and optional video provisioning as any other booking,
+  at the poll's location (`Tymeslot.Polls.PollLocation`). On
   success the poll transitions to `:confirmed` and subscribers are notified.
 
   The meeting is managed by the host (`Tymeslot.Meetings.HostManaged.managed?/1`): it
@@ -30,7 +31,15 @@ defmodule Tymeslot.Polls.Confirm do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.{PollParticipantSchema, PollQueries, PollSchema, PollTimeSlotQueries}
+
+  alias Tymeslot.Polls.{
+    PollLocation,
+    PollParticipantSchema,
+    PollQueries,
+    PollSchema,
+    PollTimeSlotQueries
+  }
+
   alias Tymeslot.Repo
   alias Tymeslot.Timezones
 
@@ -208,19 +217,17 @@ defmodule Tymeslot.Polls.Confirm do
   # The calendar the meeting is written to is chosen as a booking of the
   # poll's meeting type would choose it: the type's own calendar where it names
   # one the host can still book into, otherwise the host's booking calendar.
-  # The video integration is the meeting type's, and none without one.
+  # The meeting is held where the poll says (`PollLocation.effective/1`): its
+  # own location, or else its meeting type's, with a room on the video
+  # integration that location names.
   defp integrations(%PollSchema{} = poll) do
-    case meeting_type(poll) do
-      nil ->
-        Map.put(calendar_target(poll.user_id), :video_integration_id, nil)
+    calendar =
+      case meeting_type(poll) do
+        nil -> calendar_target(poll.user_id)
+        meeting_type -> calendar_target(meeting_type)
+      end
 
-      meeting_type ->
-        Map.put(
-          calendar_target(meeting_type),
-          :video_integration_id,
-          meeting_type.video_integration_id
-        )
-    end
+    Map.merge(calendar, poll |> PollLocation.effective() |> PollLocation.meeting_params())
   end
 
   defp meeting_type(%PollSchema{meeting_type_id: nil}), do: nil

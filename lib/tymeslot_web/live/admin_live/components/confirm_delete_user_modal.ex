@@ -23,14 +23,16 @@ defmodule TymeslotWeb.AdminLive.Components.ConfirmDeleteUserModal do
       on_cancel={JS.push("cancel_pending_action")}
       size={:small}
     >
-      <:header>{dgettext("dashboard_admin", "Delete user")}</:header>
+      <:header>{dgettext("dashboard_admin_users", "Delete user")}</:header>
 
       <p class="text-base text-tymeslot-700 font-medium leading-relaxed">
-        {dgettext("dashboard_admin", "Delete %{email} and all their data now?", email: @user.email)}
+        {dgettext("dashboard_admin_users", "Delete %{email} and all their data now?",
+          email: @user.email
+        )}
       </p>
       <p class="mt-3 text-sm text-amber-600 font-medium">
         {dgettext(
-          "dashboard_admin",
+          "dashboard_admin_users",
           "This cannot be undone. Their bookings are deleted and their guests are not notified; existing calendar events and video links stay as they are."
         )}
       </p>
@@ -42,16 +44,16 @@ defmodule TymeslotWeb.AdminLive.Components.ConfirmDeleteUserModal do
             disabled={@submitting}
             phx-click={JS.push("cancel_pending_action")}
           >
-            {dgettext("dashboard_admin", "Cancel")}
+            {dgettext("dashboard_admin_users", "Cancel")}
           </.action_button>
           <.loading_button
             variant={:danger}
             loading={@submitting}
-            loading_text={dgettext("dashboard_admin", "Deleting...")}
+            loading_text={dgettext("dashboard_admin_users", "Deleting...")}
             phx-click="delete_user"
             phx-value-id={@user.id}
           >
-            {dgettext("dashboard_admin", "Delete user")}
+            {dgettext("dashboard_admin_users", "Delete user")}
           </.loading_button>
         </div>
       </:footer>

@@ -1,0 +1,198 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr "%{minutes} min"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}, your meeting %{organizer} has been rescheduled."
+msgstr "%{name}, votre réunion %{organizer} a été reportée."
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}, your meeting %{organizer} is all set."
+msgstr "%{name}, tout est prêt pour votre réunion %{organizer}."
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}, your meeting %{organizer} is confirmed"
+msgstr "%{name}, votre réunion %{organizer} est confirmée"
+
+#: lib/tymeslot_web/themes/shared/confirmation_text.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}, your request has been sent."
+msgstr "%{name}, votre demande a été envoyée."
+
+#: lib/tymeslot_web/themes/shared/confirmation_text.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}, your request to %{organizer_name} has been sent."
+msgstr "%{name}, votre demande à %{organizer_name} a été envoyée."
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add tentative hold to calendar"
+msgstr "Ajouter la réservation provisoire au calendrier"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add to calendar"
+msgstr "Ajouter au calendrier"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Appointment host"
+msgstr "Organisateur du rendez-vous"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking confirmed"
+msgstr "Réservation confirmée"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Changed your mind? Your request email has a link to withdraw it."
+msgstr "Vous avez changé d’avis ? L’e-mail de votre demande contient un lien pour la retirer."
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Confirmation sent to"
+msgstr "Confirmation envoyée à"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr "Date"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr "Durée"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Guests"
+msgstr "Invités"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Lieu"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Confirmed!"
+msgstr "Réunion confirmée"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Details"
+msgstr "Détails de la réunion"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Rescheduled!"
+msgstr "Réunion reportée !"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Need to make changes? Check your email for reschedule options"
+msgstr "Vous souhaitez faire des modifications ? Vérifiez vos e-mails pour les options de report"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Need to reschedule? Check your confirmation email."
+msgstr "Besoin de reporter ? Vérifiez votre e-mail de confirmation."
+
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Paid"
+msgstr "Payé"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Paid %{amount}"
+msgstr "Montant payé : %{amount}"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Request sent!"
+msgstr "Demande envoyée !"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule Another Meeting"
+msgstr "Planifier une autre réunion"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Sent to"
+msgstr "Envoyé à"
+
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Successfully Rescheduled!"
+msgstr "Report effectué avec succès !"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Time"
+msgstr "Heure"
+
+#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Timezone"
+msgstr "Fuseau horaire"
+
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "You're All Set!"
+msgstr "Tout est prêt !"
+
+#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/shared/confirmation_text.ex
+#, elixir-autogen, elixir-format
+msgid "with %{name}"
+msgstr "avec %{name}"

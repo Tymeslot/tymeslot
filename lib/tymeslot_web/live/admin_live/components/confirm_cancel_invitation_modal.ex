@@ -23,14 +23,14 @@ defmodule TymeslotWeb.AdminLive.Components.ConfirmCancelInvitationModal do
       on_cancel={JS.push("cancel_pending_action")}
       size={:small}
     >
-      <:header>{dgettext("dashboard_admin", "Cancel invitation")}</:header>
+      <:header>{dgettext("dashboard_admin_users", "Cancel invitation")}</:header>
 
       <p class="text-base text-tymeslot-700 font-medium leading-relaxed">
-        {dgettext("dashboard_admin", "Cancel the invitation to %{email}?", email: @user.email)}
+        {dgettext("dashboard_admin_users", "Cancel the invitation to %{email}?", email: @user.email)}
       </p>
       <p class="mt-3 text-sm text-tymeslot-600">
         {dgettext(
-          "dashboard_admin",
+          "dashboard_admin_users",
           "The invitation link stops working and the invited account is removed. You can invite this address again later."
         )}
       </p>
@@ -42,16 +42,16 @@ defmodule TymeslotWeb.AdminLive.Components.ConfirmCancelInvitationModal do
             disabled={@submitting}
             phx-click={JS.push("cancel_pending_action")}
           >
-            {dgettext("dashboard_admin", "Keep invitation")}
+            {dgettext("dashboard_admin_users", "Keep invitation")}
           </.action_button>
           <.loading_button
             variant={:danger}
             loading={@submitting}
-            loading_text={dgettext("dashboard_admin", "Cancelling...")}
+            loading_text={dgettext("dashboard_admin_users", "Cancelling...")}
             phx-click="cancel_invitation"
             phx-value-id={@user.id}
           >
-            {dgettext("dashboard_admin", "Cancel invitation")}
+            {dgettext("dashboard_admin_users", "Cancel invitation")}
           </.loading_button>
         </div>
       </:footer>
