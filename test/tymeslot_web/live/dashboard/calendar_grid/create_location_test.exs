@@ -79,6 +79,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateLocationTest do
       assert meeting.location_kind == :custom
     end
 
+    test "keeps the form open when Enter is pressed in the text field", %{lv: lv} do
+      choose(lv, %{"location_choice" => "custom"})
+
+      lv
+      |> form("#create-location-form")
+      |> render_submit(%{"location_choice" => "custom", "location_custom" => "Room 4.12"})
+
+      assert has_element?(lv, "#create-location-custom[value='Room 4.12']")
+      assert create_meeting(lv).location == "Room 4.12"
+    end
+
     test "has no location when none is chosen", %{lv: lv} do
       meeting = create_meeting(lv)
 
