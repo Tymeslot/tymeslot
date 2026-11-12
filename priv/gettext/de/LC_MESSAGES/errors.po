@@ -860,3 +860,13 @@ msgstr "muss in der Zukunft liegen"
 #, elixir-autogen, elixir-format
 msgid "invitation links"
 msgstr "Einladungslinks"
+
+#: lib/tymeslot/meeting_types/email_verification_rule.ex
+#, elixir-autogen, elixir-format
+msgid "email verification cannot be combined with payment"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/group_validation.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "group bookings cannot require email verification"
+msgstr "Gruppenbuchungen können keine Bestätigung erfordern"

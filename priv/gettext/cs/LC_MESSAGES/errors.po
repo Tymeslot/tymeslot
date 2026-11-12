@@ -885,3 +885,13 @@ msgstr "musí být v budoucnosti"
 #, elixir-autogen, elixir-format
 msgid "invitation links"
 msgstr "odkazy na pozvání"
+
+#: lib/tymeslot/meeting_types/email_verification_rule.ex
+#, elixir-autogen, elixir-format
+msgid "email verification cannot be combined with payment"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/group_validation.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "group bookings cannot require email verification"
+msgstr "skupinové rezervace nemohou vyžadovat schválení"
