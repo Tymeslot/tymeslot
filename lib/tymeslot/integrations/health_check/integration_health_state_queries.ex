@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
 
   import Ecto.Query
 
+  alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
@@ -117,7 +118,15 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   @spec get_or_init(IntegrationTypes.kind(), integer(), integer()) ::
           {:ok, IntegrationHealthStateSchema.t()} | {:error, :not_found}
   def get_or_init(type, integration_id, user_id) do
-    seed_attrs = %{
+    type
+    |> seed_changeset(integration_id, user_id)
+    |> Repo.insert(on_conflict: :nothing, conflict_target: [:integration_type, :integration_id])
+
+    get(type, integration_id)
+  end
+
+  defp seed_changeset(type, integration_id, user_id) do
+    IntegrationHealthStateSchema.changeset(%IntegrationHealthStateSchema{}, %{
       integration_type: type,
       integration_id: integration_id,
       user_id: user_id,
@@ -127,13 +136,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       consecutive_sync_failures: 0,
       successes: 0,
       backoff_ms: IntegrationHealthStateSchema.check_interval_ms()
-    }
-
-    %IntegrationHealthStateSchema{}
-    |> IntegrationHealthStateSchema.changeset(seed_attrs)
-    |> Repo.insert(on_conflict: :nothing, conflict_target: [:integration_type, :integration_id])
-
-    get(type, integration_id)
+    })
   end
 
   @doc """
@@ -212,6 +215,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       failures: 0,
       consecutive_hard_failures: 0,
       consecutive_sync_failures: 0,
+      consecutive_credential_rejections: 0,
       successes: 0,
       backoff_ms: IntegrationHealthStateSchema.check_interval_ms(),
       last_check_at: Clock.utc_now(),
@@ -247,6 +251,51 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   @spec clear_sync_failures(IntegrationTypes.kind(), integer()) :: {non_neg_integer(), nil}
   def clear_sync_failures(type, integration_id) do
     update_fields(type, integration_id, consecutive_sync_failures: 0)
+  end
+
+  @doc """
+  Adds one sync cycle to the integration's streak of rejected credentials and
+  returns the streak including it, in one statement: a missing row is created
+  with the streak at 1.
+
+  Only the sync worker writes this streak. It is broken by
+  `clear_credential_rejections/2` and by `reset/2`.
+  """
+  @spec record_credential_rejection(IntegrationTypes.kind(), integer(), integer()) ::
+          pos_integer()
+  def record_credential_rejection(type, integration_id, user_id) do
+    {:ok, %{consecutive_credential_rejections: streak}} =
+      type
+      |> seed_changeset(integration_id, user_id)
+      |> Changeset.put_change(:consecutive_credential_rejections, 1)
+      |> Repo.insert(
+        on_conflict: [
+          inc: [consecutive_credential_rejections: 1],
+          set: [updated_at: Clock.utc_now()]
+        ],
+        conflict_target: [:integration_type, :integration_id],
+        returning: [:consecutive_credential_rejections]
+      )
+
+    streak
+  end
+
+  @doc """
+  Breaks the streak of rejected credentials. Writes only a row that has one,
+  so the call every sync cycle makes is a no-op for the integrations that are
+  fine. Safe to call when no row exists.
+  """
+  @spec clear_credential_rejections(IntegrationTypes.kind(), integer()) ::
+          {non_neg_integer(), nil}
+  def clear_credential_rejections(type, integration_id) do
+    Repo.update_all(
+      from(s in IntegrationHealthStateSchema,
+        where:
+          s.integration_type == ^type and s.integration_id == ^integration_id and
+            s.consecutive_credential_rejections > 0
+      ),
+      set: [consecutive_credential_rejections: 0, updated_at: Clock.utc_now()]
+    )
   end
 
   @doc """
