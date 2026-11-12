@@ -41,7 +41,9 @@ defmodule Tymeslot.Security.Security do
       |> maybe_extract_host()
 
     cond do
-      domain in ["localhost", "127.0.0.1", "::1"] ->
+      # IPv6 `::1` is left out on purpose: CSP host sources cannot express an
+      # IPv6 literal, so a `::1` entry would be accepted and never match.
+      domain in ["localhost", "127.0.0.1"] ->
         {:ok, domain}
 
       domain == "none" ->

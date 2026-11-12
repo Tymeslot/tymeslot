@@ -105,13 +105,13 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugProdTest do
       refute frame_ancestors(csp) =~ "127.0.0.1"
     end
 
-    test "localhost in allowed_embed_domains gets HTTPS in production", %{conn: conn} do
+    test "an allowed local host matches any port over HTTP or HTTPS in production", %{conn: conn} do
       user = insert(:user)
 
       insert(:profile,
         user: user,
         username: "prodlocalhost",
-        allowed_embed_domains: ["localhost"]
+        allowed_embed_domains: ["localhost", "127.0.0.1"]
       )
 
       conn =
@@ -120,8 +120,9 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugProdTest do
         |> SecurityHeadersPlug.call(allow_embedding: true)
 
       assert [csp] = get_resp_header(conn, "content-security-policy")
-      assert csp =~ "https://localhost"
-      refute csp =~ "http://localhost"
+
+      assert frame_ancestors(csp) ==
+               "frame-ancestors 'self' http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*"
     end
   end
 
