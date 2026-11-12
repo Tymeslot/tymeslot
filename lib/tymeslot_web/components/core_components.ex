@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @shared [
     {:Brand, [:logo]},
     {:Layout, [:page_layout]},
+    {:Tooltip, [:tooltip]},
     {:Buttons,
      [
        :action_button,
@@ -51,11 +52,13 @@ defmodule TymeslotWeb.Components.CoreComponents do
        :subsection_header
      ]},
     {:Forms, [:input, :form_wrapper, :password_requirements, :honeypot_field]},
+    {:Select, [:select]},
+    {:DateTimePicker, [:date_picker, :time_picker, :datetime_picker]},
     {:Page, [:dashboard_page]},
     {:SettingRow, [:setting_row]},
     {:Feedback, [:spinner, :empty_state, :loading_card, :pill]},
     {:Navigation, [:tab_bar, :segmented_control]},
-    {:Dropdown, [:dropdown, :dropdown_item, :dropdown_divider]},
+    {:Dropdown, [:dropdown, :dropdown_panel, :dropdown_item, :dropdown_divider]},
     {:Flash, [:flash, :flash_group]},
     {:Modal, [:modal, :confirm_modal]},
     {:Icons, [:icon]}

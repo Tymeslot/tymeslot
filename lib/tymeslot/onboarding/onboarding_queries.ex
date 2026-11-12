@@ -55,6 +55,34 @@ defmodule Tymeslot.Onboarding.OnboardingQueries do
   end
 
   @doc """
+  Stamps that the host got through the onboarding meeting step, keeping the
+  first time when it is already set, and returns the stored row.
+  """
+  @spec stamp_meeting_step_confirmed(UserSchema.t()) ::
+          {:ok, UserSchema.t()} | {:error, :not_found}
+  def stamp_meeting_step_confirmed(%UserSchema{id: user_id}) do
+    now = DateTime.utc_now(:second)
+
+    query =
+      from(u in UserSchema,
+        where: u.id == ^user_id and is_nil(u.onboarding_meeting_confirmed_at),
+        select: u
+      )
+
+    case Repo.update_all(query, set: [onboarding_meeting_confirmed_at: now, updated_at: now]) do
+      {1, [updated]} -> {:ok, updated}
+      {0, []} -> fetch_user(user_id)
+    end
+  end
+
+  defp fetch_user(user_id) do
+    case Repo.get(UserSchema, user_id) do
+      nil -> {:error, :not_found}
+      user -> {:ok, user}
+    end
+  end
+
+  @doc """
   Sets `dashboard_tour_seen_at` to the current UTC time for `user`.
 
   This is an unconditional write — idempotence is enforced at the context level

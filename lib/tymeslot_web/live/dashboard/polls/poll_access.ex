@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollAccess do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.CoreComponents.Feedback
+  alias TymeslotWeb.Components.CoreComponents.Forms
 
   @doc "The form value for whether a poll is invite-only."
   @spec value(boolean()) :: String.t()
@@ -29,9 +30,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollAccess do
   attr :hint, :string, default: nil, doc: "a warning about the current choice, if any"
 
   @doc """
-  The two choices as radio buttons. A plain fieldset rather than
-  `Forms.input`, which renders one input under a block label; the radios
-  carry a description each and post with the rest of the form.
+  The two choices as radio buttons in a fieldset, each beside its own label
+  and description, posting with the rest of the form.
   """
   @spec access_input(map()) :: Phoenix.LiveView.Rendered.t()
   def access_input(assigns) do
@@ -44,8 +44,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollAccess do
       <legend class="label mb-1">{dgettext("dashboard_polls", "Who can vote")}</legend>
 
       <div class="flex items-start gap-2 text-token-sm">
-        <%!-- raw-input: native radio beside its label and description block; <.input> gives a radio text-field styling and drops checked --%>
-        <input
+        <Forms.input
           type="radio"
           id={"#{@id}-anyone"}
           name={@name}
@@ -71,8 +70,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollAccess do
       </div>
 
       <div class="flex items-start gap-2 text-token-sm">
-        <%!-- raw-input: native radio beside its label and description block; <.input> gives a radio text-field styling and drops checked --%>
-        <input
+        <Forms.input
           type="radio"
           id={"#{@id}-invited"}
           name={@name}

@@ -262,6 +262,11 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
     socket
   end
 
+  def handle_feature_access_error(socket, :webhook_inactive) do
+    Flash.error(dgettext("dashboard_automation", "Enable webhook to test"))
+    socket
+  end
+
   def handle_feature_access_error(socket, other) do
     Logger.warning("handle_feature_access_error: unhandled reason",
       reason: LogFormat.reason(other)

@@ -6,6 +6,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
 
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
 
+  # ---------- Event accessible name ----------
+
+  @doc """
+  The accessible name of an event block, carrying what its badges say.
+
+  The block is the control keyboard and screen-reader users reach, and its
+  `aria-label` replaces the badges inside it, so their guest count and seat
+  lock are spelled out here rather than left to the badges' tooltips.
+  """
+  @spec event_label(String.t(), map() | nil, boolean()) :: String.t()
+  def event_label(base, guest_summary, locked) do
+    [
+      base,
+      guest_summary && guest_badge_title(guest_summary),
+      locked && Shared.seat_lock_message()
+    ]
+    |> Enum.filter(&is_binary/1)
+    |> Enum.join(". ")
+  end
+
   # ---------- Seat lock indicator ----------
 
   @doc """
@@ -25,13 +45,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
   @spec seat_lock_badge(map()) :: Phoenix.LiveView.Rendered.t()
   def seat_lock_badge(assigns) do
     ~H"""
-    <span
-      :if={@locked}
-      class="absolute bottom-0.5 right-0.5 inline-flex items-center rounded-full bg-black/25 p-px"
-      title={Shared.seat_lock_message()}
-    >
-      <.icon name="hero-lock-closed-micro" class="w-2.5 h-2.5" />
-    </span>
+    <.tooltip :if={@locked} text={Shared.seat_lock_message()} isolated>
+      <span
+        role="img"
+        aria-label={Shared.seat_lock_message()}
+        class="absolute bottom-0.5 right-0.5 inline-flex items-center rounded-full bg-black/25 p-px"
+      >
+        <.icon name="hero-lock-closed-micro" class="w-2.5 h-2.5" />
+      </span>
+    </.tooltip>
     """
   end
 
@@ -43,17 +65,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
   @spec event_guest_badge(map()) :: Phoenix.LiveView.Rendered.t()
   def event_guest_badge(assigns) do
     ~H"""
-    <span
-      :if={@summary}
-      class={[
-        "absolute bottom-0.5 left-0.5 inline-flex items-center gap-0.5 rounded-token-full px-1 py-px text-token-2xs font-bold leading-none",
-        guest_badge_tone(@summary)
-      ]}
-      title={guest_badge_title(@summary)}
-    >
-      <.icon name="hero-user-mini" class="w-2.5 h-2.5" />
-      {@summary.accepted}/{@summary.total}
-    </span>
+    <.tooltip :if={@summary} text={guest_badge_title(@summary)} isolated>
+      <span
+        role="img"
+        aria-label={guest_badge_title(@summary)}
+        class={[
+          "absolute bottom-0.5 left-0.5 inline-flex items-center gap-0.5 rounded-token-full px-1 py-px text-token-2xs font-bold leading-none",
+          guest_badge_tone(@summary)
+        ]}
+      >
+        <.icon name="hero-user-mini" class="w-2.5 h-2.5" />
+        {@summary.accepted}/{@summary.total}
+      </span>
+    </.tooltip>
     """
   end
 

@@ -84,6 +84,22 @@ defmodule Tymeslot.Profiles.ProfileQueries do
     |> Repo.update()
   end
 
+  @doc "The currency recorded as the one the user's prices were set in."
+  @spec last_charge_currency(integer()) :: String.t() | nil
+  def last_charge_currency(user_id) do
+    Repo.one(
+      from(p in ProfileSchema, where: p.user_id == ^user_id, select: p.last_charge_currency)
+    )
+  end
+
+  @doc "Records the currency the user's prices were set in."
+  @spec record_last_charge_currency(integer(), String.t()) :: :ok
+  def record_last_charge_currency(user_id, currency) do
+    query = from(p in ProfileSchema, where: p.user_id == ^user_id)
+    Repo.update_all(query, set: [last_charge_currency: currency])
+    :ok
+  end
+
   @doc """
   Gets a profile by user ID.
   Returns {:ok, profile} if found, {:error, :not_found} otherwise.

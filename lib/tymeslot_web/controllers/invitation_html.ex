@@ -85,6 +85,7 @@ defmodule TymeslotWeb.InvitationHTML do
           action={@action}
           class="mt-6 space-y-4"
           id="accept-invitation-form"
+          novalidate
         >
           <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
           <input type="hidden" name="username" value={@email} autocomplete="username" />

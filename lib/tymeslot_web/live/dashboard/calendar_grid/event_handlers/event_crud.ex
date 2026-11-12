@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   defdelegate handle_remove_create_guest(params, socket), to: CreateFormState
   defdelegate handle_update_create_guest_input(params, socket), to: CreateFormState
   defdelegate handle_update_create_locale(params, socket), to: CreateFormState
+  defdelegate handle_update_create_location(params, socket), to: CreateFormState
 
   defdelegate handle_update_create_group_event(params, socket),
     to: GroupEventCreation,

@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
          )}
 
       {:error, _reason} ->
-        Flash.error(dgettext("dashboard_availability", "That time off no longer exists"))
+        Flash.error(dgettext("dashboard_availability_time_off", "That time off no longer exists"))
         {:noreply, load_periods(socket)}
     end
   end
@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     else
       Flash.error(
         dgettext(
-          "dashboard_availability",
+          "dashboard_availability_time_off",
           "You already have the maximum of %{count} time off periods",
           count: TimeOff.max_periods()
         )
@@ -147,7 +147,8 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
          {:ok, _deleted} <- TimeOff.delete(period) do
       :ok
     else
-      _other -> Flash.error(dgettext("dashboard_availability", "Could not remove your time off"))
+      _other ->
+        Flash.error(dgettext("dashboard_availability_time_off", "Could not remove your time off"))
     end
 
     {:noreply, load_periods(socket)}
@@ -156,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   defp save(socket, %{mode: :edit, id: id} = data, attrs) do
     with {:ok, period} <- TimeOff.fetch(profile_id(socket), id),
          {:ok, updated} <- TimeOff.update(period, attrs) do
-      saved(socket, updated, dgettext("dashboard_availability", "Time off updated"))
+      saved(socket, updated, dgettext("dashboard_availability_time_off", "Time off updated"))
     else
       {:error, reason} -> save_failed(socket, reason, data, attrs)
     end
@@ -165,7 +166,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   defp save(socket, data, attrs) do
     case TimeOff.create(profile_id(socket), attrs) do
       {:ok, period} ->
-        saved(socket, period, dgettext("dashboard_availability", "Time off added"))
+        saved(socket, period, dgettext("dashboard_availability_time_off", "Time off added"))
 
       {:error, reason} ->
         save_failed(socket, reason, data, attrs)
@@ -192,7 +193,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
 
     Flash.warning(
       dngettext(
-        "dashboard_availability",
+        "dashboard_availability_time_off",
         "1 booking sits inside this time off. It stays in your diary until you move or cancel it.",
         "%{count} bookings sit inside this time off. They stay in your diary until you move or cancel them.",
         count,
@@ -211,7 +212,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
       |> Map.put(:errors, form_errors(changeset))
 
     if map_size(data.errors) == 0 do
-      Flash.error(dgettext("dashboard_availability", "Could not save your time off"))
+      Flash.error(dgettext("dashboard_availability_time_off", "Could not save your time off"))
     end
 
     ModalHook.show_modal(socket, :time_off_form, data)
@@ -220,7 +221,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   defp save_failed(socket, :limit_reached, _data, _attrs) do
     Flash.error(
       dgettext(
-        "dashboard_availability",
+        "dashboard_availability_time_off",
         "You already have the maximum of %{count} time off periods",
         count: TimeOff.max_periods()
       )
@@ -230,7 +231,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   end
 
   defp save_failed(socket, :not_found, _data, _attrs) do
-    Flash.error(dgettext("dashboard_availability", "That time off no longer exists"))
+    Flash.error(dgettext("dashboard_availability_time_off", "That time off no longer exists"))
 
     socket
     |> ModalHook.hide_modal(:time_off_form)
@@ -240,9 +241,10 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   defp delete(socket, id) do
     with {:ok, period} <- TimeOff.fetch(profile_id(socket), id),
          {:ok, _deleted} <- TimeOff.delete(period) do
-      Flash.info(dgettext("dashboard_availability", "Time off removed"))
+      Flash.info(dgettext("dashboard_availability_time_off", "Time off removed"))
     else
-      _other -> Flash.error(dgettext("dashboard_availability", "Could not remove your time off"))
+      _other ->
+        Flash.error(dgettext("dashboard_availability_time_off", "Could not remove your time off"))
     end
 
     socket
@@ -333,6 +335,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
       id: nil,
       errors: %{},
       conflicts: [],
+      today: Date.to_iso8601(today),
       min_starts_on: Date.to_iso8601(today),
       min_ends_on: Date.to_iso8601(today),
       max_starts_on: last_day,
@@ -352,6 +355,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
       period: period,
       errors: %{},
       conflicts: TimeOff.conflicting_meetings(period),
+      today: Date.to_iso8601(today),
       min_starts_on: earliest_iso8601(period.starts_on, today),
       min_ends_on: earliest_iso8601(period.ends_on, today),
       max_starts_on: latest_iso8601(period.starts_on, last_end_date),
@@ -390,10 +394,10 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     <div>
       <.card
         icon="hero-sun"
-        title={dgettext("dashboard_availability", "Time Off")}
+        title={dgettext("dashboard_availability_time_off", "Time Off")}
         description={
           dgettext(
-            "dashboard_availability",
+            "dashboard_availability_time_off",
             "Days you are away. These apply to every schedule and every meeting type, and nobody booking you sees why those days are closed."
           )
         }
@@ -411,10 +415,10 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
           :if={@periods == [] and @past_periods == []}
           icon="hero-sun"
           variant={:dashed}
-          title={dgettext("dashboard_availability", "No time off booked")}
+          title={dgettext("dashboard_availability_time_off", "No time off booked")}
           description={
             dgettext(
-              "dashboard_availability",
+              "dashboard_availability_time_off",
               "Add a period and those days stop being offered, without touching your calendars."
             )
           }
@@ -425,7 +429,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
 
         <div :if={@periods != [] or @past_periods != []} data-testid="time-off-current">
           <.subsection_header
-            title={dgettext("dashboard_availability", "Current and upcoming")}
+            title={dgettext("dashboard_availability_time_off", "Current and upcoming")}
             class="mb-4"
           />
 
@@ -443,21 +447,23 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
             icon="hero-sun"
             size={:sm}
             variant={:dashed}
-            title={dgettext("dashboard_availability", "No upcoming time off")}
-            description={dgettext("dashboard_availability", "Anything you add appears here.")}
+            title={dgettext("dashboard_availability_time_off", "No upcoming time off")}
+            description={
+              dgettext("dashboard_availability_time_off", "Anything you add appears here.")
+            }
             data-testid="time-off-current-empty"
           />
         </div>
 
         <div :if={@past_periods != []} class="mt-8" data-testid="time-off-past">
-          <.subsection_header title={dgettext("dashboard_availability", "Past")} class="mb-2">
+          <.subsection_header title={dgettext("dashboard_availability_time_off", "Past")} class="mb-2">
             <:actions>
               <.pill tone={:brand} size={:sm}>{length(@past_periods)}</.pill>
             </:actions>
           </.subsection_header>
           <p class="mb-4 text-token-sm text-tymeslot-500 font-medium">
             {dgettext(
-              "dashboard_availability",
+              "dashboard_availability_time_off",
               "Time off that ended in the last %{count} days. It no longer affects your availability.",
               count: TimeOff.recent_past_days()
             )}
@@ -508,7 +514,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
       icon="hero-plus"
       data-testid="add-time-off"
     >
-      {dgettext("dashboard_availability", "Add time off")}
+      {dgettext("dashboard_availability_time_off", "Add time off")}
     </.action_button>
     """
   end
@@ -543,7 +549,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
         <.icon_button
           :if={not @past}
           icon="hero-pencil-square"
-          label={dgettext("dashboard_availability", "Edit time off")}
+          label={dgettext("dashboard_availability_time_off", "Edit time off")}
           phx-click="show_time_off_form"
           phx-value-id={@period.id}
           phx-target={@myself}
@@ -551,7 +557,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
         <.icon_button
           icon="hero-trash"
           variant={:danger}
-          label={dgettext("dashboard_availability", "Remove time off")}
+          label={dgettext("dashboard_availability_time_off", "Remove time off")}
           phx-click={
             if @past,
               do: remove_past(@period, @myself),
@@ -607,7 +613,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     do: LocalizationHelpers.format_date(same)
 
   defp dates_summary(%{starts_on: starts_on, ends_on: ends_on}) do
-    dgettext("dashboard_availability", "%{from} to %{to}",
+    dgettext("dashboard_availability_time_off", "%{from} to %{to}",
       from: LocalizationHelpers.format_date(starts_on),
       to: LocalizationHelpers.format_date(ends_on)
     )
@@ -616,14 +622,14 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   defp append_time(summary, nil, _time_format, _position), do: summary
 
   defp append_time(summary, %Time{} = time, time_format, :from) do
-    dgettext("dashboard_availability", "%{range}, from %{time}",
+    dgettext("dashboard_availability_time_off", "%{range}, from %{time}",
       range: summary,
       time: TimeFormat.format(time, time_format)
     )
   end
 
   defp append_time(summary, %Time{} = time, time_format, :until) do
-    dgettext("dashboard_availability", "%{range}, until %{time}",
+    dgettext("dashboard_availability_time_off", "%{range}, until %{time}",
       range: summary,
       time: TimeFormat.format(time, time_format)
     )

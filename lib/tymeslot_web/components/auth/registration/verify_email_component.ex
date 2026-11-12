@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
           <button
             type="button"
             phx-click="navigate_to"
-            phx-value-state="login"
+            phx-value-to="login"
             class="btn-secondary w-full py-3.5 text-base"
           >
             {dgettext("auth", "Back to Login")}

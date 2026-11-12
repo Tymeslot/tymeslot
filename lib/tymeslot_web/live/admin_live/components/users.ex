@@ -37,8 +37,8 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
   def users_tab(assigns) do
     ~H"""
     <div class="grid gap-6 sm:grid-cols-2 mb-8">
-      <.stat_card label={dgettext("dashboard_admin", "Total users")} value={@user_count} />
-      <.stat_card label={dgettext("dashboard_admin", "Admins")} value={@admin_count} />
+      <.stat_card label={dgettext("dashboard_admin_users", "Total users")} value={@user_count} />
+      <.stat_card label={dgettext("dashboard_admin_users", "Admins")} value={@admin_count} />
     </div>
 
     <.invite_form form={@invite_form} available?={@invitations_available?} />
@@ -47,11 +47,11 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       <table class="min-w-full divide-y divide-tymeslot-100">
         <thead class="bg-tymeslot-50/60">
           <tr>
-            <Shared.th>{dgettext("dashboard_admin", "Email")}</Shared.th>
-            <Shared.th>{dgettext("dashboard_admin", "Display name")}</Shared.th>
-            <Shared.th>{dgettext("dashboard_admin", "Booking slug")}</Shared.th>
-            <Shared.th>{dgettext("dashboard_admin", "Role")}</Shared.th>
-            <Shared.th class="text-right">{dgettext("dashboard_admin", "Actions")}</Shared.th>
+            <Shared.th>{dgettext("dashboard_admin_users", "Email")}</Shared.th>
+            <Shared.th>{dgettext("dashboard_admin_users", "Display name")}</Shared.th>
+            <Shared.th>{dgettext("dashboard_admin_users", "Booking slug")}</Shared.th>
+            <Shared.th>{dgettext("dashboard_admin_users", "Role")}</Shared.th>
+            <Shared.th class="text-right">{dgettext("dashboard_admin_users", "Actions")}</Shared.th>
           </tr>
         </thead>
         <tbody class="divide-y divide-tymeslot-50">
@@ -62,7 +62,7 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
                 :if={user.id == @current_user.id}
                 class="ml-2 text-xs font-bold text-tymeslot-500 uppercase tracking-wider"
               >
-                {dgettext("dashboard_admin", "(you)")}
+                {dgettext("dashboard_admin_users", "(you)")}
               </span>
             </td>
             <td class="px-6 py-4 text-sm text-tymeslot-900">
@@ -78,10 +78,10 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
                 :if={user.is_admin}
                 class="inline-flex items-center rounded-full bg-turquoise-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-turquoise-700"
               >
-                {dgettext("dashboard_admin", "Admin")}
+                {dgettext("dashboard_admin_users", "Admin")}
               </span>
               <span :if={!user.is_admin} class="text-sm text-tymeslot-500">{dgettext(
-                "dashboard_admin",
+                "dashboard_admin_users",
                 "User"
               )}</span>
               <.invitation_badge user={user} />
@@ -90,7 +90,7 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
                 class="ml-2 inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-amber-700"
                 data-testid="deletion-pending-badge"
               >
-                {dgettext("dashboard_admin", "Deletion pending")}
+                {dgettext("dashboard_admin_users", "Deletion pending")}
               </span>
             </td>
             <td class="px-6 py-4 text-right">
@@ -135,11 +135,11 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
     ~H"""
     <.card class="mb-8" data-testid="invite-user-card">
       <h2 class="text-token-lg font-black text-tymeslot-900">
-        {dgettext("dashboard_admin", "Invite a user")}
+        {dgettext("dashboard_admin_users", "Invite a user")}
       </h2>
       <p class="mt-1 mb-4 text-token-sm text-tymeslot-600">
         {dgettext(
-          "dashboard_admin",
+          "dashboard_admin_users",
           "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
         )}
       </p>
@@ -150,19 +150,20 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
         id="invite-user-form"
         phx-submit="invite_user"
         class="flex flex-col gap-3 sm:flex-row sm:items-start"
+        novalidate
       >
         <div class="flex-1">
           <.input
             field={@form[:email]}
             type="email"
-            placeholder={dgettext("dashboard_admin", "name@example.com")}
-            aria-label={dgettext("dashboard_admin", "Email address to invite")}
+            placeholder={dgettext("dashboard_admin_users", "name@example.com")}
+            aria-label={dgettext("dashboard_admin_users", "Email address to invite")}
             autocomplete="off"
             required
           />
         </div>
-        <.action_button type="submit" phx-disable-with={dgettext("dashboard_admin", "Sending…")}>
-          {dgettext("dashboard_admin", "Send invitation")}
+        <.action_button type="submit" phx-disable-with={dgettext("dashboard_admin_users", "Sending…")}>
+          {dgettext("dashboard_admin_users", "Send invitation")}
         </.action_button>
       </.form>
 
@@ -172,7 +173,7 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
         data-testid="invitations-unavailable"
       >
         {dgettext(
-          "dashboard_admin",
+          "dashboard_admin_users",
           "Invitations need a way for the invitee to sign in. Enable password authentication or a social sign-in provider on the Authentication tab to invite users."
         )}
       </p>
@@ -189,14 +190,14 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       class="ml-2 inline-flex items-center rounded-full bg-cyan-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-cyan-700"
       data-testid="invitation-pending-badge"
     >
-      {dgettext("dashboard_admin", "Invited")}
+      {dgettext("dashboard_admin_users", "Invited")}
     </span>
     <span
       :if={Invitations.expired?(@user)}
       class="ml-2 inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-amber-700"
       data-testid="invitation-expired-badge"
     >
-      {dgettext("dashboard_admin", "Invitation expired")}
+      {dgettext("dashboard_admin_users", "Invitation expired")}
     </span>
     """
   end
@@ -238,11 +239,11 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       data-testid="last-admin-self-note"
     >
       <.action_button variant={:danger_soft} size={:sm} disabled>
-        {dgettext("dashboard_admin", "Demote")}
+        {dgettext("dashboard_admin_users", "Demote")}
       </.action_button>
       <span class="text-xs text-tymeslot-500 font-medium max-w-xs text-right">
         {dgettext(
-          "dashboard_admin",
+          "dashboard_admin_users",
           "No other admin can sign in. Make sure another admin can sign in before demoting yourself."
         )}
       </span>
@@ -258,9 +259,9 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       phx-click="request_demote"
       phx-value-id={@user.id}
       phx-value-email={@user.email}
-      aria-label={dgettext("dashboard_admin", "Demote %{email} from admin", email: @user.email)}
+      aria-label={dgettext("dashboard_admin_users", "Demote %{email} from admin", email: @user.email)}
     >
-      {dgettext("dashboard_admin", "Demote")}
+      {dgettext("dashboard_admin_users", "Demote")}
     </.action_button>
 
     <.action_button
@@ -270,9 +271,9 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       phx-click="request_promote"
       phx-value-id={@user.id}
       phx-value-email={@user.email}
-      aria-label={dgettext("dashboard_admin", "Promote %{email} to admin", email: @user.email)}
+      aria-label={dgettext("dashboard_admin_users", "Promote %{email} to admin", email: @user.email)}
     >
-      {dgettext("dashboard_admin", "Promote")}
+      {dgettext("dashboard_admin_users", "Promote")}
     </.action_button>
 
     <.action_button
@@ -283,10 +284,10 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       phx-click="resend_invitation"
       phx-value-id={@user.id}
       aria-label={
-        dgettext("dashboard_admin", "Resend the invitation to %{email}", email: @user.email)
+        dgettext("dashboard_admin_users", "Resend the invitation to %{email}", email: @user.email)
       }
     >
-      {dgettext("dashboard_admin", "Resend invitation")}
+      {dgettext("dashboard_admin_users", "Resend invitation")}
     </.action_button>
 
     <.action_button
@@ -298,10 +299,10 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       phx-value-id={@user.id}
       phx-value-email={@user.email}
       aria-label={
-        dgettext("dashboard_admin", "Cancel the invitation to %{email}", email: @user.email)
+        dgettext("dashboard_admin_users", "Cancel the invitation to %{email}", email: @user.email)
       }
     >
-      {dgettext("dashboard_admin", "Cancel invitation")}
+      {dgettext("dashboard_admin_users", "Cancel invitation")}
     </.action_button>
 
     <%!-- Deleting oneself goes through account settings, with re-authentication. --%>
@@ -313,9 +314,9 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       phx-click="request_delete"
       phx-value-id={@user.id}
       phx-value-email={@user.email}
-      aria-label={dgettext("dashboard_admin", "Delete %{email}", email: @user.email)}
+      aria-label={dgettext("dashboard_admin_users", "Delete %{email}", email: @user.email)}
     >
-      {dgettext("dashboard_admin", "Delete")}
+      {dgettext("dashboard_admin_users", "Delete")}
     </.action_button>
     """
   end

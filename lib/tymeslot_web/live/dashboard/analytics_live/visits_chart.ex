@@ -96,40 +96,62 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
         </div>
 
         <div class="min-w-0 flex-1">
-          <svg
-            viewBox={"0 0 #{@width} #{@height}"}
-            preserveAspectRatio="none"
-            class="h-48 w-full"
-            role="img"
-            aria-label={dgettext("dashboard_analytics", "Daily visits over the selected date range")}
-          >
-            <title>{dgettext("dashboard_analytics", "Visits over time")}</title>
-            <desc>
-              {dgettext(
-                "dashboard_analytics",
-                "Bar chart showing daily visit counts for the selected date range."
-              )}
-            </desc>
-            <g :for={{point, idx} <- Enum.with_index(@series)}>
-              <rect
-                x={bar_x(@width, @padding, length(@series), idx)}
-                y={bar_y(@height, @padding, point.visits, @max)}
-                width={bar_width(@width, @padding, length(@series))}
-                height={bar_height(@height, @padding, point.visits, @max)}
-                class="fill-turquoise-500"
+          <div class="relative">
+            <svg
+              viewBox={"0 0 #{@width} #{@height}"}
+              preserveAspectRatio="none"
+              class="h-48 w-full"
+              role="img"
+              aria-label={
+                dgettext("dashboard_analytics", "Daily visits over the selected date range")
+              }
+            >
+              <title>{dgettext("dashboard_analytics", "Visits over time")}</title>
+              <desc>
+                {dgettext(
+                  "dashboard_analytics",
+                  "Bar chart showing daily visit counts for the selected date range."
+                )}
+              </desc>
+              <g :for={{point, idx} <- Enum.with_index(@series)}>
+                <rect
+                  x={bar_x(@width, @padding, length(@series), idx)}
+                  y={bar_y(@height, @padding, point.visits, @max)}
+                  width={bar_width(@width, @padding, length(@series))}
+                  height={bar_height(@height, @padding, point.visits, @max)}
+                  class="fill-turquoise-500"
+                />
+              </g>
+            </svg>
+
+            <%!-- One focusable column over each bar: Tab reaches the chart once,
+               the arrow keys step through the days, and the tooltip reads out
+               that day's count on hover, focus or tap. --%>
+            <div
+              id="visits-chart-readout"
+              role="group"
+              aria-label={
+                dgettext("dashboard_analytics", "Daily visits over the selected date range")
+              }
+              phx-hook="ChartReadout"
+              class="absolute inset-0 flex"
+              style={"padding: 0 #{readout_padding(@width, @padding)}%;"}
+            >
+              <.tooltip
+                :for={{point, idx} <- Enum.with_index(@series)}
+                text={day_readout(point)}
               >
-                <title>
-                  {Date.to_string(point.day)}: {dngettext(
-                    "dashboard_analytics",
-                    "%{count} visit",
-                    "%{count} visits",
-                    point.visits,
-                    count: point.visits
-                  )}
-                </title>
-              </rect>
-            </g>
-          </svg>
+                <span
+                  id={"visits-readout-#{point.day}"}
+                  role="img"
+                  tabindex={if idx == 0, do: "0", else: "-1"}
+                  aria-label={day_readout(point)}
+                  data-readout-bar
+                  class="block h-full min-w-0 flex-1 rounded-token-sm hover:bg-turquoise-500/10 focus-visible:bg-turquoise-500/10 focus-visible:outline-2 focus-visible:outline-turquoise-500"
+                />
+              </.tooltip>
+            </div>
+          </div>
 
           <%!-- x-axis: first / middle / last day of the window --%>
           <div
@@ -144,6 +166,18 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
       </div>
     </.card>
     """
+  end
+
+  # The bars are inset by `padding` on each side of the viewBox; the readout
+  # columns line up with them through the same inset, as a percentage so it
+  # scales with the responsive chart.
+  defp readout_padding(width, padding), do: Float.round(padding / width * 100, 3)
+
+  defp day_readout(point) do
+    "#{Date.to_string(point.day)}: " <>
+      dngettext("dashboard_analytics", "%{count} visit", "%{count} visits", point.visits,
+        count: point.visits
+      )
   end
 
   # Build a contiguous series covering every day from `from` to `to`,

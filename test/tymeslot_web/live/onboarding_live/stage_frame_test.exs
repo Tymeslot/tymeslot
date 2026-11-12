@@ -15,6 +15,7 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Onboarding
   alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.Utils.UrlBuilder
@@ -257,6 +258,7 @@ defmodule TymeslotWeb.OnboardingLive.StageFrameTest do
         booking_theme: "3"
       )
 
+      {:ok, _confirmed} = Onboarding.confirm_meeting_step(user)
       conn |> get(path) |> html_response(200)
     end
 

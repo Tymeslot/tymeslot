@@ -9,11 +9,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Venues
   alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
+  alias TymeslotWeb.Dashboard.CalendarGrid.WriteOutcomeMessages
   alias TymeslotWeb.Dashboard.CalendarGridComponent
 
   @spec handle_save_event(map(), Phoenix.LiveView.Socket.t()) ::
@@ -76,10 +78,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
         {:noreply, socket}
 
       :ok ->
-        with {:ok, start_date} <- Date.from_iso8601(creating.date),
+        with {:ok, creating} <- put_event_location(creating, socket),
+             {:ok, start_date} <- Date.from_iso8601(creating.date),
              {:ok, end_date} <- Date.from_iso8601(creating.end_date) do
           save_with_fitted_recurrence(creating, start_date, end_date, socket)
         else
+          {:error, :invalid_location} ->
+            send(self(), {:flash, {:error, invalid_location_message()}})
+            {:noreply, socket}
+
           {:error, _reason} ->
             send(
               self(),
@@ -90,6 +97,52 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
         end
     end
   end
+
+  # A plain event's location is the text its calendar entry carries
+  # (`creating.location`, which `EventCreation` writes to the provider): a
+  # saved venue's one-line form (`Venues.display/1`), or what was typed in.
+  # The venue is read afresh among the host's own rather than from the list
+  # the grid loaded, so one deleted while the form was open is refused
+  # rather than written as a stale name.
+  defp put_event_location(creating, socket) do
+    case location_of(creating) do
+      nil ->
+        {:ok, Map.put(creating, :location, nil)}
+
+      {:custom, place} ->
+        {:ok, Map.put(creating, :location, place)}
+
+      {:venue, venue_id} ->
+        case Venues.get_venue(socket.assigns.current_user.id, venue_id) do
+          {:ok, venue} -> {:ok, Map.put(creating, :location, Venues.display(venue))}
+          {:error, :not_found} -> {:error, :invalid_location}
+        end
+    end
+  end
+
+  # The location chosen in `LocationFields`, as `Bookings.CreateAdHoc` takes
+  # it, or nil for none. A custom place left blank is none.
+  defp location_of(creating) do
+    case creating[:location_choice] do
+      "venue:" <> id ->
+        case Integer.parse(id) do
+          {venue_id, ""} -> {:venue, venue_id}
+          _malformed -> nil
+        end
+
+      "custom" ->
+        case String.trim(creating[:location_custom] || "") do
+          "" -> nil
+          place -> {:custom, place}
+        end
+
+      _none ->
+        nil
+    end
+  end
+
+  defp invalid_location_message,
+    do: WriteOutcomeMessages.ad_hoc_failed_message(:invalid_location)
 
   # Why a meeting-mode save stopped short. A rejected reminder is already
   # worded inside the picker, so it needs no flash of its own.
@@ -175,7 +228,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       video_integration_id: creating[:video_integration_id],
       organizer_note: creating[:organizer_note],
       attendee_locale: creating[:locale],
-      reminders: reminders_of(creating)
+      reminders: reminders_of(creating),
+      location: location_of(creating)
     }
   end
 
@@ -332,6 +386,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
         etag: etag,
         summary: creating.title,
         description: description,
+        location: creating[:location],
         all_day: all_day,
         reminders: Map.get(creating, :reminders, []),
         recurrence_rule: Map.get(creating, :recurrence_rule),

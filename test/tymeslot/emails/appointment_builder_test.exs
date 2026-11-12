@@ -133,6 +133,25 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
       assert result.description == ""
     end
 
+    test "keeps a named place as the location of a meeting that also has a video room" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: 3600,
+          duration: 3600,
+          location: "Head office (Main St 1)",
+          location_kind: :in_person,
+          meeting_url: "https://meet.example.com/room123"
+        })
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.location == "Head office (Main St 1)"
+      assert result.location_type == :in_person
+      assert result.meeting_url == "https://meet.example.com/room123"
+    end
+
     test "formats location as 'Video Call' when meeting_url is present" do
       %{user: user} = create_user_with_profile()
 

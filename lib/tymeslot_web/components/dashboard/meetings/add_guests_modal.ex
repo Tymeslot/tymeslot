@@ -27,6 +27,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
   attr :show, :boolean, required: true
   attr :meeting, :map, default: nil
   attr :staged, :list, default: []
+  attr :error, :string, default: nil
+  attr :input, :string, default: "", doc: "the refused entry, kept for correcting"
   attr :existing, :list, default: []
   attr :remaining, :integer, default: 0
   attr :on_cancel, Phoenix.LiveView.JS, required: true
@@ -82,12 +84,13 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
             phx-submit="stage_guest"
             phx-target={@target}
             class="flex gap-3"
+            novalidate
           >
             <Forms.input
               type="email"
               id="stage-guest-email"
               name="email"
-              value=""
+              value={@input}
               placeholder="colleague@example.com"
               class="flex-1"
             />
@@ -95,6 +98,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
               {dgettext("dashboard_bookings", "Add")}
             </Buttons.action_button>
           </form>
+          <%!-- Outside the form, which disappears once the list is full, so a
+                refusal explaining that is still seen. --%>
+          <p :if={@error} class="form-error" role="alert">{@error}</p>
 
           <p class="text-tymeslot-500 font-medium mt-2">
             {dngettext(

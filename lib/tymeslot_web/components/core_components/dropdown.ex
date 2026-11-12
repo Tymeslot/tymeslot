@@ -117,27 +117,65 @@ defmodule TymeslotWeb.Components.CoreComponents.Dropdown do
       >
         {render_slot(@trigger)}
       </button>
-      <div
+      <.dropdown_panel
         :if={@open}
         id={"#{@id}-panel"}
-        class={
-          if @unstyled do
-            @class
-          else
-            [
-              "absolute z-[100] animate-in fade-in zoom-in duration-200",
-              position_class(@position),
-              @class
-            ]
-          end
-        }
+        position={@position}
         role={@role}
-        aria-orientation={@aria_orientation}
-        aria-label={@panel_label}
-        {@panel_attrs}
+        aria_orientation={@aria_orientation}
+        panel_label={@panel_label}
+        class={@class}
+        panel_attrs={@panel_attrs}
+        unstyled={@unstyled}
       >
         {render_slot(@panel)}
-      </div>
+      </.dropdown_panel>
+    </div>
+    """
+  end
+
+  @doc """
+  The floating panel a dropdown reveals, on its own for a control that shows
+  and places it from the browser (`<.select>`, through `floating_panel.js`).
+  See `dropdown/1` for what each attribute means.
+  """
+  attr :id, :string, required: true
+
+  attr :position, :atom,
+    default: :bottom_end,
+    values: [:bottom_end, :bottom_start, :top_end, :top_start]
+
+  attr :role, :string, required: true
+  attr :aria_orientation, :string, default: "vertical"
+  attr :panel_label, :string, default: nil
+  attr :class, :string, default: nil
+  attr :panel_attrs, :list, default: []
+  attr :unstyled, :boolean, default: false
+
+  slot :inner_block
+
+  @spec dropdown_panel(map()) :: Phoenix.LiveView.Rendered.t()
+  def dropdown_panel(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class={
+        if @unstyled do
+          @class
+        else
+          [
+            "absolute z-[100] animate-in fade-in zoom-in duration-200",
+            position_class(@position),
+            @class
+          ]
+        end
+      }
+      role={@role}
+      aria-orientation={@aria_orientation}
+      aria-label={@panel_label}
+      {@panel_attrs}
+    >
+      {render_slot(@inner_block)}
     </div>
     """
   end

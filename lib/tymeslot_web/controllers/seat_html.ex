@@ -40,7 +40,7 @@ defmodule TymeslotWeb.SeatHTML do
 
       <.meeting_card meeting={@meeting} timezone={@participant.timezone} />
 
-      <.form for={%{}} action={~p"/seat/#{@token}/cancel"} class="mt-6">
+      <.form for={%{}} action={~p"/seat/#{@token}/cancel"} class="mt-6" novalidate>
         <.action_button type="submit" variant={:danger} class="w-full">
           {dgettext("booking_manage", "Yes, cancel my spot")}
         </.action_button>

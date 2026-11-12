@@ -81,13 +81,12 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                 class="space-y-2"
               >
                 <div class="flex flex-wrap items-center gap-2">
-                  <%!-- raw-input: read-only booking link display in the row with the Copy button; <.input> cannot pass readonly --%>
-                  <input
+                  <.input
                     type="text"
                     readonly
                     aria-label={dgettext("dashboard_integrations", "Direct booking link")}
                     value={type_url(assigns, @editing_type)}
-                    class="font-mono text-token-sm flex-1 min-w-[12rem] px-4 py-2.5 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50 text-tymeslot-600 cursor-default"
+                    class="font-mono flex-1 min-w-[12rem]"
                   />
                   <.action_button
                     variant={:secondary}

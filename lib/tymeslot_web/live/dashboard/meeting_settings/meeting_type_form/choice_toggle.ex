@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ChoiceToggle do
 
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.CoreComponents.Tooltip
 
   attr :id, :string, required: true
   attr :name, :string, required: true
@@ -45,31 +46,37 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ChoiceToggle do
       </p>
       <input :if={@multiple} type="hidden" name={@name} value="" />
       <div class="inline-flex flex-wrap items-center max-w-full p-1 bg-white border-2 border-tymeslot-100 rounded-token-xl shadow-sm gap-1">
-        <label
+        <Tooltip.tooltip
+          :let={tip}
           :for={option <- @options}
-          title={option[:title]}
-          data-testid={"#{@id}-option"}
-          data-value={option.value}
-          class={[
-            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-token-lg text-token-xs font-black uppercase tracking-wider transition-all cursor-pointer",
-            "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-turquoise-400 has-[:focus-visible]:ring-offset-1",
-            if(selected?(option.value, @value, @multiple),
-              do: "bg-turquoise-700 text-white shadow-md shadow-turquoise-200/40",
-              else: "text-tymeslot-500 hover:bg-tymeslot-50 hover:text-tymeslot-900"
-            )
-          ]}
+          id={"#{@id}-#{option.value}-tip"}
+          text={option[:title]}
         >
-          <%!-- raw-input: sr-only radio or checkbox drawn by the segmented option label around it --%>
-          <input
-            type={if @multiple, do: "checkbox", else: "radio"}
-            name={@name}
-            value={option.value}
-            checked={selected?(option.value, @value, @multiple)}
-            class="sr-only"
-          />
-          <Icons.icon name={option.icon} class="w-4 h-4 shrink-0" />
-          <span>{option.label}</span>
-        </label>
+          <label
+            data-testid={"#{@id}-option"}
+            data-value={option.value}
+            class={[
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-token-lg text-token-xs font-black uppercase tracking-wider transition-all cursor-pointer",
+              "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-turquoise-400 has-[:focus-visible]:ring-offset-1",
+              if(selected?(option.value, @value, @multiple),
+                do: "bg-turquoise-700 text-white shadow-md shadow-turquoise-200/40",
+                else: "text-tymeslot-500 hover:bg-tymeslot-50 hover:text-tymeslot-900"
+              )
+            ]}
+          >
+            <%!-- raw-input: sr-only radio or checkbox drawn by the segmented option label around it --%>
+            <input
+              type={if @multiple, do: "checkbox", else: "radio"}
+              name={@name}
+              value={option.value}
+              checked={selected?(option.value, @value, @multiple)}
+              class="sr-only"
+              aria-describedby={tip}
+            />
+            <Icons.icon name={option.icon} class="w-4 h-4 shrink-0" />
+            <span>{option.label}</span>
+          </label>
+        </Tooltip.tooltip>
       </div>
       <Forms.field_error errors={@errors} id={@errors != [] && "#{@id}-error"} />
     </fieldset>

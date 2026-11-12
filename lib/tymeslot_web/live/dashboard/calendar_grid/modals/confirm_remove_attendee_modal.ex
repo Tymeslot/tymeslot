@@ -16,18 +16,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModal d
       id="confirm-remove-attendee-modal"
       show
       size={:small}
-      title={dgettext("dashboard_calendar_events", "Remove attendee")}
-      confirm_label={dgettext("dashboard_calendar_events", "Remove")}
+      title={dgettext("dashboard_calendar_modals", "Remove attendee")}
+      confirm_label={dgettext("dashboard_calendar_modals", "Remove")}
       on_cancel={JS.push("cancel_remove_attendee", target: @myself)}
       on_confirm={JS.push("confirm_remove_attendee", target: @myself)}
     >
       <p>
-        {dgettext("dashboard_calendar_events", "Remove")}
+        {dgettext("dashboard_calendar_modals", "Remove")}
         <span class="text-tymeslot-900"><%= @confirm_remove_attendee.email %></span>?
       </p>
       <p class="text-amber-600">
         {dgettext(
-          "dashboard_calendar_events",
+          "dashboard_calendar_modals",
           "This person will receive a cancellation from your calendar provider."
         )}
       </p>

@@ -57,11 +57,6 @@ msgstr "Připojit Stripe"
 msgid "Connect Stripe to start charging for meetings."
 msgstr "Připojte Stripe a začněte za schůzky vybírat platby."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
-#, elixir-autogen, elixir-format
-msgid "Connect Stripe to start charging for meetings. Money goes directly to your Stripe account."
-msgstr "Připojte Stripe a začněte za schůzky vybírat platby. Peníze jdou přímo na váš účet Stripe."
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Connected and ready"
@@ -72,11 +67,6 @@ msgstr "Připojeno a připraveno"
 #, elixir-autogen, elixir-format
 msgid "Connecting…"
 msgstr "Připojování…"
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
-#, elixir-autogen, elixir-format
-msgid "Continue onboarding"
-msgstr "Pokračovat v nastavení"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -221,11 +211,6 @@ msgstr "Částečné vrácení"
 msgid "Partially refunded"
 msgstr "Částečně vráceno"
 
-#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Payment setup is temporarily unavailable. Please try again later."
-msgstr "Nastavení plateb je dočasně nedostupné. Zkuste to prosím později."
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Pending"
@@ -368,11 +353,6 @@ msgstr[2] "Máte %{count} rezervací čekajících na platbu. Odpojením je zru�
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
-msgid "You started connecting Stripe but haven't finished onboarding yet. Continue to start accepting payments."
-msgstr "Připojení Stripe ještě není dokončené. Pokračujte a začněte přijímat platby."
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
-#, elixir-autogen, elixir-format
 msgid "Your Stripe account is disconnected. Reconnect to accept payments again."
 msgstr "Váš účet Stripe je odpojený. Připojte jej znovu a začněte opět přijímat platby."
 
@@ -489,3 +469,73 @@ msgstr "V měně vašeho účtu, %{currency}, nelze přijímat platby. Chcete-li
 #, elixir-autogen, elixir-format
 msgid "Prices can no longer be set in your Stripe account's currency, %{currency}. Bookings are still charged their current prices; choose one of the currencies below to change them."
 msgstr "V měně vašeho účtu Stripe, %{currency}, už nelze nastavovat ceny. Rezervace se stále účtují za současné ceny; chcete-li je změnit, vyberte jednu z měn níže."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "A Stripe account is already connected."
+msgstr "Účet Stripe je už připojený."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Connect your Stripe account"
+msgstr "Připojit svůj účet Stripe"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
+#, elixir-autogen, elixir-format
+msgid "Connect your Stripe account, or create one, to charge for meetings. Money goes directly to your Stripe account."
+msgstr "Chcete-li za schůzky vybírat platby, připojte svůj účet Stripe, nebo si založte nový. Peníze jdou přímo na váš účet Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Finish setup in Stripe"
+msgstr "Dokončit nastavení ve Stripe"
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe connected."
+msgstr "Stripe byl připojen."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe connection cancelled."
+msgstr "Připojení Stripe bylo zrušeno."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe could not complete the connection. Please try again."
+msgstr "Připojení se ve Stripe nepodařilo dokončit. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe payments are not fully set up on this server. Please contact the administrator."
+msgstr "Platby přes Stripe nejsou na tomto serveru plně nastavené. Obraťte se prosím na správce."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "That Stripe account is already connected to another Tymeslot account."
+msgstr "Tento účet Stripe je už připojený k jinému účtu Tymeslot."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "That Stripe account uses a currency Tymeslot doesn't support for payments yet."
+msgstr "Tento účet Stripe používá měnu, kterou Tymeslot pro platby zatím nepodporuje."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "That Stripe connection link is no longer valid. Please try again."
+msgstr "Tento odkaz pro připojení Stripe už není platný. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many requests. Please try again later."
+msgstr "Příliš mnoho požadavků. Zkuste to prosím později."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
+msgstr "Váš účet Stripe je připojený, ale Stripe ještě potřebuje některé údaje, než bude moci přijímat platby. Dokončete nastavení ve Stripe a poté tuto stránku obnovte."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is not connected yet. Connect it to start accepting payments."
+msgstr "Váš účet Stripe ještě není připojený. Připojte jej a začněte přijímat platby."

@@ -65,9 +65,11 @@ defmodule TymeslotWeb.Dashboard.PollDraftsTest do
   end
 
   defp submit(view, params, intent) do
+    {pickers, fields} = Map.split(params["poll"], ~w(slots deadline))
+
     view
-    |> form("form[phx-submit='create_poll']", params)
-    |> render_submit(%{"intent" => intent})
+    |> form("form[phx-submit='create_poll']", %{"poll" => fields})
+    |> render_submit(%{"intent" => intent, "poll" => pickers})
   end
 
   test "Save draft keeps the poll without inviting anyone, and lists it without a link", %{
@@ -262,7 +264,12 @@ defmodule TymeslotWeb.Dashboard.PollDraftsTest do
     view |> element("button", "Add time") |> render_click()
 
     params = form_params(date, %{"slots" => %{"0" => "#{date}T09:00", "1" => "#{date}T14:00"}})
-    view |> form("form[phx-submit='create_poll']", params) |> render_change()
+    {pickers, fields} = Map.split(params["poll"], ~w(slots deadline))
+
+    view
+    |> form("form[phx-submit='create_poll']", %{"poll" => fields})
+    |> render_change(%{"poll" => pickers})
+
     render_async(view)
 
     assert has_element?(view, "[data-testid='poll-slot-conflict-warning'][data-slot-key='0']")

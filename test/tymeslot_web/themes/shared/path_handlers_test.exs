@@ -577,6 +577,20 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
     }
   end
 
+  describe "query_params/1" do
+    test "keeps the page's query but drops the route's segments and an entry refusal" do
+      params = %{
+        "username" => "host",
+        "slug" => "chat",
+        "embed" => "1",
+        "timezone" => "Etc/UTC",
+        "refused" => "invalid-type"
+      }
+
+      assert PathHandlers.query_params(params) == %{"embed" => "1", "timezone" => "Etc/UTC"}
+    end
+  end
+
   describe "a demo page's chosen theme" do
     test "rides along a locale switch when it is not the organiser's own" do
       assert PathHandlers.build_path_with_locale(demo_socket(%{theme_id: "3"}), "de") ==

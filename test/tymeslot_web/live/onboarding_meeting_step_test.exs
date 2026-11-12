@@ -239,11 +239,13 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
     view = open_step(conn, user)
     view |> element("#meeting-hours-preset-custom") |> render_click()
 
-    [monday] = view |> render() |> Floki.parse_document!() |> Floki.find("#meeting-day-1")
+    doc = view |> render() |> Floki.parse_document!()
+    [monday] = Floki.find(doc, "#meeting-day-1")
+    [anchor] = Floki.find(doc, "[data-tooltip]:has(#meeting-day-1)")
 
     assert Floki.attribute(monday, "aria-label") == []
     assert monday |> Floki.text() |> String.trim() == "Mon"
-    assert Floki.attribute(monday, "title") == ["Monday"]
+    assert anchor |> Floki.find("[role='tooltip']") |> Floki.text() |> String.trim() == "Monday"
   end
 
   test "custom hours with no days are refused", %{conn: conn} do
@@ -481,6 +483,21 @@ defmodule TymeslotWeb.OnboardingLive.MeetingStepTest do
 
     assert [%{name: "Strategy session"}] = meeting_types(user)
     assert has_element?(view, "#onboarding-step-heading-choose_theme")
+  end
+
+  test "a Continue the account cannot record stays on the step with a flash, not a field error",
+       %{conn: conn} do
+    %{user: user} = new_host()
+    view = open_step(conn, user)
+
+    # The account is gone by the time the stamp is written.
+    Repo.delete!(user)
+    view |> element("button[phx-click='next_step']") |> render_click()
+
+    assert has_element?(view, "#onboarding-step-heading-meeting")
+    refute has_element?(view, "#onboarding-step-heading-choose_theme")
+    assert render(view) =~ "Your meeting couldn&#39;t be saved. Please try again."
+    refute has_element?(view, "#meeting-location-error")
   end
 
   describe "malformed events" do

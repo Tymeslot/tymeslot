@@ -16,7 +16,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
 
   defp insert_active_account(stripe_account_id) do
     user = insert(:user)
-    {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+    {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id)
 
     {:ok, account} =
       ConnectAccountQueries.update(account, %{
@@ -107,7 +107,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
       account_created = 1_600_000_000
 
       user = insert(:user)
-      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id)
 
       {:ok, _account} =
         ConnectAccountQueries.update(account, %{

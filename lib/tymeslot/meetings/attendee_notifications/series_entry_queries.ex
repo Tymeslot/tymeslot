@@ -24,13 +24,19 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryQueries do
   recorded only ever rises: the guests who already hold the entry keep the
   highest revision they were sent, whatever a later email to a newcomer
   went out at.
+
+  The entries are written in UID order, whatever order they come in, so
+  that two writes to one series lock its rows in the same order and cannot
+  deadlock each other.
   """
   @spec put_all(integer(), String.t(), [map()]) :: :ok
   def put_all(_integration_id, _address, []), do: :ok
 
   def put_all(integration_id, address, attrs) do
     Repo.transaction(fn ->
-      Enum.each(attrs, fn entry ->
+      attrs
+      |> Enum.sort_by(& &1.entry_uid)
+      |> Enum.each(fn entry ->
         %SeriesEntrySchema{}
         |> SeriesEntrySchema.changeset(
           Map.merge(entry, %{calendar_integration_id: integration_id, series_address: address})
