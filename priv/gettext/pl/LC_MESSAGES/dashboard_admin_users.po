@@ -1,0 +1,401 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pl\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "(you)"
+msgstr "(ty)"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "A new invitation is on its way to %{email}."
+msgstr "Nowe zaproszenie jest w drodze na adres %{email}."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Actions"
+msgstr "Akcje"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Admin"
+msgstr "Administrator"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Admin UI is disabled."
+msgstr "Panel administracyjny jest wyłączony."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Admin access required."
+msgstr "Wymagane uprawnienia administratora."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Admins"
+msgstr "Administratorzy"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "An account with this email address already exists."
+msgstr "Konto z tym adresem e-mail już istnieje."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Booking slug"
+msgstr "Adres rezerwacji"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel invitation"
+msgstr "Anuluj zaproszenie"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel the invitation to %{email}"
+msgstr "Anuluj zaproszenie wysłane na adres %{email}"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel the invitation to %{email}?"
+msgstr "Anulować zaproszenie wysłane na adres %{email}?"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling..."
+msgstr "Anulowanie…"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot delete this admin: no other admin can sign in. Make sure another admin can sign in first."
+msgstr "Nie można usunąć tego administratora: żaden inny administrator nie może się zalogować. Najpierw upewnij się, że inny administrator może się zalogować."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Cannot demote this admin: no other admin can sign in. Make sure another admin can sign in first."
+msgstr "Nie można odebrać uprawnień temu administratorowi: żaden inny administrator nie może się zalogować. Najpierw upewnij się, że inny administrator może się zalogować."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not cancel the invitation. Please try again."
+msgstr "Nie udało się anulować zaproszenia. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not delete user."
+msgstr "Nie udało się usunąć użytkownika."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not demote user."
+msgstr "Nie udało się odebrać uprawnień użytkownikowi."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not promote user."
+msgstr "Nie udało się nadać uprawnień użytkownikowi."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Could not send the invitation. Please try again."
+msgstr "Nie udało się wysłać zaproszenia. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Usuń"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{email}"
+msgstr "Usuń konto %{email}"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{email} and all their data now?"
+msgstr "Usunąć teraz konto %{email} i wszystkie jego dane?"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete user"
+msgstr "Usuń użytkownika"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting %{email}. The account leaves this list once the deletion has run."
+msgstr "Usuwanie konta %{email}. Konto zniknie z tej listy po zakończeniu usuwania."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting..."
+msgstr "Usuwanie…"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Deletion pending"
+msgstr "Oczekuje na usunięcie"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Demote"
+msgstr "Odbierz uprawnienia"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Demote %{email} from admin"
+msgstr "Odbierz uprawnienia administratora użytkownikowi %{email}"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Demote %{email} from admin?"
+msgstr "Odebrać uprawnienia administratora użytkownikowi %{email}?"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Demote admin"
+msgstr "Odbierz uprawnienia administratora"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Demote me"
+msgstr "Odbierz mi uprawnienia"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Demote yourself"
+msgstr "Odbierz sobie uprawnienia"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Demote yourself from admin?"
+msgstr "Odebrać sobie uprawnienia administratora?"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Demoting..."
+msgstr "Odbieranie uprawnień…"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Display name"
+msgstr "Nazwa wyświetlana"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr "E-mail"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Email address to invite"
+msgstr "Adres e-mail osoby do zaproszenia"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a valid email address."
+msgstr "Podaj prawidłowy adres e-mail."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid request."
+msgstr "Nieprawidłowe żądanie."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid user id."
+msgstr "Nieprawidłowy identyfikator użytkownika."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation expired"
+msgstr "Zaproszenie wygasło"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation sent to %{email}."
+msgstr "Zaproszenie zostało wysłane na adres %{email}."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need a way for the invitee to sign in. Enable password authentication or a social sign-in provider on the Authentication tab to invite users."
+msgstr "Zaproszenia wymagają, aby zaproszona osoba mogła się zalogować. Aby zapraszać użytkowników, włącz uwierzytelnianie hasłem lub dostawcę logowania społecznościowego na karcie Uwierzytelnianie."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Invitations need a way to sign in. Enable password authentication or a social sign-in provider first."
+msgstr "Zaproszenia wymagają metody logowania. Najpierw włącz uwierzytelnianie hasłem lub dostawcę logowania społecznościowego."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invite a user"
+msgstr "Zaproś użytkownika"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Invited"
+msgstr "Zaproszono"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep invitation"
+msgstr "Zachowaj zaproszenie"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "No other admin can sign in. Make sure another admin can sign in before demoting yourself."
+msgstr "Żaden inny administrator nie może się zalogować. Zanim odbierzesz sobie uprawnienia, upewnij się, że inny administrator może się zalogować."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Promote"
+msgstr "Nadaj uprawnienia"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Promote %{email} to admin"
+msgstr "Nadaj uprawnienia administratora użytkownikowi %{email}"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Promote %{email} to admin?"
+msgstr "Nadać uprawnienia administratora użytkownikowi %{email}?"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Promote user to admin"
+msgstr "Nadaj użytkownikowi uprawnienia administratora"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Promoting..."
+msgstr "Nadawanie uprawnień…"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Resend invitation"
+msgstr "Wyślij zaproszenie ponownie"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Resend the invitation to %{email}"
+msgstr "Wyślij zaproszenie ponownie na adres %{email}"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Role"
+msgstr "Rola"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitation"
+msgstr "Wyślij zaproszenie"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Sending…"
+msgstr "Wysyłanie…"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "The account was created, but the invitation email could not be sent. Use Resend invitation to try again."
+msgstr "Konto zostało utworzone, ale nie udało się wysłać e-maila z zaproszeniem. Użyj opcji Wyślij zaproszenie ponownie, aby spróbować jeszcze raz."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The invitation link stops working and the invited account is removed. You can invite this address again later."
+msgstr "Link z zaproszenia przestanie działać, a zaproszone konto zostanie usunięte. Później możesz ponownie zaprosić ten adres."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "The invitation to %{email} is cancelled."
+msgstr "Zaproszenie wysłane na adres %{email} zostało anulowane."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "They will gain access to admin settings and user management."
+msgstr "Uzyska dostęp do ustawień administracyjnych i zarządzania użytkownikami."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "They will lose access to admin settings and user management."
+msgstr "Straci dostęp do ustawień administracyjnych i zarządzania użytkownikami."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This cannot be undone. Their bookings are deleted and their guests are not notified; existing calendar events and video links stay as they are."
+msgstr "Tej operacji nie można cofnąć. Rezerwacje tej osoby zostaną usunięte, a jej goście nie zostaną powiadomieni; istniejące wydarzenia w kalendarzu i linki do spotkań wideo pozostaną bez zmian."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "This user has no pending invitation."
+msgstr "Ten użytkownik nie ma oczekującego zaproszenia."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "Total users"
+msgstr "Łącznie użytkowników"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "User"
+msgstr "Użytkownik"
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "User demoted from admin."
+msgstr "Odebrano użytkownikowi uprawnienia administratora."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "User not found."
+msgstr "Nie znaleziono użytkownika."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "User promoted to admin."
+msgstr "Nadano użytkownikowi uprawnienia administratora."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
+msgstr "Utworzymy konto i wyślemy e-mailem link do wyboru sposobu logowania. Rejestracja publiczna może pozostać zamknięta."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "You cannot delete your own account here. Use your account settings instead."
+msgstr "Nie możesz tutaj usunąć własnego konta. Skorzystaj z ustawień konta."
+
+#: lib/tymeslot_web/live/admin_live/user_actions.ex
+#, elixir-autogen, elixir-format
+msgid "You have been demoted from admin."
+msgstr "Odebrano ci uprawnienia administratora."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "You will lose access to admin settings and user management, and be returned to your dashboard."
+msgstr "Stracisz dostęp do ustawień administracyjnych i zarządzania użytkownikami, a następnie wrócisz do panelu."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex
+#, elixir-autogen, elixir-format
+msgid "name@example.com"
+msgstr "name@example.com"
