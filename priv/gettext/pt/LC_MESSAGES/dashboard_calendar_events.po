@@ -11,86 +11,6 @@ msgstr ""
 "Language: pt\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} attendee hasn't been invited yet. Discard?"
-msgid_plural "%{count} attendees haven't been invited yet. Discard?"
-msgstr[0] "O convite ainda não foi enviado a %{count} participante. Descartar?"
-msgstr[1] "O convite ainda não foi enviado a %{count} participantes. Descartar?"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} hour before"
-msgid_plural "%{count} hours before"
-msgstr[0] "%{count} hora antes"
-msgstr[1] "%{count} horas antes"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "%{count} minute before"
-msgid_plural "%{count} minutes before"
-msgstr[0] "%{count} minuto antes"
-msgstr[1] "%{count} minutos antes"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "%{method} %{minutes}"
-msgstr "%{method} %{minutes}"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "(No title)"
-msgstr "(Sem título)"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/attendee_editor.ex
-#, elixir-autogen, elixir-format
-msgid "+%{count} more"
-msgid_plural "+%{count} more"
-msgstr[0] "Mais %{count}"
-msgstr[1] "Mais %{count}"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "1 day before"
-msgstr "1 dia antes"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "1 hour before"
-msgstr "1 hora antes"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/attendee_editor.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Add"
-msgstr "Adicionar"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Add description"
-msgstr "Adicionar descrição"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Add location"
-msgstr "Adicionar local"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Add reminder"
-msgstr "Adicionar lembrete"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Add title"
-msgstr "Adicionar título"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "All day"
-msgstr "Dia todo"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee added and invited."
@@ -101,22 +21,11 @@ msgstr "Participante adicionado e convidado."
 msgid "Attendee removed and notified."
 msgstr "Participante removido e avisado."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Attendees will be notified of pending changes."
-msgstr "Os participantes vão ser avisados das mudanças pendentes."
-
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex
 #, elixir-autogen, elixir-format
 msgid "Calendars refreshed"
 msgstr "Calendários atualizados"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr "Cancelar"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
@@ -132,71 +41,10 @@ msgstr "Alterações salvas."
 msgid "Changes saved. Attendees will be notified shortly."
 msgstr "Alterações salvas. Os participantes vão ser avisados em breve."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Close modal"
-msgstr "Fechar janela"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Colour"
-msgstr "Cor"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
 #, elixir-autogen, elixir-format
 msgid "Could not schedule notification. Changes were saved."
 msgstr "Não foi possível agendar a notificação. As alterações foram salvas."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Create"
-msgstr "Criar"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Created by Tymeslot"
-msgstr "Criado pelo Tymeslot"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Creating..."
-msgstr "Criando…"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex
-#, elixir-autogen, elixir-format
-msgid "Default calendar"
-msgstr "Calendário padrão"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete"
-msgstr "Excluir"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete event"
-msgstr "Excluir evento"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Deleting..."
-msgstr "Excluindo…"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Discard"
-msgstr "Descartar"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/attendee_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Each person will receive an invitation from your calendar provider."
-msgstr "Cada pessoa vai receber um convite do seu provedor de calendário."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Email"
-msgstr "E-mail"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
@@ -238,11 +86,6 @@ msgstr "Evento excluído."
 msgid "Event deleted. Attendees have been notified."
 msgstr "Evento excluído. Os participantes foram avisados."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Event details"
-msgstr "Detalhes do evento"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to create event"
@@ -258,11 +101,6 @@ msgstr "Não foi possível excluir o evento"
 #, elixir-autogen, elixir-format
 msgid "Failed to save preference"
 msgstr "Não foi possível salvar a preferência"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Go back"
-msgstr "Voltar"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #, elixir-autogen, elixir-format
@@ -290,35 +128,10 @@ msgstr "Data inválida"
 msgid "Invalid time"
 msgstr "Horário inválido"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Invitations will be sent when you create the event."
-msgstr "Os convites vão ser enviados quando você criar o evento."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Invite attendees (optional)"
-msgstr "Convidar participantes (opcional)"
-
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting created and invitation sent"
 msgstr "Reunião criada e convite enviado"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "New Event"
-msgstr "Novo evento"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex
-#, elixir-autogen, elixir-format
-msgid "Next month"
-msgstr "Próximo mês"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "No"
-msgstr "Não"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex
 #, elixir-autogen, elixir-format
@@ -330,37 +143,10 @@ msgstr "Nenhum calendário para sincronizar"
 msgid "None"
 msgstr "Nenhum"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Notification"
-msgstr "Notificação"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Notify %{count} attendee of this change?"
-msgid_plural "Notify %{count} attendees of this change?"
-msgstr[0] "Avisar %{count} participante desta mudança?"
-msgstr[1] "Avisar %{count} participantes desta mudança?"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
 #, elixir-autogen, elixir-format
 msgid "Pending notification cancelled."
 msgstr "Notificação pendente cancelada."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex
-#, elixir-autogen, elixir-format
-msgid "Pick a date"
-msgstr "Escolha uma data"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex
-#, elixir-autogen, elixir-format
-msgid "Previous month"
-msgstr "Mês anterior"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex
-#, elixir-autogen, elixir-format
-msgid "Primary"
-msgstr "Principal"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex
 #, elixir-autogen, elixir-format
@@ -369,73 +155,15 @@ msgid_plural "Refresh failed for %{count} integrations"
 msgstr[0] "A atualização falhou em %{count} integração"
 msgstr[1] "A atualização falhou em %{count} integrações"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders"
-msgstr "Lembretes"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders are synced to your calendar so it can alert you on your own devices."
-msgstr "Os lembretes são sincronizados com seu calendário para ele avisar você nos seus próprios dispositivos."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Remove"
-msgstr "Remover"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/attendee_editor.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Remove %{email}"
-msgstr "Remover %{email}"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Remove attendee"
-msgstr "Remover participante"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Remove reminder %{label}"
-msgstr "Remover o lembrete %{label}"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Send cancellation to %{count} attendee?"
-msgid_plural "Send cancellation to %{count} attendees?"
-msgstr[0] "Enviar o cancelamento para %{count} participante?"
-msgstr[1] "Enviar o cancelamento para %{count} participantes?"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
 msgid "The recurrence end date must be on or after the event start."
 msgstr "A data de término da recorrência precisa ser igual ou posterior à data de início do evento."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This event is linked to a booking. The attendee will be notified of the cancellation."
-msgstr "Este evento está vinculado a um agendamento. O participante vai ser avisado do cancelamento."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This person will receive a cancellation from your calendar provider."
-msgstr "Esta pessoa vai receber um cancelamento do seu provedor de calendário."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This will also remove it from your calendar provider."
-msgstr "Isso também remove o evento do seu provedor de calendário."
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #, elixir-autogen, elixir-format
 msgid "Time editing is not available for all-day events."
 msgstr "Não é possível editar o horário de eventos de dia todo."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Title"
-msgstr "Título"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
@@ -453,37 +181,6 @@ msgstr "Muitos movimentos. Aguarde um momento."
 msgid "Too many refreshes. Please wait a moment."
 msgstr "Muitas atualizações. Aguarde um momento."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Unsent invitations"
-msgstr "Convites não enviados"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Video"
-msgstr "Vídeo"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex
-#, elixir-autogen, elixir-format
-msgid "W%{week}"
-msgstr "S%{week}"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex
-#, elixir-autogen, elixir-format
-msgid "Wk"
-msgstr "Sem."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Yes, notify"
-msgstr "Sim, avisar"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Yes, send"
-msgstr "Sim, enviar"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to delete this event"
@@ -498,11 +195,6 @@ msgstr "Você não tem permissão para alterar este evento"
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to move this event"
 msgstr "Você não tem permissão para mover este evento"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Are you sure you want to delete %{title}?"
-msgstr "Tem certeza de que quer excluir %{title}?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
@@ -534,31 +226,6 @@ msgstr "Seu calendário precisa ser reconectado. Reconecte pela página de Integ
 msgid "A valid guest email is required"
 msgstr "É preciso um e-mail de convidado válido"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Ada Lovelace"
-msgstr "Ada Lovelace"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Books the slot, emails the guest an invitation, and adds it to your calendar."
-msgstr "Reserva o horário, envia um convite por e-mail para o convidado e adiciona a reunião ao seu calendário."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Event"
-msgstr "Evento"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Guest email"
-msgstr "E-mail do convidado"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Guest name"
-msgstr "Nome do convidado"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Guest name is required"
@@ -569,31 +236,11 @@ msgstr "O nome do convidado é obrigatório"
 msgid "Meeting with %{name}"
 msgstr "Reunião com %{name}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting with a guest"
-msgstr "Reunião com um convidado"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "New Meeting"
-msgstr "Nova reunião"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "What to create"
-msgstr "O que criar"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "You cannot add yourself as a guest. Use a different email address."
 msgstr "Você não pode se adicionar como convidado. Use outro endereço de e-mail."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
-#, elixir-autogen, elixir-format
-msgid "before the event"
-msgstr "antes do evento"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex
 #, elixir-autogen, elixir-format
@@ -659,31 +306,6 @@ msgstr "Este evento é um agendamento, então o link de vídeo pertence ao agend
 #, elixir-autogen, elixir-format
 msgid "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
 msgstr "O Google Calendar adicionou o Google Meet ao evento, mas ainda não devolveu o link. Escolha o Google Meet de novo para buscá-lo."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
-#, elixir-autogen, elixir-format
-msgid "%{title} is part of a repeating series. Do you want to delete only this event, or every event in the series?"
-msgstr "%{title} faz parte de uma série que se repete. Você quer excluir só este evento ou todos os eventos da série?"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete all events"
-msgstr "Excluir todos os eventos"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete recurring event"
-msgstr "Excluir evento recorrente"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete this event"
-msgstr "Excluir este evento"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Deleted events are also removed from your calendar provider."
-msgstr "Os eventos excluídos também são removidos do seu provedor de calendário."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
 #, elixir-autogen, elixir-format
@@ -778,21 +400,6 @@ msgstr "Os eventos da série que foram alterados ou cancelados individualmente v
 msgid "Guests are sent a cancellation for the original series and an invitation to the moved one."
 msgstr "Os convidados recebem um cancelamento da série original e um convite para a série movida."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Move every event in this series to %{calendar}?"
-msgstr "Mover todos os eventos desta série para %{calendar}?"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Move recurring event"
-msgstr "Mover evento recorrente"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Move series"
-msgstr "Mover série"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/series_move.ex
 #, elixir-autogen, elixir-format
 msgid "Moving the series to %{calendar}..."
@@ -850,51 +457,7 @@ msgstr "A exclusão falhou; nova tentativa na próxima sincronização. Os parti
 msgid "Event deleted, but the attendees could not be notified."
 msgstr "Evento excluído, mas não foi possível avisar os participantes."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Add a note"
-msgstr "Adicionar uma nota"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "An agenda, or anything to bring or prepare"
-msgstr "Uma pauta, ou algo para trazer ou preparar"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Included in the invitation and on the calendar entry."
-msgstr "Incluída no convite e no evento do calendário."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Note to the guest"
-msgstr "Nota para o convidado"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Remove note"
-msgstr "Remover nota"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Each one is invited by email and can accept or decline."
-msgstr "Cada pessoa recebe um convite por e-mail e pode aceitar ou recusar."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Language of the invitation"
-msgstr "Idioma do convite"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "More guests (optional)"
-msgstr "Mais convidados (opcional)"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
-msgstr "O idioma de todos os e-mails sobre esta reunião, para o convidado e para qualquer outra pessoa convidada."
-
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} is already invited."
@@ -905,6 +468,7 @@ msgstr "%{email} já está na lista de convidados."
 msgid "%{email} is already the main guest."
 msgstr "%{email} já é o convidado principal."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} is not a valid email address."
@@ -921,13 +485,6 @@ msgstr "Não é possível adicionar mais convidados a esta reunião."
 msgid "Too many new meetings. Please wait a moment."
 msgstr "Muitas reuniões novas. Aguarde um momento."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it."
-msgid_plural "Add up to %{count} reminder emails for this meeting. The guest and anyone else invited receive it."
-msgstr[0] "Adicione até %{count} e-mail de lembrete para esta reunião. Ele é enviado ao convidado e a todas as outras pessoas convidadas."
-msgstr[1] "Adicione até %{count} e-mails de lembrete para esta reunião. Eles são enviados ao convidado e a todas as outras pessoas convidadas."
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "Someone else organises this meeting, so Tymeslot can't move or split a series you were only invited to."
@@ -937,16 +494,6 @@ msgstr "Outra pessoa organiza esta reunião, então o Tymeslot não pode mover n
 #, elixir-autogen, elixir-format
 msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
 msgstr "Este é um agendamento em grupo. Para movê-lo, cancelá-lo ou mudar quem participa, use a própria reunião."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Notify attendees"
-msgstr "Avisar os participantes"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Send cancellation"
-msgstr "Enviar cancelamento"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
@@ -1004,44 +551,12 @@ msgstr "Participante adicionado. O convite será enviado assim que a alteração
 msgid "Attendee removed. They will be notified once the change has synced to your calendar."
 msgstr "Participante removido. O aviso será enviado assim que a alteração for sincronizada com seu calendário."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Dismiss"
-msgstr "Dispensar"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
-#, elixir-autogen, elixir-format
-msgid "The latest update could not be emailed to this guest. Let them know another way."
-msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
-msgstr[0] "Não foi possível enviar por e-mail a última alteração a este convidado. Avise-o de outra forma."
-msgstr[1] "Não foi possível enviar por e-mail a última alteração a estes convidados. Avise-os de outra forma."
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Add a title. A meeting without a main participant is known by its title."
 msgstr "Adicione um título. Uma reunião sem participante principal é reconhecida pelo título."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Everyone is an equal guest who can accept or decline. Only you can move or cancel the meeting."
-msgstr "Todos são convidados em pé de igualdade e podem aceitar ou recusar. Só você pode remarcar ou cancelar a reunião."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Guests"
-msgstr "Convidados"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Invite at least one guest."
 msgstr "Convide pelo menos uma pessoa."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Main participant"
-msgstr "Participante principal"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#, elixir-autogen, elixir-format
-msgid "The main participant can move or cancel the meeting. Turn this off to invite everyone as an equal guest."
-msgstr "O participante principal pode remarcar ou cancelar a reunião. Desative para convidar todos como convidados em pé de igualdade."

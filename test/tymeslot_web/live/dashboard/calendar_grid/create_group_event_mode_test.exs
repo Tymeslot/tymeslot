@@ -62,7 +62,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
 
   defp fill_in(lv, title, fields) do
     lv |> element("#create-event-title") |> render_blur(%{"value" => title})
-    lv |> form("#create-group-event-form", group_event: fields) |> render_change()
+    {select, fields} = Map.split(Map.new(fields), [:location, "location", "closes_at"])
+
+    lv
+    |> form("#create-group-event-form", group_event: fields)
+    |> render_change(group_event: select)
   end
 
   defp save(lv) do

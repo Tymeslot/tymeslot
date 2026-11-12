@@ -50,6 +50,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
 
         socket
         |> assign(:cancel_booking_payment, booking_payment)
+        |> assign(:cancel_refund_error, %{})
+        |> assign(:cancel_refund_form, blank_refund_form())
         |> ModalHook.show_modal(:cancel_meeting, meeting)
 
       {:error, :validation_failed, reason} ->
@@ -85,16 +87,21 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
           Phoenix.LiveView.Socket.t()
   def confirm(socket, meeting, params, reload) when is_function(reload, 1) do
     booking_payment = socket.assigns.cancel_booking_payment
+    # Kept whatever the outcome: the choice lives in the browser until submit,
+    # and a re-render without it would snap the radio back to a full refund.
+    socket = assign(socket, :cancel_refund_form, refund_form(params))
 
     case Meetings.resolve_cancellation_refund(booking_payment, params) do
       {:ok, refund_action} ->
         socket
         |> assign(:cancelling_meeting, meeting.id)
+        |> assign(:cancel_refund_error, %{})
         |> run_cancellation(meeting, refund_action, reload)
 
       {:error, reason} ->
-        Flash.error(refund_error_message(reason))
-        socket
+        assign(socket, :cancel_refund_error, %{
+          refund_error_field(reason) => refund_error_message(reason)
+        })
     end
   end
 
@@ -207,6 +214,22 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   end
 
   # The message shown when the refund the host asked for cannot be made.
+  defp refund_form(params) do
+    choice = params["cancel_refund_choice"]
+    amount = params["cancel_refund_amount"]
+
+    %{
+      choice: if(choice in ["partial", "none"], do: choice, else: "full"),
+      amount: if(is_binary(amount), do: amount, else: ""),
+      acknowledged: params["cancel_refund_no_refund_ack"] == "true"
+    }
+  end
+
+  defp blank_refund_form, do: %{choice: "full", amount: "", acknowledged: false}
+
+  defp refund_error_field(:acknowledgement_required), do: :acknowledgement
+  defp refund_error_field(_reason), do: :amount
+
   defp refund_error_message(:acknowledgement_required),
     do:
       dgettext(

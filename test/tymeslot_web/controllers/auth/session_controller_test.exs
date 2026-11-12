@@ -117,6 +117,20 @@ defmodule TymeslotWeb.SessionControllerTest do
       refute get_session(conn, :user_token)
     end
 
+    test "a null byte in the email answers as a failed login, not a server error", %{
+      conn: conn
+    } do
+      conn =
+        post(conn, ~p"/auth/session", %{
+          "email" => "nobody\x00@example.com",
+          "password" => "WrongPassword123!"
+        })
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Invalid email or password"
+      refute get_session(conn, :user_token)
+    end
+
     test "an unverified account with its password looks like a failed login",
          %{conn: conn, password: password} do
       user =

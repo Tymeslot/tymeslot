@@ -134,8 +134,8 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   end
 
   def handle_event("save_schedule", %{"name" => name}, socket) do
-    ModalHook.with_modal_data(socket, :schedule_form, fn %{mode: mode} ->
-      save_schedule(socket, mode, String.trim(name))
+    ModalHook.with_modal_data(socket, :schedule_form, fn %{mode: mode} = data ->
+      save_schedule(socket, mode, data, String.trim(name))
     end)
   end
 
@@ -282,19 +282,18 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     end
   end
 
-  defp save_schedule(socket, :create, name) do
+  defp save_schedule(socket, :create, data, name) do
     case Schedules.create(socket.assigns.profile.id, %{name: name}) do
       {:ok, schedule} ->
         Flash.info(dgettext("dashboard_availability", "Schedule created"))
         {:noreply, select_and_reload(socket, schedule.id)}
 
       {:error, reason} ->
-        Flash.error(failure_message(reason))
-        {:noreply, socket}
+        {:noreply, show_schedule_error(socket, data, name, reason)}
     end
   end
 
-  defp save_schedule(socket, :rename, name) do
+  defp save_schedule(socket, :rename, data, name) do
     with_selected(socket, fn schedule ->
       case Schedules.rename(schedule, name) do
         {:ok, renamed} ->
@@ -302,10 +301,18 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
           {:noreply, select_and_reload(socket, renamed.id)}
 
         {:error, reason} ->
-          Flash.error(failure_message(reason))
-          {:noreply, socket}
+          {:noreply, show_schedule_error(socket, data, name, reason)}
       end
     end)
+  end
+
+  # Re-renders the open form with the typed name and the reason it was refused.
+  defp show_schedule_error(socket, data, name, reason) do
+    ModalHook.show_modal(
+      socket,
+      :schedule_form,
+      data |> Map.put(:name, name) |> Map.put(:error, failure_message(reason))
+    )
   end
 
   defp delete_schedule(socket, schedule) do

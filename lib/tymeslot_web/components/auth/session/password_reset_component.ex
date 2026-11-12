@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
         <.auth_footer
           prompt={dgettext("auth", "Remember your password?")}
           phx-click="navigate_to"
-          phx-value-state="login"
+          phx-value-to="login"
           link_text={dgettext("auth", "Log in")}
         />
       </:footer>
@@ -249,7 +249,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
         <div class="mt-6">
           <.auth_button
             phx-click="navigate_to"
-            phx-value-state="login"
+            phx-value-to="login"
           >
             {dgettext("auth", "Log In")}
           </.auth_button>
@@ -287,14 +287,14 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
         <div class="space-y-4">
           <.auth_button
             phx-click="navigate_to"
-            phx-value-state="reset_password"
+            phx-value-to="reset_password"
           >
             {dgettext("auth", "Request New Link")}
           </.auth_button>
           <button
             type="button"
             phx-click="navigate_to"
-            phx-value-state="login"
+            phx-value-to="login"
             class="btn-secondary w-full py-3.5"
           >
             {dgettext("auth", "Back to Login")}

@@ -111,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       open_telegram_tab(view)
 
-      view |> element("button[title='Edit']") |> render_click()
+      view |> element("button[aria-label='Edit']") |> render_click()
       html = render(view)
 
       assert html =~ integration.name
@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       open_telegram_tab(view)
 
-      view |> element("button[title='Edit']") |> render_click()
+      view |> element("button[aria-label='Edit']") |> render_click()
 
       view
       |> form("#telegram-form", %{"telegram" => %{"name" => "Renamed Integration"}})
@@ -183,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       open_telegram_tab(view)
 
-      view |> element("button[title='Delete']") |> render_click()
+      view |> element("button[aria-label^='Delete ']") |> render_click()
       assert render(view) =~ "Delete Telegram integration"
 
       view |> element("#delete-telegram-modal button", "Delete Integration") |> render_click()
@@ -201,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       open_telegram_tab(view)
 
-      view |> element("button[title='Delete']") |> render_click()
+      view |> element("button[aria-label^='Delete ']") |> render_click()
       view |> element("#delete-telegram-modal button", "Cancel") |> render_click()
 
       refute render(view) =~ "Integration deleted"

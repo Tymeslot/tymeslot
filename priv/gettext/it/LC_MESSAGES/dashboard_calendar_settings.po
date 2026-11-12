@@ -541,3 +541,33 @@ msgstr "Numeri di settimana"
 #, elixir-autogen, elixir-format
 msgid "Turn on Block to use this: a calendar that doesn't block busy times has nothing for it to change"
 msgstr "Scegli «Blocca» per usare questa opzione: su un calendario che non blocca gli orari occupati non ha nulla da cambiare"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Allow notifications"
+msgstr "Consenti notifiche"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked in your browser settings. Allow notifications for this site there, then switch reminders on again."
+msgstr "Bloccate nelle impostazioni del browser. Consenti lì le notifiche per questo sito, poi riattiva i promemoria."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications were not allowed, so reminders are still off."
+msgstr "Le notifiche non sono state consentite, quindi i promemoria restano disattivati."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser has not allowed notifications yet."
+msgstr "I promemoria sono attivi, ma il browser non ha ancora consentito le notifiche."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This browser does not support notifications."
+msgstr "Questo browser non supporta le notifiche."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+msgstr "I promemoria sono attivi, ma il browser blocca le notifiche. Consenti le notifiche per questo sito nelle impostazioni del browser e i promemoria inizieranno."

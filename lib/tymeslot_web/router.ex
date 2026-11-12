@@ -1,8 +1,6 @@
 defmodule TymeslotWeb.Router do
   use TymeslotWeb, :router
 
-  require Logger
-
   alias Plug.Conn
   alias TymeslotWeb.Plugs.LocalePlug
 
@@ -283,126 +281,9 @@ defmodule TymeslotWeb.Router do
       TymeslotWeb.Plugs.AdditionalDashboardPlugs
     ]
 
-    @dashboard_hooks [
-      {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
-      TymeslotWeb.Hooks.AppLocaleHook,
-      TymeslotWeb.Hooks.ClientInfoHook,
-      TymeslotWeb.Hooks.DashboardInitHook,
-      {TymeslotWeb.Hooks.FeatureAssignsHook, :set_feature_assigns},
-      TymeslotWeb.Hooks.RouteBundleHook
-    ]
-
-    @onboarding_hooks [
-      {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
-      TymeslotWeb.Hooks.AppLocaleHook,
-      TymeslotWeb.Hooks.ClientInfoHook
-    ]
-
-    @doc false
-    @spec on_mount(
-            :dashboard_hooks | :onboarding_hooks,
-            map(),
-            map(),
-            Phoenix.LiveView.Socket.t()
-          ) :: {:cont, Phoenix.LiveView.Socket.t()} | {:halt, Phoenix.LiveView.Socket.t()}
-    def on_mount(:dashboard_hooks, params, session, socket) do
-      hooks =
-        @dashboard_hooks ++
-          dashboard_additional_hooks() ++
-          [{TymeslotWeb.Hooks.AnnouncementsHook, :load_unseen_announcements}]
-
-      run_hooks(hooks, params, session, socket)
-    end
-
-    # Onboarding sits outside the dashboard proper (DashboardInitHook would
-    # redirect an unfinished user straight back here), but the deployment's
-    # additional gates apply to it all the same.
-    def on_mount(:onboarding_hooks, params, session, socket) do
-      run_hooks(@onboarding_hooks ++ dashboard_additional_hooks(), params, session, socket)
-    end
-
-    @doc """
-    The on_mount hooks configured under `:dashboard_additional_hooks`.
-
-    These are deployment gates (a legal-acceptance check, for instance), so a
-    configuration they cannot be run from raises rather than being skipped: a
-    typo must not quietly switch a gate off.
-    """
-    @spec dashboard_additional_hooks() :: list()
-    def dashboard_additional_hooks do
-      :tymeslot
-      |> Application.get_env(:dashboard_additional_hooks, [])
-      |> normalise_additional_hooks()
-      |> Enum.map(&validate_additional_hook!/1)
-    end
-
-    @doc """
-    Boot-time check of `:dashboard_additional_hooks`: on top of the shape
-    check every mount repeats, each hook module must be loadable and export
-    `on_mount/4`, so a misspelt module name stops the application starting
-    instead of surfacing at the first dashboard mount.
-    """
-    @spec validate_additional_hooks!() :: :ok
-    def validate_additional_hooks! do
-      Enum.each(dashboard_additional_hooks(), fn hook ->
-        module = hook_module(hook)
-
-        unless Code.ensure_loaded?(module) and function_exported?(module, :on_mount, 4) do
-          raise ArgumentError,
-                ":dashboard_additional_hooks entry #{inspect(hook)} names " <>
-                  "#{inspect(module)}, which does not define on_mount/4"
-        end
-      end)
-    end
-
-    defp hook_module({module, _hook_name}), do: module
-    defp hook_module(module), do: module
-
-    defp normalise_additional_hooks(hooks) when is_list(hooks), do: hooks
-
-    defp normalise_additional_hooks(hook) when is_tuple(hook) or is_atom(hook) do
-      Logger.warning(
-        "Expected :dashboard_additional_hooks to be a list, received a single hook. Wrapping."
-      )
-
-      [hook]
-    end
-
-    defp normalise_additional_hooks(other) do
-      raise ArgumentError,
-            "expected :dashboard_additional_hooks to be a list of hooks, got: #{inspect(other)}"
-    end
-
-    defp validate_additional_hook!({module, hook_name} = hook)
-         when is_atom(module) and is_atom(hook_name),
-         do: hook
-
-    defp validate_additional_hook!(module) when is_atom(module), do: module
-
-    defp validate_additional_hook!(other) do
-      raise ArgumentError,
-            "unrecognised :dashboard_additional_hooks entry #{inspect(other)}; " <>
-              "expected a module or a {module, hook_name} tuple"
-    end
-
-    defp run_hooks(hooks, params, session, socket) do
-      Enum.reduce_while(hooks, {:cont, socket}, fn hook, {:cont, socket} ->
-        case run_hook(hook, params, session, socket) do
-          {:cont, socket} -> {:cont, {:cont, socket}}
-          {:halt, socket} -> {:halt, {:halt, socket}}
-        end
-      end)
-    end
-
-    defp run_hook({module, hook_name}, params, session, socket),
-      do: module.on_mount(hook_name, params, session, socket)
-
-    defp run_hook(module, params, session, socket),
-      do: module.on_mount(:default, params, session, socket)
-
     live_session :authenticated,
       session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
-      on_mount: {__MODULE__, :dashboard_hooks} do
+      on_mount: {TymeslotWeb.Hooks.DashboardHooks, :dashboard} do
       live "/dashboard", DashboardLive, :calendar
       live "/dashboard/overview", DashboardLive, :overview
       live "/dashboard/settings", DashboardLive, :settings
@@ -425,6 +306,9 @@ defmodule TymeslotWeb.Router do
     end
 
     post "/dashboard/payments/connect", Dashboard.PaymentsController, :connect
+
+    # Where Stripe sends the host back; must equal `StripeConnectOAuth.redirect_uri/0`.
+    get "/dashboard/payments/connect/callback", Dashboard.PaymentsController, :callback
 
     # The booking pages screen was the Theme screen; its old addresses live on
     # in bookmarks and sent emails.
@@ -463,7 +347,7 @@ defmodule TymeslotWeb.Router do
   end
 
   # Onboarding routes. The deployment's additional dashboard gates (plugs and
-  # on_mount hooks) apply here too; see `on_mount(:onboarding_hooks, ...)`.
+  # on_mount hooks) apply here too; see `TymeslotWeb.Hooks.DashboardHooks`.
   scope "/", TymeslotWeb do
     pipe_through [
       :browser,
@@ -473,7 +357,7 @@ defmodule TymeslotWeb.Router do
 
     live_session :onboarding,
       session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
-      on_mount: {TymeslotWeb.Router, :onboarding_hooks} do
+      on_mount: {TymeslotWeb.Hooks.DashboardHooks, :onboarding} do
       live "/onboarding", OnboardingLive, :index
       live "/onboarding/:step", OnboardingLive, :step
     end

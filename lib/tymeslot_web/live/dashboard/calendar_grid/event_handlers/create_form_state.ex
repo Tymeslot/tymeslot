@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Locales
@@ -16,7 +17,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateRecurrence
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-  alias TymeslotWeb.Live.Shared.Flash
 
   @spec handle_show_create_form(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -139,6 +139,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       meeting_reminders: ReminderPickerState.new(),
       recurrence_rule: nil,
       video_integration_id: nil,
+      # Where it takes place, as `LocationFields` posts it: none, a saved
+      # venue (`"venue:<id>"`) or a place typed in (`"custom"`).
+      location_choice: "",
+      location_custom: "",
       # A one-off group event's own fields, as its form posts them.
       group_event: %{"max_participants" => "10", "location" => "", "closes_at" => ""}
     }
@@ -207,6 +211,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     %{creating | main_participant: false, guest_emails: guest_emails}
   end
 
+  @doc """
+  Takes the location as `LocationFields` posts it. A saved venue that is not
+  one of the host's is not taken; the text typed in is kept as plain text,
+  within the length a meeting accepts.
+  """
+  @spec handle_update_create_location(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_location(params, socket) do
+    venues = Map.get(socket.assigns, :venues) || []
+
+    update_creating(socket, fn creating ->
+      creating
+      |> put_location_choice(params["location_choice"], venues)
+      |> put_location_custom(params["location_custom"])
+    end)
+  end
+
+  defp put_location_choice(creating, choice, venues) when is_binary(choice) do
+    if choice in ["", "custom"] or Enum.any?(venues, &("venue:#{&1.id}" == choice)),
+      do: Map.put(creating, :location_choice, choice),
+      else: creating
+  end
+
+  defp put_location_choice(creating, _choice, _venues), do: creating
+
+  defp put_location_custom(creating, text) when is_binary(text) do
+    case UniversalSanitizer.sanitize_and_validate(text,
+           mode: :plain_text,
+           max_length: CreateAdHoc.custom_location_max_length()
+         ) do
+      {:ok, sanitised} -> Map.put(creating, :location_custom, sanitised)
+      {:error, _reason} -> creating
+    end
+  end
+
+  defp put_location_custom(creating, _text), do: creating
+
   @spec handle_update_create_guest_name(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_create_guest_name(%{"value" => name}, socket),
@@ -247,11 +288,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     update_creating(socket, fn creating ->
       case check_extra_guest(creating, email, organizer_email) do
         :ok ->
-          %{creating | guest_emails: creating.guest_emails ++ [email], guest_email_input: ""}
+          creating
+          |> Map.put(:guest_email_error, nil)
+          |> Map.merge(%{guest_emails: creating.guest_emails ++ [email], guest_email_input: ""})
 
         {:error, message} ->
-          Flash.error(message)
-          creating
+          Map.put(creating, :guest_email_error, message)
       end
     end)
   end
@@ -267,7 +309,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   @spec handle_update_create_guest_input(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_create_guest_input(%{"email" => value}, socket),
-    do: put_field(socket, :guest_email_input, value)
+    do:
+      update_creating(socket, &Map.merge(&1, %{guest_email_input: value, guest_email_error: nil}))
 
   @spec handle_update_create_locale(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -516,14 +559,37 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     update_creating(socket, fn creating ->
       email = raw_email |> String.trim() |> String.downcase()
 
-      if Shared.valid_email?(email) and email not in creating.attendees do
-        creating
-        |> Map.put(:attendees, creating.attendees ++ [email])
-        |> Map.put(:attendee_input, "")
-      else
-        creating
+      case attendee_refusal(creating, email) do
+        nil ->
+          creating
+          |> Map.put(:attendees, creating.attendees ++ [email])
+          |> Map.put(:attendee_input, "")
+          |> Map.put(:attendee_error, nil)
+
+        :empty ->
+          creating
+
+        message ->
+          Map.put(creating, :attendee_error, message)
       end
     end)
+  end
+
+  defp attendee_refusal(_creating, ""), do: :empty
+
+  defp attendee_refusal(creating, email) do
+    cond do
+      not Shared.valid_email?(email) ->
+        dgettext("dashboard_calendar_events", "%{email} is not a valid email address.",
+          email: email
+        )
+
+      email in creating.attendees ->
+        dgettext("dashboard_calendar_events", "%{email} is already invited.", email: email)
+
+      true ->
+        nil
+    end
   end
 
   @spec handle_remove_create_attendee(map(), Phoenix.LiveView.Socket.t()) ::
@@ -537,7 +603,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   @spec handle_update_create_attendee_input(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_create_attendee_input(%{"email" => value}, socket),
-    do: put_field(socket, :attendee_input, value)
+    do: update_creating(socket, &Map.merge(&1, %{attendee_input: value, attendee_error: nil}))
 
   @spec handle_update_create_video(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

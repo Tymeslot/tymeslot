@@ -38,6 +38,7 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.CheckoutOutcome
   alias Tymeslot.MeetingPayments.CheckoutSessions
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
+  alias Tymeslot.MeetingPayments.ConnectAccountRetirement
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
@@ -73,33 +74,51 @@ defmodule Tymeslot.MeetingPayments do
   # ---------------------------------------------------------------------------
 
   @doc """
-  Starts the Stripe Connect onboarding flow for a user.
+  Starts connecting a host's Stripe account through OAuth.
 
-  Enforces the meeting-payments feature gate, persists a placeholder row
-  before calling Stripe (making the flow crash-safe), and reuses a Stripe
-  account the host already has. Returns the Stripe-hosted onboarding URL on
-  success; on failure, a `Tymeslot.Features.check_access/2` reason,
-  `{:error, :account_creation_restricted}`, or the underlying Stripe error.
+  Enforces the meeting-payments feature gate and returns the Stripe URL to
+  send the host to. On failure: a `Tymeslot.Features.check_access/2` reason,
+  `:oauth_not_configured`, or `:already_connected`.
   """
   @spec start_onboarding(user :: %{id: integer()}) ::
-          {:ok, %{url: String.t(), account: account()}} | {:error, term()}
+          {:ok, %{url: String.t(), account: account()}}
+          | {:error, :oauth_not_configured | :already_connected | term()}
   defdelegate start_onboarding(user), to: ConnectAccounts
+
+  @doc """
+  Completes a Stripe connection when the host returns from Stripe with a code.
+
+  See `Tymeslot.MeetingPayments.ConnectAccounts.complete_oauth_callback/3`.
+  """
+  @spec complete_oauth_callback(user :: %{id: integer()}, code :: String.t(), state :: String.t()) ::
+          {:ok, account()}
+          | {:error,
+             :invalid_state
+             | :expired_state
+             | :user_mismatch
+             | :state_already_used
+             | :invalid_grant
+             | :oauth_failed
+             | :account_already_linked
+             | :unsupported_currency
+             | term()}
+  defdelegate complete_oauth_callback(user, code, state), to: ConnectAccounts
 
   @doc """
   Soft-deletes the host's Stripe Connect account row.
   """
   @spec disconnect(user :: %{id: integer()}) ::
           {:ok, disconnect_result()} | {:error, term()}
-  defdelegate disconnect(user), to: ConnectAccounts
+  defdelegate disconnect(user), to: ConnectAccountRetirement
 
   @doc """
   Expires the host's open Stripe Checkout sessions and cancels their pending
   bookings, leaving the Connect account in place. See
-  `Tymeslot.MeetingPayments.ConnectAccounts.cancel_pending_checkouts/1`.
+  `Tymeslot.MeetingPayments.ConnectAccountRetirement.cancel_pending_checkouts/1`.
   """
   @spec cancel_pending_checkouts(user :: %{id: integer()}) ::
           {:ok, non_neg_integer()} | {:error, term()}
-  defdelegate cancel_pending_checkouts(user), to: ConnectAccounts
+  defdelegate cancel_pending_checkouts(user), to: ConnectAccountRetirement
 
   # ---------------------------------------------------------------------------
   # Bookings held for payment
@@ -138,10 +157,21 @@ defmodule Tymeslot.MeetingPayments do
 
   @doc """
   Returns the live (non-deleted) Connect account for a user, or `nil`.
+
+  A row with no Stripe account yet is the placeholder written when the host
+  pressed Connect, and counts as no account: a host who cancelled at Stripe is
+  back where they started, not part-way through connecting.
   """
   @spec get_connect_account_for_user(integer()) :: account() | nil
-  def get_connect_account_for_user(user_id),
-    do: ConnectAccountQueries.live_for_user(user_id)
+  def get_connect_account_for_user(user_id) do
+    case ConnectAccountQueries.live_for_user(user_id) do
+      %{stripe_account_id: stripe_account_id} = account when is_binary(stripe_account_id) ->
+        account
+
+      _none_or_placeholder ->
+        nil
+    end
+  end
 
   @doc """
   Maps a Connect account (or `nil`) to its onboarding display state.

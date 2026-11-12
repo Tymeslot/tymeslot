@@ -12,9 +12,9 @@ defmodule CredoChecks.HtmlTags do
 
   A tag is read up to the first `>` that sits outside a quoted attribute value
   and outside a `{...}` expression, so `phx-value-n={@n > 1}` does not end it
-  early. A tag on a line that is an Elixir comment, or inside a HEEx comment
-  (`<%!-- ... --%>`), is skipped: a comment that mentions `<select>` is not a
-  use of one.
+  early. A tag on a line that is an Elixir comment, inside a HEEx comment
+  (`<%!-- ... --%>`), or inside a `@moduledoc`, `@doc` or `@typedoc` heredoc is
+  skipped: prose that mentions `<select>` is not a use of one.
 
   Each tag also carries the HEEx comment (`<%!-- ... --%>`) that directly
   precedes it, with only whitespace between, as `:comment`, or `nil`. Credo's
@@ -43,12 +43,12 @@ defmodule CredoChecks.HtmlTags do
   def tags(%SourceFile{} = source_file, name_pattern) do
     source = SourceFile.source(source_file)
     regex = Regex.compile!("<(#{name_pattern})(?=[\\s/>])", "i")
-    heex_comments = heex_comment_spans(source)
+    skipped_spans = heex_comment_spans(source) ++ doc_heredoc_spans(source)
 
     regex
     |> Regex.scan(source, return: :index)
     |> Enum.reject(fn [{start, _len} | _] ->
-      comment_line?(source, start) or in_span?(heex_comments, start)
+      comment_line?(source, start) or in_span?(skipped_spans, start)
     end)
     |> Enum.map(fn [{start, _len}, {name_start, name_len}] ->
       %{
@@ -71,6 +71,13 @@ defmodule CredoChecks.HtmlTags do
   # The `{start, length}` of every HEEx comment in the source, in order.
   defp heex_comment_spans(source) do
     ~r/<%!--.*?--%>/s
+    |> Regex.scan(source, return: :index)
+    |> Enum.map(fn [span] -> span end)
+  end
+
+  # The `{start, length}` of every documentation heredoc in the source.
+  defp doc_heredoc_spans(source) do
+    ~r/@(?:moduledoc|doc|typedoc)\s+(?:~[Ss])?""".*?"""/s
     |> Regex.scan(source, return: :index)
     |> Enum.map(fn [span] -> span end)
   end

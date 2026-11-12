@@ -57,11 +57,6 @@ msgstr "Підключити Stripe"
 msgid "Connect Stripe to start charging for meetings."
 msgstr "Підключіть Stripe, щоб почати стягувати плату за зустрічі."
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
-#, elixir-autogen, elixir-format
-msgid "Connect Stripe to start charging for meetings. Money goes directly to your Stripe account."
-msgstr "Підключіть Stripe, щоб почати стягувати плату за зустрічі. Гроші надходитимуть безпосередньо на ваш рахунок Stripe."
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Connected and ready"
@@ -72,11 +67,6 @@ msgstr "Підключено та готово"
 #, elixir-autogen, elixir-format
 msgid "Connecting…"
 msgstr "Підключення…"
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
-#, elixir-autogen, elixir-format
-msgid "Continue onboarding"
-msgstr "Продовжити налаштування"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -221,11 +211,6 @@ msgstr "Часткове повернення"
 msgid "Partially refunded"
 msgstr "Частково повернено"
 
-#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Payment setup is temporarily unavailable. Please try again later."
-msgstr "Налаштування платежів тимчасово недоступне. Спробуйте пізніше."
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Pending"
@@ -368,11 +353,6 @@ msgstr[2] "У вас є %{count} незавершених бронювань, щ
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
-msgid "You started connecting Stripe but haven't finished onboarding yet. Continue to start accepting payments."
-msgstr "Ви почали підключення Stripe, але ще не завершили налаштування. Продовжіть, щоб почати приймати платежі."
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
-#, elixir-autogen, elixir-format
 msgid "Your Stripe account is disconnected. Reconnect to accept payments again."
 msgstr "Ваш обліковий запис Stripe від'єднано. Підключіть його знову, щоб приймати платежі."
 
@@ -489,3 +469,73 @@ msgstr "У валюті вашого облікового запису (%{curren
 #, elixir-autogen, elixir-format
 msgid "Prices can no longer be set in your Stripe account's currency, %{currency}. Bookings are still charged their current prices; choose one of the currencies below to change them."
 msgstr "У валюті вашого облікового запису Stripe (%{currency}) більше не можна встановлювати ціни. За бронювання й надалі стягується плата за поточними цінами; щоб їх змінити, виберіть одну з валют нижче."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "A Stripe account is already connected."
+msgstr "Обліковий запис Stripe вже підключено."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Connect your Stripe account"
+msgstr "Підключити свій обліковий запис Stripe"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
+#, elixir-autogen, elixir-format
+msgid "Connect your Stripe account, or create one, to charge for meetings. Money goes directly to your Stripe account."
+msgstr "Підключіть свій обліковий запис Stripe або створіть новий, щоб стягувати плату за зустрічі. Кошти надходять безпосередньо на ваш обліковий запис Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Finish setup in Stripe"
+msgstr "Завершити налаштування у Stripe"
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe connected."
+msgstr "Stripe підключено."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe connection cancelled."
+msgstr "Підключення Stripe скасовано."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe could not complete the connection. Please try again."
+msgstr "Stripe не зміг завершити підключення. Спробуйте ще раз."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe payments are not fully set up on this server. Please contact the administrator."
+msgstr "Прийом оплати через Stripe налаштовано на цьому сервері не повністю. Зверніться до адміністратора."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "That Stripe account is already connected to another Tymeslot account."
+msgstr "Цей обліковий запис Stripe вже підключено до іншого облікового запису Tymeslot."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "That Stripe account uses a currency Tymeslot doesn't support for payments yet."
+msgstr "Цей обліковий запис Stripe використовує валюту, яку Tymeslot поки що не підтримує для оплати."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "That Stripe connection link is no longer valid. Please try again."
+msgstr "Це посилання для підключення Stripe більше не дійсне. Спробуйте ще раз."
+
+#: lib/tymeslot_web/controllers/dashboard/payments_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many requests. Please try again later."
+msgstr "Забагато запитів. Будь ласка, спробуйте пізніше."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
+msgstr "Ваш обліковий запис Stripe підключено, але Stripe ще потрібні деякі дані, перш ніж він зможе приймати оплату. Завершіть налаштування у Stripe, а потім оновіть цю сторінку."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is not connected yet. Connect it to start accepting payments."
+msgstr "Ваш обліковий запис Stripe ще не підключено. Підключіть його, щоб почати приймати оплату."

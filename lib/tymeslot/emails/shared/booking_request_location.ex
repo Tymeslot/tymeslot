@@ -13,6 +13,19 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocation do
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
+  @doc """
+  The place a meeting is held at, as written, for one held somewhere named:
+  an in-person or custom location with its text. Such a meeting can also
+  have a video room (Quick Add offers both), and the place is then still the
+  location, the room being linked on its own. nil for any other meeting.
+  """
+  @spec place(Meeting.t()) :: String.t() | nil
+  def place(%{location_kind: kind, location: location})
+      when kind in [:in_person, :custom] and is_binary(location) and location != "",
+      do: location
+
+  def place(_meeting), do: nil
+
   @doc "The location kind, used to pick the label `Formatting.format_location/1` shows."
   @spec type(Meeting.t()) :: :video | :phone | :in_person | :in_person_to_arrange | :custom
   # A booking made against a meeting type's location list already recorded

@@ -78,6 +78,23 @@ defmodule CredoChecks.UseCoreInputsTest do
       end)
     end
 
+    test "points a raw select at the select component" do
+      ~S'''
+      defmodule TymeslotWeb.SomeLive do
+        def render(assigns) do
+          ~H"""
+          <select name="kind"><option>a</option></select>
+          """
+        end
+      end
+      '''
+      |> check()
+      |> assert_issue(fn issue ->
+        assert issue.trigger == "<select"
+        assert issue.message =~ "CoreComponents.Select.select/1"
+      end)
+    end
+
     test "flags each wrapped tag on its own line" do
       ~S'''
       defmodule TymeslotWeb.SomeLive do
@@ -226,7 +243,7 @@ defmodule CredoChecks.UseCoreInputsTest do
           ~H"""
           <%!-- An earlier version drew a raw
                <select name="unit"> here. --%>
-          <.input type="select" name="unit" options={@units} />
+          <.select id="unit" name="unit" options={@units} />
           """
         end
       end
@@ -256,6 +273,16 @@ defmodule CredoChecks.UseCoreInputsTest do
       """
       |> check()
       |> assert_issue(fn issue -> assert issue.trigger == ".select" end)
+    end
+
+    test "points the select helper at the select component" do
+      """
+      defmodule TymeslotWeb.SomeView do
+        def field(f), do: PhoenixHTMLHelpers.Form.select(f, :kind, ["a"])
+      end
+      """
+      |> check()
+      |> assert_issue(fn issue -> assert issue.message =~ "CoreComponents.Select.select/1" end)
     end
 
     test "flags a helper called through an alias of its module" do

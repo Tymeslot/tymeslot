@@ -156,6 +156,9 @@ defmodule TymeslotWeb.Dashboard.Polls.AvailabilityWeek do
             <div class="bg-white pr-2 text-right text-token-xs leading-none text-tymeslot-500">
               {if time.label, do: time.label}
             </div>
+            <%!-- native-title: repeats the cell's aria-label; the row and column
+                 headings and the legend carry the same, and a 20px cell has no
+                 room for a bubble. --%>
             <button
               :for={cell <- Enum.map(@grid.days, &Map.fetch!(&1.cells, time.time))}
               :key={cell.value}

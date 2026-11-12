@@ -117,6 +117,50 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.IgnorerTest do
       refute Ignorer.ignore?(error, %{})
     end
 
+    test "ignores a query PostgreSQL refused for a null byte sent to a request or a LiveView" do
+      error = %Error{
+        kind: "Elixir.Postgrex.Error",
+        reason:
+          ~s|ERROR 22021 (character_not_in_repertoire) invalid byte sequence for encoding "UTF8": 0x00|
+      }
+
+      assert Ignorer.ignore?(error, @request)
+      assert Ignorer.ignore?(error, @live_view)
+    end
+
+    test "tracks the same refused query in an Oban job or with no request context" do
+      error = %Error{
+        kind: "Elixir.Postgrex.Error",
+        reason:
+          ~s|ERROR 22021 (character_not_in_repertoire) invalid byte sequence for encoding "UTF8": 0x00|
+      }
+
+      refute Ignorer.ignore?(error, Map.merge(@request, @job))
+      refute Ignorer.ignore?(error, @job)
+      refute Ignorer.ignore?(error, %{})
+    end
+
+    test "tracks a Postgrex error with any other code raised serving a request" do
+      for reason <- [
+            ~s|ERROR 23505 (unique_violation) duplicate key value violates unique constraint "users_email_index"|,
+            "ERROR 57P01 (admin_shutdown) terminating connection due to administrator command",
+            "tcp recv (idle): closed"
+          ] do
+        error = %Error{kind: "Elixir.Postgrex.Error", reason: reason}
+
+        refute Ignorer.ignore?(error, @request), "expected #{inspect(reason)} tracked"
+      end
+    end
+
+    test "tracks the null-byte message under any kind but Postgrex.Error" do
+      error = %Error{
+        kind: "Elixir.RuntimeError",
+        reason: "ERROR 22021 (character_not_in_repertoire) invalid byte sequence"
+      }
+
+      refute Ignorer.ignore?(error, @request)
+    end
+
     test "tracks the error and logs a warning when the ignorer itself fails" do
       log =
         capture_log(fn ->

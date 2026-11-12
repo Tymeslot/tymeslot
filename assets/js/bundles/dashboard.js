@@ -10,6 +10,7 @@ import { lazyHook } from "../dynamic_hooks"
 import { ServerUrlField } from "../hooks/server_url_field"
 import { ReminderCustomRow } from "../hooks/reminder_custom_row"
 import { installKeyboardClick } from "../keyboard_click"
+import { ChartReadout } from "../hooks/chart_readout"
 
 // Define dashboard-specific hooks (lazy-loaded to minimize initial bundle size,
 // except where a hook is too small for a separate request to pay for itself)
@@ -19,6 +20,8 @@ const DashboardHooks = {
   ServerUrlField,
   // Eager for the same reason: a lazy load could miss the first focusout.
   ReminderCustomRow,
+  // Eager because it is a few lines and only ever handles a chart keypress.
+  ChartReadout,
   AutoUpload: lazyHook("AutoUpload", () => import("../hooks/auto_upload")),
   EmbedPreview: lazyHook("EmbedPreview", () => import("../hooks/embed_preview")),
   MeetingTypeSortable: lazyHook("MeetingTypeSortable", () => import("../hooks/meeting_type_sortable")),
@@ -28,6 +31,7 @@ const DashboardHooks = {
   CalendarCreate: lazyHook("CalendarCreate", () => import("../hooks/calendar_drag").then(m => m.CalendarCreate)),
   CalendarMobile: lazyHook("CalendarMobile", () => import("../hooks/calendar_drag").then(m => m.CalendarMobile)),
   DesktopReminders: lazyHook("DesktopReminders", () => import("../hooks/desktop_reminders").then(m => m.DesktopReminders)),
+  DesktopReminderPermission: lazyHook("DesktopReminderPermission", () => import("../hooks/desktop_reminder_permission").then(m => m.DesktopReminderPermission)),
   CustomColourPicker: lazyHook("CustomColourPicker", () => import("../hooks/custom_colour_picker").then(m => m.CustomColourPicker)),
   DashboardTour: lazyHook("DashboardTour", () => import("../hooks/dashboard_tour").then(m => m.DashboardTour)),
   AgendaCountdown: lazyHook("AgendaCountdown", () => import("../hooks/agenda_countdown").then(m => m.AgendaCountdown)),

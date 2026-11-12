@@ -157,6 +157,18 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
             >
               {@meeting.meeting_type}
             </Containers.detail_line>
+            <%!-- Where the meeting takes place, whether the booker chose it or
+                 the host set it in Quick Add. A video meeting has its own
+                 pill above. --%>
+            <Containers.detail_line
+              :if={place(@meeting)}
+              variant={:tile}
+              icon="hero-map-pin"
+              label={dgettext("dashboard_bookings", "Location")}
+              data-testid="meeting-location"
+            >
+              {place(@meeting)}
+            </Containers.detail_line>
             <%!-- A group slot has no single attendee: every booker is listed
                  in the participants panel below. Nor has a meeting from a
                  poll: everyone on it is a guest, listed below, the person in
@@ -455,6 +467,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   # created with no main participant. Only the first is labelled a poll.
   defp from_poll?(%{confirming_poll: %{id: _id}}), do: true
   defp from_poll?(_meeting), do: false
+
+  defp place(%{location_kind: :video}), do: nil
+  defp place(%{location: location}) when is_binary(location) and location != "", do: location
+  defp place(_meeting), do: nil
 
   defp booking_page(%{booking_page: %{name: _name} = page}), do: page
   defp booking_page(_meeting), do: nil

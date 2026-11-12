@@ -138,8 +138,8 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
     new_start = DateTime.add(ctx.meeting.start_time, 1, :day)
 
     view
-    |> form("[data-testid='host-move-form']", %{"move" => %{"start" => local(new_start)}})
-    |> render_submit()
+    |> form("[data-testid='host-move-form']", %{})
+    |> render_submit(%{"move" => %{"start" => local(new_start)}})
 
     moved = Repo.get!(MeetingSchema, ctx.meeting.id)
     assert moved.start_time == new_start
@@ -174,8 +174,8 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
 
     html =
       view
-      |> form("[data-testid='host-move-form']", %{"move" => %{"start" => local(taken)}})
-      |> render_submit()
+      |> form("[data-testid='host-move-form']", %{})
+      |> render_submit(%{"move" => %{"start" => local(taken)}})
 
     assert html =~ "You already have a meeting at that time."
     assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
@@ -193,10 +193,10 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
 
     html =
       view
-      |> form("[data-testid='host-move-form']", %{
+      |> form("[data-testid='host-move-form']", %{})
+      |> render_submit(%{
         "move" => %{"start" => local(DateTime.add(ctx.meeting.start_time, 1, :day))}
       })
-      |> render_submit()
 
     assert html =~ "Cannot reschedule a cancelled meeting"
     refute html =~ "could not be moved"
@@ -217,8 +217,8 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
 
     html =
       view
-      |> form("[data-testid='host-move-form']", %{"move" => %{"start" => local(away)}})
-      |> render_submit()
+      |> form("[data-testid='host-move-form']", %{})
+      |> render_submit(%{"move" => %{"start" => local(away)}})
 
     assert html =~
              "This time falls within your time off. Change or remove the time off to move the meeting there."
@@ -244,10 +244,10 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
 
     html =
       view
-      |> form("[data-testid='host-move-form']", %{
+      |> form("[data-testid='host-move-form']", %{})
+      |> render_submit(%{
         "move" => %{"start" => local(DateTime.add(ctx.meeting.start_time, 1, :day))}
       })
-      |> render_submit()
 
     assert html =~ "reached the limit"
     assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
@@ -287,10 +287,8 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
       monday = Date.add(sunday, 1)
 
       view
-      |> form("[data-testid='host-move-form']", %{
-        "move" => %{"start" => "#{Date.to_iso8601(monday)}T10:00"}
-      })
-      |> render_submit()
+      |> form("[data-testid='host-move-form']", %{})
+      |> render_submit(%{"move" => %{"start" => "#{Date.to_iso8601(monday)}T10:00"}})
 
       moved = Repo.get!(MeetingSchema, ctx.meeting.id)
       assert moved.start_time == DateTime.new!(monday, Time.new!(unquote(monday_utc_hour), 0, 0))

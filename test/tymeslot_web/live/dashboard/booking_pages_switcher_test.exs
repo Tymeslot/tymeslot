@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesSwitcherTest do
       refute has_element?(view, "#booking-page-tabs")
 
       target = List.last(pages)
-      view |> form("#booking-page-select", %{page: target.id}) |> render_change()
+      view |> form("#booking-page-select") |> render_change(%{page: target.id})
 
       assert_patch(view, ~p"/dashboard/pages?#{[page: target.id]}")
       assert has_element?(view, "#page-settings-#{target.id}")
@@ -129,7 +129,7 @@ defmodule TymeslotWeb.Dashboard.BookingPagesSwitcherTest do
     page = insert(:booking_page, profile: ctx.profile, name: "Audits", slug: "audits")
     {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/embed")
 
-    view |> form("#embed-page-picker", %{page: page.id}) |> render_change()
+    view |> form("#embed-page-picker") |> render_change(%{page: page.id})
     assert_patch(view, ~p"/dashboard/embed?#{[page: page.id]}")
 
     {:ok, reloaded, _html} = live(ctx.conn, ~p"/dashboard/embed?#{[page: page.id]}")

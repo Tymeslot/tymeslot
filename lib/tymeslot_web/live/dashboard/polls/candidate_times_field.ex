@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.Polls.CandidateTimesField do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Polls.PollSchema
-  alias TymeslotWeb.Components.CoreComponents.{Buttons, Forms}
+  alias TymeslotWeb.Components.CoreComponents.{Buttons, DateTimePicker}
   alias TymeslotWeb.Dashboard.Polls.{AvailabilityWeek, SlotWarnings}
 
   attr :id, :string, required: true
@@ -48,8 +48,8 @@ defmodule TymeslotWeb.Dashboard.Polls.CandidateTimesField do
       <div :for={{slot, index} <- Enum.with_index(@slots)} class="space-y-1">
         <div class="flex items-center gap-2">
           <div class="flex-1">
-            <Forms.input
-              type="datetime-local"
+            <DateTimePicker.datetime_picker
+              id={"#{@id}-slot-#{slot.key}"}
               name={"poll[slots][#{slot.key}]"}
               value={slot.value}
               aria-label={dgettext("dashboard_polls", "Candidate time %{n}", n: index + 1)}

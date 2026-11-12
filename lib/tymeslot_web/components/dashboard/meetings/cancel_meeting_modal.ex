@@ -47,6 +47,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   attr :confirm_event, :string, required: true
   attr :target, :any, required: true
   attr :booking_payment, :map, default: nil
+  attr :refund_error, :map, default: %{}, doc: "`:amount` and `:acknowledgement` messages"
+  attr :refund_form, :map, default: %{choice: "full", amount: "", acknowledged: false}
 
   @spec cancel_meeting_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_meeting_modal(assigns) do
@@ -74,12 +76,18 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         phx-submit={@confirm_event}
         phx-target={@target}
         class="space-y-4"
+        novalidate
       >
         <p>
           {confirm_question(@meeting, @timezone, @time_format)}
         </p>
 
-        <.paid_options :if={@paid?} booking_payment={@booking_payment} />
+        <.paid_options
+          :if={@paid?}
+          booking_payment={@booking_payment}
+          refund_error={@refund_error}
+          refund_form={@refund_form}
+        />
         <p :if={not @paid?} class="text-tymeslot-500">
           {if Helpers.group_meeting?(@meeting),
             do:
@@ -136,6 +144,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     end
   end
 
+  attr :booking_payment, :map, required: true
+  attr :refund_error, :map, default: %{}
+  attr :refund_form, :map, required: true
+
   defp paid_options(assigns) do
     assigns = assign(assigns, :remaining, refundable_remaining(assigns.booking_payment))
 
@@ -150,12 +162,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
       <div class="space-y-2">
         <label class="flex items-start gap-2">
-          <%!-- raw-input: refund-choice radio wrapped by its own label with a bold title and explanation; <.input> styles radios as text fields and cannot set checked --%>
-          <input
+          <Forms.input
             type="radio"
             name="cancel_refund_choice"
             value="full"
-            checked
+            checked={@refund_form.choice == "full"}
           />
           <span>
             <strong>{dgettext("dashboard_bookings", "Full refund.")}</strong>
@@ -166,11 +177,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </label>
 
         <label class="flex items-start gap-2">
-          <%!-- raw-input: refund-choice radio wrapped by its own label with a bold title and explanation; <.input> styles radios as text fields and cannot set checked --%>
-          <input
+          <Forms.input
             type="radio"
             name="cancel_refund_choice"
             value="partial"
+            checked={@refund_form.choice == "partial"}
           />
           <span>
             <strong>{dgettext("dashboard_bookings", "Partial refund.")}</strong>
@@ -187,15 +198,17 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             max={Money.to_major_string(@remaining, @booking_payment.currency)}
             step="0.01"
             placeholder={"0.00 #{String.upcase(@booking_payment.currency)}"}
+            value={@refund_form.amount}
+            errors={List.wrap(@refund_error[:amount])}
           />
         </div>
 
         <label class="flex items-start gap-2">
-          <%!-- raw-input: refund-choice radio wrapped by its own label with a bold title and explanation; <.input> styles radios as text fields and cannot set checked --%>
-          <input
+          <Forms.input
             type="radio"
             name="cancel_refund_choice"
             value="none"
+            checked={@refund_form.choice == "none"}
           />
           <span>
             <strong>{dgettext("dashboard_bookings", "Cancel without refund.")}</strong>
@@ -212,6 +225,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             type="checkbox"
             name="cancel_refund_no_refund_ack"
             value="true"
+            checked={@refund_form.acknowledged}
           />
           <span class="text-tymeslot-700">
             {dgettext(
@@ -220,6 +234,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             )}
           </span>
         </label>
+        <p
+          :if={@refund_error[:acknowledgement]}
+          id="cancel-refund-ack-error"
+          class="form-error ml-6"
+          role="alert"
+        >
+          {@refund_error[:acknowledgement]}
+        </p>
       </div>
     </div>
     """

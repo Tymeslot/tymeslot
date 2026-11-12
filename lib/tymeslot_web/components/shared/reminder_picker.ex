@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
             }
             data-testid={"reminder-preset-#{preset.value}-#{preset.unit}"}
             disabled={@limit_reached?}
-            title={limit_title(@limit_reached?, @max_reminders)}
+            aria-describedby={@limit_reached? && @event_prefix <> "reminder-limit-hint"}
             class="btn-tag-selector btn-tag-selector-turquoise"
           >
             + {preset_label(preset)}
@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
             data-discards-custom-reminder
             data-testid="reminder-custom-toggle"
             disabled={@limit_reached?}
-            title={limit_title(@limit_reached?, @max_reminders)}
+            aria-describedby={@limit_reached? && @event_prefix <> "reminder-limit-hint"}
             class={[
               "btn-tag-selector btn-tag-selector-turquoise",
               if(@show_custom_reminder, do: "btn-tag-selector-turquoise--active")
@@ -152,6 +152,14 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
           <% end %>
         </div>
 
+        <p
+          :if={@limit_reached?}
+          id={@event_prefix <> "reminder-limit-hint"}
+          class="text-token-xs text-tymeslot-500"
+        >
+          {limit_message(@max_reminders)}
+        </p>
+
         <%= if @show_custom_reminder && !@limit_reached? do %>
           <div
             id={@event_prefix <> "reminder-custom-row"}
@@ -166,6 +174,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
                 type="number"
                 min="1"
                 step="1"
+                inputmode="numeric"
                 name="reminder[value]"
                 value={@new_reminder_value}
                 placeholder="30"
@@ -173,32 +182,21 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
                 phx-change={@event_prefix <> "update_reminder_input"}
                 phx-target={@myself}
               />
-              <div class="relative w-28">
-                <%!-- raw-input: compact unit select with its own chevron overlay in the inline custom-reminder row; the field wrapper would break the row --%>
-                <select
-                  name="reminder[unit]"
-                  class="input py-1.5 pl-3 pr-10 w-full text-token-sm"
-                  phx-change={@event_prefix <> "update_reminder_input"}
-                  phx-target={@myself}
-                >
-                  <%!-- A select element ignores a value attribute; the chosen unit has to
-                      be marked on its option, or a re-render snaps it back to
-                      the first one. --%>
-                  <option value="minutes" selected={@new_reminder_unit == "minutes"}>
-                    {dgettext("common", "Minutes")}
-                  </option>
-                  <option value="hours" selected={@new_reminder_unit == "hours"}>
-                    {dgettext("common", "Hours")}
-                  </option>
-                  <option value="days" selected={@new_reminder_unit == "days"}>
-                    {dgettext("common", "Days")}
-                  </option>
-                </select>
-                <.icon
-                  name="hero-chevron-down"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 stroke-[2.5] text-tymeslot-500 pointer-events-none"
-                />
-              </div>
+              <.select
+                id={@event_prefix <> "reminder-unit"}
+                name="reminder[unit]"
+                class="w-28"
+                compact
+                aria-label={dgettext("common", "Time unit")}
+                value={@new_reminder_unit}
+                options={[
+                  {dgettext("common", "Minutes"), "minutes"},
+                  {dgettext("common", "Hours"), "hours"},
+                  {dgettext("common", "Days"), "days"}
+                ]}
+                phx-change={@event_prefix <> "update_reminder_input"}
+                phx-target={@myself}
+              />
             </div>
             <.action_button
               size={:sm}
@@ -313,12 +311,9 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   defp policy_message(:exceeds_max),
     do: dgettext("common", "Reminders cannot be set for more than 1 year in advance")
 
-  # The tooltip explaining why an add button is disabled. Nil while more
-  # reminders can still be added, so an enabled button carries no title.
-  @spec limit_title(boolean(), pos_integer()) :: String.t() | nil
-  defp limit_title(false, _max_reminders), do: nil
-
-  defp limit_title(true, max_reminders) do
+  # Why the add buttons are disabled: shown under them while the cap is reached.
+  @spec limit_message(pos_integer()) :: String.t()
+  defp limit_message(max_reminders) do
     dngettext(
       "common",
       "Maximum of %{count} reminder allowed",

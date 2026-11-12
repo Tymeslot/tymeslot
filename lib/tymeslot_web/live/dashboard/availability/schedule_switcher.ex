@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ScheduleSwitcher do
             phx-click={@can_create && "show_schedule_form"}
             phx-value-mode="create"
             phx-target={@myself}
-            title={limit_hint(@can_create, @max_schedules)}
+            aria-describedby={if(not @can_create, do: "schedule-limit-hint")}
             class={[
               "flex items-center gap-2 px-4 py-3 rounded-token-xl font-bold text-token-sm border-2 border-dashed transition-all duration-300",
               if(@can_create,
@@ -160,7 +160,11 @@ defmodule TymeslotWeb.Dashboard.Availability.ScheduleSwitcher do
 
         <%!-- Spelled out as well as shown on the disabled button, because a
         title only surfaces on hover and never on a touch screen. --%>
-        <p :if={not @can_create} class="-mt-6 text-token-sm text-tymeslot-400 font-medium">
+        <p
+          :if={not @can_create}
+          id="schedule-limit-hint"
+          class="-mt-6 text-token-sm text-tymeslot-400 font-medium"
+        >
           {limit_message(@max_schedules)}
         </p>
 
@@ -169,9 +173,6 @@ defmodule TymeslotWeb.Dashboard.Availability.ScheduleSwitcher do
     </div>
     """
   end
-
-  defp limit_hint(true, _max), do: nil
-  defp limit_hint(false, max), do: limit_message(max)
 
   defp limit_message(max) do
     dgettext(

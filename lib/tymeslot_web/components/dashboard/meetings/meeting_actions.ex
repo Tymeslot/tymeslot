@@ -98,12 +98,13 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
         </.action_button>
 
         <.action_button
+          id={"reschedule-meeting-#{@meeting.id}"}
           phx-click="show_reschedule_modal"
           phx-value-id={@meeting.id}
           phx-target={@target}
           disabled={!Helpers.can_reschedule?(@meeting)}
-          title={
-            Map.get(@meeting, :planned) &&
+          tooltip={
+            !Helpers.can_reschedule?(@meeting) && Map.get(@meeting, :planned) &&
               dgettext("dashboard_bookings", "Move a fixed date from its meeting type.")
           }
           variant={:secondary}

@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   alias TymeslotWeb.Live.Scheduling.{
     AvailabilityHelpers,
     CalendarHelpers,
+    EntryRefusal,
     OrganizerHelpers,
     PageAddress,
     PreviewToken,
@@ -72,11 +73,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
 
     # Verify an owner-preview token now that the organiser (and so the page
     # owner's user id) is resolved. Gates simulate-vs-persist downstream.
+    # An embed refused at the entry was sent here with its reason in the URL,
+    # since its flash cannot travel (`EntryRefusal`).
     socket =
       socket
       |> assign_owner_preview(params)
       |> assign_refused_calendars()
       |> announce_handoff(params)
+      |> EntryRefusal.flash(params)
 
     # Subscribe to calendar event updates for the organiser so availability refreshes on sync
     socket = maybe_subscribe_to_calendar_events(socket)

@@ -25,6 +25,8 @@ defmodule TymeslotWeb.Themes.Quill.Poll.Voting do
   attr :participant, :map, default: nil
   attr :link_request, :atom, default: nil, values: [nil, :sent, :resent, :throttled]
   attr :invalid_link, :boolean, default: false
+  attr :poll_field_errors, :map, default: %{}
+  attr :poll_draft, :map, default: %{}
 
   @doc "Renders the poll voting page in Quill theme style."
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -47,6 +49,8 @@ defmodule TymeslotWeb.Themes.Quill.Poll.Voting do
                 voting_open={@voting_open}
                 participant={@participant}
                 link_request={@link_request}
+                field_errors={@poll_field_errors}
+                draft={@poll_draft}
                 invalid_link={@invalid_link}
               />
             </div>

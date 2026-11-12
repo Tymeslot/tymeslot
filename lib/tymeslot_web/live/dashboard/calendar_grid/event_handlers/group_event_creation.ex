@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
   alias Tymeslot.Utils.ChangesetErrors
   alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Validation.Constraints
+  alias TymeslotWeb.Components.CoreComponents.DateTimePicker.Value
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading
@@ -219,6 +220,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation do
   defp registration_close(value, _timezone) when value in [nil, ""], do: {:ok, nil}
 
   defp registration_close(value, timezone) when is_binary(value) do
+    case Value.unfinished(value) do
+      nil -> read_registration_close(value, timezone)
+      reason -> {:error, Value.message(reason)}
+    end
+  end
+
+  defp read_registration_close(value, timezone) do
     with [date, time] <- String.split(value, "T", parts: 2),
          {:ok, date} <- Date.from_iso8601(date),
          {:ok, %Time{hour: hour, minute: minute}} <- Time.from_iso8601(seconds(time)),

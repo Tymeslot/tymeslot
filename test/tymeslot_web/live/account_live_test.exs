@@ -439,9 +439,18 @@ defmodule TymeslotWeb.AccountLiveTest do
     test "cannot see change buttons for social accounts", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
-      # Buttons should be disabled
-      assert render(view) =~ "disabled"
-      assert render(view) =~ "Managed by Google"
+      # Inert but focusable, with the reason linked and no click to fire.
+      button =
+        "#toggle_email_form-button[aria-disabled='true'][aria-describedby='toggle_email_form-button-tip']"
+
+      assert has_element?(view, button)
+      refute has_element?(view, "#{button}[phx-click]")
+
+      assert has_element?(
+               view,
+               "#toggle_email_form-button-tip[role='tooltip']",
+               "Managed by Google"
+             )
     end
 
     test "cannot toggle forms or update for social users", %{conn: conn} do

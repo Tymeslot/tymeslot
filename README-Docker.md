@@ -356,6 +356,24 @@ Swap in `sendgrid`, `mailgun` or `ahasend` with the variables from the table abo
 
 **Development/Testing Only**: You can use `EMAIL_ADAPTER=test` to skip email configuration during development. Emails will be logged to console instead of being sent.
 
+### Behind a CDN or load balancer
+
+Tymeslot keys its per-IP rate limits (bookings, login, password reset, poll votes) on the visitor address it reads from `X-Forwarded-For` and `X-Real-IP`. Private proxy addresses are skipped automatically, but a public proxy in front of your reverse proxy, such as a CDN edge, looks like a visitor: every visitor routed through one edge then resolves to that edge and shares its rate limits.
+
+Set `TRUSTED_PROXIES` to the proxy's published ranges so they are skipped too:
+
+```bash
+# Comma-separated IPv4/IPv6 addresses or CIDR ranges. Behind Cloudflare, list
+# every range from https://www.cloudflare.com/ips/ (IPv4 and IPv6).
+TRUSTED_PROXIES=173.245.48.0/20,103.21.244.0/22,2400:cb00::/32
+```
+
+- Unset or empty (the default) trusts no public range.
+- Tymeslot refuses to start if an entry is not a valid address or range.
+- List only ranges that belong to your proxy provider: anything that can connect from a listed range can name an arbitrary visitor address.
+
+Details are in `.env.example`, next to `TRUST_PRIVATE_CLIENT_IPS`.
+
 ### HTTP Proxy Configuration
 
 > Full details, including whitelist domains and troubleshooting: [HTTP Proxy](https://tymeslot.app/docs/http-proxy).

@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       # 5. Open edit form
       view
-      |> element("button[title='Edit Webhook']")
+      |> element("button[aria-label='Edit Webhook']")
       |> render_click()
 
       assert render(view) =~ "Edit Webhook"
@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       # 7. Delete webhook
       view
-      |> element("button[title='Delete'][aria-label='Delete #{webhook.name}']")
+      |> element("button[aria-label='Delete #{webhook.name}']")
       |> render_click()
 
       assert render(view) =~ "Delete webhook"
@@ -164,7 +164,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
 
       view
-      |> element("button[title='Delete'][aria-label='Delete #{webhook.name}']")
+      |> element("button[aria-label='Delete #{webhook.name}']")
       |> render_click()
 
       assert has_element?(view, "#delete-webhook-modal[style*='display: flex']")
@@ -190,7 +190,15 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       assert has_element?(view, "#webhook-form")
 
-      close = ~s(button[aria-label="Close"][title="Close"][phx-click="close_webhook_form"])
+      # Nothing filled in yet: the reason the submit is disabled is on the page.
+      assert has_element?(view, "#webhook-submit-hint", "Webhook name is required.")
+
+      assert has_element?(
+               view,
+               "button[type='submit'][disabled][aria-describedby='webhook-submit-hint']"
+             )
+
+      close = ~s(button[aria-label="Close"][phx-click="close_webhook_form"])
       assert has_element?(view, close)
 
       view |> element(close) |> render_click()
@@ -224,7 +232,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       # Open edit form — token is displayed there with the Regenerate button
       view
-      |> element("button[title='Edit Webhook']")
+      |> element("button[aria-label='Edit Webhook']")
       |> render_click()
 
       assert render(view) =~ "Edit Webhook"
@@ -264,7 +272,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       {:ok, view, _html} = live(conn, "/dashboard/automation")
 
-      view |> element("button[title='Edit Webhook']") |> render_click()
+      view |> element("button[aria-label='Edit Webhook']") |> render_click()
 
       view
       |> element("button[phx-click='show_regenerate_token_modal']")
@@ -301,7 +309,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
 
       view
-      |> element("button[title='Test Connection']")
+      |> element("button[id^='webhook-test-']")
       |> render_click()
 
       assert render(view) =~ "Webhook test successful"
@@ -315,7 +323,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
 
       view
-      |> element("button[title='Test Connection']")
+      |> element("button[id^='webhook-test-']")
       |> render_click()
 
       assert render(view) =~ "Test failed"
@@ -336,7 +344,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       {:ok, view, _html} = live(conn, "/dashboard/automation")
 
-      view |> element("button[title='Edit Webhook']") |> render_click()
+      view |> element("button[aria-label='Edit Webhook']") |> render_click()
 
       view
       |> form("#webhook-form", %{
@@ -374,7 +382,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
 
       view
-      |> element("button[title='View Delivery Logs']")
+      |> element("button[id^='webhook-logs-']")
       |> render_click()
 
       html = render(view)
@@ -394,7 +402,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       {:ok, _deleted} = Webhooks.delete_webhook(user.id, webhook.id)
 
       view
-      |> element("button[title='View Delivery Logs']")
+      |> element("button[id^='webhook-logs-']")
       |> render_click()
 
       assert render(view) =~ "Webhook not found"

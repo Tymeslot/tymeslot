@@ -20,6 +20,7 @@ defmodule Tymeslot.SignedToken do
           | :cursor_page
           | :slack_oauth_state
           | :checkout_return
+          | :stripe_connect_state
 
   @purposes %{
     embed_session: [salt: "embed_session", max_age: 6 * 3600],
@@ -42,7 +43,11 @@ defmodule Tymeslot.SignedToken do
     # from that booking's own Stripe Checkout: the token rides in the cancel
     # URL only Stripe and the guest's browser see. A day outlasts the longest
     # checkout Stripe allows.
-    checkout_return: [salt: "checkout return", max_age: 24 * 3600]
+    checkout_return: [salt: "checkout return", max_age: 24 * 3600],
+    # Far longer than Slack's: a host creating a new Stripe account fills in a
+    # long form and may stop to find bank details. Single use is enforced by
+    # the nonce on the connect_accounts row, not by this expiry.
+    stripe_connect_state: [salt: "stripe_connect_state", max_age: 24 * 3600]
   }
 
   @doc "Signs `payload` for `purpose`."

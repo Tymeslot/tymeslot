@@ -187,7 +187,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       attendee_locale: params[:attendee_locale],
       guest_emails: guest_emails,
       reminders: params[:reminders] || [],
-      managed_by_host: params[:managed_by_host] == true
+      managed_by_host: params[:managed_by_host] == true,
+      location: params[:location]
     }
 
     case CreateAdHoc.execute(ad_hoc_params) do
@@ -222,6 +223,14 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
        Guests.max_guests()
      )}
   end
+
+  # The place the organiser gave the event, written as the provider's own
+  # location field. None leaves the key out, as before, so a provider never
+  # receives an empty one.
+  defp put_location(event_data, location) when is_binary(location) and location != "",
+    do: Map.put(event_data, :location, location)
+
+  defp put_location(event_data, _none), do: event_data
 
   # Outlook's repeat pattern is built from the event's timing, so the check
   # runs the Outlook mapping on that same timing (`timing_data/1`), read in the
@@ -268,7 +277,10 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
         description: description
       })
 
-    base_data = MeetingProvisioning.attach_conference_data(raw_base, plan)
+    base_data =
+      raw_base
+      |> put_location(creating[:location])
+      |> MeetingProvisioning.attach_conference_data(plan)
 
     case event_details.attendees do
       [] -> base_data

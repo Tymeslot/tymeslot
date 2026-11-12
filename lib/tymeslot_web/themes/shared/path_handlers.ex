@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   alias Tymeslot.BookingPages
   alias Tymeslot.MeetingTypes
+  alias TymeslotWeb.Live.Scheduling.EntryRefusal
   alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
 
@@ -253,6 +254,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     |> maybe_put_query_param("reschedule_seat_token", socket.assigns[:reschedule_seat_token])
     |> Map.merge(invite_param(socket.assigns))
     |> put_choices(socket.assigns)
+    |> drop_spent_invite(socket.assigns)
   end
 
   # What a fresh booking forgets of them: everything built on the meeting
@@ -389,7 +391,12 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # token, the rest from the theme context. Carrying `theme` is safe here
   # because a bare `theme=` is no longer a preview claim
   # (`PreviewMode.claimed?/1`); the embed selected it and must keep it.
-  defp put_embed_params(params, socket) do
+  @doc """
+  Adds the embed parameters of a verified embedded page to `params`; a page
+  that is not embedded leaves them untouched.
+  """
+  @spec put_embed_params(map(), Phoenix.LiveView.Socket.t()) :: map()
+  def put_embed_params(params, socket) do
     if socket.assigns[:embedded] do
       params
       |> Map.put("embed", "1")
@@ -425,12 +432,16 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   @doc """
   The query string parameters of a booking page's `params`: everything but
-  the route's own segments, and only the string-valued ones a URL can carry
+  the route's own segments and the entry refusal the page was sent with
+  (`EntryRefusal`), which said its piece on arrival and must not follow the
+  guest to the next step, and only the string-valued ones a URL can carry
   back.
   """
   @spec query_params(map()) :: %{String.t() => String.t()}
   def query_params(params) do
-    for {key, value} <- Map.drop(params, @path_params), is_binary(value), into: %{} do
+    for {key, value} <- Map.drop(params, [EntryRefusal.param() | @path_params]),
+        is_binary(value),
+        into: %{} do
       {key, value}
     end
   end

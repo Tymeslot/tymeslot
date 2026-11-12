@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal do
       confirm_label={confirm_label(@kind)}
       confirm_variant={:primary}
       icon="hero-envelope"
-      cancel_label={dgettext("dashboard_calendar_events", "No")}
+      cancel_label={dgettext("dashboard_calendar_modals", "No")}
       on_cancel={JS.push("notify_prompt_cancel", target: @myself)}
       on_confirm={JS.push("notify_prompt_confirm", target: @myself)}
     >
@@ -30,12 +30,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal do
     """
   end
 
-  defp header_text(:delete), do: dgettext("dashboard_calendar_events", "Send cancellation")
-  defp header_text(_update), do: dgettext("dashboard_calendar_events", "Notify attendees")
+  defp header_text(:delete), do: dgettext("dashboard_calendar_modals", "Send cancellation")
+  defp header_text(_update), do: dgettext("dashboard_calendar_modals", "Notify attendees")
 
   defp body_text(:delete, attendees) do
     dngettext(
-      "dashboard_calendar_events",
+      "dashboard_calendar_modals",
       "Send cancellation to %{count} attendee?",
       "Send cancellation to %{count} attendees?",
       length(attendees)
@@ -44,13 +44,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal do
 
   defp body_text(_update, attendees) do
     dngettext(
-      "dashboard_calendar_events",
+      "dashboard_calendar_modals",
       "Notify %{count} attendee of this change?",
       "Notify %{count} attendees of this change?",
       length(attendees)
     )
   end
 
-  defp confirm_label(:delete), do: dgettext("dashboard_calendar_events", "Yes, send")
-  defp confirm_label(_update), do: dgettext("dashboard_calendar_events", "Yes, notify")
+  defp confirm_label(:delete), do: dgettext("dashboard_calendar_modals", "Yes, send")
+  defp confirm_label(_update), do: dgettext("dashboard_calendar_modals", "Yes, notify")
 end

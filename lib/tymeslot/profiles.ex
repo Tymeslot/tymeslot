@@ -74,6 +74,14 @@ defmodule Tymeslot.Profiles do
   @spec get_profile_by_id(integer()) :: profile | nil
   defdelegate get_profile_by_id(profile_id), to: ProfileQueries, as: :get_with_user
 
+  @doc "The currency recorded as the one the user's prices were set in, if any."
+  @spec last_charge_currency(integer()) :: String.t() | nil
+  defdelegate last_charge_currency(user_id), to: ProfileQueries
+
+  @doc "Records the currency the user's prices were set in."
+  @spec record_last_charge_currency(integer(), String.t()) :: :ok
+  defdelegate record_last_charge_currency(user_id, currency), to: ProfileQueries
+
   @doc """
   Gets or creates a profile for a user.
   Creates default weekly schedule for newly created profiles.

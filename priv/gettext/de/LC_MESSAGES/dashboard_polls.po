@@ -39,7 +39,7 @@ msgstr[1] "%{count} Stimmen"
 msgid "Add any context for your guests"
 msgstr "Fügen Sie Kontext für Ihre Gäste hinzu"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Add at least one candidate time"
 msgstr "Fügen Sie mindestens eine Zeitoption hinzu"
@@ -271,7 +271,7 @@ msgstr "Die Zeiten müssen in der Zukunft liegen"
 msgid "Times shown in %{timezone}"
 msgstr "Zeiten angezeigt in %{timezone}"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_timezone.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Zeitzone"

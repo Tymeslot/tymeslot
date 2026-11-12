@@ -6,17 +6,22 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   The sequence is fixed. Where a host may enter it is not: `resume_step/1`
   derives the first incomplete step from the account itself, and no step
   after that one can be reached, so the meeting and theme steps are never
-  shown to a host without a bookable calendar.
+  shown to a host without a bookable calendar, and the look and live steps
+  wait for the meeting.
   """
 
   @typedoc "Represents an onboarding step in the flow."
   @type step :: :profile | :connect_calendar | :meeting | :choose_theme | :ready
 
   @typedoc "A step a host can resume at: the first one their account has not done."
-  @type resume_step :: :profile | :connect_calendar | :meeting
+  @type resume_step :: :profile | :connect_calendar | :meeting | :choose_theme
 
   @typedoc "The account state `resume_step/1` reads."
-  @type account_state :: %{username: String.t() | nil, bookable_calendar?: boolean()}
+  @type account_state :: %{
+          username: String.t() | nil,
+          bookable_calendar?: boolean(),
+          meeting_confirmed?: boolean()
+        }
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -45,21 +50,24 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   @doc """
   Returns the step a host enters onboarding at, derived from their account:
   without a username they start at the link; without a bookable calendar, at
-  the calendar; otherwise at the meeting.
+  the calendar; until the meeting step is confirmed, at the meeting; and after
+  it, at the look.
   """
   @spec resume_step(account_state()) :: resume_step()
   def resume_step(%{username: username}) when username in [nil, ""], do: :profile
   def resume_step(%{bookable_calendar?: false}), do: :connect_calendar
-  def resume_step(%{bookable_calendar?: true}), do: :meeting
+  def resume_step(%{bookable_calendar?: true, meeting_confirmed?: false}), do: :meeting
+  def resume_step(%{bookable_calendar?: true, meeting_confirmed?: true}), do: :choose_theme
 
   @doc """
   Whether a host who resumes at `resume_step` may open `step`. A step past
-  the link or the calendar depends on it, so it stays out of reach until that
-  is done. The meeting is the last step the account can show as unfinished,
-  so a host who resumes there may open any step.
+  the link, the calendar or the meeting depends on it, so it stays out of
+  reach until that is done. The meeting is the last step the account records:
+  nothing marks the look as seen, so a host who resumes there may open any
+  step.
   """
   @spec reachable?(step(), resume_step()) :: boolean()
-  def reachable?(_step, :meeting), do: true
+  def reachable?(_step, :choose_theme), do: true
   def reachable?(step, resume_step), do: step_number(step) <= step_number(resume_step)
 
   @doc """

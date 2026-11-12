@@ -132,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramStateActionsTest do
       open_telegram_tab(view)
 
       view
-      |> element("button[title='Disconnect Telegram']")
+      |> element("button[aria-label='Disconnect Telegram']")
       |> render_click()
 
       assert render(view) =~ "Telegram disconnected"
@@ -157,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramStateActionsTest do
       open_telegram_tab(view)
 
       view
-      |> element("button[title='Disconnect Telegram']")
+      |> element("button[aria-label='Disconnect Telegram']")
       |> render_click()
 
       assert {:ok, %{chat_id: nil}} = Telegram.get_integration(integration.id, user.id)
@@ -260,7 +260,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramStateActionsTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       open_telegram_tab(view)
 
-      view |> element("button[title='Disconnect Telegram']") |> render_click()
+      view |> element("button[aria-label='Disconnect Telegram']") |> render_click()
       view |> element("button", "Connect") |> render_click()
 
       assert render(view) =~ "Open in Telegram"
