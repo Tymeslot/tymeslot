@@ -80,6 +80,43 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
     end
   end
 
+  describe "handle_locale_change/3 on a page with an organiser's texts" do
+    setup %{socket: socket} do
+      profile = %Tymeslot.Profiles.ProfileSchema{
+        content_locale: "en",
+        translation_locales: ["de"],
+        offer_all_locales: false
+      }
+
+      {:ok, socket: %{socket | assigns: Map.put(socket.assigns, :organizer_profile, profile)}}
+    end
+
+    test "reloads the page for an offered language", %{socket: socket} do
+      url = "http://localhost/anna?locale=de"
+      updated = LocaleHandler.handle_locale_change(socket, "de", url)
+
+      assert updated.redirected == {:redirect, %{external: url, status: 302}}
+      assert updated.assigns.locale == "en"
+    end
+
+    test "does nothing for the language already shown, so the reload cannot loop", %{
+      socket: socket
+    } do
+      updated =
+        LocaleHandler.handle_locale_change(socket, "en", "http://localhost/anna?locale=en")
+
+      assert updated.redirected == nil
+    end
+
+    test "ignores a language the organiser does not offer", %{socket: socket} do
+      updated =
+        LocaleHandler.handle_locale_change(socket, "fr", "http://localhost/anna?locale=fr")
+
+      assert updated.redirected == nil
+      assert updated.assigns.locale == "en"
+    end
+  end
+
   describe "edge cases and concurrency" do
     test "handles socket without locale assign gracefully" do
       socket =

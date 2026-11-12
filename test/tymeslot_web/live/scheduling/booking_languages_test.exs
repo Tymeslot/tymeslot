@@ -130,6 +130,34 @@ defmodule TymeslotWeb.Live.Scheduling.BookingLanguagesTest do
     assert html =~ "Intro call"
   end
 
+  test "a ?locale= patched into a running page reloads it in that language", %{
+    conn: conn,
+    profile: profile
+  } do
+    {:ok, view, _html} = live(conn, "/#{profile.username}")
+    assert render(view) =~ "Intro call"
+
+    path = "/#{profile.username}?locale=de"
+    assert {:error, {:redirect, %{to: to}}} = render_patch(view, path)
+    assert to =~ path
+
+    {:ok, reloaded, _html} = live(conn, to)
+    html = render(reloaded)
+    assert html =~ ~s(data-locale="de")
+    assert html =~ "Erstgespräch"
+  end
+
+  test "a patched ?locale= the organiser does not offer leaves the page as it is", %{
+    conn: conn,
+    profile: profile
+  } do
+    {:ok, view, _html} = live(conn, "/#{profile.username}")
+
+    html = render_patch(view, "/#{profile.username}?locale=fr")
+    assert html =~ ~s(data-locale="en")
+    assert html =~ "Intro call"
+  end
+
   test "the switcher lists only the offered languages", %{conn: conn, profile: profile} do
     {:ok, view, _html} = live(conn, "/#{profile.username}")
 
