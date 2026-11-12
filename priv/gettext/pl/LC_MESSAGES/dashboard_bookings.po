@@ -904,9 +904,9 @@ msgid "Location"
 msgstr "Lokalizacja"
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Are you sure you want to cancel “%{title}” scheduled for %{when}? Every guest is told."
-msgstr "Na pewno chcesz odwołać spotkanie z uczestnikiem %{name} zaplanowane na %{when}?"
+msgstr "Na pewno chcesz odwołać „%{title}” zaplanowane na %{when}? Wszyscy goście zostaną powiadomieni."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
