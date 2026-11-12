@@ -351,6 +351,13 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     end
   end
 
+  # A meeting held at a named place says so even when it also has a video
+  # room, as its emails do; the room keeps its CONFERENCE line and its link
+  # in the description.
+  defp determine_location(%{location_type: type, location: location})
+       when type in [:in_person, :custom] and is_binary(location) and location != "",
+       do: location
+
   defp determine_location(meeting_details) do
     meeting_url = Map.get(meeting_details, :meeting_url)
     location = Map.get(meeting_details, :location)
