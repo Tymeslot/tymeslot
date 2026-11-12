@@ -13,8 +13,8 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
   alias Tymeslot.ContentTranslations.Languages
 
   @doc """
-  Applies a `?locale=` found in `handle_params/3` to the running LiveView,
-  when it is acceptable and the organiser offers it
+  Applies the URL's `?locale=` (`new_locale`, nil when absent) in
+  `handle_params/3`, when it is acceptable and the organiser offers it
   (`Tymeslot.ContentTranslations.Languages.offers?/2`); otherwise leaves the
   socket untouched, so a locale the organiser does not offer keeps the page
   in the language it was mounted in.
@@ -26,26 +26,52 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
   `TymeslotWeb.Plugs.LocalePlug` remember the choice in the session, exactly
   as the language switcher's `change_locale` event does
   (`EventHandlers.handle_change_locale/3`). Pages without organiser texts,
-  and calls without a `url`, switch in place. The caller stops handling the
-  params once the socket is redirected.
+  and calls without a `url`, switch in place.
+
+  A page whose own URL asked for a language the organiser does not offer
+  (`:stale_locale_param`, assigned by
+  `TymeslotWeb.Live.Scheduling.OrganizerHelpers.assign_page_language/3`) is
+  shown in the original, and reloads with `?locale=` naming it, so the
+  address says the language the page is in. A remembered pick the organiser
+  does not offer never reloads: the page is simply shown in the original.
+
+  Returns `{:reload, socket}` when the socket now redirects, and the caller
+  stops handling the params; `{:cont, socket}` otherwise.
   """
   @spec handle_locale_change(Phoenix.LiveView.Socket.t(), String.t() | nil, String.t() | nil) ::
-          Phoenix.LiveView.Socket.t()
+          {:cont | :reload, Phoenix.LiveView.Socket.t()}
   def handle_locale_change(socket, new_locale, url \\ nil) do
     profile = socket.assigns[:organizer_profile]
+    reloadable? = is_binary(url) and profile != nil
 
     cond do
+      reloadable? and socket.assigns[:stale_locale_param] == true ->
+        {:reload, reload(socket, url, socket.assigns.locale)}
+
       not Languages.offers?(profile, new_locale) ->
-        socket
+        {:cont, socket}
 
       # The language already shown never reloads, so the reloaded page,
       # whose URL still carries `?locale=`, cannot loop.
-      new_locale != socket.assigns[:locale] and is_binary(url) and profile != nil ->
-        LiveView.redirect(socket, external: url)
+      reloadable? and new_locale != socket.assigns[:locale] ->
+        {:reload, LiveView.redirect(socket, external: url)}
 
       true ->
         Gettext.put_locale(new_locale)
-        Component.assign(socket, :locale, new_locale)
+        {:cont, Component.assign(socket, :locale, new_locale)}
     end
   end
+
+  @doc """
+  `url` with its `?locale=` set to `locale`, every other parameter kept.
+  """
+  @spec with_locale(String.t(), String.t()) :: String.t()
+  def with_locale(url, locale) do
+    uri = URI.parse(url)
+    query = URI.decode_query(uri.query || "")
+    URI.to_string(%{uri | query: URI.encode_query(Map.put(query, "locale", locale))})
+  end
+
+  defp reload(socket, url, locale),
+    do: LiveView.redirect(socket, external: with_locale(url, locale))
 end

@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
 
   describe "handle_locale_change/2" do
     test "changes locale when valid", %{socket: socket} do
-      updated_socket = LocaleHandler.handle_locale_change(socket, "de")
+      {:cont, updated_socket} = LocaleHandler.handle_locale_change(socket, "de")
 
       assert updated_socket.assigns.locale == "de"
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
       Gettext.put_locale(TymeslotWeb.Gettext, "de")
 
       # Change to same locale
-      updated_socket = LocaleHandler.handle_locale_change(socket, "de")
+      {:cont, updated_socket} = LocaleHandler.handle_locale_change(socket, "de")
 
       # Should return socket unchanged (same reference)
       assert updated_socket == socket
@@ -36,21 +36,21 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
     end
 
     test "rejects unsupported locale", %{socket: socket} do
-      updated_socket = LocaleHandler.handle_locale_change(socket, "ja")
+      {:cont, updated_socket} = LocaleHandler.handle_locale_change(socket, "ja")
 
       # Should remain unchanged
       assert updated_socket.assigns.locale == "en"
     end
 
     test "handles nil locale gracefully", %{socket: socket} do
-      updated_socket = LocaleHandler.handle_locale_change(socket, nil)
+      {:cont, updated_socket} = LocaleHandler.handle_locale_change(socket, nil)
 
       # Should remain unchanged
       assert updated_socket.assigns.locale == "en"
     end
 
     test "handles empty string locale", %{socket: socket} do
-      updated_socket = LocaleHandler.handle_locale_change(socket, "")
+      {:cont, updated_socket} = LocaleHandler.handle_locale_change(socket, "")
 
       # Should remain unchanged
       assert updated_socket.assigns.locale == "en"
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
       refute Locales.supported_codes() == []
 
       Enum.reduce(Locales.supported_codes(), socket, fn code, socket ->
-        socket = LocaleHandler.handle_locale_change(socket, code)
+        {:cont, socket} = LocaleHandler.handle_locale_change(socket, code)
         assert socket.assigns.locale == code
         socket
       end)
@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
 
     test "reloads the page for an offered language", %{socket: socket} do
       url = "http://localhost/anna?locale=de"
-      updated = LocaleHandler.handle_locale_change(socket, "de", url)
+      {:reload, updated} = LocaleHandler.handle_locale_change(socket, "de", url)
 
       assert updated.redirected == {:redirect, %{external: url, status: 302}}
       assert updated.assigns.locale == "en"
@@ -102,20 +102,34 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
     test "does nothing for the language already shown, so the reload cannot loop", %{
       socket: socket
     } do
-      updated =
+      {:cont, updated} =
         LocaleHandler.handle_locale_change(socket, "en", "http://localhost/anna?locale=en")
 
       assert updated.redirected == nil
     end
 
     test "ignores a language the organiser does not offer", %{socket: socket} do
-      updated =
+      {:cont, updated} =
         LocaleHandler.handle_locale_change(socket, "fr", "http://localhost/anna?locale=fr")
 
       assert updated.redirected == nil
       assert updated.assigns.locale == "en"
     end
+
+    test "reloads a page whose ?locale= is not offered with the original in its URL", %{
+      socket: socket
+    } do
+      socket = %{socket | assigns: Map.put(socket.assigns, :stale_locale_param, true)}
+      url = "http://localhost/anna?locale=fr&timezone=Europe%2FBerlin"
+
+      {:reload, updated} = LocaleHandler.handle_locale_change(socket, "fr", url)
+
+      assert {:redirect, %{external: to}} = updated.redirected
+      assert %{"locale" => "en", "timezone" => "Europe/Berlin"} = query_of(to)
+    end
   end
+
+  defp query_of(url), do: url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
 
   describe "edge cases and concurrency" do
     test "handles socket without locale assign gracefully" do
@@ -125,7 +139,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
           endpoint: TymeslotWeb.Endpoint
         }
 
-      updated_socket = LocaleHandler.handle_locale_change(socket, "de")
+      {:cont, updated_socket} = LocaleHandler.handle_locale_change(socket, "de")
 
       assert updated_socket.assigns.locale == "de"
     end

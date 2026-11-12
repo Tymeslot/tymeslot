@@ -603,7 +603,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
       assert LocalePlug.live_session_data(conn) == %{
                "resolved_locale" => "fr",
                "ambient_locale" => "de",
-               "locale_candidates" => ["de"],
+               "browser_locales" => ["de"],
                "visitor_week_start" => "monday"
              }
     end
@@ -620,7 +620,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
                "resolved_locale" => "it",
                "ambient_locale" => "it",
                "path_locale" => "it",
-               "locale_candidates" => []
+               "browser_locales" => []
              }
     end
   end

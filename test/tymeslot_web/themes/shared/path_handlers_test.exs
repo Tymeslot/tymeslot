@@ -436,6 +436,18 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
                "/janedoe?reschedule_meeting_uid=abc-123"
     end
 
+    test "carries the page's language with the reschedule uid" do
+      assigns = %{organizer_profile: %{username: "janedoe"}, meeting_uid: "abc", locale: "de"}
+
+      assert PathHandlers.organizer_scheduling_path(assigns) ==
+               "/janedoe?locale=de&reschedule_meeting_uid=abc"
+    end
+
+    test "carries no language without a meeting to reschedule" do
+      assigns = %{organizer_profile: %{username: "janedoe"}, locale: "de"}
+      assert PathHandlers.organizer_scheduling_path(assigns) == "/janedoe"
+    end
+
     test "omits the reschedule param when meeting_uid is blank" do
       assigns = %{organizer_profile: %{username: "janedoe"}, meeting_uid: ""}
       assert PathHandlers.organizer_scheduling_path(assigns) == "/janedoe"

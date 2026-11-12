@@ -14,14 +14,11 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   alias Tymeslot.BookingPages
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.ContentTranslations
-  alias Tymeslot.ContentTranslations.Languages
   alias Tymeslot.Demo
-  alias Tymeslot.Locales
   alias Tymeslot.Polls
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
-  alias TymeslotWeb.Live.Scheduling.PageAddress
   alias TymeslotWeb.Live.Scheduling.PreviewToken
   alias TymeslotWeb.Themes.Core.{Context, ErrorBoundary, MeetingManagement, PollVoting, Registry}
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
@@ -126,7 +123,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
 
     case MeetingManagement.validate_and_load_meeting(meeting_uid, action, profile.user_id) do
       {:ok, meeting} ->
-        {socket, profile} = follow_attendee_language(socket, profile, meeting, params)
+        {socket, profile} = follow_attendee_language(socket, profile, meeting)
 
         # A booking made through a booking page is managed in that page's look.
         profile = BookingPages.for_meeting(profile, meeting)
@@ -172,31 +169,13 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   end
 
   # A meeting's pages speak the language the attendee booked in, unless the
-  # URL asks for another (`?locale=`, the language switcher's): the emailed
-  # links carry no locale, and the attendee may open them anywhere. The
-  # language is resolved again among the organiser's offered ones
-  # (`Languages.resolve/2`). The page was set up in the visitor's language
-  # before the meeting was known, and the organiser's texts were put into it
-  # then, so when the attendee's language changes the answer the organiser
-  # is set up again in that one.
-  defp follow_attendee_language(socket, profile, meeting, params) do
-    candidates =
-      [params["locale"], meeting.attendee_locale | visitor_candidates(socket)]
-      |> Enum.filter(&Locales.acceptable?/1)
-      |> Enum.uniq()
-
-    socket = assign(socket, :locale_candidates, candidates)
-
-    if Languages.resolve(profile, candidates) == socket.assigns[:locale] do
-      {socket, profile}
-    else
-      socket = OrganizerHelpers.handle_username_resolution(socket, PageAddress.address(params))
-      {socket, socket.assigns[:organizer_profile] || profile}
-    end
+  # visitor picked another (`?locale=`, the language switcher's): the emailed
+  # links carry no locale, and the attendee may open them anywhere
+  # (`OrganizerHelpers.follow_booked_language/2`).
+  defp follow_attendee_language(socket, profile, meeting) do
+    socket = OrganizerHelpers.follow_booked_language(socket, meeting.attendee_locale)
+    {socket, socket.assigns[:organizer_profile] || profile}
   end
-
-  defp visitor_candidates(socket),
-    do: socket.assigns[:locale_candidates] || List.wrap(socket.assigns[:locale])
 
   # A cancel or reschedule refusal. A reason `BookingErrorMessage` does not
   # name reads as the page's own failure, not a booking's.

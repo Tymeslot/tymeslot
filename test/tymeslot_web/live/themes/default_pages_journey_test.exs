@@ -124,6 +124,6 @@ defmodule TymeslotWeb.Live.Themes.DefaultPagesJourneyTest do
     assert {:error, {:live_redirect, %{to: to}}} =
              view |> element("[data-testid='reschedule-choose-time']") |> render_click()
 
-    assert to == "/#{p.username}?reschedule_meeting_uid=#{m.uid}"
+    assert to == "/#{p.username}?locale=en&reschedule_meeting_uid=#{m.uid}"
   end
 end

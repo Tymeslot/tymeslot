@@ -302,7 +302,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # chosen theme so the visitor lands on the theme they were viewing. Inside
   # an embed the redirect stays an embed (`PathHandlers.put_embed_params/2`,
   # from verified assigns only), or the guest would see the full profile page
-  # in the host's iframe.
+  # in the host's iframe. The language the visitor picked, when it is the
+  # page's, goes along too: an embed's iframe gets no session to remember it.
   defp invalid_meeting_type_redirect_path(socket) do
     query =
       case socket.assigns[:reschedule_meeting_uid] do
@@ -312,11 +313,17 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
     query =
       query
+      |> Map.merge(picked_locale_param(socket.assigns))
       |> Map.merge(PathHandlers.demo_theme_param(socket.assigns))
       |> PathHandlers.put_embed_params(socket)
 
     PathHandlers.with_query("/" <> socket.assigns[:username_context], query)
   end
+
+  defp picked_locale_param(%{locale_choice: locale, locale: locale}) when is_binary(locale),
+    do: %{"locale" => locale}
+
+  defp picked_locale_param(_assigns), do: %{}
 
   @doc "Makes `meeting_type` the one this booking is for, with its questions, locations and booking window."
   @spec assign_meeting_type(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()

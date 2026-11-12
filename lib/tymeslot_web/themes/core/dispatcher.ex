@@ -85,17 +85,12 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     socket = assign(socket, :request_path, URI.parse(url).path || "/")
 
     # Sync locale from params if present. A change on a page showing the
-    # organiser's texts reloads it, and nothing else is handled then.
-    socket =
-      if locale = params["locale"] do
-        LocaleHandler.handle_locale_change(socket, locale, url)
-      else
-        socket
-      end
-
-    if socket.redirected,
-      do: {:noreply, socket},
-      else: handle_page_params(params, url, socket)
+    # organiser's texts reloads it, as does a pick the organiser does not
+    # offer, and nothing else is handled then.
+    case LocaleHandler.handle_locale_change(socket, params["locale"], url) do
+      {:reload, socket} -> {:noreply, socket}
+      {:cont, socket} -> handle_page_params(params, url, socket)
+    end
   end
 
   defp handle_page_params(params, url, socket) do
