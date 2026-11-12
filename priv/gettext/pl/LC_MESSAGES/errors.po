@@ -893,3 +893,8 @@ msgstr "nie może zawierać języka oryginału"
 #, elixir-autogen, elixir-format
 msgid "cannot list a language twice"
 msgstr "nie może zawierać tego samego języka dwa razy"
+
+#: lib/tymeslot/content_translations/catalogue.ex
+#, elixir-autogen, elixir-format
+msgid "is not a translation language"
+msgstr "nie jest językiem tłumaczenia"

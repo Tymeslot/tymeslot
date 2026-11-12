@@ -217,7 +217,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 action={:languages}
               >
                 <.icon name="hero-language" class="w-5 h-5" />
-                <span>{dgettext("dashboard_languages", "Languages")}</span>
+                <span>{dgettext("dashboard_common", "Languages")}</span>
               </.nav_link>
             </div>
           </div>

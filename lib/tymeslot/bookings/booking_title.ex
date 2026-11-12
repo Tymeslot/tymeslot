@@ -50,8 +50,16 @@ defmodule Tymeslot.Bookings.BookingTitle do
   `Tymeslot.ContentTranslations.AttendeeTexts`). The template is still
   detected from the stored, original name, so a title it did not build is
   returned unchanged.
+
+  A title that is just the stored meeting type name, as a group slot's or a
+  planned session's is (`Tymeslot.Bookings.SeatEffects.slot_attrs/2`),
+  names the type, so it reads as `display_type` too.
   """
   @spec localise_with_type(map(), String.t() | nil) :: String.t() | nil
+  def localise_with_type(%{title: title, meeting_type: title}, display_type)
+      when is_binary(title) and is_binary(display_type),
+      do: display_type
+
   def localise_with_type(
         %{title: title, meeting_type: meeting_type, attendee_name: attendee_name} = meeting,
         display_type

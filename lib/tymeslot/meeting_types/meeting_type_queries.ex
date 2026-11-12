@@ -123,11 +123,16 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   `opts` are forwarded to `MeetingTypeSchema.changeset/3` so callers can
   thread payment-validation context (`:price_settable`,
   `:host_charges_enabled`, `:currency_minimum_cents`) into the changeset.
+
+  The changeset never casts `translations`, which only
+  `Tymeslot.ContentTranslations` writes; a copy's `:translations`
+  (`Tymeslot.MeetingTypes.Duplication`), already validated on its source,
+  are stored as they are.
   """
   @spec create_meeting_type(map(), keyword()) ::
           {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
   def create_meeting_type(attrs, opts \\ []) do
-    %MeetingTypeSchema{}
+    %MeetingTypeSchema{translations: Map.get(attrs, :translations) || %{}}
     |> MeetingTypeSchema.changeset(attrs, opts)
     |> Repo.insert()
   end

@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Helpers.PageTitles do
   def dashboard_title(:locations), do: section_title(dgettext("dashboard_common", "Locations"))
 
   def dashboard_title(:languages),
-    do: section_title(dgettext("dashboard_languages", "Languages"))
+    do: section_title(dgettext("dashboard_common", "Languages"))
 
   # The calendar is the dashboard's landing mode, so it carries the bare title.
   def dashboard_title(:calendar), do: dgettext("dashboard_common", "Dashboard")

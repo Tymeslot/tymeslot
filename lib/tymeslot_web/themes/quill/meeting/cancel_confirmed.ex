@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
   attr :meeting, :map, default: nil, doc: "the cancelled meeting"
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
+  attr :offered_locales, :list, default: nil
   attr :legal_links, :map, required: true
 
   @doc """
@@ -27,6 +28,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
       theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      offered_locales={assigns[:offered_locales]}
       legal_links={@legal_links}
       show_language_switcher={true}
     >

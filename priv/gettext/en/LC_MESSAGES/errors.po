@@ -871,3 +871,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "cannot list a language twice"
 msgstr ""
+
+#: lib/tymeslot/content_translations/catalogue.ex
+#, elixir-autogen, elixir-format
+msgid "is not a translation language"
+msgstr ""

@@ -22,6 +22,7 @@ defmodule TymeslotWeb.SeatController do
   use TymeslotWeb, :controller
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Locales
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
@@ -44,7 +45,7 @@ defmodule TymeslotWeb.SeatController do
       |> seat_page(dgettext("booking_manage", "Cancel your spot"))
       |> render(:cancel_confirm,
         participant: participant,
-        meeting: meeting,
+        meeting: as_read_by(meeting, participant),
         token: token,
         keep_path: booking_page_path(meeting)
       )
@@ -69,7 +70,7 @@ defmodule TymeslotWeb.SeatController do
       |> seat_page(dgettext("booking_manage", "Spot cancelled"))
       |> render(:cancelled,
         participant: participant,
-        meeting: meeting,
+        meeting: as_read_by(meeting, participant),
         booking_path: booking_page_path(meeting)
       )
     else
@@ -130,6 +131,13 @@ defmodule TymeslotWeb.SeatController do
         assign(conn, :locale, locale)
     end
   end
+
+  # The meeting's type, title and location as the participant reads them:
+  # their language's copy (`AttendeeTexts`), with a group slot's title, which
+  # is the type's original name, naming it in that copy too. Called after
+  # `put_participant_locale/2`, so the title renders in their language.
+  defp as_read_by(meeting, %{locale: locale}),
+    do: AppointmentBuilder.attendee_view(meeting, locale)
 
   # These pages render without the app layout, so the browser tab takes its
   # name from `page_title` alone — without one every seat page reads

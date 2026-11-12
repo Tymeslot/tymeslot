@@ -50,6 +50,7 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
 
   require Logger
 
+  alias Tymeslot.ContentTranslations.AttendeeTexts
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.MeetingTypes
@@ -71,7 +72,9 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
 
   @doc """
   The location attributes a reschedule writes, or `%{}` when it keeps the
-  meeting where it is.
+  meeting where it is. They carry the attendees' copies of the booking's
+  texts (`attendee_texts`), every locale's rebuilt for the new location
+  (`AttendeeTexts.relocated/4`), nil when nothing in them is translated.
 
   `params` carries the booker's `:location_option_id` and, for a phone option
   that asks for it, `:location_phone`, for a video option offering several
@@ -86,14 +89,14 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   def attributes(%Meeting{}, nil, _params), do: %{}
 
   def attributes(%Meeting{} = meeting, meeting_type, params) do
-    case chosen(meeting, meeting_type, params) do
-      nil ->
-        %{}
-
-      resolution ->
-        if stays?(meeting, resolution, Map.get(params, :location_venue_id)),
-          do: %{},
-          else: changes(meeting, resolution)
+    with %{} = choice <- choice(meeting, meeting_type, params),
+         resolution = MeetingTypes.resolve_location(meeting_type, choice),
+         false <- stays?(meeting, resolution, Map.get(params, :location_venue_id)) do
+      meeting
+      |> changes(resolution)
+      |> with_attendee_texts(meeting, meeting_type, choice)
+    else
+      _keeps_location -> %{}
     end
   end
 
@@ -178,20 +181,31 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
 
   def create_room(%Meeting{}, %Meeting{}, _opts), do: :not_scheduled
 
-  defp chosen(%Meeting{} = meeting, meeting_type, %{location_option_id: option_id} = params)
+  defp choice(%Meeting{} = meeting, meeting_type, %{location_option_id: option_id} = params)
        when is_binary(option_id) do
     if Enum.any?(MeetingTypes.location_options(meeting_type), &(&1.id == option_id)) do
-      MeetingTypes.resolve_location(meeting_type, %{
+      %{
         option_id: option_id,
         phone: Map.get(params, :location_phone),
         video_integration_id: Map.get(params, :location_video_integration_id),
         venue_id: Map.get(params, :location_venue_id),
         current_venue_id: meeting.venue_id
-      })
+      }
     end
   end
 
-  defp chosen(_meeting, _meeting_type, _params), do: nil
+  defp choice(_meeting, _meeting_type, _params), do: nil
+
+  # The attendees' copies of the location move with the original, in the
+  # same write: left alone, it would keep showing the old place in their
+  # emails, calendar entry and meeting pages (`AttendeeTexts.text/3`).
+  defp with_attendee_texts(changes, meeting, meeting_type, choice) do
+    Map.put(
+      changes,
+      :attendee_texts,
+      AttendeeTexts.relocated(meeting, meeting_type, changes, choice)
+    )
+  end
 
   # The same option with the same number, on the same provider, is the
   # booker leaving the picker where it opened: a time-only reschedule, which

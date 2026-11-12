@@ -51,6 +51,22 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   end
 
   @doc """
+  `meeting` as its attendee reads it in `locale`, for a template that renders
+  the meeting itself rather than these details: the attendee's copies of its
+  texts (`AttendeeTexts`) and its title in their language, the type named as
+  they read it.
+  """
+  @spec attendee_view(MeetingSchema.t(), String.t()) :: MeetingSchema.t()
+  def attendee_view(%MeetingSchema{} = meeting, locale) do
+    attendee_meeting = AttendeeTexts.as_read_in(meeting, locale)
+
+    %{
+      attendee_meeting
+      | title: BookingTitle.localise_with_type(meeting, attendee_meeting.meeting_type)
+    }
+  end
+
+  @doc """
   Appointment details for a meeting moved from `original`, which carries the
   previous `start_time`, `end_time` and `attendee_video_url` (the meeting
   row no longer holds them), for the reschedule templates to show where the
@@ -279,7 +295,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   # copies when the booking carries them in this locale (`AttendeeTexts`);
   # `:original_texts` keeps the organiser's for their copies.
   defp base_details(meeting, attendee_locale) do
-    attendee_meeting = attendee_meeting(meeting, attendee_locale)
+    attendee_meeting = AttendeeTexts.as_read_in(meeting, attendee_locale)
     title = BookingTitle.localise_with_type(meeting, attendee_meeting.meeting_type)
 
     %{
@@ -300,12 +316,6 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     }
     |> Map.merge(snapshot_texts(attendee_meeting))
     |> put_original_texts(meeting, attendee_meeting)
-  end
-
-  defp attendee_meeting(meeting, locale) do
-    Enum.reduce(AttendeeTexts.keys(), meeting, fn key, acc ->
-      Map.put(acc, key, AttendeeTexts.text(meeting, key, locale))
-    end)
   end
 
   defp snapshot_texts(meeting) do

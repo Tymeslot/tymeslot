@@ -25,8 +25,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
 
   import Swoosh.Email
 
-  alias Tymeslot.Bookings.BookingTitle
-
+  alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.RecipientLocale
 
   alias Tymeslot.Emails.Shared.{
@@ -56,9 +55,9 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
     locale = RecipientLocale.attendee_locale(meeting)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      # The stored title is in the organiser's language; the booker reads it in
-      # theirs.
-      meeting = %{meeting | title: BookingTitle.localise(meeting)}
+      # The stored title and texts are in the organiser's language; the booker
+      # reads them in theirs.
+      meeting = AppointmentBuilder.attendee_view(meeting, locale)
 
       kind = if rescheduled?(meeting), do: :reschedule, else: :booking
       attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)

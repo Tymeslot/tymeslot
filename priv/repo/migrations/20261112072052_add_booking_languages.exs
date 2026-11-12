@@ -12,9 +12,13 @@ defmodule Tymeslot.Repo.Migrations.AddBookingLanguages do
     * `profiles.content_locale` (nullable: unset means the booking pages'
       fallback language), `translation_locales` and `offer_all_locales`
       (true keeps today's behaviour).
-    * `meetings.attendee_texts`: the attendee's copies of the booking's
-      snapshot strings, in the attendee's language, stored only when they were
-      actually translated.
+    * `meetings.attendee_texts`: the attendees' copies of the booking's
+      snapshot strings, one per language someone booked in,
+      `%{locale => %{"meeting_type" => ..., "description" => ...,
+      "location" => ..., "custom_fields_snapshot" => [...]}}`, holding only
+      the locales in which something was actually translated (null when
+      none). A group slot carries one copy for each of its participants'
+      languages.
 
   Every new NOT NULL column has a constant default, so existing rows satisfy
   it without a backfill.

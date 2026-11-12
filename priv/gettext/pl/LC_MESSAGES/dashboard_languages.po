@@ -81,11 +81,6 @@ msgstr "Teksty strony rezerwacji"
 msgid "Choose the language you write your booking pages in, and translate your texts into other languages. These settings apply to every booking page."
 msgstr "Wybierz język, w którym piszesz strony rezerwacji, i przetłumacz teksty na inne języki. Te ustawienia dotyczą wszystkich stron rezerwacji."
 
-#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Close"
-msgstr "Zamknij"
-
 #: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save these translations."
@@ -156,8 +151,6 @@ msgstr "Tekst pomocniczy"
 msgid "Instruction"
 msgstr "Instrukcja"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/languages_component.ex
 #, elixir-autogen, elixir-format
 msgid "Languages"
@@ -357,3 +350,8 @@ msgstr "Strona rezerwacji jest dostępna tylko w języku oryginału (%{language}
 #, elixir-autogen, elixir-format
 msgid "original"
 msgstr "oryginał"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save these translations. Choose the language again to leave without saving them."
+msgstr "Nie udało się zapisać tych tłumaczeń. Wybierz język ponownie, aby wyjść bez ich zapisywania."

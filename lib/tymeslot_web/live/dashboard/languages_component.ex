@@ -41,7 +41,14 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
      )}
   end
 
+  # A saved translation changes only its own record, so it replaces that
+  # record in the items already read and the progress is counted again from
+  # them, without reading everything back.
   @impl Phoenix.LiveComponent
+  def update(%{translation_saved: entity}, %{assigns: %{items: %{} = items}} = socket) do
+    {:ok, socket |> assign(:items, replace_record(items, entity)) |> count_progress()}
+  end
+
   def update(%{translation_saved: _entity}, socket), do: {:ok, load(socket)}
 
   def update(assigns, socket) do
@@ -57,6 +64,12 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
         send(self(), {:patch, ~p"/dashboard/languages"})
         {:ok, socket}
 
+      # The static render shows the page without its counts and texts, as
+      # `DashboardLive` leaves its own data to the connected mount; reading
+      # them here would read everything twice.
+      not connected?(socket) ->
+        {:ok, assign(socket, :review_locale, review_locale)}
+
       socket.assigns.loaded_for == {review_locale, locales} ->
         {:ok, socket}
 
@@ -68,17 +81,33 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
     end
   end
 
-  defp load(%{assigns: %{review_locale: nil}} = socket) do
-    user_id = socket.assigns.current_user.id
-    locales = Languages.translation_locales(socket.assigns.profile)
-    assign(socket, :progress, Map.new(locales, &{&1, Catalogue.progress(user_id, &1)}))
+  # One read of everything translatable, from which every language's
+  # progress is counted.
+  defp load(socket) do
+    socket
+    |> assign(:items, Catalogue.items(socket.assigns.current_user.id))
+    |> count_progress()
   end
 
-  defp load(%{assigns: %{review_locale: locale, current_user: user}} = socket) do
-    assign(socket,
-      items: Catalogue.items(user.id),
-      progress: %{locale => Catalogue.progress(user.id, locale)}
-    )
+  defp count_progress(%{assigns: %{items: items, review_locale: review_locale}} = socket) do
+    locales =
+      if review_locale,
+        do: [review_locale],
+        else: Languages.translation_locales(socket.assigns.profile)
+
+    assign(socket, :progress, Catalogue.progress(items, locales))
+  end
+
+  # Each group keeps its own fields of the record (the profile appears in
+  # two, with different texts), so only the record is replaced.
+  defp replace_record(items, %{kind: kind, id: id, record: record}) do
+    Map.new(items, fn {group, entities} ->
+      {group,
+       Enum.map(entities, fn
+         %{kind: ^kind, id: ^id} = entity -> %{entity | record: record}
+         entity -> entity
+       end)}
+    end)
   end
 
   @impl Phoenix.LiveComponent
@@ -411,7 +440,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
     />
 
     <.empty_state
-      :if={@sections == []}
+      :if={@items && @sections == []}
       icon="hero-check-circle"
       title={
         if @only_open,

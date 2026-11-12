@@ -18,6 +18,8 @@ defmodule Tymeslot.ContentTranslations.Catalogue do
   the same `{:profile, id}`.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Ecto.Changeset
   alias Tymeslot.BookingPages
   alias Tymeslot.ContentTranslations
@@ -26,6 +28,7 @@ defmodule Tymeslot.ContentTranslations.Catalogue do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
+  alias Tymeslot.Repo
   alias Tymeslot.Venues
 
   @type kind :: :profile | :booking_page | :meeting_type | :venue
@@ -88,17 +91,26 @@ defmodule Tymeslot.ContentTranslations.Catalogue do
   end
 
   @doc """
-  How far `locale` has got across `items/1`, counting only texts whose
-  original is not blank: `translated` against the current original,
-  `outdated` (translated, but the original changed since) and `missing`.
+  How far each of `locales` has got across `items` (`items/1`, read once by
+  the caller), counting only texts whose original is not blank: `translated`
+  against the current original, `outdated` (translated, but the original
+  changed since) and `missing`.
   """
-  @spec progress(integer(), String.t()) :: progress()
-  def progress(user_id, locale) when is_integer(user_id) and is_binary(locale) do
-    statuses =
-      for {_group, entities} <- items(user_id),
+  @spec progress(items(), [String.t()]) :: %{String.t() => progress()}
+  def progress(items, locales) when is_map(items) and is_list(locales) do
+    fields =
+      for {_group, entities} <- items,
           entity <- entities,
           field <- entity.fields,
-          status = ContentTranslations.field_status(entity.record, field, locale),
+          do: {entity.record, field}
+
+    Map.new(locales, &{&1, locale_progress(fields, &1)})
+  end
+
+  defp locale_progress(fields, locale) do
+    statuses =
+      for {record, field} <- fields,
+          status = ContentTranslations.field_status(record, field, locale),
           status != :not_needed,
           do: status
 
@@ -143,10 +155,22 @@ defmodule Tymeslot.ContentTranslations.Catalogue do
   def save(user_id, {kind, id}, locale, texts)
       when is_integer(user_id) and is_binary(locale) and is_map(texts) do
     with {:ok, profile} <- fetch_profile(user_id),
-         {:ok, record} <- fetch(kind, id, user_id, profile),
+         {:ok, record} <- fetch(kind, id, user_id, profile) do
+      Repo.transaction(fn -> save_locked(record, kind, locale, texts, profile) end)
+    end
+  end
+
+  # The whole map is written back, so it is read under the row's lock: two
+  # saves at once (two languages, or two tabs) would otherwise each write
+  # back the map as they found it, and the later would drop the earlier's
+  # texts.
+  defp save_locked(record, kind, locale, texts, profile) do
+    with {:ok, record} <- TranslationQueries.lock(record),
          {:ok, saved} <-
            TranslationQueries.update(build_changeset(record, locale, texts, profile)) do
-      {:ok, entity(kind, saved)}
+      entity(kind, saved)
+    else
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 
@@ -167,7 +191,10 @@ defmodule Tymeslot.ContentTranslations.Catalogue do
     if locale in Languages.translation_locales(profile),
       do: changeset,
       else:
-        Changeset.add_error(changeset, :translations, "is not a translation language",
+        Changeset.add_error(
+          changeset,
+          :translations,
+          dgettext_noop("errors", "is not a translation language"),
           locale: locale
         )
   end

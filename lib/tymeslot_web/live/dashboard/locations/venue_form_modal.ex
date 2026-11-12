@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueFormModal do
                 phx-click="close_venue_form"
                 phx-target={@myself}
               >
-                {dgettext("dashboard_languages", "Close")}
+                {dgettext("dashboard_meeting_types", "Close")}
               </.action_button>
             </div>
           </:actions>

@@ -84,11 +84,6 @@ msgstr "Texty rezervační stránky"
 msgid "Choose the language you write your booking pages in, and translate your texts into other languages. These settings apply to every booking page."
 msgstr "Zvolte jazyk, ve kterém píšete své rezervační stránky, a přeložte své texty do dalších jazyků. Tato nastavení platí pro všechny rezervační stránky."
 
-#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Close"
-msgstr "Zavřít"
-
 #: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save these translations."
@@ -159,8 +154,6 @@ msgstr "Nápověda"
 msgid "Instruction"
 msgstr "Pokyn"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/languages_component.ex
 #, elixir-autogen, elixir-format
 msgid "Languages"
@@ -360,3 +353,8 @@ msgstr "Vaše rezervační stránka je dostupná jen v původním jazyce (%{lan
 #, elixir-autogen, elixir-format
 msgid "original"
 msgstr "původní"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save these translations. Choose the language again to leave without saving them."
+msgstr "Tyto překlady se nepodařilo uložit. Chcete-li odejít bez uložení, zvolte jazyk znovu."

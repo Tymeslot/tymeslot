@@ -84,11 +84,6 @@ msgstr "Тексти сторінки бронювання"
 msgid "Choose the language you write your booking pages in, and translate your texts into other languages. These settings apply to every booking page."
 msgstr "Виберіть мову, якою ви пишете свої сторінки бронювання, і перекладіть свої тексти іншими мовами. Ці налаштування діють для всіх сторінок бронювання."
 
-#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Close"
-msgstr "Закрити"
-
 #: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save these translations."
@@ -159,8 +154,6 @@ msgstr "Текст підказки"
 msgid "Instruction"
 msgstr "Підказка"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/languages_component.ex
 #, elixir-autogen, elixir-format
 msgid "Languages"
@@ -360,3 +353,8 @@ msgstr "Ваша сторінка бронювання доступна лише
 #, elixir-autogen, elixir-format
 msgid "original"
 msgstr "оригінал"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save these translations. Choose the language again to leave without saving them."
+msgstr "Не вдалося зберегти ці переклади. Виберіть мову ще раз, щоб вийти без збереження."

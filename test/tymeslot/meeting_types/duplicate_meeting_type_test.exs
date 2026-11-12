@@ -6,6 +6,7 @@ defmodule Tymeslot.MeetingTypes.DuplicateMeetingTypeTest do
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Duplication
@@ -116,6 +117,43 @@ defmodule Tymeslot.MeetingTypes.DuplicateMeetingTypeTest do
 
       assert {:error, _reason} = MeetingTypes.duplicate_meeting_type(source)
       assert length(MeetingTypes.get_all_meeting_types(user.id)) == 1
+    end
+
+    test "keeps the translations, the name's reading as outdated" do
+      user = insert(:user)
+
+      source =
+        insert(:meeting_type,
+          user: user,
+          name: "Intro call",
+          description: "Thirty minutes to get to know each other",
+          custom_fields: [
+            %FieldDefinition{id: "company", type: "short_text", label: "Company", position: 0}
+          ],
+          translations: %{
+            "de" => %{
+              "name" => %{"text" => "Erstgespräch", "source" => :erlang.phash2("Intro call")},
+              "description" => %{
+                "text" => "Dreißig Minuten zum Kennenlernen",
+                "source" => :erlang.phash2("Thirty minutes to get to know each other")
+              },
+              "custom_fields/company/label" => %{
+                "text" => "Firma",
+                "source" => :erlang.phash2("Company")
+              }
+            }
+          }
+        )
+
+      assert {:ok, copy} = MeetingTypes.duplicate_meeting_type(source)
+
+      reloaded = MeetingTypes.get_meeting_type(copy.id, user.id)
+      assert reloaded.translations == source.translations
+      assert ContentTranslations.status(reloaded, "name", "de") == :outdated
+      assert ContentTranslations.status(reloaded, "description", "de") == :translated
+
+      assert ContentTranslations.status(reloaded, "custom_fields/company/label", "de") ==
+               :translated
     end
 
     test "picks the next free name when a copy already exists" do

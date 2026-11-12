@@ -4,7 +4,9 @@ defmodule TymeslotWeb.Live.Scheduling.BookingLanguagesTest do
   original, and a German translation), walked as a visitor: which language
   the page picks, what it refuses, what the switcher offers, and that a
   booking made in German keeps the German copies for the attendee beside the
-  original wording.
+  original wording; and that the meeting's own pages (cancel, reschedule,
+  cancel confirmed) and the payment return page stay in the attendee's or
+  an offered language.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -17,8 +19,10 @@ defmodule TymeslotWeb.Live.Scheduling.BookingLanguagesTest do
   import Tymeslot.BookingTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Locales
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -91,19 +95,38 @@ defmodule TymeslotWeb.Live.Scheduling.BookingLanguagesTest do
       }
     )
 
-    %{profile: profile}
+    %{user: user, profile: profile}
   end
 
+  # German is the original here, so a page falling back to the instance
+  # default (English) instead of the organiser's original would fail.
   test "a visitor asking for French gets the original language", %{conn: conn, profile: profile} do
+    profile
+    |> Changeset.change(content_locale: "de", translation_locales: ["en"])
+    |> Repo.update!()
+
     {:ok, view, _html} =
       conn
       |> put_req_header("accept-language", "fr-FR,fr;q=0.9")
       |> live("/#{profile.username}")
 
     html = render(view)
-    assert html =~ ~s(data-locale="en")
-    assert html =~ "Intro call"
-    refute html =~ "Erstgespräch"
+    assert html =~ ~s(data-locale="de")
+    refute html =~ ~s(data-locale="en")
+  end
+
+  test "a visitor's later Accept-Language choice wins when the first is not offered", %{
+    conn: conn,
+    profile: profile
+  } do
+    {:ok, view, _html} =
+      conn
+      |> put_req_header("accept-language", "fr, de")
+      |> live("/#{profile.username}")
+
+    html = render(view)
+    assert html =~ ~s(data-locale="de")
+    assert html =~ "Erstgespräch"
   end
 
   test "?locale=de shows the German meeting type name and question label", %{
@@ -161,15 +184,119 @@ defmodule TymeslotWeb.Live.Scheduling.BookingLanguagesTest do
   test "the switcher lists only the offered languages", %{conn: conn, profile: profile} do
     {:ok, view, _html} = live(conn, "/#{profile.username}")
 
-    view |> element("button[phx-click='toggle_language_dropdown']") |> render_click()
+    assert Enum.sort(switcher_locales(view)) == ["de", "en"]
+  end
 
-    offered =
-      view
-      |> render()
-      |> Floki.parse_document!()
-      |> Floki.attribute("button[phx-click='change_locale']", "phx-value-locale")
+  test "the switcher is hidden when the organiser offers one language", %{
+    conn: conn,
+    profile: profile
+  } do
+    profile |> Changeset.change(translation_locales: []) |> Repo.update!()
 
-    assert Enum.sort(offered) == ["de", "en"]
+    {:ok, view, _html} = live(conn, "/#{profile.username}")
+
+    assert render(view) =~ ~s(data-locale="en")
+    assert has_element?(view, ".theme-shell__language--hidden")
+    refute has_element?(view, ".visible button[phx-click='toggle_language_dropdown']")
+  end
+
+  test "offering every language lists every supported locale", %{conn: conn, profile: profile} do
+    profile |> Changeset.change(offer_all_locales: true) |> Repo.update!()
+
+    {:ok, view, _html} = live(conn, "/#{profile.username}")
+
+    assert Enum.sort(switcher_locales(view)) == Enum.sort(Locales.supported_codes())
+  end
+
+  describe "a meeting's own pages" do
+    test "the cancel page's switcher lists only the offered languages", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      meeting = insert(:meeting, organizer_user_id: user.id, organizer_user: user)
+
+      {:ok, view, _html} = live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel")
+
+      assert Enum.sort(switcher_locales(view)) == ["de", "en"]
+    end
+
+    for action <- ["cancel", "reschedule"] do
+      test "the #{action} page follows the attendee's language and copy", %{
+        conn: conn,
+        user: user,
+        profile: profile
+      } do
+        meeting = german_meeting(user)
+
+        {:ok, view, _html} =
+          conn
+          |> put_req_header("accept-language", "en-US,en;q=0.9")
+          |> live("/#{profile.username}/meeting/#{meeting.uid}/#{unquote(action)}")
+
+        html = render(view)
+        assert html =~ ~s(data-locale="de")
+        assert html =~ "Erstgespräch"
+        refute html =~ "Intro call"
+      end
+    end
+
+    test "?locale= still chooses another offered language on the cancel page", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      meeting = german_meeting(user)
+
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel?locale=en")
+
+      html = render(view)
+      assert html =~ ~s(data-locale="en")
+      assert html =~ "Intro call"
+    end
+
+    test "a meeting booked before attendee copies shows its original meeting type", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_user: user,
+          meeting_type: "Intro call",
+          attendee_locale: "de",
+          attendee_texts: nil
+        )
+
+      {:ok, view, _html} = live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel")
+
+      html = render(view)
+      assert html =~ ~s(data-locale="de")
+      assert html =~ "Intro call"
+    end
+  end
+
+  test "the payment return page stays in a language the organiser offers", %{
+    conn: conn,
+    user: user
+  } do
+    meeting = insert(:meeting, organizer_user_id: user.id, status: :awaiting_payment)
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      stripe_checkout_session_id: "cs_LINGO"
+    )
+
+    {:ok, view, _html} =
+      conn
+      |> put_req_header("accept-language", "fr-FR,fr;q=0.9")
+      |> live("/themes/quill/payment-processing/#{meeting.id}?session_id=cs_LINGO")
+
+    assert render(view) =~ ~s(data-locale="en")
+    assert Enum.sort(switcher_locales(view)) == ["de", "en"]
   end
 
   @tag :capture_log
@@ -190,9 +317,31 @@ defmodule TymeslotWeb.Live.Scheduling.BookingLanguagesTest do
     assert [%{"label" => "Company"}] = meeting.custom_fields_snapshot
 
     assert %{
-             "locale" => "de",
-             "meeting_type" => "Erstgespräch",
-             "custom_fields_snapshot" => [%{"label" => "Firma"}]
+             "de" => %{
+               "meeting_type" => "Erstgespräch",
+               "custom_fields_snapshot" => [%{"label" => "Firma"}]
+             }
            } = meeting.attendee_texts
+
+    assert Map.keys(meeting.attendee_texts) == ["de"]
+  end
+
+  defp german_meeting(user) do
+    insert(:meeting,
+      organizer_user_id: user.id,
+      organizer_user: user,
+      meeting_type: "Intro call",
+      attendee_locale: "de",
+      attendee_texts: %{"de" => %{"meeting_type" => "Erstgespräch"}}
+    )
+  end
+
+  defp switcher_locales(view) do
+    view |> element("button[phx-click='toggle_language_dropdown']") |> render_click()
+
+    view
+    |> render()
+    |> Floki.parse_document!()
+    |> Floki.attribute("button[phx-click='change_locale']", "phx-value-locale")
   end
 end

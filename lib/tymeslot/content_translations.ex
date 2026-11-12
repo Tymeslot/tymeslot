@@ -325,13 +325,17 @@ defmodule Tymeslot.ContentTranslations do
 
   @doc """
   `translations` without the paths `record` no longer has (a deleted
-  question, a removed location, an option whose key changed).
+  question, a removed location, an option whose key changed), and without
+  the languages no longer supported: texts nobody can be shown any more,
+  which `changeset/2` would otherwise refuse on every later save.
   """
   @spec prune(map(), struct()) :: map()
   def prune(translations, record) do
     paths = record |> fields() |> MapSet.new(& &1.path)
+    supported = Locales.supported_codes()
 
     translations
+    |> Enum.filter(fn {locale, entries} -> locale in supported and is_map(entries) end)
     |> Enum.map(fn {locale, entries} ->
       {locale, Map.filter(entries, fn {path, _entry} -> path in paths end)}
     end)

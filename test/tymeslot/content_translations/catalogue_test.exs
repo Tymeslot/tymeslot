@@ -5,8 +5,10 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.ContentTranslations
   alias Tymeslot.ContentTranslations.Catalogue
+  alias Tymeslot.ContentTranslations.TranslationQueries
   alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -98,7 +100,9 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
       user: user,
       meeting_type: meeting_type
     } do
-      assert %{total: total, translated: 0, missing: total} = Catalogue.progress(user.id, "de")
+      progress = fn -> user.id |> Catalogue.items() |> Catalogue.progress(["de", "fr"]) end
+
+      assert %{"de" => %{total: total, translated: 0, missing: total} = untouched} = progress.()
 
       assert {:ok, %{record: saved}} =
                Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{
@@ -109,7 +113,8 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
 
       assert ContentTranslations.text(saved, "custom_fields/q1/label", "de") == "Firma"
       assert Map.keys(saved.translations["de"]) == ["custom_fields/q1/label", "name"]
-      assert %{translated: 2, missing: missing} = Catalogue.progress(user.id, "de")
+      # Each language is counted on its own, from the one read of the items.
+      assert %{"de" => %{translated: 2, missing: missing}, "fr" => ^untouched} = progress.()
       assert missing == total - 2
 
       # The meeting type form never casts the translations, so saving it
@@ -119,7 +124,7 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
 
       assert reloaded.translations == saved.translations
       assert ContentTranslations.status(reloaded, "name", "de") == :outdated
-      assert %{outdated: 1, translated: 1} = Catalogue.progress(user.id, "de")
+      assert %{"de" => %{outdated: 1, translated: 1}} = progress.()
     end
 
     test "a blank text deletes the translation", %{user: user, meeting_type: meeting_type} do
@@ -162,12 +167,31 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
       user: user,
       meeting_type: meeting_type
     } do
-      assert {:error, %Ecto.Changeset{} = changeset} =
+      assert {:error, %Changeset{} = changeset} =
                Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "fr", %{
                  "name" => "Appel"
                })
 
       assert [{:translations, {"is not a translation language", _opts}}] = changeset.errors
+    end
+
+    test "drops a stored language no longer supported rather than refusing the save", %{
+      user: user,
+      meeting_type: meeting_type
+    } do
+      retired = %{"name" => %{"text" => "Retired", "source" => :erlang.phash2("Intro call")}}
+
+      meeting_type
+      |> Changeset.change(translations: %{"xx" => retired})
+      |> Repo.update!()
+
+      assert {:ok, %{record: saved}} =
+               Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{
+                 "name" => "Erstgespräch"
+               })
+
+      assert Map.keys(saved.translations) == ["de"]
+      assert ContentTranslations.text(saved, "name", "de") == "Erstgespräch"
     end
 
     test "refuses a text over its cap", %{user: user, meeting_type: meeting_type} do
@@ -180,6 +204,31 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
 
       assert [{:translations, {_message, opts}}] = changeset.errors
       assert opts[:path] == "custom_fields/q1/label"
+    end
+  end
+
+  describe "TranslationQueries.lock/1" do
+    test "re-reads the translations a stale record was read without", %{
+      meeting_type: meeting_type
+    } do
+      committed = %{"de" => %{"name" => %{"text" => "Erstgespräch", "source" => 1}}}
+
+      meeting_type
+      |> Changeset.change(translations: committed)
+      |> Repo.update!()
+
+      assert {:ok, {:ok, locked}} =
+               Repo.transaction(fn -> TranslationQueries.lock(meeting_type) end)
+
+      assert locked.translations == committed
+      assert locked.name == meeting_type.name
+    end
+
+    test "is not found for a row that has gone", %{meeting_type: meeting_type} do
+      Repo.delete!(meeting_type)
+
+      assert {:ok, {:error, :not_found}} =
+               Repo.transaction(fn -> TranslationQueries.lock(meeting_type) end)
     end
   end
 end

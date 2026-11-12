@@ -26,7 +26,6 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.PubSub
   alias Tymeslot.BookingPages
   alias Tymeslot.ContentTranslations
-  alias Tymeslot.ContentTranslations.Languages
   alias Tymeslot.Demo
   alias Tymeslot.Invitations
   alias Tymeslot.MeetingPayments
@@ -35,6 +34,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
+  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Core.Registry, as: ThemeRegistry
   alias TymeslotWeb.Themes.Shared.EventHandlers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -156,16 +156,23 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   shell may draw) and the legal links the page's footer shows
   (`:legal_links`, `Profiles.public_legal_links/1`: the organiser's own, else
   the instance defaults). Called on the connected mount, once the meeting's
-  organiser is known. The profile's own texts are in the page's language
-  when it is one of the organiser's translations.
+  organiser is known.
+
+  The page's language is the booking page's
+  (`OrganizerHelpers.assign_page_language/2`): the visitor's first
+  candidate the organiser offers, else the organiser's original, so the
+  attendee comes back from Stripe in a language the booking page offers.
+  `:offered_locales` restricts the language switcher alike, and the
+  profile's own texts are in the page's language when it is one of the
+  organiser's translations.
   """
   @spec assign_organizer(LiveView.Socket.t(), Tymeslot.Profiles.ProfileSchema.t()) ::
           LiveView.Socket.t()
   def assign_organizer(socket, profile) do
-    content_locale = Languages.content_locale(profile, socket.assigns[:locale])
+    socket = OrganizerHelpers.assign_page_language(socket, profile)
 
     Component.assign(socket,
-      organizer_profile: ContentTranslations.localise(profile, content_locale),
+      organizer_profile: ContentTranslations.localise(profile, socket.assigns.content_locale),
       legal_links: Profiles.public_legal_links(profile)
     )
   end

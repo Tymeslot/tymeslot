@@ -122,10 +122,13 @@ defmodule Tymeslot.Bookings.AttendeeTextsEmailsTest do
     assert [%{"label" => "Company"}] = meeting.custom_fields_snapshot
 
     assert %{
-             "locale" => "de",
-             "meeting_type" => "Erstgespräch",
-             "custom_fields_snapshot" => [%{"label" => "Firma"}]
+             "de" => %{
+               "meeting_type" => "Erstgespräch",
+               "custom_fields_snapshot" => [%{"label" => "Firma"}]
+             }
            } = meeting.attendee_texts
+
+    assert Map.keys(meeting.attendee_texts) == ["de"]
 
     emails = confirmation_emails(meeting)
     attendee = emails["attendee@example.com"]

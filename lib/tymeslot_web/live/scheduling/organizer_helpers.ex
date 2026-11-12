@@ -93,11 +93,16 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
     end
   end
 
-  # The page's language, clamped to the ones the organiser offers
-  # (`Languages.resolve/2`): the visitor's first acceptable candidate the
-  # organiser offers, else the organiser's original. `:content_locale` is the
-  # language their texts are shown in, nil for the original.
-  defp assign_page_language(socket, profile) do
+  @doc """
+  Assigns a public page's language, clamped to the ones the organiser
+  offers (`Languages.resolve/2`): the visitor's first acceptable candidate
+  (`:locale_candidates`) the organiser offers, else the organiser's
+  original. Also assigns `:offered_locales`, which the language switcher
+  lists, and `:content_locale`, the language the organiser's texts are
+  shown in (nil for the original).
+  """
+  @spec assign_page_language(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def assign_page_language(socket, profile) do
     candidates = socket.assigns[:locale_candidates] || List.wrap(socket.assigns[:locale])
     locale = Languages.resolve(profile, candidates)
 

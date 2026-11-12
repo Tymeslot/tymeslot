@@ -38,6 +38,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   """
 
   alias Ecto.Changeset
+  alias Tymeslot.ContentTranslations.AttendeeTexts
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingConflictQueries
@@ -179,7 +180,9 @@ defmodule Tymeslot.Meetings.GroupScheduling do
               )
 
             %Meeting{} = meeting ->
-              join_meeting(meeting, seat_request, seats_requested)
+              meeting
+              |> join_meeting(seat_request, seats_requested)
+              |> add_attendee_texts(meeting_attrs)
           end
 
         run_on_booked(booking, hooks.on_booked)
@@ -230,6 +233,23 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       %{meeting: meeting, participant: participant, created_meeting?: false}
     else
       Repo.rollback(:slot_full)
+    end
+  end
+
+  # The joiner read the slot in their own language: their locale's copy of
+  # its texts joins the slot's (`AttendeeTexts.merge/2`), under the lock
+  # taken above, so two joiners in different languages cannot overwrite
+  # each other's copy.
+  defp add_attendee_texts(%{meeting: meeting} = booking, meeting_attrs) do
+    case AttendeeTexts.merge(meeting, Map.get(meeting_attrs, :attendee_texts)) do
+      texts when texts == meeting.attendee_texts ->
+        booking
+
+      texts ->
+        case GroupMeetingQueries.set_attendee_texts(meeting, texts) do
+          {:ok, updated} -> %{booking | meeting: updated}
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
     end
   end
 

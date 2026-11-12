@@ -10,7 +10,9 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslatableForm do
   (`TymeslotWeb.Hooks.EditingLocaleHook`), which hands it back down as
   `:editing_locale`, so it carries over to every other translatable form.
   It is ignored while it is not one of the profile's translation languages.
-  With no translation language at all, the form renders on its own.
+  With no translation language at all, the form renders on its own. Leaving
+  a translation language hands the switch to the editor, which saves the
+  texts typed in it first.
 
   ## Assigns
 
@@ -94,8 +96,16 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslatableForm do
   end
 
   @impl Phoenix.LiveComponent
+  # Leaving a translation goes through its editor, which saves what was
+  # typed in it before the dashboard switches (`TranslationEditor`).
   def handle_event("choose_editing_locale", %{"locale" => locale}, socket) do
-    send(self(), {:editing_locale, if(locale in socket.assigns.locales, do: locale)})
+    %{id: id, current: current, locales: locales} = socket.assigns
+    target = if locale in locales, do: locale
+
+    if current && target != current,
+      do: send_update(TranslationEditor, id: "#{id}-editor", switch_to: target),
+      else: send(self(), {:editing_locale, target})
+
     {:noreply, socket}
   end
 

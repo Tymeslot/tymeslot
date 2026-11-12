@@ -301,6 +301,28 @@ defmodule TymeslotWeb.SeatControllerTest do
       assert html =~ ~s(lang="de")
     end
 
+    test "a seat page names the meeting as the participant's copy does", %{
+      conn: conn,
+      leaver: leaver,
+      meeting: meeting,
+      meeting_type: meeting_type
+    } do
+      # A group slot is titled with the type's original name.
+      assert meeting.title == meeting_type.name
+      leaver |> Changeset.change(%{locale: "de"}) |> Repo.update!()
+
+      meeting
+      |> Changeset.change(%{
+        attendee_texts: %{"de" => %{"meeting_type" => "Erstgespräch"}}
+      })
+      |> Repo.update!()
+
+      html = conn |> get(~p"/seat/#{leaver.management_token}/cancel") |> html_response(200)
+
+      assert html =~ "Erstgespräch"
+      refute html =~ meeting_type.name
+    end
+
     test "an unknown link keeps the request's language", %{conn: conn} do
       html =
         conn

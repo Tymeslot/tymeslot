@@ -62,7 +62,11 @@ defmodule Tymeslot.MeetingTypes.Duplication do
     :buffer_before_minutes,
     :buffer_after_minutes,
     :min_advance_hours,
-    :advance_booking_days
+    :advance_booking_days,
+    # Keyed by the paths of the embeds, whose ids the copy keeps, so every
+    # translation still fits; the name's reads as outdated, as the copy's
+    # name is a new one (`Tymeslot.ContentTranslations.status/3`).
+    :translations
   ]
 
   @copied_embeds [:custom_fields, :attachments, :locations]
@@ -79,9 +83,6 @@ defmodule Tymeslot.MeetingTypes.Duplication do
     :is_archived,
     :allow_video,
     :video_integration_id,
-    # A copy starts untranslated: no changeset casts the translations
-    # (`Tymeslot.ContentTranslations`), and the copy's name is a new one.
-    :translations,
     :inserted_at,
     :updated_at
   ]

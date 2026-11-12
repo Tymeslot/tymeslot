@@ -25,6 +25,14 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
   left as it was keeps its Outdated mark rather than being restamped as
   current. What is typed survives the parent re-rendering; it is dropped
   only when it is saved, or when the record or the language changes.
+
+  Leaving the language from the language bar goes through the editor
+  (`send_update/3` with `switch_to: locale`, nil for the original), so what
+  was typed is not lost: the changed texts are saved first, as the
+  autosaving forms save theirs, and only then is the dashboard told to
+  switch (`{:editing_locale, locale}`). When that save fails the editor
+  stays, showing why; choosing the same language again leaves without
+  saving.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -36,10 +44,43 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
-    {:ok, assign(socket, draft: %{}, errors: %{}, paths: nil, only_open: false, notify: nil)}
+    {:ok,
+     assign(socket,
+       draft: %{},
+       errors: %{},
+       leave_unsaved: nil,
+       paths: nil,
+       only_open: false,
+       notify: nil
+     )}
   end
 
   @impl Phoenix.LiveComponent
+  def update(%{switch_to: target}, socket) do
+    %{draft: draft, record: record, locale: locale, fields: fields} = socket.assigns
+    changed = changed_texts(draft, record, locale, fields)
+
+    if changed == %{} or socket.assigns.leave_unsaved == {:to, target} do
+      {:ok, leave(socket, target)}
+    else
+      case persist(socket, changed, draft) do
+        {:ok, socket} ->
+          Flash.info(dgettext("dashboard_languages", "Translations saved"))
+          {:ok, leave(socket, target)}
+
+        {:error, socket} ->
+          Flash.error(
+            dgettext(
+              "dashboard_languages",
+              "Couldn't save these translations. Choose the language again to leave without saving them."
+            )
+          )
+
+          {:ok, assign(socket, :leave_unsaved, {:to, target})}
+      end
+    end
+  end
+
   def update(assigns, socket) do
     socket =
       if switched?(socket.assigns, assigns),
@@ -88,7 +129,10 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
 
   @impl Phoenix.LiveComponent
   def handle_event("draft", %{"translation" => texts}, socket) when is_map(texts) do
-    {:noreply, update(socket, :draft, &Map.merge(&1, only_strings(texts)))}
+    {:noreply,
+     socket
+     |> update(:draft, &Map.merge(&1, only_strings(texts)))
+     |> assign(:leave_unsaved, nil)}
   end
 
   def handle_event("draft", _params, socket), do: {:noreply, socket}
@@ -107,26 +151,48 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
   end
 
   defp save(socket, changed, typed) do
+    case persist(socket, changed, typed) do
+      {:ok, socket} ->
+        Flash.info(dgettext("dashboard_languages", "Translations saved"))
+        {:noreply, socket}
+
+      {:error, socket} ->
+        Flash.error(dgettext("dashboard_languages", "Couldn't save these translations."))
+        {:noreply, socket}
+    end
+  end
+
+  defp persist(socket, changed, typed) do
     %{user_id: user_id, kind: kind, record: record, locale: locale} = socket.assigns
 
     case Catalogue.save(user_id, {kind, record.id}, locale, changed) do
       {:ok, entity} ->
         notify(socket.assigns.notify, entity)
-        Flash.info(dgettext("dashboard_languages", "Translations saved"))
 
-        {:noreply,
+        {:ok,
          socket
-         |> assign(record: entity.record, draft: Map.drop(typed, Map.keys(changed)), errors: %{})
+         |> assign(
+           record: entity.record,
+           draft: Map.drop(typed, Map.keys(changed)),
+           errors: %{},
+           leave_unsaved: nil
+         )
          |> assign_fields()}
 
       {:error, :not_found} ->
-        Flash.error(dgettext("dashboard_languages", "This item no longer exists."))
-        {:noreply, socket}
+        {:error, assign(socket, draft: typed, errors: %{base: [not_found_message()]})}
 
       {:error, changeset} ->
-        Flash.error(dgettext("dashboard_languages", "Couldn't save these translations."))
-        {:noreply, assign(socket, draft: typed, errors: errors_by_path(changeset))}
+        {:error, assign(socket, draft: typed, errors: errors_by_path(changeset))}
     end
+  end
+
+  defp not_found_message, do: dgettext("dashboard_languages", "This item no longer exists.")
+
+  # Told only once the draft is safe, so the switch never outruns the save.
+  defp leave(socket, target) do
+    send(self(), {:editing_locale, target})
+    socket
   end
 
   defp notify({module, id}, entity), do: send_update(module, id: id, translation_saved: entity)

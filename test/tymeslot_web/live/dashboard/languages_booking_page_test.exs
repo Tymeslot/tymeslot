@@ -1,8 +1,9 @@
 defmodule TymeslotWeb.Dashboard.LanguagesBookingPageTest do
   @moduledoc """
   From the dashboard to the visitor: a meeting type name translated on the
-  Languages review page shows on the public booking page in that language,
-  for an organiser who offers only English and German.
+  Languages review page, and a heading translated from the booking text
+  card's language bar, show on the public booking page in that language, for
+  an organiser who offers only English and German.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -13,7 +14,9 @@ defmodule TymeslotWeb.Dashboard.LanguagesBookingPageTest do
   import Tymeslot.AuthTestHelpers, only: [log_in_user: 2]
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -66,5 +69,38 @@ defmodule TymeslotWeb.Dashboard.LanguagesBookingPageTest do
 
     {:ok, original, _html} = live(build_conn(), "/#{profile.username}?locale=en")
     assert render(original) =~ "Intro call"
+  end
+
+  test "a heading translated from the booking text card shows on the German booking page", %{
+    conn: conn,
+    user: user,
+    profile: profile
+  } do
+    profile
+    |> Changeset.change(
+      booking_text_enabled: true,
+      booking_heading: "Ready to talk?",
+      booking_greeting: "I am Lingo.",
+      booking_instruction: "Pick a time."
+    )
+    |> Repo.update!()
+
+    dashboard = conn |> init_test_session(%{}) |> fetch_session() |> log_in_user(user)
+    {:ok, view, _html} = live(dashboard, ~p"/dashboard/pages")
+    card = "#booking-text-form-translations"
+
+    view |> element("#{card}-bar button[data-locale='de']") |> render_click()
+
+    view
+    |> form("#{card}-editor-form", %{"translation" => %{"booking_heading" => "Bereit zu reden?"}})
+    |> render_submit()
+
+    {:ok, page, _html} = live(build_conn(), "/#{profile.username}?locale=de")
+    html = render(page)
+    assert html =~ "Bereit zu reden?"
+    refute html =~ "Ready to talk?"
+
+    {:ok, original, _html} = live(build_conn(), "/#{profile.username}?locale=en")
+    assert render(original) =~ "Ready to talk?"
   end
 end
