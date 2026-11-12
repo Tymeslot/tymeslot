@@ -16,15 +16,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
       id="confirm-discard-attendees-modal"
       show
       size={:small}
-      title={dgettext("dashboard_calendar_events", "Unsent invitations")}
-      confirm_label={dgettext("dashboard_calendar_events", "Discard")}
-      cancel_label={dgettext("dashboard_calendar_events", "Go back")}
+      title={dgettext("dashboard_calendar_modals", "Unsent invitations")}
+      confirm_label={dgettext("dashboard_calendar_modals", "Discard")}
+      cancel_label={dgettext("dashboard_calendar_modals", "Go back")}
       on_cancel={JS.push("cancel_discard_attendees", target: @myself)}
       on_confirm={JS.push("discard_pending_attendees", target: @myself)}
     >
       <p>
         {dngettext(
-          "dashboard_calendar_events",
+          "dashboard_calendar_modals",
           "%{count} attendee hasn't been invited yet. Discard?",
           "%{count} attendees haven't been invited yet. Discard?",
           @count

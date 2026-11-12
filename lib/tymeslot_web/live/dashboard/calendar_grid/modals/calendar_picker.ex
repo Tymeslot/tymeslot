@@ -69,7 +69,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
             <span
               :if={cal.primary}
               class="text-token-xs font-bold bg-tymeslot-200 px-1 py-0.5 rounded-token-md text-tymeslot-500 uppercase"
-            >{dgettext("dashboard_calendar_events", "Primary")}</span>
+            >{dgettext("dashboard_calendar_modals", "Primary")}</span>
           </button>
         </div>
         <%!-- Fallback: a connection whose calendars have not been discovered,
@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
             phx-target={@myself}
             class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-token-lg border text-token-xs transition-all #{if is_active_integration, do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
           >
-            <span>{dgettext("dashboard_calendar_events", "Default calendar")}</span>
+            <span>{dgettext("dashboard_calendar_modals", "Default calendar")}</span>
           </button>
         </div>
       </div>

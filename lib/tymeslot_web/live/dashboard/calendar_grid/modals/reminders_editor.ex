@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
     <.detail_line
       variant={:compact}
       icon="hero-bell"
-      label={dgettext("dashboard_calendar_events", "Reminders")}
+      label={dgettext("dashboard_calendar_modals", "Reminders")}
       class="mb-3"
     >
       <div :if={@reminders != []} class="flex flex-wrap gap-1.5 mb-2">
@@ -51,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
             phx-target={@myself}
             class="w-4 h-4 rounded-token-full hover:bg-red-100 flex items-center justify-center transition-colors"
             aria-label={
-              dgettext("dashboard_calendar_events", "Remove reminder %{label}",
+              dgettext("dashboard_calendar_modals", "Remove reminder %{label}",
                 label: reminder_label(reminder)
               )
             }
@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
           name="minutes"
           class="w-40"
           compact
-          aria-label={dgettext("dashboard_calendar_events", "Reminder time")}
+          aria-label={dgettext("dashboard_calendar_modals", "Reminder time")}
           options={Enum.map(@presets, fn {minutes, label} -> {label, minutes} end)}
         />
         <.select
@@ -81,19 +81,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
           name="method"
           class="w-36"
           compact
-          aria-label={dgettext("dashboard_calendar_events", "Reminder method")}
+          aria-label={dgettext("dashboard_calendar_modals", "Reminder method")}
           options={[
-            {dgettext("dashboard_calendar_events", "Notification"), "popup"},
-            {dgettext("dashboard_calendar_events", "Email"), "email"}
+            {dgettext("dashboard_calendar_modals", "Notification"), "popup"},
+            {dgettext("dashboard_calendar_modals", "Email"), "email"}
           ]}
         />
         <.action_button type="submit" variant={:secondary} size={:sm}>
-          {dgettext("dashboard_calendar_events", "Add reminder")}
+          {dgettext("dashboard_calendar_modals", "Add reminder")}
         </.action_button>
       </form>
       <p class="text-token-xs text-tymeslot-400 mt-1">
         {dgettext(
-          "dashboard_calendar_events",
+          "dashboard_calendar_modals",
           "Reminders are synced to your calendar so it can alert you on your own devices."
         )}
       </p>
@@ -111,27 +111,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
   """
   @spec reminder_label(map()) :: String.t()
   def reminder_label(%{} = reminder) do
-    dgettext("dashboard_calendar_events", "%{method} %{minutes}",
+    dgettext("dashboard_calendar_modals", "%{method} %{minutes}",
       method: method_label(Reminder.method(reminder)),
       minutes: minutes_label(Reminder.minutes_before(reminder))
     )
   end
 
-  defp method_label(:email), do: dgettext("dashboard_calendar_events", "Email")
-  defp method_label(_popup_or_other), do: dgettext("dashboard_calendar_events", "Notification")
+  defp method_label(:email), do: dgettext("dashboard_calendar_modals", "Email")
+  defp method_label(_popup_or_other), do: dgettext("dashboard_calendar_modals", "Notification")
 
   # A provider alarm whose trigger we could not parse reaches the cache without
   # a lead time. Say so rather than inventing one.
   defp minutes_label(minutes) when not is_integer(minutes),
-    do: dgettext("dashboard_calendar_events", "before the event")
+    do: dgettext("dashboard_calendar_modals", "before the event")
 
-  defp minutes_label(1440), do: dgettext("dashboard_calendar_events", "1 day before")
-  defp minutes_label(60), do: dgettext("dashboard_calendar_events", "1 hour before")
+  defp minutes_label(1440), do: dgettext("dashboard_calendar_modals", "1 day before")
+  defp minutes_label(60), do: dgettext("dashboard_calendar_modals", "1 hour before")
 
   defp minutes_label(minutes) when minutes >= 60 and rem(minutes, 60) == 0,
     do:
       dngettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_modals",
         "%{count} hour before",
         "%{count} hours before",
         div(minutes, 60)
@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
   defp minutes_label(minutes),
     do:
       dngettext(
-        "dashboard_calendar_events",
+        "dashboard_calendar_modals",
         "%{count} minute before",
         "%{count} minutes before",
         minutes

@@ -60,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       show={true}
       on_cancel={JS.push("close_event_detail", target: @myself)}
       size={:medium}
-      aria_label={@selected_event.summary || dgettext("dashboard_calendar_events", "Event details")}
+      aria_label={@selected_event.summary || dgettext("dashboard_calendar_modals", "Event details")}
     >
       <%!-- Pending-notification banner --%>
       <div
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         class="rounded-token-lg bg-turquoise-50 border border-turquoise-200 p-2 mb-3 flex items-center justify-between"
       >
         <span class="text-token-sm text-turquoise-900">
-          {dgettext("dashboard_calendar_events", "Attendees will be notified of pending changes.")}
+          {dgettext("dashboard_calendar_modals", "Attendees will be notified of pending changes.")}
         </span>
         <button
           type="button"
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-target={@myself}
           class="text-token-sm text-turquoise-800 hover:text-turquoise-900 underline"
         >
-          {dgettext("dashboard_calendar_events", "Cancel")}
+          {dgettext("dashboard_calendar_modals", "Cancel")}
         </button>
       </div>
 
@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           <div class="min-w-0 flex-1 text-token-sm">
             <p>
               {dngettext(
-                "dashboard_calendar_events",
+                "dashboard_calendar_modals",
                 "The latest update could not be emailed to this guest. Let them know another way.",
                 "The latest update could not be emailed to these guests. Let them know another way.",
                 length(@undelivered_updates)
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             phx-target={@myself}
             class="text-token-sm text-amber-800 hover:text-amber-900 underline shrink-0"
           >
-            {dgettext("dashboard_calendar_events", "Dismiss")}
+            {dgettext("dashboard_calendar_modals", "Dismiss")}
           </button>
         </div>
       </.info_box>
@@ -124,7 +124,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           icon="hero-x-mark"
           variant={:danger}
           size={:sm}
-          label={dgettext("dashboard_calendar_events", "Close modal")}
+          label={dgettext("dashboard_calendar_modals", "Close modal")}
           class="absolute -top-2 -right-2"
           phx-click={JS.push("close_event_detail", target: @myself)}
         />
@@ -145,7 +145,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             name="value"
             value={@selected_event.summary || ""}
             title={@selected_event.summary}
-            placeholder={dgettext("dashboard_calendar_events", "(No title)")}
+            placeholder={dgettext("dashboard_calendar_modals", "(No title)")}
             phx-blur="update_event_title"
             phx-target={@myself}
             phx-debounce="500"
@@ -168,7 +168,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         class="flex items-center gap-1 text-token-xs text-tymeslot-500 mb-2"
       >
         <img src="/images/brand/logo.svg" alt="" class="w-3.5 h-3.5" />
-        <span>{dgettext("dashboard_calendar_events", "Created by Tymeslot")}</span>
+        <span>{dgettext("dashboard_calendar_modals", "Created by Tymeslot")}</span>
       </div>
 
       <%!-- Time --%>
@@ -177,7 +177,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         <% end_parts = Helpers.datetime_to_local_parts(@selected_event.end_at, @user_timezone) %>
         <div :if={@editable and not @time_locked} class="flex items-center justify-between mb-2">
           <span class="text-token-xs font-medium text-tymeslot-400">{dgettext(
-            "dashboard_calendar_events",
+            "dashboard_calendar_modals",
             "All day"
           )}</span>
           <StatusSwitch.status_switch
@@ -201,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             name="start-date"
             value={@selected_event.start_date && Date.to_iso8601(@selected_event.start_date)}
             variant={:inline}
-            aria-label={dgettext("dashboard_calendar_events", "Start date")}
+            aria-label={dgettext("dashboard_calendar_modals", "Start date")}
           />
           <span class="text-tymeslot-400">&ndash;</span>
           <%!-- end_date is stored exclusively; show the inclusive last day. --%>
@@ -212,7 +212,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
               @selected_event.end_date && Date.to_iso8601(Date.add(@selected_event.end_date, -1))
             }
             variant={:inline}
-            aria-label={dgettext("dashboard_calendar_events", "End date")}
+            aria-label={dgettext("dashboard_calendar_modals", "End date")}
           />
         </form>
         <form
@@ -228,14 +228,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             name="start-date"
             value={start_parts.date}
             variant={:inline}
-            aria-label={dgettext("dashboard_calendar_events", "Start date")}
+            aria-label={dgettext("dashboard_calendar_modals", "Start date")}
           />
           <.time_picker
             id="event-start-time"
             name="start-time"
             value={start_parts.time}
             variant={:inline}
-            aria-label={dgettext("dashboard_calendar_events", "Start time")}
+            aria-label={dgettext("dashboard_calendar_modals", "Start time")}
           />
           <span class="text-tymeslot-400">&ndash;</span>
           <.date_picker
@@ -243,14 +243,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             name="end-date"
             value={end_parts.date}
             variant={:inline}
-            aria-label={dgettext("dashboard_calendar_events", "End date")}
+            aria-label={dgettext("dashboard_calendar_modals", "End date")}
           />
           <.time_picker
             id="event-end-time"
             name="end-time"
             value={end_parts.time}
             variant={:inline}
-            aria-label={dgettext("dashboard_calendar_events", "End time")}
+            aria-label={dgettext("dashboard_calendar_modals", "End time")}
           />
           <span class="text-token-xs font-normal text-tymeslot-400 ml-1">{Helpers.tz_abbr(
             @user_timezone,
@@ -289,7 +289,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           id="event-location-input"
           name="value"
           value={@selected_event.location || ""}
-          placeholder={dgettext("dashboard_calendar_events", "Add location")}
+          placeholder={dgettext("dashboard_calendar_modals", "Add location")}
           phx-blur="update_event_location"
           phx-target={@myself}
           phx-debounce="500"
@@ -322,7 +322,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         <textarea
           id="event-description-input"
           name="value"
-          placeholder={dgettext("dashboard_calendar_events", "Add description")}
+          placeholder={dgettext("dashboard_calendar_modals", "Add description")}
           phx-blur="update_event_description"
           phx-target={@myself}
           phx-debounce="500"
@@ -357,7 +357,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         :if={@editable and @video_integrations != []}
         variant={:compact}
         icon="hero-video-camera"
-        label={dgettext("dashboard_calendar_events", "Video")}
+        label={dgettext("dashboard_calendar_modals", "Video")}
         class="mb-3"
       >
         <VideoPicker.video_picker
@@ -436,14 +436,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         :if={@editable}
         variant={:compact}
         icon="hero-swatch"
-        label={dgettext("dashboard_calendar_events", "Colour")}
+        label={dgettext("dashboard_calendar_modals", "Colour")}
         class="mb-3"
       >
         <ColourSwatches.colour_swatches
           selected={Map.get(@selected_event, :colour)}
           event="update_event_colour"
           target={@myself}
-          group_label={dgettext("dashboard_calendar_events", "Colour")}
+          group_label={dgettext("dashboard_calendar_modals", "Colour")}
         />
       </.detail_line>
 
@@ -459,7 +459,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           phx-click="request_delete_event"
           phx-target={@myself}
         >
-          {dgettext("dashboard_calendar_events", "Delete event")}
+          {dgettext("dashboard_calendar_modals", "Delete event")}
         </.action_button>
       </div>
     </.modal>
