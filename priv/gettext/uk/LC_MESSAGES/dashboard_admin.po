@@ -16,27 +16,11 @@ msgstr ""
 msgid "%{name} updated."
 msgstr "%{name} оновлено."
 
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "(you)"
-msgstr "(ви)"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Actions"
-msgstr "Дії"
-
 #: lib/tymeslot_web/live/admin_live.ex
 #: lib/tymeslot_web/live/admin_live/components/layout.ex
-#: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
 msgid "Admin"
 msgstr "Адміністратор"
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Admin UI is disabled."
-msgstr "Адміністративний інтерфейс вимкнено."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -52,11 +36,6 @@ msgstr "Адміністративні сповіщення"
 #, elixir-autogen, elixir-format
 msgid "Admin sections"
 msgstr "Адміністративні розділи"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Admins"
-msgstr "Адміністратори"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #: lib/tymeslot_web/live/admin_live/tabs.ex
@@ -74,67 +53,10 @@ msgstr "Повернутися до панелі керування"
 msgid "Booking min score"
 msgstr "Мінімальний бал для бронювання"
 
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Booking slug"
-msgstr "URL-ідентифікатор бронювання"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr "Скасувати"
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Could not demote user."
-msgstr "Не вдалося понизити користувача."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Could not promote user."
-msgstr "Не вдалося підвищити користувача."
-
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not update setting."
 msgstr "Не вдалося оновити налаштування."
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Demote"
-msgstr "Понизити"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Demote %{email} from admin"
-msgstr "Понизити %{email} з адміністратора"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Demote admin"
-msgstr "Понизити адміністратора"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Demote me"
-msgstr "Понизити мене"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Demote yourself"
-msgstr "Понизити себе"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Demote yourself from admin?"
-msgstr "Понизити себе з адміністратора?"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Demoting..."
-msgstr "Пониження..."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #: lib/tymeslot_web/live/admin_live/formatters.ex
@@ -142,12 +64,6 @@ msgstr "Пониження..."
 msgid "Disabled"
 msgstr "Вимкнено"
 
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Display name"
-msgstr "Відображуване ім'я"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
 #: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
@@ -165,7 +81,6 @@ msgid "Enter a number between 0.0 and 1.0."
 msgstr "Введіть число від 0,0 до 1,0."
 
 #: lib/tymeslot_web/live/admin_live.ex
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Введіть дійсну адресу електронної пошти."
@@ -184,16 +99,6 @@ msgstr "Вхід через GitHub"
 #, elixir-autogen, elixir-format
 msgid "Google login"
 msgstr "Вхід через Google"
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid request."
-msgstr "Некоректний запит."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid user id."
-msgstr "Некоректний ідентифікатор користувача."
 
 #: lib/tymeslot_web/live/admin_live/components/layout.ex
 #, elixir-autogen, elixir-format
@@ -215,27 +120,6 @@ msgstr "Автентифікація за паролем"
 msgid "Payments"
 msgstr "Платежі"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Promote"
-msgstr "Підвищити"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Promote %{email} to admin"
-msgstr "Підвищити %{email} до адміністратора"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Promote user to admin"
-msgstr "Підвищити користувача до адміністратора"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Promoting..."
-msgstr "Підвищення..."
-
 #: lib/tymeslot_web/live/admin_live/components/setting_row.ex
 #, elixir-autogen, elixir-format
 msgid "Recommended:"
@@ -245,11 +129,6 @@ msgstr "Рекомендовано:"
 #, elixir-autogen, elixir-format
 msgid "Registration enabled"
 msgstr "Реєстрацію увімкнено"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Role"
-msgstr "Роль"
 
 #: lib/tymeslot_web/live/admin_live/components/email_branding.ex
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
@@ -274,55 +153,10 @@ msgstr "Мінімальний бал для реєстрації"
 msgid "That change would lock everyone out and was not applied."
 msgstr "Ця зміна заблокувала б доступ для всіх і не була застосована."
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "They will gain access to admin settings and user management."
-msgstr "Вони отримають доступ до адміністративних налаштувань та керування користувачами."
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "They will lose access to admin settings and user management."
-msgstr "Вони втратять доступ до адміністративних налаштувань та керування користувачами."
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Total users"
-msgstr "Усього користувачів"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "User"
-msgstr "Користувач"
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "User demoted from admin."
-msgstr "Користувача понижено з адміністратора."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "User not found."
-msgstr "Користувача не знайдено."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "User promoted to admin."
-msgstr "Користувача підвищено до адміністратора."
-
 #: lib/tymeslot_web/live/admin_live/tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Users"
 msgstr "Користувачі"
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "You have been demoted from admin."
-msgstr "Вас було понижено з адміністратора."
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "You will lose access to admin settings and user management, and be returned to your dashboard."
-msgstr "Ви втратите доступ до адміністративних налаштувань та керування користувачами, і вас буде повернуто до панелі керування."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
@@ -404,17 +238,6 @@ msgstr "Показувати кнопку «Продовжити з Google» п�
 msgid "Your admin access has been revoked."
 msgstr "Ваші права адміністратора відкликано."
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Demote %{email} from admin?"
-msgstr "Позбавити %{email} прав адміністратора?"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Promote %{email} to admin?"
-msgstr "Надати %{email} права адміністратора?"
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
 #: lib/tymeslot_web/plugs/require_admin.ex
 #, elixir-autogen, elixir-format
 msgid "Admin access required."
@@ -610,71 +433,6 @@ msgstr "Мова, на яку повертаються панель керува
 msgid "General"
 msgstr "Загальні"
 
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Could not delete user."
-msgstr "Не вдалося видалити користувача."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Cannot demote this admin: no other admin can sign in. Make sure another admin can sign in first."
-msgstr "Неможливо понизити цього адміністратора: жоден інший адміністратор не може увійти. Спочатку переконайтеся, що інший адміністратор може увійти."
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Delete"
-msgstr "Видалити"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Delete %{email}"
-msgstr "Видалити обліковий запис %{email}"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete %{email} and all their data now?"
-msgstr "Видалити зараз обліковий запис %{email} і всі його дані?"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Delete user"
-msgstr "Видалити користувача"
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Deleting %{email}. The account leaves this list once the deletion has run."
-msgstr "Видалення облікового запису %{email}. Він зникне з цього списку після завершення видалення."
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Deleting..."
-msgstr "Видалення…"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_delete_user_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This cannot be undone. Their bookings are deleted and their guests are not notified; existing calendar events and video links stay as they are."
-msgstr "Цю дію не можна скасувати. Бронювання буде видалено, а гостей не буде сповіщено; наявні події календаря та відеопосилання залишаться без змін."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "You cannot delete your own account here. Use your account settings instead."
-msgstr "Власний обліковий запис тут видалити не можна. Скористайтеся налаштуваннями облікового запису."
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Deletion pending"
-msgstr "Очікує видалення"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "No other admin can sign in. Make sure another admin can sign in before demoting yourself."
-msgstr "Жоден інший адміністратор не може увійти. Переконайтеся, що інший адміністратор може увійти, перш ніж понижувати себе."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Cannot delete this admin: no other admin can sign in. Make sure another admin can sign in first."
-msgstr "Неможливо видалити цього адміністратора: жоден інший адміністратор не може увійти. Спочатку переконайтеся, що інший адміністратор може увійти."
-
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Admin alerts turned off."
@@ -864,137 +622,6 @@ msgstr "Коли надійде адміністративне сповіщен�
 #, elixir-autogen, elixir-format
 msgid "Version %{version}"
 msgstr "Версія %{version}"
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "A new invitation is on its way to %{email}."
-msgstr "Нове запрошення вже надсилається на адресу %{email}."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "An account with this email address already exists."
-msgstr "Обліковий запис із цією адресою електронної пошти вже існує."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Could not send the invitation. Please try again."
-msgstr "Не вдалося надіслати запрошення. Спробуйте ще раз."
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Email address to invite"
-msgstr "Адреса електронної пошти для запрошення"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Invitation expired"
-msgstr "Термін дії запрошення минув"
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Invitation sent to %{email}."
-msgstr "Запрошення надіслано на адресу %{email}."
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Invite a user"
-msgstr "Запросити користувача"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Invited"
-msgstr "Запрошено"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Resend invitation"
-msgstr "Надіслати запрошення ще раз"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Resend the invitation to %{email}"
-msgstr "Надіслати запрошення на адресу %{email} ще раз"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Send invitation"
-msgstr "Надіслати запрошення"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Sending…"
-msgstr "Надсилання…"
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "The account was created, but the invitation email could not be sent. Use Resend invitation to try again."
-msgstr "Обліковий запис створено, але лист із запрошенням не вдалося надіслати. Натисніть «Надіслати запрошення ще раз», щоб спробувати знову."
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "name@example.com"
-msgstr "name@example.com"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Invitations need a way for the invitee to sign in. Enable password authentication or a social sign-in provider on the Authentication tab to invite users."
-msgstr "Запрошеному потрібен спосіб входу. Щоб запрошувати користувачів, увімкніть автентифікацію за паролем або провайдер входу через соціальні мережі на вкладці «Автентифікація»."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Invitations need a way to sign in. Enable password authentication or a social sign-in provider first."
-msgstr "Для запрошень потрібен спосіб входу. Спочатку ввімкніть автентифікацію за паролем або провайдер входу через соціальні мережі."
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "We'll create the account and email them a link to choose how they'll sign in. Public registration can stay closed."
-msgstr "Ми створимо обліковий запис і надішлемо запрошеному лист із посиланням, за яким можна вибрати спосіб входу. Публічна реєстрація може залишатися закритою."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "This user has no pending invitation."
-msgstr "У цього користувача немає запрошення, яке очікує на прийняття."
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel invitation"
-msgstr "Скасувати запрошення"
-
-#: lib/tymeslot_web/live/admin_live/components/users.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel the invitation to %{email}"
-msgstr "Скасувати запрошення на адресу %{email}"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel the invitation to %{email}?"
-msgstr "Скасувати запрошення на адресу %{email}?"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelling..."
-msgstr "Скасування…"
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Could not cancel the invitation. Please try again."
-msgstr "Не вдалося скасувати запрошення. Спробуйте ще раз."
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Keep invitation"
-msgstr "Залишити запрошення"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_cancel_invitation_modal.ex
-#, elixir-autogen, elixir-format
-msgid "The invitation link stops working and the invited account is removed. You can invite this address again later."
-msgstr "Посилання із запрошення перестане працювати, а запрошений обліковий запис буде видалено. Пізніше ви зможете знову запросити цю адресу."
-
-#: lib/tymeslot_web/live/admin_live/user_actions.ex
-#, elixir-autogen, elixir-format
-msgid "The invitation to %{email} is cancelled."
-msgstr "Запрошення на адресу %{email} скасовано."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format

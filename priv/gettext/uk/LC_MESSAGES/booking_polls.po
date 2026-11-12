@@ -235,3 +235,8 @@ msgstr "Виберіть відповідь хоча б для одного ва
 #, elixir-autogen, elixir-format
 msgid "The meeting arranged through this poll has been cancelled."
 msgstr "Зустріч, призначену через це опитування, скасовано."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_location.ex
+#, elixir-autogen, elixir-format
+msgid "Video call. The link follows once a time is confirmed."
+msgstr "Відеозустріч. Посилання надійде, щойно час буде підтверджено."

@@ -519,3 +519,23 @@ msgstr "Ano, odeslat"
 #, elixir-autogen, elixir-format
 msgid "before the event"
 msgstr "před událostí"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone is an equal guest who can accept or decline. Only you can move or cancel the meeting."
+msgstr "Všichni jsou rovnocenní hosté a mohou pozvání přijmout nebo odmítnout. Schůzku můžete přesunout nebo zrušit jen vy."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Guests"
+msgstr "Hosté"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Main participant"
+msgstr "Hlavní účastník"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The main participant can move or cancel the meeting. Turn this off to invite everyone as an equal guest."
+msgstr "Hlavní účastník může schůzku přesunout nebo zrušit. Vypnutím této možnosti pozvete všechny jako rovnocenné hosty."

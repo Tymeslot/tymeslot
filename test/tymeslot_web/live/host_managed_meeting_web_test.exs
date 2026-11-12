@@ -82,6 +82,13 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
   end
 
   test "the dashboard card names the poll, not a booker, and lists everyone as a guest", ctx do
+    insert(:poll,
+      user: ctx.user,
+      status: :confirmed,
+      confirmed_meeting_id: ctx.meeting.id,
+      confirmed_at: DateTime.utc_now(:second)
+    )
+
     conn = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(ctx.user)
     {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 
@@ -89,8 +96,54 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
     refute has_element?(view, "h2", "Ada")
     assert has_element?(view, "[data-testid='poll-meeting-badge']")
     refute has_element?(view, "[data-testid='meeting-type']")
+    refute has_element?(view, "[data-testid='host-managed-badge']")
     refute render(view) =~ "Attendee Email"
     assert render(view) =~ "bob@example.com"
+  end
+
+  test "the card keeps its poll badge and guests once its calendar sync banner is dismissed",
+       ctx do
+    Repo.update!(Changeset.change(ctx.meeting, calendar_sync_status: :externally_modified))
+
+    insert(:poll,
+      user: ctx.user,
+      status: :confirmed,
+      confirmed_meeting_id: ctx.meeting.id,
+      confirmed_at: DateTime.utc_now(:second)
+    )
+
+    conn = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(ctx.user)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+    view |> element("button[phx-click='dismiss_calendar_sync_banner']") |> render_click()
+
+    refute has_element?(view, "button[phx-click='dismiss_calendar_sync_banner']")
+    assert has_element?(view, "[data-testid='poll-meeting-badge']")
+    refute has_element?(view, "[data-testid='host-managed-badge']")
+    assert render(view) =~ "bob@example.com"
+  end
+
+  test "a meeting created with no main participant is labelled as the host's, not a poll's",
+       ctx do
+    conn = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(ctx.user)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+    assert has_element?(view, "h2", "Team offsite")
+    assert has_element?(view, "[data-testid='host-managed-badge']", "Managed by you")
+    refute has_element?(view, "[data-testid='poll-meeting-badge']")
+  end
+
+  test "the cancel dialog names the meeting by its title, not its first guest", ctx do
+    conn = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(ctx.user)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+    view
+    |> element("[phx-click='show_cancel_modal'][phx-value-id='#{ctx.meeting.id}']")
+    |> render_click()
+
+    html = render(view)
+    assert html =~ "cancel “Team offsite” scheduled for"
+    refute html =~ "the meeting with Ada"
   end
 
   test "the host moves it from the dashboard and everyone is told", ctx do

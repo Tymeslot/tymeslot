@@ -2,10 +2,18 @@ defmodule TymeslotWeb.Dashboard.Polls.LocalTime do
   @moduledoc """
   Converts between a `datetime-local` input's value, which carries no zone,
   and UTC, reading the value in the poll's timezone. Shared by the poll create
-  form and the poll editor.
+  form and the poll editor, with the zone the create form starts in.
   """
 
+  alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
+
+  @doc "The zone a new poll starts in: the host's own, or the app's default."
+  @spec host_timezone(map() | nil) :: String.t()
+  def host_timezone(%{timezone: timezone}) when is_binary(timezone) and timezone != "",
+    do: timezone
+
+  def host_timezone(_profile), do: Profiles.get_default_timezone()
 
   @doc "The UTC moment `value` names in `timezone`, or nil for a blank or unreadable value."
   @spec to_utc(String.t() | nil, String.t()) :: DateTime.t() | nil

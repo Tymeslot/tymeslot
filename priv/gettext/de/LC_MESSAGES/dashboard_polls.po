@@ -567,11 +567,6 @@ msgstr "„%{title}“ wird mit allen Zeiten und Antworten entfernt. Das kann ni
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
 #, elixir-autogen, elixir-format
-msgid "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
-msgstr "Sein Kalender und sein Video-Anbieter werden für den Termin verwendet, wenn Sie eine Zeit bestätigen. Zeiten und Titel der Umfrage bleiben unverändert."
-
-#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
-#, elixir-autogen, elixir-format
 msgid "%{count} person who asked for a voting link but hasn't voted with it yet will be removed."
 msgid_plural "%{count} people who asked for a voting link but haven't voted with it yet will be removed."
 msgstr[0] "%{count} Person, die einen Abstimmungslink angefordert, aber noch nicht damit abgestimmt hat, wird entfernt."
@@ -587,7 +582,7 @@ msgstr "Alle mit dem Link"
 msgid "Anyone you share the poll's link with can ask for a personal voting link by email."
 msgstr "Alle, mit denen Sie den Link zur Umfrage teilen, können per E-Mail einen persönlichen Abstimmungslink anfordern."
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_access.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody can vote until you invite someone. You can also invite people after creating the poll."
 msgstr "Niemand kann abstimmen, bevor Sie jemanden einladen. Sie können auch nach dem Erstellen der Umfrage noch Personen einladen."
@@ -956,3 +951,63 @@ msgstr "Abstimmung endet am %{when}"
 #, elixir-autogen, elixir-format
 msgid "Your week"
 msgstr "Ihre Woche"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_location_field.ex
+#, elixir-autogen, elixir-format
+msgid "An address, a room or a meeting point"
+msgstr "Eine Adresse, ein Raum oder ein Treffpunkt"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Custom location"
+msgstr "Eigener Ort"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Custom location…"
+msgstr "Eigener Ort…"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_location_field.ex
+#, elixir-autogen, elixir-format
+msgid "From the meeting type: %{place}"
+msgstr "Vom Termintyp: %{place}"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_location_field.ex
+#, elixir-autogen, elixir-format
+msgid "From the meeting type: video call"
+msgstr "Vom Termintyp: Videoanruf"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Its calendar is used for the meeting when you confirm a time, and its location while the poll has none of its own. The poll's times and title stay as they are."
+msgstr "Sein Kalender wird für den Termin verwendet, wenn Sie eine Zeit bestätigen, und sein Ort, solange die Umfrage keinen eigenen hat. Zeiten und Titel der Umfrage bleiben, wie sie sind."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Location (optional)"
+msgstr "Ort (optional)"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_location_field.ex
+#, elixir-autogen, elixir-format
+msgid "No location"
+msgstr "Kein Ort"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Saved locations"
+msgstr "Gespeicherte Orte"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Shown on the voting page and in the invitations. A video call gets its room when you confirm a time."
+msgstr "Erscheint auf der Abstimmungsseite und in den Einladungen. Ein Videoanruf erhält seinen Raum, wenn Sie eine Zeit bestätigen."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_location_field.ex
+#, elixir-autogen, elixir-format
+msgid "This location or video provider is no longer available. Please choose another."
+msgstr "Dieser Ort oder Videoanbieter ist nicht mehr verfügbar. Bitte wählen Sie einen anderen."
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Video call"
+msgstr "Videoanruf"

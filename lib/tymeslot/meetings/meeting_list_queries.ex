@@ -376,6 +376,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> apply_limit(limit)
     |> preload([
       :booking_page,
+      :confirming_poll,
       guests: ^live_guests_preload(),
       participants: ^card_participants_preload()
     ])

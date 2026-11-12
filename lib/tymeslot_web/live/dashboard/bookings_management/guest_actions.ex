@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Validation.AddressList
   alias TymeslotWeb.Hooks.ModalHook
@@ -131,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   defp refusal_message(refusals), do: refusals |> Enum.reverse() |> Enum.uniq() |> Enum.join(" ")
 
   # The reasons, and their wording, follow Quick Add's
-  # (`CreateFormState.check_extra_guest/2`), so the host is told the same
+  # (`CreateFormState.check_extra_guest/3`), so the host is told the same
   # thing wherever they invite someone.
   defp check_guest(email, meeting, taken, room) do
     cond do
@@ -139,7 +140,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
         {:error,
          dgettext("dashboard_bookings", "%{email} is not a valid email address.", email: email)}
 
-      email == normalize(meeting.attendee_email) ->
+      # On a meeting the host manages the attendee is only its first guest,
+      # who booked nothing: they are among the guests already invited below.
+      not HostManaged.managed?(meeting) and email == normalize(meeting.attendee_email) ->
         {:error,
          dgettext("dashboard_bookings", "%{email} booked this meeting and is already invited.",
            email: email

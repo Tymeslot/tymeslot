@@ -69,7 +69,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
       <div class="paper-confirmation__details">
         <p class="paper-confirmation__meeting">
           <span :if={@meeting_type} class="paper-confirmation__meeting-name">{@meeting_type.name}</span>
-          <span class="paper-badge">{dgettext("booking", "%{minutes} min", minutes: @minutes)}</span>
+          <span class="paper-badge">{dgettext("booking_confirmation", "%{minutes} min",
+            minutes: @minutes
+          )}</span>
         </p>
         <ul class="paper-facts" role="list">
           <Components.fact icon="hero-calendar">
@@ -90,7 +92,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
             {@next_day_end}
           </Components.fact>
           <Components.fact :if={@organizer_profile} icon="hero-user">
-            {dgettext("booking", "with %{name}", name: Profiles.display_name(@organizer_profile))}
+            {dgettext("booking_confirmation", "with %{name}",
+              name: Profiles.display_name(@organizer_profile)
+            )}
           </Components.fact>
           <Components.fact :if={@location} icon="hero-map-pin" data-testid="confirmation-location">
             {@location}
@@ -107,7 +111,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
 
       <p class="paper-confirmation__sent">
         <.icon name="hero-envelope" class="paper-confirmation__sent-icon" />
-        <span>{dgettext("booking", "Sent to")} <strong>{@email}</strong></span>
+        <span>{dgettext("booking_confirmation", "Sent to")} <strong>{@email}</strong></span>
       </p>
 
       <CustomAnswers.custom_answers
@@ -125,8 +129,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
         >
           <.icon name="hero-calendar-days" class="paper-button__icon" />
           {if @held,
-            do: dgettext("booking", "Add tentative hold to calendar"),
-            else: dgettext("booking", "Add to calendar")}
+            do: dgettext("booking_confirmation", "Add tentative hold to calendar"),
+            else: dgettext("booking_confirmation", "Add to calendar")}
         </a>
         <button
           type="button"
@@ -142,8 +146,16 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
 
       <p class="paper-confirmation__help">
         {if @held,
-          do: dgettext("booking", "Changed your mind? Your request email has a link to withdraw it."),
-          else: dgettext("booking", "Need to make changes? Check your email for reschedule options")}
+          do:
+            dgettext(
+              "booking_confirmation",
+              "Changed your mind? Your request email has a link to withdraw it."
+            ),
+          else:
+            dgettext(
+              "booking_confirmation",
+              "Need to make changes? Check your email for reschedule options"
+            )}
       </p>
     </section>
     """
@@ -153,7 +165,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
     case ConfirmationText.status(assigns) do
       :held -> dpgettext("booking_voice", "paper", "Request sent")
       :rescheduled -> dpgettext("booking_voice", "paper", "Meeting rescheduled")
-      :confirmed -> dgettext("booking", "Booking confirmed")
+      :confirmed -> dgettext("booking_confirmation", "Booking confirmed")
     end
   end
 

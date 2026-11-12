@@ -11,22 +11,6 @@ msgstr ""
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "%{name}, your meeting %{organizer} has been rescheduled."
-msgstr "%{name}, вашу зустріч %{organizer} перенесено."
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "%{name}, your meeting %{organizer} is all set."
-msgstr "%{name}, усе готово до вашої зустрічі %{organizer}."
-
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "%{name}, your meeting %{organizer} is confirmed"
-msgstr "%{name}, вашу зустріч %{organizer} підтверджено"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{time} local time"
@@ -36,12 +20,6 @@ msgstr "%{time} за місцевим часом"
 #, elixir-autogen, elixir-format
 msgid "Additional Message (Optional)"
 msgstr "Додаткове повідомлення (необов'язково)"
-
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Appointment host"
-msgstr "Організатор зустрічі"
 
 #: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
 #: lib/tymeslot_web/themes/shared/components/slot_list.ex
@@ -69,11 +47,6 @@ msgstr "Календар завантажується повільно"
 msgid "Complete your payment in the new tab"
 msgstr "Завершіть оплату в новій вкладці"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Confirmation sent to"
-msgstr "Підтвердження надіслано на"
-
 #: lib/tymeslot_web/themes/folio/scheduling/components/you_moment.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
@@ -81,9 +54,6 @@ msgstr "Підтвердження надіслано на"
 msgid "Continue"
 msgstr "Продовжити"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/shared/components/meeting_details.ex
 #, elixir-autogen, elixir-format
 msgid "Date"
@@ -93,12 +63,6 @@ msgstr "Дата"
 #, elixir-autogen, elixir-format
 msgid "Did the new tab not open?"
 msgstr "Нова вкладка не відкрилася?"
-
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Duration"
-msgstr "Тривалість"
 
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
@@ -145,34 +109,15 @@ msgstr "Зв'яжімося!"
 msgid "Loading available times..."
 msgstr "Завантаження доступного часу…"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/shared/blocks/summary_bar.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Details"
 msgstr "Деталі зустрічі"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Rescheduled!"
-msgstr "Зустріч перенесено!"
-
 #: lib/tymeslot_web/themes/shared/components/meeting_details.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting with"
 msgstr "Зустріч із"
-
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Need to make changes? Check your email for reschedule options"
-msgstr "Потрібно внести зміни? Перевірте пошту: у листі є варіанти перенесення"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Need to reschedule? Check your confirmation email."
-msgstr "Потрібно перенести зустріч? Перевірте лист із підтвердженням."
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/yes_no.ex
 #, elixir-autogen, elixir-format
@@ -234,12 +179,6 @@ msgstr "Політика конфіденційності"
 msgid "Question %{n} of %{m}"
 msgstr "Запитання %{n} з %{m}"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Schedule Another Meeting"
-msgstr "Запланувати ще одну зустріч"
-
 #: lib/tymeslot_web/themes/rhythm/shared/organizer_header.ex
 #, elixir-autogen, elixir-format
 msgid "Schedule with"
@@ -277,23 +216,10 @@ msgstr "Виберіть часовий пояс"
 msgid "Select…"
 msgstr "Виберіть…"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Sent to"
-msgstr "Надіслано на"
-
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "Service slow"
 msgstr "Сервіс відповідає повільно"
-
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Successfully Rescheduled!"
-msgstr "Успішно перенесено!"
 
 #: lib/tymeslot_web/themes/shared/security_fields.ex
 #, elixir-autogen, elixir-format
@@ -311,18 +237,6 @@ msgstr "На цей день усе заброньовано"
 msgid "This site is protected by reCAPTCHA and the Google %{privacy_link} and %{terms_link} apply."
 msgstr "Цей сайт захищено системою reCAPTCHA; до нього застосовуються %{privacy_link} та %{terms_link} Google."
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Time"
-msgstr "Час"
-
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Timezone"
-msgstr "Часовий пояс"
-
 #: lib/tymeslot_web/themes/folio/scheduling/components/you_moment.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
@@ -339,11 +253,6 @@ msgstr "Ми відкрили Stripe Checkout у новій вкладці бр�
 #, elixir-autogen, elixir-format
 msgid "Yes"
 msgstr "Так"
-
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "You're All Set!"
-msgstr "Усе готово!"
 
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
@@ -400,11 +309,6 @@ msgstr "ivan@example.com"
 msgid "meeting"
 msgstr "зустріч"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Confirmed!"
-msgstr "Зустріч підтверджено!"
-
 #: lib/tymeslot_web/themes/shared/components/booking_form.ex
 #, elixir-autogen, elixir-format
 msgid "Message (optional)"
@@ -440,12 +344,6 @@ msgstr "Перенести зустріч"
 msgid "Submit"
 msgstr "Надіслати"
 
-#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/shared/confirmation_text.ex
-#, elixir-autogen, elixir-format
-msgid "with %{name}"
-msgstr "з %{name}"
-
 #: lib/tymeslot_web/themes/shared/guest_booking.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} has already been added."
@@ -471,9 +369,6 @@ msgstr "Введіть коректну адресу електронної по
 msgid "Guest email address"
 msgstr "Адреса електронної пошти гостя"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex
 #, elixir-autogen, elixir-format
 msgid "Guests"
@@ -513,14 +408,6 @@ msgstr "Оберіть зручний для вас час і забронюйт
 #, elixir-autogen, elixir-format
 msgid "Preview session expired. Reload the page to continue."
 msgstr "Сеанс попереднього перегляду завершився. Перезавантажте сторінку, щоб продовжити."
-
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Add to calendar"
-msgstr "Додати до календаря"
 
 #: lib/tymeslot_web/live/scheduling/entry_refusal.ex
 #, elixir-autogen, elixir-format
@@ -640,12 +527,6 @@ msgstr "Ще не підтверджено"
 msgid "Request meeting"
 msgstr "Надіслати запит"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Request sent!"
-msgstr "Запит надіслано!"
-
 #: lib/tymeslot_web/themes/shared/components/approval_notice.ex
 #, elixir-autogen, elixir-format
 msgid "The host"
@@ -656,36 +537,10 @@ msgstr "Організатор"
 msgid "This booking needs approval"
 msgstr "Це бронювання потребує підтвердження"
 
-#: lib/tymeslot_web/themes/shared/confirmation_text.ex
-#, elixir-autogen, elixir-format
-msgid "%{name}, your request has been sent."
-msgstr "%{name}, ваш запит надіслано."
-
-#: lib/tymeslot_web/themes/shared/confirmation_text.ex
-#, elixir-autogen, elixir-format
-msgid "%{name}, your request to %{organizer_name} has been sent."
-msgstr "%{name}, ваш запит до %{organizer_name} надіслано."
-
 #: lib/tymeslot_web/themes/shared/components/approval_notice.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} confirms each booking personally, so submitting this sends a request rather than booking the time outright. You'll pay now to hold the slot; if %{organizer} declines or doesn't answer in time, you're refunded in full."
 msgstr "%{organizer} підтверджує кожне бронювання особисто, тому надсилання цієї форми створює запит, а не бронює час одразу. Ви сплачуєте зараз, щоб зарезервувати слот; якщо %{organizer} відхилить запит або не відповість вчасно, кошти буде повернено в повному обсязі."
-
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Add tentative hold to calendar"
-msgstr "Додати попереднє бронювання до календаря"
-
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Changed your mind? Your request email has a link to withdraw it."
-msgstr "Передумали? У вашому листі із запитом є посилання, щоб відкликати його."
 
 #: lib/tymeslot_web/themes/shared/booking_labels.ex
 #, elixir-autogen, elixir-format
@@ -717,13 +572,6 @@ msgstr "Вкажіть номер, за яким ми маємо вам зате
 msgid "In person"
 msgstr "Особисто"
 
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Location"
-msgstr "Місце"
-
 #: lib/tymeslot/meeting_types/location_selection.ex
 #: lib/tymeslot/onboarding/meeting_setup.ex
 #, elixir-autogen, elixir-format
@@ -749,13 +597,6 @@ msgstr "Який відеосервіс?"
 #, elixir-autogen, elixir-format
 msgid "Your phone number"
 msgstr "Ваш номер телефону"
-
-#: lib/tymeslot_web/themes/folio/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "%{minutes} min"
-msgstr "%{minutes} хв"
 
 #: lib/tymeslot_web/themes/shared/live_helpers/mount.ex
 #, elixir-autogen, elixir-format
@@ -989,25 +830,10 @@ msgstr "%{min}–%{max} хв"
 msgid "How long should the meeting be?"
 msgstr "Скільки має тривати зустріч?"
 
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Paid"
-msgstr "Оплачено"
-
 #: lib/tymeslot_web/themes/shared/components/meeting_price.ex
 #, elixir-autogen, elixir-format
 msgid "Price:"
 msgstr "Ціна:"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Paid %{amount}"
-msgstr "Оплачено %{amount}"
-
-#: lib/tymeslot_web/themes/paper/scheduling/components/confirmation_component.ex
-#, elixir-autogen, elixir-format
-msgid "Booking confirmed"
-msgstr "Бронювання підтверджено"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #, elixir-autogen, elixir-format

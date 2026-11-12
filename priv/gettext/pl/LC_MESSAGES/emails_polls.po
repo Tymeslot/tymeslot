@@ -404,3 +404,13 @@ msgstr "Oto ponownie osobisty link do głosowania w ankiecie %{title} od %{host}
 #, elixir-autogen, elixir-format
 msgid "%{host} has cancelled the poll %{title}, so no meeting will be scheduled from it."
 msgstr "%{host} odwołuje ankietę %{title}, więc nie zostanie z niej ustalone spotkanie."
+
+#: lib/tymeslot/emails/shared/poll_place.ex
+#, elixir-autogen, elixir-format
+msgid "Video call. You get the link once a time is confirmed."
+msgstr "Rozmowa wideo. Link otrzymasz, gdy termin zostanie potwierdzony."
+
+#: lib/tymeslot/emails/shared/poll_place.ex
+#, elixir-autogen, elixir-format
+msgid "Where"
+msgstr "Gdzie"

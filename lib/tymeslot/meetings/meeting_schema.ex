@@ -114,6 +114,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           booking_page_id: integer() | nil,
           invitation_id: integer() | nil,
           booking_page: any() | Ecto.Association.NotLoaded.t() | nil,
+          confirming_poll: any() | Ecto.Association.NotLoaded.t() | nil,
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -357,6 +358,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # direct link under it, or a booking that came through no page at all.
     # Deleting the page nils it (`on_delete: :nilify_all`).
     belongs_to(:booking_page, Tymeslot.BookingPages.BookingPageSchema, type: :id)
+    # The poll this meeting was confirmed from, if any.
+    has_one(:confirming_poll, Tymeslot.Polls.PollSchema, foreign_key: :confirmed_meeting_id)
 
     # The single-use invitation link booked through, if any; at most one live
     # meeting carries it (`Tymeslot.Meetings.UniqueInvitation`).

@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.PollVotingLocation
   alias TymeslotWeb.Themes.Shared.SecurityFields
 
   use TymeslotWeb.Components.CoreComponents, only: [honeypot_field: 1, icon: 1]
@@ -30,6 +31,11 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   @responses [:yes, :if_need_be, :no]
 
   attr :poll, :map, required: true
+
+  attr :location, :map,
+    default: nil,
+    doc: "where the meeting will be held (`Tymeslot.Polls.location/1`), if anywhere"
+
   attr :tallies, :map, required: true
   attr :voting_open, :boolean, required: true
   attr :participant, :map, default: nil
@@ -52,6 +58,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
         <p :if={@poll.description && @poll.description != ""} class="poll-voting-description">
           {@poll.description}
         </p>
+        <PollVotingLocation.location location={@location} />
         <%!-- Slot rows show a compact date with no zone on it, so the zone has
               to be stated once here or every candidate time is unlabelled. It
               reads as a property of the poll rather than a sentence about it,

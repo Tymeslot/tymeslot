@@ -21,7 +21,10 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
     another reason gets the unhealthy email as usual, since the reauth path
     leaves `notification_sent_at` untouched.
   - Permanent auth failures (e.g. Google `invalid_grant`) bypass the 48-hour
-    threshold via the fast-path in `handle_check_result/5`: the integration is
+    threshold via the fast-path in `handle_check_result/5`. A CalDAV-family
+    calendar takes it only once `ReauthHandling.password_rejection_threshold/0`
+    consecutive hard failures have accumulated; until then its rejection counts
+    toward the badge like any other failure. On the fast-path the integration is
     flagged `needs_reauth: true`, which itself owns the notification (the
     reauth email, not the unhealthy one; see `ReauthHandling.flag_and_notify/3`)
     on the false to true transition, which the row decides. This fast-path
@@ -44,6 +47,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Shared.ReauthHandling
@@ -158,11 +162,36 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
           {:ok, any()} | {:error, any()}
         ) :: :ok
   def handle_check_result(type, integration, transition, health_state, check_result) do
-    integration = apply_permanent_auth_failure(type, integration, check_result)
+    integration =
+      if rejection_confirmed?(type, integration, health_state) do
+        apply_permanent_auth_failure(type, integration, check_result)
+      else
+        integration
+      end
+
     handle_transition(type, integration, transition, health_state)
   end
 
   # Private Functions
+
+  # A password-based calendar's rejection is believed only once it has lasted
+  # `ReauthHandling.password_rejection_threshold/0` consecutive hard failures,
+  # this check included (`health_state` is already updated with it). Until then
+  # the failure only counts toward the badge like any other. OAuth providers,
+  # whose refused grant really is gone, and video integrations keep flagging
+  # on the first rejection.
+  defp rejection_confirmed?(:calendar, %{provider: provider}, %{
+         consecutive_hard_failures: failures
+       })
+       when is_integer(failures) do
+    threshold = ReauthHandling.password_rejection_threshold()
+
+    # A threshold of 1 is the first rejection, which this check is whatever
+    # state a caller hands over.
+    not ProviderConfig.caldav_based?(provider) or threshold <= 1 or failures >= threshold
+  end
+
+  defp rejection_confirmed?(_type, _integration, _health_state), do: true
 
   # Returns the integration as the rest of the check should see it: flagged
   # when the flag was written, untouched otherwise (the row has gone, or the

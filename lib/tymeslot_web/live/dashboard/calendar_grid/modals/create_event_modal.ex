@@ -44,6 +44,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       |> assign(:meeting_mode, assigns.creating_event[:mode] == :meeting)
       |> assign(:group_mode, assigns.creating_event[:mode] == :group_event)
       |> assign(:event_mode, assigns.creating_event[:mode] in [nil, :event])
+      |> assign(:main_participant, Map.get(assigns.creating_event, :main_participant, true))
       # A subscribed calendar is no more a target than no calendar at all, so
       # the mode toggle and the picker follow what can be written to, not what
       # is connected.
@@ -123,8 +124,44 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         />
       </div>
 
-      <%!-- Guest details (meeting mode only) --%>
-      <div :if={@meeting_mode} class="mb-3 grid gap-3 sm:grid-cols-2">
+      <%!-- Whether a main participant booked the meeting with the host, and
+            may move or cancel it, or the host manages it alone and everyone
+            invited is a guest (meeting mode only). --%>
+      <div :if={@meeting_mode} class="mb-3">
+        <div class="flex items-center justify-between gap-3">
+          <p
+            id="create-meeting-main-participant-label"
+            class="text-token-sm font-medium text-tymeslot-700"
+          >
+            {dgettext("dashboard_calendar_modals", "Main participant")}
+          </p>
+          <StatusSwitch.status_switch
+            id="create-meeting-main-participant"
+            checked={@main_participant}
+            on_change="toggle_create_main_participant"
+            target={@myself}
+            size={:small}
+            aria-labelledby="create-meeting-main-participant-label"
+            aria-describedby="create-meeting-main-participant-hint"
+          />
+        </div>
+        <p id="create-meeting-main-participant-hint" class="mt-1 text-token-xs text-tymeslot-400">
+          <%= if @main_participant do %>
+            {dgettext(
+              "dashboard_calendar_modals",
+              "The main participant can move or cancel the meeting. Turn this off to invite everyone as an equal guest."
+            )}
+          <% else %>
+            {dgettext(
+              "dashboard_calendar_modals",
+              "Everyone is an equal guest who can accept or decline. Only you can move or cancel the meeting."
+            )}
+          <% end %>
+        </p>
+      </div>
+
+      <%!-- Main participant details (meeting mode with a main participant) --%>
+      <div :if={@meeting_mode and @main_participant} class="mb-3 grid gap-3 sm:grid-cols-2">
         <.input
           type="text"
           name="guest_name"
@@ -159,7 +196,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       <div :if={@meeting_mode} class="mb-3 space-y-3">
         <div>
           <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
-            {dgettext("dashboard_calendar_modals", "More guests (optional)")}
+            <%= if @main_participant do %>
+              {dgettext("dashboard_calendar_modals", "More guests (optional)")}
+            <% else %>
+              {dgettext("dashboard_calendar_modals", "Guests")}
+            <% end %>
           </p>
           <div :if={@creating_event[:guest_emails] != []} class="flex flex-wrap gap-1.5 mb-2">
             <span
