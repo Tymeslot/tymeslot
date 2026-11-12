@@ -3,7 +3,8 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   Schema for user profiles containing calendar and appointment settings.
 
   Besides `changeset/2`, focused changesets cover single concerns:
-  `booking_text_changeset/2`, `intro_changeset/2` and `legal_links_changeset/2`.
+  `booking_text_changeset/2`, `intro_changeset/2`, `legal_links_changeset/2`
+  and `booking_languages_changeset/2`.
   """
   use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
@@ -11,6 +12,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
+  alias Tymeslot.Locales
   alias Tymeslot.Profiles.ReservedPaths
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.FieldValidators.UsernameValidator
@@ -46,6 +48,10 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           bio: String.t() | nil,
           legal_notice_url: String.t() | nil,
           privacy_policy_url: String.t() | nil,
+          content_locale: String.t() | nil,
+          translation_locales: [String.t()],
+          offer_all_locales: boolean(),
+          translations: map(),
           freebusy_token: String.t() | nil,
           freebusy_token_hash: String.t() | nil,
           primary_calendar_integration_id: integer() | nil,
@@ -84,6 +90,18 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:bio, :string)
     field(:legal_notice_url, :string)
     field(:privacy_policy_url, :string)
+
+    # The booking languages (`Tymeslot.ContentTranslations.Languages`): the
+    # language the organiser writes in (nil means the booking pages'
+    # fallback), the languages they translate into, and whether the booking
+    # page is offered in every interface language or only in those.
+    field(:content_locale, :string)
+    field(:translation_locales, {:array, :string}, default: [])
+    field(:offer_all_locales, :boolean, default: true)
+    # Translations of the booking texts and the intro
+    # (`Tymeslot.ContentTranslations`). No changeset here casts it, so a form
+    # save can never wipe it.
+    field(:translations, :map, default: %{})
 
     # Grants read access to the host's busy times, and the host copies the
     # feed URL from the dashboard again whenever they like, so it is
@@ -336,6 +354,59 @@ defmodule Tymeslot.Profiles.ProfileSchema do
         internal_names_local: true
       )
     end)
+  end
+
+  @doc """
+  Focused changeset for the booking languages: `content_locale` (the
+  language the organiser's texts are written in, nil for the booking pages'
+  fallback), `translation_locales` and `offer_all_locales`.
+
+  Every code must be a supported locale, a translation language may not be
+  the original, and none may be listed twice. Removing a translation language
+  leaves its stored texts in `translations`, so adding it again restores them.
+  """
+  @spec booking_languages_changeset(t(), map()) :: Ecto.Changeset.t()
+  def booking_languages_changeset(profile, attrs) do
+    supported = Locales.supported_codes()
+
+    profile
+    |> cast(attrs, [:content_locale, :translation_locales, :offer_all_locales])
+    |> validate_inclusion(:content_locale, supported,
+      message: dgettext_noop("errors", "is not a supported language")
+    )
+    |> validate_required([:offer_all_locales])
+    |> validate_translation_locales(supported)
+  end
+
+  defp validate_translation_locales(changeset, supported) do
+    original = get_field(changeset, :content_locale) || Locales.booking_default_locale()
+    codes = get_field(changeset, :translation_locales) || []
+
+    cond do
+      Enum.any?(codes, &(&1 not in supported)) ->
+        add_error(
+          changeset,
+          :translation_locales,
+          dgettext_noop("errors", "is not a supported language")
+        )
+
+      original in codes ->
+        add_error(
+          changeset,
+          :translation_locales,
+          dgettext_noop("errors", "cannot include the original language")
+        )
+
+      Enum.uniq(codes) != codes ->
+        add_error(
+          changeset,
+          :translation_locales,
+          dgettext_noop("errors", "cannot list a language twice")
+        )
+
+      true ->
+        changeset
+    end
   end
 
   defp validate_username(changeset) do

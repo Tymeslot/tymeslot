@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.ContentTranslations.AttendeeTexts
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
 
   attr :theme_tokens, :any, required: true
@@ -45,11 +46,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                     {dgettext("booking_manage", "Meeting Cancelled")}
                   </h1>
                   <p
-                    :if={assigns[:meeting] && @meeting.meeting_type not in [nil, ""]}
+                    :if={
+                      assigns[:meeting] &&
+                        AttendeeTexts.text(@meeting, :meeting_type, assigns[:locale]) not in [nil, ""]
+                    }
                     class="confirmation-subject"
                     data-testid="chosen-meeting-type"
                   >
-                    {@meeting.meeting_type}
+                    {AttendeeTexts.text(@meeting, :meeting_type, assigns[:locale])}
                   </p>
 
                   <p class="confirmation-message">

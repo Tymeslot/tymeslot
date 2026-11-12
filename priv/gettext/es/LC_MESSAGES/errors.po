@@ -522,6 +522,7 @@ msgid "is not a palette colour"
 msgstr "no es un color de la paleta"
 
 #: lib/tymeslot/app_settings/app_settings_schema.ex
+#: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported language"
 msgstr "no es un idioma compatible"
@@ -867,3 +868,13 @@ msgstr "debe estar en el futuro"
 #, elixir-autogen, elixir-format
 msgid "invitation links"
 msgstr "enlaces de invitación"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#, elixir-autogen, elixir-format
+msgid "cannot include the original language"
+msgstr "no puede incluir el idioma original"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#, elixir-autogen, elixir-format
+msgid "cannot list a language twice"
+msgstr "no puede incluir un idioma dos veces"

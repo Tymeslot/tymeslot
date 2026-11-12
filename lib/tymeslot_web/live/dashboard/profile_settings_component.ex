@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
     {:ok,
      assign(socket,
        saving: false,
+       editing_locale: nil,
        section_components: Application.get_env(:tymeslot, :profile_section_components, [])
      )}
   end
@@ -76,6 +77,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
                     module={IntroFormComponent}
                     id="intro-form-component"
                     profile={@profile}
+                    editing_locale={@editing_locale}
                   />
                 </div>
 

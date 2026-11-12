@@ -210,6 +210,15 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 <.icon name="hero-rectangle-stack" class="w-5 h-5" />
                 <span>{dgettext("dashboard_common", "Booking pages")}</span>
               </.nav_link>
+
+              <.nav_link
+                patch={~p"/dashboard/languages"}
+                current={@current_action}
+                action={:languages}
+              >
+                <.icon name="hero-language" class="w-5 h-5" />
+                <span>{dgettext("dashboard_languages", "Languages")}</span>
+              </.nav_link>
             </div>
           </div>
 

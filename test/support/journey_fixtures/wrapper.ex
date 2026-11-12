@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Test.JourneyFixtures.Wrapper do
   attr :locale, :string, default: nil
   attr :current_state, :atom, default: nil
   attr :journey, :any, default: nil, doc: "the page's journey: its navigator decides the switcher"
+  attr :offered_locales, :list, default: nil, doc: "the locale codes the organiser offers"
   attr :language_dropdown_open, :boolean, default: nil
   attr :organizer_user_id, :integer, default: nil
   attr :should_show_branding, :boolean, default: false
@@ -53,6 +54,7 @@ defmodule TymeslotWeb.Test.JourneyFixtures.Wrapper do
     ~H"""
     <ThemeShell.theme_shell class={@wrapper_class} locale={@locale} theme_tokens={@theme_tokens}>
       <ThemeShell.chrome
+        locales={@language_locales}
         language_class="journey-fixture-language"
         locale={@locale}
         language_dropdown_open={@language_dropdown_open}

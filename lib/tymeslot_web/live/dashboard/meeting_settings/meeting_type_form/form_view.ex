@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Validation.Constraints
+  alias TymeslotWeb.Dashboard.Languages.TranslatableForm
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.PageVisibility
 
@@ -98,11 +99,36 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
 
     ~H"""
     <div id={"meeting-type-form-wrapper-#{@id}"}>
+      <%!-- A translation language swaps the form for the translation editor.
+           The form is hidden rather than removed, so its sections keep their
+           state for the way back to the original. --%>
+      <.live_component
+        :if={@is_edit && @profile}
+        module={TranslatableForm}
+        id={"meeting-type-translations-#{@type.id}"}
+        profile={@profile}
+        editing_locale={@editing_locale}
+        user_id={@type.user_id}
+        kind={:meeting_type}
+        record={@type}
+        class="mb-6"
+      >
+        <:actions>
+          <div class="flex justify-end">
+            <.action_button phx-click="close_edit_overlay" phx-target={@parent_myself}>
+              {dgettext("dashboard_meeting_form", "Done")}
+            </.action_button>
+          </div>
+        </:actions>
+      </.live_component>
       <form
         id={"meeting-type-form-#{@id}"}
         phx-submit={if @is_edit, do: "flush_autosave", else: "create_meeting_type"}
         phx-target={@myself}
-        class="space-y-6"
+        class={[
+          "space-y-6",
+          @is_edit && TranslatableForm.translating?(@profile, @editing_locale) && "hidden"
+        ]}
         novalidate
       >
         <div class="space-y-2">

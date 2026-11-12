@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   alias Tymeslot.BookingPages
   alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Bookings.SubmissionToken
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.CustomFields
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
@@ -320,6 +321,11 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   @doc "Makes `meeting_type` the one this booking is for, with its questions, locations and booking window."
   @spec assign_meeting_type(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_meeting_type(socket, meeting_type) do
+    # Looked up afresh, not taken from the page's (already translated) list,
+    # so its texts are put into the page's content language here, before the
+    # questions and locations are read from it.
+    meeting_type = ContentTranslations.localise(meeting_type, socket.assigns[:content_locale])
+
     socket
     |> ChosenLength.keep_if_offered(meeting_type)
     |> assign(:meeting_type, meeting_type)

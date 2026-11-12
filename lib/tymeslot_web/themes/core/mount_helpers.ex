@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   alias Phoenix.LiveView
   alias Tymeslot.BookingPages
   alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.Demo
   alias Tymeslot.Polls
   alias Tymeslot.Scheduling.LinkAccessPolicy
@@ -295,7 +296,10 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
        ) do
     socket =
       socket
-      |> assign(:organizer_profile, profile)
+      |> assign(
+        :organizer_profile,
+        ContentTranslations.localise(profile, socket.assigns[:content_locale])
+      )
       |> assign(:booking_window_days, OrganizerHelpers.booking_window_days(profile))
       |> assign(:meeting, meeting)
       |> assign(:meeting_uid, meeting_uid)

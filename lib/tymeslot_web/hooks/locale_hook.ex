@@ -9,7 +9,12 @@ defmodule TymeslotWeb.Hooks.LocaleHook do
   `LocalePlug.live_session_data/1`). A `?locale=` param on the mount URL still
   wins, so a locale switch applied by patching the URL is honoured.
 
-  It also assigns `:visitor_week_start` (`:monday`, `:sunday` or `nil`), the
+  It also assigns `:locale_candidates`, the visitor's acceptable locales in
+  priority order (the mount URL's `?locale=`, then the dead render's
+  `"locale_candidates"`), from which a booking page that offers only some
+  languages picks its own (`Tymeslot.ContentTranslations.Languages.resolve/2`).
+
+  And it assigns `:visitor_week_start` (`:monday`, `:sunday` or `nil`), the
   week start the dead render read from `Accept-Language`, for the booking
   calendar.
   """
@@ -32,8 +37,23 @@ defmodule TymeslotWeb.Hooks.LocaleHook do
     {:cont,
      assign(socket,
        locale: locale,
+       locale_candidates: locale_candidates(params, session),
        visitor_week_start: visitor_week_start(session["visitor_week_start"])
      )}
+  end
+
+  # A session signed before the candidates were carried has only the
+  # resolved locale to go on.
+  defp locale_candidates(params, session) do
+    carried =
+      case session do
+        %{"locale_candidates" => candidates} when is_list(candidates) -> candidates
+        _older_session -> [dead_render_locale(session)]
+      end
+
+    [params["locale"] | carried]
+    |> Enum.filter(&Locales.acceptable?/1)
+    |> Enum.uniq()
   end
 
   defp visitor_week_start("monday"), do: :monday

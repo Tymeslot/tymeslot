@@ -65,8 +65,10 @@ defmodule Tymeslot.MeetingTypes do
   The venues the booker can pick between, per in-person location; see
   `Tymeslot.MeetingTypes.LocationChoices.location_venue_choices/1`.
   """
-  @spec location_venue_choices(map() | nil) :: %{String.t() => [Venues.choice()]}
-  defdelegate location_venue_choices(meeting_type), to: LocationChoices
+  @spec location_venue_choices(map() | nil, String.t() | nil) :: %{
+          String.t() => [Venues.choice()]
+        }
+  defdelegate location_venue_choices(meeting_type, content_locale \\ nil), to: LocationChoices
 
   @doc """
   Gets all active meeting types for a user. A pure read: a host may have

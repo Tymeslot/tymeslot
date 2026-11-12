@@ -268,6 +268,20 @@ defmodule Tymeslot.Profiles do
   defdelegate update_legal_links(profile, attrs), to: ProfileQueries
 
   @doc """
+  Updates the booking languages: the original language, the translation
+  languages and whether the booking page is offered in every language
+  (`Tymeslot.ContentTranslations.Languages`). Stored translations are never
+  touched, so a removed language's texts come back when it is added again.
+  """
+  @spec update_booking_languages(profile, map()) :: result(profile)
+  defdelegate update_booking_languages(profile, attrs), to: ProfileQueries
+
+  @doc "A changeset for the booking languages form."
+  @spec change_booking_languages(profile, map()) :: Ecto.Changeset.t()
+  def change_booking_languages(%ProfileSchema{} = profile, attrs \\ %{}),
+    do: ProfileSchema.booking_languages_changeset(profile, attrs)
+
+  @doc """
   The legal links a booking page shows. Each link is the organiser's own, else
   the instance default (`:booking_legal_notice_url`, `:booking_privacy_policy_url`),
   else `nil`. Always returns both keys; a `nil` profile yields the defaults.

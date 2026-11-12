@@ -100,6 +100,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           seen_calendar_end_time: DateTime.t() | nil,
           custom_fields_snapshot: [map()],
           custom_field_answers: map(),
+          attendee_texts: map() | nil,
           show_as_free: boolean(),
           attachments_snapshot: [map()],
           utm_source: String.t() | nil,
@@ -324,6 +325,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:custom_fields_snapshot, {:array, :map}, default: [])
     field(:custom_field_answers, :map, default: %{})
 
+    # The attendee's copies of the snapshot strings above (`meeting_type`,
+    # `description`, `location`, `custom_fields_snapshot`) in their language,
+    # `%{"locale" => ..., ...}`. Set only when the organiser had translated
+    # something into that language; the plain columns keep the original for
+    # the organiser (`Tymeslot.ContentTranslations.AttendeeTexts`).
+    field(:attendee_texts, :map)
+
     # Confirmed from a poll: only its host manages it (`Tymeslot.Meetings.HostManaged`).
     field(:managed_by_host, :boolean, default: false)
 
@@ -444,6 +452,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :last_notified_state,
     :custom_fields_snapshot,
     :custom_field_answers,
+    :attendee_texts,
     :show_as_free,
     :attachments_snapshot,
     :utm_source,

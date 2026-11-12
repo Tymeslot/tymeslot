@@ -44,6 +44,27 @@ defmodule Tymeslot.Bookings.BookingTitle do
   def localise(meeting, locale),
     do: Gettext.with_locale(TymeslotWeb.Gettext, locale, fn -> localise(meeting) end)
 
+  @doc """
+  `localise/1` with the meeting type named `display_type`, the name as the
+  reader sees it (the attendee's translation of it,
+  `Tymeslot.ContentTranslations.AttendeeTexts`). The template is still
+  detected from the stored, original name, so a title it did not build is
+  returned unchanged.
+  """
+  @spec localise_with_type(map(), String.t() | nil) :: String.t() | nil
+  def localise_with_type(
+        %{title: title, meeting_type: meeting_type, attendee_name: attendee_name} = meeting,
+        display_type
+      )
+      when is_binary(title) and is_binary(meeting_type) and is_binary(attendee_name) and
+             is_binary(display_type) do
+    if built_from_template?(title, meeting_type, attendee_name),
+      do: render(display_type, attendee_name),
+      else: localise(meeting)
+  end
+
+  def localise_with_type(meeting, _display_type), do: localise(meeting)
+
   # Every catalogue is tried, not only the organiser's current language: the
   # title was rendered in whatever language they had when the booking was
   # made, and bookings older than the translated title hold the English one.

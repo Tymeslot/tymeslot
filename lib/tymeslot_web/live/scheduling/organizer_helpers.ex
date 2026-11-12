@@ -14,9 +14,12 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   alias Phoenix.Component
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.BookingPages
+  alias Tymeslot.ContentTranslations
+  alias Tymeslot.ContentTranslations.Languages
   alias Tymeslot.Demo
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.OrganizerContext
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
@@ -71,17 +74,51 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
         |> assign(:page_title, dgettext("errors", "Page not found"))
 
       {:ok, context} ->
+        socket = assign_page_language(socket, context.profile)
+        content_locale = socket.assigns.content_locale
+        profile = ContentTranslations.localise(context.profile, content_locale)
+
         socket
         |> assign(:username_context, context.username)
-        |> assign(:organizer_profile, context.profile)
+        |> assign(:organizer_profile, profile)
         |> assign(:legal_links, Profiles.public_legal_links(context.profile))
         |> assign(:booking_window_days, booking_window_days(context.profile))
         |> assign(:organizer_user_id, context.user_id)
-        |> assign(:meeting_types, context.meeting_types)
+        |> assign(
+          :meeting_types,
+          ContentTranslations.localise(context.meeting_types, content_locale)
+        )
         |> assign(:host_currency, host_currency(context))
-        |> assign(:page_title, context.page_title)
+        |> assign(:page_title, page_title(profile, context))
     end
   end
+
+  # The page's language, clamped to the ones the organiser offers
+  # (`Languages.resolve/2`): the visitor's first acceptable candidate the
+  # organiser offers, else the organiser's original. `:content_locale` is the
+  # language their texts are shown in, nil for the original.
+  defp assign_page_language(socket, profile) do
+    candidates = socket.assigns[:locale_candidates] || List.wrap(socket.assigns[:locale])
+    locale = Languages.resolve(profile, candidates)
+
+    # Global: reaches every Gettext backend in this process, not just Core's.
+    Gettext.put_locale(locale)
+
+    socket
+    |> assign(:locale, locale)
+    |> assign(:offered_locales, Languages.offered(profile))
+    |> assign(:content_locale, Languages.content_locale(profile, locale))
+  end
+
+  # Built again in the page's language, with the page's translated name. A
+  # demo persona's context brings its own.
+  defp page_title(%ProfileSchema{} = profile, context) do
+    if Demo.demo_profile?(profile),
+      do: context.page_title,
+      else: OrganizerContext.page_title(profile)
+  end
+
+  defp page_title(_demo_profile, context), do: context.page_title
 
   # The currency the organiser's paid meeting types are priced in, for the
   # steps that show a price (`BookingText.price_label/3`): the currency

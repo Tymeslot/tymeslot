@@ -79,6 +79,9 @@ defmodule Tymeslot.MeetingTypes.Duplication do
     :is_archived,
     :allow_video,
     :video_integration_id,
+    # A copy starts untranslated: no changeset casts the translations
+    # (`Tymeslot.ContentTranslations`), and the copy's name is a new one.
+    :translations,
     :inserted_at,
     :updated_at
   ]

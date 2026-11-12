@@ -39,6 +39,11 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     * `:ambient_locale` - the same resolution without the user's saved
       preference (source 2): what the page resolves to once that preference
       is cleared. Equal to `:locale` unless `prefer_user_locale` is set.
+    * `:locale_candidates` - the acceptable, normalised candidates the
+      visitor's own sources gave, highest priority first and without
+      duplicates: the `?locale=` choice, the remembered choice, then the
+      `Accept-Language` tags. A booking page that offers only some languages
+      picks the first it offers (`Tymeslot.ContentTranslations.Languages`).
     * `:visitor_week_start` - `:monday` or `:sunday` when the header's
       language tags settle it (`Tymeslot.Locales.WeekStart`), else `nil`.
       Read from the header alone: the region it carries is where the
@@ -108,6 +113,7 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     merge_assigns(conn,
       locale: locale,
       ambient_locale: ambient_locale,
+      locale_candidates: detected |> Enum.filter(&Locales.acceptable?/1) |> Enum.uniq(),
       visitor_week_start: WeekStart.from_language_tags(tags)
     )
   end
@@ -121,20 +127,21 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
 
       live_session :name, session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []}
 
-  `TymeslotWeb.Hooks.LocaleHook` reads `"resolved_locale"` and
-  `"visitor_week_start"`;
+  `TymeslotWeb.Hooks.LocaleHook` reads `"resolved_locale"`,
+  `"locale_candidates"` and `"visitor_week_start"`;
   `TymeslotWeb.Hooks.AppLocaleHook` reads `"path_locale"` and
   `"ambient_locale"` and re-applies the user's saved preference itself, so a
   preference changed after the page loaded still takes effect on a live
   remount. Absent assigns are left out.
   """
-  @spec live_session_data(Plug.Conn.t()) :: %{optional(String.t()) => String.t()}
+  @spec live_session_data(Plug.Conn.t()) :: %{optional(String.t()) => String.t() | [String.t()]}
   def live_session_data(conn) do
     Map.reject(
       %{
         "resolved_locale" => conn.assigns[:locale],
         "ambient_locale" => conn.assigns[:ambient_locale],
         "path_locale" => conn.assigns[:path_locale],
+        "locale_candidates" => conn.assigns[:locale_candidates],
         "visitor_week_start" => week_start_string(conn.assigns[:visitor_week_start])
       },
       fn {_key, value} -> is_nil(value) end

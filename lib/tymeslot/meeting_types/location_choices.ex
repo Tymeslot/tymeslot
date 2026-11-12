@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingTypes.LocationChoices do
   against them. Reached through `Tymeslot.MeetingTypes`.
   """
 
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.Venues
@@ -21,13 +22,16 @@ defmodule Tymeslot.MeetingTypes.LocationChoices do
     * `:venue_id`, the venue picked within an in-person option
     * `:current_venue_id`, on a reschedule the meeting's own venue, kept
       when `:venue_id` is not one the option offers
+    * `:content_locale`, the language the venues are written out in
+      (`Tymeslot.ContentTranslations`), nil for the original
   """
   @type location_choice :: %{
           optional(:option_id) => String.t() | nil,
           optional(:phone) => String.t() | nil,
           optional(:video_integration_id) => integer() | String.t() | nil,
           optional(:venue_id) => integer() | String.t() | nil,
-          optional(:current_venue_id) => integer() | nil
+          optional(:current_venue_id) => integer() | nil,
+          optional(:content_locale) => String.t() | nil
         }
 
   @doc """
@@ -62,7 +66,7 @@ defmodule Tymeslot.MeetingTypes.LocationChoices do
 
     venues =
       meeting_type
-      |> location_venue_choices()
+      |> location_venue_choices(choice[:content_locale])
       |> Map.get(resolution.location_option_id, [])
 
     LocationSelection.place_at_venue(resolution, venues, [
@@ -144,9 +148,18 @@ defmodule Tymeslot.MeetingTypes.LocationChoices do
   location left with none is absent from the map: its address is arranged
   after booking. Loaded once when the booking page mounts, next to
   `location_video_choices/1`, so rendering runs no query.
+
+  `content_locale` writes the venues' names and descriptions out in that
+  language where the owner translated them (`Tymeslot.ContentTranslations`);
+  nil keeps the originals.
   """
-  @spec location_venue_choices(map() | nil) :: %{String.t() => [Venues.choice()]}
-  def location_venue_choices(%{user_id: user_id} = meeting_type) when is_integer(user_id) do
+  @spec location_venue_choices(map() | nil, String.t() | nil) :: %{
+          String.t() => [Venues.choice()]
+        }
+  def location_venue_choices(meeting_type, content_locale \\ nil)
+
+  def location_venue_choices(%{user_id: user_id} = meeting_type, content_locale)
+      when is_integer(user_id) do
     in_person =
       meeting_type
       |> LocationSelection.options()
@@ -155,7 +168,11 @@ defmodule Tymeslot.MeetingTypes.LocationChoices do
     if in_person == [] do
       %{}
     else
-      library = user_id |> Venues.list_venues() |> Enum.map(&Venues.to_choice/1)
+      library =
+        user_id
+        |> Venues.list_venues()
+        |> ContentTranslations.localise(content_locale)
+        |> Enum.map(&Venues.to_choice/1)
 
       for option <- in_person,
           choices = Enum.filter(library, &(&1.id in option.venue_ids)),
@@ -165,5 +182,5 @@ defmodule Tymeslot.MeetingTypes.LocationChoices do
     end
   end
 
-  def location_venue_choices(_meeting_type), do: %{}
+  def location_venue_choices(_meeting_type, _content_locale), do: %{}
 end

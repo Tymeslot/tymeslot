@@ -9,11 +9,14 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
   """
 
   alias Phoenix.Component
-  alias Tymeslot.Locales
+  alias Tymeslot.ContentTranslations.Languages
 
   @doc """
   Applies `new_locale` to the current process and the socket's `:locale`
-  assign, when it is acceptable; otherwise leaves both untouched.
+  assign, when it is acceptable and the organiser offers it
+  (`Tymeslot.ContentTranslations.Languages.offers?/2`); otherwise leaves both
+  untouched, so a `?locale=` the organiser does not offer keeps the page in
+  the language it was mounted in.
 
   Called from `handle_params/3` when the URL carries `?locale=`. It only
   affects the running LiveView. The language switcher does not go through
@@ -25,7 +28,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
   @spec handle_locale_change(Phoenix.LiveView.Socket.t(), String.t()) ::
           Phoenix.LiveView.Socket.t()
   def handle_locale_change(socket, new_locale) do
-    if Locales.acceptable?(new_locale) do
+    if Languages.offers?(socket.assigns[:organizer_profile], new_locale) do
       Gettext.put_locale(new_locale)
       Component.assign(socket, :locale, new_locale)
     else

@@ -39,6 +39,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
      socket
      |> assign(assigns)
      |> assign_new(:venue_form, fn -> nil end)
+     |> assign_new(:editing_locale, fn -> nil end)
      |> assign_new(:editing_venue, fn -> nil end)
      |> assign_new(:deleting_venue, fn -> nil end)
      |> assign_new(:deleting_in_use, fn -> [] end)
@@ -259,6 +260,9 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
           form={@venue_form}
           mode={if @editing_venue.id, do: :edit, else: :new}
           myself={@myself}
+          venue={@editing_venue}
+          profile={@profile}
+          editing_locale={@editing_locale}
         />
 
         <DeleteVenueModal.delete_venue_modal
