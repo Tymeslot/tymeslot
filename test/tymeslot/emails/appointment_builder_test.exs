@@ -301,6 +301,39 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
       assert result.reminders_enabled == true
     end
 
+    test "counts only the reminders whose send time is still ahead" do
+      %{user: user} = create_user_with_profile()
+
+      # Two days out: the three-day reminder can no longer be sent.
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: 2 * 86_400,
+          duration: 3600,
+          reminders: [%{value: 30, unit: "minutes"}, %{value: 3, unit: "days"}]
+        })
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.reminders_summary ==
+               "I'll send you a reminder 30 minutes before our appointment."
+    end
+
+    test "says no reminders are scheduled when every reminder's send time has passed" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: 3600,
+          duration: 3600,
+          reminders: [%{value: 1, unit: "days"}]
+        })
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.reminders_enabled == false
+      assert result.reminders_summary == "No reminder emails are scheduled for this appointment."
+    end
+
     test "uses legacy reminder time fields when no reminder list exists" do
       %{user: user} = create_user_with_profile()
 

@@ -380,8 +380,28 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
         meeting
         |> Map.get(:reminders)
         |> Reminders.normalize_reminders()
-        |> handle_normalized_reminders(meeting)
+        |> upcoming_reminders(meeting)
     end
+  end
+
+  # Describe only the reminders that will still be sent: one whose send time
+  # has already passed (a booking made two days ahead of a meeting with a
+  # three-day reminder) is never scheduled, so counting it would promise the
+  # attendee an email they will not get.
+  defp upcoming_reminders([], meeting), do: handle_normalized_reminders([], meeting)
+
+  defp upcoming_reminders(reminders, meeting) do
+    now = DateTime.utc_now()
+
+    case Enum.filter(reminders, &reminder_ahead?(&1, meeting.start_time, now)) do
+      [] -> legacy_reminder_details(nil)
+      upcoming -> handle_normalized_reminders(upcoming, meeting)
+    end
+  end
+
+  defp reminder_ahead?(%{value: value, unit: unit}, start_time, now) do
+    send_at = DateTime.add(start_time, -Reminders.reminder_interval_seconds(value, unit), :second)
+    DateTime.after?(send_at, now)
   end
 
   defp build_reminder_details_from_interval(%{value: value, unit: unit}) do
