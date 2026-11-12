@@ -35,6 +35,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias TymeslotWeb.Components.DashboardLayout
+  alias TymeslotWeb.Components.Shared.PickerPreferences
   alias TymeslotWeb.Components.TourOverlay
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
   alias TymeslotWeb.Dashboard.BookingLinkShare
@@ -115,9 +116,9 @@ defmodule TymeslotWeb.DashboardLive do
     end
   end
 
-  # Builds the hub URL for a legacy redirect, carrying the Stripe onboarding
-  # return markers (`?return=1`/`?refresh=1`) through so the hub still triggers
-  # the capability resync once the user lands on the payments tab.
+  # Builds the hub URL for a legacy redirect, carrying the Stripe return markers
+  # (`?return=1` from the OAuth callback, `?refresh=1` from old links) through
+  # so the hub still triggers the capability resync on the payments tab.
   defp hub_tab_path(tab, params) do
     passthrough =
       for key <- [:return, :refresh],
@@ -334,6 +335,7 @@ defmodule TymeslotWeb.DashboardLive do
   @spec handle_info({:time_format_updated, String.t()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:time_format_updated, time_format}, socket) do
+    PickerPreferences.put_time_format(time_format)
     {:noreply, assign(socket, time_format: time_format)}
   end
 

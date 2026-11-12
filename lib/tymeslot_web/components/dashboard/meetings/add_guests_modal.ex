@@ -28,6 +28,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
   attr :show, :boolean, required: true
   attr :meeting, :map, default: nil
   attr :staged, :list, default: []
+  attr :error, :string, default: nil
+  attr :input, :string, default: "", doc: "the refused entry, kept for correcting"
   attr :existing, :list, default: []
   attr :remaining, :integer, default: 0
   attr :on_cancel, Phoenix.LiveView.JS, required: true
@@ -62,9 +64,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
             <span
               :for={guest <- @staged}
               class="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-token-full bg-turquoise-50 border border-turquoise-200 text-turquoise-800 font-medium"
-              title={guest.email}
             >
               {guest.name || guest.email}
+              <span :if={guest.name} class="font-normal text-turquoise-700">{guest.email}</span>
               <button
                 type="button"
                 phx-click="unstage_guest"
@@ -84,13 +86,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
             phx-submit="stage_guest"
             phx-target={@target}
             class="flex gap-3"
+            novalidate
           >
             <Forms.input
               type="text"
               inputmode="email"
               id="stage-guest-email"
               name="email"
-              value=""
+              value={@input}
               placeholder="colleague@example.com"
               autocomplete="off"
               class="flex-1"
@@ -100,6 +103,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
             </Buttons.action_button>
           </form>
           <ContactSuggestions.contact_suggestions for="stage-guest-email" submit named />
+          <%!-- Outside the form, which disappears once the list is full, so a
+                refusal explaining that is still seen. --%>
+          <p :if={@error} class="form-error" role="alert">{@error}</p>
 
           <p class="text-tymeslot-500 font-medium mt-2">
             {dngettext(
@@ -120,7 +126,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
               :for={guest <- @existing}
               class="flex items-center justify-between gap-3 text-tymeslot-600 font-medium"
             >
-              <span class="truncate" title={guest.email}>{guest.name || guest.email}</span>
+              <span class="truncate">
+                {guest.name || guest.email}
+                <span :if={guest.name} class="font-normal text-tymeslot-400">{guest.email}</span>
+              </span>
               <GuestStatusPill.guest_status_pill status={guest.status} />
             </li>
           </ul>

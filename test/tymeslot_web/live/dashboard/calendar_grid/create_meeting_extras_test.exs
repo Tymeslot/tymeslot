@@ -199,6 +199,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingExtrasTest do
       open_form(lv)
       fill_guest(lv)
 
+      add_guest(lv, "not-an-email")
+      assert has_element?(lv, "#create-guest-email-input-error", "not-an-email")
+
       for n <- 1..Guests.max_guests(), do: add_guest(lv, "guest#{n}@example.com")
 
       refute has_element?(lv, "#create-add-guest-form")

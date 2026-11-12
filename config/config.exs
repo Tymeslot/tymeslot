@@ -350,15 +350,16 @@ config :tymeslot, TymeslotWeb.Gettext, default_locale: "en"
 # priv/gettext/TRANSLATING.md for the translator-facing side.
 config :tymeslot, :locales,
   supported: [
-    %{code: "en", name: "English", country_code: :gbr},
+    # Listed by each language's own name, the order the pickers show them in.
+    %{code: "cs", name: "Čeština", country_code: :cze},
     %{code: "de", name: "Deutsch", country_code: :deu},
+    %{code: "en", name: "English", country_code: :gbr},
+    %{code: "es", name: "Español", country_code: :esp},
     %{code: "fr", name: "Français", country_code: :fra},
     %{code: "it", name: "Italiano", country_code: :ita},
-    %{code: "uk", name: "Українська", country_code: :ukr},
-    %{code: "cs", name: "Čeština", country_code: :cze},
     %{code: "pl", name: "Polski", country_code: :pol},
     %{code: "pt", name: "Português (Brasil)", country_code: :bra},
-    %{code: "es", name: "Español", country_code: :esp}
+    %{code: "uk", name: "Українська", country_code: :ukr}
   ],
   default: "en"
 
@@ -472,6 +473,11 @@ config :phoenix, :json_library, Jason
 # and cannot be narrowed, so it is filtered wholesale; nothing this app logs
 # needs to read it.
 #
+# "redirect_to" carries the page a signed-out visitor asked for through
+# sign-in (`TymeslotWeb.Plugs.ReturnTo`), query and all, so a host signed out
+# when Stripe sends them back would otherwise log the OAuth callback's code and
+# state inside it.
+#
 # This lives in compile-time config rather than runtime.exs so it holds at every
 # log level and in every environment. Production pins the level to :info, where
 # the "Parameters:" line is not emitted at all, but dev runs at :debug and a
@@ -485,7 +491,10 @@ config :phoenix, :filter_parameters, [
   "webhook_url",
   "custom_meeting_url",
   "invite",
-  "value"
+  "value",
+  "code",
+  "state",
+  "redirect_to"
 ]
 
 # Precompressed siblings written by `mix phx.digest`, replacing the stock
@@ -586,11 +595,6 @@ config :tymeslot, :calendar_providers, %{
 # pin — keep the two in step.
 config :stripity_stripe, api_version: "2025-11-17.clover"
 
-# Default country code (ISO 3166-1 alpha-2) for Stripe Connect onboarding when
-# the host's profile carries no explicit country. Configurable via the
-# MEETING_PAYMENTS_DEFAULT_COUNTRY env var (read in runtime.exs).
-config :tymeslot, :meeting_payments_default_country, "ch"
-
 # Payment rate limiting configuration
 config :tymeslot, :payment_rate_limits,
   # Maximum number of payment initiation attempts per user
@@ -685,6 +689,13 @@ config :tymeslot, :hsts,
 # apart from a visitor, and everyone behind it still collapses onto the outer
 # proxy's address.
 config :tymeslot, :trust_private_client_ips, false
+
+# Public address ranges that are proxy hops rather than visitors, such as a
+# CDN's edges. Empty, because no public range can be assumed to be a proxy. Set
+# from TRUSTED_PROXIES by config/runtime.exs; TymeslotWeb.Helpers.ClientIP reads
+# it for the LiveView socket path and hands the endpoint's RemoteIp plug its
+# `proxies:` list from it for the conn path.
+config :tymeslot, :trusted_proxies, []
 
 # Slack notifications — credentials supplied via env at runtime
 config :tymeslot,

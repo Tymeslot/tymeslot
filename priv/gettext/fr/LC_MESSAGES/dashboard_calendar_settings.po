@@ -561,3 +561,33 @@ msgstr "Les contacts de ce compte sont désormais suggérés quand vous invitez 
 #, elixir-autogen, elixir-format
 msgid "Suggest contacts from this account's address books when you invite people"
 msgstr "Suggérer les contacts des carnets d’adresses de ce compte quand vous invitez des personnes"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Allow notifications"
+msgstr "Autoriser les notifications"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked in your browser settings. Allow notifications for this site there, then switch reminders on again."
+msgstr "Bloquées dans les paramètres de votre navigateur. Autorisez-y les notifications pour ce site, puis réactivez les rappels."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications were not allowed, so reminders are still off."
+msgstr "Les notifications n’ont pas été autorisées, les rappels restent donc désactivés."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser has not allowed notifications yet."
+msgstr "Les rappels sont activés, mais votre navigateur n’a pas encore autorisé les notifications."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This browser does not support notifications."
+msgstr "Ce navigateur ne prend pas en charge les notifications."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+msgstr "Les rappels sont activés, mais votre navigateur bloque les notifications. Autorisez les notifications pour ce site dans les paramètres du navigateur et les rappels démarreront."

@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.BookingForm do
   attr :form, Phoenix.HTML.Form, required: true
   attr :validation_errors, :any, required: true
   attr :target, :any, required: true, doc: "the step component (`@myself`)"
-  attr :class, :any, default: nil, doc: "classes on the `<form>`"
+  attr :class, :any, default: nil, doc: "classes on the form element"
 
   attr :contact_class, :any,
     default: nil,

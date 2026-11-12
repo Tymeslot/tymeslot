@@ -94,6 +94,43 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
       assert has_element?(view, "[data-testid='session-registration-closed']")
     end
 
+    # The picker posts a date with no time as it stands; it used to post
+    # nothing, and the date was planned with registration open to the start.
+    test "refuses to plan a date whose close has a day and no time, and says so", ctx do
+      view = edit(ctx.conn, ctx.meeting_type)
+      day = Date.utc_today() |> Date.add(10) |> Date.to_iso8601()
+      close_day = Date.utc_today() |> Date.add(8) |> Date.to_iso8601()
+
+      for {field, value} <- [{"date", day}, {"time", "18:00"}, {"closes_at", close_day}] do
+        view
+        |> element("input[name='session[#{field}]']")
+        |> render_change(%{"session" => %{field => value}})
+      end
+
+      view |> element("[data-testid='add-session']") |> render_click()
+
+      assert view |> element("[id^='new-session-closes-'][id$='-error']") |> render() =~
+               "Add a time"
+
+      assert PlannedSessions.list(ctx.meeting_type) == []
+    end
+
+    test "refuses to move a close to a day with no time, and keeps the old close", ctx do
+      {:ok, session} =
+        PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, at(10, ~T[18:00:00]),
+          registration_closes_at: at(2, ~T[12:00:00])
+        )
+
+      view = edit(ctx.conn, ctx.meeting_type)
+
+      move_close(view, session, Date.utc_today() |> Date.add(5) |> Date.to_iso8601())
+
+      assert view |> element("#edit-session-closes_at-#{session.id}-error") |> render() =~
+               "Add a time"
+
+      assert Repo.reload!(session).registration_closes_at == at(2, ~T[12:00:00])
+    end
+
     test "refuses a close after the start and says why", ctx do
       {:ok, session} =
         PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, at(10, ~T[18:00:00]))
@@ -192,7 +229,22 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
 
       {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/meetings")
 
-      assert has_element?(view, "button[phx-click='show_reschedule_modal'][disabled]")
+      button = "button[id^='reschedule-meeting-'][aria-disabled='true']"
+      assert has_element?(view, button)
+      refute has_element?(view, "button[phx-click='show_reschedule_modal']")
+
+      [describedby] =
+        view
+        |> element(button)
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.attribute("aria-describedby")
+
+      assert has_element?(
+               view,
+               "##{describedby}[role='tooltip']",
+               "Move a fixed date from its meeting type"
+             )
     end
 
     test "marks an upcoming session whose registration has closed", ctx do

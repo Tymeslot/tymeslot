@@ -30,7 +30,8 @@ defmodule Tymeslot.SignedTokenTest do
     oauth_signup_confirmation: "oauth typed-email sign-up confirmation",
     booking_preview: "booking owner preview",
     cursor_page: "cursor-page:v1",
-    slack_oauth_state: "slack_oauth_state"
+    slack_oauth_state: "slack_oauth_state",
+    stripe_connect_state: "stripe_connect_state"
   }
 
   @lifetimes %{
@@ -39,7 +40,8 @@ defmodule Tymeslot.SignedTokenTest do
     oauth_signup_confirmation: 86_400,
     booking_preview: 3600,
     cursor_page: :infinity,
-    slack_oauth_state: 600
+    slack_oauth_state: 600,
+    stripe_connect_state: 86_400
   }
 
   describe "purposes" do

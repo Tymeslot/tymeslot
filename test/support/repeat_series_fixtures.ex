@@ -145,7 +145,10 @@ defmodule TymeslotWeb.RepeatSeriesFixtures do
 
   @doc "Changes the repeat editor's `fields`, answering the render."
   @spec pick(Phoenix.LiveViewTest.View.t(), map()) :: String.t()
-  def pick(lv, fields), do: lv |> form(@editor_form, fields) |> render_change()
+  def pick(lv, fields) do
+    {selects, others} = Map.split(fields, ~w(freq on end_type until))
+    lv |> form(@editor_form, others) |> render_change(selects)
+  end
 
   @doc ~s(Presses "Save repeat".)
   @spec save(Phoenix.LiveViewTest.View.t()) :: String.t()

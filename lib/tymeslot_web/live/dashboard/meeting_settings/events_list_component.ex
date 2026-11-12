@@ -176,6 +176,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
               data-copy-feedback={dgettext("dashboard_meeting_types", "Booking link copied!")}
             />
             <Buttons.icon_button
+              id={"meeting-type-row-edit-#{event.type.id}"}
               icon="hero-pencil-square"
               size={:sm}
               label={dgettext("dashboard_meeting_types", "Edit %{name}", name: event.type.name)}
@@ -185,6 +186,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
               phx-target={@parent_myself}
             />
             <Buttons.icon_button
+              id={"meeting-type-row-delete-#{event.type.id}"}
               icon="hero-trash"
               variant={:danger}
               size={:sm}

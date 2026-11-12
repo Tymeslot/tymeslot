@@ -36,6 +36,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           allowed_embed_domains: [String.t()] | nil,
           booking_page_published_at: DateTime.t() | nil,
           booking_link_first_shared_at: DateTime.t() | nil,
+          last_charge_currency: String.t() | nil,
           booking_text_enabled: boolean(),
           booking_heading: String.t() | nil,
           booking_page: map() | nil,
@@ -72,6 +73,9 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:allowed_embed_domains, {:array, :string}, default: ["none"])
     field(:booking_page_published_at, :utc_datetime)
     field(:booking_link_first_shared_at, :utc_datetime)
+    # The currency the host's prices were set in, kept across a disconnect:
+    # `price_cents` carries no currency of its own.
+    field(:last_charge_currency, :string)
     field(:booking_text_enabled, :boolean, default: false)
     field(:booking_heading, :string)
     field(:booking_greeting, :string)

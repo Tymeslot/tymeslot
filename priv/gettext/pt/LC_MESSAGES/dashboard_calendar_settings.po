@@ -561,3 +561,33 @@ msgstr "Agora os contatos desta conta são sugeridos quando você convida pessoa
 #, elixir-autogen, elixir-format
 msgid "Suggest contacts from this account's address books when you invite people"
 msgstr "Sugerir contatos dos catálogos de endereços desta conta quando você convida pessoas"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Allow notifications"
+msgstr "Permitir notificações"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked in your browser settings. Allow notifications for this site there, then switch reminders on again."
+msgstr "Bloqueadas nas configurações do navegador. Permita lá as notificações deste site e ative os lembretes novamente."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications were not allowed, so reminders are still off."
+msgstr "As notificações não foram permitidas, então os lembretes continuam desativados."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser has not allowed notifications yet."
+msgstr "Os lembretes estão ativados, mas o navegador ainda não permitiu as notificações."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This browser does not support notifications."
+msgstr "Este navegador não oferece suporte a notificações."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+msgstr "Os lembretes estão ativados, mas o navegador está a bloquear as notificações. Permita as notificações deste site nas definições do navegador e os lembretes vão começar."

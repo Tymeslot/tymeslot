@@ -104,6 +104,37 @@ defmodule Tymeslot.Bookings.CreateInvitationTest do
     assert meeting_count(ctx.user) == 1
   end
 
+  # Both bookings pass `validate_invitation/1`; the other commits while this
+  # one checks the host's calendar, so only the database index can refuse it.
+  test "a booking that loses the invitation to one committed meanwhile is refused", ctx do
+    invitation = invite(ctx)
+    test_pid = self()
+
+    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+      if Process.get(:rival_booked) != true do
+        Process.put(:rival_booked, true)
+
+        rival =
+          insert(:meeting,
+            organizer_user_id: ctx.user.id,
+            invitation_id: invitation.id,
+            start_time: DateTime.add(DateTime.utc_now(:second), 10, :day),
+            end_time: DateTime.add(DateTime.utc_now(:second), 10 * 86_400 + 3600, :second)
+          )
+
+        send(test_pid, {:rival, rival.id})
+      end
+
+      {:ok, []}
+    end)
+
+    assert book(ctx, 3, invitation.id) == {:error, :invitation_unavailable}
+    assert_received {:rival, rival_id}
+
+    assert [%MeetingSchema{id: ^rival_id}] =
+             Repo.all(from(m in MeetingSchema, where: m.invitation_id == ^invitation.id))
+  end
+
   test "an invitation for another meeting type is refused", ctx do
     other_type = insert(:meeting_type, user: ctx.user, invitation_only: true, is_active: true)
     {:ok, foreign} = Invitations.create(ctx.user.id, other_type, %{})

@@ -165,6 +165,30 @@ defmodule Tymeslot.Onboarding do
   def onboarding_completed?(%{onboarding_completed_at: nil}), do: false
   def onboarding_completed?(_user), do: true
 
+  @doc """
+  Records that the host got through the meeting step of the wizard, which
+  opens the steps after it. Idempotent, and returns the user as stored.
+  """
+  @spec confirm_meeting_step(Ecto.Schema.t()) :: {:ok, Ecto.Schema.t()} | {:error, :not_found}
+  def confirm_meeting_step(user) do
+    if meeting_step_confirmed?(user),
+      do: {:ok, user},
+      else: OnboardingQueries.stamp_meeting_step_confirmed(user)
+  end
+
+  @doc """
+  Whether the host has been through the meeting step. A host who completed
+  onboarding counts whatever the marker says: the account may predate it.
+  """
+  @spec meeting_step_confirmed?(Ecto.Schema.t() | map()) :: boolean()
+  def meeting_step_confirmed?(%{
+        onboarding_meeting_confirmed_at: nil,
+        onboarding_completed_at: nil
+      }),
+      do: false
+
+  def meeting_step_confirmed?(_user), do: true
+
   # How long after completing onboarding the live step still counts as the
   # host's own unfinished session: the life of the preview token that step
   # shows. A reconnect (the mail app took the screen) comes back within

@@ -63,6 +63,7 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
           phx-submit="confirm_slug_change"
           phx-target={@myself}
           class="space-y-2"
+          novalidate
         >
           <label for="booking-link-slug" class="block font-medium text-tymeslot-700">
             {dgettext("dashboard_meeting_types", "Link address")}

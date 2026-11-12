@@ -71,6 +71,32 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       assert html =~ "90 days"
     end
 
+    test "gives each day of the chart a focusable readout", %{conn: conn, user: user} do
+      seed_visit(user, "linkedin", "hash-a")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+      doc = view |> render() |> LazyHTML.from_document()
+
+      bars = LazyHTML.query(doc, "#visits-chart-readout [data-readout-bar]")
+      assert Enum.count(bars) > 1
+
+      assert [_only] =
+               doc
+               |> LazyHTML.query("#visits-chart-readout [data-readout-bar][tabindex='0']")
+               |> Enum.to_list()
+
+      assert has_element?(
+               view,
+               "#visits-chart-readout [role='tooltip']",
+               "#{Date.utc_today()}: 1 visit"
+             )
+
+      assert has_element?(
+               view,
+               "#visits-readout-#{Date.utc_today()}[aria-label='#{Date.utc_today()}: 1 visit']"
+             )
+    end
+
     test "renders sources table with rows for each utm_source", %{conn: conn, user: user} do
       seed_visit(user, "linkedin", "hash-a")
       seed_visit(user, "linkedin", "hash-b")

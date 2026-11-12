@@ -98,6 +98,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavFamilyCon
           # hidden field above is submitted.
           assert [shown] = Floki.find(doc, "input[type='text'][value='#{url}']")
           assert Floki.attribute(shown, "disabled") != []
+
+          [hint_id] = Floki.attribute(shown, "aria-describedby")
+          assert doc |> Floki.find("##{hint_id}") |> Floki.text() =~ "cannot"
           assert Floki.attribute(shown, "name") == []
         end
       end

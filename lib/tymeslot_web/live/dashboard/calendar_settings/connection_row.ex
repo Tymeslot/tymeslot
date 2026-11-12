@@ -85,82 +85,106 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConnectionRow do
       </:icon>
       <:last_activity :if={@last_synced}>{@last_synced}</:last_activity>
       <:actions>
-        <button
+        <.tooltip
+          :let={tip}
           :if={@integration.provider == "google" && Helpers.needs_scope_upgrade?(@integration)}
-          phx-click="upgrade_google_scope"
-          phx-value-id={@integration.id}
-          phx-target={@myself}
-          class={Helpers.tile_class(:warning)}
-          title={dgettext("dashboard_calendar_settings", "Upgrade Google Calendar permissions")}
+          id={"calendar-#{@integration.id}-upgrade-tip"}
+          text={dgettext("dashboard_calendar_settings", "Upgrade Google Calendar permissions")}
         >
-          <.icon name="hero-bolt" class="w-4 h-4" /> {dgettext(
-            "dashboard_calendar_settings",
-            "Upgrade"
-          )}
-        </button>
+          <button
+            phx-click="upgrade_google_scope"
+            phx-value-id={@integration.id}
+            phx-target={@myself}
+            class={Helpers.tile_class(:warning)}
+            aria-describedby={tip}
+          >
+            <.icon name="hero-bolt" class="w-4 h-4" /> {dgettext(
+              "dashboard_calendar_settings",
+              "Upgrade"
+            )}
+          </button>
+        </.tooltip>
         <%!-- Shown even when no calendars have been discovered yet: the modal
              also carries the name and colour, which apply to any connection.
              Not for a subscription, though: it has exactly one calendar,
              always selected, so the modal would offer a choice that does not
              exist. --%>
-        <button
+        <.tooltip
+          :let={tip}
           :if={not @subscription?}
-          phx-click="manage_calendars"
-          phx-value-id={@integration.id}
-          phx-target={@myself}
-          class={Helpers.tile_class(:neutral)}
-          title={
+          id={"calendar-#{@integration.id}-manage-tip"}
+          text={
             dgettext(
               "dashboard_calendar_settings",
               "Rename, recolour, and choose which calendars sync"
             )
           }
-          aria-label={dgettext("dashboard_calendar_settings", "Manage calendars")}
         >
-          <.icon name="hero-squares-2x2" class="w-4 h-4" /><span>{dgettext(
-            "dashboard_calendar_settings",
-            "Manage calendars"
-          )}</span>
-        </button>
-        <button
+          <button
+            phx-click="manage_calendars"
+            phx-value-id={@integration.id}
+            phx-target={@myself}
+            class={Helpers.tile_class(:neutral)}
+            aria-describedby={tip}
+            aria-label={dgettext("dashboard_calendar_settings", "Manage calendars")}
+          >
+            <.icon name="hero-squares-2x2" class="w-4 h-4" /><span>{dgettext(
+              "dashboard_calendar_settings",
+              "Manage calendars"
+            )}</span>
+          </button>
+        </.tooltip>
+        <.tooltip
+          :let={tip}
           :if={retry_offered?(@integration, @stuck)}
-          phx-click="retry_stuck_changes"
-          phx-value-id={@integration.id}
-          phx-target={@myself}
-          class={Helpers.tile_class(:warning)}
-          title={
+          id={"calendar-#{@integration.id}-retry-tip"}
+          text={
             dgettext(
               "dashboard_calendar_settings",
               "Send the changes this calendar's server refused to it again"
             )
           }
         >
-          <.icon name="hero-arrow-path" class="w-4 h-4" /> {dgettext(
-            "dashboard_calendar_settings",
-            "Retry changes"
-          )}
-        </button>
-        <button
+          <button
+            phx-click="retry_stuck_changes"
+            phx-value-id={@integration.id}
+            phx-target={@myself}
+            class={Helpers.tile_class(:warning)}
+            aria-describedby={tip}
+          >
+            <.icon name="hero-arrow-path" class="w-4 h-4" /> {dgettext(
+              "dashboard_calendar_settings",
+              "Retry changes"
+            )}
+          </button>
+        </.tooltip>
+        <.tooltip
+          :let={tip}
           :if={Map.get(@integration, :removed_calendars, []) != []}
-          phx-click="dismiss_removed_calendars"
-          phx-value-id={@integration.id}
-          phx-value-shown={
-            @integration |> Map.get(:removed_calendars, []) |> Enum.map(& &1.id) |> Jason.encode!()
-          }
-          phx-target={@myself}
-          class={Helpers.tile_class(:neutral)}
-          title={
+          id={"calendar-#{@integration.id}-dismiss-tip"}
+          text={
             dgettext(
               "dashboard_calendar_settings",
               "Dismiss the notice about calendars no longer on the server"
             )
           }
         >
-          <.icon name="hero-x-mark" class="w-4 h-4" /> {dgettext(
-            "dashboard_calendar_settings",
-            "Dismiss"
-          )}
-        </button>
+          <button
+            phx-click="dismiss_removed_calendars"
+            phx-value-id={@integration.id}
+            phx-value-shown={
+              @integration |> Map.get(:removed_calendars, []) |> Enum.map(& &1.id) |> Jason.encode!()
+            }
+            phx-target={@myself}
+            class={Helpers.tile_class(:neutral)}
+            aria-describedby={tip}
+          >
+            <.icon name="hero-x-mark" class="w-4 h-4" /> {dgettext(
+              "dashboard_calendar_settings",
+              "Dismiss"
+            )}
+          </button>
+        </.tooltip>
         <ContactsToggle.contacts_toggle integration={@integration} myself={@myself} />
         <FeedControls.feed_controls
           :if={@subscription?}
@@ -182,6 +206,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConnectionRow do
       </:actions>
       <:end_actions>
         <.icon_button
+          id={"calendar-delete-#{@integration.id}"}
           icon="hero-trash"
           variant={:danger}
           label={dgettext("dashboard_calendar_settings", "Delete %{name}", name: @display_name)}
@@ -216,7 +241,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConnectionRow do
     <button
       {@action}
       class={@class}
-      title={dgettext("dashboard_calendar_settings", "Reconnect integration")}
       aria-label={dgettext("dashboard_calendar_settings", "Reconnect integration")}
     >
       <.icon name="hero-arrow-path" class="w-4 h-4" /><span class={@label_class}>{dgettext(

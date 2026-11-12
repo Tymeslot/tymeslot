@@ -37,6 +37,8 @@ defmodule TymeslotWeb.Dashboard.PollsAccessTest do
       view
     end
 
+    defp pickers(params), do: %{"poll" => Map.take(params, ["slots"])}
+
     defp create_params(extra) do
       date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
 
@@ -60,9 +62,11 @@ defmodule TymeslotWeb.Dashboard.PollsAccessTest do
 
       assert has_element?(view, "input[name='poll[access]'][value='anyone'][checked]")
 
+      params = create_params(%{})
+
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => create_params(%{})})
-      |> render_submit()
+      |> form("form[phx-submit='create_poll']", %{"poll" => Map.delete(params, "slots")})
+      |> render_submit(pickers(params))
 
       assert [%{invite_only: false}] = Polls.list_polls(user.id)
     end
@@ -75,11 +79,15 @@ defmodule TymeslotWeb.Dashboard.PollsAccessTest do
       open_create_form(view)
       params = create_params(%{"invitees" => "grace@example.com"})
 
-      view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_change()
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => Map.delete(params, "slots")})
+      |> render_change(pickers(params))
 
       assert has_element?(view, "input[name='poll[access]'][value='invited'][checked]")
 
-      view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_submit()
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => Map.delete(params, "slots")})
+      |> render_submit(pickers(params))
 
       assert [%{invite_only: true}] = Polls.list_polls(user.id)
     end
@@ -89,17 +97,23 @@ defmodule TymeslotWeb.Dashboard.PollsAccessTest do
       open_create_form(view)
       params = create_params(%{"invitees" => "grace@example.com"})
 
-      view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_change()
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => Map.delete(params, "slots")})
+      |> render_change(pickers(params))
 
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => Map.put(params, "access", "anyone")})
-      |> render_change(%{"_target" => ["poll", "access"]})
+      |> form("form[phx-submit='create_poll']", %{
+        "poll" => Map.delete(Map.put(params, "access", "anyone"), "slots")
+      })
+      |> render_change(Map.merge(pickers(params), %{"_target" => ["poll", "access"]}))
 
       assert has_element?(view, "input[name='poll[access]'][value='anyone'][checked]")
 
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => Map.put(params, "access", "anyone")})
-      |> render_submit()
+      |> form("form[phx-submit='create_poll']", %{
+        "poll" => Map.delete(Map.put(params, "access", "anyone"), "slots")
+      })
+      |> render_submit(pickers(params))
 
       assert [%{invite_only: false}] = Polls.list_polls(user.id)
     end
@@ -112,7 +126,9 @@ defmodule TymeslotWeb.Dashboard.PollsAccessTest do
       open_create_form(view)
       params = create_params(%{"invitees" => "grace@example.com"})
 
-      view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_submit()
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => Map.delete(params, "slots")})
+      |> render_submit(pickers(params))
 
       assert [%{invite_only: true}] = Polls.list_polls(user.id)
     end
@@ -128,18 +144,20 @@ defmodule TymeslotWeb.Dashboard.PollsAccessTest do
       typed = create_params(%{"invitees" => "grace@example.com", "access" => "anyone"})
 
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => first})
-      |> render_change(%{"_target" => ["poll", "invitees"]})
+      |> form("form[phx-submit='create_poll']", %{"poll" => Map.delete(first, "slots")})
+      |> render_change(Map.merge(pickers(first), %{"_target" => ["poll", "invitees"]}))
 
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => typed})
-      |> render_change(%{"_target" => ["poll", "invitees"]})
+      |> form("form[phx-submit='create_poll']", %{"poll" => Map.delete(typed, "slots")})
+      |> render_change(Map.merge(pickers(typed), %{"_target" => ["poll", "invitees"]}))
 
       assert has_element?(view, "input[name='poll[access]'][value='invited'][checked]")
 
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => Map.put(typed, "access", "invited")})
-      |> render_submit()
+      |> form("form[phx-submit='create_poll']", %{
+        "poll" => Map.delete(Map.put(typed, "access", "invited"), "slots")
+      })
+      |> render_submit(pickers(Map.put(typed, "access", "invited")))
 
       assert [%{invite_only: true}] = Polls.list_polls(user.id)
     end
@@ -149,12 +167,17 @@ defmodule TymeslotWeb.Dashboard.PollsAccessTest do
       open_create_form(view)
       params = create_params(%{"invitees" => "grace@example.com"})
 
-      view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_change()
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => Map.delete(params, "slots")})
+      |> render_change(pickers(params))
+
       assert has_element?(view, "input[name='poll[access]'][value='invited'][checked]")
 
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => Map.put(params, "invitees", "")})
-      |> render_change()
+      |> form("form[phx-submit='create_poll']", %{
+        "poll" => Map.delete(Map.put(params, "invitees", ""), "slots")
+      })
+      |> render_change(pickers(Map.put(params, "invitees", "")))
 
       assert has_element?(view, "input[name='poll[access]'][value='anyone'][checked]")
     end
@@ -165,12 +188,14 @@ defmodule TymeslotWeb.Dashboard.PollsAccessTest do
       params = create_params(%{"invitees" => "grace@example.com", "access" => "invited"})
 
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => params})
-      |> render_change(%{"_target" => ["poll", "access"]})
+      |> form("form[phx-submit='create_poll']", %{"poll" => Map.delete(params, "slots")})
+      |> render_change(Map.merge(pickers(params), %{"_target" => ["poll", "access"]}))
 
       view
-      |> form("form[phx-submit='create_poll']", %{"poll" => Map.put(params, "invitees", "")})
-      |> render_change()
+      |> form("form[phx-submit='create_poll']", %{
+        "poll" => Map.delete(Map.put(params, "invitees", ""), "slots")
+      })
+      |> render_change(pickers(Map.put(params, "invitees", "")))
 
       assert has_element?(view, "input[name='poll[access]'][value='invited'][checked]")
     end
@@ -209,11 +234,11 @@ defmodule TymeslotWeb.Dashboard.PollsAccessTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
       open_create_form(view)
 
+      params = create_params(%{"access" => "invited"})
+
       view
-      |> form("form[phx-submit='create_poll']", %{
-        "poll" => create_params(%{"access" => "invited"})
-      })
-      |> render_change(%{"_target" => ["poll", "access"]})
+      |> form("form[phx-submit='create_poll']", %{"poll" => Map.delete(params, "slots")})
+      |> render_change(Map.merge(pickers(params), %{"_target" => ["poll", "access"]}))
 
       assert has_element?(view, "[data-testid='poll-access-hint']", "Nobody can vote")
     end

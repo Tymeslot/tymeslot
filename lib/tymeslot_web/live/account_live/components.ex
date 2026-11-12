@@ -9,6 +9,7 @@ defmodule TymeslotWeb.AccountLive.Components do
   import TymeslotWeb.AccountLive.Forms
   import TymeslotWeb.Components.CoreComponents.Buttons
   import TymeslotWeb.Components.CoreComponents.Icons
+  import TymeslotWeb.Components.CoreComponents.Tooltip
   import TymeslotWeb.Components.FlagHelpers
   alias TymeslotWeb.AccountLive.Helpers
   alias TymeslotWeb.Helpers.TimeAgo
@@ -149,22 +150,28 @@ defmodule TymeslotWeb.AccountLive.Components do
         role="group"
         aria-label={dgettext("account", "Interface language")}
       >
-        <button
-          type="button"
-          phx-click="change_language"
-          phx-value-locale=""
-          aria-pressed={is_nil(@current_user.locale)}
-          title={
+        <.tooltip
+          :let={tip}
+          id="language-automatic-tip"
+          text={
             dgettext("account", "Follow your browser's language setting instead of a fixed choice.")
           }
-          class={[
-            "btn-tag-selector btn-tag-selector-primary inline-flex items-center gap-2",
-            is_nil(@current_user.locale) && "btn-tag-selector-primary--active"
-          ]}
         >
-          <.icon name="hero-globe-alt" class="w-4 h-4" />
-          {dgettext("account", "Automatic")}
-        </button>
+          <button
+            type="button"
+            phx-click="change_language"
+            phx-value-locale=""
+            aria-pressed={is_nil(@current_user.locale)}
+            aria-describedby={tip}
+            class={[
+              "btn-tag-selector btn-tag-selector-primary inline-flex items-center gap-2",
+              is_nil(@current_user.locale) && "btn-tag-selector-primary--active"
+            ]}
+          >
+            <.icon name="hero-globe-alt" class="w-4 h-4" />
+            {dgettext("account", "Automatic")}
+          </button>
+        </.tooltip>
         <button
           :for={locale <- @supported_locales}
           type="button"
@@ -244,28 +251,19 @@ defmodule TymeslotWeb.AccountLive.Components do
   @spec card_toggle_button(map) :: Phoenix.LiveView.Rendered.t()
   def card_toggle_button(assigns) do
     ~H"""
-    <div class="relative group shrink-0">
-      <.action_button phx-click={@toggle_event} size={:sm} disabled={@is_social}>
+    <div class="shrink-0">
+      <.action_button
+        id={"#{@toggle_event}-button"}
+        phx-click={@toggle_event}
+        size={:sm}
+        disabled={@is_social}
+        tooltip={
+          @is_social &&
+            dgettext("account", "Managed by %{provider}", provider: String.capitalize(@provider))
+        }
+      >
         {@button_text}
       </.action_button>
-      <%= if @is_social do %>
-        <.social_tooltip provider={@provider} />
-      <% end %>
-    </div>
-    """
-  end
-
-  attr :provider, :string, required: true
-
-  @spec social_tooltip(map) :: Phoenix.LiveView.Rendered.t()
-  defp social_tooltip(assigns) do
-    ~H"""
-    <div class="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10">
-      <div class="bg-tymeslot-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap">
-        {dgettext("account", "Managed by %{provider}", provider: String.capitalize(@provider))}
-        <div class="absolute top-full right-4 w-0 h-0 border-l-[6px] border-l-transparent border-t-[6px] border-t-tymeslot-900 border-r-[6px] border-r-transparent">
-        </div>
-      </div>
     </div>
     """
   end

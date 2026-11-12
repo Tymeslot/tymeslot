@@ -31,38 +31,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
       size={:small}
       title={
         if @scopes == :series,
-          do: dgettext("dashboard_calendar_events", "Delete recurring event"),
-          else: dgettext("dashboard_calendar_events", "Delete event")
+          do: dgettext("dashboard_calendar_modals", "Delete recurring event"),
+          else: dgettext("dashboard_calendar_modals", "Delete event")
       }
-      confirm_label={dgettext("dashboard_calendar_events", "Delete")}
+      confirm_label={dgettext("dashboard_calendar_modals", "Delete")}
       loading={@deleting}
-      loading_label={dgettext("dashboard_calendar_events", "Deleting...")}
+      loading_label={dgettext("dashboard_calendar_modals", "Deleting...")}
       on_cancel={JS.push("cancel_delete_event", target: @myself)}
       on_confirm={JS.push("confirm_delete_event", target: @myself)}
     >
       <p :if={@scopes == :single}>
-        {dgettext("dashboard_calendar_events", "Are you sure you want to delete %{title}?",
+        {dgettext("dashboard_calendar_modals", "Are you sure you want to delete %{title}?",
           title: @title
         )}
         {dgettext(
-          "dashboard_calendar_events",
+          "dashboard_calendar_modals",
           "This will also remove it from your calendar provider."
         )}
       </p>
       <p :if={@scopes == :series}>
         {dgettext(
-          "dashboard_calendar_events",
+          "dashboard_calendar_modals",
           "%{title} is part of a repeating series. Do you want to delete only this event, or every event in the series?",
           title: @title
         )}
         {dgettext(
-          "dashboard_calendar_events",
+          "dashboard_calendar_modals",
           "Deleted events are also removed from your calendar provider."
         )}
       </p>
       <p :if={@linked_to_booking} class="text-amber-600">
         {dgettext(
-          "dashboard_calendar_events",
+          "dashboard_calendar_modals",
           "This event is linked to a booking. The attendee will be notified of the cancellation."
         )}
       </p>
@@ -71,22 +71,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
         <.loading_button
           variant={:danger}
           loading={@deleting}
-          loading_text={dgettext("dashboard_calendar_events", "Deleting...")}
+          loading_text={dgettext("dashboard_calendar_modals", "Deleting...")}
           phx-click="confirm_delete_event"
           phx-value-scope="occurrence"
           phx-target={@myself}
         >
-          {dgettext("dashboard_calendar_events", "Delete this event")}
+          {dgettext("dashboard_calendar_modals", "Delete this event")}
         </.loading_button>
         <.loading_button
           variant={:danger}
           loading={@deleting}
-          loading_text={dgettext("dashboard_calendar_events", "Deleting...")}
+          loading_text={dgettext("dashboard_calendar_modals", "Deleting...")}
           phx-click="confirm_delete_event"
           phx-value-scope="series"
           phx-target={@myself}
         >
-          {dgettext("dashboard_calendar_events", "Delete all events")}
+          {dgettext("dashboard_calendar_modals", "Delete all events")}
         </.loading_button>
       </:actions>
     </.confirm_modal>

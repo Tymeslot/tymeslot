@@ -561,3 +561,33 @@ msgstr "Kontakte aus diesem Konto werden jetzt vorgeschlagen, wenn Sie Personen 
 #, elixir-autogen, elixir-format
 msgid "Suggest contacts from this account's address books when you invite people"
 msgstr "Kontakte aus den Adressbüchern dieses Kontos vorschlagen, wenn Sie Personen einladen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Allow notifications"
+msgstr "Benachrichtigungen erlauben"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked in your browser settings. Allow notifications for this site there, then switch reminders on again."
+msgstr "In den Browsereinstellungen blockiert. Erlauben Sie dort Benachrichtigungen für diese Website und schalten Sie die Erinnerungen dann erneut ein."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications were not allowed, so reminders are still off."
+msgstr "Benachrichtigungen wurden nicht erlaubt, daher bleiben die Erinnerungen ausgeschaltet."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser has not allowed notifications yet."
+msgstr "Die Erinnerungen sind eingeschaltet, aber Ihr Browser hat Benachrichtigungen noch nicht erlaubt."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This browser does not support notifications."
+msgstr "Dieser Browser unterstützt keine Benachrichtigungen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+msgstr "Die Erinnerungen sind eingeschaltet, aber Ihr Browser blockiert Benachrichtigungen. Erlauben Sie Benachrichtigungen für diese Website in den Browsereinstellungen, dann starten die Erinnerungen."

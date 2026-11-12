@@ -15,8 +15,11 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
   alias Tymeslot.Dashboard.ExtensionSchema
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Tasks
+  alias Tymeslot.Locales.WeekStart
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Components.Shared.PickerPreferences
 
   @spec on_mount(:default, map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()} | {:halt, Phoenix.LiveView.Socket.t()}
@@ -59,10 +62,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
       # renders the same clock, and a meeting list must not query per row.
       # AppLocaleHook runs before this one, so the ambient locale is already the
       # organiser's when it supplies the preset.
-      |> assign(
-        :time_format,
-        CalendarGrid.get_user_time_format(user.id, Gettext.get_locale(TymeslotWeb.Gettext))
-      )
+      |> assign_preferences(user.id)
       |> assign(:payments_allowed, payments_allowed?(user.id))
       |> assign_new(:saving, fn -> false end)
       |> assign_new(:saving_timer_ref, fn -> nil end)
@@ -90,6 +90,20 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
       )
 
     {:cont, socket}
+  end
+
+  # Read once for both: `time_format` for every surface that renders a clock,
+  # the two together for the date and time pickers, wherever they sit.
+  defp assign_preferences(socket, user_id) do
+    preferences = CalendarGrid.get_or_create_preferences(user_id)
+
+    time_format =
+      TimeFormat.resolve(preferences.time_format, Gettext.get_locale(TymeslotWeb.Gettext))
+
+    PickerPreferences.put_time_format(time_format)
+    PickerPreferences.put_week_start(WeekStart.parse(preferences.week_start_day))
+
+    assign(socket, :time_format, time_format)
   end
 
   # The static render is thrown away the moment the socket connects, but

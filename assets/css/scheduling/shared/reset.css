@@ -50,6 +50,18 @@
     font: inherit;
   }
 
+  /* Number questions have no browser spinner, the same as the dashboard. */
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
   p, h1, h2, h3, h4, h5, h6 {
     overflow-wrap: break-word;
   }

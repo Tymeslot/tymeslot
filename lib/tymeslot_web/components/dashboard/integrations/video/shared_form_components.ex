@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.CoreComponents.Tooltip
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -110,8 +111,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   The value is shown but never submitted: the provider supplies its own host
   server-side. The input stays `readonly` rather than `disabled` so keyboard
   and screen reader users can still reach it; it points at the tooltip and
-  the helper text through `aria-describedby`, and focusing it shows the
-  tooltip. The info icon is decorative and only reveals the tooltip on hover.
+  the helper text through `aria-describedby`, and hovering, focusing or
+  tapping it shows the tooltip.
   """
   attr :id, :string, required: true
   attr :value, :string, required: true
@@ -131,36 +132,21 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
       )
 
     ~H"""
-    <div class="group/field">
-      <div class="flex items-center gap-1.5 mb-2">
-        <label for={@id} class="label mb-0">
-          {dgettext("dashboard_video", "Server URL")}
-        </label>
-        <span class="group relative inline-flex text-tymeslot-500 shrink-0">
-          <Icons.icon name="hero-information-circle-mini" class="w-4 h-4" />
-          <span
-            id={"#{@id}-tooltip"}
-            role="tooltip"
-            class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within/field:visible group-focus-within/field:opacity-100 transition-opacity absolute left-1/2 bottom-full z-10 mb-2 w-64 -translate-x-1/2 rounded-token-lg bg-tymeslot-800 px-3 py-2 text-token-xs font-medium text-white shadow-glass-md"
-          >
-            {@tooltip}
-          </span>
-        </span>
-      </div>
-      <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-tymeslot-300">
-          <Icons.icon name="hero-lock-closed" class="w-5 h-5" />
-        </div>
-        <%!-- raw-input: must stay readonly (not disabled) so keyboard and screen reader users reach it and the tooltip shows on focus; <.input> cannot carry readonly --%>
-        <input
+    <div>
+      <label for={@id} class="label mb-2 block">
+        {dgettext("dashboard_video", "Server URL")}
+      </label>
+      <Tooltip.tooltip id={"#{@id}-tooltip"} text={@tooltip}>
+        <%!-- readonly, not disabled, so keyboard and screen reader users reach it and the tooltip shows on focus --%>
+        <Forms.input
           type="text"
           id={@id}
           value={@value}
+          icon="hero-lock-closed"
           readonly
           aria-describedby={@describedby}
-          class="input input-with-icon w-full cursor-not-allowed bg-tymeslot-100 text-tymeslot-600"
         />
-      </div>
+      </Tooltip.tooltip>
       <p :if={@helper_text} id={"#{@id}-help"} class="mt-2 text-token-xs text-tymeslot-500">
         {@helper_text}
       </p>

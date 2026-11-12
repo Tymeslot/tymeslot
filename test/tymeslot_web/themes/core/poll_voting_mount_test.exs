@@ -182,6 +182,32 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       html = render_submit(view, "cast_votes", %{"name" => "", "votes" => %{slot.id => "yes"}})
 
       assert html =~ "Please enter your name, then save your responses again."
+      # The unsaved pick is still there to save once a name is given.
+      assert has_element?(view, "[data-testid='vote-#{slot.id}-yes'][checked]")
+      assert has_element?(view, "[data-testid='poll-voter-name-error']")
+      assert has_element?(view, "form[data-testid='poll-vote-form'][novalidate]")
+    end
+
+    test "submitting the request form empty shows each field's error beside it", %{view: view} do
+      assert has_element?(view, "form[data-testid='poll-register-form'][novalidate]")
+
+      render_submit(view, "register_participant", %{"name" => "", "email" => ""})
+
+      assert has_element?(view, "[data-testid='poll-name-error']", "Please enter your name.")
+
+      assert has_element?(
+               view,
+               "[data-testid='poll-email-error']",
+               "Please enter your email address."
+             )
+    end
+
+    test "a refused address leaves the name and address as the visitor typed them", %{view: view} do
+      render_submit(view, "register_participant", %{"name" => "Ada", "email" => "not-an-email"})
+
+      assert has_element?(view, "[data-testid='poll-email-error']")
+      assert has_element?(view, "#poll-name[value='Ada']")
+      assert has_element?(view, "#poll-email[value='not-an-email']")
     end
 
     test "a link request with a refused name or address says which and why", %{view: view} do

@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.GroupEventFields
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.LocationFields
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.VideoPicker
@@ -63,11 +64,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       <:header>
         <%= cond do %>
           <% @meeting_mode -> %>
-            {dgettext("dashboard_calendar_events", "New Meeting")}
+            {dgettext("dashboard_calendar_modals", "New Meeting")}
           <% @group_mode -> %>
             {dgettext("dashboard_group_events", "New Group Event")}
           <% true -> %>
-            {dgettext("dashboard_calendar_events", "New Event")}
+            {dgettext("dashboard_calendar_modals", "New Event")}
         <% end %>
       </:header>
 
@@ -82,15 +83,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           on_change="set_create_mode"
           param="mode"
           target={@myself}
-          aria_label={dgettext("dashboard_calendar_events", "What to create")}
+          aria_label={dgettext("dashboard_calendar_modals", "What to create")}
         >
           <:option
             value="event"
-            label={dgettext("dashboard_calendar_events", "Event")}
+            label={dgettext("dashboard_calendar_modals", "Event")}
           />
           <:option
             value="meeting"
-            label={dgettext("dashboard_calendar_events", "Meeting with a guest")}
+            label={dgettext("dashboard_calendar_modals", "Meeting with a guest")}
             testid="create-mode-meeting"
           />
           <:option
@@ -102,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         </.segmented_control>
         <p :if={@meeting_mode} class="mt-1.5 text-token-xs text-tymeslot-400">
           {dgettext(
-            "dashboard_calendar_events",
+            "dashboard_calendar_modals",
             "Books the slot, emails the guest an invitation, and adds it to your calendar."
           )}
         </p>
@@ -113,8 +114,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           type="text"
           name="title"
           value={@creating_event.title}
-          label={dgettext("dashboard_calendar_events", "Title")}
-          placeholder={dgettext("dashboard_calendar_events", "Add title")}
+          label={dgettext("dashboard_calendar_modals", "Title")}
+          placeholder={dgettext("dashboard_calendar_modals", "Add title")}
           id="create-event-title"
           phx-mounted={JS.focus()}
           phx-blur="update_create_title"
@@ -128,8 +129,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           type="text"
           name="guest_name"
           value={@creating_event[:guest_name] || ""}
-          label={dgettext("dashboard_calendar_events", "Guest name")}
-          placeholder={dgettext("dashboard_calendar_events", "Ada Lovelace")}
+          label={dgettext("dashboard_calendar_modals", "Guest name")}
+          placeholder={dgettext("dashboard_calendar_modals", "Ada Lovelace")}
           id="create-meeting-guest-name"
           phx-blur="update_create_guest_name"
           phx-target={@myself}
@@ -138,7 +139,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           type="email"
           name="guest_email"
           value={@creating_event[:guest_email] || ""}
-          label={dgettext("dashboard_calendar_events", "Guest email")}
+          label={dgettext("dashboard_calendar_modals", "Guest email")}
           placeholder="guest@example.com"
           id="create-meeting-guest-email"
           phx-blur="update_create_guest_email"
@@ -158,22 +159,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       <div :if={@meeting_mode} class="mb-3 space-y-3">
         <div>
           <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
-            {dgettext("dashboard_calendar_events", "More guests (optional)")}
+            {dgettext("dashboard_calendar_modals", "More guests (optional)")}
           </p>
           <div :if={@creating_event[:guest_emails] != []} class="flex flex-wrap gap-1.5 mb-2">
             <span
               :for={email <- @creating_event[:guest_emails] || []}
               class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-token-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
-              title={email}
             >
-              {Map.get(@creating_event[:guest_names] || %{}, email, email)}
+              <%= case Map.get(@creating_event[:guest_names] || %{}, email) do %>
+                <% nil -> %>
+                  {email}
+                <% name -> %>
+                  {name} <span class="text-turquoise-700/80">{email}</span>
+              <% end %>
               <button
                 type="button"
                 phx-click="remove_create_guest"
                 phx-value-email={email}
                 phx-target={@myself}
                 class="w-4 h-4 rounded-token-full hover:bg-turquoise-200 flex items-center justify-center transition-colors"
-                aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
+                aria-label={dgettext("dashboard_calendar_modals", "Remove %{email}", email: email)}
               >
                 <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
               </button>
@@ -185,6 +190,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             phx-submit="add_create_guest"
             phx-target={@myself}
             class="flex gap-2"
+            novalidate
           >
             <.input
               type="text"
@@ -197,15 +203,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               placeholder="colleague@example.com"
               autocomplete="off"
               class="flex-1 min-w-0"
+              errors={List.wrap(@creating_event[:guest_email_error])}
             />
             <.action_button type="submit" variant={:secondary} size={:sm}>
-              {dgettext("dashboard_calendar_events", "Add")}
+              {dgettext("dashboard_calendar_modals", "Add")}
             </.action_button>
           </form>
           <.contact_suggestions for="create-guest-email-input" submit named />
           <p class="text-token-xs text-tymeslot-400 mt-1">
             {dgettext(
-              "dashboard_calendar_events",
+              "dashboard_calendar_modals",
               "Each one is invited by email and can accept or decline."
             )}
           </p>
@@ -216,7 +223,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             id="create-meeting-locale-label"
             class="text-token-xs font-medium text-tymeslot-400 mb-1.5"
           >
-            {dgettext("dashboard_calendar_events", "Language of the invitation")}
+            {dgettext("dashboard_calendar_modals", "Language of the invitation")}
           </p>
           <div
             id="create-meeting-locale"
@@ -235,7 +242,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           </div>
           <p class="text-token-xs text-tymeslot-400 mt-1">
             {dgettext(
-              "dashboard_calendar_events",
+              "dashboard_calendar_modals",
               "The language every email about this meeting is written in, for the guest and anyone else invited."
             )}
           </p>
@@ -254,16 +261,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           class="inline-flex items-center gap-1.5 text-token-sm font-medium text-turquoise-700 hover:text-turquoise-800"
         >
           <.icon name="hero-plus-mini" class="w-4 h-4" />
-          {dgettext("dashboard_calendar_events", "Add a note")}
+          {dgettext("dashboard_calendar_modals", "Add a note")}
         </button>
         <div :if={@creating_event[:note_open]}>
           <.input
             type="textarea"
             name="organizer_note"
             value={@creating_event[:organizer_note] || ""}
-            label={dgettext("dashboard_calendar_events", "Note to the guest")}
+            label={dgettext("dashboard_calendar_modals", "Note to the guest")}
             placeholder={
-              dgettext("dashboard_calendar_events", "An agenda, or anything to bring or prepare")
+              dgettext("dashboard_calendar_modals", "An agenda, or anything to bring or prepare")
             }
             id="create-meeting-note"
             rows={3}
@@ -275,7 +282,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           <div class="mt-1 flex items-center justify-between gap-3">
             <p class="text-token-xs text-tymeslot-400">
               {dgettext(
-                "dashboard_calendar_events",
+                "dashboard_calendar_modals",
                 "Included in the invitation and on the calendar entry."
               )}
             </p>
@@ -285,7 +292,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               phx-target={@myself}
               class="shrink-0 text-token-xs font-medium text-tymeslot-500 hover:text-tymeslot-700"
             >
-              {dgettext("dashboard_calendar_events", "Remove note")}
+              {dgettext("dashboard_calendar_modals", "Remove note")}
             </button>
           </div>
         </div>
@@ -293,7 +300,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
 
       <div :if={@event_mode} class="mb-3 flex items-center justify-between">
         <p class="text-token-sm font-medium text-tymeslot-700">
-          {dgettext("dashboard_calendar_events", "All day")}
+          {dgettext("dashboard_calendar_modals", "All day")}
         </p>
         <StatusSwitch.status_switch
           id="create-event-all-day"
@@ -310,45 +317,42 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           phx-change="update_create_time"
           phx-target={@myself}
           class="flex flex-wrap items-center gap-1 text-token-sm text-tymeslot-600"
+          novalidate
         >
-          <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
-          <input
-            type="date"
+          <.date_picker
             id="create-event-start-date"
             name="start-date"
             value={@creating_event.date}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_modals", "Start date")}
           />
-          <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
-          <input
+          <.time_picker
             :if={!@creating_event[:all_day]}
-            type="time"
             id="create-event-start-time"
             name="start-time"
             value={
               EditWorkflow.format_time_value(@creating_event.start_hour, @creating_event.start_minute)
             }
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_modals", "Start time")}
           />
           <span class="text-tymeslot-400">&ndash;</span>
-          <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
-          <input
-            type="date"
+          <.date_picker
             id="create-event-end-date"
             name="end-date"
             value={@creating_event.end_date}
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_modals", "End date")}
           />
-          <%!-- raw-input: borderless date or time field, part of one start-to-end sentence drawn as plain text --%>
-          <input
+          <.time_picker
             :if={!@creating_event[:all_day]}
-            type="time"
             id="create-event-end-time"
             name="end-time"
             value={
               EditWorkflow.format_time_value(@creating_event.end_hour, @creating_event.end_minute)
             }
-            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            variant={:inline}
+            aria-label={dgettext("dashboard_calendar_modals", "End time")}
           />
           <span
             :if={!@creating_event[:all_day]}
@@ -356,6 +360,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           >{Helpers.tz_abbr(@user_timezone, recurrence_start(@creating_event, @user_timezone))}</span>
         </form>
       </div>
+
+      <LocationFields.location_fields
+        :if={not @group_mode}
+        choice={@creating_event[:location_choice] || ""}
+        custom={@creating_event[:location_custom] || ""}
+        venues={@venues}
+        myself={@myself}
+      />
 
       <GroupEventFields.group_event_fields
         :if={@group_mode}
@@ -384,7 +396,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         class="border-t border-tymeslot-200 pt-3 mt-3"
       >
         <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
-          {dgettext("dashboard_calendar_events", "Video")}
+          {dgettext("dashboard_calendar_modals", "Video")}
         </p>
         <VideoPicker.video_picker
           video_integrations={@video_integrations}
@@ -421,6 +433,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           phx-change="meeting_update_reminder_input"
           phx-submit="meeting_add_reminder"
           phx-target={@myself}
+          novalidate
         >
           <ReminderPicker.reminder_picker
             reminders={@reminder_picker.reminders}
@@ -431,7 +444,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             show_custom_reminder={@reminder_picker.show_custom_reminder}
             description={
               dngettext(
-                "dashboard_calendar_events",
+                "dashboard_calendar_modals",
                 "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it.",
                 "Add up to %{count} reminder emails for this meeting. The guest and anyone else invited receive it.",
                 ReminderValidation.max_reminders()
@@ -457,7 +470,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       <%!-- Attendee section --%>
       <div :if={@event_mode} class="space-y-3 border-t border-tymeslot-200 pt-3 mt-3">
         <p class="text-token-xs font-medium text-tymeslot-400">
-          {dgettext("dashboard_calendar_events", "Invite attendees (optional)")}
+          {dgettext("dashboard_calendar_modals", "Invite attendees (optional)")}
         </p>
         <div>
           <div
@@ -475,7 +488,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
                 phx-value-email={email}
                 phx-target={@myself}
                 class="w-4 h-4 rounded-token-full hover:bg-amber-200 flex items-center justify-center transition-colors"
-                aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
+                aria-label={dgettext("dashboard_calendar_modals", "Remove %{email}", email: email)}
               >
                 <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
               </button>
@@ -486,6 +499,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             phx-submit="add_create_attendee"
             phx-target={@myself}
             class="flex gap-2"
+            novalidate
           >
             <.input
               type="email"
@@ -497,15 +511,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               placeholder="attendee@example.com"
               autocomplete="off"
               class="flex-1 min-w-0"
+              errors={List.wrap(@creating_event[:attendee_error])}
             />
             <.action_button type="submit" variant={:secondary} size={:sm}>
-              {dgettext("dashboard_calendar_events", "Add")}
+              {dgettext("dashboard_calendar_modals", "Add")}
             </.action_button>
           </form>
           <.contact_suggestions for="create-attendee-email" submit />
           <p class="text-token-xs text-tymeslot-400 mt-1">
             {dgettext(
-              "dashboard_calendar_events",
+              "dashboard_calendar_modals",
               "Invitations will be sent when you create the event."
             )}
           </p>
@@ -520,16 +535,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             disabled={@saving}
             phx-click={JS.push("close_create_form", target: @myself)}
           >
-            {dgettext("dashboard_calendar_events", "Cancel")}
+            {dgettext("dashboard_calendar_modals", "Cancel")}
           </.action_button>
           <.loading_button
             variant={:primary}
             loading={@saving}
-            loading_text={dgettext("dashboard_calendar_events", "Creating...")}
+            loading_text={dgettext("dashboard_calendar_modals", "Creating...")}
             phx-click="save_event"
             phx-target={@myself}
           >
-            {dgettext("dashboard_calendar_events", "Create")}
+            {dgettext("dashboard_calendar_modals", "Create")}
           </.loading_button>
         </div>
       </:footer>

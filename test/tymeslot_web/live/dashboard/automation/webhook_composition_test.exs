@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
       message = RateLimiterTestHelpers.exhaust_limit!(:webhook_write, user.id)
 
       {:ok, view, _html} = live(conn, "/dashboard/automation")
-      view |> element("button[title='Edit Webhook']") |> render_click()
+      view |> element("button[aria-label='Edit Webhook']") |> render_click()
 
       view
       |> form("#webhook-form", %{
@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
       message = RateLimiterTestHelpers.exhaust_limit!(:webhook_token_regen, user.id)
 
       {:ok, view, _html} = live(conn, "/dashboard/automation")
-      view |> element("button[title='Edit Webhook']") |> render_click()
+      view |> element("button[aria-label='Edit Webhook']") |> render_click()
       view |> element("button[phx-click='show_regenerate_token_modal']") |> render_click()
       view |> element("#regenerate-token-modal .action-button--danger") |> render_click()
 
@@ -164,11 +164,11 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
         })
 
       {:ok, view, _html} = live(conn, "/dashboard/automation")
-      assert has_element?(view, "button[title='Test Connection']")
+      assert has_element?(view, "button[id^='webhook-test-']")
 
       {:ok, _deleted} = Webhooks.delete_webhook(user.id, webhook.id)
 
-      view |> element("button[title='Test Connection']") |> render_click()
+      view |> element("button[id^='webhook-test-']") |> render_click()
 
       html = render(view)
       assert html =~ "Webhook not found"
@@ -188,7 +188,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
       message = RateLimiterTestHelpers.exhaust_limit!(:webhook_test, user.id)
 
       {:ok, view, _html} = live(conn, "/dashboard/automation")
-      view |> element("button[title='Test Connection']") |> render_click()
+      view |> element("button[id^='webhook-test-']") |> render_click()
 
       html = render(view)
       assert html =~ HTML.html_escape(message)

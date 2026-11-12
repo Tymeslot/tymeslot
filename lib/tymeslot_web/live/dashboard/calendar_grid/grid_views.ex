@@ -167,14 +167,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                   {Helpers.open_event_attrs(event, keys: :hook)}
                   phx-target={@myself}
                   aria-label={
-                    dgettext("dashboard_calendar", "%{event}, %{time}",
-                      event: DashboardFormat.title(event.summary),
-                      time:
-                        Helpers.format_display_time_range(
-                          event,
-                          Helpers.time_format(assigns),
-                          @user_timezone
-                        )
+                    EventBadges.event_label(
+                      dgettext("dashboard_calendar", "%{event}, %{time}",
+                        event: DashboardFormat.title(event.summary),
+                        time:
+                          Helpers.format_display_time_range(
+                            event,
+                            Helpers.time_format(assigns),
+                            @user_timezone
+                          )
+                      ),
+                      EventBadges.guest_summary_for_event(@guest_rsvp_summaries, event),
+                      EventBadges.seat_locked?(@group_booking_uids, event)
                     )
                   }
                   data-draggable={to_string(movable?(event, @group_booking_uids))}

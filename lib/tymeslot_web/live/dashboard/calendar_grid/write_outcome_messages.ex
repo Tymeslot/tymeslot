@@ -161,6 +161,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.WriteOutcomeMessages do
     )
   end
 
+  # The venue picked was deleted while the form was open, or the place typed
+  # in is longer than a location may be.
+  def ad_hoc_failed_message(:invalid_location) do
+    dgettext(
+      "dashboard_calendar_location",
+      "That location can no longer be used. Please choose another one."
+    )
+  end
+
   def ad_hoc_failed_message(reason), do: BookingErrorMessage.message(reason)
 
   @doc "What the organiser is told when an event's video link could not be changed."

@@ -6,6 +6,7 @@ defmodule Tymeslot.OnboardingTest do
   @moduletag :utils
   @moduletag :onboarding
 
+  alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklySchedule
@@ -191,6 +192,69 @@ defmodule Tymeslot.OnboardingTest do
     )
 
     on_exit(fn -> :telemetry.detach(id) end)
+  end
+
+  describe "confirm_meeting_step/1" do
+    test "stamps the account and returns it as stored" do
+      user = insert(:user, onboarding_completed_at: nil)
+
+      assert {:ok, %UserSchema{id: id} = confirmed} = Onboarding.confirm_meeting_step(user)
+
+      assert id == user.id
+      assert %DateTime{} = confirmed.onboarding_meeting_confirmed_at
+
+      assert Repo.reload!(user).onboarding_meeting_confirmed_at ==
+               confirmed.onboarding_meeting_confirmed_at
+
+      assert Onboarding.meeting_step_confirmed?(confirmed)
+    end
+
+    test "keeps the first time, even when called with a stale struct" do
+      first = ~U[2026-01-01 09:00:00Z]
+      user = insert(:user, onboarding_completed_at: nil)
+      Repo.update!(Changeset.change(user, onboarding_meeting_confirmed_at: first))
+
+      assert {:ok, confirmed} = Onboarding.confirm_meeting_step(user)
+      assert confirmed.onboarding_meeting_confirmed_at == first
+      assert Repo.reload!(user).onboarding_meeting_confirmed_at == first
+    end
+
+    test "writes nothing for a host who already completed onboarding" do
+      user = insert(:user, onboarding_completed_at: ~U[2026-01-01 09:00:00Z])
+
+      assert {:ok, _user} = Onboarding.confirm_meeting_step(user)
+      assert Repo.reload!(user).onboarding_meeting_confirmed_at == nil
+    end
+
+    test "returns not found for a user that no longer exists" do
+      user = insert(:user, onboarding_completed_at: nil)
+      Repo.delete!(user)
+
+      assert {:error, :not_found} = Onboarding.confirm_meeting_step(user)
+    end
+  end
+
+  describe "meeting_step_confirmed?/1" do
+    test "is false with neither the marker nor a completed onboarding" do
+      refute Onboarding.meeting_step_confirmed?(%{
+               onboarding_meeting_confirmed_at: nil,
+               onboarding_completed_at: nil
+             })
+    end
+
+    test "is true with the marker" do
+      assert Onboarding.meeting_step_confirmed?(%{
+               onboarding_meeting_confirmed_at: ~U[2026-01-01 09:00:00Z],
+               onboarding_completed_at: nil
+             })
+    end
+
+    test "is true for a completed onboarding without the marker" do
+      assert Onboarding.meeting_step_confirmed?(%{
+               onboarding_meeting_confirmed_at: nil,
+               onboarding_completed_at: ~U[2026-01-01 09:00:00Z]
+             })
+    end
   end
 
   describe "dashboard tour helpers" do

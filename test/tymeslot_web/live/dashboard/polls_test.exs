@@ -127,15 +127,14 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
 
       view
-      |> form("form[phx-submit='create_poll']", %{
+      |> form("form[phx-submit='create_poll']", %{"poll" => %{"title" => "Launch planning"}})
+      |> render_submit(%{
         "poll" => %{
-          "title" => "Launch planning",
           "duration" => "30",
           "timezone" => "Europe/Tallinn",
           "slots" => %{"0" => "#{date}T09:00", "1" => "#{date}T10:00"}
         }
       })
-      |> render_submit()
 
       assert render(view) =~ "Launch planning"
 
@@ -155,13 +154,16 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       |> form("form[phx-submit='create_poll']", %{
         "poll" => %{
           "title" => "Launch planning",
-          "duration" => "30",
-          "timezone" => "Europe/Tallinn",
-          "slots" => %{"0" => "#{date}T09:00"},
           "invitees" => "Grace Hopper <grace@example.com>, ada@example.com"
         }
       })
-      |> render_submit()
+      |> render_submit(%{
+        "poll" => %{
+          "duration" => "30",
+          "timezone" => "Europe/Tallinn",
+          "slots" => %{"0" => "#{date}T09:00"}
+        }
+      })
 
       assert [poll] = Polls.list_polls(user.id)
 
@@ -191,13 +193,16 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
         |> form("form[phx-submit='create_poll']", %{
           "poll" => %{
             "title" => "Launch planning",
-            "duration" => "30",
-            "timezone" => "Europe/Tallinn",
-            "slots" => %{"0" => "#{date}T09:00"},
             "invitees" => "ada@example.com, not-an-address"
           }
         })
-        |> render_submit()
+        |> render_submit(%{
+          "poll" => %{
+            "duration" => "30",
+            "timezone" => "Europe/Tallinn",
+            "slots" => %{"0" => "#{date}T09:00"}
+          }
+        })
 
       assert html =~ "Not valid email addresses: not-an-address"
       assert Polls.list_polls(user.id) == []
@@ -217,13 +222,16 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       |> form("form[phx-submit='create_poll']", %{
         "poll" => %{
           "title" => "Launch planning",
-          "duration" => "30",
-          "timezone" => "Europe/Tallinn",
-          "slots" => %{"0" => "#{date}T09:00"},
           "invitees" => "ada@example.com, A <a@example.com>"
         }
       })
-      |> render_submit()
+      |> render_submit(%{
+        "poll" => %{
+          "duration" => "30",
+          "timezone" => "Europe/Tallinn",
+          "slots" => %{"0" => "#{date}T09:00"}
+        }
+      })
 
       assert has_element?(view, "[data-testid='poll-invitees']", "These names can't be used: A")
       assert Polls.list_polls(user.id) == []
@@ -243,16 +251,17 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       view |> element("button", "Add time") |> render_click()
       view |> element("button", "Add time") |> render_click()
 
-      params = %{
+      fields = %{
+        "poll" => %{"title" => "Offsite", "duration" => "30", "timezone" => profile.timezone}
+      }
+
+      pickers = %{
         "poll" => %{
-          "title" => "Offsite",
-          "duration" => "30",
-          "timezone" => profile.timezone,
           "slots" => %{"0" => "#{Date.to_iso8601(day_off)}T10:00", "1" => "#{working_day}T10:00"}
         }
       }
 
-      view |> form("form[phx-submit='create_poll']", params) |> render_change()
+      view |> form("form[phx-submit='create_poll']", fields) |> render_change(pickers)
 
       # Only the first row, the one on the day off, carries the warning.
       assert view
@@ -261,7 +270,7 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
 
       refute has_element?(view, "[data-testid='poll-slot-time-off-warning'][data-slot-key='1']")
 
-      view |> form("form[phx-submit='create_poll']", params) |> render_submit()
+      view |> form("form[phx-submit='create_poll']", fields) |> render_submit(pickers)
 
       assert [poll] = Polls.list_polls(user.id)
       assert length(poll.time_slots) == 2
@@ -277,16 +286,71 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
 
       html =
         view
-        |> form("form[phx-submit='create_poll']", %{
-          "poll" => %{
-            "title" => "Empty poll",
-            "duration" => "30",
-            "timezone" => "Europe/Tallinn"
-          }
-        })
-        |> render_submit()
+        |> form("form[phx-submit='create_poll']", %{"poll" => %{"title" => "Empty poll"}})
+        |> render_submit(%{"poll" => %{"duration" => "30", "timezone" => "Europe/Tallinn"}})
 
       assert html =~ "Add at least one candidate time"
+      assert Polls.list_polls(user.id) == []
+    end
+
+    # A date picked with no time used to post nothing, and the poll was
+    # created with no deadline at all.
+    test "refuses a deadline with a date and no time, and says the time is missing", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+      deadline_day = Date.utc_today() |> Date.add(3) |> Date.to_iso8601()
+
+      fields = %{"poll" => %{"title" => "Launch planning"}}
+
+      pickers = %{
+        "poll" => %{
+          "duration" => "30",
+          "timezone" => "Europe/Tallinn",
+          "deadline" => deadline_day,
+          "slots" => %{"0" => "#{date}T09:00"}
+        }
+      }
+
+      view |> form("form[phx-submit='create_poll']", fields) |> render_change(pickers)
+      view |> form("form[phx-submit='create_poll']", fields) |> render_submit(pickers)
+
+      assert view |> element("[id^='poll-deadline-'][id$='-error']") |> render() =~ "Add a time"
+
+      assert Polls.list_polls(user.id) == []
+    end
+
+    test "refuses a candidate time with a date and no time, rather than drop the row", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+      date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
+
+      fields = %{"poll" => %{"title" => "Launch planning"}}
+
+      pickers = %{
+        "poll" => %{
+          "duration" => "30",
+          "timezone" => "Europe/Tallinn",
+          "slots" => %{"0" => "#{date}T09:00", "1" => date}
+        }
+      }
+
+      view |> form("form[phx-submit='create_poll']", fields) |> render_change(pickers)
+      view |> form("form[phx-submit='create_poll']", fields) |> render_submit(pickers)
+
+      assert view |> element("[id$='-slot-1-field']") |> render() =~ "Add a time"
+      refute view |> element("[id$='-slot-0-field']") |> render() =~ "Add a time"
       assert Polls.list_polls(user.id) == []
     end
 
@@ -302,15 +366,14 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
 
       view
-      |> form("form[phx-submit='create_poll']", %{
+      |> form("form[phx-submit='create_poll']", %{"poll" => %{"title" => ""}})
+      |> render_submit(%{
         "poll" => %{
-          "title" => "",
           "duration" => "30",
           "timezone" => "Europe/Tallinn",
           "slots" => %{"0" => "#{date}T09:00"}
         }
       })
-      |> render_submit()
 
       assert has_element?(view, "form[phx-submit='create_poll']", "darf nicht leer sein")
       assert Polls.list_polls(user.id) == []
@@ -349,7 +412,12 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
     end
 
     defp change_form(view, params) do
-      view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_change()
+      {selects, fields} = Map.split(params, ~w(timezone duration meeting_type_id slots deadline))
+
+      view
+      |> form("form[phx-submit='create_poll']", %{"poll" => fields})
+      |> render_change(%{"poll" => selects})
+
       render_async(view)
     end
 
@@ -486,7 +554,11 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
 
         params = if notify, do: Map.put(params, "notify_on_vote", notify), else: params
 
-        view |> form("form[phx-submit='create_poll']", %{"poll" => params}) |> render_submit()
+        {pickers, fields} = Map.split(params, ~w(slots))
+
+        view
+        |> form("form[phx-submit='create_poll']", %{"poll" => fields})
+        |> render_submit(%{"poll" => pickers})
       end
 
       polls = Map.new(Polls.list_polls(user.id), &{&1.title, &1.notify_on_vote})
@@ -536,8 +608,13 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       # tooltip carries the reason.
       assert has_element?(
                view,
-               ~s(button[aria-disabled="true"][aria-label="Copy poll link to clipboard"]) <>
-                 ~s([title="Connect a calendar in Calendar settings to enable this feature"])
+               ~s(button[aria-disabled="true"][aria-label="Copy poll link to clipboard"][aria-describedby$="-tip"])
+             )
+
+      assert has_element?(
+               view,
+               ~s([role="tooltip"]),
+               "Connect a calendar in Calendar settings to enable this feature"
              )
 
       refute has_element?(view, ~s(button[aria-label="Copy poll link to clipboard"][disabled]))

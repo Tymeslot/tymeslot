@@ -22,27 +22,33 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ContactsToggle do
     assigns = assign(assigns, :enabled?, Map.get(assigns.integration, :use_for_contacts, false))
 
     ~H"""
-    <button
+    <.tooltip
+      :let={tip}
       :if={Contacts.supported_provider?(Map.get(@integration, :provider))}
-      type="button"
-      phx-click="toggle_use_for_contacts"
-      phx-value-id={@integration.id}
-      phx-target={@myself}
-      class={Helpers.tile_class(:neutral)}
-      aria-pressed={to_string(@enabled?)}
-      data-testid="use-for-contacts-toggle"
-      title={
+      id={"calendar-#{@integration.id}-contacts-tip"}
+      text={
         dgettext(
           "dashboard_calendar_settings",
           "Suggest contacts from this account's address books when you invite people"
         )
       }
     >
-      <.icon
-        name={if @enabled?, do: "hero-check-circle", else: "hero-user-circle"}
-        class="w-4 h-4"
-      /><span>{dgettext("dashboard_calendar_settings", "Contact suggestions")}</span>
-    </button>
+      <button
+        type="button"
+        phx-click="toggle_use_for_contacts"
+        phx-value-id={@integration.id}
+        phx-target={@myself}
+        class={Helpers.tile_class(:neutral)}
+        aria-pressed={to_string(@enabled?)}
+        aria-describedby={tip}
+        data-testid="use-for-contacts-toggle"
+      >
+        <.icon
+          name={if @enabled?, do: "hero-check-circle", else: "hero-user-circle"}
+          class="w-4 h-4"
+        /><span>{dgettext("dashboard_calendar_settings", "Contact suggestions")}</span>
+      </button>
+    </.tooltip>
     """
   end
 

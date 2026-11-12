@@ -13,6 +13,8 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
   import TymeslotWeb.Shared.Auth.ButtonComponents
   use TymeslotWeb.Components.CoreComponents
 
+  alias TymeslotWeb.Components.CoreComponents.Forms
+
   @doc """
   Renders the complete registration form using shared auth components.
   """
@@ -29,10 +31,23 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
           class="space-y-3 sm:space-y-4"
           action={~p"/auth/complete"}
         >
-          <.full_name_input />
-          <.email_input email_required={@email_required} temp_user={@temp_user} />
+          <.full_name_input value={@completion_draft["full_name"]} />
+          <.email_input
+            email_required={@email_required}
+            temp_user={@temp_user}
+            errors={@completion_errors.email}
+            value={@completion_draft["email"]}
+          />
           <%= if Application.get_env(:tymeslot, :enforce_legal_agreements, false) do %>
-            <.terms_checkbox name="auth[terms_accepted]" style={:complex} />
+            <.terms_checkbox
+              name="auth[terms_accepted]"
+              style={:complex}
+              checked={@completion_draft["terms"]}
+            />
+            <Forms.field_error
+              errors={@completion_errors.terms}
+              id="complete-registration-terms-error"
+            />
           <% end %>
           <.auth_button type="submit" class="mt-4 sm:mt-6">
             {dgettext("auth", "Complete Registration")}
@@ -57,6 +72,7 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
       id="full-name"
       name="profile[full_name]"
       type="text"
+      value={@value}
       label={dgettext("auth", "Display Name")}
       placeholder={dgettext("auth", "e.g. John Doe")}
       autofocus
@@ -75,6 +91,8 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
         label={dgettext("auth", "Email Address")}
         placeholder={dgettext("auth", "your.email@example.com")}
         required
+        value={@value}
+        errors={@errors}
         icon="hero-envelope"
       />
     <% else %>

@@ -79,7 +79,7 @@ defmodule TymeslotWeb.AuthLive do
   def handle_info(:resend_cooldown_tick, socket), do: VerificationEvents.tick(socket)
 
   @impl Phoenix.LiveView
-  def handle_event("navigate_to", %{"state" => state}, socket) do
+  def handle_event("navigate_to", %{"to" => state}, socket) do
     Logger.info("AuthLive: navigate_to event received", state: state)
 
     case check_navigation(state) do
