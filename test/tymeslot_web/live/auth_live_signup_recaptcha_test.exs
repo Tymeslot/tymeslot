@@ -1,17 +1,19 @@
 defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
   use TymeslotWeb.LiveCase, async: false
 
-  @moduletag :recaptcha_signup_test
-  @moduletag backup_tests: true
-  @moduletag :auth
-  @moduletag :security
-
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Infrastructure.Security.Recaptcha
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.SuiteConfig
+
+  @moduletag :recaptcha_signup_test
+  @moduletag backup_tests: true
+  @moduletag skip: SuiteConfig.unless_included(:backup_tests)
+  @moduletag :auth
+  @moduletag :security
 
   setup do
     RateLimiter.clear_all()

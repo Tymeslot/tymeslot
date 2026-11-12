@@ -58,6 +58,43 @@ defmodule Tymeslot.Test.SuiteConfig do
   end
 
   @doc """
+  The `:skip` value for a module in a default-excluded suite: `false` when the
+  run asked for the suite, a reason otherwise.
+
+  ExUnit lets an include override an exclude, so a domain sweep such as
+  `mix test --only calendar` also runs the Nextcloud and Baikal suites, which
+  carry `:calendar` beside `:calendar_integration`, and fails them on a machine
+  without those servers. A module tagged
+
+      @moduletag :calendar_integration
+      @moduletag skip: SuiteConfig.unless_included(:calendar_integration)
+
+  is reported as skipped by such a sweep and still runs under
+  `--only calendar_integration` or `--include calendar_integration`. A run that
+  names a test by line (`path:LINE`) also counts as asking for it.
+
+  It reads the `:include` filters `mix test` configures before it compiles the
+  test files, so it must be called from a module attribute, at compile time. A
+  tag not excluded by default (`:git_cliff` where the binary is installed)
+  never skips.
+  """
+  @spec unless_included(atom(), list()) :: false | String.t()
+  def unless_included(tag, include \\ Keyword.get(ExUnit.configuration(), :include, []))
+      when is_atom(tag) do
+    if Keyword.has_key?(default_exclude_tags(), tag) and
+         not Enum.any?(include, &opts_in?(&1, tag)) do
+      "#{tag} suite: run it with --only #{tag}"
+    else
+      false
+    end
+  end
+
+  defp opts_in?(tag, tag), do: true
+  defp opts_in?({tag, _value}, tag), do: true
+  defp opts_in?({:location, _location}, _tag), do: true
+  defp opts_in?(_filter, _tag), do: false
+
+  @doc """
   The configured ExUnit formatters with `ExUnit.CLIFormatter` swapped for
   `Tymeslot.Test.HtmlFailureFormatter`, so a failed `html =~` prints an excerpt
   rather than the whole page. Any `--formatter` given on the command line is
