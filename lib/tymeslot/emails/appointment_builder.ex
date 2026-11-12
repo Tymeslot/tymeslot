@@ -7,7 +7,6 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   require Logger
   alias Tymeslot.BookingPages
   alias Tymeslot.BookingPages.BookedThrough
-  alias Tymeslot.Bookings.BookingTitle
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.ContentTranslations.AttendeeTexts
   alias Tymeslot.Emails.HostClock
@@ -48,22 +47,6 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     meeting
     |> Recipient.as_seen_by(recipient)
     |> build(reminder_interval)
-  end
-
-  @doc """
-  `meeting` as its attendee reads it in `locale`, for a template that renders
-  the meeting itself rather than these details: the attendee's copies of its
-  texts (`AttendeeTexts`) and its title in their language, the type named as
-  they read it.
-  """
-  @spec attendee_view(MeetingSchema.t(), String.t()) :: MeetingSchema.t()
-  def attendee_view(%MeetingSchema{} = meeting, locale) do
-    attendee_meeting = AttendeeTexts.as_read_in(meeting, locale)
-
-    %{
-      attendee_meeting
-      | title: BookingTitle.localise_with_type(meeting, attendee_meeting.meeting_type)
-    }
   end
 
   @doc """
@@ -295,8 +278,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   # copies when the booking carries them in this locale (`AttendeeTexts`);
   # `:original_texts` keeps the organiser's for their copies.
   defp base_details(meeting, attendee_locale) do
-    attendee_meeting = AttendeeTexts.as_read_in(meeting, attendee_locale)
-    title = BookingTitle.localise_with_type(meeting, attendee_meeting.meeting_type)
+    attendee_meeting = AttendeeTexts.attendee_view(meeting, attendee_locale)
+    title = attendee_meeting.title
 
     %{
       uid: meeting.calendar_uid,

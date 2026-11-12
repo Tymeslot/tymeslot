@@ -3,6 +3,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   Database queries for meeting types.
   """
   import Ecto.Query, warn: false
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.Invitations.InvitationSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
@@ -125,15 +126,19 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   `:host_charges_enabled`, `:currency_minimum_cents`) into the changeset.
 
   The changeset never casts `translations`, which only
-  `Tymeslot.ContentTranslations` writes; a copy's `:translations`
-  (`Tymeslot.MeetingTypes.Duplication`), already validated on its source,
-  are stored as they are.
+  `Tymeslot.ContentTranslations` writes. A copy carries its source's in the
+  `:translations` option (`Tymeslot.MeetingTypes.Duplication.translations/1`),
+  pruned to the copy's own texts and checked
+  (`Tymeslot.ContentTranslations.put_copied/2`).
   """
   @spec create_meeting_type(map(), keyword()) ::
           {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
   def create_meeting_type(attrs, opts \\ []) do
-    %MeetingTypeSchema{translations: Map.get(attrs, :translations) || %{}}
+    {translations, opts} = Keyword.pop(opts, :translations)
+
+    %MeetingTypeSchema{}
     |> MeetingTypeSchema.changeset(attrs, opts)
+    |> ContentTranslations.put_copied(translations)
     |> Repo.insert()
   end
 

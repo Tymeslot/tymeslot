@@ -241,7 +241,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   # taken above, so two joiners in different languages cannot overwrite
   # each other's copy.
   defp add_attendee_texts(%{meeting: meeting} = booking, meeting_attrs) do
-    case AttendeeTexts.merge(meeting, Map.get(meeting_attrs, :attendee_texts)) do
+    case AttendeeTexts.merge(meeting, meeting_attrs) do
       texts when texts == meeting.attendee_texts ->
         booking
 

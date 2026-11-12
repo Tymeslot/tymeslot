@@ -40,6 +40,59 @@ defmodule Tymeslot.ContentTranslations.LanguagesTest do
     end
   end
 
+  describe "visitor_locale/2" do
+    setup do
+      %{
+        profile:
+          profile(
+            content_locale: "en",
+            translation_locales: ["de", "fr"],
+            offer_all_locales: false
+          )
+      }
+    end
+
+    test "the visitor's pick wins over the booked language", %{profile: profile} do
+      assert Languages.visitor_locale(profile, picked: "fr", booked: "de", browser: []) == "fr"
+    end
+
+    test "the visitor's pick wins over the browser", %{profile: profile} do
+      assert Languages.visitor_locale(profile, picked: "fr", browser: ["de"]) == "fr"
+    end
+
+    test "the booked language wins over the browser when nothing was picked", %{
+      profile: profile
+    } do
+      assert Languages.visitor_locale(profile, picked: nil, booked: "de", browser: ["fr"]) ==
+               "de"
+    end
+
+    test "a pick not offered gives the original, not the booked or browser language", %{
+      profile: profile
+    } do
+      assert Languages.visitor_locale(profile, picked: "it", booked: "de", browser: ["fr"]) ==
+               "en"
+
+      assert Languages.stale_pick?(profile, "it")
+    end
+
+    test "a booked language not offered falls through to the browser", %{profile: profile} do
+      assert Languages.visitor_locale(profile, booked: "it", browser: ["xx", "fr"]) == "fr"
+      refute Languages.stale_pick?(profile, nil)
+    end
+
+    test "nothing offered among the candidates gives the original", %{profile: profile} do
+      assert Languages.visitor_locale(profile, booked: "it", browser: ["pl"]) == "en"
+    end
+
+    test "every pick is offered while every language is", %{profile: profile} do
+      profile = %{profile | offer_all_locales: true}
+
+      assert Languages.visitor_locale(profile, picked: "it", booked: "de") == "it"
+      refute Languages.stale_pick?(profile, "it")
+    end
+  end
+
   describe "offered/1 and content_locale/2" do
     test "a restricted profile offers its original then its translations" do
       profile =
@@ -73,6 +126,29 @@ defmodule Tymeslot.ContentTranslations.LanguagesTest do
 
       assert %{content_locale: "en", translation_locales: ["de", "fr"], offer_all_locales: false} =
                saved
+    end
+
+    test "saves the original the texts read as, so it no longer follows the fallback", %{
+      profile: profile
+    } do
+      assert profile.content_locale == nil
+
+      assert {:ok, saved} =
+               Profiles.update_booking_languages(profile, %{translation_locales: ["de"]})
+
+      assert saved.content_locale == Locales.booking_default_locale()
+      assert Repo.get!(ProfileSchema, profile.id).content_locale == saved.content_locale
+    end
+
+    test "refuses the fallback as a translation language while the original is unset", %{
+      profile: profile
+    } do
+      assert {:error, changeset} =
+               Profiles.update_booking_languages(profile, %{
+                 translation_locales: [Locales.booking_default_locale()]
+               })
+
+      assert %{translation_locales: [_message]} = errors_on(changeset)
     end
 
     test "a new profile offers every language with no translations", %{profile: profile} do

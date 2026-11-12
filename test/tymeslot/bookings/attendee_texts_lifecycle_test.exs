@@ -20,9 +20,11 @@ defmodule Tymeslot.Bookings.AttendeeTextsLifecycleTest do
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Bookings.{Cancel, Create, Reschedule, RescheduleRequest}
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
 
@@ -213,6 +215,123 @@ defmodule Tymeslot.Bookings.AttendeeTextsLifecycleTest do
              )
 
     assert Repo.get!(MeetingSchema, meeting.id).attendee_texts == nil
+  end
+
+  defp reschedule_to(ctx, meeting, venue) do
+    assert {:ok, _updated} =
+             Reschedule.execute(
+               meeting.uid,
+               %{
+                 date: Date.to_string(Date.add(Date.utc_today(), 2)),
+                 time: "2:00 PM",
+                 duration: "30min",
+                 user_timezone: "America/New_York",
+                 location_option_id: "loc-offices",
+                 location_venue_id: to_string(venue.id)
+               },
+               ctx.user.id
+             )
+
+    Repo.get!(MeetingSchema, meeting.id)
+  end
+
+  test "a reschedule keeps the rest of the attendee's copy as they booked it", ctx do
+    meeting_type = meeting_type(ctx)
+    meeting = book(ctx, meeting_type, ctx.berlin)
+
+    # The organiser renames the type, and its translation, after the booking.
+    meeting_type
+    |> Changeset.change(
+      name: "Discovery call",
+      translations: %{
+        "de" => %{
+          "name" => %{"text" => "Kennenlernen", "source" => :erlang.phash2("Discovery call")}
+        }
+      }
+    )
+    |> Repo.update!()
+
+    stored = reschedule_to(ctx, meeting, ctx.munich)
+
+    # The booking's original is unchanged, and so is the attendee's copy of it.
+    assert stored.meeting_type == "Intro call"
+
+    assert %{
+             "de" => %{
+               "meeting_type" => "Erstgespräch",
+               "location" => "Büro München (Marienplatz 8)"
+             }
+           } = stored.attendee_texts
+  end
+
+  test "a reschedule keeps the copy of a language the organiser no longer translates into",
+       ctx do
+    meeting = book(ctx, meeting_type(ctx), ctx.berlin)
+    _confirmations = delivered()
+
+    ProfileSchema
+    |> Repo.get_by!(user_id: ctx.user.id)
+    |> Changeset.change(translation_locales: [])
+    |> Repo.update!()
+
+    stored = reschedule_to(ctx, meeting, ctx.munich)
+
+    # The new venue is not translated any more; what the attendee booked with is.
+    assert %{"de" => %{"meeting_type" => "Erstgespräch", "location" => location}} =
+             stored.attendee_texts
+
+    assert location == stored.location
+
+    attendee = only(delivered(), @attendee)
+    assert attendee.html_body =~ "Erstgespräch"
+    assert attendee.html_body =~ "Munich office"
+  end
+
+  test "a reschedule stores no copy where the booking had none and the location is not translated",
+       ctx do
+    plain = insert(:venue, user: ctx.user, name: "Studio", description: "Hafen 3")
+    offices = in_person_location([plain, ctx.munich], id: "loc-offices", label: "In person")
+    meeting_type = meeting_type(%{ctx | offices: offices}, translations: %{})
+
+    meeting = book(ctx, meeting_type, plain)
+    assert meeting.attendee_texts == nil
+
+    # Translated since the booking, but not what the attendee booked with.
+    meeting_type
+    |> Changeset.change(
+      translations: %{
+        "de" => %{"name" => %{"text" => "Erstgespräch", "source" => :erlang.phash2("Intro call")}}
+      }
+    )
+    |> Repo.update!()
+
+    plain_again = insert(:venue, user: ctx.user, name: "Loft", description: "Kai 1")
+    offices = in_person_location([plain, plain_again], id: "loc-offices", label: "In person")
+
+    meeting_type
+    |> Changeset.change(locations: [offices])
+    |> Repo.update!()
+
+    assert reschedule_to(ctx, meeting, plain_again).attendee_texts == nil
+  end
+
+  test "a reschedule onto a translated venue gives a booking without a copy its location alone",
+       ctx do
+    plain = insert(:venue, user: ctx.user, name: "Studio", description: "Hafen 3")
+    offices = in_person_location([plain, ctx.munich], id: "loc-offices", label: "In person")
+    meeting_type = meeting_type(%{ctx | offices: offices}, translations: %{})
+
+    meeting = book(ctx, meeting_type, plain)
+    assert meeting.attendee_texts == nil
+    _confirmations = delivered()
+
+    stored = reschedule_to(ctx, meeting, ctx.munich)
+    assert stored.attendee_texts == %{"de" => %{"location" => "Büro München (Marienplatz 8)"}}
+
+    # Every other text reads as the booking's own.
+    attendee = only(delivered(), @attendee)
+    assert attendee.html_body =~ "Büro München"
+    assert attendee.html_body =~ "Intro call"
   end
 
   test "the reminder reads the attendee's copy", ctx do

@@ -20,8 +20,13 @@ defmodule Tymeslot.Bookings.AttendeeTextsGroupTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
-  alias Tymeslot.Bookings.{Create, RescheduleLocation, RescheduleRequest}
+  alias Tymeslot.Bookings.{Create, RescheduleLocation, RescheduleRequest, RescheduleSeat}
+  alias Tymeslot.ContentTranslations
+  alias Tymeslot.ContentTranslations.AttendeeTexts
+  alias Tymeslot.CustomFields
+  alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.TestMocks
 
@@ -195,6 +200,26 @@ defmodule Tymeslot.Bookings.AttendeeTextsGroupTest do
       assert texts["de"]["meeting_type"] == "Erstgespräch"
     end
 
+    test "a joiner's copy leaves out a text the type has changed since the slot was made",
+         ctx do
+      meeting = book_seat!(ctx, @lea, "fr")
+
+      ctx.meeting_type
+      |> Changeset.change(
+        name: "Discovery call",
+        translations: translations([{"de", "Discovery call", "Kennenlernen"}])
+      )
+      |> Repo.update!()
+
+      _joined = book_seat!(ctx, @jana, "de")
+
+      slot = Repo.get!(MeetingSchema, meeting.id)
+      assert slot.meeting_type == "Intro call"
+      refute Map.has_key?(slot.attendee_texts["de"], "meeting_type")
+      assert slot.attendee_texts["de"]["location"] == "Büro Berlin (Friedrichstrasse 1)"
+      assert AttendeeTexts.text(slot, :meeting_type, "de") == "Intro call"
+    end
+
     test "a booker in a language that is not a translation language adds no copy", ctx do
       meeting = book_seat!(ctx, @jana, "de")
       _joined = book_seat!(ctx, @lea, "es")
@@ -236,6 +261,101 @@ defmodule Tymeslot.Bookings.AttendeeTextsGroupTest do
                    "location" => "Bureau de Munich (Marienplatz 8)"
                  })
              }
+    end
+  end
+
+  describe "a seat move onto a slot others have booked" do
+    setup do
+      {user, profile} = organiser("en", ["de", "fr"])
+      _schedule = open_schedule_for(profile)
+
+      venue =
+        insert(:venue,
+          user: user,
+          name: "Berlin office",
+          description: "Friedrichstrasse 1",
+          translations: translations([{"fr", "Berlin office", "Bureau de Berlin"}])
+        )
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          name: "Intro call",
+          duration_minutes: 30,
+          max_participants: 3,
+          locations: [in_person_location([venue])],
+          custom_fields: [
+            %FieldDefinition{id: "q-company", type: "short_text", label: "Company", position: 0}
+          ],
+          translations: %{
+            "de" => %{
+              "name" => %{"text" => "Erstgespräch", "source" => :erlang.phash2("Intro call")},
+              "custom_fields/q-company/label" => %{
+                "text" => "Firma",
+                "source" => :erlang.phash2("Company")
+              }
+            }
+          }
+        )
+
+      %{user: user, meeting_type: meeting_type}
+    end
+
+    defp book_with_questions!(ctx, email, locale, days_ahead) do
+      snapshot =
+        ctx.meeting_type
+        |> ContentTranslations.localise(locale)
+        |> CustomFields.snapshot_for()
+
+      assert {:ok, meeting} =
+               Create.execute(
+                 %{
+                   date: Date.add(Date.utc_today(), days_ahead),
+                   time: "14:00",
+                   duration: "30min",
+                   user_timezone: "America/New_York",
+                   organizer_user_id: ctx.user.id,
+                   meeting_type_id: ctx.meeting_type.id,
+                   attendee_locale: locale,
+                   custom_fields_snapshot: snapshot,
+                   custom_field_answers: %{"q-company" => "Acme"}
+                 },
+                 %{"name" => "Booker #{email}", "email" => email, "message" => ""}
+               )
+
+      meeting
+    end
+
+    test "the mover's copy carries the slot's questions in their language", ctx do
+      old_slot = book_with_questions!(ctx, @jana, "de", 1)
+      target = book_with_questions!(ctx, @lea, "fr", 2)
+      assert Map.keys(target.attendee_texts) == ["fr"]
+
+      jana =
+        Enum.find(ParticipantQueries.list_live_for_meeting(old_slot.id), &(&1.email == @jana))
+
+      assert {:ok, %{meeting: moved_to}} =
+               RescheduleSeat.execute(
+                 jana.management_token,
+                 %{
+                   date: Date.to_iso8601(Date.add(Date.utc_today(), 2)),
+                   time: "14:00",
+                   duration: "30min",
+                   user_timezone: "America/New_York"
+                 },
+                 ctx.user.id
+               )
+
+      assert moved_to.id == target.id
+      slot = Repo.get!(MeetingSchema, target.id)
+      assert [%{"label" => "Company"}] = slot.custom_fields_snapshot
+
+      assert %{
+               "meeting_type" => "Erstgespräch",
+               "custom_fields_snapshot" => [%{"label" => "Firma"}]
+             } = slot.attendee_texts["de"]
+
+      assert [%{"label" => "Firma"}] = AttendeeTexts.text(slot, :custom_fields_snapshot, "de")
     end
   end
 

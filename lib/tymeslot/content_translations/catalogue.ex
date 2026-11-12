@@ -13,7 +13,7 @@ defmodule Tymeslot.ContentTranslations.Catalogue do
         fields: [ContentTranslations.field()]
       }
 
-  `{kind, id}` addresses an entity in `save/4`. The profile appears twice in
+  `{kind, id}` addresses an entity in `save/4` and `confirm/4`. The profile appears twice in
   `items/1`, once with its booking page texts and once with its intro, under
   the same `{:profile, id}`.
   """
@@ -160,32 +160,68 @@ defmodule Tymeslot.ContentTranslations.Catalogue do
     end
   end
 
+  @doc """
+  Confirms the user's `locale` translations at `paths` of the entity
+  `{kind, id}` as still correct for the current originals, without changing
+  their texts: an outdated translation counts as translated again, and is
+  shown to invitees again (`ContentTranslations.confirm/3`). A path with no
+  translation is left alone. Returns the entity with all of its fields.
+
+  Scoped and locked as `save/4` is, with the same errors.
+  """
+  @spec confirm(integer(), {kind(), integer() | String.t()}, String.t(), [
+          ContentTranslations.path()
+        ]) ::
+          {:ok, entity()} | {:error, Ecto.Changeset.t() | :not_found}
+  def confirm(user_id, {kind, id}, locale, paths)
+      when is_integer(user_id) and is_binary(locale) and is_list(paths) do
+    with {:ok, profile} <- fetch_profile(user_id),
+         {:ok, record} <- fetch(kind, id, user_id, profile) do
+      Repo.transaction(fn ->
+        write_locked(
+          record,
+          kind,
+          locale,
+          profile,
+          &ContentTranslations.confirm(&1, locale, paths)
+        )
+      end)
+    end
+  end
+
   # The whole map is written back, so it is read under the row's lock: two
   # saves at once (two languages, or two tabs) would otherwise each write
   # back the map as they found it, and the later would drop the earlier's
-  # texts.
+  # texts. The originals the texts are stamped against are the locked row's
+  # too, so an edit committed meanwhile cannot leave a translation stamped
+  # against a text the record no longer holds.
   defp save_locked(record, kind, locale, texts, profile) do
+    write_locked(record, kind, locale, profile, &put_texts(&1, locale, texts))
+  end
+
+  defp write_locked(record, kind, locale, profile, translate) do
     with {:ok, record} <- TranslationQueries.lock(record),
          {:ok, saved} <-
-           TranslationQueries.update(build_changeset(record, locale, texts, profile)) do
+           TranslationQueries.update(build_changeset(record, locale, translate, profile)) do
       entity(kind, saved)
     else
       {:error, reason} -> Repo.rollback(reason)
     end
   end
 
-  defp build_changeset(record, locale, texts, profile) do
+  defp put_texts(record, locale, texts) do
     paths = record |> ContentTranslations.fields() |> MapSet.new(& &1.path)
 
-    translations =
-      texts
-      |> Enum.filter(fn {path, _text} -> path in paths end)
-      |> Enum.reduce(record, fn {path, text}, acc ->
-        %{acc | translations: ContentTranslations.put(acc, locale, path, text)}
-      end)
-      |> Map.fetch!(:translations)
-      |> ContentTranslations.prune(record)
+    texts
+    |> Enum.filter(fn {path, _text} -> path in paths end)
+    |> Enum.reduce(record, fn {path, text}, acc ->
+      %{acc | translations: ContentTranslations.put(acc, locale, path, text)}
+    end)
+    |> Map.fetch!(:translations)
+  end
 
+  defp build_changeset(record, locale, translate, profile) do
+    translations = record |> translate.() |> ContentTranslations.prune(record)
     changeset = ContentTranslations.changeset(record, translations)
 
     if locale in Languages.translation_locales(profile),

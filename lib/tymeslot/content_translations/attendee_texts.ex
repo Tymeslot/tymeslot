@@ -27,12 +27,15 @@ defmodule Tymeslot.ContentTranslations.AttendeeTexts do
 
   A copy is stored only for a locale someone booked in, that is one of the
   organiser's translation languages, and in which something was actually
-  translated. A meeting with no copies stores nil.
+  translated. A text a copy leaves out, or holds as nil, reads as the
+  original. A meeting with no copies stores nil.
   """
 
+  alias Tymeslot.Bookings.BookingTitle
   alias Tymeslot.ContentTranslations
   alias Tymeslot.ContentTranslations.Languages
   alias Tymeslot.CustomFields.Snapshot
+  alias Tymeslot.Locales
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
 
@@ -70,18 +73,31 @@ defmodule Tymeslot.ContentTranslations.AttendeeTexts do
   end
 
   @doc """
-  The copies of `slot`, a shared group slot, once a booker carrying
-  `texts` (`build/4`) takes a seat on it: their locale's copy added when
-  the slot has none in that locale yet. A copy the slot already holds is
-  kept, since every booker in that locale reads the same slot, and one equal
-  to the slot's own originals is not added. Nil when there are none.
-  """
-  @spec merge(map(), t() | nil) :: t() | nil
-  def merge(slot, texts) do
-    originals = originals(slot)
+  The copies of `slot`, a shared group slot, once a booker takes a seat on
+  it with `attrs`, the attributes their booking was built with (`build/4`'s,
+  carrying `:attendee_texts`): their locale's copy added when the slot has
+  none in that locale yet. A copy the slot already holds is kept, since every
+  booker in that locale reads the same slot.
 
-    (texts || %{})
-    |> Map.reject(fn {_locale, entry} -> entry == originals end)
+  The booker's copy was built from the texts as they read when they booked,
+  which need not be the slot's: the organiser may have renamed the type
+  since the slot was made, or the booker carried their own questions over
+  from another slot (a seat move). A text whose original differs from the
+  slot's is left out of the copy, so it reads as the slot's original, and a
+  copy left reading as the slot's originals is not added. Nil when there are
+  none.
+  """
+  @spec merge(map(), map()) :: t() | nil
+  def merge(slot, attrs) do
+    slot_originals = originals(slot)
+    booker_originals = originals(attrs)
+
+    (attrs[:attendee_texts] || %{})
+    |> Map.new(fn {locale, entry} ->
+      {locale,
+       Map.filter(entry, fn {key, _text} -> booker_originals[key] == slot_originals[key] end)}
+    end)
+    |> Map.reject(fn {_locale, entry} -> redundant?(entry, slot_originals) end)
     |> Map.merge(slot.attendee_texts || %{})
     |> nil_if_empty()
   end
@@ -91,26 +107,28 @@ defmodule Tymeslot.ContentTranslations.AttendeeTexts do
   (`Tymeslot.Bookings.RescheduleLocation`) written over its stored
   originals, and `location_choice` the booker's new choice, resolved
   against the translated meeting type and venues as `build/4` does for a
-  new booking. Every locale the meeting holds a copy in is rebuilt (and
-  dropped once it reads as the originals), and a one-to-one meeting's own
-  attendee locale is built too, since the new location may be translated
-  where the old one was not. Nil when there is nothing to store.
+  new booking.
+
+  Only the location moves: every other text of a stored copy is the one the
+  attendee booked with, and stays, whatever the meeting type reads now. A
+  copy left reading as the originals is dropped, and a one-to-one meeting's
+  own attendee locale gains a copy of the location alone when it had none
+  and the new location is translated. Nil when there is nothing to store.
   """
   @spec relocated(map(), map() | nil, map(), map()) :: t() | nil
   def relocated(meeting, meeting_type, location_attrs, location_choice) do
     profile = Profiles.get_profile(meeting.organizer_user_id)
-
-    attrs =
-      meeting
-      |> Map.take(@keys)
-      |> Map.merge(Map.take(location_attrs, [:location]))
+    moved = Map.merge(meeting, Map.take(location_attrs, [:location]))
+    originals = originals(moved)
 
     meeting
     |> locales()
-    |> Enum.map(
-      &build(meeting_type, profile, Map.put(attrs, :attendee_locale, &1), location_choice)
-    )
-    |> Enum.reduce(%{}, &Map.merge(&2, &1 || %{}))
+    |> Map.new(fn locale ->
+      location = location(meeting_type, profile, locale, moved.location, location_choice)
+      entry = (meeting.attendee_texts || %{})[locale] || %{}
+      {locale, Map.put(entry, "location", location)}
+    end)
+    |> Map.reject(fn {_locale, entry} -> redundant?(entry, originals) end)
     |> nil_if_empty()
   end
 
@@ -122,39 +140,70 @@ defmodule Tymeslot.ContentTranslations.AttendeeTexts do
   defp locales(meeting),
     do: Enum.uniq(Map.keys(meeting.attendee_texts || %{}) ++ [meeting.attendee_locale])
 
+  # The new location in `locale`, the original where the language is no
+  # longer translated into, or the meeting has no location.
+  defp location(_meeting_type, _profile, _locale, nil, _choice), do: nil
+
+  defp location(meeting_type, profile, locale, original, choice) do
+    case Languages.content_locale(profile, locale) do
+      nil -> original
+      content_locale -> resolve_location(meeting_type, content_locale, choice)
+    end
+  end
+
+  defp resolve_location(meeting_type, locale, location_choice) do
+    meeting_type
+    |> ContentTranslations.localise(locale)
+    |> MeetingTypes.resolve_location(Map.put(location_choice, :content_locale, locale))
+    |> Map.get(:location)
+  end
+
   defp entry(meeting_type, locale, attrs, location_choice) do
     localised = ContentTranslations.localise(meeting_type, locale)
-
-    location =
-      localised
-      |> MeetingTypes.resolve_location(Map.put(location_choice, :content_locale, locale))
-      |> Map.get(:location)
+    originals = originals(attrs)
 
     texts = %{
       "meeting_type" => localised.name,
-      "description" => localised.description || "",
-      "location" => if(is_nil(attrs[:location]), do: nil, else: location),
+      "description" => localised.description,
+      "location" =>
+        if(is_nil(attrs[:location]),
+          do: nil,
+          else: resolve_location(meeting_type, locale, location_choice)
+        ),
       "custom_fields_snapshot" =>
         Snapshot.overlay_texts(attrs[:custom_fields_snapshot] || [], localised)
     }
 
-    if texts != originals(attrs), do: texts
+    if redundant?(texts, originals), do: nil, else: texts
   end
 
   defp originals(fields), do: Map.new(@keys, &{Atom.to_string(&1), Map.get(fields, &1)})
+
+  # A copy that says nothing the originals do not: each of its texts nil
+  # (which reads as the original, `text/3`) or the original's own, a blank
+  # description (nil on the type, "" on the booking) matching a blank one.
+  defp redundant?(entry, originals),
+    do: Enum.all?(entry, fn {key, text} -> is_nil(text) or same?(text, originals[key]) end)
+
+  defp same?(text, original), do: text == original or (blank?(text) and blank?(original))
+
+  defp blank?(nil), do: true
+  defp blank?(""), do: true
+  defp blank?(_text), do: false
 
   defp nil_if_empty(texts) when map_size(texts) == 0, do: nil
   defp nil_if_empty(texts), do: texts
 
   @doc """
   `key` of `meeting` (one of `keys/0`) as a reader in `locale` sees it: the
-  copy the meeting carries in that locale, otherwise the meeting's own value.
+  copy the meeting carries in that locale, otherwise (no copy, or one that
+  leaves this text out or nil) the meeting's own value.
   """
   @spec text(map(), atom(), String.t() | nil) :: term()
   def text(meeting, key, locale) when key in @keys do
     case Map.get(meeting, :attendee_texts) do
       %{^locale => %{} = entry} when is_binary(locale) ->
-        Map.get(entry, Atom.to_string(key), Map.get(meeting, key))
+        Map.get(entry, Atom.to_string(key)) || Map.get(meeting, key)
 
       _no_copy ->
         Map.get(meeting, key)
@@ -168,5 +217,24 @@ defmodule Tymeslot.ContentTranslations.AttendeeTexts do
   @spec as_read_in(map(), String.t() | nil) :: map()
   def as_read_in(meeting, locale) do
     Enum.reduce(@keys, meeting, fn key, acc -> Map.put(acc, key, text(meeting, key, locale)) end)
+  end
+
+  @doc """
+  `meeting` as its attendee reads it in `locale`, for a page or a template
+  that renders the meeting itself: their copies of its texts (`as_read_in/2`)
+  and its title in their language, the type named as they read it. `locale`
+  is a stored one, normalised as their emails normalise it
+  (`Tymeslot.Meetings.Recipient`): one no longer supported, or none, is the
+  booking pages' fallback.
+  """
+  @spec attendee_view(map(), String.t() | nil) :: map()
+  def attendee_view(meeting, locale) do
+    attendee_meeting =
+      as_read_in(meeting, Locales.acceptable(locale) || Locales.booking_default_locale())
+
+    %{
+      attendee_meeting
+      | title: BookingTitle.localise_with_type(meeting, attendee_meeting.meeting_type)
+    }
   end
 end

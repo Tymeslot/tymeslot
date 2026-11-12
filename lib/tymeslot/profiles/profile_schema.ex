@@ -12,6 +12,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
+  alias Tymeslot.ContentTranslations.Languages
   alias Tymeslot.Locales
   alias Tymeslot.Profiles.ReservedPaths
   alias Tymeslot.Security.EncryptedString
@@ -358,8 +359,9 @@ defmodule Tymeslot.Profiles.ProfileSchema do
 
   @doc """
   Focused changeset for the booking languages: `content_locale` (the
-  language the organiser's texts are written in, nil for the booking pages'
-  fallback), `translation_locales` and `offer_all_locales`.
+  language the organiser's texts are written in; left unset, the one they
+  read as until now, `Languages.original/1`, is saved), `translation_locales`
+  and `offer_all_locales`.
 
   Every code must be a supported locale, a translation language may not be
   the original, and none may be listed twice. Removing a translation language
@@ -371,15 +373,25 @@ defmodule Tymeslot.Profiles.ProfileSchema do
 
     profile
     |> cast(attrs, [:content_locale, :translation_locales, :offer_all_locales])
+    |> pin_original(profile)
     |> validate_inclusion(:content_locale, supported,
       message: dgettext_noop("errors", "is not a supported language")
     )
-    |> validate_required([:offer_all_locales])
+    |> validate_required([:content_locale, :offer_all_locales])
     |> validate_translation_locales(supported)
   end
 
+  # An unset original is the booking pages' fallback, which an admin can
+  # move onto one of the translation languages. Saved, it is the language the
+  # texts have been read as until now, and no longer follows the fallback.
+  defp pin_original(changeset, profile) do
+    if get_field(changeset, :content_locale),
+      do: changeset,
+      else: put_change(changeset, :content_locale, Languages.original(profile))
+  end
+
   defp validate_translation_locales(changeset, supported) do
-    original = get_field(changeset, :content_locale) || Locales.booking_default_locale()
+    original = get_field(changeset, :content_locale)
     codes = get_field(changeset, :translation_locales) || []
 
     cond do

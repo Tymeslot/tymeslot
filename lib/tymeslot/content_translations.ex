@@ -20,7 +20,9 @@ defmodule Tymeslot.ContentTranslations do
   `:outdated` (`status/3`).
 
   A blank translation, or none, falls back to the original, and a blank
-  original stays blank: there is nothing to translate.
+  original stays blank: there is nothing to translate. So does an outdated
+  one: an invitee reads the original until the organiser updates the
+  translation, or confirms it as still correct (`confirm/3`).
 
   Which languages a profile offers is `Tymeslot.ContentTranslations.Languages`;
   listing, counting and saving an organiser's translations is
@@ -251,7 +253,8 @@ defmodule Tymeslot.ContentTranslations do
 
   @doc """
   The text at `path` of `record` in `locale`: the translation when there is a
-  non-blank one and the original is not blank, otherwise the original.
+  non-blank one written against the current original, which is not blank,
+  otherwise the original.
   """
   @spec text(struct(), path(), String.t() | nil) :: String.t() | nil
   def text(record, path, locale) do
@@ -324,6 +327,38 @@ defmodule Tymeslot.ContentTranslations do
   end
 
   @doc """
+  `record`'s translations with the text at each of `paths` in `locale`
+  confirmed as still correct for the current original: its text kept, its
+  source re-stamped, so an outdated translation counts as translated again.
+  A path with no translation, or none in `record`, is left alone.
+  """
+  @spec confirm(struct(), String.t(), [path()]) :: map()
+  def confirm(record, locale, paths) when is_list(paths) do
+    translations = Map.get(record, :translations) || %{}
+
+    case Map.get(translations, locale) do
+      %{} = entries ->
+        originals = record |> fields() |> Map.new(&{&1.path, &1.original})
+
+        confirmed =
+          Enum.reduce(paths, entries, fn path, acc ->
+            case {acc, originals} do
+              {%{^path => %{} = entry}, %{^path => original}} ->
+                Map.put(acc, path, Map.put(entry, "source", source(original)))
+
+              _untranslated ->
+                acc
+            end
+          end)
+
+        Map.put(translations, locale, confirmed)
+
+      _none ->
+        translations
+    end
+  end
+
+  @doc """
   `translations` without the paths `record` no longer has (a deleted
   question, a removed location, an option whose key changed), and without
   the languages no longer supported: texts nobody can be shown any more,
@@ -359,6 +394,26 @@ defmodule Tymeslot.ContentTranslations do
     |> cast(%{translations: translations}, [:translations])
     |> validate_change(:translations, fn :translations, value -> errors(value, caps) end)
   end
+
+  @doc """
+  `changeset`, creating a record, carrying `translations` taken over from
+  another record (a copy of a meeting type): pruned to the paths and
+  languages the new record has (`prune/2`) and checked as `changeset/2`
+  checks them, its errors added to `changeset`.
+  """
+  @spec put_copied(Ecto.Changeset.t(), map() | nil) :: Ecto.Changeset.t()
+  def put_copied(%Ecto.Changeset{} = changeset, translations) when is_map(translations) do
+    record = apply_changes(changeset)
+    checked = changeset(record, prune(translations, record))
+
+    Enum.reduce(
+      checked.errors,
+      put_change(changeset, :translations, get_field(checked, :translations)),
+      fn {field, {message, opts}}, acc -> add_error(acc, field, message, opts) end
+    )
+  end
+
+  def put_copied(%Ecto.Changeset{} = changeset, nil), do: changeset
 
   defp errors(translations, caps) do
     supported = Locales.supported_codes()
@@ -495,9 +550,13 @@ defmodule Tymeslot.ContentTranslations do
     end)
   end
 
+  # An outdated translation was written for an original that has changed
+  # since, so it may say something the original no longer does.
   defp pick(original, entries, path) do
     with false <- blank?(original),
-         %{"text" => text} when is_binary(text) and text != "" <- Map.get(entries, path) do
+         %{"text" => text, "source" => source} when is_binary(text) and text != "" <-
+           Map.get(entries, path),
+         true <- source == source(original) do
       text
     else
       _untranslated -> original

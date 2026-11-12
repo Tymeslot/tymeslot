@@ -4,7 +4,7 @@ defmodule Tymeslot.ContentTranslations.Languages do
   profile shared by every booking page:
 
     * the **original** language, the one their texts are written in
-      (`content_locale`, else the booking pages' fallback), always offered;
+      (`content_locale`, `original/1`), always offered;
     * the **translation** languages (`translation_locales`), the only ones
       their texts are translated into;
     * whether the booking page is offered in **every** interface language
@@ -17,12 +17,24 @@ defmodule Tymeslot.ContentTranslations.Languages do
 
   alias Tymeslot.Locales
 
-  @doc "The language the organiser's texts are written in."
+  @doc """
+  The language the organiser's texts are written in: `content_locale`, which
+  saving the booking languages always sets
+  (`Tymeslot.Profiles.update_booking_languages/2`).
+
+  Unset, it is the booking pages' fallback, which an admin can change. A
+  fallback since moved onto one of the organiser's translation languages
+  cannot be their original (those texts are translations, and stay shown),
+  so the first supported language they do not translate into stands in.
+  """
   @spec original(map() | nil) :: String.t()
   def original(profile) do
     case profile && Map.get(profile, :content_locale) do
-      code when is_binary(code) -> if Locales.acceptable?(code), do: code, else: fallback()
-      _unset -> fallback()
+      code when is_binary(code) ->
+        if Locales.acceptable?(code), do: code, else: fallback(profile)
+
+      _unset ->
+        fallback(profile)
     end
   end
 
@@ -69,6 +81,57 @@ defmodule Tymeslot.ContentTranslations.Languages do
   def resolve(profile, candidates) when is_list(candidates),
     do: Enum.find(candidates, original(profile), &offers?(profile, &1))
 
+  @typedoc """
+  What a visitor's language may come from, highest priority first:
+
+    * `:picked` - the language the visitor chose themselves: a `?locale=`
+      on the URL, else the language switcher's choice remembered in the
+      session;
+    * `:booked` - the language a meeting was booked in
+      (`attendee_locale`), on that meeting's own pages;
+    * `:browser` - the browser's `Accept-Language` tags, highest weight
+      first.
+  """
+  @type preferences :: [picked: term(), booked: term(), browser: [term()]]
+
+  @doc """
+  The page language for a visitor, among the languages the organiser offers
+  (`offered/1`): the visitor's own pick, else the language their meeting was
+  booked in, else the first browser language offered, else the original.
+
+  A pick the organiser does not offer (one remembered from before they
+  restricted their languages, or from another organiser's page) is not
+  passed over for the next candidate: the visitor gets the original, the
+  page's default language. `stale_pick?/2` tells the caller so, to replace
+  the remembered choice.
+  """
+  @spec visitor_locale(map() | nil, preferences()) :: String.t()
+  def visitor_locale(profile, preferences) do
+    picked = Keyword.get(preferences, :picked)
+
+    cond do
+      offers?(profile, picked) ->
+        picked
+
+      Locales.acceptable?(picked) ->
+        original(profile)
+
+      true ->
+        resolve(profile, [
+          Keyword.get(preferences, :booked) | Keyword.get(preferences, :browser, [])
+        ])
+    end
+  end
+
+  @doc """
+  Whether `picked`, the visitor's own choice of language, is one the
+  booking page cannot be shown in, so `visitor_locale/2` set it aside for the
+  original.
+  """
+  @spec stale_pick?(map() | nil, term()) :: boolean()
+  def stale_pick?(profile, picked),
+    do: Locales.acceptable?(picked) and not offers?(profile, picked)
+
   @doc """
   The language the organiser's texts are shown in on a page in `locale`:
   `locale` when it is one of their translation languages, else nil (the
@@ -82,5 +145,13 @@ defmodule Tymeslot.ContentTranslations.Languages do
        do: locale
   end
 
-  defp fallback, do: Locales.booking_default_locale()
+  defp fallback(profile) do
+    translations = translation_locales(profile)
+
+    Enum.find(
+      [Locales.booking_default_locale(), Locales.default_locale() | Locales.supported_codes()],
+      Locales.booking_default_locale(),
+      &(&1 not in translations)
+    )
+  end
 end

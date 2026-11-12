@@ -207,6 +207,62 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
     end
   end
 
+  describe "confirm/4" do
+    setup %{user: user, meeting_type: meeting_type} do
+      {:ok, _saved} =
+        Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{
+          "name" => "Erstgespräch"
+        })
+
+      {:ok, _renamed} =
+        MeetingTypes.update_meeting_type(Repo.get!(MeetingTypeSchema, meeting_type.id), %{
+          "name" => "Discovery call"
+        })
+
+      :ok
+    end
+
+    test "marks an outdated translation as still correct, without changing its text", %{
+      user: user,
+      meeting_type: meeting_type
+    } do
+      progress = fn -> user.id |> Catalogue.items() |> Catalogue.progress(["de"]) end
+      assert %{"de" => %{outdated: 1}} = progress.()
+
+      assert {:ok, %{record: confirmed}} =
+               Catalogue.confirm(user.id, {:meeting_type, meeting_type.id}, "de", ["name"])
+
+      reloaded = Repo.get!(MeetingTypeSchema, meeting_type.id)
+      assert reloaded.translations == confirmed.translations
+      assert ContentTranslations.status(reloaded, "name", "de") == :translated
+      assert ContentTranslations.translation(reloaded, "de", "name") == "Erstgespräch"
+      assert ContentTranslations.localise(reloaded, "de").name == "Erstgespräch"
+      assert %{"de" => %{outdated: 0, translated: 1}} = progress.()
+    end
+
+    test "is not found for another user's entity", %{meeting_type: meeting_type} do
+      other = insert(:user)
+      insert(:profile, user: other, translation_locales: ["de"])
+
+      assert {:error, :not_found} =
+               Catalogue.confirm(other.id, {:meeting_type, meeting_type.id}, "de", ["name"])
+
+      reloaded = Repo.get!(MeetingTypeSchema, meeting_type.id)
+      assert ContentTranslations.status(reloaded, "name", "de") == :outdated
+    end
+
+    test "refuses a language that is not a translation language", %{
+      user: user,
+      meeting_type: meeting_type
+    } do
+      assert {:error, %Changeset{} = changeset} =
+               Catalogue.confirm(user.id, {:meeting_type, meeting_type.id}, "fr", ["name"])
+
+      assert [{:translations, {_message, opts}}] = changeset.errors
+      assert opts[:locale] == "fr"
+    end
+  end
+
   describe "TranslationQueries.lock/1" do
     test "re-reads the translations a stale record was read without", %{
       meeting_type: meeting_type
@@ -222,6 +278,19 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
 
       assert locked.translations == committed
       assert locked.name == meeting_type.name
+    end
+
+    # A translation is stamped against the original it is saved beside, so
+    # the originals are the locked row's, not those of the caller's read.
+    test "re-reads the originals a stale record was read with", %{meeting_type: meeting_type} do
+      meeting_type
+      |> Changeset.change(name: "Discovery call")
+      |> Repo.update!()
+
+      assert {:ok, {:ok, locked}} =
+               Repo.transaction(fn -> TranslationQueries.lock(meeting_type) end)
+
+      assert locked.name == "Discovery call"
     end
 
     test "is not found for a row that has gone", %{meeting_type: meeting_type} do

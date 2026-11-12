@@ -104,6 +104,47 @@ defmodule Tymeslot.ContentTranslationsTest do
       assert [%{name: "Erstgespräch"}] = localised.meeting_types
     end
 
+    test "shows the original for an outdated translation, on every translated record" do
+      stale = fn text -> entry(text, "an original since changed") end
+
+      type =
+        meeting_type(%{
+          "de" => %{
+            "name" => stale.("Erstgespräch"),
+            "description" => entry("Ein erstes Gespräch", "A first chat"),
+            "custom_fields/q1/label" => stale.("Ihre Rolle"),
+            "custom_fields/q1/options/dev/label" => stale.("Entwickler"),
+            "locations/l1/details" => stale.("Zweimal klingeln")
+          }
+        })
+
+      localised = ContentTranslations.localise(type, "de")
+
+      assert localised.name == "Intro call"
+      assert localised.description == "Ein erstes Gespräch"
+      assert [%{label: "Your role", options: [%{label: "Developer"}]}] = localised.custom_fields
+      assert [%{details: "Ring twice"}, _online] = localised.locations
+
+      venue = %VenueSchema{name: "Hall", translations: %{"de" => %{"name" => stale.("Saal")}}}
+      assert ContentTranslations.localise(venue, "de").name == "Hall"
+
+      page = %BookingPageSchema{
+        name: "Coaching",
+        booking_heading: "Book coaching",
+        translations: %{"de" => %{"booking_heading" => stale.("Coaching buchen")}}
+      }
+
+      profile = %ProfileSchema{
+        headline: "Coach",
+        booking_heading: "Book coaching",
+        meeting_types: [],
+        translations: %{"de" => %{"headline" => stale.("Trainer")}}
+      }
+
+      assert %{headline: "Coach", booking_heading: "Book coaching"} =
+               ContentTranslations.localise(%{profile | booking_page: page}, "de")
+    end
+
     test "leaves plain maps, untranslated structs and a nil locale untouched" do
       demo_persona = %{name: "Demo", booking_heading: "Hi", translations: %{"de" => %{}}}
       type = meeting_type(%{"de" => %{"name" => entry("Erstgespräch", "Intro call")}})
@@ -168,6 +209,35 @@ defmodule Tymeslot.ContentTranslationsTest do
       assert ContentTranslations.put(type, "de", "name", "   ") == %{
                "fr" => %{"name" => entry("Premier appel", "Intro call")}
              }
+    end
+  end
+
+  describe "confirm/3" do
+    test "re-stamps an outdated translation against the current original, keeping its text" do
+      type =
+        meeting_type(%{
+          "de" => %{
+            "name" => entry("Erstgespräch", "First call"),
+            "description" => entry("Ein erstes Gespräch", "An older description")
+          }
+        })
+
+      confirmed = %{type | translations: ContentTranslations.confirm(type, "de", ["name"])}
+
+      assert ContentTranslations.status(confirmed, "name", "de") == :translated
+      assert ContentTranslations.translation(confirmed, "de", "name") == "Erstgespräch"
+      assert ContentTranslations.localise(confirmed, "de").name == "Erstgespräch"
+      # Only the paths asked for.
+      assert ContentTranslations.status(confirmed, "description", "de") == :outdated
+    end
+
+    test "leaves an untranslated path, an unknown one and another language alone" do
+      type = meeting_type(%{"de" => %{"name" => entry("Erstgespräch", "First call")}})
+
+      assert ContentTranslations.confirm(type, "de", ["description", "no/such/path"]) ==
+               type.translations
+
+      assert ContentTranslations.confirm(type, "fr", ["name"]) == type.translations
     end
   end
 

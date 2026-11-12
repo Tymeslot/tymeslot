@@ -147,7 +147,9 @@ defmodule Tymeslot.MeetingTypes do
   @doc """
   Creates a new meeting type.
 
-  `opts` are forwarded to the changeset for payment-validation context.
+  `opts` are forwarded to the changeset for payment-validation context, bar
+  `:translations`, a copy's translations
+  (`MeetingTypeQueries.create_meeting_type/2`).
   """
   @spec create_meeting_type(map(), keyword()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t() | :not_found}
@@ -186,7 +188,10 @@ defmodule Tymeslot.MeetingTypes do
     attrs = Duplication.copy_attrs(source)
 
     with :ok <- FormValidation.check(user_id, attrs) do
-      create_meeting_type(attrs, FormMapper.payment_opts(user_id))
+      create_meeting_type(
+        attrs,
+        [translations: Duplication.translations(source)] ++ FormMapper.payment_opts(user_id)
+      )
     end
   end
 

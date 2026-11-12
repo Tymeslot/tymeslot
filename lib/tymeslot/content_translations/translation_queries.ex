@@ -10,19 +10,30 @@ defmodule Tymeslot.ContentTranslations.TranslationQueries do
   alias Tymeslot.Repo
 
   @doc """
-  `record` with its `translations` as they stand now, its row locked
-  `FOR UPDATE` until the surrounding transaction ends, so a save built on
-  them cannot overwrite another committed in the meantime. Only the
-  translations are re-read; the rest of `record` is the caller's.
+  `record` as its row stands now, locked `FOR UPDATE` until the surrounding
+  transaction ends, so a save built on it cannot overwrite another committed
+  in the meantime, nor stamp its translations against originals since
+  changed. The associations and virtual fields `record` had loaded are
+  carried over as they were.
   """
   @spec lock(struct()) :: {:ok, struct()} | {:error, :not_found}
   def lock(%schema{id: id} = record) do
-    query = from(r in schema, where: r.id == ^id, lock: "FOR UPDATE", select: r.translations)
+    query = from(r in schema, where: r.id == ^id, lock: "FOR UPDATE")
 
     case Repo.one(query) do
       nil -> {:error, :not_found}
-      translations -> {:ok, %{record | translations: translations}}
+      locked -> {:ok, struct(locked, caller_fields(record))}
     end
+  end
+
+  # The row carries columns alone: what the caller had loaded beyond them
+  # (associations, virtual fields) is the caller's.
+  defp caller_fields(%schema{} = record) do
+    keys = schema.__schema__(:associations) ++ schema.__schema__(:virtual_fields)
+
+    record
+    |> Map.take(keys)
+    |> Map.reject(fn {_key, value} -> match?(%Ecto.Association.NotLoaded{}, value) end)
   end
 
   @doc "Writes the translations in `changeset`."

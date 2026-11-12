@@ -73,7 +73,7 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   @doc """
   The location attributes a reschedule writes, or `%{}` when it keeps the
   meeting where it is. They carry the attendees' copies of the booking's
-  texts (`attendee_texts`), every locale's rebuilt for the new location
+  texts (`attendee_texts`), every locale's location moved to the new one
   (`AttendeeTexts.relocated/4`), nil when nothing in them is translated.
 
   `params` carries the booker's `:location_option_id` and, for a phone option

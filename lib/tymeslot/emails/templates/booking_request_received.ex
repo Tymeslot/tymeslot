@@ -22,7 +22,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
 
   alias Tymeslot.Bookings.MeetingLinks
 
-  alias Tymeslot.Emails.AppointmentBuilder
+  alias Tymeslot.ContentTranslations.AttendeeTexts
   alias Tymeslot.Emails.RecipientLocale
 
   alias Tymeslot.Emails.Shared.{
@@ -59,7 +59,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
       meeting =
         meeting
         |> MeetingLinks.with_current_links()
-        |> AppointmentBuilder.attendee_view(locale)
+        |> AttendeeTexts.attendee_view(locale)
 
       kind = if rescheduled?(meeting), do: :reschedule, else: :booking
       attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)
