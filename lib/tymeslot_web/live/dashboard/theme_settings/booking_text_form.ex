@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
             id={"#{@id}-translations"}
             profile={@profile}
             editing_locale={@editing_locale}
-            user_id={@profile.user_id}
+            user_id={@user_id}
             kind={translation_kind(@profile)}
             record={translation_record(@profile)}
             paths={text_paths()}

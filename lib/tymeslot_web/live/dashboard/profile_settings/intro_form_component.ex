@@ -16,7 +16,9 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.IntroFormComponent do
 
   With a translation language, a language bar sits above the form, and
   choosing a translation language swaps the form for the translation editor
-  (`TymeslotWeb.Dashboard.Languages.TranslatableForm`).
+  (`TymeslotWeb.Dashboard.Languages.TranslatableForm`). A headline or bio
+  typed and not yet saved is saved first, so the translator works from the
+  current original; when that save is refused the form stays, showing why.
 
   The form keeps what the organiser has typed when the parent re-renders it
   (after another settings form saves, for instance): it is built from the
@@ -33,6 +35,25 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.IntroFormComponent do
   alias TymeslotWeb.Dashboard.Languages.TranslatableForm
 
   @impl Phoenix.LiveComponent
+  def update(%{save_original: locale}, socket) do
+    case unsaved_params(socket.assigns.form) do
+      nil ->
+        send(self(), {:editing_locale, locale})
+        {:ok, socket}
+
+      params ->
+        case save(socket, params) do
+          {:ok, socket} ->
+            send(self(), {:editing_locale, locale})
+            {:ok, socket}
+
+          {:error, socket} ->
+            Flash.error(dgettext("dashboard_profile", "Couldn't save your headline and bio"))
+            {:ok, socket}
+        end
+    end
+  end
+
   def update(assigns, socket) do
     socket =
       socket
@@ -59,27 +80,40 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.IntroFormComponent do
   end
 
   def handle_event("save", %{"profile_intro" => params}, socket) do
+    {_result, socket} = save(socket, params)
+    {:noreply, socket}
+  end
+
+  defp save(socket, params) do
     with {:ok, sanitized} <- sanitize(params, socket),
          {:ok, profile} <- Profiles.update_intro(socket.assigns.profile, sanitized) do
       send(self(), {:profile_updated, profile})
       Flash.info(dgettext("dashboard_profile", "Headline and bio saved"))
 
-      {:noreply,
+      {:ok,
        assign(socket,
          profile: profile,
          form: build_form(ProfileSchema.intro_changeset(profile, %{}))
        )}
     else
       {:error, %Changeset{} = changeset} ->
-        {:noreply, assign(socket, :form, build_form(Map.put(changeset, :action, :update)))}
+        {:error, assign(socket, :form, build_form(Map.put(changeset, :action, :update)))}
 
       {:error, field_errors} ->
         Flash.error(dgettext("dashboard_profile", "Couldn't save your headline and bio"))
         changeset = refused(socket.assigns.profile, params, field_errors)
 
-        {:noreply, assign(socket, :form, build_form(Map.put(changeset, :action, :update)))}
+        {:error, assign(socket, :form, build_form(Map.put(changeset, :action, :update)))}
     end
   end
+
+  # What was typed and differs from the saved profile, or nil: a form that
+  # was never changed, or was changed back, has nothing to save.
+  defp unsaved_params(%{source: %Changeset{changes: changes}, params: params})
+       when changes != %{} and params != %{},
+       do: params
+
+  defp unsaved_params(_form), do: nil
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
@@ -91,8 +125,9 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.IntroFormComponent do
         id={"intro-translations-#{@profile.id}"}
         profile={@profile}
         editing_locale={@editing_locale}
-        user_id={@profile.user_id}
+        user_id={@user_id}
         kind={:profile}
+        save_original={@myself}
         record={@profile}
         paths={~w(headline bio)}
       >

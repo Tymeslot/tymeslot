@@ -108,7 +108,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
         id={"meeting-type-translations-#{@type.id}"}
         profile={@profile}
         editing_locale={@editing_locale}
-        user_id={@type.user_id}
+        user_id={@current_user.id}
         kind={:meeting_type}
         record={@type}
         class="mb-6"

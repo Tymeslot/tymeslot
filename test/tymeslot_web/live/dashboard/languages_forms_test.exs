@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesFormsTest do
   # tells the dashboard to switch (`send/2`): two messages the LiveView
   # handles after the click, so the test waits for each before reading back.
   defp choose(view, component, locale) do
-    view |> element("##{component}-bar button[data-locale='#{locale}']") |> render_click()
+    view |> element("##{component}-bar-#{locale}") |> render_click()
     _editor = :sys.get_state(view.pid)
     _dashboard = :sys.get_state(view.pid)
     :ok
@@ -170,7 +170,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesFormsTest do
       choose(view, component, "fr")
 
       assert stored(Repo.reload!(profile), "de", "headline") == "Karrierecoach"
-      assert has_element?(view, "##{component}-bar button[data-locale='fr'][aria-pressed='true']")
+      assert has_element?(view, "##{component}-bar-fr[aria-pressed='true']")
       refute has_element?(view, "##{component}-editor input[value='Karrierecoach']")
     end
 

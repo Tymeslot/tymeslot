@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetErrors
   alias TymeslotWeb.Dashboard.BookingLinkShare
+  alias TymeslotWeb.Dashboard.Languages.{EditingLocale, TranslatableForm}
   alias TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.ServiceSettings.ComponentView
@@ -62,7 +63,23 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      )}
   end
 
-  def update(assigns, socket) do
+  # The meeting type editor closing once its translation editor has saved
+  # what was typed in it (`close_edit_overlay`).
+  def update(%{close_edit_overlay: true}, socket), do: {:ok, close_edit_overlay(socket)}
+
+  # A click on a language bar re-renders this section with only the editing
+  # language changed; the open editor takes it from the re-render, and
+  # nothing loaded below depends on it.
+  def update(%{editing_locale: locale} = assigns, socket)
+      when is_binary(locale) or is_nil(locale) do
+    if EditingLocale.only_change?(assigns, socket),
+      do: {:ok, assign(socket, :editing_locale, locale)},
+      else: load(assigns, socket)
+  end
+
+  def update(assigns, socket), do: load(assigns, socket)
+
+  defp load(assigns, socket) do
     # Merge new assigns into socket
     socket = assign(socket, assigns)
 
@@ -191,13 +208,22 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     {:noreply, close_form(socket)}
   end
 
+  # Edits auto-save as they happen, so closing only tears down the overlay,
+  # once a translation typed in the editor's language bar has been saved too
+  # (`TranslatableForm.leave/2`, which comes back as `close_edit_overlay:
+  # true`).
   def handle_event("close_edit_overlay", _params, socket) do
-    # Edits auto-save as they happen, so closing only tears down the overlay.
-    # Refresh the list view from the database so it reflects the saved state
-    # — the data is already persisted regardless of how the user leaves.
-    send(self(), {:meeting_type_changed})
+    %{editing_type: type, profile: profile, myself: myself} = socket.assigns
 
-    {:noreply, close_form(socket)}
+    if type && TranslatableForm.translating?(profile, socket.assigns[:editing_locale]) do
+      TranslatableForm.leave("meeting-type-translations-#{type.id}", fn ->
+        send_update(myself, close_edit_overlay: true)
+      end)
+
+      {:noreply, socket}
+    else
+      {:noreply, close_edit_overlay(socket)}
+    end
   end
 
   def handle_event("toggle_type", %{"id" => id}, socket) do
@@ -584,6 +610,13 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
         "dashboard_integrations",
         "Could not duplicate this meeting type. Check its settings, then try again."
       )
+
+  # Refresh the list view from the database so it reflects the saved state:
+  # the data is already persisted regardless of how the user leaves.
+  defp close_edit_overlay(socket) do
+    send(self(), {:meeting_type_changed})
+    close_form(socket)
+  end
 
   defp close_form(socket) do
     assign(socket, editing_type: nil, show_edit_overlay: false, form_id: nil)

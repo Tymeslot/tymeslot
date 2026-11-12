@@ -6,7 +6,10 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueFormModal do
 
   Editing a saved venue with a translation language, the form sits under the
   language bar, and a translation language swaps it for the translation
-  editor (`TymeslotWeb.Dashboard.Languages.TranslatableForm`).
+  editor (`TymeslotWeb.Dashboard.Languages.TranslatableForm`). Leaving the
+  original saves what was typed in it first, and closing the modal (Close,
+  the X, Escape) saves a translation typed in the editor, through
+  `LocationsComponent`.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -21,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueFormModal do
   attr :venue, VenueSchema, default: nil, doc: "the venue being edited, for its translations"
   attr :profile, :any, default: nil, doc: "for the booking languages"
   attr :editing_locale, :string, default: nil
+  attr :user_id, :integer, default: nil, doc: "the organiser, for the translations"
 
   @spec venue_form_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def venue_form_modal(assigns) do
@@ -51,9 +55,10 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueFormModal do
           id={"venue-translations-#{@venue.id}"}
           profile={@profile}
           editing_locale={@editing_locale}
-          user_id={@venue.user_id}
+          user_id={@user_id}
           kind={:venue}
           record={@venue}
+          save_original={@myself}
         >
           <.venue_form form={@form} mode={@mode} myself={@myself} />
           <:actions>

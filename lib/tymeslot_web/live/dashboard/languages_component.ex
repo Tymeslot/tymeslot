@@ -12,6 +12,12 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
 
   Removing a translation language asks first (`RemoveLanguageModal`); its
   texts are kept, so adding the language again brings them back.
+
+  Leaving the review page for all languages, or turning "Only missing or
+  outdated" on or off (which takes away the editors of what is then hidden),
+  first has every editor on the page save what was typed in it
+  (`TranslationEditor.leave/3`); the page moves on once each has, and stays
+  where it is if one could not.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -37,7 +43,8 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
        only_open: false,
        progress: %{},
        items: nil,
-       review_locale: nil
+       review_locale: nil,
+       pending: nil
      )}
   end
 
@@ -50,6 +57,22 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   end
 
   def update(%{translation_saved: _entity}, socket), do: {:ok, load(socket)}
+
+  # One editor has saved what was typed in it before `action`; the last one
+  # to do so runs it.
+  def update(%{drafts_saved: {action, editor}}, socket) do
+    case socket.assigns.pending do
+      {^action, editors} ->
+        editors = MapSet.delete(editors, editor)
+
+        if MapSet.size(editors) == 0,
+          do: {:ok, socket |> assign(:pending, nil) |> run(action)},
+          else: {:ok, assign(socket, :pending, {action, editors})}
+
+      _other ->
+        {:ok, socket}
+    end
+  end
 
   def update(assigns, socket) do
     socket = assign(socket, assigns)
@@ -148,7 +171,46 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   end
 
   def handle_event("toggle_only_open", _params, socket),
-    do: {:noreply, update(socket, :only_open, &(not &1))}
+    do: {:noreply, after_drafts_saved(socket, :toggle_only_open)}
+
+  def handle_event("leave_review", _params, socket),
+    do: {:noreply, after_drafts_saved(socket, :leave_review)}
+
+  defp after_drafts_saved(socket, action) do
+    case editor_ids(socket.assigns) do
+      [] ->
+        run(socket, action)
+
+      ids ->
+        myself = socket.assigns.myself
+
+        for id <- ids do
+          TranslationEditor.leave(id, :review, fn ->
+            send_update(myself, drafts_saved: {action, id})
+          end)
+        end
+
+        assign(socket, :pending, {action, MapSet.new(ids)})
+    end
+  end
+
+  defp run(socket, :toggle_only_open), do: update(socket, :only_open, &(not &1))
+
+  defp run(socket, :leave_review) do
+    send(self(), {:patch, ~p"/dashboard/languages"})
+    socket
+  end
+
+  defp editor_ids(%{review_locale: locale, items: items, only_open: only_open})
+       when is_binary(locale) do
+    for {group, entities} <- sections(items, locale, only_open),
+        entity <- entities,
+        do: editor_id(group, entity)
+  end
+
+  defp editor_ids(_assigns), do: []
+
+  defp editor_id(group, entity), do: "translation-#{group}-#{entity.kind}-#{entity.id}"
 
   defp save(socket, attrs) do
     case Profiles.update_booking_languages(socket.assigns.profile, attrs) do
@@ -212,6 +274,8 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
       <RemoveLanguageModal.remove_language_modal
         :if={@removing_locale}
         locale={@removing_locale}
+        original={@original}
+        offer_all={@offer_all}
         myself={@myself}
       />
     </div>
@@ -260,7 +324,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
       description={
         dgettext(
           "dashboard_languages",
-          "Visitors who choose one of these languages see your texts translated. A text you leave untranslated shows in the original."
+          "Invitees who choose one of these languages see your texts translated. A text you leave untranslated, or whose translation is outdated, shows in the original."
         )
       }
       icon="hero-language"
@@ -340,11 +404,11 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
         <.setting_row
           id="offer-all-locales"
           control={:switch}
-          label={dgettext("dashboard_languages", "Show the booking page in all languages")}
+          label={dgettext("dashboard_languages", "Offer the booking page in every language")}
           description={
             dgettext(
               "dashboard_languages",
-              "Visitors in other languages see your texts in %{language}; buttons, dates and emails are translated.",
+              "You decide which languages invitees can choose. On: every language Tymeslot supports, with your texts in %{language} wherever you have no translation (buttons, dates and emails are always translated). Off: only %{language} and your translation languages.",
               language: Labels.language_name(@original)
             )
           }
@@ -420,14 +484,16 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
         />
         <.progress_summary progress={@progress} />
       </div>
-      <.action_link
-        patch={~p"/dashboard/languages"}
+      <.action_button
         variant={:ghost}
         size={:sm}
         icon="hero-arrow-left"
+        phx-click="leave_review"
+        phx-target={@myself}
+        data-testid="all-languages"
       >
         {dgettext("dashboard_languages", "All languages")}
-      </.action_link>
+      </.action_button>
     </div>
 
     <.setting_row
@@ -463,7 +529,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
       <.card :for={entity <- entities} title={entity_title(group, entity)}>
         <.live_component
           module={TranslationEditor}
-          id={"translation-#{group}-#{entity.kind}-#{entity.id}"}
+          id={editor_id(group, entity)}
           user_id={@user_id}
           kind={entity.kind}
           record={entity.record}

@@ -1,10 +1,13 @@
 defmodule TymeslotWeb.Dashboard.Languages.RemoveLanguageModal do
   @moduledoc """
   Confirmation before a translation language is removed from the Languages
-  page. Removing it stops the booking page offering it, but keeps its
-  translations, so adding the language again brings them back
-  (`Tymeslot.Profiles.update_booking_languages/2`). Its events go to the
-  owning `LanguagesComponent` (`@myself`).
+  page. What removing it means for invitees depends on which languages the
+  organiser offers: offering only their own, the booking page stops offering
+  it; offering every language, the page stays available in it, with the
+  original texts (`Tymeslot.ContentTranslations.Languages.content_locale/2`).
+  Either way its translations are kept, so adding the language again brings
+  them back (`Tymeslot.Profiles.ProfileSchema.booking_languages_changeset/2`).
+  Its events go to the owning `LanguagesComponent` (`@myself`).
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -13,11 +16,17 @@ defmodule TymeslotWeb.Dashboard.Languages.RemoveLanguageModal do
   alias TymeslotWeb.Dashboard.Languages.Labels
 
   attr :locale, :string, required: true
+  attr :original, :string, required: true, doc: "the original language"
+  attr :offer_all, :boolean, required: true, doc: "whether every language is offered"
   attr :myself, :any, required: true
 
   @spec remove_language_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def remove_language_modal(assigns) do
-    assigns = assign(assigns, :language, Labels.language_name(assigns.locale))
+    assigns =
+      assign(assigns,
+        language: Labels.language_name(assigns.locale),
+        original_language: Labels.language_name(assigns.original)
+      )
 
     ~H"""
     <.confirm_modal
@@ -29,11 +38,19 @@ defmodule TymeslotWeb.Dashboard.Languages.RemoveLanguageModal do
       on_confirm={JS.push("confirm_remove", target: @myself)}
       data-testid="confirm-remove-language"
     >
-      <p>
+      <p :if={not @offer_all} data-testid="remove-language-effect">
         {dgettext(
           "dashboard_languages",
-          "Visitors will no longer see your texts in %{language}.",
+          "Your booking page will no longer be offered in %{language}: invitees can choose only the languages you keep.",
           language: @language
+        )}
+      </p>
+      <p :if={@offer_all} data-testid="remove-language-effect">
+        {dgettext(
+          "dashboard_languages",
+          "You offer your booking page in every language, so invitees can still choose %{language}, but they will see your texts in %{original}.",
+          language: @language,
+          original: @original_language
         )}
       </p>
       <p>

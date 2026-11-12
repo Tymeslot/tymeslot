@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Dashboard.LanguagesBookingPageTest do
   From the dashboard to the visitor: a meeting type name translated on the
   Languages review page, and a heading translated from the booking text
   card's language bar, show on the public booking page in that language, for
-  an organiser who offers only English and German.
+  an organiser who offers only English and German. An outdated name shows in
+  the original until it is kept as still correct.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -15,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesBookingPageTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
+  alias Tymeslot.ContentTranslations.Catalogue
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -71,6 +73,37 @@ defmodule TymeslotWeb.Dashboard.LanguagesBookingPageTest do
     assert render(original) =~ "Intro call"
   end
 
+  test "an outdated name shows in the original until it is kept as still correct", %{
+    conn: conn,
+    user: user,
+    profile: profile,
+    meeting_type: meeting_type
+  } do
+    {:ok, _entity} =
+      Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{"name" => "Gespräch"})
+
+    meeting_type |> Changeset.change(name: "First call") |> Repo.update!()
+
+    {:ok, page, _html} = live(build_conn(), "/#{profile.username}?locale=de")
+    html = render(page)
+    assert html =~ "First call"
+    refute html =~ "Gespräch"
+
+    dashboard = conn |> init_test_session(%{}) |> fetch_session() |> log_in_user(user)
+    {:ok, view, _html} = live(dashboard, ~p"/dashboard/languages/de")
+
+    view
+    |> element(
+      "#translation-meeting_types-meeting_type-#{meeting_type.id} [data-path='name'] [data-testid='confirm-translation']"
+    )
+    |> render_click()
+
+    {:ok, page, _html} = live(build_conn(), "/#{profile.username}?locale=de")
+    html = render(page)
+    assert html =~ "Gespräch"
+    refute html =~ "First call"
+  end
+
   test "a heading translated from the booking text card shows on the German booking page", %{
     conn: conn,
     user: user,
@@ -89,7 +122,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesBookingPageTest do
     {:ok, view, _html} = live(dashboard, ~p"/dashboard/pages")
     card = "#booking-text-form-translations"
 
-    view |> element("#{card}-bar button[data-locale='de']") |> render_click()
+    view |> element("#{card}-bar-de") |> render_click()
 
     view
     |> form("#{card}-editor-form", %{"translation" => %{"booking_heading" => "Bereit zu reden?"}})

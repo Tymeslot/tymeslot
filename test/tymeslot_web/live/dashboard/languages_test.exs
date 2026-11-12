@@ -280,7 +280,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
     } do
       refute has_element?(view, "#{bar}-editor")
 
-      view |> element("#{bar}-bar button[data-locale='de']") |> render_click()
+      view |> element("#{bar}-bar-de") |> render_click()
 
       assert has_element?(view, "#{bar}-editor")
       assert has_element?(view, "form[id^='meeting-type-form-'].hidden")
@@ -292,7 +292,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
       assert stored_translation(meeting_type, user, "name") == "Erstgespräch"
       assert has_element?(view, "#{bar}-editor [data-path='name'][data-status='translated']")
 
-      view |> element("#{bar}-bar button[data-locale='en']") |> render_click()
+      view |> element("#{bar}-bar-en") |> render_click()
 
       refute has_element?(view, "#{bar}-editor")
       refute has_element?(view, "form[id^='meeting-type-form-'].hidden")
@@ -304,7 +304,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
       profile: profile,
       bar: bar
     } do
-      view |> element("#{bar}-bar button[data-locale='de']") |> render_click()
+      view |> element("#{bar}-bar-de") |> render_click()
 
       render_patch(view, ~p"/dashboard/settings")
 

@@ -77,6 +77,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
                     module={IntroFormComponent}
                     id="intro-form-component"
                     profile={@profile}
+                    user_id={@current_user.id}
                     editing_locale={@editing_locale}
                   />
                 </div>

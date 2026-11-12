@@ -26,13 +26,16 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
   current. What is typed survives the parent re-rendering; it is dropped
   only when it is saved, or when the record or the language changes.
 
-  Leaving the language from the language bar goes through the editor
-  (`send_update/3` with `switch_to: locale`, nil for the original), so what
-  was typed is not lost: the changed texts are saved first, as the
-  autosaving forms save theirs, and only then is the dashboard told to
-  switch (`{:editing_locale, locale}`). When that save fails the editor
-  stays, showing why; choosing the same language again leaves without
-  saving.
+  Anything that takes the editor away (another language from the language
+  bar, closing the form it sits in, leaving or filtering the Languages
+  review page) goes through `leave/3`, so what was typed is not lost: the
+  changed texts are saved first, as the autosaving forms save theirs, and
+  only then does the caller carry on. When that save fails the editor stays,
+  showing why; asking to leave again leaves without saving.
+
+  An outdated translation is hidden from invitees, who see the original
+  instead, until it is updated or confirmed as still correct (`Catalogue.confirm/4`),
+  which each outdated text offers beside its input.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -48,35 +51,43 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
      assign(socket,
        draft: %{},
        errors: %{},
-       leave_unsaved: nil,
+       leave_unsaved: false,
        paths: nil,
        only_open: false,
        notify: nil
      )}
   end
 
+  @doc """
+  Asks the editor `id` to save what was typed in it, then to run `continue`
+  (in the LiveView process): `reason` is `:switch` for another language from
+  the language bar, `:close` for closing the form the editor sits in, and
+  `:review` for leaving or filtering the Languages review page, and only
+  words the message shown when the save fails. Nothing typed, `continue`
+  runs at once.
+  """
+  @spec leave(String.t(), :switch | :close | :review, (-> any())) :: :ok
+  def leave(id, reason, continue) when is_function(continue, 0),
+    do: send_update(__MODULE__, id: id, leave: {reason, continue})
+
   @impl Phoenix.LiveComponent
-  def update(%{switch_to: target}, socket) do
+  def update(%{leave: {reason, continue}}, socket) do
     %{draft: draft, record: record, locale: locale, fields: fields} = socket.assigns
     changed = changed_texts(draft, record, locale, fields)
 
-    if changed == %{} or socket.assigns.leave_unsaved == {:to, target} do
-      {:ok, leave(socket, target)}
+    if changed == %{} or socket.assigns.leave_unsaved do
+      continue.()
+      {:ok, assign(socket, :leave_unsaved, false)}
     else
       case persist(socket, changed, draft) do
         {:ok, socket} ->
           Flash.info(dgettext("dashboard_languages", "Translations saved"))
-          {:ok, leave(socket, target)}
+          continue.()
+          {:ok, socket}
 
         {:error, socket} ->
-          Flash.error(
-            dgettext(
-              "dashboard_languages",
-              "Couldn't save these translations. Choose the language again to leave without saving them."
-            )
-          )
-
-          {:ok, assign(socket, :leave_unsaved, {:to, target})}
+          Flash.error(leave_failed_message(reason))
+          {:ok, assign(socket, :leave_unsaved, true)}
       end
     end
   end
@@ -132,10 +143,16 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
     {:noreply,
      socket
      |> update(:draft, &Map.merge(&1, only_strings(texts)))
-     |> assign(:leave_unsaved, nil)}
+     |> assign(:leave_unsaved, false)}
   end
 
   def handle_event("draft", _params, socket), do: {:noreply, socket}
+
+  def handle_event("confirm", %{"path" => path}, socket) when is_binary(path) do
+    if confirmable?(socket.assigns, path),
+      do: {:noreply, confirm(socket, path)},
+      else: {:noreply, socket}
+  end
 
   def handle_event("save", params, socket) do
     %{draft: draft, record: record, locale: locale} = socket.assigns
@@ -162,6 +179,41 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
     end
   end
 
+  defp confirm(socket, path) do
+    %{user_id: user_id, kind: kind, record: record, locale: locale} = socket.assigns
+
+    case Catalogue.confirm(user_id, {kind, record.id}, locale, [path]) do
+      {:ok, entity} ->
+        notify(socket.assigns.notify, entity)
+        Flash.info(dgettext("dashboard_languages", "Translation kept"))
+
+        socket
+        |> assign(
+          record: entity.record,
+          draft: Map.delete(socket.assigns.draft, path),
+          errors: Map.delete(socket.assigns.errors, path)
+        )
+        |> assign_fields()
+
+      {:error, :not_found} ->
+        assign(socket, :errors, %{base: [not_found_message()]})
+
+      {:error, changeset} ->
+        Flash.error(dgettext("dashboard_languages", "Couldn't keep this translation."))
+        assign(socket, :errors, errors_by_path(changeset))
+    end
+  end
+
+  # An outdated text whose stored translation is still what its input shows:
+  # confirming keeps the stored text, so it is offered only while nothing
+  # different has been typed over it.
+  defp confirmable?(%{fields: fields, draft: draft, record: record, locale: locale}, path) do
+    stored = ContentTranslations.translation(record, locale, path)
+
+    Enum.any?(fields, fn {field, status} -> field.path == path and status == :outdated end) and
+      is_binary(stored) and normalise(Map.get(draft, path, stored)) == normalise(stored)
+  end
+
   defp persist(socket, changed, typed) do
     %{user_id: user_id, kind: kind, record: record, locale: locale} = socket.assigns
 
@@ -175,7 +227,7 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
            record: entity.record,
            draft: Map.drop(typed, Map.keys(changed)),
            errors: %{},
-           leave_unsaved: nil
+           leave_unsaved: false
          )
          |> assign_fields()}
 
@@ -189,11 +241,19 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
 
   defp not_found_message, do: dgettext("dashboard_languages", "This item no longer exists.")
 
-  # Told only once the draft is safe, so the switch never outruns the save.
-  defp leave(socket, target) do
-    send(self(), {:editing_locale, target})
-    socket
-  end
+  defp leave_failed_message(:switch),
+    do:
+      dgettext(
+        "dashboard_languages",
+        "Couldn't save these translations. Choose the language again to leave without saving them."
+      )
+
+  defp leave_failed_message(_reason),
+    do:
+      dgettext(
+        "dashboard_languages",
+        "Couldn't save these translations. Try again to leave without saving them."
+      )
 
   defp notify({module, id}, entity), do: send_update(module, id: id, translation_saved: entity)
   defp notify(nil, _entity), do: :ok
@@ -266,6 +326,8 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
               )
             }
             errors={Map.get(@errors, field.path, [])}
+            confirmable={confirmable?(assigns, field.path)}
+            target={@myself}
           />
           <Forms.field_error errors={Map.get(@errors, :base, [])} />
           <div class="flex justify-end">
@@ -289,6 +351,8 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
   attr :status, :atom, required: true
   attr :value, :string, default: nil
   attr :errors, :list, default: []
+  attr :confirmable, :boolean, default: false
+  attr :target, :any, required: true
 
   defp translation_field(assigns) do
     ~H"""
@@ -311,6 +375,30 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
           </span>
         </:description>
       </.input>
+      <div
+        :if={@status == :outdated}
+        class="mt-2 flex flex-wrap items-center justify-between gap-3"
+        data-testid="outdated-note"
+      >
+        <p class="flex-1 min-w-0 text-token-sm text-tymeslot-600">
+          {dgettext(
+            "dashboard_languages",
+            "Invitees see the original until you update this translation or confirm it is still correct."
+          )}
+        </p>
+        <.action_button
+          :if={@confirmable}
+          variant={:secondary}
+          size={:sm}
+          icon="hero-check"
+          phx-click="confirm"
+          phx-value-path={@field.path}
+          phx-target={@target}
+          data-testid="confirm-translation"
+        >
+          {dgettext("dashboard_languages", "Still correct")}
+        </.action_button>
+      </div>
     </div>
     """
   end
