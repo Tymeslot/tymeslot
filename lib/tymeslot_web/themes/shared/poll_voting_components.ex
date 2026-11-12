@@ -30,15 +30,13 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   @responses [:yes, :if_need_be, :no]
 
   attr :poll, :map, required: true
-
-  attr :location, :map,
-    default: nil,
-    doc: "where the meeting will be held (`Tymeslot.Polls.location/1`), if anywhere"
-
+  attr :location, :map, default: nil, doc: "where it is held (`Tymeslot.Polls.location/1`)"
   attr :tallies, :map, required: true
   attr :voting_open, :boolean, required: true
   attr :participant, :map, default: nil
   attr :link_request, :atom, default: nil, values: [nil, :sent, :resent, :throttled]
+  attr :field_errors, :map, default: %{}, doc: "`:name`/`:email` messages shown under the fields"
+  attr :draft, :map, default: %{}, doc: "what the visitor last submitted, kept across a refusal"
   attr :invalid_link, :boolean, default: false
 
   @doc """
@@ -108,7 +106,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           <%= if @link_request do %>
             <.link_sent outcome={@link_request} />
           <% else %>
-            <.identity_form />
+            <.identity_form field_errors={@field_errors} draft={@draft} />
           <% end %>
           <.slot_grid poll={@poll} tallies={@tallies} editable={false} />
         <% :vote -> %>
@@ -134,6 +132,8 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
             tallies={@tallies}
             participant={@participant}
             editable={true}
+            field_errors={@field_errors}
+            draft={@draft}
           />
       <% end %>
     </div>
@@ -261,6 +261,9 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   Submits `register_participant` to the dispatcher. Includes a honeypot field to
   catch automated submissions, matching the booking form.
   """
+  attr :field_errors, :map, default: %{}
+  attr :draft, :map, default: %{}
+
   @spec identity_form(map()) :: Phoenix.LiveView.Rendered.t()
   def identity_form(assigns) do
     # The token is verified with `RecaptchaHelpers.verify/3`, which pins the
@@ -283,6 +286,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
       class="poll-identity-form"
       data-testid="poll-register-form"
       {@recaptcha_attrs}
+      novalidate
     >
       <p class="poll-voting-notice">
         {dgettext(
@@ -316,8 +320,12 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           name="name"
           autocomplete="name"
           required
+          value={@draft[:name]}
+          aria-invalid={@field_errors[:name] && "true"}
+          aria-describedby={@field_errors[:name] && "poll-name-error"}
           data-testid="poll-name"
         />
+        <.poll_field_error id="poll-name-error" message={@field_errors[:name]} />
       </div>
 
       <div class="poll-field">
@@ -330,8 +338,12 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
           name="email"
           autocomplete="email"
           required
+          value={@draft[:email]}
+          aria-invalid={@field_errors[:email] && "true"}
+          aria-describedby={@field_errors[:email] && "poll-email-error"}
           data-testid="poll-email"
         />
+        <.poll_field_error id="poll-email-error" message={@field_errors[:email]} />
       </div>
 
       <button type="submit" class="poll-submit-button" data-testid="poll-register-submit">
@@ -347,6 +359,8 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   attr :tallies, :map, required: true
   attr :participant, :map, default: nil
   attr :editable, :boolean, default: false
+  attr :field_errors, :map, default: %{}
+  attr :draft, :map, default: %{}
 
   @doc """
   Renders the candidate slots with their running tallies.
@@ -362,10 +376,11 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
       |> assign(:slots, assigns.poll.time_slots)
       |> assign(:tz, tz(assigns.poll))
       |> assign(:current_votes, participant_votes(assigns.participant))
+      |> assign(:draft_votes, Map.get(assigns.draft, :votes, %{}))
 
     ~H"""
     <%= if @editable do %>
-      <form phx-submit="cast_votes" class="poll-slot-form" data-testid="poll-vote-form">
+      <form phx-submit="cast_votes" class="poll-slot-form" data-testid="poll-vote-form" novalidate>
         <%!-- Someone the host invited by address alone gives their name with
               their first responses. --%>
         <div :if={@participant && is_nil(@participant.name)} class="poll-field">
@@ -380,8 +395,12 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
             name="name"
             autocomplete="name"
             required
+            value={@draft[:name]}
+            aria-invalid={@field_errors[:name] && "true"}
+            aria-describedby={@field_errors[:name] && "poll-voter-name-error"}
             data-testid="poll-voter-name"
           />
+          <.poll_field_error id="poll-voter-name-error" message={@field_errors[:name]} />
         </div>
         <div class="poll-slot-grid">
           <.slot_row
@@ -390,7 +409,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
             tz={@tz}
             tally={Map.get(@tallies, slot.id, %{})}
             editable={true}
-            current={Map.get(@current_votes, slot.id)}
+            current={draft_vote(@draft_votes, slot.id) || Map.get(@current_votes, slot.id)}
             new?={new_to?(@participant, @current_votes, slot)}
           />
         </div>
@@ -466,6 +485,15 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   end
 
   # --- Slot row ---
+
+  attr :id, :string, required: true
+  attr :message, :string, default: nil
+
+  defp poll_field_error(assigns) do
+    ~H"""
+    <p :if={@message} id={@id} class="poll-field-error" role="alert" data-testid={@id}>{@message}</p>
+    """
+  end
 
   attr :slot, :map, required: true
   attr :tz, :string, required: true
@@ -566,6 +594,11 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   defp new_to?(_participant, _current_votes, _slot), do: false
 
   defp responses, do: @responses
+
+  # An unsaved pick from a refused submit, as the response it names.
+  defp draft_vote(draft_votes, slot_id) do
+    Enum.find(responses(), &(to_string(&1) == draft_votes[slot_id]))
+  end
 
   defp participant_votes(nil), do: %{}
 

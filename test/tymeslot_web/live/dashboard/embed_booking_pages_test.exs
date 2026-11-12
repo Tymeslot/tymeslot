@@ -46,8 +46,8 @@ defmodule TymeslotWeb.Dashboard.EmbedBookingPagesTest do
 
     html =
       view
-      |> form("#embed-page-picker", %{"page" => to_string(page.id)})
-      |> render_change()
+      |> form("#embed-page-picker")
+      |> render_change(%{"page" => to_string(page.id)})
 
     assert html =~ ~r/data-username=(&quot;|")joern\/einfachiso/
   end
@@ -56,8 +56,8 @@ defmodule TymeslotWeb.Dashboard.EmbedBookingPagesTest do
     page = insert(:booking_page, profile: profile, slug: "einfachiso")
     {:ok, view, _html} = live(conn, ~p"/dashboard/embed")
 
-    view |> form("#embed-page-picker", %{"page" => to_string(page.id)}) |> render_change()
-    html = view |> form("#embed-page-picker", %{"page" => "profile"}) |> render_change()
+    view |> form("#embed-page-picker") |> render_change(%{"page" => to_string(page.id)})
+    html = view |> form("#embed-page-picker") |> render_change(%{"page" => "profile"})
 
     assert html =~ ~r/data-username=(&quot;|")joern/
   end

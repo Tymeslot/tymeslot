@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
       phx-target={@myself}
       data-auto-upload="true"
       class="flex flex-col items-center gap-6"
+      novalidate
     >
       <input type="hidden" name="asset_field" value={@field} />
       <div class="w-full max-w-md">

@@ -239,10 +239,6 @@
   --step-connector-height: 2px;
   --step-connector-width: 2rem;
 
-  /* Component-Specific Tokens - Dropdowns */
-  --dropdown-width-sm: 160px;
-  --dropdown-width-md: 180px;
-
   /* Component-Specific Tokens - Scrollbar */
   --scrollbar-width: 6px;
   --scrollbar-track: rgba(255, 255, 255, 0.05);

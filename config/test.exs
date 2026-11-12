@@ -308,7 +308,9 @@ config :tymeslot, :recaptcha, signup_enabled: false, booking_enabled: false
 # Payment system configuration for tests
 config :tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock
 config :tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock
+
 config :tymeslot, :stripe_adapter, Tymeslot.MeetingPayments.StripeAdapterMock
+config :tymeslot, :stripe_connect_client_id, "ca_test"
 config :tymeslot, :show_branding, true
 
 # Pricing configuration for tests

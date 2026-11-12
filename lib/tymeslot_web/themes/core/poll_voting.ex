@@ -80,6 +80,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       participant: participant,
       invalid_link: params["p"] not in [nil, ""] and is_nil(participant),
       link_request: nil,
+      poll_field_errors: %{},
+      poll_draft: %{},
       voter_timezone: browser_timezone(socket)
     )
     |> assign_voting_open(poll)
@@ -115,6 +117,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         %{"name" => _name, "email" => _email} = params,
         socket
       ) do
+    socket = assign(socket, poll_draft: identity_draft(params))
+
     if Honeypot.tripped?(params) do
       # A bot filled the hidden field: fake success and register nothing, exactly
       # as the booking form's honeypot does. Logged like the booking honeypot so
@@ -135,6 +139,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   def handle_poll_event("cast_votes", %{"votes" => votes_map} = params, socket)
       when is_map(votes_map) do
+    socket = assign(socket, poll_draft: Map.put(identity_draft(params), :votes, votes_map))
+
     with_poll_limit(socket, :poll_vote, fn socket ->
       cast_votes_for(socket, votes_map, params["name"])
     end)
@@ -143,6 +149,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   # Nothing ticked: the form sends no `votes` at all, and saving it would
   # otherwise do nothing without a word. A malformed `votes` stays ignored.
   def handle_poll_event("cast_votes", params, socket) when not is_map_key(params, "votes") do
+    socket = assign(socket, poll_draft: identity_draft(params))
+
     {:noreply,
      put_flash(
        socket,
@@ -152,6 +160,14 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   end
 
   def handle_poll_event(_event, _params, socket), do: {:noreply, socket}
+
+  # What the visitor typed, kept so a refusal re-renders the form as they left
+  # it. Only strings: a crafted body can send anything here.
+  defp identity_draft(params) do
+    for {key, field} <- [name: "name", email: "email"], is_binary(params[field]), into: %{} do
+      {key, params[field]}
+    end
+  end
 
   defp register_participant(socket, params) do
     with_poll_limit(socket, :poll_register, fn socket ->
@@ -204,6 +220,14 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     case Voting.request_link(socket.assigns.poll, attrs) do
       {:ok, outcome} ->
         {:noreply, assign(socket, link_request: outcome)}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply,
+         show_field_errors(
+           socket,
+           changeset,
+           dgettext("booking_polls", "Please enter your name.")
+         )}
 
       {:error, reason} ->
         {:noreply, flash_after_reload(socket, reason, &register_error_message/1)}
@@ -262,6 +286,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       {:ok, _participant} ->
         {:noreply,
          socket
+         |> assign(poll_field_errors: %{}, poll_draft: %{})
          |> reload_tallies()
          |> put_flash(:info, saved_message(participant))}
 
@@ -278,8 +303,32 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
            cast_error_message(explain(:unknown_participant, socket.assigns.poll))
          )}
 
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply,
+         show_field_errors(
+           socket,
+           changeset,
+           dgettext("booking_polls", "Please enter your name, then save your responses again.")
+         )}
+
       {:error, reason} ->
         {:noreply, flash_after_reload(socket, reason, &cast_error_message/1)}
+    end
+  end
+
+  # The fields the changeset refused show their reason beneath themselves; a
+  # changeset that names neither field falls back to the page's flash.
+  defp show_field_errors(socket, changeset, blank_name_message) do
+    case field_errors(changeset, blank_name_message) do
+      errors when map_size(errors) > 0 ->
+        assign(socket, poll_field_errors: errors)
+
+      _none ->
+        put_flash(
+          socket,
+          :error,
+          dgettext("booking_polls", "Please check your name and email, then try again.")
+        )
     end
   end
 
@@ -356,18 +405,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   defp register_error_message(:recipient_rate_limited),
     do: dgettext("booking_polls", "Too many emails to this address recently; try again later.")
 
-  defp register_error_message(%Ecto.Changeset{} = changeset),
-    do: changeset_message(changeset, dgettext("booking_polls", "Please enter your name."))
-
   defp cast_error_message(:voting_closed),
     do: dgettext("booking_polls", "Voting has closed for this poll.")
-
-  defp cast_error_message(%Ecto.Changeset{} = changeset),
-    do:
-      changeset_message(
-        changeset,
-        dgettext("booking_polls", "Please enter your name, then save your responses again.")
-      )
 
   defp cast_error_message(:invite_only),
     do: PollVotingComponents.invite_only_message()
@@ -400,12 +439,12 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   # as they are. Ecto's built-in ones (a missing field, a value of the wrong
   # type) are not translated, so a missing name or address gets a sentence
   # written here, and anything else the general one.
-  defp changeset_message(%Ecto.Changeset{errors: errors}, blank_name_message) do
-    Enum.find_value(
-      [:name, :email],
-      dgettext("booking_polls", "Please check your name and email, then try again."),
-      &field_message(&1, Keyword.get(errors, &1), blank_name_message)
-    )
+  defp field_errors(%Ecto.Changeset{errors: errors}, blank_name_message) do
+    for field <- [:name, :email],
+        message = field_message(field, Keyword.get(errors, field), blank_name_message),
+        into: %{} do
+      {field, message}
+    end
   end
 
   defp field_message(_field, {message, []}, _blank_name_message), do: message

@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.CoreComponents.Tooltip
   alias TymeslotWeb.Dashboard.Polls.PollAccess
   alias TymeslotWeb.Dashboard.Polls.PollEditor
   alias TymeslotWeb.Dashboard.Polls.PollInvite
@@ -383,14 +384,20 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
           >
             {dgettext("dashboard_polls", "Most votes")}
           </Feedback.pill>
-          <Feedback.pill
+          <Tooltip.tooltip
+            :let={tip}
             :if={@health == :conflict}
-            tone={:warning}
-            icon="hero-exclamation-triangle-mini"
-            title={dgettext("dashboard_polls", "This time clashes with an event on your calendar")}
+            id={"poll-slot-#{@slot.id}-conflict-tip"}
+            text={dgettext("dashboard_polls", "This time clashes with an event on your calendar")}
           >
-            {dgettext("dashboard_polls", "Calendar conflict")}
-          </Feedback.pill>
+            <Feedback.pill
+              aria-describedby={tip}
+              tone={:warning}
+              icon="hero-exclamation-triangle-mini"
+            >
+              {dgettext("dashboard_polls", "Calendar conflict")}
+            </Feedback.pill>
+          </Tooltip.tooltip>
         </div>
 
         <Buttons.action_button

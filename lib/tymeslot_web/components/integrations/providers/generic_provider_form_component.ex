@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
   def render(assigns) do
     ~H"""
     <div>
-      <.form for={@form} id={@id} phx-target={@myself} phx-submit="save">
+      <.form for={@form} id={@id} phx-target={@myself} phx-submit="save" novalidate>
         <%= for {field, spec} <- @schema do %>
           <div class="mb-4">
             {render_field(@form, field, spec)}
@@ -56,8 +56,7 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
     assigns = %{form: form, field: field, spec: spec}
 
     ~H"""
-    <.input
-      type="datetime-local"
+    <.datetime_picker
       field={@form[Atom.to_string(@field)]}
       label={label_for(@field, @spec)}
     />

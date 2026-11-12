@@ -181,6 +181,12 @@ html.scheduling-app .poll-field-input {
   font-size: var(--theme-font-size-base);
 }
 
+html.scheduling-app .poll-field-error {
+  font-size: var(--theme-font-size-sm);
+  font-weight: 600;
+  color: var(--theme-danger);
+}
+
 html.scheduling-app .poll-field-input:focus {
   outline: none;
   border-color: var(--theme-primary);

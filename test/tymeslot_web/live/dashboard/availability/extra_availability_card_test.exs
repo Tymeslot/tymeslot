@@ -33,10 +33,8 @@ defmodule TymeslotWeb.Dashboard.Availability.ExtraAvailabilityCardTest do
 
     for {from, to} <- [{"14:00", "16:00"}, {"09:00", "11:00"}] do
       view
-      |> form("[data-testid='extra-availability-form']", %{
-        "extra" => %{"date" => date, "start_time" => from, "end_time" => to}
-      })
-      |> render_submit()
+      |> form("[data-testid='extra-availability-form']", %{})
+      |> render_submit(%{"extra" => %{"date" => date, "start_time" => from, "end_time" => to}})
     end
 
     assert [_one_day] =
@@ -49,10 +47,10 @@ defmodule TymeslotWeb.Dashboard.Availability.ExtraAvailabilityCardTest do
 
     html =
       view
-      |> form("[data-testid='extra-availability-form']", %{
+      |> form("[data-testid='extra-availability-form']", %{})
+      |> render_submit(%{
         "extra" => %{"date" => date, "start_time" => "10:00", "end_time" => "12:00"}
       })
-      |> render_submit()
 
     assert html =~ "This time overlaps another extra time on that date."
 

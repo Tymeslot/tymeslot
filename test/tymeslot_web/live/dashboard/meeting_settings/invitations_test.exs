@@ -111,10 +111,27 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
   end
 
   test "the card says invitation only in place of unlisted", ctx do
-    insert(:meeting_type, user: ctx.user, invitation_only: true, is_private: true)
+    type = insert(:meeting_type, user: ctx.user, invitation_only: true, is_private: true)
     {:ok, view, _html} = live(ctx.conn, ~p"/dashboard/meeting-settings")
 
     assert has_element?(view, "[data-testid='invitation-only']", "Invitation only")
+
+    # Why it is invitation only reaches keyboards and screen readers too: the
+    # tab stop is a named element whose description is the tooltip.
+    tip = "meeting-type-#{type.id}-invitation-only-tip"
+
+    assert has_element?(
+             view,
+             "[data-testid='invitation-only'][tabindex='0'][role='img']" <>
+               "[aria-label='Invitation only'][aria-describedby='#{tip}']"
+           )
+
+    assert has_element?(
+             view,
+             "##{tip}[role='tooltip']",
+             "booked only through the invitation links"
+           )
+
     refute render(view) =~ "Unlisted"
   end
 
@@ -412,8 +429,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
     view = open_editor(ctx.conn, type)
 
     view
-    |> form("#{panel(type)}-form", invitation: %{expires_on: "2030-06-15"})
-    |> render_submit()
+    |> form("#{panel(type)}-form", %{})
+    |> render_submit(invitation: %{expires_on: "2030-06-15"})
 
     [%{invitation: invitation}] = Invitations.list(ctx.user.id, type)
     # 23:59:59 on 15 June in Auckland (NZST, UTC+12).
@@ -427,8 +444,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
 
     # Berlin springs forward on 2030-03-31, so the day ends at UTC+2, not +1.
     view
-    |> form("#{panel(type)}-form", invitation: %{expires_on: "2030-03-31"})
-    |> render_submit()
+    |> form("#{panel(type)}-form", %{})
+    |> render_submit(invitation: %{expires_on: "2030-03-31"})
 
     [%{invitation: invitation}] = Invitations.list(ctx.user.id, type)
     assert invitation.expires_at == ~U[2030-03-31 21:59:59Z]
@@ -439,8 +456,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsTest do
     view = open_editor(ctx.conn, type)
 
     view
-    |> form("#{panel(type)}-form", invitation: %{expires_on: "2020-01-01"})
-    |> render_submit()
+    |> form("#{panel(type)}-form", %{})
+    |> render_submit(invitation: %{expires_on: "2020-01-01"})
 
     assert Invitations.list(ctx.user.id, type) == []
     assert has_element?(view, "#{panel(type)}-form", "must be in the future")

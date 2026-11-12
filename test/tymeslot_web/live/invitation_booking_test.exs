@@ -371,6 +371,13 @@ defmodule TymeslotWeb.InvitationBookingTest do
     confirmation = BookingTestHelpers.last_patched_url(view)
     refute Map.has_key?(URI.decode_query(URI.parse(confirmation).query || ""), "invite")
     refute confirmation =~ invitation.token
+
+    # Nor does the address a language switch on the confirmation leads to.
+    assert {:error, {:redirect, %{to: switched}}} =
+             render_hook(view, "change_locale", %{"locale" => "de"})
+
+    refute Map.has_key?(URI.decode_query(URI.parse(switched).query || ""), "invite")
+    refute switched =~ invitation.token
   end
 
   test "invite is a reserved username" do

@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
       |> assign_new(:class, fn -> "space-y-4 mb-6" end)
       |> assign_new(:id, fn -> nil end)
       |> assign_new(:loading, fn -> false end)
-      |> assign_new(:novalidate, fn -> false end)
+      |> assign_new(:novalidate, fn -> true end)
       |> assign_new(:csrf_token, fn -> Controller.get_csrf_token() end)
       |> assign_new(:rest, fn -> %{} end)
 
@@ -51,6 +51,7 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
       assigns
       |> assign_new(:name, fn -> "user[terms_accepted]" end)
       |> assign_new(:style, fn -> :simple end)
+      |> assign_new(:checked, fn -> false end)
       |> assign_new(:class, fn -> "" end)
       |> assign(:terms_url, Application.get_env(:tymeslot, :legal_terms_url))
       |> assign(:privacy_url, Application.get_env(:tymeslot, :legal_privacy_url))
@@ -66,6 +67,7 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
         name={@name}
         class="mt-1"
         hidden_input={false}
+        value={@checked && "true"}
         required
       />
       <label for="terms" class="text-sm text-tymeslot-500 font-medium leading-relaxed">

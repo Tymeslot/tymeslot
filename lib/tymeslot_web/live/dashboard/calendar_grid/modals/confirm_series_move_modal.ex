@@ -26,8 +26,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmSeriesMoveModal do
       id="confirm-series-move-modal"
       show
       size={:small}
-      title={dgettext("dashboard_calendar_events", "Move recurring event")}
-      confirm_label={dgettext("dashboard_calendar_events", "Move series")}
+      title={dgettext("dashboard_calendar_modals", "Move recurring event")}
+      confirm_label={dgettext("dashboard_calendar_modals", "Move series")}
       confirm_variant={:primary}
       icon="hero-arrow-path"
       on_cancel={JS.push("cancel_series_move", target: @myself)}
@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmSeriesMoveModal do
     >
       <p>
         {dgettext(
-          "dashboard_calendar_events",
+          "dashboard_calendar_modals",
           "Move every event in this series to %{calendar}?",
           calendar: @prompt.calendar_name
         )}

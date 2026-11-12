@@ -565,3 +565,13 @@ msgstr "Není k dispozici: nový konec je před touto událostí, takže nejsou 
 #, elixir-autogen, elixir-format
 msgid "This series' first event hasn't been read from your calendar yet, so the events left in it can't be counted. Refresh the calendar and try again."
 msgstr "První událost této série se z vašeho kalendáře ještě nenačetla, takže nelze spočítat, kolik událostí v ní zbývá. Obnovte kalendář a zkuste to znovu."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Ends"
+msgstr "Konec"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Repeat until"
+msgstr "Opakovat do"

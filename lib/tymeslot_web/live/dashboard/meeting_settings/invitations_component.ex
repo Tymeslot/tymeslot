@@ -226,6 +226,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
         phx-submit="create"
         phx-target={@myself}
         class="space-y-4"
+        novalidate
       >
         <div class="grid gap-4 sm:grid-cols-3">
           <.input
@@ -238,11 +239,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent do
             type="email"
             label={dgettext("dashboard_meeting_types", "Email (optional)")}
           />
-          <.input
+          <.date_picker
             field={@form[:expires_on]}
-            type="date"
             label={dgettext("dashboard_meeting_types", "Link expires on (optional)")}
             min={Date.to_iso8601(today(@timezone))}
+            today={today(@timezone)}
           />
         </div>
         <input

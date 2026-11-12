@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
       assert has_element?(
                view,
-               ~s(button[aria-disabled="true"][title="Connect Calendar to Preview"]),
+               ~s(button[aria-disabled="true"][aria-describedby]),
                "Live Preview"
              )
 

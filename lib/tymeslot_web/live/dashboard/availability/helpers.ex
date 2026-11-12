@@ -44,6 +44,7 @@ defmodule TymeslotWeb.Dashboard.Availability.Helpers do
         fallback_icon="hero-globe-alt"
         show_fallback={true}
       />
+      <%!-- native-title: repeats the timezone, which can truncate. --%>
       <span data-testid="timezone-display" class="truncate" title={@timezone_display}>{@timezone_display}</span>
     </div>
     """

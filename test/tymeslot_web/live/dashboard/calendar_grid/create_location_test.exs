@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateLocationTest do
   alias Plug.Test
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Venues
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution
 
   describe "a meeting" do
@@ -79,6 +80,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateLocationTest do
       assert meeting.location_kind == :custom
     end
 
+    test "keeps the form open when Enter is pressed in the text field", %{lv: lv} do
+      choose(lv, %{"location_choice" => "custom"})
+
+      lv
+      |> form("#create-location-form")
+      |> render_submit(%{"location_choice" => "custom", "location_custom" => "Room 4.12"})
+
+      assert has_element?(lv, "#create-location-custom[value='Room 4.12']")
+      assert create_meeting(lv).location == "Room 4.12"
+    end
+
     test "has no location when none is chosen", %{lv: lv} do
       meeting = create_meeting(lv)
 
@@ -109,6 +121,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateLocationTest do
 
       assert_receive {:execute_create_event, payload}
       assert payload.creating.location == "Room 4.12"
+    end
+
+    test "refuses a saved location deleted while the form was open" do
+      user = insert(:user)
+      venue = insert(:venue, user: user, name: "Head office")
+      # The grid still lists it: it was loaded before the deletion.
+      socket = event_socket(user, [venue], %{location_choice: "venue:#{venue.id}"})
+      {:ok, _rewritten} = Venues.delete_venue(venue)
+
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert_receive {:flash, {:error, "That location can no longer be used." <> _rest}}
+      refute_receive {:execute_create_event, _payload}
     end
 
     test "refuses a saved location that is no longer the host's" do

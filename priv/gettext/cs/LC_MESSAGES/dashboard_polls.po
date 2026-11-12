@@ -42,7 +42,7 @@ msgstr[2] "%{count} hlasů"
 msgid "Add any context for your guests"
 msgstr "Doplňte pro hosty další kontext"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_form_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Add at least one candidate time"
 msgstr "Přidejte alespoň jeden navržený termín"
@@ -274,7 +274,7 @@ msgstr "Termíny musí být v budoucnosti"
 msgid "Times shown in %{timezone}"
 msgstr "Časy jsou uvedeny v časovém pásmu %{timezone}"
 
-#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_timezone.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Časové pásmo"

@@ -42,6 +42,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
     default: [],
     doc: "ids of the integration's calendars bookings go to, which always block"
 
+  attr :rename_error, :string, default: nil
+  attr :rename_value, :string, default: nil, doc: "the refused name, kept beside its error"
   attr :target, :any, required: true
   attr :on_cancel, JS, default: %JS{}
 
@@ -86,6 +88,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
             phx-submit="rename_integration"
             phx-target={@target}
             class="mb-6 flex items-end gap-2"
+            novalidate
           >
             <input type="hidden" name="integration_id" value={@integration.id} />
             <.input
@@ -93,9 +96,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
               type="text"
               name="name"
               label={dgettext("dashboard_calendar_providers", "Name")}
-              value={@integration.name}
+              value={@rename_value || @integration.name}
               required
               maxlength="100"
+              errors={List.wrap(@rename_error)}
               autocomplete="off"
               class="flex-1"
             />
@@ -312,7 +316,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
         dgettext("dashboard_calendar_providers", "Use of %{calendar}", calendar: name(@calendar))
       }
       on_change={push("set_calendar_state", @integration_id, @calendar.id, @target)}
-      param="state"
+      param="use"
     >
       <:option
         value="off"

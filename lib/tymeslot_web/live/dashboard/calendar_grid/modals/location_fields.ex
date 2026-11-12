@@ -7,6 +7,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.LocationFields do
   created on a provider rather than named. A group event chooses its one
   place in its own fields (`GroupEventFields`).
 
+  Enter in the text field submits the form; `phx-submit` takes it as one
+  more change, since a form with only `phx-change` is submitted natively by
+  LiveView and would reload the page.
+
   The choice is posted as `location_choice`: `""` for none, `"venue:<id>"`
   for a saved location, `"custom"` for one typed into `location_custom`.
   """
@@ -28,11 +32,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.LocationFields do
       id="create-location-form"
       class="mb-3 space-y-2"
       phx-change="update_create_location"
+      phx-submit="update_create_location"
       phx-target={@myself}
-      onsubmit="return false;"
+      novalidate
     >
-      <.input
-        type="select"
+      <.select
         id="create-location-choice"
         name="location_choice"
         label={dgettext("dashboard_calendar_location", "Location (optional)")}

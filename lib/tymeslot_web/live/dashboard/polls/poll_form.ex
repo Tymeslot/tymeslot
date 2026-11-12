@@ -49,6 +49,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     PollLocationField,
     PollReminders,
     PollsComponent,
+    PollTimezone,
     SlotWarnings
   }
 
@@ -57,6 +58,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   import PollFormErrors, only: [error_list: 2]
 
   @reminder_events PollReminders.Events.all()
+  @timezone_events ~w(toggle_timezone_dropdown close_timezone_dropdown search_timezone change_timezone)
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -71,6 +73,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        type_location_for: "",
        duration: "30",
        deadline: "",
+       timezone_dropdown_open: false,
+       timezone_search: "",
        notify_on_vote: true,
        reminder_picker: PollReminders.new([%{value: 1, unit: "days"}]),
        invitees: "",
@@ -164,8 +168,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
           />
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <.input
-              type="select"
+            <.select
+              id={"poll-meeting-type-#{@id}"}
               name="poll[meeting_type_id]"
               label={dgettext("dashboard_polls", "Meeting type (optional)")}
               value={@meeting_type_id}
@@ -191,17 +195,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
           />
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <.input
-              type="select"
-              name="poll[timezone]"
-              label={dgettext("dashboard_polls", "Timezone")}
-              value={@timezone}
-              options={LocalTime.timezone_options(@timezone)}
+            <PollTimezone.field
+              timezone={@timezone}
+              open={@timezone_dropdown_open}
+              search={@timezone_search}
               errors={error_list(@errors, :timezone)}
+              target={@myself}
             />
 
-            <.input
-              type="datetime-local"
+            <.datetime_picker
+              id={"poll-deadline-#{@id}"}
               name="poll[deadline]"
               label={dgettext("dashboard_polls", "Voting deadline (optional)")}
               value={@deadline}
@@ -307,6 +310,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   def handle_event("form_change", _params, socket), do: {:noreply, socket}
 
+  def handle_event(event, params, socket) when event in @timezone_events do
+    case PollTimezone.handle_event(event, params, socket) do
+      {:changed, socket} ->
+        {:noreply, socket |> assign_time_off_keys() |> check_calendar() |> refresh_availability()}
+
+      {:unchanged, socket} ->
+        {:noreply, socket}
+    end
+  end
+
   @impl Phoenix.LiveComponent
   def handle_event(event, params, socket) when event in @reminder_events do
     {:noreply,
@@ -380,7 +393,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   defp create(socket, params) do
     intent = if params["intent"] == "draft", do: :draft, else: :publish
 
-    with {:ok, invitees} <- parse_invitees(params),
+    with :ok <- PollFormErrors.finished_times(params, "slots"),
+         {:ok, invitees} <- parse_invitees(params),
          attrs = Map.put(build_attrs(params, socket), :invitees, invitees),
          {:ok, poll} <- save(intent, socket.assigns.draft, socket.assigns.current_user.id, attrs) do
       Flash.info(saved_message(intent, poll, invitees))
@@ -621,9 +635,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   defp errors_for(:location_not_found),
     do: %{location_kind: [PollLocationField.not_found_message()]}
-
-  defp errors_for(:no_slots),
-    do: %{slots: [dgettext("dashboard_polls", "Add at least one candidate time")]}
 
   defp errors_for(%Changeset{} = changeset), do: PollFormErrors.changeset_errors(changeset)
   defp errors_for(reason), do: PollFormErrors.errors_for(reason, :slots)

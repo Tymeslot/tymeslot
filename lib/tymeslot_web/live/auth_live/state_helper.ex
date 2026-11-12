@@ -6,9 +6,11 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Phoenix.Flash
   alias Phoenix.LiveView
   alias Tymeslot.Auth
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias TymeslotWeb.AuthControllerHelpers
   import Phoenix.Component, only: [assign: 2, assign: 3]
   require Logger
 
@@ -126,11 +128,37 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
             })
             |> assign(:email_required, reg_data[:email_from_provider] != true)
             |> assign(:has_oauth_error, has_oauth_error)
+            |> assign(:completion_errors, completion_errors(params["error"]))
+            |> assign(:completion_draft, completion_draft(socket))
         end
 
       _other_state ->
         socket
     end
+  end
+
+  # `POST /auth/complete` redirects back here on a refused form with the reason
+  # in the query string (`format_oauth_error_for_params/1`); the field the
+  # reason belongs to shows it. Anything else stays with the page's flash.
+  defp completion_draft(socket) do
+    Map.merge(
+      %{"email" => "", "full_name" => "", "terms" => false},
+      Flash.get(socket.assigns.flash, :completion_draft) || %{}
+    )
+  end
+
+  defp completion_errors("email_required"), do: field_error(:email, :email_required)
+  defp completion_errors("invalid_email"), do: field_error(:email, :invalid_email)
+  defp completion_errors("email_taken"), do: field_error(:email, :email_already_taken)
+  defp completion_errors("terms_not_accepted"), do: field_error(:terms, :terms_not_accepted)
+  defp completion_errors(_reason), do: %{email: [], terms: []}
+
+  defp field_error(field, reason) do
+    Map.put(
+      %{email: [], terms: []},
+      field,
+      [AuthControllerHelpers.format_oauth_error_for_flash(reason)]
+    )
   end
 
   @doc """

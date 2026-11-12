@@ -179,10 +179,10 @@ defmodule TymeslotWeb.OnboardingJourneyTest do
     assert reload(user).onboarding_completed_at == nil
     assert profile(user).booking_link_first_shared_at == nil
 
-    # With a calendar connected the host resumes at the meeting
+    # The meeting is confirmed, so the host resumes at the look
     # (`StepConfig.resume_step/1`), not at the live step they left.
     {:ok, resumed, _html} = live(conn, "/onboarding")
-    assert on_step?(resumed, :meeting)
+    assert on_step?(resumed, :choose_theme)
 
     assert {:error, {:redirect, %{to: "/onboarding"}}} = live(conn, "/dashboard")
   end

@@ -99,17 +99,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
     js_options = build_js_options(options)
 
     label = escape(snippet_label("popup", options))
+    href = popup_href(options)
 
-    unavailable =
-      js_escape(
-        localized_label(options, fn ->
-          dgettext("dashboard_embed", "Booking system is currently unavailable.")
-        end)
-      )
-
+    # A plain link to the booking page: a visitor whose embed.js never loaded
+    # (blocked, slow, offline) still reaches the booking page in a new tab,
+    # and never sees a native dialog. With the script present the click opens
+    # the modal instead.
     String.trim("""
     <!-- Tymeslot Popup -->
-    <button onclick="if(window.TymeslotBooking){TymeslotBooking.open('#{username}'#{js_options})}else{alert('#{unavailable}')}">#{label}</button>
+    <a href="#{href}" target="_blank" rel="noopener" onclick="if(window.TymeslotBooking){event.preventDefault();TymeslotBooking.open('#{username}'#{js_options})}">#{label}</a>
     <script src="#{base_url}/embed.js" async></script>
     """)
   end
@@ -218,12 +216,18 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
     end
   end
 
-  # Escapes a translated string for safe interpolation inside a single-quoted
-  # JS string literal (the popup snippet's alert fallback).
-  defp js_escape(value) do
-    value
-    |> String.replace("\\", "\\\\")
-    |> String.replace("'", "\\'")
+  # The popup snippet's fallback target: the public booking page, with the same
+  # layout and language query as the link snippet. HTML-attribute-escaped (it
+  # sits in an `href`, not in JS). Without a booking URL it is built from the
+  # base URL and username, never left empty (an empty href reloads the host).
+  defp popup_href(options) do
+    base =
+      case options[:booking_url] do
+        url when is_binary(url) and url != "" -> url
+        _none -> "#{options[:base_url]}/#{sanitize_username(options[:username])}"
+      end
+
+    escape(base <> link_query(options))
   end
 
   # For embed snippets (inline + popup + floating), the server defaults every

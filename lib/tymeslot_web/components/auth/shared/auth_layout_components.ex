@@ -154,7 +154,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
       assigns
       |> assign_new(:"phx-click", fn -> nil end)
       |> assign_new(:href, fn -> nil end)
-      |> assign_new(:"phx-value-state", fn -> nil end)
+      |> assign_new(:"phx-value-to", fn -> nil end)
 
     ~H"""
     <div class="text-center">
@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
         <button
           type="button"
           phx-click={assigns[:"phx-click"]}
-          phx-value-state={assigns[:"phx-value-state"]}
+          phx-value-to={assigns[:"phx-value-to"]}
           class="font-bold text-turquoise-600 hover:text-turquoise-700 transition-colors ml-2 bg-turquoise-50 hover:bg-turquoise-100 px-4 py-2 rounded-xl text-sm inline-block border-none cursor-pointer"
         >
           {@link_text}

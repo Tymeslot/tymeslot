@@ -106,13 +106,9 @@ defmodule TymeslotWeb.Dashboard.PollsCalendarRequiredTest do
         html =
           view
           |> form("form[phx-submit='create_poll']", %{
-            "poll" => %{
-              "title" => "Sync",
-              "duration" => duration,
-              "slots" => %{"0" => "#{date}T09:00"}
-            }
+            "poll" => %{"title" => "Sync", "duration" => duration}
           })
-          |> render_submit()
+          |> render_submit(%{"poll" => %{"slots" => %{"0" => "#{date}T09:00"}}})
 
         assert html =~ "Duration" and has_element?(view, "form[phx-submit='create_poll']")
       end
