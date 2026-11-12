@@ -102,8 +102,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
             {dgettext("dashboard_calendar_modals", "Add")}
           </.action_button>
         </form>
-        <ContactSuggestions.contact_suggestions for="edit-attendee-email" submit />
         <p :if={@attendee_error} class="form-error" role="alert">{@attendee_error}</p>
+        <ContactSuggestions.contact_suggestions for="edit-attendee-email" submit />
         <p :if={@pending_attendees == []} class="text-token-xs text-tymeslot-400 mt-1">
           {dgettext(
             "dashboard_calendar_modals",

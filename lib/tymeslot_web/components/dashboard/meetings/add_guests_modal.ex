@@ -102,10 +102,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.AddGuestsModal do
               {dgettext("dashboard_bookings", "Add")}
             </Buttons.action_button>
           </form>
-          <ContactSuggestions.contact_suggestions for="stage-guest-email" submit named />
           <%!-- Outside the form, which disappears once the list is full, so a
                 refusal explaining that is still seen. --%>
           <p :if={@error} class="form-error" role="alert">{@error}</p>
+          <ContactSuggestions.contact_suggestions for="stage-guest-email" submit named />
 
           <p class="text-tymeslot-500 font-medium mt-2">
             {dngettext(
