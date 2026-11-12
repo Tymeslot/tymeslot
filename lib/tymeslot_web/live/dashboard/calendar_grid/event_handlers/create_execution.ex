@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   alias Tymeslot.Venues
   alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.ExtraGuests
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.WriteOutcomeMessages
@@ -497,7 +497,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   end
 
   # Without a main participant the guests are checked as they are added
-  # (`CreateFormState.check_extra_guest/3`), so only the title is left: there
+  # (`ExtraGuests.check/3`), so only the title is left: there
   # is no guest whose name could stand in for it.
   defp validate_meeting_fields(%{main_participant: false} = creating, _organizer_email) do
     if String.trim(creating.title || "") == "",
@@ -523,7 +523,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       not Shared.valid_email?(guest_email) ->
         {:error, dgettext("dashboard_calendar_events", "A valid guest email is required")}
 
-      CreateFormState.same_address?(guest_email, organizer_email) ->
+      ExtraGuests.same_address?(guest_email, organizer_email) ->
         {:error,
          dgettext(
            "dashboard_calendar_events",
@@ -547,11 +547,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       pending == "" ->
         {:ok, added}
 
-      Shared.valid_email?(pending) and not CreateFormState.same_address?(pending, organizer_email) ->
+      Shared.valid_email?(pending) and not ExtraGuests.same_address?(pending, organizer_email) ->
         {:ok, added ++ [pending]}
 
       true ->
-        CreateFormState.check_extra_guest(creating, pending, organizer_email)
+        ExtraGuests.check(creating, pending, organizer_email)
     end
   end
 
@@ -559,7 +559,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   # among them.
   defp guest_names(creating) do
     creating
-    |> CreateFormState.put_guest_name(pending_guest(creating))
+    |> ExtraGuests.put_name(pending_guest(creating))
     |> Map.get(:guest_names, %{})
   end
 

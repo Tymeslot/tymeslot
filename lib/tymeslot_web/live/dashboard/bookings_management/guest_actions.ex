@@ -132,8 +132,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.GuestActions do
   defp refusal_message(refusals), do: refusals |> Enum.reverse() |> Enum.uniq() |> Enum.join(" ")
 
   # The reasons, and their wording, follow Quick Add's
-  # (`CreateFormState.check_extra_guest/3`), so the host is told the same
-  # thing wherever they invite someone.
+  # (`TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.ExtraGuests.check/3`),
+  # so the host is told the same thing wherever they invite someone.
   defp check_guest(email, meeting, taken, room) do
     cond do
       not Guests.valid_email?(email) ->
