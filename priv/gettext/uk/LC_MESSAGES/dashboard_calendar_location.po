@@ -1,0 +1,52 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: uk\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "An address, a room or a meeting point"
+msgstr "Адреса, кімната або місце зустрічі"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Custom location"
+msgstr "Власне місце"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Custom location…"
+msgstr "Власне місце…"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Location (optional)"
+msgstr "Місце (необов'язково)"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "No location"
+msgstr "Без місця"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Saved locations"
+msgstr "Збережені місця"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/location_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Shown on the calendar entry and in every invitation."
+msgstr "Показується в записі календаря та в кожному запрошенні."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
+#, elixir-autogen, elixir-format
+msgid "That location can no longer be used. Please choose another one."
+msgstr "Це місце більше не можна використати. Виберіть інше."

@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Dashboard.MeetingCardLiveTest do
   @moduledoc """
   Covers what a booking card on the Meetings page tells the organiser: which
-  meeting type was booked, and a time range that reads on one line per end.
+  meeting type was booked, where it takes place, and a time range that reads
+  on one line per end.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -32,6 +33,43 @@ defmodule TymeslotWeb.Dashboard.MeetingCardLiveTest do
     {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 
     assert has_element?(view, ~s([data-testid="meeting-type"]), "Discovery call")
+  end
+
+  test "shows where the meeting takes place, and no location tile without one", %{
+    conn: conn,
+    user: user
+  } do
+    insert(:meeting,
+      organizer_user: user,
+      organizer_email: user.email,
+      title: "Board dinner",
+      location: "The Old Mill, Main Street 1",
+      location_kind: :custom
+    )
+
+    insert(:meeting,
+      organizer_user: user,
+      organizer_email: user.email,
+      title: "Video sync",
+      location: "Video call",
+      location_kind: :video,
+      start_time: DateTime.add(DateTime.utc_now(), 3, :day),
+      end_time: DateTime.add(DateTime.utc_now(), 3 * 24 * 60 + 30, :minute)
+    )
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+    assert has_element?(
+             view,
+             ~s([data-testid="meeting-location"]),
+             "The Old Mill, Main Street 1"
+           )
+
+    assert [_one] =
+             view
+             |> render()
+             |> Floki.parse_document!()
+             |> Floki.find(~s([data-testid="meeting-location"]))
   end
 
   test "keeps each end of the booking's time range on one line", %{conn: conn, user: user} do

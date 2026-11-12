@@ -897,3 +897,8 @@ msgstr "Strona główna"
 #, elixir-autogen, elixir-format
 msgid "via %{page}"
 msgstr "przez %{page}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Lokalizacja"
