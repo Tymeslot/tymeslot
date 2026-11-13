@@ -120,15 +120,18 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
   Returns `{:ok, meeting}` when a matching meeting is found.
   Returns `{:error, :not_found}` when no meeting exists with that UID, or when
-  the meeting exists but belongs to a different organizer.
+  the meeting exists but belongs to a different organizer, or is one the
+  organiser may not see (`MeetingState.visible_to_organiser?/1`, an
+  unverified or unpaid hold). System callers that must reach such a meeting
+  use `get_meeting/1`.
   """
   @spec get_meeting_by_uid_for_organizer(String.t(), integer()) ::
           {:ok, Meeting.t()} | {:error, :not_found}
   def get_meeting_by_uid_for_organizer(uid, organizer_user_id)
       when is_integer(organizer_user_id) do
     query =
-      from(m in Meeting,
-        where: m.uid == ^uid and m.organizer_user_id == ^organizer_user_id
+      MeetingState.where_visible_to_organiser(
+        from(m in Meeting, where: m.uid == ^uid and m.organizer_user_id == ^organizer_user_id)
       )
 
     case Repo.one(query) do
@@ -142,7 +145,10 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
   Returns `{:ok, meeting}` when a matching meeting is found.
   Returns `{:error, :not_found}` when no meeting exists with that ID, or when
-  the meeting exists but belongs to a different organizer.
+  the meeting exists but belongs to a different organizer, or is one the
+  organiser may not see (`MeetingState.visible_to_organiser?/1`, an
+  unverified or unpaid hold). System callers that must reach such a meeting
+  use `get_meeting/1`.
   """
   @spec get_meeting_for_organizer(String.t(), integer()) ::
           {:ok, Meeting.t()} | {:error, :not_found}
@@ -150,8 +156,8 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     case UUID.cast(id) do
       {:ok, uuid} ->
         query =
-          from(m in Meeting,
-            where: m.id == ^uuid and m.organizer_user_id == ^organizer_user_id
+          MeetingState.where_visible_to_organiser(
+            from(m in Meeting, where: m.id == ^uuid and m.organizer_user_id == ^organizer_user_id)
           )
 
         case Repo.one(query) do
@@ -175,9 +181,11 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     case UUID.cast(id) do
       {:ok, uuid} ->
         query =
-          from(m in Meeting,
-            where: m.id == ^uuid and m.organizer_user_id == ^organizer_user_id,
-            lock: "FOR UPDATE"
+          MeetingState.where_visible_to_organiser(
+            from(m in Meeting,
+              where: m.id == ^uuid and m.organizer_user_id == ^organizer_user_id,
+              lock: "FOR UPDATE"
+            )
           )
 
         case Repo.one(query) do

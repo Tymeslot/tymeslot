@@ -195,11 +195,9 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       assert updated_meeting.reschedule_requested_at == nil
     end
 
-    test "awaiting_payment meeting: reschedule request then rebook does not silently confirm an unpaid meeting" do
+    test "awaiting_payment meeting: is not found, so an unpaid booking is never moved" do
       %{user: user} = create_always_bookable_profile()
       meeting = insert_meeting_for_user(user, %{status: :awaiting_payment})
-
-      assert :ok = RescheduleRequest.send_reschedule_request(meeting)
 
       new_params = %{
         date: Date.to_string(Date.add(Date.utc_today(), 2)),
@@ -208,11 +206,14 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         user_timezone: "America/New_York"
       }
 
-      assert {:ok, updated_meeting} =
+      # Hidden from the organiser until paid, so no organiser-scoped lookup
+      # finds it, and nobody outside the system holds its uid yet.
+      assert {:error, :meeting_not_found} =
                Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)
 
-      assert updated_meeting.status == :awaiting_payment
-      assert updated_meeting.reschedule_requested_at == nil
+      {:ok, reloaded} = MeetingQueries.get_meeting(meeting.id)
+      assert reloaded.status == :awaiting_payment
+      assert reloaded.start_time == meeting.start_time
     end
 
     test "re-pins the reminder email to the new meeting time" do
@@ -421,10 +422,15 @@ defmodule Tymeslot.Bookings.RescheduleTest do
     test "returns error when meeting has expired" do
       %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
 
-      # A lapsed approval request or an abandoned paid checkout leaves the
-      # meeting "expired", which releases its slot; rescheduling it would move
-      # a booking that reserves nothing.
-      {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: :expired})
+      # A lapsed approval request leaves the meeting "expired", which releases
+      # its slot; rescheduling it would move a booking that reserves nothing.
+      # (An abandoned paid checkout expires too, but is never found at all:
+      # see the awaiting_payment case.)
+      {:ok, _meeting} =
+        MeetingQueries.update_meeting(meeting, %{
+          status: :expired,
+          approval_resolved_at: DateTime.utc_now(:second)
+        })
 
       assert {:error, {:not_reschedulable, :expired}} =
                Reschedule.execute(meeting.uid, new_params, meeting.organizer_user_id)

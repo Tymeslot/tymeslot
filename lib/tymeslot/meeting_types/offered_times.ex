@@ -194,7 +194,8 @@ defmodule Tymeslot.MeetingTypes.OfferedTimes do
   end
 
   # Drops the times a live booking of their host overlaps, buffers included,
-  # with one bookings read per host.
+  # with one bookings read per host. Holds the host cannot see (unverified,
+  # unpaid) still take their time, as they do for the conflict check.
   defp reject_booked(offered_times, reaches) do
     offered_times
     |> Enum.group_by(&Map.fetch!(reaches, &1.meeting_type_id).user_id)
@@ -202,7 +203,9 @@ defmodule Tymeslot.MeetingTypes.OfferedTimes do
       spans = Enum.map(times, &{&1, held_span(&1, reaches)})
       from = spans |> Enum.map(fn {_time, {from, _to}} -> from end) |> Enum.min(DateTime)
       to = spans |> Enum.map(fn {_time, {_from, to}} -> to end) |> Enum.max(DateTime)
-      bookings = Meetings.list_meetings_in_range_for_organizer(user_id, from, to)
+
+      bookings =
+        Meetings.list_meetings_in_range_for_organizer(user_id, from, to, include_hidden: true)
 
       for {time, span} <- spans, not Enum.any?(bookings, &overlaps?(&1, span)), do: time
     end)

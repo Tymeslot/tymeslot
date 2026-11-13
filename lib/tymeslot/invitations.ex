@@ -78,6 +78,11 @@ defmodule Tymeslot.Invitations do
   @doc """
   The host's invitations for a type, newest first, each with its derived
   status. `limit:` caps how many are loaded (the newest).
+
+  Only meetings the host may see (`MeetingState.visible_to_organiser?/1`)
+  count here, so an invitation whose booking awaits its attendee's email
+  verification or its payment reads as available. The booking side still
+  reads every meeting, so the hold refuses a second booker meanwhile.
   """
   @spec list(pos_integer(), MeetingTypeSchema.t(), limit: pos_integer()) :: [entry()]
   def list(user_id, %MeetingTypeSchema{id: meeting_type_id}, opts \\ []) do
@@ -85,7 +90,8 @@ defmodule Tymeslot.Invitations do
 
     user_id
     |> InvitationQueries.list_for_meeting_type(meeting_type_id, opts)
-    |> Enum.map(fn %InvitationSchema{meetings: meetings} = invitation ->
+    |> Enum.map(fn %InvitationSchema{meetings: all_meetings} = invitation ->
+      meetings = Enum.filter(all_meetings, &MeetingState.visible_to_organiser?/1)
       consuming = InvitationStatus.consuming_meeting(invitation, meetings)
 
       %{

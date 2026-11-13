@@ -316,20 +316,37 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   and not voided by a pending reschedule request. Past bookings inside the
   window are included — the calendar grid shows history as well as what is
   ahead.
+
+  By default only the bookings the organiser may see
+  (`MeetingState.where_visible_to_organiser/1`): the calendar grid and the
+  time-off warning are the organiser's view. `include_hidden: true` keeps
+  the unverified and unpaid holds too, for callers deciding what the public
+  may still book: a held slot must stay taken there.
   """
-  @spec list_for_organizer_in_range(pos_integer(), DateTime.t(), DateTime.t()) :: [Meeting.t()]
-  def list_for_organizer_in_range(organizer_user_id, %DateTime{} = from_utc, %DateTime{} = to_utc) do
+  @spec list_for_organizer_in_range(pos_integer(), DateTime.t(), DateTime.t(),
+          include_hidden: boolean()
+        ) :: [Meeting.t()]
+  def list_for_organizer_in_range(
+        organizer_user_id,
+        %DateTime{} = from_utc,
+        %DateTime{} = to_utc,
+        opts \\ []
+      ) do
     Meeting
     |> MeetingState.where_slot_live()
+    |> visible_unless(Keyword.get(opts, :include_hidden, false))
     |> where([m], m.organizer_user_id == ^organizer_user_id)
     |> where([m], m.start_time < ^to_utc and m.end_time > ^from_utc)
     |> order_by_start_asc()
     |> Repo.all()
   end
 
+  defp visible_unless(query, true), do: query
+  defp visible_unless(query, false), do: MeetingState.where_visible_to_organiser(query)
+
   @doc """
-  Get every upcoming meeting the organiser holds, whatever its status, soonest
-  first.
+  Get every upcoming meeting the organiser holds and may see, whatever its
+  status, soonest first.
   """
   @spec list_upcoming_meetings_for_organizer(pos_integer()) :: [Meeting.t()]
   def list_upcoming_meetings_for_organizer(organizer_user_id) do
@@ -337,6 +354,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
     Meeting
     |> for_organizer(organizer_user_id)
+    |> MeetingState.where_visible_to_organiser()
     |> upcoming(now)
     |> order_by_start_asc()
     |> Repo.all()
@@ -348,6 +366,8 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   :id (one meeting only), :order (:desc, the default, newest first; or :asc, soonest first),
   :booking_page (`:main` for bookings through no page, or a booking page id).
   Each meeting comes with the booking page it was booked through.
+  Never returns a meeting the organiser may not see
+  (`MeetingState.where_visible_to_organiser/1`), whatever the filter.
   Returns a list limited to per_page.
   """
   @spec list_meetings_for_organizer_paginated_cursor(pos_integer(), Keyword.t()) :: [Meeting.t()]
@@ -366,6 +386,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
     Meeting
     |> for_organizer(organizer_user_id)
+    |> MeetingState.where_visible_to_organiser()
     |> with_id(Keyword.get(opts, :id))
     |> with_status(status)
     |> without_status(exclude_status)

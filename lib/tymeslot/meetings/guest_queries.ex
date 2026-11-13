@@ -339,6 +339,8 @@ defmodule Tymeslot.Meetings.GuestQueries do
   """
   @spec rsvp_summaries_for_user(integer()) :: %{String.t() => Guest.summary()}
   def rsvp_summaries_for_user(user_id) do
+    # Not filtered for organiser visibility: callers look summaries up by the
+    # uids of cards that already are.
     query =
       from(g in Guest,
         join: m in Meeting,

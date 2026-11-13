@@ -525,8 +525,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       refute_enqueued(worker: VideoRoomWorker)
     end
 
-    test "leaves room creation to the payment when the booking is not yet paid for",
-         %{user: user, zoom: zoom} do
+    test "never moves a booking that is not yet paid for", %{user: user, zoom: zoom} do
       meeting =
         meeting_on(
           user,
@@ -534,10 +533,21 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
           Map.put(office_meeting_attrs(), :status, :awaiting_payment)
         )
 
-      updated = reschedule(meeting, %{location_option_id: "loc-zoom"})
+      params = %{
+        date: Date.to_string(Date.add(Date.utc_today(), 2)),
+        time: "2:00 PM",
+        duration: "60min",
+        user_timezone: "America/New_York",
+        location_option_id: "loc-zoom"
+      }
 
-      assert updated.status == :awaiting_payment
-      assert updated.video_integration_id == zoom.id
+      # Hidden from the organiser until paid, so the lookup does not find it.
+      assert {:error, :meeting_not_found} =
+               Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
+
+      assert Repo.get!(MeetingSchema, meeting.id).video_integration_id ==
+               meeting.video_integration_id
+
       refute_enqueued(worker: VideoRoomWorker)
     end
 

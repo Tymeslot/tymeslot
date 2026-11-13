@@ -356,9 +356,38 @@ defmodule Tymeslot.Meetings.MeetingState do
   @doc """
   Whether the organiser may see this meeting: the single definition of
   organiser visibility, mirrored for queries by `where_visible_to_organiser/1`.
+
+  Two kinds of booking never reach the organiser, because neither became a
+  booking anyone agreed to:
+
+    * **Unverified**: `unverified?/1`, read from the verification columns, so
+      a hold that expired without being verified stays hidden for good.
+    * **Unpaid**: one that never got past payment. That is status
+      `:awaiting_payment`, or `:expired` with no `approval_resolved_at`. The
+      meeting row carries no payment column, so the second half reads what
+      the other ways to `:expired` leave behind: an approval request that
+      lapsed (or was answered after its deadline) is released by
+      `Tymeslot.Meetings.Approval`, which always stamps
+      `approval_resolved_at`, whereas a lapsed or failed checkout
+      (`Tymeslot.MeetingPayments.HeldMeetings.expire/1`, `PaidBooking`, a
+      refused late payment) writes the status alone. `approval_requested_at`
+      cannot tell them apart, since a paid type that requires approval stamps
+      it at submission, before any payment. Nor can the booking payment's
+      `paid_at`: a checkout that failed to open leaves no payment row, and a
+      late payment refused onto a slot already taken is paid without ever
+      becoming a booking. A late payment that is recovered moves the meeting
+      to `:confirmed` or `:awaiting_approval`, and from then on it is
+      visible like any paid booking.
+
+  The remaining expiry, an unverified hold, also has no
+  `approval_resolved_at`; both rules hide it.
   """
   @spec visible_to_organiser?(Meeting.t() | map()) :: boolean()
-  def visible_to_organiser?(meeting), do: not unverified?(meeting)
+  def visible_to_organiser?(meeting), do: not unverified?(meeting) and not unpaid?(meeting)
+
+  defp unpaid?(%{status: @awaiting_payment}), do: true
+  defp unpaid?(%{status: @expired, approval_resolved_at: nil}), do: true
+  defp unpaid?(%{status: _status, approval_resolved_at: _resolved_at}), do: false
 
   @doc "Query-side counterpart of `awaiting_verification?/1`."
   @spec where_awaiting_verification(Ecto.Queryable.t()) :: Ecto.Query.t()
@@ -367,11 +396,18 @@ defmodule Tymeslot.Meetings.MeetingState do
   end
 
   @doc """
-  Query-side counterpart of `visible_to_organiser?/1`. Assumes the meeting is
-  the query's first binding.
+  Query-side counterpart of `visible_to_organiser?/1`, and the same rule
+  clause for clause: verified or never gated, and past payment. Assumes the
+  meeting is the query's first binding.
   """
   @spec where_visible_to_organiser(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_visible_to_organiser(query) do
-    where(query, [m], is_nil(m.verification_deadline_at) or not is_nil(m.email_verified_at))
+    where(
+      query,
+      [m],
+      (is_nil(m.verification_deadline_at) or not is_nil(m.email_verified_at)) and
+        m.status != @awaiting_payment and
+        (m.status != @expired or not is_nil(m.approval_resolved_at))
+    )
   end
 end

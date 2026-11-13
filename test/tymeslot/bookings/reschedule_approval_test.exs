@@ -423,15 +423,15 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
   end
 
   describe "rescheduling a booking whose status the gate is not meaningful for" do
-    test "awaiting_payment: leaves the status untouched instead of confirming it into the gate" do
+    test "awaiting_payment: is not found, so it never reaches the gate" do
       %{meeting: meeting, params: params} = gated_booking(true, %{status: :awaiting_payment})
 
-      assert {:ok, rescheduled} =
+      # A booking that never paid must not be revived into a state the host
+      # can approve. It is hidden from the organiser until paid, so the
+      # organiser-scoped lookup does not find it at all.
+      assert {:error, :meeting_not_found} =
                Reschedule.execute(meeting.uid, params, meeting.organizer_user_id)
 
-      # A booking that never paid must not be revived into a state the host
-      # can approve — that would confirm a meeting nobody paid for.
-      assert rescheduled.status == :awaiting_payment
       refute_enqueued(worker: ApprovalExpiryWorker)
     end
 

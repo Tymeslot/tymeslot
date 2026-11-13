@@ -162,7 +162,16 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       # time can still be days away — "upcoming" has to read the resolved
       # status, not just the clock, or a lapsed request looks like a live
       # booking again.
-      held_meeting(user, %{status: :expired, attendee_name: "Sam Overdue"})
+      now = DateTime.utc_now(:second)
+
+      # Resolved as `Approval.expire/1` leaves it, so it is hidden from
+      # "upcoming" by its status, not by organiser visibility.
+      held_meeting(user, %{
+        status: :expired,
+        attendee_name: "Sam Overdue",
+        approval_resolved_at: now,
+        cancelled_at: now
+      })
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings")
 
@@ -175,12 +184,15 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
     } do
       past = DateTime.add(DateTime.utc_now(:second), -2, :hour)
 
+      # Lapsed as `Approval.expire/1` leaves it: resolved and released.
       held_meeting(user, %{
         status: :expired,
         attendee_name: "Sam Overdue",
         start_time: past,
         end_time: DateTime.add(past, 30, :minute),
-        approval_deadline_at: DateTime.add(past, 90, :minute)
+        approval_deadline_at: DateTime.add(past, 90, :minute),
+        approval_resolved_at: past,
+        cancelled_at: past
       })
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
@@ -194,8 +206,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
   end
 
   describe "an unpaid checkout is never shown as agreed" do
-    test "an awaiting_payment booking is badged honestly, not as Scheduled",
-         %{conn: conn, user: user} do
+    test "an awaiting_payment booking is not listed at all", %{conn: conn, user: user} do
       insert(:meeting,
         status: :awaiting_payment,
         organizer_user: user,
@@ -208,9 +219,9 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings")
 
-      assert html =~ "Unpaid Guest"
-      assert html =~ "Awaiting payment"
-      refute html =~ "Scheduled"
+      # Hidden from the organiser until it is paid.
+      refute html =~ "Unpaid Guest"
+      refute html =~ "Awaiting payment"
     end
   end
 

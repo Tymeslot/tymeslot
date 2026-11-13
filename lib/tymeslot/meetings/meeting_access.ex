@@ -26,8 +26,9 @@ defmodule Tymeslot.Meetings.MeetingAccess do
   Fetches a meeting by UID only if the given `organizer_user_id` owns it.
 
   Returns `{:ok, meeting}` when a matching meeting is found.
-  Returns `{:error, :not_found}` when no meeting exists with that UID, or when
-  the meeting exists but belongs to a different organizer.
+  Returns `{:error, :not_found}` when no meeting exists with that UID, when
+  the meeting exists but belongs to a different organizer, or when it is a
+  hold the organiser may not see (`MeetingState.visible_to_organiser?/1`).
 
   Use this instead of an unscoped UID lookup on any user-facing route that
   accepts a meeting UID from the URL, to prevent IDOR attacks.
