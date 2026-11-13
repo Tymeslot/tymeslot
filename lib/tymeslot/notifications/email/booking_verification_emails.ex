@@ -24,6 +24,16 @@ defmodule Tymeslot.Notifications.Email.BookingVerificationEmails do
   alias Tymeslot.Notifications.Email.SeatJobs
   alias Tymeslot.Workers.DeliveryClaims
 
+  @booking_not_held "Booking no longer awaiting verification"
+  @seat_not_held "Seat no longer awaiting verification"
+
+  @doc """
+  Whether `reason`, from a discard this module returned, is an expected
+  outcome: the attendee verified, or the hold lapsed, before the job ran.
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason), do: reason in [@booking_not_held, @seat_not_held]
+
   @doc """
   Sends the verification link to the attendee of a held booking.
 
@@ -44,7 +54,7 @@ defmodule Tymeslot.Notifications.Email.BookingVerificationEmails do
           status: meeting.status
         )
 
-        {:discard, "Meeting #{meeting.status}"}
+        {:discard, @booking_not_held}
       end
     end)
   end
@@ -76,7 +86,7 @@ defmodule Tymeslot.Notifications.Email.BookingVerificationEmails do
             participant_id: participant_id
           )
 
-          {:discard, "Seat no longer awaiting verification"}
+          {:discard, @seat_not_held}
         end
       end
     )

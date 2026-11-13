@@ -15,6 +15,7 @@ defmodule Tymeslot.Workers.BookingVerificationEmailTest do
 
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
   alias Tymeslot.Meetings.EmailVerificationToken
+  alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Workers.EmailWorker
 
   setup :set_mox_from_context
@@ -93,7 +94,8 @@ defmodule Tymeslot.Workers.BookingVerificationEmailTest do
   test "a booking verified or expired before the job ran gets no email" do
     for status <- [:confirmed, :expired] do
       meeting = held_meeting(%{status: status})
-      assert {:discard, _reason} = perform(meeting)
+      assert {:discard, reason} = perform(meeting)
+      assert EmailHandlers.expected_discard?(reason)
     end
 
     refute_received {:email, _email}
@@ -203,7 +205,8 @@ defmodule Tymeslot.Workers.BookingVerificationEmailTest do
       ]
 
       for {slot, seat} <- cases do
-        assert {:discard, _reason} = perform_job(EmailWorker, seat_args(slot, seat))
+        assert {:discard, reason} = perform_job(EmailWorker, seat_args(slot, seat))
+        assert EmailHandlers.expected_discard?(reason)
       end
 
       refute_received {:email, _email}
