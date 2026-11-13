@@ -70,6 +70,42 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingExtrasTest do
       assert guest_emails(meeting) == ["one@example.com", "two@example.com"]
     end
 
+    test "invites a guest under the name typed with the address", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_form(lv)
+      fill_guest(lv)
+
+      assert add_guest(lv, "Grace Hopper <Grace@Example.com>") =~ "Grace Hopper"
+
+      lv
+      |> element("#create-guest-email-input")
+      |> render_change(%{"email" => ~s("Lovelace, Ada" <ada.l@example.com>)})
+
+      meeting = save_and_fetch(lv)
+
+      assert [
+               %{email: "ada.l@example.com", name: "Lovelace, Ada"},
+               %{email: "grace@example.com", name: "Grace Hopper"}
+             ] = meeting.id |> GuestQueries.list_for_meeting() |> Enum.sort_by(& &1.email)
+    end
+
+    test "a removed guest's name goes with them", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_form(lv)
+      fill_guest(lv)
+
+      add_guest(lv, "Grace Hopper <grace@example.com>")
+
+      lv
+      |> element(~s([phx-click="remove_create_guest"][phx-value-email="grace@example.com"]))
+      |> render_click()
+
+      add_guest(lv, "grace@example.com")
+
+      assert [%{email: "grace@example.com", name: nil}] =
+               lv |> save_and_fetch() |> Map.fetch!(:id) |> GuestQueries.list_for_meeting()
+    end
+
     test "refuses the main guest's own address and repeats", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard")
       open_form(lv)

@@ -221,6 +221,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
     end
   end
 
+  @doc """
+  The href of the connected account's principal (`DAV:current-user-principal`,
+  RFC 5397), found by the probe discovery uses: the URL as supplied, then the
+  origin root. Read by address book discovery (`Tymeslot.Contacts.CardDAV`),
+  which starts from the same principal.
+  """
+  @spec current_user_principal(Base.client()) :: {:ok, String.t()} | {:error, term()}
+  def current_user_principal(client), do: probe_current_user_principal(client)
+
   # Full RFC 4791 discovery chain:
   #   1. PROPFIND a probe URL → current-user-principal href
   #   2. PROPFIND principal URL → calendar-home-set href

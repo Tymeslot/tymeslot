@@ -9,12 +9,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Locales
-  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.UniversalSanitizer
+  alias Tymeslot.Validation.AddressList
   alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateRecurrence
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.ExtraGuests
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -124,6 +125,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       note_open: false,
       organizer_note: "",
       guest_emails: [],
+      # The name typed with an extra guest (`Name <address>`), by address.
+      guest_names: %{},
       guest_email_input: "",
       # Which language the guests are written to. Defaults to the host's own
       # (they know whom they are inviting) and is theirs to change per meeting.
@@ -187,7 +190,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   Turns the meeting's main participant on or off.
 
   Turning it off invites a main guest already typed in first among the
-  guests, if `check_extra_guest/3` takes them (the host's own address is
+  guests, if `ExtraGuests.check/3` takes them (the host's own address is
   refused with its usual message). Name and address stay hidden, for switching back.
   """
   @spec handle_toggle_create_main_participant(map(), Phoenix.LiveView.Socket.t()) ::
@@ -199,15 +202,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     do: %{creating | main_participant: true}
 
   defp toggle_main_participant(creating, organizer_email) do
-    main_guest = normalise_address(creating.guest_email)
+    main_guest = ExtraGuests.normalise_address(creating.guest_email)
     without_main = %{creating | main_participant: false}
 
-    case check_extra_guest(without_main, main_guest, organizer_email) do
+    case ExtraGuests.check(without_main, main_guest, organizer_email) do
       :ok ->
         %{without_main | guest_emails: [main_guest | creating.guest_emails]}
 
       {:error, message} ->
-        if same_address?(main_guest, organizer_email),
+        if ExtraGuests.same_address?(main_guest, organizer_email),
           do: Map.put(without_main, :guest_email_error, message),
           else: without_main
     end
@@ -278,21 +281,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   host is signed in, so their own meetings are not held to the lower default
   of the public booking page (`Guests.default_booking_limit/0`). An
   invalid address, the main guest's own and repeats are refused here with a
-  flash saying why, rather than silently dropped later.
+  flash saying why, rather than silently dropped later. A name typed with
+  the address (`Name <address>`, as a contact suggestion fills it in) is
+  kept for the guest's emails, unless it is not one a guest could be given.
   """
   @spec handle_add_create_guest(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_add_create_guest(%{"email" => raw_email}, socket) do
-    email = raw_email |> String.trim() |> String.downcase()
+    %{email: email} = entry = AddressList.parse_entry(raw_email)
 
     organizer_email = socket.assigns.current_user.email
 
     update_creating(socket, fn creating ->
-      case check_extra_guest(creating, email, organizer_email) do
+      case ExtraGuests.check(creating, email, organizer_email) do
         :ok ->
           creating
           |> Map.put(:guest_email_error, nil)
           |> Map.merge(%{guest_emails: creating.guest_emails ++ [email], guest_email_input: ""})
+          |> ExtraGuests.put_name(entry)
 
         {:error, message} ->
           Map.put(creating, :guest_email_error, message)
@@ -304,7 +310,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_remove_create_guest(%{"email" => email}, socket) do
     update_creating(socket, fn creating ->
-      Map.put(creating, :guest_emails, List.delete(creating.guest_emails, email))
+      creating
+      |> Map.put(:guest_emails, List.delete(creating.guest_emails, email))
+      |> ExtraGuests.forget_name(email)
     end)
   end
 
@@ -322,65 +330,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       code -> put_field(socket, :locale, code)
     end
   end
-
-  @doc """
-  Whether `email` (already trimmed and downcased) can join the meeting's extra
-  guests, or the reason it cannot. Save runs the same check over an address
-  still sitting in the input, so the two cannot disagree.
-
-  The host's own address (`organizer_email`) is refused: they organise the
-  meeting and are never one of its guests. The main guest's address only
-  counts while the meeting has a main participant; without one, whatever is
-  left in that hidden field invites nobody.
-  """
-  @spec check_extra_guest(map(), String.t(), String.t() | nil) :: :ok | {:error, String.t()}
-  def check_extra_guest(creating, email, organizer_email) do
-    cond do
-      not Shared.valid_email?(email) ->
-        {:error,
-         dgettext("dashboard_calendar_events", "%{email} is not a valid email address.",
-           email: email
-         )}
-
-      same_address?(email, organizer_email) ->
-        {:error,
-         dgettext(
-           "dashboard_calendar_events",
-           "You cannot add yourself as a guest. Use a different email address."
-         )}
-
-      Map.get(creating, :main_participant, true) and
-          email == creating.guest_email |> String.trim() |> String.downcase() ->
-        {:error,
-         dgettext("dashboard_calendar_events", "%{email} is already the main guest.",
-           email: email
-         )}
-
-      email in creating.guest_emails ->
-        {:error,
-         dgettext("dashboard_calendar_events", "%{email} is already invited.", email: email)}
-
-      length(creating.guest_emails) >= Guests.max_guests() ->
-        {:error,
-         dgettext("dashboard_calendar_events", "No more guests can be added to this meeting.")}
-
-      true ->
-        :ok
-    end
-  end
-
-  @doc """
-  Whether two addresses are the same mailbox, compared trimmed and
-  case-insensitively as `Tymeslot.Bookings.CreateAdHoc` compares a
-  self-booking.
-  """
-  @spec same_address?(String.t() | nil, String.t() | nil) :: boolean()
-  def same_address?(left, right) when is_binary(left) and is_binary(right),
-    do: normalise_address(left) == normalise_address(right)
-
-  def same_address?(_left, _right), do: false
-
-  defp normalise_address(email), do: email |> String.trim() |> String.downcase()
 
   # Applies `fun` to the event being created and assigns what it returns; a
   # no-op while no create form is open. A `fun` that returns the map it was

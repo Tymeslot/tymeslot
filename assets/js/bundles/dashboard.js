@@ -9,6 +9,7 @@ import { initializeBundle } from "./bundle_utils"
 import { lazyHook } from "../dynamic_hooks"
 import { ServerUrlField } from "../hooks/server_url_field"
 import { ReminderCustomRow } from "../hooks/reminder_custom_row"
+import { ContactSuggest } from "../hooks/contact_suggest"
 import { installKeyboardClick } from "../keyboard_click"
 import { ChartReadout } from "../hooks/chart_readout"
 
@@ -20,6 +21,9 @@ const DashboardHooks = {
   ServerUrlField,
   // Eager for the same reason: a lazy load could miss the first focusout.
   ReminderCustomRow,
+  // Eager as well: the first keystroke in an invite field should already
+  // be heard, not the one after a lazy load.
+  ContactSuggest,
   // Eager because it is a few lines and only ever handles a chart keypress.
   ChartReadout,
   AutoUpload: lazyHook("AutoUpload", () => import("../hooks/auto_upload")),

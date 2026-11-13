@@ -9,10 +9,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Validation.AddressList
   alias Tymeslot.Venues
   alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.ExtraGuests
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.GroupEventCreation
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.WriteOutcomeMessages
@@ -56,6 +57,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
         creating
         |> ad_hoc_params(socket, start_at, end_at)
         |> Map.put(:guest_emails, guest_emails)
+        |> Map.put(:guest_names, guest_names(creating))
 
       send(self(), {:execute_create_ad_hoc_meeting, params})
 
@@ -495,7 +497,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   end
 
   # Without a main participant the guests are checked as they are added
-  # (`CreateFormState.check_extra_guest/3`), so only the title is left: there
+  # (`ExtraGuests.check/3`), so only the title is left: there
   # is no guest whose name could stand in for it.
   defp validate_meeting_fields(%{main_participant: false} = creating, _organizer_email) do
     if String.trim(creating.title || "") == "",
@@ -521,7 +523,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       not Shared.valid_email?(guest_email) ->
         {:error, dgettext("dashboard_calendar_events", "A valid guest email is required")}
 
-      CreateFormState.same_address?(guest_email, organizer_email) ->
+      ExtraGuests.same_address?(guest_email, organizer_email) ->
         {:error,
          dgettext(
            "dashboard_calendar_events",
@@ -539,19 +541,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   # guest's own address is settled by `EventCreation` like any other.
   defp extra_guest_emails(creating, organizer_email) do
     added = creating[:guest_emails] || []
-    pending = (creating[:guest_email_input] || "") |> String.trim() |> String.downcase()
+    %{email: pending} = pending_guest(creating)
 
     cond do
       pending == "" ->
         {:ok, added}
 
-      Shared.valid_email?(pending) and not CreateFormState.same_address?(pending, organizer_email) ->
+      Shared.valid_email?(pending) and not ExtraGuests.same_address?(pending, organizer_email) ->
         {:ok, added ++ [pending]}
 
       true ->
-        CreateFormState.check_extra_guest(creating, pending, organizer_email)
+        ExtraGuests.check(creating, pending, organizer_email)
     end
   end
+
+  # The names typed with the extra guests, the one still in the input
+  # among them.
+  defp guest_names(creating) do
+    creating
+    |> ExtraGuests.put_name(pending_guest(creating))
+    |> Map.get(:guest_names, %{})
+  end
+
+  defp pending_guest(creating), do: AddressList.parse_entry(creating[:guest_email_input] || "")
 
   # A meeting without a main participant is for its guests, so it needs one.
   defp require_guests(%{main_participant: false}, []),

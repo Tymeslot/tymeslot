@@ -185,7 +185,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       video_integration_id: params[:video_integration_id],
       organizer_note: params[:organizer_note],
       attendee_locale: params[:attendee_locale],
-      guest_emails: guest_emails,
+      guest_emails: Guests.with_names(guest_emails, params[:guest_names] || %{}),
       reminders: params[:reminders] || [],
       managed_by_host: params[:managed_by_host] == true,
       location: params[:location]

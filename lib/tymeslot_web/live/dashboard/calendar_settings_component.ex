@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.CalendarSettings.ComponentView
+  alias TymeslotWeb.Dashboard.CalendarSettings.ContactsToggle
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.Flash
@@ -160,6 +161,13 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
       _not_changed ->
         {:noreply, socket}
+    end
+  end
+
+  def handle_event("toggle_use_for_contacts", %{"id" => id}, socket) do
+    case ContactsToggle.toggle(socket.assigns.current_user.id, socket.assigns.integrations, id) do
+      {:ok, _updated} -> {:noreply, load_integrations(socket)}
+      :unchanged -> {:noreply, socket}
     end
   end
 

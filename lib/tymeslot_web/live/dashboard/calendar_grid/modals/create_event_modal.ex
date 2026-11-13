@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.UI.LocaleButton
+  import TymeslotWeb.Components.Dashboard.ContactSuggestions
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.CalendarGrid
@@ -180,8 +181,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           id="create-meeting-guest-email"
           phx-blur="update_create_guest_email"
           phx-target={@myself}
+          autocomplete="off"
         />
       </div>
+      <.contact_suggestions
+        :if={@meeting_mode}
+        for="create-meeting-guest-email"
+        name_input="create-meeting-guest-name"
+      />
 
       <%!-- Further guests and the language every email about the meeting is
             written in. Meeting mode only: a bare provider event has its own
@@ -200,7 +207,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               :for={email <- @creating_event[:guest_emails] || []}
               class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-token-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
             >
-              {email}
+              <%= case Map.get(@creating_event[:guest_names] || %{}, email) do %>
+                <% nil -> %>
+                  {email}
+                <% name -> %>
+                  {name} <span class="text-turquoise-700/80">{email}</span>
+              <% end %>
               <button
                 type="button"
                 phx-click="remove_create_guest"
@@ -222,13 +234,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             novalidate
           >
             <.input
-              type="email"
+              type="text"
+              inputmode="email"
               id="create-guest-email-input"
               name="email"
               value={@creating_event[:guest_email_input] || ""}
               phx-change="update_create_guest_input"
               phx-target={@myself}
               placeholder="colleague@example.com"
+              autocomplete="off"
               class="flex-1 min-w-0"
               errors={List.wrap(@creating_event[:guest_email_error])}
             />
@@ -236,6 +250,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               {dgettext("dashboard_calendar_modals", "Add")}
             </.action_button>
           </form>
+          <.contact_suggestions for="create-guest-email-input" submit named />
           <p class="text-token-xs text-tymeslot-400 mt-1">
             {dgettext(
               "dashboard_calendar_modals",
@@ -535,6 +550,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               phx-change="update_create_attendee_input"
               phx-target={@myself}
               placeholder="attendee@example.com"
+              autocomplete="off"
               class="flex-1 min-w-0"
               errors={List.wrap(@creating_event[:attendee_error])}
             />
@@ -542,6 +558,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               {dgettext("dashboard_calendar_modals", "Add")}
             </.action_button>
           </form>
+          <.contact_suggestions for="create-attendee-email" submit />
           <p class="text-token-xs text-tymeslot-400 mt-1">
             {dgettext(
               "dashboard_calendar_modals",

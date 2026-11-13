@@ -306,6 +306,7 @@ defmodule TymeslotWeb.Router do
     end
 
     post "/dashboard/payments/connect", Dashboard.PaymentsController, :connect
+    get "/dashboard/contacts/search", Dashboard.ContactSearchController, :search
 
     # Where Stripe sends the host back; must equal `StripeConnectOAuth.redirect_uri/0`.
     get "/dashboard/payments/connect/callback", Dashboard.PaymentsController, :callback
