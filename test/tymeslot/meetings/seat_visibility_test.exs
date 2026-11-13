@@ -165,6 +165,27 @@ defmodule Tymeslot.Meetings.SeatVisibilityTest do
     assert CalendarExport.for_booker(booker_view) == :none
   end
 
+  test "an unverified seat's token cannot move it", %{meeting: meeting, unverified: unverified} do
+    new_params = %{
+      date: Date.to_iso8601(Date.add(Date.utc_today(), 3)),
+      time: "10:00",
+      duration: "30min",
+      user_timezone: "America/New_York"
+    }
+
+    assert {:error, :meeting_not_found} =
+             RescheduleSeat.execute(
+               unverified.management_token,
+               new_params,
+               meeting.organizer_user_id
+             )
+
+    assert {:ok, %{cancelled_at: nil, meeting_id: meeting_id}} =
+             ParticipantQueries.get(unverified.id)
+
+    assert meeting_id == meeting.id
+  end
+
   test "the last visible seat leaving cancels the slot and the held seat with it", %{
     meeting: meeting,
     verified: verified,

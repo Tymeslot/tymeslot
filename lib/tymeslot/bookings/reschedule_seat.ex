@@ -71,6 +71,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.SeatLookup
   alias Tymeslot.MeetingTypes
@@ -151,7 +152,14 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   def vacated_meeting(_seat, _organizer_user_id), do: nil
 
-  defp ensure_live(%{cancelled_at: nil}), do: :ok
+  # A seat awaiting its booker's email verification is refused as if its
+  # token named no seat, as `SeatLookup.fetch_live_seat/1` refuses it: the
+  # held booker's only way on is the verification link. A seat is never
+  # held again once verified or cancelled, so the check needs no lock.
+  defp ensure_live(%{cancelled_at: nil} = participant) do
+    if ParticipantSchema.unverified?(participant), do: {:error, :not_found}, else: :ok
+  end
+
   defp ensure_live(_participant), do: {:error, :already_cancelled}
 
   # The seat link only says which seat to move; the page it was submitted
