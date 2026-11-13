@@ -533,7 +533,7 @@ msgstr "не є підтримуваною мовою"
 
 #: lib/tymeslot/auth/user_schema.ex
 #: lib/tymeslot/meetings/guest_schema.ex
-#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/meeting_rules.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
@@ -874,17 +874,17 @@ msgstr "має бути в майбутньому"
 msgid "invitation links"
 msgstr "посилань із запрошенням"
 
-#: lib/tymeslot/meeting_types/email_verification_rule.ex
-#, elixir-autogen, elixir-format
-msgid "email verification cannot be combined with payment"
-msgstr "підтвердження електронної пошти не можна поєднувати з оплатою"
-
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email verification"
-msgstr "групові бронювання не можуть вимагати підтвердження електронної пошти"
-
 #: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Цей час більше недоступний. Виберіть інший."
+
+#: lib/tymeslot/meeting_types/email_verification_rule.ex
+#, elixir-autogen, elixir-format
+msgid "email confirmation cannot be combined with payment"
+msgstr "підтвердження електронної пошти не можна поєднувати з оплатою"
+
+#: lib/tymeslot/meeting_types/group_validation.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require email confirmation"
+msgstr "групові бронювання не можуть вимагати підтвердження електронної пошти"

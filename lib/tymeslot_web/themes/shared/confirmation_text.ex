@@ -61,32 +61,32 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
   until when the time is held, in the voice of the theme with key
   `theme_key` where it has one.
 
-  Names the booking's own `verification_deadline_at` as a time on the
-  attendee's clock (`user_timezone`), not the length of the hold: the hold
-  is capped at the meeting's start, so a booking made close to it is held
-  for less.
+  Names the booking's own `verification_deadline_at` as a date and time on
+  the attendee's clock (`user_timezone`), not the length of the hold: the
+  hold is capped at the meeting's start, so a booking made close to it is
+  held for less. The date is always there, as on the verify page, so a hold
+  running past midnight never reads as a time already gone.
   """
   @spec check_inbox_message(map(), Catalog.theme_key() | nil) :: String.t()
   def check_inbox_message(assigns, theme_key \\ nil) do
     email = assigns[:email]
-    time = deadline_time(assigns[:verification_deadline_at], assigns[:user_timezone])
+    deadline = deadline_text(assigns[:verification_deadline_at], assigns[:user_timezone])
+    bindings = %{email: email, deadline: deadline}
 
-    Voice.line(Voice.of(theme_key), :check_inbox_message, %{email: email, time: time}, fn ->
+    Voice.line(Voice.of(theme_key), :check_inbox_message, bindings, fn ->
       dgettext(
         "booking_confirmation",
-        "We have sent a link to %{email}. Click it by %{time} to confirm your booking. Until then the time is held for you.",
+        "We have sent a link to %{email}. Click it by %{deadline} to confirm your booking. Until then the time is held for you.",
         email: email,
-        time: time
+        deadline: deadline
       )
     end)
   end
 
   # A booking awaiting verification always carries its deadline
   # (`EmailVerification.gate_attributes/2`), so there is no fallback.
-  defp deadline_time(%DateTime{} = deadline, timezone) do
-    {:ok, local} = LocalizationHelpers.to_attendee_datetime(deadline, timezone)
-    "#{LocalizationHelpers.format_time_by_locale(local)} #{local.zone_abbr}"
-  end
+  defp deadline_text(%DateTime{} = deadline, timezone),
+    do: LocalizationHelpers.format_meeting_datetime(deadline, timezone)
 
   @doc """
   The sentence under a held booking's headline, in the voice of the theme

@@ -208,8 +208,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMoveTest do
 
     view |> element("[data-testid=confirm-calendar-move]") |> render_click()
 
-    assert render(view) =~
-             "Tymeslot could not move this booking. Another booking already starts at that time."
+    html = render(view)
+    assert html =~ "This time is no longer available. Please choose another time."
+    refute html =~ "Another booking"
 
     {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
     assert unchanged.start_time == meeting.start_time

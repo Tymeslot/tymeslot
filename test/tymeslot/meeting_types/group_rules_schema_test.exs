@@ -36,7 +36,7 @@ defmodule Tymeslot.MeetingTypes.GroupRulesSchemaTest do
 
       refute cs.valid?
 
-      assert "group bookings cannot require email verification" in errors_on(cs).max_participants
+      assert "group bookings cannot require email confirmation" in errors_on(cs).max_participants
     end
 
     test "a one-to-one type may require email verification" do

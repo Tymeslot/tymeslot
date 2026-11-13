@@ -1,13 +1,13 @@
 /* ==========================================================================
-   Verification notice — confirming the attendee's email address
+   Verification notice: confirming the attendee's email address
 
    Matches the shared component
    (TymeslotWeb.Themes.Shared.Components.VerificationNotice):
 
-     .verification-notice  — one muted line on the booking form, beside the
-                             approval notice
-     .verification-resend  — "Resend email" and what the last press did, on
-                             the check-your-inbox confirmation
+     .verification-notice: one muted line on the booking form, beside the
+                           approval notice
+     .verification-resend: "Resend email" and what the last press did, on
+                           the check-your-inbox confirmation
 
    Quieter than the approval notice: nothing here is a catch the visitor must
    weigh, only a step they will be asked to take. Reads the approval notice's

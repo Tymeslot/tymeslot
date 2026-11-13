@@ -540,7 +540,7 @@ msgstr "není podporovaný jazyk"
 
 #: lib/tymeslot/auth/user_schema.ex
 #: lib/tymeslot/meetings/guest_schema.ex
-#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/meeting_rules.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
@@ -881,17 +881,17 @@ msgstr "musí být v budoucnosti"
 msgid "invitation links"
 msgstr "odkazy na pozvání"
 
-#: lib/tymeslot/meeting_types/email_verification_rule.ex
-#, elixir-autogen, elixir-format
-msgid "email verification cannot be combined with payment"
-msgstr "potvrzení e-mailu nelze kombinovat s platbou"
-
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email verification"
-msgstr "skupinové rezervace nemohou vyžadovat potvrzení e-mailu"
-
 #: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Tento čas už není k dispozici. Vyberte prosím jiný."
+
+#: lib/tymeslot/meeting_types/email_verification_rule.ex
+#, elixir-autogen, elixir-format
+msgid "email confirmation cannot be combined with payment"
+msgstr "potvrzení e-mailu nelze kombinovat s platbou"
+
+#: lib/tymeslot/meeting_types/group_validation.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require email confirmation"
+msgstr "skupinové rezervace nemohou vyžadovat potvrzení e-mailu"

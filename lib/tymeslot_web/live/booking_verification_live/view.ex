@@ -86,7 +86,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
         <.action_button
           variant={:primary}
           phx-click="confirm"
-          phx-disable-with={dgettext("booking_manage", "Confirming...")}
+          phx-disable-with={dgettext("booking_manage", "Confirming…")}
           data-testid="confirm-booking"
         >
           {dgettext("booking_manage", "Confirm booking")}
@@ -95,7 +95,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
         <.action_button
           variant={:outline}
           phx-click="release"
-          phx-disable-with={dgettext("booking_manage", "Cancelling...")}
+          phx-disable-with={dgettext("booking_manage", "Cancelling…")}
           data-testid="release-booking"
         >
           {dgettext("booking_manage", "I didn't make this booking")}

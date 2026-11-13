@@ -90,7 +90,6 @@ msgstr "Cancelar compromisso"
 msgid "Cancellation emails have been sent to all participants."
 msgstr "Os e-mails de cancelamento foram enviados a todos os participantes."
 
-#: lib/tymeslot_web/live/booking_verification_live/view.ex
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #: lib/tymeslot_web/themes/shared/components/meeting_page_bodies.ex
@@ -671,11 +670,6 @@ msgstr "Confirme seu agendamento"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
-msgid "Confirming..."
-msgstr "Confirmando…"
-
-#: lib/tymeslot_web/live/booking_verification_live/view.ex
-#, elixir-autogen, elixir-format
 msgid "I didn't make this booking"
 msgstr "Não fui eu que fiz este agendamento"
 
@@ -748,3 +742,13 @@ msgstr "Leva só um instante."
 #, elixir-autogen, elixir-format
 msgid "This booking is no longer available, so the time was released."
 msgstr "Este agendamento não está mais disponível, então o horário foi liberado."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling…"
+msgstr "Cancelando…"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Confirming…"
+msgstr "Confirmando…"

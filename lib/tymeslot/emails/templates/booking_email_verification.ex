@@ -100,13 +100,15 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
 
   # The deadline itself, on the attendee's clock, not the length of the hold:
   # the hold is capped at the meeting's start, and a resend never moves it.
+  # Always with its date: the email may be read the next day, and a hold
+  # running past midnight would otherwise read as a time already gone.
   defp intro(%Meeting{verification_deadline_at: %DateTime{} = deadline} = meeting, locale) do
     {local, _zone} = DateTimeUtils.shift_or_utc(deadline, meeting.attendee_timezone)
 
     dgettext(
       "emails_booking_requests",
-      "Your booking is not confirmed yet. Click the button below by %{time} to confirm it, and we will hold the time for you until then.",
-      time: Formatting.format_time(local, locale)
+      "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold the time for you until then.",
+      deadline: Formatting.format_meeting_datetime(%{start_time: local}, locale)
     )
   end
 

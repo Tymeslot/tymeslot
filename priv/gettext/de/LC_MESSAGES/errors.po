@@ -516,7 +516,7 @@ msgstr "ist keine unterstützte Sprache"
 
 #: lib/tymeslot/auth/user_schema.ex
 #: lib/tymeslot/meetings/guest_schema.ex
-#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/meeting_rules.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
@@ -856,17 +856,17 @@ msgstr "muss in der Zukunft liegen"
 msgid "invitation links"
 msgstr "Einladungslinks"
 
-#: lib/tymeslot/meeting_types/email_verification_rule.ex
-#, elixir-autogen, elixir-format
-msgid "email verification cannot be combined with payment"
-msgstr "E-Mail-Bestätigung lässt sich nicht mit einer Zahlung kombinieren"
-
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email verification"
-msgstr "Gruppenbuchungen können keine E-Mail-Bestätigung erfordern"
-
 #: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Diese Zeit ist nicht mehr verfügbar. Bitte wählen Sie eine andere."
+
+#: lib/tymeslot/meeting_types/email_verification_rule.ex
+#, elixir-autogen, elixir-format
+msgid "email confirmation cannot be combined with payment"
+msgstr "E-Mail-Bestätigung lässt sich nicht mit Zahlungen kombinieren"
+
+#: lib/tymeslot/meeting_types/group_validation.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require email confirmation"
+msgstr "Gruppenbuchungen können keine E-Mail-Bestätigung erfordern"

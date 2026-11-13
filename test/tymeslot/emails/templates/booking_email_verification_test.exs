@@ -47,7 +47,7 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerificationTest do
     # 10:30 UTC is 12:30 in Ljubljana in summer.
     for body <- [email.html_body, email.text_body] do
       assert body =~ @verify_url
-      assert body =~ "by 12:30 PM CEST"
+      assert body =~ "by 30 August 2026 at 12:30 PM CEST"
       refute body =~ "within"
       assert body =~ "Confirm booking"
     end
@@ -70,8 +70,23 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerificationTest do
         @verify_url
       )
 
-    assert email.text_body =~ "by 03:00 PM CEST"
+    assert email.text_body =~ "by 1 September 2026 at 03:00 PM CEST"
     refute email.text_body =~ "03:20 PM"
+  end
+
+  # Without its date, a hold running past midnight on the attendee's clock
+  # would read as a time already gone.
+  test "a deadline past the attendee's midnight names its own date" do
+    # 22:10 UTC on 30 August is 00:10 on 31 August in Ljubljana.
+    email =
+      BookingEmailVerification.render(
+        meeting(%{verification_deadline_at: ~U[2026-08-30 22:10:00Z]}),
+        @verify_url
+      )
+
+    for body <- [email.html_body, email.text_body] do
+      assert body =~ "by 31 August 2026 at 12:10 AM CEST"
+    end
   end
 
   test "the email is in the attendee's language" do

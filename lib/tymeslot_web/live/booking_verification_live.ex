@@ -24,6 +24,7 @@ defmodule TymeslotWeb.BookingVerificationLive do
   require Logger
 
   alias Tymeslot.Clock
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.EmailVerificationToken
@@ -79,11 +80,30 @@ defmodule TymeslotWeb.BookingVerificationLive do
   end
 
   defp show(socket, meeting, :expired) do
-    assign(socket, meeting: meeting, state: :expired, rebook_path: rebook_path(meeting))
+    socket
+    |> put_attendee_locale(meeting)
+    |> assign(meeting: meeting, state: :expired, rebook_path: rebook_path(meeting))
   end
 
   defp show(socket, meeting, state) do
-    assign(socket, meeting: meeting, state: state, rebook_path: nil)
+    socket
+    |> put_attendee_locale(meeting)
+    |> assign(meeting: meeting, state: state, rebook_path: nil)
+  end
+
+  # The page speaks the language the booking was made in, as the email that
+  # linked here does, rather than whatever the app surface would resolve:
+  # the booking pages keep their language choice apart from it.
+  defp put_attendee_locale(socket, nil), do: socket
+
+  defp put_attendee_locale(socket, meeting) do
+    locale = RecipientLocale.attendee_locale(meeting)
+    Gettext.put_locale(locale)
+
+    assign(socket,
+      locale: locale,
+      page_title: dgettext("booking_manage", "Confirm your booking")
+    )
   end
 
   # A verified booking that was later cancelled has nothing true to show here:

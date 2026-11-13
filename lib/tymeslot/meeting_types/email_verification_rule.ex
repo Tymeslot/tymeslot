@@ -27,7 +27,7 @@ defmodule Tymeslot.MeetingTypes.EmailVerificationRule do
       add_error(
         changeset,
         :requires_email_verification,
-        dgettext_noop("errors", "email verification cannot be combined with payment")
+        dgettext_noop("errors", "email confirmation cannot be combined with payment")
       )
     else
       changeset

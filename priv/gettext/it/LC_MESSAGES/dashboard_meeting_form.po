@@ -914,16 +914,6 @@ msgstr "Chiedi agli invitati di confermare la loro email"
 msgid "Email confirmation"
 msgstr "Conferma dell'email"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off email verification to enable group bookings."
-msgstr "Disattiva la conferma dell'email per attivare le prenotazioni di gruppo."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off email verification to require payment."
-msgstr "Disattiva la conferma dell'email per richiedere il pagamento."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off group bookings to ask invitees to confirm their email."
@@ -936,5 +926,17 @@ msgstr "Disattiva i pagamenti per chiedere agli invitati di confermare la loro e
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
-msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to 30 minutes, and you are not notified."
-msgstr "La prenotazione conta solo dopo che l'invitato ha cliccato sul link che gli inviamo via email. Fino ad allora la fascia oraria resta riservata per un massimo di 30 minuti e non ricevi alcuna notifica."
+msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minute, and you are not notified."
+msgid_plural "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minutes, and you are not notified."
+msgstr[0] "Una prenotazione conta solo quando l'invitato clicca sul link che riceve via email. Fino ad allora l'orario resta riservato per un massimo di %{count} minuto e non ricevi notifiche."
+msgstr[1] "Una prenotazione conta solo quando l'invitato clicca sul link che riceve via email. Fino ad allora l'orario resta riservato per un massimo di %{count} minuti e non ricevi notifiche."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off email confirmation to enable group bookings."
+msgstr "Disattiva la conferma dell'email per attivare le prenotazioni di gruppo."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off email confirmation to require payment."
+msgstr "Disattiva la conferma dell'email per richiedere il pagamento."

@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupRulesTest do
       view = edit(conn, meeting_type)
 
       assert has_element?(view, "input[phx-click='toggle_group_bookings'][disabled]")
-      assert render(view) =~ "Turn off email verification to enable group bookings."
+      assert render(view) =~ "Turn off email confirmation to enable group bookings."
 
       view
       |> with_target(form_wrapper(meeting_type))

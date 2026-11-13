@@ -79,7 +79,7 @@ defmodule Tymeslot.MeetingTypes.GroupValidation do
       )
       |> refuse_for_group(
         :requires_email_verification,
-        dgettext_noop("errors", "group bookings cannot require email verification")
+        dgettext_noop("errors", "group bookings cannot require email confirmation")
       )
       |> validate_group_location()
     else

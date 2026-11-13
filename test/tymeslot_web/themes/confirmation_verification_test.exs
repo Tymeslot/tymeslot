@@ -59,8 +59,21 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
           user_timezone: "Europe/Ljubljana"
         })
 
-      assert message =~ "Click it by 11:30 AM CEST"
+      assert message =~ "Click it by 10 September 2026 at 11:30 AM CEST"
       refute message =~ "minutes"
+    end
+
+    # Without its date, a hold running past midnight on the attendee's clock
+    # would read as a time already gone.
+    test "a deadline past the attendee's midnight names its own date" do
+      message =
+        ConfirmationText.check_inbox_message(%{
+          email: "ana@example.com",
+          verification_deadline_at: ~U[2026-09-10 22:10:00Z],
+          user_timezone: "Europe/Ljubljana"
+        })
+
+      assert message =~ "Click it by 11 September 2026 at 12:10 AM CEST"
     end
 
     # The hold is capped at the meeting's start, so a booking made ten minutes
@@ -78,7 +91,7 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
           user_timezone: "UTC"
         })
 
-      assert message =~ "Click it by 10:00 AM UTC"
+      assert message =~ "Click it by 10 September 2026 at 10:00 AM UTC"
       refute message =~ "10:20"
     end
   end
@@ -90,7 +103,7 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
 
         assert [message] = find(html, "[data-testid='check-inbox']")
         assert Floki.text(message) =~ "ana@example.com"
-        assert Floki.text(message) =~ "Click it by 09:30 AM UTC"
+        assert Floki.text(message) =~ "Click it by 10 September 2026 at 09:30 AM UTC"
 
         assert Floki.text(find(html, "[data-testid='confirmation-heading']")) =~
                  "Check your inbox"
@@ -132,6 +145,9 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
         assert find(html, "[data-testid='add-to-calendar']") != []
         assert find(html, "[data-testid='check-inbox']") == []
         assert find(html, "[data-testid='resend-verification']") == []
+        # Anchors the check-inbox case's refute: the help copy it expects
+        # gone is what every theme shows a confirmed booking.
+        assert Enum.any?(@help_copy, &(html =~ &1))
       end
     end
   end

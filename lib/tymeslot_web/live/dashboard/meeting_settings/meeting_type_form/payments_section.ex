@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
             <% @charges_enabled -> %>
               {dgettext(
                 "dashboard_meeting_form",
-                "Turn off email verification to require payment."
+                "Turn off email confirmation to require payment."
               )}
             <% @currency_support == :legacy -> %>
               {raw(
