@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Seats
+  alias Tymeslot.MeetingTypes
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
@@ -467,7 +468,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   defp from_poll?(_meeting), do: false
 
   defp place(%{location_kind: :video}), do: nil
-  defp place(%{location: location}) when is_binary(location) and location != "", do: location
+  # A default location label ("In person") reads in the dashboard's language.
+  defp place(%{location: location} = meeting) when is_binary(location) and location != "",
+    do: MeetingTypes.display_location(location, Map.get(meeting, :location_kind))
+
   defp place(_meeting), do: nil
 
   # Read only when loaded: a meeting refreshed on its own arrives without it,

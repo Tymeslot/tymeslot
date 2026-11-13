@@ -89,5 +89,22 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderLocaleTest do
       # The summary is the host's own title and is never translated.
       assert event.summary == "Team Sync"
     end
+
+    test "names a default location label in the organiser's language, their own text as written" do
+      organiser = insert(:user, locale: "de")
+
+      in_person =
+        Map.merge(@meeting, %{
+          organizer_user_id: organiser.id,
+          meeting_url: nil,
+          location: "In person",
+          location_kind: :in_person
+        })
+
+      assert CalendarEventBuilder.build_event_data(in_person).location == "Vor Ort"
+
+      studio = %{in_person | location: "Our studio", location_kind: :custom}
+      assert CalendarEventBuilder.build_event_data(studio).location == "Our studio"
+    end
   end
 end

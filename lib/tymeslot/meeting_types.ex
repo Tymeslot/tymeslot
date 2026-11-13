@@ -37,6 +37,14 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate location_options(meeting_type), to: LocationSelection, as: :options
 
   @doc """
+  A meeting's location as a reader sees it in the current locale: a default
+  location label in their language, anything the host wrote as written; see
+  `Tymeslot.MeetingTypes.LocationSelection.display_location/2`.
+  """
+  @spec display_location(String.t() | nil, LocationOption.kind() | nil) :: String.t() | nil
+  defdelegate display_location(location, kind), to: LocationSelection
+
+  @doc """
   Whether `meeting_type` lets several people book the same slot. Anything
   that is not a stored meeting type (`nil`, a demo's plain-map type) is not.
   """

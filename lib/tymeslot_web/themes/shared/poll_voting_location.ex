@@ -2,13 +2,15 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingLocation do
   @moduledoc """
   Where a poll's meeting will be held, as the voting page names it
   (`Tymeslot.Polls.location/1`), under the poll's description in every
-  theme family. Styled by the shared poll CSS (`poll-voting-location`).
+  theme family: a default location label in the visitor's language. Styled by the shared poll CSS (`poll-voting-location`).
   """
 
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
+
+  alias Tymeslot.MeetingTypes
 
   attr :location, :map, required: true
 
@@ -30,7 +32,9 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingLocation do
       <span :if={@location.kind == :video}>
         {dgettext("booking_polls", "Video call. The link follows once a time is confirmed.")}
       </span>
-      <span :if={@location.kind != :video}>{@location.place}</span>
+      <span :if={@location.kind != :video}>
+        {MeetingTypes.display_location(@location.place, @location.kind)}
+      </span>
     </p>
     """
   end

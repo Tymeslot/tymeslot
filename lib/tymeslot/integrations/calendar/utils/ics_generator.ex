@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Locales
@@ -356,7 +357,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   # in the description.
   defp determine_location(%{location_type: type, location: location})
        when type in [:in_person, :custom] and is_binary(location) and location != "",
-       do: location
+       do: BookingRequestLocation.display(location, type)
 
   defp determine_location(meeting_details) do
     meeting_url = Map.get(meeting_details, :meeting_url)
@@ -367,7 +368,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
         dgettext("emails", "Video Call")
 
       is_binary(location) and location != "" ->
-        location
+        BookingRequestLocation.display(location, Map.get(meeting_details, :location_type))
 
       true ->
         ""

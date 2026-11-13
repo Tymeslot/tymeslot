@@ -375,11 +375,12 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
     })
   end
 
-  # The written location of an in-person booking, once there is one.
+  # The written location of an in-person booking, once there is one, a
+  # default label read in the visitor's language.
   defp booked_in_person(assigns) do
     with true <- in_person?(assigns),
          %{location_kind: :in_person} = booked <- assigns[:booked_location] do
-      booked
+      %{booked | location: MeetingTypes.display_location(booked.location, :in_person)}
     else
       _not_booked_in_person -> nil
     end
@@ -406,8 +407,8 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
 
   @doc """
   The location a reschedule keeps, as the meeting stores it
-  (`%{location: …, address_to_arrange: …}`), or nil when the submission
-  places the meeting afresh.
+  (`%{location: …, address_to_arrange: …}`, a default label read in the
+  visitor's language), or nil when the submission places the meeting afresh.
 
   That is a reschedule on the meeting's own in-person location with no venue
   submitted, or with the meeting's own venue submitted: the server writes
@@ -423,7 +424,10 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
       when is_binary(id) do
     if submitted_option_id(assigns) == id and in_person?(assigns) and
          submitted_venue_id(assigns) in [nil, kept[:venue_id]],
-       do: %{location: kept[:location], address_to_arrange: kept[:address_to_arrange] == true}
+       do: %{
+         location: MeetingTypes.display_location(kept[:location], :in_person),
+         address_to_arrange: kept[:address_to_arrange] == true
+       }
   end
 
   def kept_location(_assigns), do: nil

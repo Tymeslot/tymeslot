@@ -11,6 +11,7 @@ defmodule Tymeslot.Emails.Shared.PollPlace do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Emails.Shared.{Sanitise, Styles, Text}
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
   alias Tymeslot.Polls.PollSchema
 
@@ -24,8 +25,9 @@ defmodule Tymeslot.Emails.Shared.PollPlace do
       %{kind: :video} ->
         dgettext("emails_polls", "Video call. You get the link once a time is confirmed.")
 
-      %{place: place} ->
-        place
+      # A default location label ("In person") in the participant's language.
+      %{kind: kind, place: place} ->
+        MeetingTypes.display_location(place, kind)
     end
   end
 

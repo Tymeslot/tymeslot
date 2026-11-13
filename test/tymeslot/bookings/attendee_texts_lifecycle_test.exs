@@ -158,10 +158,11 @@ defmodule Tymeslot.Bookings.AttendeeTextsLifecycleTest do
     refute only(emails, @organizer).html_body =~ "Büro Berlin"
   end
 
-  # The booking page runs in the booker's language, so the default label it
-  # resolves reads in German there; the meeting's own column is the
-  # organiser's copy all the same.
-  test "a default location label is the organiser's in the meeting, the attendee's in their copy",
+  # The booking page runs in the booker's language, but a default label is
+  # product wording, not the organiser's text: the meeting stores it in
+  # English, with no copy, and each email reads it in its recipient's
+  # language.
+  test "a default location label is stored once and read in each recipient's language",
        ctx do
     arranged = in_person_location([], id: "loc-arranged")
     meeting_type = meeting_type(ctx, locations: [arranged])
@@ -187,7 +188,7 @@ defmodule Tymeslot.Bookings.AttendeeTextsLifecycleTest do
       end)
 
     assert meeting.location == "In person"
-    assert meeting.attendee_texts["de"]["location"] == "Vor Ort"
+    assert meeting.attendee_texts["de"]["location"] == "In person"
 
     emails = delivered()
     assert only(emails, @attendee).html_body =~ "Vor Ort"

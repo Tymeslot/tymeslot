@@ -13,6 +13,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.Seats
+  alias Tymeslot.MeetingTypes
 
   @doc """
   Returns the user's live bookings overlapping `[start_dt, end_dt)` as
@@ -49,7 +50,8 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
       # The event-shaped identity, matching the provider copy's `uid`.
       uid: meeting.calendar_uid,
       summary: presence(meeting.title) || "Meeting",
-      location: presence(meeting.location),
+      # A default location label ("In person") reads in the dashboard's language.
+      location: presence(MeetingTypes.display_location(meeting.location, meeting.location_kind)),
       start_at: meeting.start_time,
       end_at: meeting.end_time,
       attendee_name: attendee_name(meeting),

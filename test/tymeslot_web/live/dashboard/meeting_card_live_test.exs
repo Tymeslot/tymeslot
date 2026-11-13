@@ -13,7 +13,9 @@ defmodule TymeslotWeb.Dashboard.MeetingCardLiveTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Plug.Test
+  alias Tymeslot.Repo
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -70,6 +72,21 @@ defmodule TymeslotWeb.Dashboard.MeetingCardLiveTest do
              |> render()
              |> Floki.parse_document!()
              |> Floki.find(~s([data-testid="meeting-location"]))
+  end
+
+  test "shows a default location label in the dashboard's language", %{conn: conn, user: user} do
+    user |> Changeset.change(locale: "de") |> Repo.update!()
+
+    insert(:meeting,
+      organizer_user: user,
+      organizer_email: user.email,
+      location: "In person",
+      location_kind: :in_person
+    )
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+    assert has_element?(view, ~s([data-testid="meeting-location"]), "Vor Ort")
   end
 
   test "keeps each end of the booking's time range on one line", %{conn: conn, user: user} do
