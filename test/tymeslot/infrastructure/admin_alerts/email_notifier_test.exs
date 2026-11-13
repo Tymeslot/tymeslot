@@ -8,6 +8,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.AdminAlerts.DigestEntrySchema
   alias Tymeslot.Infrastructure.AdminAlerts.EmailNotifier
   alias Tymeslot.Repo
   alias Tymeslot.Test.LogCapture
@@ -238,9 +239,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
                  meeting_id: 7
                })
 
-      [job] = all_enqueued(worker: EmailWorker)
-      refute Jason.encode!(job.args) =~ "jane.doe@example.com"
-      assert job.args["message"] =~ "Found inactive addresses: j***@example.com"
+      [entry] = Repo.all(DigestEntrySchema)
+      refute inspect(entry) =~ "jane.doe@example.com"
+      assert entry.message =~ "Found inactive addresses: j***@example.com"
     end
   end
 
@@ -368,24 +369,26 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
     # too, raising another :recipient_email_rejected report, forever. This is
     # the same feedback loop as the delivery error case above, just reached
     # through the recipient-rejected path instead of a recorded error.
-    test "a rejected admin-alert recipient is logged but never enqueues another email" do
+    test "a rejected admin-alert recipient is logged but never queued for the digest" do
       assert :ok =
                AdminAlerts.send_alert(:recipient_email_rejected, %{
                  action: "send_admin_alert",
                  reason_message: "ops@example.com is inactive"
                })
 
+      assert Repo.all(DigestEntrySchema) == []
       assert all_enqueued(worker: EmailWorker) == []
     end
 
-    test "a rejected recipient for an ordinary transactional email still enqueues an alert" do
+    test "a rejected recipient for an ordinary transactional email waits for the digest" do
       assert :ok =
                AdminAlerts.send_alert(:recipient_email_rejected, %{
                  action: "send_booking_confirmation",
                  meeting_id: 42
                })
 
-      assert [_job] = all_enqueued(worker: EmailWorker)
+      assert [%{alert_type: "recipient_email_rejected"}] = Repo.all(DigestEntrySchema)
+      assert all_enqueued(worker: EmailWorker) == []
     end
   end
 
