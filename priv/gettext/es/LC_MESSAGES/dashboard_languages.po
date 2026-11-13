@@ -388,5 +388,4 @@ msgstr "Ofreces tu página de reservas en todos los idiomas, así que los invita
 #: lib/tymeslot_web/live/dashboard/languages/remove_language_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking page will no longer be offered in %{language}: invitees can choose only the languages you keep."
-
 msgstr "Tu página de reservas ya no se ofrecerá en este idioma (%{language}): los invitados solo podrán elegir los idiomas que conserves."
