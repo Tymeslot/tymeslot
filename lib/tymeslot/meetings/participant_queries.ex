@@ -208,4 +208,86 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     |> Repo.all()
     |> Map.new()
   end
+
+  @doc """
+  Restricts a query on the participant binding to the seats others may see:
+  ungated ones and ones whose booker has verified their address.
+  """
+  @spec where_visible(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def where_visible(query) do
+    where(query, [p], is_nil(p.verification_deadline_at) or not is_nil(p.email_verified_at))
+  end
+
+  @doc """
+  Marks a held seat verified. Guarded in the `WHERE`, so a seat already
+  verified, cancelled or never gated is left alone and reported as an error.
+  """
+  @spec transition_from_unverified(binary(), DateTime.t()) ::
+          {:ok, Participant.t()} | {:error, :not_awaiting_verification}
+  def transition_from_unverified(participant_id, %DateTime{} = now) do
+    participant_id
+    |> unverified_by_id()
+    |> update([p], set: [email_verified_at: ^now])
+    |> run_guarded()
+  end
+
+  @doc """
+  Cancels a held seat that was never verified, advancing `ical_sequence` as
+  `cancel/2` does. Guarded like `transition_from_unverified/2`.
+  """
+  @spec cancel_unverified(binary(), DateTime.t()) ::
+          {:ok, Participant.t()} | {:error, :not_awaiting_verification}
+  def cancel_unverified(participant_id, %DateTime{} = now) do
+    participant_id
+    |> unverified_by_id()
+    |> update([p], set: [cancelled_at: ^now], inc: [ical_sequence: 1])
+    |> run_guarded()
+  end
+
+  @doc "Cancels every live unverified seat on a meeting."
+  @spec cancel_unverified_for_meeting(binary(), DateTime.t()) :: {non_neg_integer(), nil}
+  def cancel_unverified_for_meeting(meeting_id, %DateTime{} = now) do
+    Participant
+    |> where([p], p.meeting_id == ^meeting_id)
+    |> live_unverified()
+    |> update([p], set: [cancelled_at: ^now], inc: [ical_sequence: 1])
+    |> Repo.update_all([])
+  end
+
+  @doc """
+  Lists live unverified seats whose hold has lapsed at `now`, oldest deadline
+  first, with their meeting preloaded.
+  """
+  @spec list_expired_verifications(DateTime.t(), pos_integer()) :: [Participant.t()]
+  def list_expired_verifications(%DateTime{} = now, limit) do
+    Participant
+    |> live_unverified()
+    |> where([p], p.verification_deadline_at <= ^now)
+    |> order_by([p], asc: p.verification_deadline_at, asc: p.id)
+    |> limit(^limit)
+    |> preload(:meeting)
+    |> Repo.all()
+  end
+
+  defp unverified_by_id(participant_id) do
+    Participant
+    |> where([p], p.id == ^participant_id)
+    |> live_unverified()
+  end
+
+  defp live_unverified(query) do
+    where(
+      query,
+      [p],
+      is_nil(p.cancelled_at) and is_nil(p.email_verified_at) and
+        not is_nil(p.verification_deadline_at)
+    )
+  end
+
+  defp run_guarded(query) do
+    case query |> select([p], p) |> Repo.update_all([]) do
+      {1, [participant]} -> {:ok, participant}
+      {0, _none} -> {:error, :not_awaiting_verification}
+    end
+  end
 end

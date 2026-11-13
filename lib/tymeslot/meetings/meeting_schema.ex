@@ -512,16 +512,17 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   Group meetings hold no attendee — bookers live in `meeting_participants` —
   so `attendee_name`/`attendee_email` are not required. Status is always
-  forced to `:confirmed`, regardless of what the caller passes: group
-  meetings never wait on payment, and the single-live-row invariant (backed
-  by `unique_confirmed_meeting_per_organizer_at_time`, which indexes the
-  slot-holding statuses) depends on every group meeting landing in that status.
+  `:confirmed`, unless the caller passes `:awaiting_verification` (a slot held
+  for its first booker's email check): group meetings never wait on payment.
+  The single-live-row invariant (backed by
+  `unique_confirmed_meeting_per_organizer_at_time`, which indexes both
+  statuses) depends on every group meeting landing in one of them.
   """
   @spec group_changeset(t(), map()) :: Ecto.Changeset.t()
   def group_changeset(meeting, attrs) do
-    meeting
-    |> base_changeset(attrs, @group_required_fields)
-    |> put_change(:status, :confirmed)
+    changeset = base_changeset(meeting, attrs, @group_required_fields)
+    held? = get_change(changeset, :status) == :awaiting_verification
+    put_change(changeset, :status, if(held?, do: :awaiting_verification, else: :confirmed))
   end
 
   @status_transition_fields [
