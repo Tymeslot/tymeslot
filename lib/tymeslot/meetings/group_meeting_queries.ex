@@ -13,6 +13,7 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   alias Ecto.Changeset
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Repo
 
@@ -136,8 +137,8 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   (`capacity > 1`, start time after `now`), returning how many were updated.
 
   A meeting never ends up with a capacity below the seats already taken on
-  it (live participants plus their guests, the count
-  `ParticipantQueries.count_seats_taken/1` makes): lowering the limit under
+  it (live participants plus their guests, including seats awaiting email
+  verification: the count `ParticipantQueries.count_seats_held/1` makes): lowering the limit under
   that leaves the slot exactly full, and nobody is cancelled. Solo meetings
   (`capacity == 1`) are never touched, so a one-to-one booking stays private
   whatever the type becomes.
@@ -156,6 +157,7 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
           capacity:
             fragment(
               """
+              -- held seats: unverified ones count against capacity too
               GREATEST(?::integer, (
                 SELECT count(DISTINCT p.id) + count(g.id)
                 FROM meeting_participants AS p
@@ -238,9 +240,11 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
       [meeting: m],
       m.planned or
         exists(
-          from(p in Participant,
-            where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
-            select: 1
+          ParticipantQueries.where_visible(
+            from(p in Participant,
+              where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
+              select: 1
+            )
           )
         )
     )

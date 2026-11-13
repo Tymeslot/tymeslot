@@ -14,6 +14,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
 
@@ -86,13 +87,15 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   defp order_by_start_and_id(query, :asc),
     do: from(m in query, order_by: [asc: m.start_time, asc: m.id])
 
-  # Live (non-cancelled) participants only, oldest booking first — mirrors
-  # the guests preload_order and keeps the dashboard from ever rendering a
-  # cancelled participant.
+  # Live (non-cancelled), visible participants only, oldest booking first —
+  # mirrors the guests preload_order and keeps the dashboard from ever
+  # rendering a cancelled participant or a seat awaiting email verification.
   defp live_participants_preload do
-    from(p in ParticipantSchema,
-      where: is_nil(p.cancelled_at),
-      order_by: [asc: p.inserted_at, asc: p.id]
+    ParticipantQueries.where_visible(
+      from(p in ParticipantSchema,
+        where: is_nil(p.cancelled_at),
+        order_by: [asc: p.inserted_at, asc: p.id]
+      )
     )
   end
 

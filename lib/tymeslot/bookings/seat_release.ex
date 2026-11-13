@@ -127,6 +127,12 @@ defmodule Tymeslot.Bookings.SeatRelease do
         {:ok, :seats_remain}
 
       true ->
+        # A seat still awaiting verification must not outlive its slot.
+        ParticipantQueries.cancel_unverified_for_meeting(
+          meeting.id,
+          DateTime.truncate(Clock.utc_now(), :second)
+        )
+
         flip_to_cancelled(locked)
     end
   end

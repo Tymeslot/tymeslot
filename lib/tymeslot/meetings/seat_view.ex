@@ -61,7 +61,10 @@ defmodule Tymeslot.Meetings.SeatView do
   def for_booker(%MeetingSchema{id: meeting_id} = meeting, email) when is_binary(email) do
     address = ParticipantSchema.normalize_email(email)
 
-    case Enum.find(ParticipantQueries.list_live_for_meeting(meeting_id), &(&1.email == address)) do
+    case Enum.find(
+           ParticipantQueries.list_live_held_for_meeting(meeting_id),
+           &(&1.email == address)
+         ) do
       nil -> nil
       participant -> at_event(meeting, participant)
     end
@@ -136,8 +139,13 @@ defmodule Tymeslot.Meetings.SeatView do
 
   defp seat_guests(not_loaded, _participant_id), do: not_loaded
 
-  defp put_seat_status(meeting, %ParticipantSchema{cancelled_at: nil}), do: meeting
   defp put_seat_status(%MeetingSchema{status: :cancelled} = meeting, _participant), do: meeting
+
+  defp put_seat_status(meeting, %ParticipantSchema{cancelled_at: nil} = participant) do
+    if ParticipantSchema.unverified?(participant),
+      do: %{meeting | status: :awaiting_verification},
+      else: meeting
+  end
 
   defp put_seat_status(meeting, %ParticipantSchema{cancelled_at: cancelled_at}),
     do: %{meeting | status: :cancelled, cancelled_at: cancelled_at}

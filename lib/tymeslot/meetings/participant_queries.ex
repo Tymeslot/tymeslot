@@ -42,13 +42,33 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     end
   end
 
-  @doc "Lists the live (not cancelled) participants of a meeting, oldest first."
+  @doc """
+  Lists the live (not cancelled) participants of a meeting, oldest first.
+  Visible: excludes seats awaiting email verification.
+  """
   @spec list_live_for_meeting(binary()) :: [Participant.t()]
   def list_live_for_meeting(meeting_id) do
+    meeting_id
+    |> live_for_meeting()
+    |> where_visible()
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists the live participants of a meeting, oldest first. Held: includes
+  seats awaiting email verification, for the booker finding their own seat.
+  """
+  @spec list_live_held_for_meeting(binary()) :: [Participant.t()]
+  def list_live_held_for_meeting(meeting_id) do
+    meeting_id
+    |> live_for_meeting()
+    |> Repo.all()
+  end
+
+  defp live_for_meeting(meeting_id) do
     Participant
     |> where([p], p.meeting_id == ^meeting_id and is_nil(p.cancelled_at))
     |> order_by([p], asc: p.inserted_at, asc: p.id)
-    |> Repo.all()
   end
 
   @doc """
@@ -132,35 +152,52 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     :ok
   end
 
-  @doc "Counts the live (not cancelled) participants of a meeting."
+  @doc """
+  Counts the live (not cancelled) participants of a meeting. Visible:
+  excludes seats awaiting email verification.
+  """
   @spec count_live_for_meeting(binary()) :: non_neg_integer()
   def count_live_for_meeting(meeting_id) do
     Participant
     |> where([p], p.meeting_id == ^meeting_id and is_nil(p.cancelled_at))
+    |> where_visible()
     |> select([p], count(p.id))
     |> Repo.one()
   end
 
   @doc """
   Counts the seats taken on a meeting: live participants plus their guests,
-  except guests who declined, whose seats are free again.
+  except guests who declined, whose seats are free again. Visible: excludes
+  seats awaiting email verification.
   """
   @spec count_seats_taken(binary()) :: non_neg_integer()
   def count_seats_taken(meeting_id) do
-    Repo.one(
-      from(p in Participant,
-        left_join: g in Guest,
-        on: g.participant_id == p.id and g.status != :declined,
-        where: p.meeting_id == ^meeting_id and is_nil(p.cancelled_at),
-        select: count(p.id, :distinct) + count(g.id)
-      )
+    meeting_id |> seats_query() |> where_visible() |> Repo.one()
+  end
+
+  @doc """
+  `count_seats_taken/1`'s count including seats awaiting email verification.
+  Held: what a meeting's capacity is measured against.
+  """
+  @spec count_seats_held(binary()) :: non_neg_integer()
+  def count_seats_held(meeting_id) do
+    meeting_id |> seats_query() |> Repo.one()
+  end
+
+  defp seats_query(meeting_id) do
+    from(p in Participant,
+      left_join: g in Guest,
+      on: g.participant_id == p.id and g.status != :declined,
+      where: p.meeting_id == ^meeting_id and is_nil(p.cancelled_at),
+      select: count(p.id, :distinct) + count(g.id)
     )
   end
 
   @doc """
   Live participants and seats taken (`count_seats_taken/1`'s count) on each
   of `meeting_ids`, in one grouped query. A meeting without live
-  participants does not appear in the result.
+  participants does not appear in the result. Visible: excludes seats
+  awaiting email verification.
   """
   @spec counts_by_meeting([binary()]) :: %{
           binary() => %{participants: non_neg_integer(), seats_taken: non_neg_integer()}
@@ -168,6 +205,23 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   def counts_by_meeting([]), do: %{}
 
   def counts_by_meeting(meeting_ids) when is_list(meeting_ids) do
+    meeting_ids |> counts_query() |> where_visible() |> run_counts()
+  end
+
+  @doc """
+  `counts_by_meeting/1` including seats awaiting email verification. Held:
+  what each meeting's capacity is measured against.
+  """
+  @spec held_counts_by_meeting([binary()]) :: %{
+          binary() => %{participants: non_neg_integer(), seats_taken: non_neg_integer()}
+        }
+  def held_counts_by_meeting([]), do: %{}
+
+  def held_counts_by_meeting(meeting_ids) when is_list(meeting_ids) do
+    meeting_ids |> counts_query() |> run_counts()
+  end
+
+  defp counts_query(meeting_ids) do
     from(p in Participant,
       left_join: g in Guest,
       on: g.participant_id == p.id and g.status != :declined,
@@ -175,6 +229,10 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
       group_by: p.meeting_id,
       select: {p.meeting_id, count(p.id, :distinct), count(p.id, :distinct) + count(g.id)}
     )
+  end
+
+  defp run_counts(query) do
+    query
     |> Repo.all()
     |> Map.new(fn {id, participants, seats} ->
       {id, %{participants: participants, seats_taken: seats}}
@@ -184,7 +242,8 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   @doc """
   Seats taken per meeting start time for live meetings of a meeting type
   whose `start_time` falls in `[from_utc, to_utc)`, counted as
-  `count_seats_taken/1` does. One grouped query over meetings, participants
+  `count_seats_held/1` does. Held: includes seats awaiting email
+  verification, since this is the public capacity. One grouped query over meetings, participants
   and guests; meetings without live participants do not appear in the
   result.
 

@@ -101,6 +101,7 @@ defmodule Tymeslot.Meetings.SeatLookup do
   defp live_seat(participant, meeting) do
     cond do
       not ParticipantSchema.live?(participant) -> {:error, :already_cancelled}
+      ParticipantSchema.unverified?(participant) -> {:error, :not_found}
       meeting.status == :cancelled -> {:error, :meeting_cancelled}
       true -> {:ok, %{participant: participant, meeting: meeting}}
     end
