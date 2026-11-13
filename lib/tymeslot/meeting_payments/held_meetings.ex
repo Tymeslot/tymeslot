@@ -152,7 +152,9 @@ defmodule Tymeslot.MeetingPayments.HeldMeetings do
   of one series then wait on each other instead of deadlocking. Call inside
   a transaction.
   """
-  @spec lock_series(binary()) :: {SeriesSchema.t() | nil, [MeetingSchema.t()]}
+  @spec lock_series(binary() | nil) :: {SeriesSchema.t() | nil, [MeetingSchema.t()]}
+  def lock_series(nil), do: {nil, []}
+
   def lock_series(series_id) when is_binary(series_id) do
     case SeriesQueries.lock(series_id) do
       nil -> {nil, []}

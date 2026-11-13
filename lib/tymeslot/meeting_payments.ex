@@ -47,6 +47,7 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Payments.Config, as: PaymentsConfig
 
   @type account :: ConnectAccountSchema.t()
@@ -396,6 +397,19 @@ defmodule Tymeslot.MeetingPayments do
   """
   @spec meetings_for_payment(booking_payment()) :: [MeetingSchema.t()]
   defdelegate meetings_for_payment(payment), to: HeldMeetings, as: :meetings_for
+
+  @doc """
+  Whether none of the meetings a booking payment paid for goes ahead any
+  more (each cancelled, expired or otherwise released), so whatever of it
+  remains is owed back. The rule the outstanding-refunds list applies.
+  """
+  @spec series_released?(booking_payment()) :: boolean()
+  def series_released?(payment) do
+    case HeldMeetings.meetings_for(payment) do
+      [] -> false
+      meetings -> Enum.all?(meetings, &MeetingState.released_status?(&1.status))
+    end
+  end
 
   @doc "Fetches the one booking payment of a paid series, or `nil`."
   @spec payment_for_series(term()) :: booking_payment() | nil

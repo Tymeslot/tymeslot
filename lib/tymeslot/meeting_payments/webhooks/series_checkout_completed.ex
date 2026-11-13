@@ -19,6 +19,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
       `Workers.RefundLatePayment`.
     * A host whose account is pending deletion takes no booking: every
       session is left expired and the payment refunded in full.
+    * Some sessions released while the rest were held: the series cannot
+      go ahead whole, so the held sessions are expired and the payment
+      refunded in full, as for a refused booking.
     * Anything else is a no-op, as for a single booking.
 
   Locks are taken payment first (`LockedPayment`), then the series row,
@@ -40,7 +43,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
   alias Tymeslot.MeetingPayments.Webhooks.PaymentCompletion
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Repo
 
@@ -81,7 +84,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
 
   defp settle_outcome({:ok, {:refused, paid, first}}, object, meta) do
     Logger.warning(
-      "checkout.session.completed: series refused (host pending deletion or series gone), refund scheduled",
+      "checkout.session.completed: series refused (host pending deletion, sessions released or series gone), refund scheduled",
       meta
     )
 
@@ -178,6 +181,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
       {:ok, {transition, paid, confirmed, pending}}
     else
       :no_op -> {:ok, :no_op}
+      {:refuse, :sessions_released} -> refuse(payment, meetings, event_id, object)
       {:refuse, :host_pending_deletion, _meeting} -> refuse(payment, meetings, event_id, object)
       {:error, _reason} = error -> error
     end
@@ -220,15 +224,24 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
   end
 
   # The series is taken whole: every session awaiting payment, or, for a
-  # payment that failed meanwhile, every session expired.
+  # payment that failed meanwhile, every session expired. A series some of
+  # whose sessions were released while the rest waited for the payment
+  # cannot be confirmed as booked, and must not keep the rest held and the
+  # money pending for ever: it is refused, the held sessions released and
+  # the payment refunded. (Cancelling one held session is refused
+  # (`Bookings.Policy`), so this is the defence, not the expected path.)
   defp check_transition(meetings, payment) do
+    {held, others} = Enum.split_with(meetings, &MeetingState.awaiting_payment?/1)
+
     cond do
-      Enum.all?(meetings, &match?(%MeetingSchema{status: :awaiting_payment}, &1)) ->
+      others == [] ->
         {:proceed, :advanced}
 
-      payment.status == :failed and
-          Enum.all?(meetings, &match?(%MeetingSchema{status: :expired}, &1)) ->
+      payment.status == :failed and Enum.all?(meetings, &MeetingState.expired?/1) ->
         {:proceed, :recovered}
+
+      held != [] and Enum.all?(others, &MeetingState.released_status?(&1.status)) ->
+        {:refuse, :sessions_released}
 
       true ->
         :no_op
@@ -238,8 +251,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
   defp slot_checked(:recovered, :unchecked), do: {:error, :slot_unchecked}
   defp slot_checked(_transition, _slot), do: :ok
 
-  # Recorded paid, as it truly was, every session left expired, and the
-  # whole payment refunded by a job inserted in this transaction.
+  # Recorded paid, as it truly was, every session still held expired (one
+  # already released keeps its status), and the whole payment refunded by a
+  # job inserted in this transaction.
   defp refuse(payment, meetings, event_id, object) do
     with {:ok, paid} <- PaymentCompletion.mark_paid(payment, event_id, object),
          {:ok, [first | _rest]} <- expire_all(meetings),
@@ -272,8 +286,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
     with {:ok, done} <- result, do: {:ok, Enum.reverse(done)}
   end
 
-  defp expire(%{status: :expired} = meeting), do: {:ok, meeting}
-  defp expire(meeting), do: MeetingQueries.update_meeting_status(meeting, %{status: :expired})
+  defp expire(%{status: :awaiting_payment} = meeting),
+    do: MeetingQueries.update_meeting_status(meeting, %{status: :expired})
+
+  defp expire(meeting), do: {:ok, meeting}
 
   # A slot of the series was taken since the expiry released it: the
   # sessions stay expired and the whole payment goes back, by a job, as for

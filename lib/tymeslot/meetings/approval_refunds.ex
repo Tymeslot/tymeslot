@@ -49,6 +49,11 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   @spec refund_unapproved_request(Meeting.t()) :: :ok
   def refund_unapproved_request(meeting) do
     case MeetingPayments.payment_for_meeting(meeting.id) do
+      # One payment paid for every session of a series, so releasing one
+      # session must never refund it whole. Approval for a paid series is to
+      # be decided, and refunded, for the series as a whole; until then
+      # nothing is refunded here.
+      %{series_id: series_id} when is_binary(series_id) -> :ok
       %{paid_at: %DateTime{}} = payment -> refund_or_defer(payment, meeting)
       _unpaid_or_missing -> :ok
     end

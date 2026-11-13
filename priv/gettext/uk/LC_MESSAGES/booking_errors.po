@@ -300,3 +300,8 @@ msgstr "Дві з ваших сесій накладаються. Виберіт
 #, elixir-autogen, elixir-format
 msgid "This meeting type can't be booked as a series at the moment."
 msgstr "Цей тип зустрічі зараз не можна забронювати як серію."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This session is waiting for its series to be paid for. Until then the series can only be released as a whole."
+msgstr "Ця сесія очікує оплати своєї серії. Доти серію можна звільнити лише повністю."

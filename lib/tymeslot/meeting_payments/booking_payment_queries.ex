@@ -282,7 +282,16 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
         as: :payment,
         join: m in MeetingSchema,
         as: :meeting,
-        on: m.id == b.meeting_id or (m.series_id == b.series_id and m.series_position == 1),
+        # The payment's meeting, or its series' first session still there:
+        # one equality on the meeting id, so the join stays a primary-key
+        # lookup per payment.
+        on:
+          m.id ==
+            fragment(
+              "COALESCE(?, (SELECT sm.id FROM meetings AS sm WHERE sm.series_id = ? ORDER BY sm.series_position LIMIT 1))",
+              b.meeting_id,
+              b.series_id
+            ),
         where:
           b.host_user_id == ^host_user_id and
             b.status in ^BookingPaymentSchema.refundable_statuses() and
@@ -293,7 +302,8 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   end
 
   # A paid series' one payment is owed back once none of its sessions goes
-  # ahead (a late payment refused, say); it is listed by its first session.
+  # ahead (a late payment refused, say); it is listed by its first session
+  # still there, whichever position that is.
   # One session cancelled alone is refunded its share when the host cancels
   # it, and the rest still pays for the sessions going ahead.
   defp series_sessions_going_ahead do

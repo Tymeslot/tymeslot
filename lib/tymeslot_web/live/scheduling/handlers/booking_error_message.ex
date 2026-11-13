@@ -214,6 +214,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   def message({:not_cancellable, :past}),
     do: dgettext("booking_errors", "Cannot cancel a meeting that has already occurred")
 
+  def message({:not_cancellable, :held_for_series_payment}),
+    do:
+      dgettext(
+        "booking_errors",
+        "This session is waiting for its series to be paid for. Until then the series can only be released as a whole."
+      )
+
   def message({:not_reschedulable, :cancelled}),
     do: dgettext("booking_errors", "Cannot reschedule a cancelled meeting")
 

@@ -40,7 +40,14 @@ defmodule Tymeslot.Bookings.Policy do
   layer renders a refusal (`TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage`).
   """
   @type meeting_state ::
-          :cancelled | :completed | :expired | :awaiting_approval | :started | :past | :planned
+          :cancelled
+          | :completed
+          | :expired
+          | :awaiting_approval
+          | :started
+          | :past
+          | :planned
+          | :held_for_series_payment
   @type cancel_refusal :: :already_cancelled | {:not_cancellable, meeting_state()}
   @type reschedule_refusal :: {:not_reschedulable, meeting_state()}
   @type booker_move_refusal :: :managed_by_host
@@ -71,6 +78,13 @@ defmodule Tymeslot.Bookings.Policy do
       meeting.status == :expired ->
         {:error, {:not_cancellable, :expired}}
 
+      # A session of a paid series still awaiting payment is held with its
+      # whole series on one checkout. Cancelling it alone would leave the
+      # payment unable to confirm the rest, so a held series is released only
+      # whole, when its checkout expires or is abandoned.
+      held_for_series_payment?(meeting) ->
+        {:error, {:not_cancellable, :held_for_series_payment}}
+
       meeting_is_current?(meeting) ->
         Logger.info("Blocked cancellation: meeting has already started",
           meeting_id: Map.get(meeting, :id)
@@ -89,6 +103,12 @@ defmodule Tymeslot.Bookings.Policy do
         :ok
     end
   end
+
+  defp held_for_series_payment?(%{status: :awaiting_payment, series_id: series_id})
+       when is_binary(series_id),
+       do: true
+
+  defp held_for_series_payment?(_meeting), do: false
 
   @doc """
   Determines if a meeting can be rescheduled.

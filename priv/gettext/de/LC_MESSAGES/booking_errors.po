@@ -300,3 +300,8 @@ msgstr "Zwei Ihrer Termine überschneiden sich. Bitte wählen Sie andere Zeiten.
 #, elixir-autogen, elixir-format
 msgid "This meeting type can't be booked as a series at the moment."
 msgstr "Dieser Termintyp kann derzeit nicht als Serie gebucht werden."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This session is waiting for its series to be paid for. Until then the series can only be released as a whole."
+msgstr "Dieser Termin wartet auf die Zahlung für seine Serie. Bis dahin kann die Serie nur als Ganzes freigegeben werden."
