@@ -273,8 +273,7 @@ defmodule Tymeslot.Meetings.EmailVerification do
   Whether a held booking or seat can no longer be verified at `now`. The
   deadline itself counts as passed, as it does for the sweep.
   """
-  @spec deadline_reached?(%{verification_deadline_at: DateTime.t() | nil}, DateTime.t()) ::
-          boolean()
+  @spec deadline_reached?(Meeting.t() | Participant.t(), DateTime.t()) :: boolean()
   def deadline_reached?(%{verification_deadline_at: %DateTime{} = deadline}, now),
     do: DateTime.compare(now, deadline) != :lt
 
