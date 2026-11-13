@@ -25,7 +25,6 @@ defmodule TymeslotWeb.Live.Scheduling.BookingLanguagesTest do
   @moduletag :scheduling
 
   import Mox
-  import Tymeslot.BookingTestHelpers
   import Tymeslot.Factory
 
   alias Ecto.Changeset

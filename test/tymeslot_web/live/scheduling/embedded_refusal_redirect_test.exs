@@ -304,6 +304,92 @@ defmodule TymeslotWeb.Live.Scheduling.EmbeddedRefusalRedirectTest do
       end
     end
 
+    # The redirect merges the guest's language and the refusal code into one
+    # query; the patch that strips the code must leave the language.
+    defp assert_refused_in_german(conn, path, code, message) do
+      {to, body} = follow_embedded_refusal(conn, path)
+      query = to |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+      assert query["refused"] == code
+      assert query["locale"] == "de"
+      assert_carries_embed(to)
+      assert body =~ ~s(lang="de")
+      assert body =~ html_escape(message)
+
+      {:ok, view, _html} = build_conn() |> embedded() |> live(to)
+
+      patched = assert_patch(view)
+      patched_query = patched |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+      refute Map.has_key?(patched_query, "refused")
+      assert patched_query["locale"] == "de"
+      assert render(view) =~ html_escape(message)
+    end
+
+    @tag :capture_log
+    test "an unknown slug says so in the language the guest picked", %{conn: conn} do
+      assert_refused_in_german(
+        conn,
+        "/#{@username}/no-such-type?locale=de&#{@embed_query}",
+        "invalid-type",
+        "Ungültiger Termintyp"
+      )
+    end
+
+    @tag :capture_log
+    test "an invitation-only type says so in the language the guest picked", %{
+      conn: conn,
+      user: user
+    } do
+      insert_invitation_only(user)
+
+      message =
+        Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+          InvitationMessages.message(:required)
+        end)
+
+      refute message == InvitationMessages.message(:required)
+
+      assert_refused_in_german(
+        conn,
+        "/#{@username}/coaching?locale=de&#{@embed_query}",
+        "invitation-required",
+        message
+      )
+    end
+
+    # A `?locale=` the organiser does not offer reloads the page in the
+    # original first, so the pick that reaches the refusal unoffered is a
+    # remembered one, on a page that is not embedded (an embed ignores the
+    # session).
+    @tag :capture_log
+    test "a remembered pick the organiser does not offer is not carried", %{
+      conn: conn,
+      profile: profile
+    } do
+      profile
+      |> Changeset.change(
+        content_locale: "en",
+        translation_locales: ["fr"],
+        offer_all_locales: false
+      )
+      |> Repo.update!()
+
+      assert {:error, {:redirect, %{to: to}}} =
+               conn
+               |> init_test_session(%{booking_chosen_locale: "de"})
+               |> live("/#{@username}/no-such-type")
+
+      assert to == "/" <> @username
+
+      assert {:error, {:redirect, %{to: offered}}} =
+               conn
+               |> init_test_session(%{booking_chosen_locale: "fr"})
+               |> live("/#{@username}/no-such-type")
+
+      assert URI.decode_query(URI.parse(offered).query)["locale"] == "fr"
+    end
+
     test "a step the refusal does not send the guest to ignores the code", %{
       conn: conn,
       user: user

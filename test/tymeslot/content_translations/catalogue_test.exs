@@ -6,6 +6,7 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
+  alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.ContentTranslations
   alias Tymeslot.ContentTranslations.Catalogue
   alias Tymeslot.ContentTranslations.TranslationQueries
@@ -150,6 +151,49 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
 
       {:ok, reloaded} = Profiles.get_profile_by_user_id(user.id)
       assert ContentTranslations.text(reloaded, "headline", "de") == "Trainerin"
+    end
+
+    test "saves a named booking page's name and texts, which items lists", %{
+      user: user,
+      profile: profile
+    } do
+      page =
+        insert(:booking_page,
+          profile: profile,
+          name: "Consulting",
+          booking_heading: "Ready to talk?"
+        )
+
+      assert {:ok, %{kind: :booking_page, record: saved}} =
+               Catalogue.save(user.id, {:booking_page, to_string(page.id)}, "de", %{
+                 "name" => "Beratung",
+                 "booking_heading" => "Bereit?",
+                 "not_a_field" => "ignored"
+               })
+
+      assert ContentTranslations.text(saved, "name", "de") == "Beratung"
+      assert ContentTranslations.text(saved, "booking_heading", "de") == "Bereit?"
+      assert Enum.sort(Map.keys(saved.translations["de"])) == ["booking_heading", "name"]
+
+      reloaded = Repo.get!(BookingPageSchema, page.id)
+      assert ContentTranslations.text(reloaded, "booking_heading", "de") == "Bereit?"
+      assert reloaded.booking_heading == "Ready to talk?"
+
+      assert [%{kind: :profile}, %{kind: :booking_page, id: page_id, name: "Consulting"}] =
+               Catalogue.items(user.id).booking_texts
+
+      assert page_id == page.id
+    end
+
+    test "refuses another user's booking page", %{profile: profile} do
+      page = insert(:booking_page, profile: profile)
+      other = insert(:user)
+      insert(:profile, user: other, translation_locales: ["de"])
+
+      assert {:error, :not_found} =
+               Catalogue.save(other.id, {:booking_page, page.id}, "de", %{"name" => "X"})
+
+      assert Repo.get!(BookingPageSchema, page.id).translations == %{}
     end
 
     test "refuses another user's entity", %{meeting_type: meeting_type, profile: profile} do
