@@ -67,11 +67,9 @@ defmodule Tymeslot.Announcements.Catalog do
       body:
         dgettext(
           "onboarding",
-          "Choose a meeting type and press B to see the times your booking page offers, " <>
-            "hatched across your calendar. Press Ctrl K (Cmd K on a Mac) to search and run " <>
-            "commands, and 1 to 9 to switch calendar sets. On the calendar page the menu folds " <>
-            "into a narrow column of icons, and on a wide screen focus mode hides it altogether " <>
-            "so the calendar gets the whole page."
+          "We've redesigned the calendar from the ground up: a fresh look, a clearer layout " <>
+            "with more room for your week, and quicker ways to plan, create and change your " <>
+            "meetings. Have a look around, or read the docs for a tour of everything that's new."
         ),
       image_path: "/images/announcements/calendar-redesign.svg",
       cta_label: dgettext("onboarding", "Read the docs"),

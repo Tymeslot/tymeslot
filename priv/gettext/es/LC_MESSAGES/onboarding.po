@@ -205,5 +205,5 @@ msgstr "El calendario de tu panel, renovado"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
-msgid "Choose a meeting type and press B to see the times your booking page offers, hatched across your calendar. Press Ctrl K (Cmd K on a Mac) to search and run commands, and 1 to 9 to switch calendar sets. On the calendar page the menu folds into a narrow column of icons, and on a wide screen focus mode hides it altogether so the calendar gets the whole page."
-msgstr "Elige un tipo de reunión y pulsa B para ver, rayados en tu calendario, los horarios que ofrece tu página de reservas. Pulsa Ctrl K (Cmd K en un Mac) para buscar y ejecutar comandos, y de 1 a 9 para cambiar de conjunto de calendarios. En la página del calendario, el menú se pliega en una columna estrecha de iconos y, en una pantalla ancha, el modo de concentración lo oculta del todo para que el calendario ocupe toda la página."
+msgid "We've redesigned the calendar from the ground up: a fresh look, a clearer layout with more room for your week, and quicker ways to plan, create and change your meetings. Have a look around, or read the docs for a tour of everything that's new."
+msgstr "Hemos rediseñado el calendario desde cero: un aspecto renovado, una distribución más clara con más espacio para tu semana y formas más rápidas de planificar, crear y cambiar tus reuniones. Echa un vistazo o consulta la documentación para descubrir todas las novedades."

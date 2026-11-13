@@ -210,5 +210,5 @@ msgstr "Ihr Dashboard-Kalender, neu gestaltet"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
-msgid "Choose a meeting type and press B to see the times your booking page offers, hatched across your calendar. Press Ctrl K (Cmd K on a Mac) to search and run commands, and 1 to 9 to switch calendar sets. On the calendar page the menu folds into a narrow column of icons, and on a wide screen focus mode hides it altogether so the calendar gets the whole page."
-msgstr "Wählen Sie einen Termintyp und drücken Sie B: Ihr Kalender zeigt schraffiert die Zeiten, die Ihre Buchungsseite anbietet. Mit Strg K (Cmd K auf dem Mac) suchen Sie und führen Befehle aus, mit 1 bis 9 wechseln Sie die Kalendergruppe. Auf der Kalenderseite klappt das Menü zu einer schmalen Spalte aus Symbolen zusammen, und auf einem breiten Bildschirm blendet der Fokusmodus es ganz aus, damit der Kalender die ganze Seite bekommt."
+msgid "We've redesigned the calendar from the ground up: a fresh look, a clearer layout with more room for your week, and quicker ways to plan, create and change your meetings. Have a look around, or read the docs for a tour of everything that's new."
+msgstr "Wir haben den Kalender von Grund auf neu gestaltet: ein frisches Aussehen, ein übersichtlicheres Layout mit mehr Platz für Ihre Woche und schnellere Wege, Ihre Termine zu planen, anzulegen und zu ändern. Sehen Sie sich um oder lesen Sie in der Dokumentation nach, was alles neu ist."
