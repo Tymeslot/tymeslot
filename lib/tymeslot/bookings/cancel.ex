@@ -8,6 +8,7 @@ defmodule Tymeslot.Bookings.Cancel do
 
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -30,6 +31,8 @@ defmodule Tymeslot.Bookings.Cancel do
   2. Cancelling calendar event
   3. Deleting pending reminder email jobs
   4. Sending cancellation emails
+  5. Closing the meeting's series when nothing of it is left to come
+     (`BookingSeries.maybe_close/1`)
 
   ## Options
 
@@ -60,10 +63,25 @@ defmodule Tymeslot.Bookings.Cancel do
   def execute(%Meeting{} = meeting, opts) do
     # Validation covers the Policy time checks plus the group-meeting guard.
     case validate_cancellation(meeting, opts) do
-      :ok -> execute_permitted(meeting, Keyword.get(opts, :announce, true))
-      {:error, reason} -> policy_blocked(meeting, reason)
+      :ok ->
+        meeting
+        |> execute_permitted(Keyword.get(opts, :announce, true))
+        |> close_series()
+
+      {:error, reason} ->
+        policy_blocked(meeting, reason)
     end
   end
+
+  # A series whose last session still to come was just cancelled is over:
+  # it is closed with no email of its own, each session having had its own.
+  defp close_series({:ok, %Meeting{series_id: series_id}} = result)
+       when is_binary(series_id) do
+    BookingSeries.maybe_close(series_id)
+    result
+  end
+
+  defp close_series(result), do: result
 
   @doc """
   Tells everyone a meeting was cancelled: the cancellation emails, the

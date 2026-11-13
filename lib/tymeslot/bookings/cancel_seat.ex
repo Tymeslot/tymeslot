@@ -28,16 +28,25 @@ defmodule Tymeslot.Bookings.CancelSeat do
 
   A seat-availability broadcast and an availability-cache invalidation are
   published after commit in both cases.
+
+  A seat of a series is also the series' last seat to come when its booker
+  gives it up last: the series is then closed (`BookingSeries.maybe_close/1`).
+  Giving up every remaining seat of a series at once goes through
+  `cancel_in_transaction/1` and `finish/2` instead (`BookingSeries.Cancel`).
   """
 
   require Logger
 
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.CalendarJobs
+  alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Bookings.SeatRelease
+  alias Tymeslot.BookingSeries
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GroupMeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.Meetings.SeatLookup
   alias Tymeslot.Notifications.Events
@@ -57,9 +66,75 @@ defmodule Tymeslot.Bookings.CancelSeat do
   def execute(management_token) when is_binary(management_token) do
     with {:ok, %{participant: participant, meeting: meeting}} <-
            SeatLookup.fetch_cancellable_seat(management_token) do
-      cancel_seat(meeting, participant)
+      meeting
+      |> cancel_seat(participant)
+      |> close_series(participant)
     end
   end
+
+  @typedoc "A seat given up in the caller's transaction, for `finish/2`."
+  @type released :: %{
+          meeting: Meeting.t(),
+          participant: Participant.t(),
+          outcome: {:cancelled, Meeting.t()} | :seats_remain
+        }
+
+  @doc """
+  Gives up `participant`'s seat inside the caller's transaction, under its
+  meeting's row lock, and cancels the meeting with it when no live seat
+  remains (`SeatRelease.cancel_if_emptied/1`). Refuses, for the caller to
+  roll back, what `execute/1` refuses once it holds the lock
+  (`:already_cancelled`, `:meeting_cancelled`); the caller has checked the
+  meeting has not started.
+
+  Nothing is announced: once the caller's transaction has committed, it
+  owes a `finish/2` on each result.
+  """
+  @spec cancel_in_transaction(Participant.t()) :: {:ok, released()} | {:error, term()}
+  def cancel_in_transaction(%Participant{} = participant) do
+    locked = GroupMeetingQueries.lock_for_update(participant.meeting_id)
+
+    with {:ok, current} <- ParticipantQueries.get(participant.id),
+         :ok <- ensure_live(current),
+         :ok <- ensure_meeting_on(locked),
+         {:ok, cancelled} <- ParticipantQueries.cancel(current),
+         {:ok, outcome} <- SeatRelease.cancel_if_emptied(locked) do
+      {:ok, %{meeting: locked, participant: cancelled, outcome: outcome}}
+    end
+  end
+
+  @doc """
+  The side effects of a seat `cancel_in_transaction/1` gave up, once the
+  caller's transaction has committed: the availability change, the emptied
+  meeting's cancellation or the host event's refresh, and the seat's
+  `meeting.cancelled` for integrations. `emails: false` sends the seat's
+  cancellation emails to nobody, for a caller that tells both sides itself.
+  """
+  @spec finish(released(), keyword()) :: :ok
+  def finish(%{meeting: meeting, participant: participant, outcome: outcome}, opts \\ []) do
+    publish_seat_change(meeting)
+    emails? = Keyword.get(opts, :emails, true)
+
+    case outcome do
+      {:cancelled, cancelled_meeting} ->
+        Cancel.finalise_cancellation(cancelled_meeting)
+        Events.seat_cancelled(meeting, participant, slot_freed: true, emails: emails?)
+
+      :seats_remain ->
+        CalendarJobs.schedule_job(meeting, "update")
+        Events.seat_cancelled(meeting, participant, emails: emails?)
+    end
+
+    :ok
+  end
+
+  defp close_series({:ok, _outcome} = result, %Participant{series_id: series_id})
+       when is_binary(series_id) do
+    BookingSeries.maybe_close(series_id)
+    result
+  end
+
+  defp close_series(result, _participant), do: result
 
   defp ensure_live(%{cancelled_at: nil}), do: :ok
   defp ensure_live(_participant), do: {:error, :already_cancelled}

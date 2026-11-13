@@ -62,8 +62,11 @@ defmodule Tymeslot.BookingSeries.Approval do
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
 
-  @typedoc "Who withdrew a series request: its booker, or the host's own calendar."
-  @type withdrawn_by :: :attendee | :calendar
+  @typedoc """
+  Who withdrew a series request: its booker, the host's own calendar, or
+  the host calling the whole series off (`Tymeslot.BookingSeries.Cancel`).
+  """
+  @type withdrawn_by :: :attendee | :calendar | :organizer
 
   @typedoc "An answer a single-request entry point asks of a session's series."
   @type session_action ::
@@ -131,8 +134,9 @@ defmodule Tymeslot.BookingSeries.Approval do
 
   @doc """
   Withdraws a series request outside of the host's decision: its booker
-  changed their mind (`:attendee`), or the host deleted a session's
-  tentative event from their own calendar (`:calendar`). Every session
+  changed their mind (`:attendee`), the host deleted a session's
+  tentative event from their own calendar (`:calendar`), or the host
+  cancelled the series as a whole (`:organizer`). Every session
   still held is cancelled and released, a paid series refunded in full,
   and both sides sent one series cancellation, worded as the booker's or
   the host's. Neither `approval_resolved_at` nor `approval_declined_at` is
@@ -142,7 +146,7 @@ defmodule Tymeslot.BookingSeries.Approval do
   @spec withdraw(SeriesSchema.t(), withdrawn_by(), keyword()) ::
           {:ok, [Meeting.t()]} | {:error, term()}
   def withdraw(%SeriesSchema{} = series, withdrawn_by, extra_changes \\ [])
-      when withdrawn_by in [:attendee, :calendar] do
+      when withdrawn_by in [:attendee, :calendar, :organizer] do
     now = DateTime.truncate(Clock.utc_now(), :second)
     changes = [status: :cancelled, cancelled_at: now] ++ extra_changes
 
@@ -354,8 +358,8 @@ defmodule Tymeslot.BookingSeries.Approval do
     Notifications.schedule_series_cancellation(series, released, cancelled_by(withdrawn_by))
   end
 
-  defp cancelled_by(:calendar), do: :organizer
   defp cancelled_by(:attendee), do: :attendee
+  defp cancelled_by(_calendar_or_organizer), do: :organizer
 
   # Locks
 

@@ -74,6 +74,14 @@ defmodule Tymeslot.BookingSeries.SeriesQueries do
     |> Repo.one()
   end
 
+  @doc "Stamps `cancelled_at` on the series: nothing of it is left to come."
+  @spec mark_cancelled(Series.t(), DateTime.t()) :: {:ok, Series.t()} | {:error, Changeset.t()}
+  def mark_cancelled(%Series{} = series, %DateTime{} = cancelled_at) do
+    series
+    |> Series.cancel_changeset(cancelled_at)
+    |> Repo.update()
+  end
+
   @doc "The meetings of a one-to-one series, in `series_position` order."
   @spec list_meetings(Series.t() | binary()) :: [Meeting.t()]
   def list_meetings(%Series{id: id}), do: list_meetings(id)

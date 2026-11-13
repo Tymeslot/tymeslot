@@ -375,15 +375,22 @@ defmodule Tymeslot.Notifications.Events do
   Integrations hear `meeting.cancelled` for this seat. For the last leaver
   that is the only one: the meeting-level cancellation that follows finds no
   live seat left to announce, and an empty slot was never a booking.
+
+  `emails: false` schedules no email: the seat was given up with the rest of
+  its series, which tells both sides once (`Tymeslot.BookingSeries.Cancel`).
   """
   @spec seat_cancelled(term(), term(), keyword()) :: {:ok, term()} | {:error, term()}
   def seat_cancelled(meeting, participant, opts \\ []) do
     result =
-      Orchestrator.schedule_seat_cancellation(
-        meeting,
-        participant,
-        Keyword.get(opts, :slot_freed, false)
-      )
+      if Keyword.get(opts, :emails, true) do
+        Orchestrator.schedule_seat_cancellation(
+          meeting,
+          participant,
+          Keyword.get(opts, :slot_freed, false)
+        )
+      else
+        {:ok, :announced_with_series}
+      end
 
     dispatch_seat(:meeting_cancelled, meeting, participant)
 

@@ -8,12 +8,14 @@ defmodule Tymeslot.BookingSeries do
   is all-or-nothing: it is booked only when every occurrence is available.
   `book/3` books it (`Tymeslot.BookingSeries.Create`). `describe_rule/3`
   words a series' rhythm for anyone who shows it
-  (`Tymeslot.BookingSeries.Rule`).
+  (`Tymeslot.BookingSeries.Rule`). `cancel_remaining/2` calls off every
+  session still to come (`Tymeslot.BookingSeries.Cancel`).
   """
 
   alias Tymeslot.Availability.Schedules
 
   alias Tymeslot.BookingSeries.{
+    Cancel,
     Check,
     Create,
     Occurrence,
@@ -24,6 +26,7 @@ defmodule Tymeslot.BookingSeries do
   }
 
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   @doc """
@@ -60,6 +63,48 @@ defmodule Tymeslot.BookingSeries do
   """
   @spec book(map(), map(), keyword()) :: Create.result()
   defdelegate book(meeting_params, form_data, opts \\ []), to: Create, as: :execute
+
+  @doc """
+  Cancels every session of `series` still to come, with one email to each
+  side and, for a host cancelling a paid series, one refund. Options
+  `:caller` (required), `:acting_user` and `:refund`; see
+  `Tymeslot.BookingSeries.Cancel.cancel_remaining/2`.
+  """
+  @spec cancel_remaining(SeriesSchema.t(), keyword()) :: Cancel.result()
+  defdelegate cancel_remaining(series, opts), to: Cancel
+
+  @doc """
+  Closes a series once nothing of it is left to come, after one of its
+  sessions was cancelled on its own. See
+  `Tymeslot.BookingSeries.Cancel.maybe_close/1`.
+  """
+  @spec maybe_close(SeriesSchema.t() | binary()) :: :ok
+  defdelegate maybe_close(series_or_id), to: Cancel
+
+  @doc """
+  The series behind the attendee's series link, by its bearer `uid`;
+  `{:error, :not_found}` for an unknown or malformed one.
+  """
+  @spec get_for_attendee(term()) :: {:ok, SeriesSchema.t()} | {:error, :not_found}
+  def get_for_attendee(uid) when is_binary(uid), do: SeriesQueries.get_by_uid(uid)
+  def get_for_attendee(_uid), do: {:error, :not_found}
+
+  @doc """
+  The series `series_id` when `user_id` is its organiser, else
+  `{:error, :not_found}`, as for an unknown or malformed id.
+  """
+  @spec get_for_organizer(term(), integer()) :: {:ok, SeriesSchema.t()} | {:error, :not_found}
+  def get_for_organizer(series_id, user_id) when is_binary(series_id) and is_integer(user_id),
+    do: SeriesQueries.get_for_organizer(series_id, user_id)
+
+  def get_for_organizer(_series_id, _user_id), do: {:error, :not_found}
+
+  @doc """
+  The occurrences of a series in series order: its meetings on a one-to-one
+  type, its seats (each with its meeting) on a group type.
+  """
+  @spec occurrences(SeriesSchema.t()) :: [MeetingSchema.t() | ParticipantSchema.t()]
+  def occurrences(%SeriesSchema{} = series), do: SeriesQueries.list_occurrences(series)
 
   @doc """
   The meetings of a one-to-one series, in series order. Unscoped: for
