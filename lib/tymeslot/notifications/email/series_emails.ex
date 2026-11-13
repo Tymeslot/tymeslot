@@ -2,20 +2,26 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
   @moduledoc """
   The email jobs of a booking series: its one confirmation, sent once every
   session's video room is ready (`Tymeslot.Workers.SeriesAnnouncementWorker`
-  queues it), and the cancellation of several of its sessions at once.
+  queues it), the cancellation of several of its sessions at once, and for a
+  series held for approval its one request and, when it is declined or
+  expires, the booker's answer.
 
-  Each job writes to the booker and the organiser, claiming each send on the
-  job (`Tymeslot.Workers.DeliveryClaims`), so a retry sends only what has
-  not gone out.
+  Each job but the answer writes to the booker and the organiser, claiming
+  each send on the job (`Tymeslot.Workers.DeliveryClaims`), so a retry sends
+  only what has not gone out.
   """
 
   require Logger
 
+  alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.BookingSeries.Notifications
   alias Tymeslot.BookingSeries.SeriesQueries
   alias Tymeslot.Emails.SeriesBuilder
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.ApprovalToken
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.Email.DeliveryOutcome
   alias Tymeslot.Workers.DeliveryClaims
 
@@ -23,6 +29,8 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
   @series_cancelled "Series cancelled"
   @nothing_live "No session of the series is still booked"
   @nothing_cancelled "None of the sessions is cancelled"
+  @nothing_held "No session of the series is awaiting approval"
+  @outcome_changed "No session of the series is released that way"
 
   @doc """
   Whether `reason`, from a discard this module returned, is an expected end
@@ -30,7 +38,15 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
   """
   @spec expected_discard?(term()) :: boolean()
   def expected_discard?(reason),
-    do: reason in [@series_gone, @series_cancelled, @nothing_live, @nothing_cancelled]
+    do:
+      reason in [
+        @series_gone,
+        @series_cancelled,
+        @nothing_live,
+        @nothing_cancelled,
+        @nothing_held,
+        @outcome_changed
+      ]
 
   @doc """
   The series' confirmation to its booker and organiser, listing every
@@ -89,6 +105,75 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
       end
     end)
   end
+
+  @doc """
+  The request of a series held for approval: to the organiser, with every
+  session, the deadline and the approve and decline links, and to the
+  booker, acknowledging it. The links are the first session's: answering it
+  answers the series (`Tymeslot.BookingSeries.Approval`). Discarded when no
+  session is still awaiting approval, as a request answered (or withdrawn)
+  before the job ran must not be presented as open.
+  """
+  @spec handle_series_request(%{String.t() => term()}, DeliveryClaims.job_id()) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_series_request(%{"series_id" => series_id}, job_id) do
+    with_series(series_id, fn series ->
+      case Enum.filter(SeriesQueries.list_meetings(series), &MeetingState.awaiting_approval?/1) do
+        [] ->
+          {:discard, @nothing_held}
+
+        [first | _rest] = held ->
+          details =
+            series
+            |> SeriesBuilder.build(held)
+            |> Map.merge(%{
+              approval_urls: MeetingLinks.approval_urls(ApprovalToken.sign(first)),
+              approval_deadline_at: first.approval_deadline_at,
+              attendee_message: first.attendee_message
+            })
+
+          send_both("series_request", details, :send_series_request, job_id)
+      end
+    end)
+  end
+
+  @doc """
+  Tells the booker their series request was declined (`"declined"`, with
+  the host's reason when they gave one) or expired (`"expired"`), listing
+  the sessions it held. Guarded on the sessions' status matching the
+  variant, as `BookingApprovalEmails` guards a single request's.
+  """
+  @spec handle_series_request_outcome(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_series_request_outcome(%{"series_id" => series_id, "variant" => variant})
+      when variant in ["declined", "expired"] do
+    variant = String.to_existing_atom(variant)
+
+    with_series(series_id, fn series ->
+      case Enum.filter(SeriesQueries.list_meetings(series), &released_as?(&1, variant)) do
+        [] ->
+          {:discard, @outcome_changed}
+
+        [first | _rest] = released ->
+          details =
+            series
+            |> SeriesBuilder.build(released)
+            |> Map.put(:decline_reason, first.decline_reason)
+
+          sent =
+            Config.email_service_module().send_series_request_outcome(
+              variant,
+              details.attendee_email,
+              details
+            )
+
+          DeliveryOutcome.from_results("series_request_outcome", [series_id: series.id], [sent])
+      end
+    end)
+  end
+
+  defp released_as?(meeting, :declined), do: Approval.declined?(meeting)
+  defp released_as?(meeting, :expired), do: MeetingState.expired?(meeting)
 
   defp with_series(series_id, fun) do
     case SeriesQueries.get(series_id) do

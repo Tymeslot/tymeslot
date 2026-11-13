@@ -1,0 +1,349 @@
+defmodule Tymeslot.BookingSeries.Approval do
+  @moduledoc """
+  The approval gate for a booking series: one request, one answer.
+
+  A series booked on a type requiring approval holds every session
+  `awaiting_approval`, all with the first session's deadline
+  (`Tymeslot.Bookings.MeetingAttributes.share_series_approval_clock/1`), and
+  is requested once (`Tymeslot.BookingSeries.Notifications.schedule_series_request/1`).
+  The host answers for the series as a whole, never for a session:
+
+    * `approve/2` confirms every session still held, each through the
+      ordinary confirmation pipeline (calendar event, reminders, video room)
+      as a session of a series, and sends the series' one confirmation.
+    * `decline/3`, `expire/1` and `withdraw/3` release every session still
+      held, refund a paid series' one payment in full, once, and send one
+      email: the booker's decline or expiry notice, or for a withdrawal the
+      series cancellation to both.
+
+  Each takes the organiser's schedule lock, then the series row, then its
+  sessions in series order, as every writer of a series does, and moves
+  every session still held through the guarded
+  `MeetingQueries.transition_from_awaiting_approval/2` in one transaction.
+  A session that cannot be moved rolls back the series, so it is never left
+  half approved. Nothing external happens inside the transaction: the
+  calendar, video, refund and email work runs once it has committed, each
+  step best-effort, in the order `Tymeslot.Meetings.Approval` uses for a
+  single request.
+
+  The single-request entry points (`Tymeslot.Meetings.Approval.approve/1`,
+  `decline/2`, `expire/1`, `withdraw/2`) hand any session of a series here
+  through `for_session/2`, so the dashboard's request card, the host's email
+  links, the expiry job and the sweep all answer the whole series. That
+  includes the host deleting one session's tentative event from their own
+  calendar (`Tymeslot.Bookings.Cancel`): it withdraws the whole series, as a
+  series missing a session is not the series that was asked for.
+  """
+
+  require Logger
+
+  alias Tymeslot.Auth
+  alias Tymeslot.Auth.UserSchema, as: User
+  alias Tymeslot.Availability
+  alias Tymeslot.Bookings.Activation
+  alias Tymeslot.BookingSeries.Notifications
+  alias Tymeslot.BookingSeries.SeriesQueries
+  alias Tymeslot.BookingSeries.SeriesSchema
+  alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Meetings.Approval, as: MeetingApproval
+  alias Tymeslot.Meetings.ApprovalRefunds
+  alias Tymeslot.Meetings.MeetingConflictQueries
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Notifications.DispatchInTransactionError
+  alias Tymeslot.Notifications.Events
+  alias Tymeslot.Repo
+
+  @typedoc "Who withdrew a series request: its booker, or the host's own calendar."
+  @type withdrawn_by :: :attendee | :calendar
+
+  @typedoc "An answer a single-request entry point asks of a session's series."
+  @type session_action ::
+          :approve
+          | {:decline, String.t() | nil}
+          | :expire
+          | {:withdraw, withdrawn_by(), keyword()}
+
+  @doc """
+  Approves the series: every session still held is confirmed and joins the
+  booking pipeline, and the series' one confirmation is scheduled, all in
+  one transaction.
+
+  Refused with `:not_awaiting_approval` when no session is held any more
+  (the series was answered or withdrawn first), and `:past_deadline` when
+  the shared deadline has passed, in which case the series is released as
+  expired, exactly as the expiry job would have. `:slot_taken` when a slot
+  was taken meanwhile, leaving the series held; `:not_scheduled` when the
+  confirmation could not be queued, rolling the approval back.
+  `{:error, :not_found}` for an actor who is not the series' organiser.
+  """
+  @spec approve(SeriesSchema.t(), User.t()) ::
+          {:ok, [Meeting.t()]}
+          | {:error, :not_awaiting_approval | :past_deadline | :not_found | term()}
+  def approve(%SeriesSchema{} = series, %User{} = actor) do
+    with :ok <- owned_by(series, actor) do
+      series
+      |> confirm(Clock.utc_now())
+      |> settle_approval(series)
+    end
+  end
+
+  @doc """
+  Declines the series: every session still held is cancelled and released,
+  a paid series refunded in full, and the booker told once, with the host's
+  `reason` when given (trimmed and capped as for a single request).
+  `{:error, :not_found}` for an actor who is not the series' organiser.
+  """
+  @spec decline(SeriesSchema.t(), User.t(), String.t() | nil) ::
+          {:ok, [Meeting.t()]} | {:error, term()}
+  def decline(%SeriesSchema{} = series, %User{} = actor, reason \\ nil) do
+    with :ok <- owned_by(series, actor) do
+      now = DateTime.truncate(Clock.utc_now(), :second)
+
+      changes =
+        [status: :cancelled, approval_resolved_at: now, cancelled_at: now] ++
+          MeetingApproval.decline_changes(reason, now)
+
+      release(series, changes, &announce_outcome(series, &1, :declined))
+    end
+  end
+
+  @doc """
+  Releases a series nobody answered before its deadline: every session
+  still held becomes `:expired`, a paid series is refunded in full, and the
+  booker is told once. For the expiry job and the sweep.
+  """
+  @spec expire(SeriesSchema.t()) :: {:ok, [Meeting.t()]} | {:error, term()}
+  def expire(%SeriesSchema{} = series) do
+    now = DateTime.truncate(Clock.utc_now(), :second)
+    changes = [status: :expired, approval_resolved_at: now, cancelled_at: now]
+
+    release(series, changes, &announce_outcome(series, &1, :expired))
+  end
+
+  @doc """
+  Withdraws a series request outside of the host's decision: its booker
+  changed their mind (`:attendee`), or the host deleted a session's
+  tentative event from their own calendar (`:calendar`). Every session
+  still held is cancelled and released, a paid series refunded in full,
+  and both sides sent one series cancellation, worded as the booker's or
+  the host's. Neither `approval_resolved_at` nor `approval_declined_at` is
+  set, as for a single withdrawal. `extra_changes` are written to every
+  session (`Bookings.Cancel`'s reason for an external deletion).
+  """
+  @spec withdraw(SeriesSchema.t(), withdrawn_by(), keyword()) ::
+          {:ok, [Meeting.t()]} | {:error, term()}
+  def withdraw(%SeriesSchema{} = series, withdrawn_by, extra_changes \\ [])
+      when withdrawn_by in [:attendee, :calendar] do
+    now = DateTime.truncate(Clock.utc_now(), :second)
+    changes = [status: :cancelled, cancelled_at: now] ++ extra_changes
+
+    release(series, changes, &announce_withdrawal(series, &1, withdrawn_by))
+  end
+
+  @doc """
+  Answers a single-request call on a session of a series by answering the
+  series, returning the session as it now is (`:not_in_series` for a
+  meeting outside any series, or whose series is gone). The single entry
+  points take no actor, their callers having established it is the host, so
+  the series' own organiser answers. A series past its deadline is reported
+  as `:not_awaiting_approval`, as a single request is.
+  """
+  @spec for_session(Meeting.t(), session_action()) ::
+          {:ok, Meeting.t()} | {:error, term()} | :not_in_series
+  def for_session(%Meeting{series_id: nil}, _action), do: :not_in_series
+
+  def for_session(%Meeting{series_id: series_id} = meeting, action) do
+    case SeriesQueries.get(series_id) do
+      {:ok, series} -> series |> answer(action) |> as_session(meeting)
+      {:error, :not_found} -> :not_in_series
+    end
+  end
+
+  defp answer(series, :approve), do: as_organiser(series, &approve/2)
+  defp answer(series, {:decline, reason}), do: as_organiser(series, &decline(&1, &2, reason))
+  defp answer(series, :expire), do: expire(series)
+  defp answer(series, {:withdraw, by, changes}), do: withdraw(series, by, changes)
+
+  defp as_organiser(series, fun) do
+    case Auth.get_user(series.organizer_user_id) do
+      {:ok, organiser} -> fun.(series, organiser)
+      {:error, :not_found} -> {:error, :not_awaiting_approval}
+    end
+  end
+
+  defp as_session({:ok, sessions}, meeting),
+    do: {:ok, Enum.find(sessions, hd(sessions), &(&1.id == meeting.id))}
+
+  defp as_session({:error, :past_deadline}, _meeting), do: {:error, :not_awaiting_approval}
+  defp as_session({:error, _reason} = error, _meeting), do: error
+
+  defp owned_by(%SeriesSchema{organizer_user_id: owner_id}, %User{id: owner_id}), do: :ok
+  defp owned_by(_series, _actor), do: {:error, :not_found}
+
+  # Approval
+
+  # The confirmations, their emails and reminders and the series'
+  # confirmation commit together, as for a single approval.
+  defp confirm(series, now) do
+    Repo.transaction(fn ->
+      held = lock_held(series)
+
+      if MeetingState.approval_deadline_passed?(hd(held), now),
+        do: Repo.rollback(:past_deadline)
+
+      confirmed = Enum.map(held, &confirm_session(&1, now))
+
+      case Notifications.schedule_series_confirmation(series) do
+        {:ok, _job} -> confirmed
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  defp confirm_session(meeting, now) do
+    with {:ok, confirmed} <-
+           MeetingQueries.transition_from_awaiting_approval(meeting.id,
+             status: :confirmed,
+             approval_resolved_at: DateTime.truncate(now, :second)
+           ),
+         {:ok, pending} <-
+           Activation.activate_in_transaction(confirmed,
+             announce: :series,
+             with_video_room: true
+           ) do
+      {confirmed, pending}
+    else
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
+  defp settle_approval({:ok, confirmed}, series) do
+    Logger.info("Series request approved", series_id: series.id, sessions: length(confirmed))
+    Availability.changed(series.organizer_user_id)
+
+    Enum.each(confirmed, fn {meeting, pending} ->
+      MeetingApproval.activate_confirmed(meeting, pending)
+    end)
+
+    {:ok, Enum.map(confirmed, &elem(&1, 0))}
+  end
+
+  # The host answered after the window the booker was promised: the series
+  # is released as the expiry job would have released it.
+  defp settle_approval({:error, :past_deadline} = error, series) do
+    Logger.info("Series approval refused: past its deadline", series_id: series.id)
+    _released = expire(series)
+    error
+  end
+
+  defp settle_approval({:error, reason} = error, series)
+       when reason in [:not_awaiting_approval, :slot_taken, :not_found] do
+    Logger.info("Series approval refused", series_id: series.id, reason: reason)
+    error
+  end
+
+  defp settle_approval({:error, reason}, series) do
+    Logger.error("Series approval rolled back: the confirmation could not be scheduled",
+      series_id: series.id,
+      reason: LogFormat.reason(reason)
+    )
+
+    {:error, :not_scheduled}
+  end
+
+  # Release
+
+  defp release(series, changes, announce) do
+    case Repo.transaction(fn -> Enum.map(lock_held(series), &release_session(&1, changes)) end) do
+      {:ok, released} ->
+        Logger.info("Series request released",
+          series_id: series.id,
+          status: hd(released).status,
+          sessions: length(released)
+        )
+
+        Availability.changed(series.organizer_user_id)
+        after_release(series, released, announce)
+        {:ok, released}
+
+      {:error, reason} = error ->
+        Logger.info("Series release skipped", series_id: series.id, reason: reason)
+        error
+    end
+  end
+
+  defp release_session(meeting, changes) do
+    case MeetingQueries.transition_from_awaiting_approval(meeting.id, changes) do
+      {:ok, released} -> released
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
+  # As for a single request: off the calendars, the video provider and the
+  # request jobs first, then the refund, then the people told. Each step is
+  # best-effort: the release has committed and cannot be undone.
+  defp after_release(series, released, announce) do
+    Enum.each(released, &MeetingApproval.clear_released_request/1)
+
+    best_effort(series, "refund unapproved series", fn ->
+      ApprovalRefunds.refund_unapproved_series(series, released)
+    end)
+
+    best_effort(series, "announce release", fn -> announce.(released) end)
+  end
+
+  # Integrations hear of each session, as for any booking; the booker reads
+  # one email.
+  defp announce_outcome(series, released, :declined) do
+    Enum.each(released, &Events.meeting_declined(&1, emails: false))
+    Notifications.schedule_series_request_outcome(series, :declined)
+  end
+
+  defp announce_outcome(series, released, :expired) do
+    Enum.each(released, &Events.meeting_request_expired(&1, emails: false))
+    Notifications.schedule_series_request_outcome(series, :expired)
+  end
+
+  defp announce_withdrawal(series, released, withdrawn_by) do
+    Enum.each(released, &Events.meeting_cancelled(&1, emails: false))
+    Notifications.schedule_series_cancellation(series, released, cancelled_by(withdrawn_by))
+  end
+
+  defp cancelled_by(:calendar), do: :organizer
+  defp cancelled_by(:attendee), do: :attendee
+
+  # Locks
+
+  # The organiser's schedule, the series, then its sessions in series order:
+  # the order every writer of a series takes them in. Rolls back with
+  # `:not_awaiting_approval` when no session is held any more.
+  defp lock_held(series) do
+    :ok = MeetingConflictQueries.lock_organizer_schedule(series.organizer_user_id)
+
+    with %SeriesSchema{} <- SeriesQueries.lock(series),
+         [_first | _rest] = held <-
+           series
+           |> SeriesQueries.lock_meetings()
+           |> Enum.filter(&MeetingState.awaiting_approval?/1) do
+      held
+    else
+      _gone_or_answered -> Repo.rollback(:not_awaiting_approval)
+    end
+  end
+
+  # See `Tymeslot.Meetings.Approval`'s own: a raise in one step of work that
+  # follows a committed release must not stop the next.
+  defp best_effort(series, step, fun) do
+    fun.()
+  rescue
+    exception in DispatchInTransactionError ->
+      reraise exception, __STACKTRACE__
+
+    exception ->
+      ErrorTracking.report_error(exception, __STACKTRACE__, %{step: step, series_id: series.id})
+  end
+end

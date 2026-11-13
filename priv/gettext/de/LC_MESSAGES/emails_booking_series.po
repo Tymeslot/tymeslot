@@ -46,11 +46,14 @@ msgstr[1] "%{count} Termine abgesagt"
 
 #: lib/tymeslot/emails/templates/series_cancellation.ex
 #: lib/tymeslot/emails/templates/series_confirmation.ex
+#: lib/tymeslot/emails/templates/series_request.ex
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "%{meeting_type} with %{name}"
 msgstr "%{meeting_type} mit %{name}"
 
 #: lib/tymeslot/emails/templates/series_cancellation.ex
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Book another time"
 msgstr "Anderen Termin buchen"
@@ -163,3 +166,107 @@ msgstr[1] "Ihre %{count} Termine mit %{host} sind gebucht"
 #, elixir-autogen, elixir-format
 msgid "This session has been cancelled."
 msgstr "Dieser Termin wurde abgesagt."
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "%{attendee} requests %{count} session"
+msgid_plural "%{attendee} requests %{count} sessions"
+msgstr[0] "%{attendee} fragt %{count} Termin an"
+msgstr[1] "%{attendee} fragt %{count} Termine an"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Approve all sessions"
+msgstr "Alle Termine bestätigen"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Both buttons open the request for you to confirm. Your answer applies to every session, and nothing is decided until you choose there."
+msgstr "Beide Schaltflächen öffnen zunächst die Anfrage, wo Sie Ihre Wahl bestätigen. Ihre Antwort gilt für alle Termine, und entschieden ist erst etwas, wenn Sie dort auswählen."
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Decline all sessions"
+msgstr "Alle Termine ablehnen"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Every session is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the times are free again."
+msgstr "Alle Termine bleiben reserviert, bis Sie antworten. Ohne Antwort bis %{deadline} verfällt die Anfrage und %{name} erfährt, dass die Zeiten wieder frei sind."
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Every session stays held for %{name} until you answer."
+msgstr "Alle Termine bleiben für %{name} reserviert, bis Sie antworten."
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, %{host} can't make the sessions below, so none of them is booked."
+msgstr "Hallo %{name}, %{host} kann die folgenden Termine nicht wahrnehmen, daher ist keiner davon gebucht."
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{deadline}."
+msgstr "Hallo %{name}, %{host} hat Ihre Anfrage für die folgenden Termine erhalten. Die Termine sind für Sie reserviert, aber erst gebucht, wenn %{host} sie bestätigt. Bis %{deadline} erhalten Sie in jedem Fall Bescheid."
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them."
+msgstr "Hallo %{name}, %{host} hat Ihre Anfrage für die folgenden Termine erhalten. Die Termine sind für Sie reserviert, aber erst gebucht, wenn %{host} sie bestätigt."
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, your request wasn't answered in time, so the sessions below are no longer held for you."
+msgstr "Hallo %{name}, Ihre Anfrage wurde nicht rechtzeitig beantwortet, daher sind die folgenden Termine nicht mehr für Sie reserviert."
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Needs your answer"
+msgstr "Ihre Antwort wird benötigt"
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "No longer held"
+msgstr "Nicht mehr reserviert"
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Not confirmed"
+msgstr "Nicht bestätigt"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Request sent"
+msgstr "Anfrage gesendet"
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "These times are available for booking again."
+msgstr "Diese Zeiten sind wieder buchbar."
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "They added:"
+msgstr "Anmerkung:"
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Your request for %{count} session expired"
+msgid_plural "Your request for %{count} sessions expired"
+msgstr[0] "Ihre Anfrage für %{count} Termin ist abgelaufen"
+msgstr[1] "Ihre Anfrage für %{count} Termine ist abgelaufen"
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Your request for %{count} session was declined"
+msgid_plural "Your request for %{count} sessions was declined"
+msgstr[0] "Ihre Anfrage für %{count} Termin wurde abgelehnt"
+msgstr[1] "Ihre Anfrage für %{count} Termine wurde abgelehnt"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Your request for %{count} session was sent"
+msgid_plural "Your request for %{count} sessions was sent"
+
+msgstr[0] "Ihre Anfrage für %{count} Termin wurde gesendet"
+msgstr[1] "Ihre Anfrage für %{count} Termine wurde gesendet"

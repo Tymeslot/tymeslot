@@ -138,6 +138,12 @@ defmodule Tymeslot.Emails.EmailService do
   defdelegate send_series_cancellation(role, email, series_details), to: SeriesEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_series_request(role, email, series_details), to: SeriesEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_series_request_outcome(variant, email, series_details), to: SeriesEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_registration_closed(organizer_email, appointment_details, roster),
     to: AppointmentEmails
 

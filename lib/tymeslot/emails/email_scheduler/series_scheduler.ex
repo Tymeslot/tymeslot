@@ -1,12 +1,21 @@
 defmodule Tymeslot.Emails.EmailScheduler.SeriesScheduler do
   @moduledoc """
-  Schedules the emails a booking series sends as one: its confirmation and
-  the cancellation of several of its sessions
+  Schedules the emails a booking series sends as one: its confirmation, the
+  cancellation of several of its sessions, and, for a series held for
+  approval, its request and the answer when it is declined or expires
   (`Tymeslot.Notifications.Email.SeriesEmails`).
   """
 
   alias Tymeslot.Emails.EmailScheduler.Helpers
   alias Tymeslot.Workers.EmailWorker
+
+  # An email a series sends once in its life: a completed job counts too.
+  @once_per_series [
+    period: :infinity,
+    fields: [:args, :queue],
+    keys: [:action, :series_id],
+    states: [:suspended, :available, :scheduled, :executing, :retryable, :completed]
+  ]
 
   @doc """
   Schedules the series confirmation to its booker and organiser, now. One
@@ -17,16 +26,7 @@ defmodule Tymeslot.Emails.EmailScheduler.SeriesScheduler do
   @spec schedule_series_confirmation_emails(binary()) :: :ok | {:error, term()}
   def schedule_series_confirmation_emails(series_id) do
     %{"action" => "send_series_confirmation", "series_id" => series_id}
-    |> EmailWorker.new(
-      queue: :emails,
-      priority: 0,
-      unique: [
-        period: :infinity,
-        fields: [:args, :queue],
-        keys: [:action, :series_id],
-        states: [:suspended, :available, :scheduled, :executing, :retryable, :completed]
-      ]
-    )
+    |> EmailWorker.new(queue: :emails, priority: 0, unique: @once_per_series)
     |> Helpers.insert(series_id: series_id)
     |> Helpers.ok()
   end
@@ -48,5 +48,34 @@ defmodule Tymeslot.Emails.EmailScheduler.SeriesScheduler do
     }
     |> EmailWorker.new(queue: :emails, priority: 0)
     |> Helpers.insert(series_id: series_id)
+  end
+
+  @doc """
+  Schedules the request a series held for approval sends, now: the host's,
+  to approve or decline it, and the booker's acknowledgement. One per series
+  ever, as for the confirmation: a series is requested once.
+  """
+  @spec schedule_series_request_emails(binary()) :: :ok | {:error, term()}
+  def schedule_series_request_emails(series_id) do
+    %{"action" => "send_series_request", "series_id" => series_id}
+    |> EmailWorker.new(queue: :emails, priority: 0, unique: @once_per_series)
+    |> Helpers.insert(series_id: series_id)
+    |> Helpers.ok()
+  end
+
+  @doc """
+  Schedules the booker's email saying their series request was declined or
+  expired, now. One per series ever: a series is answered once.
+  """
+  @spec schedule_series_request_outcome(binary(), :declined | :expired) :: :ok | {:error, term()}
+  def schedule_series_request_outcome(series_id, variant) when variant in [:declined, :expired] do
+    %{
+      "action" => "send_series_request_outcome",
+      "series_id" => series_id,
+      "variant" => Atom.to_string(variant)
+    }
+    |> EmailWorker.new(queue: :emails, priority: 0, unique: @once_per_series)
+    |> Helpers.insert(series_id: series_id)
+    |> Helpers.ok()
   end
 end

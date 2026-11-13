@@ -50,11 +50,14 @@ msgstr[2] "Скасовано %{count} сесій"
 
 #: lib/tymeslot/emails/templates/series_cancellation.ex
 #: lib/tymeslot/emails/templates/series_confirmation.ex
+#: lib/tymeslot/emails/templates/series_request.ex
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "%{meeting_type} with %{name}"
 msgstr "%{meeting_type} з %{name}"
 
 #: lib/tymeslot/emails/templates/series_cancellation.ex
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Book another time"
 msgstr "Забронювати інший час"
@@ -169,3 +172,111 @@ msgstr[2] "Заброньовано %{count} сесій з %{host}"
 #, elixir-autogen, elixir-format
 msgid "This session has been cancelled."
 msgstr "Цю сесію скасовано."
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "%{attendee} requests %{count} session"
+msgid_plural "%{attendee} requests %{count} sessions"
+msgstr[0] "Запит від %{attendee} на %{count} сесію"
+msgstr[1] "Запит від %{attendee} на %{count} сесії"
+msgstr[2] "Запит від %{attendee} на %{count} сесій"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Approve all sessions"
+msgstr "Підтвердити всі сесії"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Both buttons open the request for you to confirm. Your answer applies to every session, and nothing is decided until you choose there."
+msgstr "Обидві кнопки відкривають запит для підтвердження. Ваша відповідь стосується всіх сесій, і нічого не вирішується, доки ви не оберете там."
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Decline all sessions"
+msgstr "Відхилити всі сесії"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Every session is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the times are free again."
+msgstr "Усі сесії зарезервовано, доки ви не відповісте. Без відповіді до %{deadline} запит скасується, а %{name} дізнається, що цей час знову вільний."
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Every session stays held for %{name} until you answer."
+msgstr "Усі сесії залишаються зарезервованими для %{name}, доки ви не відповісте."
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, %{host} can't make the sessions below, so none of them is booked."
+msgstr "Вітаю, %{name}! %{host} не може провести наведені нижче сесії, тому жодну з них не заброньовано."
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{deadline}."
+msgstr "Вітаю, %{name}! %{host} уже має ваш запит на наведені нижче сесії. Їх зарезервовано за вами, але заброньовано їх буде лише тоді, коли %{host} їх підтвердить. Хоч якою буде відповідь, ви отримаєте її до %{deadline}."
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them."
+msgstr "Вітаю, %{name}! %{host} уже має ваш запит на наведені нижче сесії. Їх зарезервовано за вами, але заброньовано їх буде лише тоді, коли %{host} їх підтвердить."
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, your request wasn't answered in time, so the sessions below are no longer held for you."
+msgstr "Вітаю, %{name}! На ваш запит не відповіли вчасно, тому наведені нижче сесії більше не зарезервовано за вами."
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Needs your answer"
+msgstr "Потрібна ваша відповідь"
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "No longer held"
+msgstr "Час звільнено"
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Not confirmed"
+msgstr "Не підтверджено"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Request sent"
+msgstr "Запит надіслано"
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "These times are available for booking again."
+msgstr "Ці дати й час знову доступні для бронювання."
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "They added:"
+msgstr "Додано:"
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Your request for %{count} session expired"
+msgid_plural "Your request for %{count} sessions expired"
+msgstr[0] "Термін вашого запиту на %{count} сесію минув"
+msgstr[1] "Термін вашого запиту на %{count} сесії минув"
+msgstr[2] "Термін вашого запиту на %{count} сесій минув"
+
+#: lib/tymeslot/emails/templates/series_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Your request for %{count} session was declined"
+msgid_plural "Your request for %{count} sessions was declined"
+msgstr[0] "Ваш запит на %{count} сесію відхилено"
+msgstr[1] "Ваш запит на %{count} сесії відхилено"
+msgstr[2] "Ваш запит на %{count} сесій відхилено"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Your request for %{count} session was sent"
+msgid_plural "Your request for %{count} sessions was sent"
+
+msgstr[0] "Ваш запит на %{count} сесію надіслано"
+msgstr[1] "Ваш запит на %{count} сесії надіслано"
+msgstr[2] "Ваш запит на %{count} сесій надіслано"

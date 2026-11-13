@@ -12,6 +12,13 @@ defmodule Tymeslot.BookingSeries.Notifications do
   Several sessions cancelled at once are likewise told in one email to each
   (`schedule_series_cancellation/3`).
 
+  A series held for the host's approval is requested once, for all its
+  sessions (`schedule_series_request/1`): one request to the host, one
+  acknowledgement to the booker, and one expiry job at the deadline the
+  sessions share. Its answer is one email too: the series confirmation once
+  approved, and the booker's `schedule_series_request_outcome/2` once
+  declined or expired (`Tymeslot.BookingSeries.Approval`).
+
   A session of its own changed later (rescheduled, cancelled) sends the
   ordinary email for that one meeting or seat, as any booking does.
   """
@@ -22,6 +29,7 @@ defmodule Tymeslot.BookingSeries.Notifications do
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Jobs
+  alias Tymeslot.Meetings.ApprovalJobs
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
@@ -48,6 +56,47 @@ defmodule Tymeslot.BookingSeries.Notifications do
     |> SeriesAnnouncementWorker.new()
     |> Oban.insert()
   end
+
+  @doc """
+  Schedules the one request a series held for approval sends its host and
+  booker, and the one job that releases the series at its deadline
+  (`Tymeslot.Meetings.ApprovalJobs`, on the first session still held: every
+  session shares its deadline, and expiring one expires the series). Called
+  in the transaction that holds the series for approval, booking or payment,
+  so it commits with it or not at all.
+
+  No session schedules a request, nudge or expiry of its own
+  (`Tymeslot.Bookings.Activation`, `announce: :series`), and the request is
+  scheduled once per series ever.
+  """
+  @spec schedule_series_request(SeriesSchema.t()) :: {:ok, :scheduled} | {:error, term()}
+  def schedule_series_request(%SeriesSchema{} = series) do
+    with :ok <- EmailScheduler.schedule_series_request_emails(series.id) do
+      series
+      |> SeriesQueries.list_meetings()
+      |> Enum.find(&MeetingState.awaiting_approval?/1)
+      |> schedule_series_expiry()
+
+      {:ok, :scheduled}
+    end
+  end
+
+  # The expiry sweep backstops a lost job, as for a single request.
+  defp schedule_series_expiry(nil), do: :ok
+
+  defp schedule_series_expiry(%Meeting{} = first_held),
+    do: ApprovalJobs.schedule_expiry(first_held)
+
+  @doc """
+  Schedules the booker's one email saying their series request was
+  declined or expired. The host, who declined it or let it lapse, is sent
+  nothing, as for a single request.
+  """
+  @spec schedule_series_request_outcome(SeriesSchema.t(), :declined | :expired) ::
+          :ok | {:error, term()}
+  def schedule_series_request_outcome(%SeriesSchema{id: series_id}, variant)
+      when variant in [:declined, :expired],
+      do: EmailScheduler.schedule_series_request_outcome(series_id, variant)
 
   @doc """
   Queues the series confirmation emails, once the sessions' video rooms are

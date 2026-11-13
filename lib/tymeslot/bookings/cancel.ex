@@ -89,6 +89,12 @@ defmodule Tymeslot.Bookings.Cancel do
     end
   end
 
+  # A session of a series held for approval is withdrawn with its whole
+  # series (`Approval.withdraw/2`), which tells both sides once for all of
+  # it; an email for this one session would contradict that.
+  defp maybe_announce(%Meeting{series_id: series_id}, _announce?) when is_binary(series_id),
+    do: :ok
+
   defp maybe_announce(meeting, true), do: send_cancellation_notifications(meeting)
   defp maybe_announce(_meeting, false), do: :ok
 
@@ -273,8 +279,11 @@ defmodule Tymeslot.Bookings.Cancel do
     )
 
     with {:ok, released} <-
-           withdraw(meeting, cancellation_reason: @external_cancellation_reason),
-         :ok <- send_cancellation_notifications(released) do
+           withdraw(meeting,
+             cancellation_reason: @external_cancellation_reason,
+             withdrawn_by: :calendar
+           ),
+         :ok <- maybe_announce(released, true) do
       {:ok, released}
     else
       {:error, :already_cancelled} = error ->

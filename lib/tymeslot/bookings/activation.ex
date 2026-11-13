@@ -64,8 +64,9 @@ defmodule Tymeslot.Bookings.Activation do
   Runs the side effects a newly created or newly confirmed meeting needs, in
   the transaction that created or confirmed it.
 
-  A meeting still awaiting the host's approval takes the request fan-out; any
-  other status takes the confirmation one.
+  A meeting still awaiting the host's approval takes the request fan-out
+  (without emails for a session of a series); any other status takes the
+  confirmation one.
 
   With `announce: :series` the meeting is one occurrence of a booking
   series (`Tymeslot.BookingSeries`): its reminders are scheduled and its
@@ -105,10 +106,16 @@ defmodule Tymeslot.Bookings.Activation do
   #
   # The request still has to reach people — the invitee needs telling their
   # booking is not final, and the host cannot approve what they never heard
-  # about — so it takes the request fan-out instead.
-  def activate_in_transaction(%Meeting{status: :awaiting_approval} = meeting, _opts) do
+  # about — so it takes the request fan-out instead. A session of a series
+  # (`announce: :series`) schedules no request emails, nudge or expiry of its
+  # own: the series is requested once, for all its sessions
+  # (`Tymeslot.BookingSeries.Notifications.schedule_series_request/1`), and
+  # only the integration fan-out is returned.
+  def activate_in_transaction(%Meeting{status: :awaiting_approval} = meeting, opts) do
+    emails? = Keyword.get(opts, :announce, :meeting) == :meeting
+
     meeting
-    |> Events.meeting_requested_deferred()
+    |> Events.meeting_requested_deferred(emails: emails?)
     |> settle(meeting, "Failed to schedule booking request emails")
   end
 

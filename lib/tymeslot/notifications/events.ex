@@ -292,10 +292,23 @@ defmodule Tymeslot.Notifications.Events do
   @doc """
   `meeting_requested/2` without its integration fan-out, for a caller inside
   a transaction; see `meeting_created_deferred/1`.
+
+  `emails: false` schedules none of the request's emails, nudge or expiry,
+  and only returns the fan-out: a session of a booking series, whose
+  request is sent once for the whole series
+  (`Tymeslot.BookingSeries.Notifications.schedule_series_request/1`).
   """
   @spec meeting_requested_deferred(term(), keyword()) ::
           {{:ok, term()} | {:error, term()}, pending()}
   def meeting_requested_deferred(meeting, opts \\ []) do
+    if Keyword.get(opts, :emails, true) do
+      schedule_request(meeting, opts)
+    else
+      {{:ok, :requested_with_series}, [{:meeting_requested, meeting, :once}]}
+    end
+  end
+
+  defp schedule_request(meeting, opts) do
     result =
       :meeting_requested
       |> send_notifications(meeting, fn ->
@@ -422,22 +435,32 @@ defmodule Tymeslot.Notifications.Events do
   same. A cancellation tells the invitee a confirmed meeting is off; a decline
   tells them a request was never accepted, and sending the cancellation email
   here would refer to a booking they were explicitly told was not one.
+
+  `emails: false` (here, in `meeting_request_expired/2` and in
+  `meeting_cancelled/2`) skips the emails and runs only the integration
+  fan-out: a session of a booking series released with the rest of it,
+  whose people are told once for the whole series.
   """
-  @spec meeting_declined(term()) :: {:ok, term()} | {:error, term()}
-  def meeting_declined(meeting), do: request_ended(meeting, :meeting_declined, :declined)
+  @spec meeting_declined(term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def meeting_declined(meeting, opts \\ []),
+    do: request_ended(meeting, :meeting_declined, :declined, opts)
 
   @doc """
   Handles a booking request nobody answered before its deadline.
   """
-  @spec meeting_request_expired(term()) :: {:ok, term()} | {:error, term()}
-  def meeting_request_expired(meeting),
-    do: request_ended(meeting, :meeting_request_expired, :expired)
+  @spec meeting_request_expired(term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def meeting_request_expired(meeting, opts \\ []),
+    do: request_ended(meeting, :meeting_request_expired, :expired, opts)
 
-  defp request_ended(meeting, event, variant) do
+  defp request_ended(meeting, event, variant, opts) do
     result =
-      send_notifications(event, meeting, fn ->
-        Orchestrator.send_request_outcome_notifications(meeting, variant)
-      end)
+      if Keyword.get(opts, :emails, true) do
+        send_notifications(event, meeting, fn ->
+          Orchestrator.send_request_outcome_notifications(meeting, variant)
+        end)
+      else
+        {:ok, :announced_with_series}
+      end
 
     dispatch_channels(event, meeting)
 
@@ -453,13 +476,17 @@ defmodule Tymeslot.Notifications.Events do
   live by it. An emptied slot cancelled by its last leaver has no live seat
   left, and `seat_cancelled/3` already announced that seat.
   """
-  @spec meeting_cancelled(term()) :: {:ok, term()} | {:error, term()}
-  def meeting_cancelled(meeting) do
+  @spec meeting_cancelled(term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def meeting_cancelled(meeting, opts \\ []) do
     # Send email notifications
     result =
-      send_notifications(:meeting_cancelled, meeting, fn ->
-        Orchestrator.send_cancellation_notifications(meeting)
-      end)
+      if Keyword.get(opts, :emails, true) do
+        send_notifications(:meeting_cancelled, meeting, fn ->
+          Orchestrator.send_cancellation_notifications(meeting)
+        end)
+      else
+        {:ok, :announced_with_series}
+      end
 
     # Cancel pending reminders — a cancellation event already tells us the
     # slot is void, so call the canceller directly. Failures are logged but

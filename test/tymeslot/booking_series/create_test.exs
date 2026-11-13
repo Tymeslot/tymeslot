@@ -301,13 +301,13 @@ defmodule Tymeslot.BookingSeries.CreateTest do
     assert series_count() == 0
   end
 
-  test "approval types are refused for now", %{host: host, today: today} do
+  test "an approval type books the series held for approval", %{host: host, today: today} do
     held = series_type(host, requires_approval: true)
 
-    assert {:error, :series_not_offered} = book_series(host, held, weekly(today, 4))
+    assert {:ok, %{meetings: meetings}} = book_series(host, held, weekly(today, 4))
 
-    assert meeting_count() == 0
-    assert series_count() == 0
+    assert Enum.map(meetings, & &1.status) == List.duplicate(:awaiting_approval, 4)
+    assert series_count() == 1
   end
 
   test "a request in the other mode than the type's is refused", %{host: host, today: today} do

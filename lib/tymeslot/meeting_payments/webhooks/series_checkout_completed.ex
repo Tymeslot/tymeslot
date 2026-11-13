@@ -10,7 +10,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
     * Every session `awaiting_payment`: the payment is recorded paid, each
       session confirmed, given its calendar job and announced as a session
       of a series (`Activation`, `announce: :series`), and the series'
-      one confirmation scheduled, all in one transaction.
+      one confirmation scheduled, all in one transaction. On a type
+      requiring approval each session moves to `awaiting_approval` instead,
+      every one with the deadline restarted from the first session's
+      (`PaymentCompletion.post_payment_status/1`), and the series is
+      requested once (`Notifications.schedule_series_request/1`) in place
+      of its confirmation: the host is asked only once the money is in.
     * Every session expired and the payment failed (the checkout lapsed
       before the money arrived): the sessions come back only if every one
       of their slots is still free, each counted under the organiser's
@@ -177,7 +182,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
          :ok <- slot_checked(transition, slot),
          {:ok, paid} <- PaymentCompletion.mark_paid(payment, event_id, object),
          {:ok, confirmed, pending} <- confirm_all(meetings),
-         {:ok, _job} <- Notifications.schedule_series_confirmation(series) do
+         {:ok, _job} <- announce_series(series, confirmed) do
       {:ok, {transition, paid, confirmed, pending}}
     else
       :no_op -> {:ok, :no_op}
@@ -187,12 +192,22 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
     end
   end
 
+  # A series held for approval is requested now, not confirmed.
+  defp announce_series(series, [%{status: :awaiting_approval} | _rest]),
+    do: Notifications.schedule_series_request(series)
+
+  defp announce_series(series, _confirmed), do: Notifications.schedule_series_confirmation(series)
+
   # Each session is confirmed as a single paid booking is, without a
-  # confirmation of its own: the series sends one for all of them.
-  defp confirm_all(meetings) do
+  # confirmation of its own: the series sends one for all of them. The
+  # status is the first session's for every one, so a series held for
+  # approval shares one deadline, counted from the first session.
+  defp confirm_all([first | _rest] = meetings) do
+    status = PaymentCompletion.post_payment_status(first)
+
     result =
       Enum.reduce_while(meetings, {[], []}, fn meeting, {confirmed, pending} ->
-        case confirm(meeting) do
+        case confirm(meeting, status) do
           {:ok, done, owed} -> {:cont, {[done | confirmed], [owed | pending]}}
           {:error, _reason} = error -> {:halt, error}
         end
@@ -207,12 +222,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
     end
   end
 
-  defp confirm(meeting) do
-    with {:ok, confirmed} <-
-           MeetingQueries.update_meeting_status(
-             meeting,
-             PaymentCompletion.post_payment_status(meeting)
-           ),
+  defp confirm(meeting, status) do
+    with {:ok, confirmed} <- MeetingQueries.update_meeting_status(meeting, status),
          {:ok, _job_status} <- PaymentCompletion.schedule_calendar_creation(confirmed),
          {:ok, pending} <-
            Activation.activate_in_transaction(confirmed,

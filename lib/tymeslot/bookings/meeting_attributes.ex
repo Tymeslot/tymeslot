@@ -153,6 +153,26 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
     |> Map.merge(build_meeting_action_urls(meeting_uid, org_username))
   end
 
+  @doc """
+  Gives every session of a series the approval clock of its first: the
+  same `approval_requested_at` and `approval_deadline_at`, the deadline
+  capped at the first session's start.
+
+  A series held for approval is one request with one answer
+  (`Tymeslot.BookingSeries.Approval`), so it has one deadline, the one its
+  earliest session allows. Each session's own `build/1` would cap the
+  window at that session's start, giving the later sessions later
+  deadlines. `attrs` are the sessions' attributes in series order; a
+  series not held for approval is returned unchanged.
+  """
+  @spec share_series_approval_clock([meeting_attributes()]) :: [meeting_attributes()]
+  def share_series_approval_clock([%{status: :awaiting_approval} = first | _rest] = attrs) do
+    clock = Map.take(first, [:approval_requested_at, :approval_deadline_at])
+    Enum.map(attrs, &Map.merge(&1, clock))
+  end
+
+  def share_series_approval_clock(attrs) when is_list(attrs), do: attrs
+
   # What the booker answered, and the series the booking is one session of
   # (`Tymeslot.BookingSeries`) and which; the series is nil for a booking of
   # its own.

@@ -20,8 +20,9 @@ defmodule Tymeslot.Emails.EmailScheduler do
     participants' voting links and receipts
   - `SessionScheduler`: a planned session's participant list, at its
     registration close
-  - `SeriesScheduler`: a booking series' one confirmation, and the
-    cancellation of several of its sessions at once
+  - `SeriesScheduler`: a booking series' one confirmation, the
+    cancellation of several of its sessions at once, and the request and
+    its outcome for a series held for approval
   - `IntegrationScheduler` — integration health notifications and admin alerts
 
   Callers should reference this module directly — no delegation functions exist
@@ -50,6 +51,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
   # Booking series emails
 
   defdelegate schedule_series_confirmation_emails(series_id), to: SeriesScheduler
+  defdelegate schedule_series_request_emails(series_id), to: SeriesScheduler
+  defdelegate schedule_series_request_outcome(series_id, variant), to: SeriesScheduler
 
   defdelegate schedule_series_cancellation_emails(series_id, occurrence_ids, cancelled_by),
     to: SeriesScheduler

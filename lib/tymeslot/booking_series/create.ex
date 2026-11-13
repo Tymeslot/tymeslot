@@ -35,8 +35,13 @@ defmodule Tymeslot.BookingSeries.Create do
   meetings, checkout_url}}`, `meeting` being the first session, whose
   payment pages the checkout returns to.
 
-  Approval types are not booked as a series yet, and are refused with
-  `:series_not_offered`.
+  On a type requiring approval (one-to-one only: a group type cannot be
+  approval-gated) every session is held `awaiting_approval`, all with the
+  first session's deadline (`MeetingAttributes.share_series_approval_clock/1`),
+  and the series is requested once, for all of them, in place of its
+  confirmation (`Notifications.schedule_series_request/1`). The host answers
+  for the whole series (`Tymeslot.BookingSeries.Approval`). A paid one is
+  held for payment first, and requested once paid.
   """
 
   alias Tymeslot.Availability
@@ -132,17 +137,9 @@ defmodule Tymeslot.BookingSeries.Create do
 
   defp ensure_offered(%{meeting_type: nil}), do: :ok
 
-  defp ensure_offered(%{meeting_type: %MeetingTypeSchema{} = type} = booking_data) do
-    cond do
-      not SeriesSettings.offered?(type) -> {:error, :series_not_offered}
-      not_yet_bookable_as_series?(type, booking_data) -> {:error, :series_not_offered}
-      true -> :ok
-    end
+  defp ensure_offered(%{meeting_type: %MeetingTypeSchema{} = type}) do
+    if SeriesSettings.offered?(type), do: :ok, else: {:error, :series_not_offered}
   end
-
-  # Not booked as a series yet: an approval type's sessions are requested as
-  # one. (A paused group type is refused by the admission check.)
-  defp not_yet_bookable_as_series?(type, _booking_data), do: Approval.required?(type)
 
   # Plan
 
@@ -204,7 +201,11 @@ defmodule Tymeslot.BookingSeries.Create do
   # The meeting attributes read the host's profile, schedule and
   # integrations, so they are built before the schedule lock is taken.
   defp book(plan, occurrences, booking_data, opts) do
-    attrs = Enum.map(occurrences, &occurrence_attrs(&1, booking_data))
+    attrs =
+      occurrences
+      |> Enum.sort_by(& &1.position)
+      |> Enum.map(&occurrence_attrs(&1, booking_data))
+      |> MeetingAttributes.share_series_approval_clock()
 
     plan
     |> run_transaction(attrs, booking_data, opts)
@@ -242,19 +243,25 @@ defmodule Tymeslot.BookingSeries.Create do
     end)
   end
 
-  # The confirmation commits with the series: a series nobody would be told
-  # about is rolled back and booked again whole. A paid series is confirmed
+  # The confirmation (or, for a series held for approval, the request)
+  # commits with the series: a series nobody would be told about is rolled
+  # back and booked again whole. A paid series is confirmed or requested
   # once paid for, by the payment webhook.
   defp schedule_confirmation(series, booking_data) do
-    if Prepare.paid?(booking_data) do
-      :ok
-    else
-      case Notifications.schedule_series_confirmation(series) do
-        {:ok, _job} -> :ok
-        {:error, reason} -> Repo.rollback(reason)
-      end
+    cond do
+      Prepare.paid?(booking_data) ->
+        :ok
+
+      Approval.required?(booking_data.meeting_type) ->
+        settle_scheduled(Notifications.schedule_series_request(series))
+
+      true ->
+        settle_scheduled(Notifications.schedule_series_confirmation(series))
     end
   end
+
+  defp settle_scheduled({:ok, _job}), do: :ok
+  defp settle_scheduled({:error, reason}), do: Repo.rollback(reason)
 
   # Books one session inside the series' transaction, returning
   # `{{meeting, seat}, owed}`: the seat is nil for a one-to-one session, and
