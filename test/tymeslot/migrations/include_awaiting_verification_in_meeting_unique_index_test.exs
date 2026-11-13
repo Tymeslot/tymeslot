@@ -146,6 +146,8 @@ defmodule Tymeslot.Migrations.IncludeAwaitingVerificationInMeetingUniqueIndexTes
       organizer_user_id: organizer_id,
       status: status
     })
+    # A test's own fixture, inserted through the schema to probe the index.
+    # excellent_migrations:safety-assured-for-next-line operation_insert
     |> Repo.insert()
   end
 

@@ -3,9 +3,11 @@ defmodule Tymeslot.Repo.Migrations.AddEmailVerificationToMeetings do
 
   # excellent_migrations:safety-assured-for-this-file check_constraint_added
   # excellent_migrations:safety-assured-for-this-file raw_sql_executed
+  # excellent_migrations:safety-assured-for-this-file column_removed
   # Widening the status vocabulary: every row the old constraint admitted is
   # admitted by the new one, so validation cannot fail and nothing needs repair.
   # Migrations run offline (start.sh), so the brief lock blocks no traffic.
+  # The only columns removed are this migration's own, in `down/0`.
   @known_before "'pending', 'awaiting_payment', 'awaiting_approval', 'confirmed', 'cancelled', 'completed', 'expired', 'reschedule_requested'"
   @known_after @known_before <> ", 'awaiting_verification'"
 
