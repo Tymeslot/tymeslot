@@ -137,41 +137,67 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   @spec join_target(integer() | nil, DateTime.t(), pos_integer()) :: Meeting.t() | nil
   def join_target(meeting_type_id, %DateTime{} = start_time, seats_requested)
       when is_integer(seats_requested) do
-    case session_at(meeting_type_id, start_time, seats_requested) do
-      {:join, meeting} -> meeting
-      _full_or_none -> nil
+    start_utc = start_time |> DateTime.shift_zone!("Etc/UTC") |> DateTime.truncate(:second)
+
+    case GroupMeetingQueries.get_live_at(meeting_type_id, start_utc) do
+      %Meeting{} = meeting -> if joinable?(meeting, seats_requested), do: meeting
+      nil -> nil
     end
   end
 
   @doc """
-  What a booking of `seats_requested` seats at `(meeting_type_id, start_time)`
-  would meet: `{:join, meeting}` for a live group meeting it would join,
-  `{:full, meeting}` for a live meeting it would be refused by as full, and
-  `:none` when it would create a new slot.
+  What a booking of `seats_requested` seats would meet at each of `starts`
+  for `meeting_type_id`, keyed by the start as given:
+  `{:join, meeting, seats_left}` for a live group meeting it would join,
+  `{:full, meeting, seats_left}` for a live meeting that would refuse it as
+  full, and `:none` where it would create a new slot.
 
-  The same unlocked read and joinability rule as `join_target/3`, for a
-  caller that has to tell a full slot from an empty one.
+  The joinability rule of `join_target/3`, read unlocked for every start in
+  two queries (the meetings, then their seat counts), for a caller weighing
+  many starts at once such as the sessions of a series.
   """
-  @spec session_at(integer() | nil, DateTime.t(), pos_integer()) ::
-          {:join, Meeting.t()} | {:full, Meeting.t()} | :none
-  def session_at(meeting_type_id, %DateTime{} = start_time, seats_requested)
-      when is_integer(seats_requested) do
-    start_utc = start_time |> DateTime.shift_zone!("Etc/UTC") |> DateTime.truncate(:second)
+  @spec sessions_at(integer(), [DateTime.t()], pos_integer()) :: %{
+          DateTime.t() => {:join | :full, Meeting.t(), non_neg_integer()} | :none
+        }
+  def sessions_at(_meeting_type_id, [], _seats_requested), do: %{}
 
-    case GroupMeetingQueries.get_live_at(meeting_type_id, start_utc) do
-      %Meeting{} = meeting ->
-        if joinable?(meeting, seats_requested), do: {:join, meeting}, else: {:full, meeting}
+  def sessions_at(meeting_type_id, starts, seats_requested)
+      when is_integer(meeting_type_id) and is_integer(seats_requested) do
+    meetings =
+      GroupMeetingQueries.list_live_for_type_in_range(
+        meeting_type_id,
+        DateTime.truncate(Enum.min(starts, DateTime), :second),
+        Enum.max(starts, DateTime)
+      )
 
-      nil ->
-        :none
-    end
+    seats_left = meetings |> Enum.filter(&Meeting.group?/1) |> Seats.seats_left_by_meeting()
+    by_start = Map.new(meetings, &{DateTime.to_unix(&1.start_time), &1})
+
+    Map.new(starts, fn start ->
+      case Map.fetch(by_start, DateTime.to_unix(start)) do
+        {:ok, meeting} ->
+          {start, session_state(meeting, Map.get(seats_left, meeting.id, 0), seats_requested)}
+
+        :error ->
+          {start, :none}
+      end
+    end)
+  end
+
+  defp session_state(meeting, seats_left, seats_requested) do
+    if joinable?(meeting, seats_requested, seats_left),
+      do: {:join, meeting, seats_left},
+      else: {:full, meeting, seats_left}
   end
 
   # A solo meeting at the slot (a one-to-one booked before the type became a
   # group type) is never joined: it reads as full, so a private booking stays
   # private.
   defp joinable?(meeting, seats_requested),
-    do: Meeting.group?(meeting) and seats_requested <= Seats.seats_left(meeting, meeting.capacity)
+    do: joinable?(meeting, seats_requested, Seats.seats_left(meeting, meeting.capacity))
+
+  defp joinable?(meeting, seats_requested, seats_left),
+    do: Meeting.group?(meeting) and seats_requested <= seats_left
 
   defp attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, retries_left) do
     result =

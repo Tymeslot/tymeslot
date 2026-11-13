@@ -14,15 +14,21 @@ defmodule Tymeslot.BookingSeries.Check do
     2. **Schedule.** The host's schedule must offer the time
        (`Calculate.offers_slot/6`); a type with fixed dates must have an
        offered time, or an open planned session, at that start.
-    3. **Calendar.** The host's connected calendars, read once for the whole
-       series (`CalendarCheck.enforce_many/3`).
+    3. **Calendar.** The host's connected calendars, read once for the
+       occurrences that passed steps 1 and 2 (`CalendarCheck.enforce_many/3`).
     4. **Bookings.** No other live Tymeslot booking in the way, buffers
        included. A group session the booker can join is not in the way; one
-       with too few seats is full.
+       with too few seats is full. An earlier available occurrence of the
+       same series is in the way too (`:overlaps_session`), since the series
+       is booked as one.
     5. **Booking limits.** Counted as if the series' earlier available
        occurrences were already booked, so a weekly cap of two refuses a
        third session in one week. A seat in an existing group session adds
        no booking and is exempt, as it is for a single booking.
+
+  The whole series is read in a fixed number of queries, however many
+  occurrences it has: the schedule, the group sessions and their seats, the
+  booking limits and the conflicting meetings are each read once.
 
   A type with fixed-date sessions is judged as `Create` judges a booking of
   one: the session's own registration close stands in for the notice and the
@@ -34,7 +40,7 @@ defmodule Tymeslot.BookingSeries.Check do
   """
 
   alias Tymeslot.Availability.Calculate
-  alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Availability.Reach
   alias Tymeslot.Bookings.CalendarCheck
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.BookingSeries.Occurrence
@@ -47,10 +53,10 @@ defmodule Tymeslot.BookingSeries.Check do
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Scheduling
-  alias Tymeslot.Meetings.Seats
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
+  alias Tymeslot.Utils.TimeRange
 
   # Every occurrence after the first must start within this many days of it.
   @series_span_days 365
@@ -61,11 +67,15 @@ defmodule Tymeslot.BookingSeries.Check do
   Judges every occurrence of `plan`, in order.
 
   Returns `{:error, :availability_unverifiable}` when the host's calendars
-  could not be read in full, which refuses every occurrence alike.
+  or schedule could not be read in full, which refuses every occurrence
+  alike.
 
   Options:
 
-    * `:now` - stands in for the clock.
+    * `:now` - stands in for the clock in the time checks (step 1) and for
+      a planned session's registration close. The schedule check
+      (`Calculate.offers_slot/6`) still drops a start already past by the
+      real clock.
     * `:booker_email` - lets a group session the booker already holds a
       seat in be reported as `:already_booked`; without it that check is
       skipped.
@@ -75,46 +85,53 @@ defmodule Tymeslot.BookingSeries.Check do
   @spec check(Plan.t(), keyword()) ::
           {:ok, [Occurrence.t()]} | {:error, :availability_unverifiable}
   def check(%Plan{} = plan, opts \\ []) do
-    ctx = context(plan, opts)
-
     occurrences =
       plan.starts
       |> Enum.with_index(1)
       |> Enum.map(fn {start, position} -> occurrence(plan, start, position) end)
 
-    sessions = Map.new(occurrences, &{&1.position, session(&1, ctx)})
+    ctx = context(plan, opts)
 
-    with {:ok, busy} <- calendar_busy(occurrences, sessions, ctx) do
-      ctx =
-        Map.merge(ctx, %{
-          busy: busy,
-          clashing: clashing(occurrences, sessions, ctx),
-          first_start: hd(plan.starts)
-        })
+    with {:ok, screened} <- screen(occurrences, ctx),
+         passing = for({occurrence, :ok} <- screened, do: occurrence),
+         {:ok, busy} <- calendar_busy(passing, ctx) do
+      ctx = Map.merge(ctx, %{busy: busy, clashing: clashing(passing, ctx)})
 
-      {judged, _limits} =
-        Enum.map_reduce(occurrences, limits_context(plan, ctx), fn occurrence, limits ->
-          session = Map.fetch!(sessions, occurrence.position)
-
-          occurrence
-          |> Map.put(:seats_left, seats_left(session, ctx))
-          |> judge(session, limits, ctx)
-        end)
+      {judged, _state} =
+        Enum.map_reduce(screened, {limits_context(plan, ctx), []}, &judge(&1, &2, ctx))
 
       {:ok, judged}
     end
   end
 
   defp context(%Plan{meeting_type: type} = plan, opts) do
+    now = Keyword.get(opts, :now) || Clock.utc_now()
+    group? = MeetingTypeSchema.group?(type)
+    sessions = sessions(plan, group?, 1 + Keyword.get(opts, :guests, 0))
+
     %{
       plan: plan,
-      now: Keyword.get(opts, :now) || Clock.utc_now(),
-      config: Schedules.booking_config(plan.organizer_user_id, type),
-      group?: MeetingTypeSchema.group?(type),
+      now: now,
+      config: prefetched_config(plan),
       sessions_only?: FixedDates.sessions?(type),
-      seats_requested: 1 + Keyword.get(opts, :guests, 0),
-      booker_email: normalise_email(Keyword.get(opts, :booker_email))
+      sessions: sessions,
+      seated: seated(sessions, Keyword.get(opts, :booker_email)),
+      first_start: hd(plan.starts)
     }
+  end
+
+  # The schedule, overrides and time off, read once for every booker date
+  # the series touches and the host dates each can reach, so the schedule
+  # check reads them from memory.
+  defp prefetched_config(%Plan{config: config, starts: starts, booker_tz: booker_tz}) do
+    dates = Enum.map(starts, &(&1 |> DateTime.shift_zone!(booker_tz) |> DateTime.to_date()))
+
+    Calculate.prefetch_schedule_data(
+      config,
+      config.schedule_id,
+      dates |> Enum.min(Date) |> Date.add(-Reach.owner_days()),
+      dates |> Enum.max(Date) |> Date.add(Reach.owner_days())
+    )
   end
 
   defp occurrence(plan, start, position) do
@@ -125,15 +142,40 @@ defmodule Tymeslot.BookingSeries.Check do
     }
   end
 
-  defp judge(occurrence, session, limits, ctx) do
-    with :ok <- check_time(occurrence, ctx),
-         :ok <- check_schedule(occurrence, session, ctx),
+  # Steps 1 and 2, which need nothing read per occurrence. A schedule that
+  # cannot be read refuses the whole series, as `ScheduleCheck` refuses a
+  # single booking.
+  defp screen(occurrences, ctx) do
+    screened =
+      Enum.reduce_while(occurrences, [], fn occurrence, screened ->
+        case with(:ok <- check_time(occurrence, ctx), do: check_schedule(occurrence, ctx)) do
+          :unverifiable -> {:halt, :unverifiable}
+          result -> {:cont, [{occurrence, result} | screened]}
+        end
+      end)
+
+    case screened do
+      :unverifiable -> {:error, :availability_unverifiable}
+      screened -> {:ok, Enum.reverse(screened)}
+    end
+  end
+
+  defp judge({occurrence, screened}, {limits, accepted}, ctx) do
+    session = session(occurrence, ctx)
+    occurrence = %{occurrence | seats_left: seats_left(session, ctx)}
+
+    with :ok <- screened,
          :ok <- check_calendar(occurrence, ctx),
          :ok <- check_bookings(occurrence, session, ctx),
+         :ok <- check_series_overlap(occurrence, session, accepted, ctx),
          {:ok, limits} <- check_limits(occurrence, session, limits, ctx) do
-      {occurrence, limits}
+      {occurrence, {limits, accept(accepted, occurrence, session, ctx)}}
     else
-      {:error, reason} -> {%{occurrence | status: {:unavailable, reason}}, limits}
+      {:error, :no_session} ->
+        {%{occurrence | status: {:unavailable, :no_session}, seats_left: nil}, {limits, accepted}}
+
+      {:error, reason} ->
+        {%{occurrence | status: {:unavailable, reason}}, {limits, accepted}}
     end
   end
 
@@ -169,9 +211,9 @@ defmodule Tymeslot.BookingSeries.Check do
 
   # 2. Schedule
 
-  defp check_schedule(_occurrence, session, %{sessions_only?: true} = ctx) do
-    case session do
-      {_join_or_full, %MeetingSchema{planned: true} = planned} ->
+  defp check_schedule(occurrence, %{sessions_only?: true} = ctx) do
+    case session(occurrence, ctx) do
+      {_join_or_full, %MeetingSchema{planned: true} = planned, _seats_left} ->
         if PlannedSessions.open?(planned, ctx.now), do: :ok, else: {:error, :no_session}
 
       _no_planned_session ->
@@ -182,7 +224,7 @@ defmodule Tymeslot.BookingSeries.Check do
   # `offers_slot/6` also applies the notice and the window against the real
   # clock; both were judged in step 1, so they are lifted here and the
   # answer is about the schedule alone.
-  defp check_schedule(%Occurrence{start: start}, _session, %{plan: plan} = ctx) do
+  defp check_schedule(%Occurrence{start: start}, %{plan: plan} = ctx) do
     config =
       Map.merge(ctx.config, %{
         min_advance_hours: 0,
@@ -200,7 +242,8 @@ defmodule Tymeslot.BookingSeries.Check do
            config
          ) do
       {:ok, true} -> :ok
-      _not_offered -> {:error, not_offered_reason(plan.meeting_type)}
+      {:ok, false} -> {:error, not_offered_reason(plan.meeting_type)}
+      {:error, _reason} -> :unverifiable
     end
   end
 
@@ -214,13 +257,14 @@ defmodule Tymeslot.BookingSeries.Check do
     if MapSet.member?(ctx.busy, start), do: {:error, :calendar_busy}, else: :ok
   end
 
-  # One read for the whole series. A seat's own session is on the host's
-  # calendar and is not a clash with joining it, as `Create` excludes it.
-  defp calendar_busy(_occurrences, _sessions, %{sessions_only?: true}), do: {:ok, MapSet.new()}
+  # One read for every occurrence still standing. A seat's own session is
+  # on the host's calendar and is not a clash with joining it, as `Create`
+  # excludes it.
+  defp calendar_busy(_passing, %{sessions_only?: true}), do: {:ok, MapSet.new()}
 
-  defp calendar_busy(occurrences, sessions, %{plan: plan, config: config}) do
+  defp calendar_busy(passing, %{plan: plan, config: config} = ctx) do
     slots =
-      Enum.map(occurrences, fn occurrence ->
+      Enum.map(passing, fn occurrence ->
         %{
           organizer_user_id: plan.organizer_user_id,
           start_datetime: occurrence.start,
@@ -228,7 +272,10 @@ defmodule Tymeslot.BookingSeries.Check do
         }
       end)
 
-    joined = for {_position, {:join, meeting}} <- sessions, do: meeting
+    joined =
+      for occurrence <- passing,
+          {:join, meeting, _left} <- [session(occurrence, ctx)],
+          do: meeting
 
     case CalendarCheck.enforce_many(slots, config, exclude: joined) do
       {:ok, %{busy: busy}} -> {:ok, busy}
@@ -238,10 +285,10 @@ defmodule Tymeslot.BookingSeries.Check do
 
   # 4. Bookings
 
-  defp check_bookings(occurrence, {_join_or_full, meeting} = session, ctx) do
+  defp check_bookings(occurrence, {state, meeting, _seats_left}, ctx) do
     cond do
-      already_seated?(meeting, ctx.booker_email) -> {:error, :already_booked}
-      match?({:full, _meeting}, session) -> {:error, :session_full}
+      MapSet.member?(ctx.seated, meeting.id) -> {:error, :already_booked}
+      state == :full -> {:error, :session_full}
       true -> check_clash(occurrence, ctx)
     end
   end
@@ -255,29 +302,51 @@ defmodule Tymeslot.BookingSeries.Check do
   # Only an occurrence that would add a meeting can clash: a seat in an
   # existing session adds none, exactly as the seat transaction runs no
   # conflict count for a join.
-  defp clashing(_occurrences, _sessions, %{sessions_only?: true}), do: MapSet.new()
+  defp clashing(_passing, %{sessions_only?: true}), do: MapSet.new()
 
-  defp clashing(occurrences, sessions, %{plan: plan}) do
+  defp clashing(passing, %{plan: plan} = ctx) do
     slots =
-      for occurrence <- occurrences, Map.fetch!(sessions, occurrence.position) in [nil, :none] do
+      for occurrence <- passing, adds_meeting?(session(occurrence, ctx)) do
         %{start_time: occurrence.start, end_time: occurrence.end}
       end
 
     Scheduling.clashing_starts(plan.organizer_user_id, plan.meeting_type.id, slots)
   end
 
-  defp already_seated?(_meeting, nil), do: false
+  # The series' own earlier sessions are booked with it, so each is in the
+  # way of the later ones exactly as an existing booking of the type would
+  # be: buffers on both sides.
+  defp check_series_overlap(_occurrence, _session, [], _ctx), do: :ok
 
-  defp already_seated?(%MeetingSchema{id: meeting_id}, email) do
-    meeting_id
-    |> ParticipantQueries.list_live_for_meeting()
-    |> Enum.any?(&(normalise_email(&1.email) == email))
+  defp check_series_overlap(occurrence, session, accepted, ctx) do
+    if adds_meeting?(session) and
+         TimeRange.has_conflict_with_events?(
+           occurrence.start,
+           occurrence.end,
+           accepted,
+           Calculate.config_buffers(ctx.config)
+         ),
+       do: {:error, :overlaps_session},
+       else: :ok
+  end
+
+  defp accept(accepted, occurrence, session, ctx) do
+    if adds_meeting?(session) and not ctx.sessions_only?,
+      do: [
+        %{
+          start_time: occurrence.start,
+          end_time: occurrence.end,
+          buffers: Calculate.config_buffers(ctx.config)
+        }
+        | accepted
+      ],
+      else: accepted
   end
 
   # 5. Booking limits
 
   defp check_limits(_occurrence, _session, limits, %{sessions_only?: true}), do: {:ok, limits}
-  defp check_limits(_occurrence, {:join, _meeting}, limits, _ctx), do: {:ok, limits}
+  defp check_limits(_occurrence, {:join, _meeting, _left}, limits, _ctx), do: {:ok, limits}
   defp check_limits(_occurrence, _session, nil, _ctx), do: {:ok, nil}
 
   defp check_limits(%Occurrence{start: start}, _session, limits, %{plan: plan}) do
@@ -309,25 +378,32 @@ defmodule Tymeslot.BookingSeries.Check do
 
   # Group sessions
 
-  # The live session each occurrence would join, be refused by, or create
-  # (`GroupScheduling.session_at/3`); nil for a one-to-one type.
-  defp session(_occurrence, %{group?: false}), do: nil
+  # The live session each start would join, be refused by, or create
+  # (`GroupScheduling.sessions_at/3`), read for every start at once; nil
+  # for a one-to-one type.
+  defp sessions(_plan, false, _seats_requested), do: nil
 
-  defp session(%Occurrence{start: start}, %{plan: plan} = ctx),
-    do: GroupScheduling.session_at(plan.meeting_type.id, start, ctx.seats_requested)
+  defp sessions(plan, true, seats_requested),
+    do: GroupScheduling.sessions_at(plan.meeting_type.id, plan.starts, seats_requested)
 
-  defp seats_left(nil, _ctx), do: nil
-  defp seats_left(:none, %{plan: plan}), do: plan.meeting_type.max_participants
+  defp session(_occurrence, %{sessions: nil}), do: nil
+  defp session(%Occurrence{start: start}, %{sessions: sessions}), do: Map.fetch!(sessions, start)
 
-  defp seats_left({_join_or_full, meeting}, _ctx) do
-    if MeetingSchema.group?(meeting), do: Seats.seats_left(meeting, meeting.capacity), else: 0
+  # The sessions among them the booker already holds a seat in, in one read.
+  defp seated(sessions, email) when is_map(sessions) and is_binary(email) do
+    meeting_ids = for {_start, {_state, meeting, _left}} <- sessions, do: meeting.id
+    ParticipantQueries.meeting_ids_seating(String.trim(email), meeting_ids)
   end
 
-  # Helpers
+  defp seated(_sessions, _email), do: MapSet.new()
+
+  defp adds_meeting?(session), do: session in [nil, :none]
+
+  defp seats_left(nil, _ctx), do: nil
+  defp seats_left({_join_or_full, _meeting, seats_left}, _ctx), do: seats_left
+  defp seats_left(:none, %{sessions_only?: true}), do: nil
+  defp seats_left(:none, %{plan: plan}), do: plan.meeting_type.max_participants
 
   # A booking window just long enough to reach `start` from `now`.
   defp days_reaching(start, now), do: max(div(DateTime.diff(start, now), @seconds_per_day) + 1, 1)
-
-  defp normalise_email(nil), do: nil
-  defp normalise_email(email), do: email |> String.trim() |> String.downcase()
 end

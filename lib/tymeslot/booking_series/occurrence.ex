@@ -13,6 +13,8 @@ defmodule Tymeslot.BookingSeries.Occurrence do
       at that start;
     * `:calendar_busy`: the host's connected calendar is busy;
     * `:booked`: another Tymeslot booking is in the way;
+    * `:overlaps_session`: an earlier session of the same series is in the
+      way, buffers included;
     * `:already_booked`: the booker already holds a seat in that session;
     * `:session_full`: the group session has too few seats left;
     * `:limit_reached`: a booking limit would be exceeded, counting the
@@ -20,7 +22,7 @@ defmodule Tymeslot.BookingSeries.Occurrence do
 
   `seats_left` is the seats a group session has before this booking (its
   capacity when the occurrence would start a new one); nil for a one-to-one
-  type.
+  type and for an occurrence with no session to book (`:no_session`).
   """
 
   @type reason ::
@@ -32,6 +34,7 @@ defmodule Tymeslot.BookingSeries.Occurrence do
           | :no_session
           | :calendar_busy
           | :booked
+          | :overlaps_session
           | :already_booked
           | :session_full
           | :limit_reached

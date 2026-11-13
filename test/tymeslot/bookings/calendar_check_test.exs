@@ -94,13 +94,16 @@ defmodule Tymeslot.Bookings.CalendarCheckTest do
 
       assert busy == MapSet.new([~U[2026-11-17 10:00:00Z], ~U[2026-12-01 10:00:00Z]])
 
+      # Exactly one fetch, over the whole buffered range, before anything else
+      # in this test reads the calendar.
+      assert_received {:fetched, ~D[2026-11-09], ~D[2026-12-02]}
+      refute_received {:fetched, _start_date, _end_date}
+
+      # Each slot is judged as `probe/3` judges it alone.
       for start <- starts do
         expected = if MapSet.member?(busy, start), do: {:error, :slot_unavailable}, else: :ok
         assert CalendarCheck.probe(slot(user, start), @buffers) == expected
       end
-
-      assert_received {:fetched, ~D[2026-11-09], ~D[2026-12-02]}
-      refute_received {:fetched, ~D[2026-11-09], ~D[2026-12-02]}
     end
 
     test "an unreadable calendar is an error", %{user: user} do

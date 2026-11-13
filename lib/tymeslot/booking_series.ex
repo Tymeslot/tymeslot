@@ -8,6 +8,7 @@ defmodule Tymeslot.BookingSeries do
   is all-or-nothing: it is booked only when every occurrence is available.
   """
 
+  alias Tymeslot.Availability.Schedules
   alias Tymeslot.BookingSeries.{Check, Occurrence, Plan}
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
@@ -15,8 +16,9 @@ defmodule Tymeslot.BookingSeries do
   Plans the series and judges each occurrence.
 
   Given a `DateTime`, the series is recurring from that first start and
-  `opts[:count]` sets how many sessions it has; given a list of starts, it is
-  the flexible series of those sessions.
+  `opts[:count]` sets how many sessions it has, and the type must be a
+  recurring series type; given a list of starts, it is the flexible series
+  of those sessions.
 
   Options: `:count` (recurring only), `:booker_tz` and `:duration_minutes`
   (see `Plan.recurring/4`), and `:now`, `:booker_email` and `:guests` (see
@@ -24,8 +26,13 @@ defmodule Tymeslot.BookingSeries do
   """
   @spec preview(MeetingTypeSchema.t(), DateTime.t() | [DateTime.t()], keyword()) ::
           {:ok, [Occurrence.t()]}
-          | {:error, :invalid_count | :duplicate_start | :availability_unverifiable}
+          | {:error, :invalid_count | :overlapping_starts | :availability_unverifiable}
   def preview(meeting_type, first_or_starts, opts \\ []) do
+    opts =
+      Keyword.put_new_lazy(opts, :config, fn ->
+        Schedules.booking_config(meeting_type.user_id, meeting_type)
+      end)
+
     with {:ok, plan} <- plan(meeting_type, first_or_starts, opts) do
       Check.check(plan, opts)
     end
