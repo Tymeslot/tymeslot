@@ -156,5 +156,10 @@ msgstr "Sie haben die folgenden Termine abgesagt. %{attendee} wurde darüber inf
 #, elixir-autogen, elixir-format
 msgid "Your %{count} session with %{host} is booked"
 msgid_plural "Your %{count} sessions with %{host} are booked"
-msgstr[0] "Ihr Termin mit %{host} ist gebucht"
+msgstr[0] "%{count} Termin mit %{host} ist gebucht"
 msgstr[1] "Ihre %{count} Termine mit %{host} sind gebucht"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "This session has been cancelled."
+msgstr "Dieser Termin wurde abgesagt."

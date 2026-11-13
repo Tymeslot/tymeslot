@@ -48,13 +48,18 @@ defmodule Tymeslot.Emails.SeriesBuilder do
   Options: `:currency`, the currency the series was paid in. With it and
   the series' `unit_price_cents`, the payload carries the `:total` paid for
   these sessions; without either, `:total` is nil and no amount is shown.
+  `:cancelled`, the ids of those of `occurrences` already cancelled, marks
+  them `cancelled: true`: listed in their place, without links or a
+  calendar entry.
   """
   @spec build(SeriesSchema.t(), [occurrence(), ...], keyword()) :: t()
   def build(%SeriesSchema{} = series, [_first | _rest] = occurrences, opts \\ []) do
+    cancelled = Keyword.get(opts, :cancelled, [])
+
     sessions =
       occurrences
       |> Enum.sort_by(& &1.series_position)
-      |> Enum.map(&session(&1, series))
+      |> Enum.map(&Map.put(session(&1, series), :cancelled, &1.id in cancelled))
 
     first = hd(sessions)
     count = length(sessions)

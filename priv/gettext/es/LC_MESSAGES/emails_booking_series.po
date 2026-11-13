@@ -63,12 +63,12 @@ msgstr "Cancelar"
 #: lib/tymeslot/emails/templates/series_cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled"
-msgstr "Cancelación"
+msgstr "Canceladas"
 
 #: lib/tymeslot/emails/templates/series_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirmed"
-msgstr "Confirmación"
+msgstr "Confirmadas"
 
 #: lib/tymeslot/emails/templates/series_cancellation.ex
 #, elixir-autogen, elixir-format
@@ -158,3 +158,8 @@ msgid "Your %{count} session with %{host} is booked"
 msgid_plural "Your %{count} sessions with %{host} are booked"
 msgstr[0] "Reservaste %{count} sesión con %{host}"
 msgstr[1] "Reservaste %{count} sesiones con %{host}"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "This session has been cancelled."
+msgstr "Esta sesión se canceló."

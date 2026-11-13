@@ -164,3 +164,8 @@ msgid_plural "Your %{count} sessions with %{host} are booked"
 msgstr[0] "Zarezerwowano %{count} sesję – %{host}"
 msgstr[1] "Zarezerwowano %{count} sesje – %{host}"
 msgstr[2] "Zarezerwowano %{count} sesji – %{host}"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "This session has been cancelled."
+msgstr "Ta sesja została odwołana."

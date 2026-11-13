@@ -32,20 +32,24 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
     do: reason in [@series_gone, @series_cancelled, @nothing_live, @nothing_cancelled]
 
   @doc """
-  The series' confirmation to its booker and organiser, listing every session
-  still booked. Discarded when the series was cancelled, or none of its
-  sessions is still booked, by the time it runs.
+  The series' confirmation to its booker and organiser, listing every
+  session of the series in its place ("Session 2 of 4"), a session already
+  cancelled by the time it runs marked so rather than left out, so the
+  count in the subject is the count in the list. Discarded when the series
+  was cancelled, or none of its sessions is still booked.
   """
   @spec handle_series_confirmation(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_series_confirmation(%{"series_id" => series_id}, job_id) do
     with_series(series_id, fn series ->
+      occurrences = SeriesQueries.list_occurrences(series)
+
       with :ok <- not_cancelled(series),
-           [_first | _rest] = live <- Notifications.live_occurrences(series) do
-        details = SeriesBuilder.build(series, live)
+           {[_first | _rest], gone} <- Enum.split_with(occurrences, &Notifications.live?/1) do
+        details = SeriesBuilder.build(series, occurrences, cancelled: Enum.map(gone, & &1.id))
         send_both("series_confirmation", details, :send_series_confirmation, job_id)
       else
-        [] -> {:discard, @nothing_live}
+        {[], _gone} -> {:discard, @nothing_live}
         {:discard, _reason} = discard -> discard
       end
     end)

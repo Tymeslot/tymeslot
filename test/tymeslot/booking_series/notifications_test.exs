@@ -211,6 +211,34 @@ defmodule Tymeslot.BookingSeries.NotificationsTest do
       refute attendee.text_body =~ "The join link will be in your reminder."
     end
 
+    test "a room job that gave up stops the wait at once", %{
+      host: host,
+      today: today,
+      type: type
+    } do
+      assert {:ok, %{series: series}} =
+               book(host, type, weekly(today, 2), %{}, with_video_room: true)
+
+      Repo.update_all(
+        from(j in Oban.Job, where: j.worker == "Tymeslot.Workers.VideoRoomWorker"),
+        set: [state: "discarded"]
+      )
+
+      assert :ok = announce(series)
+      drain_emails()
+      {attendee, _organizer} = sent_pair()
+
+      assert attendee.text_body =~ "The join link will be in your reminder."
+    end
+
+    test "still waits after 19 snoozes", %{host: host, today: today, type: type} do
+      assert {:ok, %{series: series}} =
+               book(host, type, weekly(today, 2), %{}, with_video_room: true)
+
+      assert {:snooze, 30} = announce(series, meta: %{"snoozed" => 19})
+      assert series_jobs() == []
+    end
+
     test "sends without a link after the wait runs out", %{host: host, today: today, type: type} do
       assert {:ok, %{series: series}} =
                book(host, type, weekly(today, 3), %{}, with_video_room: true)
@@ -228,6 +256,91 @@ defmodule Tymeslot.BookingSeries.NotificationsTest do
       assert length(String.split(attendee.text_body, "The join link will be in your reminder.")) ==
                4
     end
+  end
+
+  test "scheduling the confirmation twice returns the job already queued", %{
+    host: host,
+    today: today
+  } do
+    type = series_type(host)
+    assert {:ok, %{series: series}} = book(host, type, weekly(today, 2))
+
+    assert [queued] =
+             all_enqueued(worker: SeriesAnnouncementWorker, args: %{"series_id" => series.id})
+
+    assert {:ok, %Oban.Job{id: id, conflict?: true}} =
+             Notifications.schedule_series_confirmation(series)
+
+    assert id == queued.id
+  end
+
+  test "a confirmation already sent is not queued again", %{host: host, today: today} do
+    type = series_type(host)
+    assert {:ok, %{series: series}} = book(host, type, weekly(today, 2))
+
+    drain_emails()
+    {_attendee, _organizer} = sent_pair()
+
+    # The announcement run again, as after a rescue: the completed email job
+    # stands in for the one it would queue.
+    assert :ok = Notifications.send_series_confirmation(series)
+    assert %{success: 0} = drain_emails()
+    refute_received {:email, _again}
+  end
+
+  test "a retry resends only the email that failed", %{host: host, today: today} do
+    type = series_type(host)
+    assert {:ok, %{series: series}} = book(host, type, weekly(today, 2))
+    assert :ok = announce(series)
+
+    Application.put_env(:tymeslot, :email_service_module, Tymeslot.EmailServiceMock)
+    [queued] = series_jobs()
+    # The stored job, so both runs share its id as a rescued or retried job
+    # does, which is what each send is claimed on.
+    job = %{Repo.get!(Oban.Job, queued.id) | attempt: 1, attempted_at: DateTime.utc_now()}
+
+    expect(Tymeslot.EmailServiceMock, :send_series_confirmation, 2, fn
+      :attendee, "ada@example.com", _details -> {:ok, :sent}
+      :organizer, _email, _details -> {:error, :smtp_down}
+    end)
+
+    assert {:error, _reason} = perform_job(job)
+
+    expect(Tymeslot.EmailServiceMock, :send_series_confirmation, 1, fn
+      :organizer, _email, _details -> {:ok, :sent}
+    end)
+
+    assert :ok = perform_job(%{job | attempt: 2})
+  end
+
+  test "a session cancelled before the confirmation is shown cancelled", %{
+    host: host,
+    today: today
+  } do
+    type = series_type(host)
+
+    assert {:ok, %{series: series, meetings: [_first, second, _third]}} =
+             book(host, type, weekly(today, 3))
+
+    second |> Changeset.change(status: :cancelled) |> Repo.update!()
+
+    assert :ok = announce(series)
+    drain_emails()
+    {attendee, organizer} = sent_pair()
+
+    assert attendee.subject == "Your 3 sessions with Grace Hopper are booked"
+    assert organizer.subject == "Ada Lovelace booked 3 sessions"
+
+    [_before, cancelled_card, _after] =
+      String.split(attendee.text_body, ["Session 2 of 3", "Session 3 of 3"])
+
+    assert cancelled_card =~ "This session has been cancelled."
+    refute cancelled_card =~ second.uid
+    assert length(String.split(attendee.text_body, "This session has been cancelled.")) == 2
+
+    data = ics(attendee).data
+    refute data =~ "UID:#{second.calendar_uid}@"
+    assert length(Regex.scan(~r/^BEGIN:VEVENT/m, data)) == 2
   end
 
   test "a cancelled series sends nothing", %{host: host, today: today} do

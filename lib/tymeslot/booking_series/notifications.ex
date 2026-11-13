@@ -123,9 +123,7 @@ defmodule Tymeslot.BookingSeries.Notifications do
   end
 
   @doc """
-  The sessions of `series` still booked, in series order: a meeting not
-  cancelled or waiting for a new time, or a seat not given up in such a
-  meeting.
+  The sessions of `series` still booked (`live?/1`), in series order.
   """
   @spec live_occurrences(SeriesSchema.t()) :: [occurrence()]
   def live_occurrences(%SeriesSchema{} = series) do
@@ -145,9 +143,14 @@ defmodule Tymeslot.BookingSeries.Notifications do
     |> Enum.filter(&(&1.id in ids and cancelled?(&1)))
   end
 
-  defp live?(%Meeting{} = meeting), do: MeetingState.expects_calendar_event?(meeting)
+  @doc """
+  Whether a session of a series is still booked: a meeting not cancelled or
+  waiting for a new time, or a seat not given up in such a meeting.
+  """
+  @spec live?(occurrence()) :: boolean()
+  def live?(%Meeting{} = meeting), do: MeetingState.expects_calendar_event?(meeting)
 
-  defp live?(%Participant{meeting: meeting} = seat),
+  def live?(%Participant{meeting: meeting} = seat),
     do: Participant.live?(seat) and MeetingState.expects_calendar_event?(meeting)
 
   defp cancelled?(%Meeting{} = meeting), do: MeetingState.cancelled?(meeting)

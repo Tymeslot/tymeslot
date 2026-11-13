@@ -14,7 +14,9 @@ defmodule Tymeslot.Emails.Shared.SeriesSessions do
     * the organiser (`:organizer`) gets the session in their dashboard.
 
   `links: false` leaves out every link, the join link included, for a list
-  of sessions that are cancelled. Rendered in the caller's Gettext locale.
+  of sessions that are cancelled. A session marked `cancelled: true` in a
+  list of booked ones says so in place of where it is, and has no links.
+  Rendered in the caller's Gettext locale.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -27,6 +29,8 @@ defmodule Tymeslot.Emails.Shared.SeriesSessions do
   @spec html([map()], audience(), String.t(), keyword()) :: String.t()
   def html(sessions, audience, locale, opts \\ []) do
     Enum.map_join(sessions, "\n", fn session ->
+      opts = session_opts(session, opts)
+
       lines =
         [Sanitise.sanitize_for_email(session_time(session, audience, locale))] ++
           [place_html(session, audience, opts)] ++
@@ -40,6 +44,8 @@ defmodule Tymeslot.Emails.Shared.SeriesSessions do
   @spec text([map()], audience(), String.t(), keyword()) :: String.t()
   def text(sessions, audience, locale, opts \\ []) do
     Enum.map_join(sessions, "\n\n", fn session ->
+      opts = session_opts(session, opts)
+
       [
         title(session),
         session_time(session, audience, locale),
@@ -69,8 +75,14 @@ defmodule Tymeslot.Emails.Shared.SeriesSessions do
         Map.get(session, :organizer_time_format)
       )
 
+  defp session_opts(%{cancelled: true}, opts), do: Keyword.put(opts, :links, false)
+  defp session_opts(_session, opts), do: opts
+
   # Where the session is: its join link, the promise of one when its room is
-  # still being made, or its location.
+  # still being made, or its location; or that it is no longer happening.
+  defp place(%{cancelled: true}, _audience, _opts),
+    do: {:text, dgettext("emails_booking_series", "This session has been cancelled.")}
+
   defp place(session, audience, opts) do
     case links?(opts) && JoinUrl.for(audience, session) do
       url when is_binary(url) -> {:join, url}

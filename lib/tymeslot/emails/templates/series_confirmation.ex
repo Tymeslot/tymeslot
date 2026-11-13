@@ -5,7 +5,10 @@ defmodule Tymeslot.Emails.Templates.SeriesConfirmation do
   role-dispatched by `render/3` as `AppointmentConfirmation` is.
 
   Both list every session (`Tymeslot.Emails.Shared.SeriesSessions`) with the
-  rhythm of a recurring series above them. The booker's copy carries each
+  rhythm of a recurring series above them, numbered by their place in the
+  series and counted as the series is: a session cancelled before the
+  confirmation went out is shown cancelled, not left out, so "Your 4
+  sessions" lists four. The booker's copy carries each
   session's own reschedule and cancel links, a link to the page managing
   them all, and one calendar file with every session in it. The organiser's
   links each session in their dashboard and carries no calendar file, for
@@ -85,7 +88,7 @@ defmodule Tymeslot.Emails.Templates.SeriesConfirmation do
       |> text_body(attendee_text(details, rule, total, locale))
       |> attachment(
         IcsGenerator.generate_series_attachment(
-          details.sessions,
+          Enum.reject(details.sessions, &Map.get(&1, :cancelled, false)),
           locale,
           "series-#{details.series.uid}.ics"
         )

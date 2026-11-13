@@ -25,28 +25,28 @@ msgstr "%{frequency} à %{time}"
 #, elixir-autogen, elixir-format
 msgid "Every %{count} day"
 msgid_plural "Every %{count} days"
-msgstr[0] "Tous les jours"
+msgstr[0] "À %{count} jour d’intervalle"
 msgstr[1] "Tous les %{count} jours"
 
 #: lib/tymeslot/booking_series/rule.ex
 #, elixir-autogen, elixir-format
 msgid "Every %{count} month"
 msgid_plural "Every %{count} months"
-msgstr[0] "Tous les mois"
+msgstr[0] "À %{count} mois d’intervalle"
 msgstr[1] "Tous les %{count} mois"
 
 #: lib/tymeslot/booking_series/rule.ex
 #, elixir-autogen, elixir-format
 msgid "Every %{count} month on the same weekday"
 msgid_plural "Every %{count} months on the same weekday"
-msgstr[0] "Tous les mois, le même jour de la semaine"
+msgstr[0] "À %{count} mois d’intervalle, le même jour de la semaine"
 msgstr[1] "Tous les %{count} mois, le même jour de la semaine"
 
 #: lib/tymeslot/booking_series/rule.ex
 #, elixir-autogen, elixir-format
 msgid "Every %{count} week"
 msgid_plural "Every %{count} weeks"
-msgstr[0] "Toutes les semaines"
+msgstr[0] "À %{count} semaine d’intervalle"
 msgstr[1] "Toutes les %{count} semaines"
 
 #: lib/tymeslot/booking_series/rule.ex

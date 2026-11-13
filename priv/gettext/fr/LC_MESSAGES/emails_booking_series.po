@@ -156,5 +156,10 @@ msgstr "Vous avez annulé les séances ci-dessous. Nous en avons informé %{atte
 #, elixir-autogen, elixir-format
 msgid "Your %{count} session with %{host} is booked"
 msgid_plural "Your %{count} sessions with %{host} are booked"
-msgstr[0] "Votre séance avec %{host} est réservée"
-msgstr[1] "Vos %{count} séances avec %{host} sont réservées"
+msgstr[0] "Vous avez réservé %{count} séance avec %{host}"
+msgstr[1] "Vous avez réservé %{count} séances avec %{host}"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "This session has been cancelled."
+msgstr "Cette séance a été annulée."

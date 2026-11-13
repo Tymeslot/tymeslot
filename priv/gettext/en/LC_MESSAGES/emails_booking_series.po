@@ -158,3 +158,8 @@ msgid "Your %{count} session with %{host} is booked"
 msgid_plural "Your %{count} sessions with %{host} are booked"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "This session has been cancelled."
+msgstr ""
