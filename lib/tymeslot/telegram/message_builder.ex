@@ -150,20 +150,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     end
   end
 
-  defp meeting_title(meeting) do
-    cond do
-      Map.has_key?(meeting, :event_type) and
-        is_struct(meeting.event_type) and
-          not is_struct(meeting.event_type, Ecto.Association.NotLoaded) ->
-        Map.get(meeting.event_type, :name, "Meeting")
-
-      Map.has_key?(meeting, :event_type_name) ->
-        meeting.event_type_name || "Meeting"
-
-      true ->
-        "Meeting"
-    end
-  end
+  defp meeting_title(%{title: title}), do: title || "Meeting"
 
   defp format_time(meeting, timezone) do
     start_time =

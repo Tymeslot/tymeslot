@@ -13,7 +13,7 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
     attendee_timezone: "America/New_York",
     start_time: ~U[2026-03-10 14:00:00Z],
     end_time: ~U[2026-03-10 14:30:00Z],
-    event_type: %{name: "30-minute intro call"},
+    title: "30-minute intro call",
     id: "6f1d2c3b-0a4e-4b8f-9c7d-1e2f3a4b5c6d",
     uid: "abc123",
     video_room_url: nil,
@@ -57,7 +57,7 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
     test "says the host arranged it, naming the guest's address once" do
       msg = MessageBuilder.build_message("meeting.created", @managed, @timezone)
 
-      assert msg =~ "You arranged <i>Meeting</i> with <b>guest@example.com</b>"
+      assert msg =~ "You arranged <i>30-minute intro call</i> with <b>guest@example.com</b>"
       refute msg =~ "booked"
       assert length(String.split(msg, "guest@example.com")) == 2
     end
@@ -66,14 +66,14 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
       moved = MessageBuilder.build_message("meeting.rescheduled", @managed, @timezone)
       cancelled = MessageBuilder.build_message("meeting.cancelled", @managed, @timezone)
 
-      assert moved =~ "Moved <i>Meeting</i> with <b>guest@example.com</b>"
-      assert cancelled =~ "Cancelled <i>Meeting</i> with <b>guest@example.com</b>"
+      assert moved =~ "Moved <i>30-minute intro call</i> with <b>guest@example.com</b>"
+      assert cancelled =~ "Cancelled <i>30-minute intro call</i> with <b>guest@example.com</b>"
     end
 
     test "an ordinary booking still says who booked it" do
       msg = MessageBuilder.build_message("meeting.created", @meeting, @timezone)
 
-      assert msg =~ "<b>John Smith</b> booked <i>Meeting</i>"
+      assert msg =~ "<b>John Smith</b> booked <i>30-minute intro call</i>"
       assert msg =~ "john@example.com"
     end
 
@@ -147,6 +147,11 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
       msg = MessageBuilder.build_message("meeting.created", meeting, @timezone)
       assert msg =~ "Join video call"
       assert msg =~ "https://meet.example.com/room"
+    end
+
+    test "names the meeting by its title" do
+      msg = MessageBuilder.build_message("meeting.created", @meeting, @timezone)
+      assert msg =~ "<i>30-minute intro call</i>"
     end
 
     test "uses attendee_email as fallback name" do
