@@ -613,20 +613,14 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   defp ensure_seen_calendar_end(changeset), do: changeset
 
+  # Derives the duration from the times unless the caller gave one.
   defp calculate_duration(changeset) do
-    # Only calculate duration if not provided
-    if get_change(changeset, :duration) do
-      changeset
+    with nil <- get_change(changeset, :duration),
+         %DateTime{} = start_time <- get_field(changeset, :start_time),
+         %DateTime{} = end_time <- get_field(changeset, :end_time) do
+      put_change(changeset, :duration, DateTime.diff(end_time, start_time, :minute))
     else
-      start_time = get_field(changeset, :start_time)
-      end_time = get_field(changeset, :end_time)
-
-      if start_time && end_time do
-        duration = DateTime.diff(end_time, start_time, :minute)
-        put_change(changeset, :duration, duration)
-      else
-        changeset
-      end
+      _given_or_incomplete -> changeset
     end
   end
 
