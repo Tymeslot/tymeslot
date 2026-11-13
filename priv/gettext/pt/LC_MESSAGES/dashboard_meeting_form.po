@@ -903,3 +903,8 @@ msgstr "Links de convite funcionam apenas para tipos de reunião individuais."
 #, elixir-autogen, elixir-format
 msgid "Only people with an invitation link can book"
 msgstr "Só pessoas com um link de convite podem agendar"
+
+#: lib/tymeslot_web/helpers/context_errors.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring bookings are not included in your current plan."
+msgstr "Agendamentos recorrentes não estão incluídos no seu plano atual."

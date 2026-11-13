@@ -903,3 +903,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Only people with an invitation link can book"
 msgstr ""
+
+#: lib/tymeslot_web/helpers/context_errors.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring bookings are not included in your current plan."
+msgstr ""

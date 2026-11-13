@@ -908,3 +908,8 @@ msgstr "Odkazy na pozvání fungují jen u individuálních typů schůzek."
 #, elixir-autogen, elixir-format
 msgid "Only people with an invitation link can book"
 msgstr "Rezervovat mohou jen lidé s odkazem na pozvání"
+
+#: lib/tymeslot_web/helpers/context_errors.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring bookings are not included in your current plan."
+msgstr "Opakované rezervace nejsou součástí vašeho aktuálního tarifu."

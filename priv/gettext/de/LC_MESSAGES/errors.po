@@ -860,3 +860,33 @@ msgstr "muss in der Zukunft liegen"
 #, elixir-autogen, elixir-format
 msgid "invitation links"
 msgstr "Einladungslinks"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation-only meeting types cannot be booked as a series."
+msgstr "Termintypen nur auf Einladung können nicht als Serie gebucht werden."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types with fixed dates can offer a series only as sessions the booker picks."
+msgstr "Termintypen mit festen Terminen können eine Serie nur als Termine anbieten, die die buchende Person selbst auswählt."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "One-off meeting types cannot be booked as a series."
+msgstr "Einmalige Termintypen können nicht als Serie gebucht werden."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be between %{min} and %{max}"
+msgstr "muss zwischen %{min} und %{max} liegen"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be between 1 and 4"
+msgstr "muss zwischen 1 und 4 liegen"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must not be less than the minimum"
+msgstr "darf nicht kleiner als das Minimum sein"

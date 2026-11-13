@@ -885,3 +885,33 @@ msgstr "musí být v budoucnosti"
 #, elixir-autogen, elixir-format
 msgid "invitation links"
 msgstr "odkazy na pozvání"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation-only meeting types cannot be booked as a series."
+msgstr "Typy schůzek pouze na pozvání nelze rezervovat jako sérii."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types with fixed dates can offer a series only as sessions the booker picks."
+msgstr "Typy schůzek s pevně danými termíny mohou nabízet sérii pouze jako schůzky, které si vybírá ten, kdo rezervuje."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "One-off meeting types cannot be booked as a series."
+msgstr "Jednorázové typy schůzek nelze rezervovat jako sérii."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be between %{min} and %{max}"
+msgstr "musí být mezi %{min} a %{max}"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be between 1 and 4"
+msgstr "musí být mezi 1 a 4"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must not be less than the minimum"
+msgstr "nesmí být menší než minimum"

@@ -908,3 +908,8 @@ msgstr "Посилання із запрошенням працюють лише
 #, elixir-autogen, elixir-format
 msgid "Only people with an invitation link can book"
 msgstr "Бронювати можуть лише люди з посиланням із запрошенням"
+
+#: lib/tymeslot_web/helpers/context_errors.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring bookings are not included in your current plan."
+msgstr "Повторювані бронювання не входять до вашого поточного тарифу."
