@@ -71,6 +71,8 @@ defmodule Tymeslot.BookingSeries.Create do
           | {:error, Errors.classified_error()}
 
   # A session the transaction found taken, as the check would have judged it.
+  # `:slot_taken` (a first-booker index collision) is not here: with the
+  # schedule lock held for the whole series it cannot occur.
   @lost_in_lock %{
     time_conflict: :booked,
     booking_limit_reached: :limit_reached,
@@ -302,11 +304,11 @@ defmodule Tymeslot.BookingSeries.Create do
   defp occurrence_failed(meeting_attrs, reason),
     do: Repo.rollback({:occurrence_failed, meeting_attrs.series_position, reason})
 
-  defp map_result({:ok, {series, booked, pending}}, _occurrences, _booking_data) do
+  defp map_result({:ok, {series, booked, pending}}, _occurrences, booking_data) do
     :ok = Activation.after_commit(pending)
     {meetings, seats} = Enum.unzip(booked)
     seats = Enum.reject(seats, &is_nil/1)
-    announce_change(series, meetings, seats)
+    announce_change(booking_data.meeting_type, series, meetings)
     Enum.each(booked, fn _booked -> Telemetry.booking_created() end)
     {:ok, %{series: series, meetings: meetings, participants: seats}}
   end
@@ -326,10 +328,11 @@ defmodule Tymeslot.BookingSeries.Create do
   defp map_result({:error, reason}, _occurrences, booking_data),
     do: {:error, Errors.classify_creation_error(reason, booking_data)}
 
-  # Every session of a series shares its host and type, so one broadcast
-  # tells the type's booking pages about every seat taken.
-  defp announce_change(series, _meetings, []), do: Availability.changed(series.organizer_user_id)
-
-  defp announce_change(_series, [session | _sessions], _seats),
-    do: SeatEffects.broadcast_and_invalidate(session)
+  # Every session of a group series shares its host and type, so one
+  # broadcast tells the type's booking pages about every seat taken.
+  defp announce_change(type, series, [session | _sessions]) do
+    if MeetingTypeSchema.group?(type),
+      do: SeatEffects.broadcast_and_invalidate(session),
+      else: Availability.changed(series.organizer_user_id)
+  end
 end

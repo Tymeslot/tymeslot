@@ -16,6 +16,7 @@ defmodule Tymeslot.BookingSeries.CreateGroupTest do
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.ConfigTestHelpers
 
+  alias Tymeslot.Bookings.RescheduleSeat
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Occurrence
   alias Tymeslot.BookingSeries.SeriesSchema
@@ -26,6 +27,7 @@ defmodule Tymeslot.BookingSeries.CreateGroupTest do
   alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.VideoRoomWorker
 
   setup :verify_on_exit!
 
@@ -75,7 +77,7 @@ defmodule Tymeslot.BookingSeries.CreateGroupTest do
     do:
       Map.merge(%{"name" => "Ada Lovelace", "email" => "ada@example.com", "message" => ""}, extra)
 
-  defp book_series(host, type, series, params \\ %{}, form \\ form_data()) do
+  defp book_series(host, type, series, params \\ %{}, form \\ form_data(), opts \\ []) do
     %{
       duration: 30,
       user_timezone: "Etc/UTC",
@@ -84,7 +86,7 @@ defmodule Tymeslot.BookingSeries.CreateGroupTest do
       series: series
     }
     |> Map.merge(params)
-    |> BookingSeries.book(form)
+    |> BookingSeries.book(form, opts)
   end
 
   # A live session of `type` at `start`, its seats held by `emails`.
@@ -299,6 +301,62 @@ defmodule Tymeslot.BookingSeries.CreateGroupTest do
 
     assert status == {:unavailable, :session_full}
     assert series_count() == 0
+  end
+
+  test "a series creating sessions with a video room holds back no seat confirmation", %{
+    host: host,
+    today: today
+  } do
+    video = insert(:video_integration, user: host.user, provider: "mirotalk")
+    type = group_type(host, allow_video: true, video_integration_id: video.id)
+
+    assert {:ok, %{meetings: meetings}} =
+             book_series(host, type, weekly(today, 3), %{}, form_data(), with_video_room: true)
+
+    rooms = all_enqueued(worker: VideoRoomWorker)
+
+    assert rooms |> Enum.map(& &1.args["meeting_id"]) |> Enum.sort() ==
+             meetings |> Enum.map(& &1.id) |> Enum.sort()
+
+    assert Enum.all?(rooms, &(&1.args["announce"] == false))
+
+    # The room's release step, run for each session, finds only series seats.
+    for meeting <- meetings, do: assert(:ok = Events.announce_video_room_outcome(meeting))
+    assert jobs(EmailWorker, "send_seat_confirmation_emails") == []
+  end
+
+  test "a moved seat stays in its series", %{host: host, today: today} do
+    type = group_type(host)
+
+    assert {:ok, %{series: series, participants: [_first_seat, seat, _third_seat]}} =
+             book_series(host, type, weekly(today, 3))
+
+    assert {:ok, %{meeting: new_session, participant: moved}} =
+             RescheduleSeat.execute(
+               seat.management_token,
+               %{
+                 date: Date.to_iso8601(Date.add(today, 15)),
+                 time: "10:00",
+                 duration: "30min",
+                 user_timezone: "Etc/UTC"
+               },
+               host.user.id
+             )
+
+    assert %ParticipantSchema{series_id: series_id, series_position: 2, cancelled_at: nil} =
+             Repo.reload!(moved)
+
+    assert series_id == series.id
+    assert %ParticipantSchema{cancelled_at: %DateTime{}} = Repo.reload!(seat)
+
+    # The move is announced like any seat's; the room release still leaves
+    # the seat to its series.
+    assert [%{args: %{"participant_id" => moved_id}}] =
+             jobs(EmailWorker, "send_seat_reschedule_emails")
+
+    assert moved_id == moved.id
+    assert :ok = Events.announce_video_room_outcome(new_session)
+    assert jobs(EmailWorker, "send_seat_confirmation_emails") == []
   end
 
   # Runs `fun` the moment the series row is inserted: after the series was

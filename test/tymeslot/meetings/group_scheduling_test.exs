@@ -135,7 +135,8 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
 
   # A first-booker collision on the `(organizer_user_id, start_time)` index,
   # staged by leaving a meeting already at the slot out of the conflict
-  # check, as a writer skipping the schedule lock would.
+  # check, as a writer skipping the schedule lock would. That callback runs
+  # once per attempt, so it also counts them.
   describe "book_seat/3 — a first-booker index collision" do
     setup ctx do
       blocker =
@@ -146,9 +147,14 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
           status: :confirmed
         )
 
+      test_pid = self()
+
       %{
         attrs: meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time),
-        exclude: fn -> blocker.uid end
+        exclude: fn ->
+          send(test_pid, :attempt)
+          blocker.uid
+        end
       }
     end
 
@@ -159,6 +165,9 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
                )
 
       assert MeetingSchema.unique_slot_violation?(changeset)
+      assert_received :attempt
+      assert_received :attempt
+      refute_received :attempt
     end
 
     test "inside the caller's transaction, which it aborted, is refused as :slot_taken", ctx do
@@ -171,6 +180,9 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
 
                  Repo.rollback(reason)
                end)
+
+      assert_received :attempt
+      refute_received :attempt
 
       assert Repo.aggregate(MeetingSchema, :count) == 1
     end

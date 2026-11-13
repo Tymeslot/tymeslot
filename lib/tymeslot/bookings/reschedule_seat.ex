@@ -71,6 +71,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.SeatLookup
   alias Tymeslot.MeetingTypes
@@ -388,7 +389,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       # second tab), which trips the same unique index `CreateGroup` maps to
       # `:already_booked` — that has user-facing copy already; the generic
       # "failed to update" does not.
-      duplicate_seat?(changeset) ->
+      ParticipantSchema.duplicate_seat?(changeset) ->
         log_and_bounce(old_meeting, participant, changeset, :already_booked)
 
       true ->
@@ -398,12 +399,6 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   defp handle_move({:error, reason}, old_meeting, participant),
     do: log_and_bounce(old_meeting, participant, reason, :failed_to_update_meeting)
-
-  defp duplicate_seat?(%Ecto.Changeset{errors: errors}) do
-    Enum.any?(errors, fn {_field, {_message, opts}} ->
-      to_string(opts[:constraint_name] || "") == "meeting_participants_live_email_index"
-    end)
-  end
 
   defp log_and_bounce(old_meeting, participant, reason, error) do
     Logger.error("Failed to reschedule seat",
@@ -448,6 +443,9 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   # Matches Section B's seat_request() contract:
   # %{participant: map, guest_emails: [String.t()], max_participants: pos_integer}
+  # A series' seat stays in its series, at its place, when it moves: the new
+  # row is the same occurrence, so the series still confirms it and a room
+  # job releasing held seat confirmations still leaves it out.
   defp seat_request(participant, guest_emails, max_participants) do
     %{
       participant: %{
@@ -458,7 +456,9 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
         message: participant.message,
         timezone: participant.timezone,
         locale: participant.locale,
-        custom_field_answers: participant.custom_field_answers
+        custom_field_answers: participant.custom_field_answers,
+        series_id: participant.series_id,
+        series_position: participant.series_position
       },
       guest_emails: guest_emails,
       max_participants: max_participants
