@@ -11,7 +11,9 @@ defmodule Tymeslot.Meetings.Cancellation do
   ## The refund rule
 
   Cancelling a paid meeting refunds the full remaining balance by default: the
-  attendee paid for a meeting that is not going to happen. The host can
+  attendee paid for a meeting that is not going to happen. A session of a
+  paid series refunds one session's price by default, as its one payment
+  paid for the sessions that still go ahead too. The host can
   override that with a partial amount, or with no refund at all — but declining
   to refund is the one choice that requires an explicit acknowledgement, since
   it is the only one that leaves the attendee out of pocket.
@@ -81,9 +83,11 @@ defmodule Tymeslot.Meetings.Cancellation do
   end
 
   # No explicit choice: refund whatever is left, or nothing if the balance has
-  # already been refunded in full.
+  # already been refunded in full. A session of a paid series refunds one
+  # session's price: the payment paid for every session, and the others go
+  # ahead.
   def resolve_refund(payment, _params) do
-    case MeetingPayments.refundable_remaining_cents(payment) do
+    case MeetingPayments.default_cancellation_refund_cents(payment) do
       remaining when remaining > 0 -> {:ok, {:refund, remaining}}
       _zero -> {:ok, :none}
     end

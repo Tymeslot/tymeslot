@@ -27,8 +27,16 @@ defmodule Tymeslot.BookingSeries.Create do
   A full session, or one the booker already has a seat in, refuses the
   whole series. No seat sends a confirmation of its own.
 
-  Paid and approval types are not booked as a series yet, and are refused
-  with `:series_not_offered`.
+  On a paid type (one-to-one only: a group type cannot take payment) every
+  session is held `awaiting_payment` instead, with nothing else done for it
+  and no confirmation scheduled, and once the series commits one Stripe
+  Checkout is opened for all of them (`Tymeslot.BookingSeries.Payment`).
+  The result is then `{:ok, :payment_required, %{series, meeting,
+  meetings, checkout_url}}`, `meeting` being the first session, whose
+  payment pages the checkout returns to.
+
+  Approval types are not booked as a series yet, and are refused with
+  `:series_not_offered`.
   """
 
   alias Tymeslot.Availability
@@ -45,7 +53,7 @@ defmodule Tymeslot.BookingSeries.Create do
   }
 
   alias Tymeslot.Bookings.Create.{Persist, Prepare}
-  alias Tymeslot.BookingSeries.{Check, Notifications, Occurrence, Plan, SeriesQueries}
+  alias Tymeslot.BookingSeries.{Check, Notifications, Occurrence, Payment, Plan, SeriesQueries}
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingConflictQueries
@@ -68,6 +76,13 @@ defmodule Tymeslot.BookingSeries.Create do
              meetings: [MeetingSchema.t()],
              participants: [ParticipantSchema.t()]
            }}
+          | {:ok, :payment_required,
+             %{
+               series: SeriesSchema.t(),
+               meeting: MeetingSchema.t(),
+               meetings: [MeetingSchema.t()],
+               checkout_url: String.t()
+             }}
           | {:error, Errors.classified_error()}
 
   # A session the transaction found taken, as the check would have judged it.
@@ -125,12 +140,9 @@ defmodule Tymeslot.BookingSeries.Create do
     end
   end
 
-  # Not booked as a series yet: a paid type's sessions take one payment for
-  # all of them, and an approval type's are requested as one. (A paused
-  # group type is refused by the admission check.)
-  defp not_yet_bookable_as_series?(type, booking_data) do
-    Prepare.paid?(booking_data) or Approval.required?(type)
-  end
+  # Not booked as a series yet: an approval type's sessions are requested as
+  # one. (A paused group type is refused by the admission check.)
+  defp not_yet_bookable_as_series?(type, _booking_data), do: Approval.required?(type)
 
   # Plan
 
@@ -224,15 +236,24 @@ defmodule Tymeslot.BookingSeries.Create do
           {one, [owed | pending]}
         end)
 
-      # The confirmation commits with the series: a series nobody would be
-      # told about is rolled back and booked again whole.
+      :ok = schedule_confirmation(series, booking_data)
+
+      {series, booked, pending |> Enum.reverse() |> Enum.concat()}
+    end)
+  end
+
+  # The confirmation commits with the series: a series nobody would be told
+  # about is rolled back and booked again whole. A paid series is confirmed
+  # once paid for, by the payment webhook.
+  defp schedule_confirmation(series, booking_data) do
+    if Prepare.paid?(booking_data) do
+      :ok
+    else
       case Notifications.schedule_series_confirmation(series) do
         {:ok, _job} -> :ok
         {:error, reason} -> Repo.rollback(reason)
       end
-
-      {series, booked, pending |> Enum.reverse() |> Enum.concat()}
-    end)
+    end
   end
 
   # Books one session inside the series' transaction, returning
@@ -241,12 +262,17 @@ defmodule Tymeslot.BookingSeries.Create do
   defp occurrence_booker(type, booking_data, opts) do
     with_video_room = Keyword.get(opts, :with_video_room, false)
 
-    if MeetingTypeSchema.group?(type) do
-      seat_opts = [emails: false, in_outer_transaction: true, with_video_room: with_video_room]
-      &book_seat(&1, booking_data, seat_opts)
-    else
-      activation_opts = [announce: :series, with_video_room: with_video_room]
-      &book_meeting(&1, booking_data, activation_opts)
+    cond do
+      MeetingTypeSchema.group?(type) ->
+        seat_opts = [emails: false, in_outer_transaction: true, with_video_room: with_video_room]
+        &book_seat(&1, booking_data, seat_opts)
+
+      Prepare.paid?(booking_data) ->
+        &hold_meeting(&1, booking_data)
+
+      true ->
+        activation_opts = [announce: :series, with_video_room: with_video_room]
+        &book_meeting(&1, booking_data, activation_opts)
     end
   end
 
@@ -264,7 +290,8 @@ defmodule Tymeslot.BookingSeries.Create do
       attendee_name: booking_data.form_data["name"],
       attendee_email: booking_data.form_data["email"],
       attendee_timezone: Timezones.normalize(plan.booker_tz),
-      attendee_locale: booking_data.attendee_locale
+      attendee_locale: booking_data.attendee_locale,
+      unit_price_cents: if(Prepare.paid?(booking_data), do: type.price_cents)
     }
 
     case SeriesQueries.insert(attrs) do
@@ -278,6 +305,14 @@ defmodule Tymeslot.BookingSeries.Create do
   # session it happened to.
   defp book_meeting(meeting_attrs, booking_data, activation_opts) do
     case Persist.persist_and_activate(meeting_attrs, booking_data, activation_opts) do
+      {:ok, {meeting, pending}} -> {{meeting, nil}, pending}
+      {:error, reason} -> occurrence_failed(meeting_attrs, reason)
+    end
+  end
+
+  # A paid session is held for the series' payment, with nothing else done.
+  defp hold_meeting(meeting_attrs, booking_data) do
+    case Payment.hold(meeting_attrs, booking_data) do
       {:ok, {meeting, pending}} -> {{meeting, nil}, pending}
       {:error, reason} -> occurrence_failed(meeting_attrs, reason)
     end
@@ -312,8 +347,11 @@ defmodule Tymeslot.BookingSeries.Create do
     {meetings, seats} = Enum.unzip(booked)
     seats = Enum.reject(seats, &is_nil/1)
     announce_change(booking_data.meeting_type, series, meetings)
-    Enum.each(booked, fn _booked -> Telemetry.booking_created() end)
-    {:ok, %{series: series, meetings: meetings, participants: seats}}
+
+    with {:ok, result} <- booked_result(series, meetings, seats, booking_data) do
+      Enum.each(booked, fn _booked -> Telemetry.booking_created() end)
+      result
+    end
   end
 
   # A session taken between the check and the lock is reported as the check
@@ -330,6 +368,24 @@ defmodule Tymeslot.BookingSeries.Create do
 
   defp map_result({:error, reason}, _occurrences, booking_data),
     do: {:error, Errors.classify_creation_error(reason, booking_data)}
+
+  # A paid series is held until its checkout, opened now that it has
+  # committed, is paid; a checkout that cannot be opened releases it.
+  defp booked_result(series, meetings, seats, booking_data) do
+    if Prepare.paid?(booking_data) do
+      case Payment.checkout(series) do
+        {:ok, url} ->
+          {:ok,
+           {:ok, :payment_required,
+            %{series: series, meeting: hd(meetings), meetings: meetings, checkout_url: url}}}
+
+        {:error, reason} ->
+          {:error, Errors.classify_creation_error(reason, booking_data)}
+      end
+    else
+      {:ok, {:ok, %{series: series, meetings: meetings, participants: seats}}}
+    end
+  end
 
   # Every session of a group series shares its host and type, so one
   # broadcast tells the type's booking pages about every seat taken.

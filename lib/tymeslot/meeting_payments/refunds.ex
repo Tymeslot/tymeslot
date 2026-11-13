@@ -68,6 +68,26 @@ defmodule Tymeslot.MeetingPayments.Refunds do
       do: max(amount - refunded, 0)
 
   @doc """
+  What a host's cancellation of one booking refunds by default: the
+  remaining balance, or, when the payment paid for a whole series, one
+  session's price (`unit_price_cents` snapshotted on the series), capped at
+  what remains. A series payment whose series is gone falls back to the
+  remaining balance.
+  """
+  @spec default_cancellation_refund_cents(BookingPaymentSchema.t()) :: non_neg_integer()
+  def default_cancellation_refund_cents(%BookingPaymentSchema{series_id: id} = payment)
+      when is_binary(id) do
+    remaining = refundable_remaining_cents(payment)
+
+    case Repo.preload(payment, :series).series do
+      %{unit_price_cents: unit} when is_integer(unit) and unit > 0 -> min(unit, remaining)
+      _gone -> remaining
+    end
+  end
+
+  def default_cancellation_refund_cents(payment), do: refundable_remaining_cents(payment)
+
+  @doc """
   Returns `true` when the host still holds money the attendee has not been
   given back.
 
@@ -252,10 +272,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
       %{
         charge: payment.stripe_charge_id,
         amount: amount_cents,
-        metadata: %{
-          meeting_id: payment.meeting_id,
-          booking_payment_id: payment.id
-        }
+        metadata: refund_metadata(payment)
       }
       |> maybe_put_reason(reason)
       |> maybe_refund_application_fee(payment)
@@ -267,6 +284,13 @@ defmodule Tymeslot.MeetingPayments.Refunds do
       recv_timeout: @stripe_recv_timeout_ms
     )
   end
+
+  # A series payment names its series instead of a meeting.
+  defp refund_metadata(%{series_id: series_id} = payment) when is_binary(series_id),
+    do: %{series_id: series_id, booking_payment_id: payment.id}
+
+  defp refund_metadata(payment),
+    do: %{meeting_id: payment.meeting_id, booking_payment_id: payment.id}
 
   # Stripe rejects a blank `reason` ("cannot be unset") — only include it when
   # the caller supplies a non-empty value, otherwise omit the param entirely.

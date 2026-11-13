@@ -301,13 +301,10 @@ defmodule Tymeslot.BookingSeries.CreateTest do
     assert series_count() == 0
   end
 
-  test "paid and approval types are refused for now", %{host: host, today: today} do
-    paid = series_type(host, payment_required: true, price_cents: 5_000)
+  test "approval types are refused for now", %{host: host, today: today} do
     held = series_type(host, requires_approval: true)
 
-    for type <- [paid, held] do
-      assert {:error, :series_not_offered} = book_series(host, type, weekly(today, 4))
-    end
+    assert {:error, :series_not_offered} = book_series(host, held, weekly(today, 4))
 
     assert meeting_count() == 0
     assert series_count() == 0

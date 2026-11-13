@@ -12,7 +12,18 @@ defmodule Tymeslot.BookingSeries do
   """
 
   alias Tymeslot.Availability.Schedules
-  alias Tymeslot.BookingSeries.{Check, Create, Occurrence, Plan, Rule, SeriesSchema}
+
+  alias Tymeslot.BookingSeries.{
+    Check,
+    Create,
+    Occurrence,
+    Plan,
+    Rule,
+    SeriesQueries,
+    SeriesSchema
+  }
+
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   @doc """
@@ -49,6 +60,27 @@ defmodule Tymeslot.BookingSeries do
   """
   @spec book(map(), map(), keyword()) :: Create.result()
   defdelegate book(meeting_params, form_data, opts \\ []), to: Create, as: :execute
+
+  @doc """
+  The meetings of a one-to-one series, in series order. Unscoped: for
+  system callers that already hold the series.
+  """
+  @spec meetings(SeriesSchema.t() | binary()) :: [MeetingSchema.t()]
+  def meetings(series_or_id), do: SeriesQueries.list_meetings(series_or_id)
+
+  @doc """
+  How many sessions the series a meeting belongs to has, or nil for a
+  meeting outside any series (or whose series is gone).
+  """
+  @spec session_count(MeetingSchema.t()) :: pos_integer() | nil
+  def session_count(%MeetingSchema{series_id: nil}), do: nil
+
+  def session_count(%MeetingSchema{series_id: series_id}) do
+    case SeriesQueries.get(series_id) do
+      {:ok, %SeriesSchema{occurrences_count: count}} -> count
+      {:error, :not_found} -> nil
+    end
+  end
 
   @doc """
   How the rhythm of a series or a series type reads in `locale`: "Every

@@ -416,7 +416,16 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   defp select_rows(query, {:ids, ids}), do: where(query, [r], r.id in ^ids)
   defp select_rows(query, {:meetings, ids}), do: where(query, [r], r.meeting_id in ^ids)
 
-  defp select_payments(query, {:meetings, ids}), do: where(query, [b], b.meeting_id in ^ids)
+  # A paid series' one payment paid for each of its sessions.
+  defp select_payments(query, {:meetings, ids}) do
+    series_ids =
+      from(m in Meeting,
+        where: m.id in ^ids and not is_nil(m.series_id),
+        select: m.series_id
+      )
+
+    where(query, [b], b.meeting_id in ^ids or b.series_id in subquery(series_ids))
+  end
 
   defp select_payments(query, {:email, email, :all}),
     do: where(query, [b], fragment("lower(?)", b.attendee_email) == ^email)

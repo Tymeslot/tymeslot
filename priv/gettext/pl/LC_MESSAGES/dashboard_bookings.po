@@ -912,3 +912,13 @@ msgstr "Na pewno chcesz odwołać „%{title}” zaplanowane na %{when}? Wszyscy
 #, elixir-autogen, elixir-format
 msgid "Managed by you"
 msgstr "Zarządzasz ty"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refund this session."
+msgstr "Zwrot za tę sesję."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds one session's share of the series payment (%{amount})."
+msgstr "Zwraca część płatności za serię przypadającą na jedną sesję (%{amount})."

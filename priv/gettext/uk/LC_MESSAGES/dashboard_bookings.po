@@ -916,3 +916,13 @@ msgstr "Ви впевнені, що хочете скасувати «%{title}»
 #, elixir-autogen, elixir-format
 msgid "Managed by you"
 msgstr "Керуєте ви"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refund this session."
+msgstr "Повернути кошти за цю сесію."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds one session's share of the series payment (%{amount})."
+msgstr "Повертає частку однієї сесії в оплаті серії (%{amount})."

@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.LiveView
   alias Phoenix.PubSub
   alias Tymeslot.BookingPages
+  alias Tymeslot.BookingSeries
   alias Tymeslot.Demo
   alias Tymeslot.Invitations
   alias Tymeslot.MeetingPayments
@@ -315,6 +316,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
             |> assign_customization(profile)
             |> assign_organizer(profile)
             |> Component.assign(loading: false, meeting: meeting, payment: payment)
+            |> Component.assign(:series_count, BookingSeries.session_count(meeting))
             |> Component.assign(rebook(profile, meeting, true))
 
           {:ok, socket}
@@ -331,6 +333,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           loading: true,
           meeting: nil,
           payment: nil,
+          series_count: nil,
           rebook_path: nil,
           invitation_held: false,
           invitation_withheld: false
@@ -360,6 +363,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
         {:ok, meeting} ->
           socket
           |> Component.assign(:meeting, meeting)
+          |> Component.assign(:series_count, BookingSeries.session_count(meeting))
           |> Component.assign(rebook(socket.assigns.organizer_profile, meeting, true))
 
         {:error, :not_found} ->

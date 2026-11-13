@@ -74,6 +74,34 @@ defmodule Tymeslot.BookingSeries.SeriesQueries do
     |> Repo.one()
   end
 
+  @doc "The meetings of a one-to-one series, in `series_position` order."
+  @spec list_meetings(Series.t() | binary()) :: [Meeting.t()]
+  def list_meetings(%Series{id: id}), do: list_meetings(id)
+
+  def list_meetings(id) when is_binary(id) do
+    Meeting
+    |> where([m], m.series_id == ^id)
+    |> order_by([m], asc: m.series_position)
+    |> Repo.all()
+  end
+
+  @doc """
+  Locks the meetings of a one-to-one series with `FOR UPDATE`, in
+  `series_position` order, and returns them in that order. Every writer
+  that locks several sessions takes them in this order, after the series
+  row, so two cannot deadlock. Call inside a transaction.
+  """
+  @spec lock_meetings(Series.t() | binary()) :: [Meeting.t()]
+  def lock_meetings(%Series{id: id}), do: lock_meetings(id)
+
+  def lock_meetings(id) when is_binary(id) do
+    Meeting
+    |> where([m], m.series_id == ^id)
+    |> order_by([m], asc: m.series_position)
+    |> lock("FOR UPDATE")
+    |> Repo.all()
+  end
+
   @doc """
   Lists the occurrences of a series by `series_position`: `Meeting` structs
   for one-to-one types, `Participant` structs (meeting preloaded) for group

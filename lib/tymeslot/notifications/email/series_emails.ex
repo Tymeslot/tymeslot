@@ -15,6 +15,7 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
   alias Tymeslot.BookingSeries.SeriesQueries
   alias Tymeslot.Emails.SeriesBuilder
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Notifications.Email.DeliveryOutcome
   alias Tymeslot.Workers.DeliveryClaims
 
@@ -35,7 +36,8 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
   The series' confirmation to its booker and organiser, listing every
   session of the series in its place ("Session 2 of 4"), a session already
   cancelled by the time it runs marked so rather than left out, so the
-  count in the subject is the count in the list. Discarded when the series
+  count in the subject is the count in the list. A paid series shows the
+  total it was paid. Discarded when the series
   was cancelled, or none of its sessions is still booked.
   """
   @spec handle_series_confirmation(%{String.t() => term()}, DeliveryClaims.job_id()) ::
@@ -46,7 +48,12 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
 
       with :ok <- not_cancelled(series),
            {[_first | _rest], gone} <- Enum.split_with(occurrences, &Notifications.live?/1) do
-        details = SeriesBuilder.build(series, occurrences, cancelled: Enum.map(gone, & &1.id))
+        details =
+          SeriesBuilder.build(series, occurrences,
+            cancelled: Enum.map(gone, & &1.id),
+            currency: paid_currency(series)
+          )
+
         send_both("series_confirmation", details, :send_series_confirmation, job_id)
       else
         {[], _gone} -> {:discard, @nothing_live}
@@ -91,6 +98,15 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
       {:error, :not_found} ->
         Logger.warning("Series not found, discarding its email", series_id: series_id)
         {:discard, @series_gone}
+    end
+  end
+
+  # A paid series shows the total it was paid, in the currency its one
+  # payment took.
+  defp paid_currency(series) do
+    case MeetingPayments.payment_for_series(series.id) do
+      %{paid_at: %DateTime{}, currency: currency} -> currency
+      _unpaid_or_free -> nil
     end
   end
 

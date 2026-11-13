@@ -17,7 +17,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.LockedPayment do
   completion recovering an expired booking, through
   `Scheduling.reinstate_with_conflict_check/2`), then the payment row, then
   the meeting row, as in every other writer of both
-  (`ConnectAccountRetirement.disconnect/1`, `FailAndExpire`).
+  (`ConnectAccountRetirement.disconnect/1`, `FailAndExpire`). A paid
+  series' payment is followed by its series row, then its meetings in
+  series order (`HeldMeetings.lock_series/1`).
 
   This lock is the one concurrency mechanism for a webhook's status change;
   there is deliberately no compare-and-set alternative beside it. The writes

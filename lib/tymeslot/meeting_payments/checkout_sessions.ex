@@ -9,14 +9,19 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   a Mox.
 
   Call sites should pass a freshly created `MeetingSchema` (status
-  `awaiting_payment`); on success they receive a Stripe-hosted checkout
-  URL to redirect the attendee to.
+  `awaiting_payment`), or a paid series whose sessions all are
+  (`create_session_for_series/1`); on success they receive a Stripe-hosted
+  checkout URL to redirect the attendee to.
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   require Logger
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.BookingPages
+  alias Tymeslot.BookingSeries
+  alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
@@ -44,7 +49,55 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
 
   @spec create_session_for_booking(Tymeslot.Meetings.MeetingSchema.t()) ::
           {:ok, create_result()} | {:error, term()}
-  def create_session_for_booking(meeting) do
+  def create_session_for_booking(meeting), do: create_session(for_meeting(meeting))
+
+  @doc """
+  Opens one Stripe Checkout for every session of a paid series: one line
+  item at the series' `unit_price_cents` with the number of sessions as its
+  quantity, recorded as one `booking_payments` row owned by the series
+  (`meeting_id` nil) for the whole amount.
+
+  The checkout returns to the first session's payment pages, which wait on
+  that session's payment topic: every broadcast about the series goes there
+  (`HeldMeetings`).
+  """
+  @spec create_session_for_series(SeriesSchema.t()) ::
+          {:ok, create_result()} | {:error, term()}
+  def create_session_for_series(%SeriesSchema{} = series) do
+    case BookingSeries.meetings(series) do
+      [] -> {:error, :series_without_sessions}
+      meetings -> create_session(for_series(series, meetings))
+    end
+  end
+
+  # What a checkout is for: one meeting, or every session of a series. The
+  # first meeting (the meeting itself, or the series' first session) gives
+  # the attendee, the booking page and the pages the checkout returns to.
+  defp for_meeting(meeting) do
+    %{
+      meeting: meeting,
+      owner: %{meeting_id: meeting.id},
+      reference: meeting.id,
+      metadata: %{meeting_id: meeting.id},
+      idempotency_key: "checkout:#{meeting.id}",
+      unit_price_cents: nil,
+      quantity: 1
+    }
+  end
+
+  defp for_series(series, [first | _rest] = meetings) do
+    %{
+      meeting: first,
+      owner: %{series_id: series.id, meeting_id: nil},
+      reference: "series:#{series.id}",
+      metadata: %{series_id: series.id},
+      idempotency_key: "checkout:series:#{series.id}",
+      unit_price_cents: series.unit_price_cents,
+      quantity: length(meetings)
+    }
+  end
+
+  defp create_session(%{meeting: meeting} = checkout) do
     # The Stripe checkout call is deliberately NOT wrapped in a DB transaction.
     # Holding a pooled connection open across a network round-trip to Stripe
     # risks pool exhaustion when Stripe is slow. Instead we:
@@ -65,19 +118,19 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     # meeting collapses to a single Stripe session.
     with {:ok, host} <- fetch_host(meeting.organizer_user_id),
          :ok <- check_payments_access(host.id),
-         {:ok, %{booking_payment: booking_payment} = context} <- record_payment(meeting, host),
-         {:ok, session} <- create_stripe_session(meeting, context),
+         {:ok, %{booking_payment: booking_payment} = context} <- record_payment(checkout, host),
+         {:ok, session} <- create_stripe_session(checkout, context),
          {:ok, booking_payment} <- attach_session_details(booking_payment, session) do
       {:ok, %{checkout_url: session.url, booking_payment: booking_payment}}
     end
   end
 
-  defp record_payment(meeting, host) do
+  defp record_payment(%{meeting: meeting} = checkout, host) do
     Repo.transaction(fn ->
       with {:ok, account} <- lock_connect_account(host.id),
            {:ok, meeting_type} <- fetch_meeting_type(meeting.meeting_type_id),
            :ok <- check_still_paid(meeting_type),
-           context = build_context(meeting, host, account, meeting_type),
+           context = build_context(checkout, host, account, meeting_type),
            {:ok, booking_payment} <- BookingPaymentQueries.insert(context.snapshot) do
         Map.put(context, :booking_payment, booking_payment)
       else
@@ -86,19 +139,30 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     end)
   end
 
-  defp build_context(meeting, host, account, meeting_type) do
+  # A series is charged the price snapshotted on it when it was booked; a
+  # single booking the type's price, read here. The fee is the platform's
+  # share of the whole amount, so `unit_price_cents × quantity` is both what
+  # Stripe charges and what the row records (the completed webhook compares
+  # them).
+  defp build_context(%{meeting: meeting} = checkout, host, account, meeting_type) do
     theme_id = resolve_theme_id(host.id, meeting)
+    unit_price_cents = checkout.unit_price_cents || meeting_type.price_cents
+    amount_cents = unit_price_cents * checkout.quantity
     bp_config = Application.get_env(:tymeslot, :payment_application_fee_bp, 0)
-    fee_cents = ApplicationFee.calculate(meeting_type.price_cents, bp_config)
+    fee_cents = ApplicationFee.calculate(amount_cents, bp_config)
 
     %{
       host: host,
       account: account,
       meeting_type: meeting_type,
+      unit_price_cents: unit_price_cents,
       theme_id: theme_id,
       theme_slug: theme_slug_for(theme_id),
       fee_cents: fee_cents,
-      snapshot: snapshot_attrs(meeting, host, account, meeting_type, theme_id, fee_cents)
+      snapshot:
+        checkout.owner
+        |> Map.merge(snapshot_attrs(meeting, host, account, meeting_type, theme_id, fee_cents))
+        |> Map.put(:amount_cents, amount_cents)
     }
   end
 
@@ -111,21 +175,18 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
 
   defp check_still_paid(_meeting_type), do: {:error, :payment_not_required}
 
-  defp create_stripe_session(meeting, context) do
-    %{account: account, meeting_type: mt, fee_cents: fee, theme_slug: slug} = context
+  defp create_stripe_session(%{meeting: meeting} = checkout, context) do
+    %{account: account, theme_slug: slug} = context
 
     StripeAdapter.create_checkout_session(
       session_params(
-        meeting,
-        mt,
-        account,
-        fee,
+        checkout,
+        context,
         success_url(slug, meeting.id),
-        cancel_url(slug, meeting.id),
-        account.default_currency
+        cancel_url(slug, meeting.id)
       ),
       connect_account: account.stripe_account_id,
-      idempotency_key: "checkout:#{meeting.id}"
+      idempotency_key: checkout.idempotency_key
     )
   end
 
@@ -217,7 +278,6 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
 
   defp snapshot_attrs(meeting, host, account, meeting_type, theme_id, fee_cents) do
     %{
-      meeting_id: meeting.id,
       stripe_account_id: account.stripe_account_id,
       host_user_id: host.id,
       host_email: host.email,
@@ -233,37 +293,29 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     }
   end
 
-  defp session_params(
-         meeting,
-         meeting_type,
-         account,
-         fee_cents,
-         success_url,
-         cancel_url,
-         currency
-       ) do
-    payment_intent_data = payment_intent_data(meeting, account, fee_cents)
+  defp session_params(%{meeting: meeting} = checkout, context, success_url, cancel_url) do
+    %{account: account, meeting_type: meeting_type, fee_cents: fee_cents} = context
 
     %{
       mode: "payment",
       line_items: [
         %{
           price_data: %{
-            currency: currency,
-            unit_amount: meeting_type.price_cents,
-            product_data: %{name: meeting_type.name}
+            currency: account.default_currency,
+            unit_amount: context.unit_price_cents,
+            product_data: %{name: product_name(meeting_type, checkout.quantity, meeting)}
           },
-          quantity: 1
+          quantity: checkout.quantity
         }
       ],
-      payment_intent_data: payment_intent_data,
+      payment_intent_data: payment_intent_data(checkout.metadata, account, fee_cents),
       # These are direct charges on the host's connected account, so Stripe
       # issues the invoice in the host's name under their own tax settings,
       # which is what an attendee needs for expensing. Without this the
       # attendee gets only a charge receipt.
       invoice_creation: %{enabled: true},
       customer_email: meeting.attendee_email,
-      client_reference_id: meeting.id,
+      client_reference_id: checkout.reference,
       expires_at: System.os_time(:second) + @session_expiry_seconds,
       success_url: success_url <> "?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: cancel_url,
@@ -271,23 +323,27 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     }
   end
 
-  defp payment_intent_data(meeting, account, fee_cents) when fee_cents > 0 do
-    %{
-      application_fee_amount: fee_cents,
-      metadata: %{
-        meeting_id: meeting.id,
-        host_user_id: account.user_id
-      }
-    }
+  # A series names how many sessions the one line item is for, in the
+  # attendee's language, as the checkout is shown in it.
+  defp product_name(meeting_type, 1, _meeting), do: meeting_type.name
+
+  defp product_name(meeting_type, count, meeting) do
+    Gettext.with_locale(TymeslotWeb.Gettext, meeting.attendee_locale || "en", fn ->
+      dngettext(
+        "booking_payments",
+        "%{name}, %{count} session",
+        "%{name}, %{count} sessions",
+        count,
+        name: meeting_type.name
+      )
+    end)
   end
 
-  defp payment_intent_data(meeting, account, _fee_cents) do
-    %{
-      metadata: %{
-        meeting_id: meeting.id,
-        host_user_id: account.user_id
-      }
-    }
+  defp payment_intent_data(metadata, account, fee_cents) do
+    Map.merge(
+      %{metadata: Map.put(metadata, :host_user_id, account.user_id)},
+      if(fee_cents > 0, do: %{application_fee_amount: fee_cents}, else: %{})
+    )
   end
 
   defp success_url(theme_slug, meeting_id) do
@@ -332,7 +388,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   """
   @spec abandon_checkout(String.t()) :: :ok | {:error, term()}
   def abandon_checkout(meeting_id) do
-    case BookingPaymentQueries.by_meeting_id(meeting_id) do
+    case BookingPaymentQueries.for_meeting(meeting_id) do
       %{status: :pending, stripe_checkout_session_id: "cs_" <> _rest = session_id} = payment ->
         expire_stripe_session(session_id, payment.stripe_account_id)
 

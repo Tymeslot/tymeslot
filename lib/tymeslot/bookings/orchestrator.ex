@@ -42,7 +42,9 @@ defmodule Tymeslot.Bookings.Orchestrator do
       (`Tymeslot.Meetings.SeatView`)
     * `{:ok, :payment_required, %{meeting: meeting, checkout_url: url}}` when
       the meeting type requires payment — caller should redirect the
-      attendee to the Stripe Checkout URL
+      attendee to the Stripe Checkout URL. For a paid series the map also
+      carries `series` and `meetings`, and `meeting` is its first session,
+      whose payment topic and pages the series' checkout reports on
     * `{:error, reason}` on validation or persistence failure, where
       `reason` is either a semantic atom classified by the domain layer
       (`Tymeslot.Bookings.Errors.classified_error/0`, e.g. `:slot_taken`,

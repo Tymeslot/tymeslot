@@ -29,7 +29,6 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.TransactionalEmailDelivery
 
@@ -85,7 +84,8 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
   end
 
   defp build_context(%BookingPaymentSchema{} = payment, args) do
-    meeting = load_meeting(payment.meeting_id)
+    # A series payment is named after its first session.
+    meeting = payment |> MeetingPayments.meetings_for_payment() |> List.first()
 
     %DisputeContext{
       host_email: payment.host_email,
@@ -99,15 +99,6 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
       stripe_charge_id: payment.stripe_charge_id,
       reason: Map.get(args, "reason")
     }
-  end
-
-  defp load_meeting(nil), do: nil
-
-  defp load_meeting(meeting_id) do
-    case MeetingQueries.get_meeting(meeting_id) do
-      {:ok, meeting} -> meeting
-      {:error, _reason} -> nil
-    end
   end
 
   defp meeting_title(%{title: title}, _payment) when is_binary(title) and title != "", do: title

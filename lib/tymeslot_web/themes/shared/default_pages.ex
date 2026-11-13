@@ -125,6 +125,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
     <MeetingPageBodies.status_icon icon={elem(@status, 0)} tone={elem(@status, 1)} />
     <PaymentReturnComponents.processing_body
       loading={@loading}
+      series_count={assigns[:series_count]}
       payment={@payment}
       meeting={@meeting}
       rebook_path={@rebook_path}

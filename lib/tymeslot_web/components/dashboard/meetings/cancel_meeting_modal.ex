@@ -149,7 +149,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   attr :refund_form, :map, required: true
 
   defp paid_options(assigns) do
-    assigns = assign(assigns, :remaining, refundable_remaining(assigns.booking_payment))
+    assigns =
+      assign(assigns,
+        remaining: refundable_remaining(assigns.booking_payment),
+        series?: is_binary(assigns.booking_payment.series_id),
+        default_refund: MeetingPayments.default_cancellation_refund_cents(assigns.booking_payment)
+      )
 
     ~H"""
     <div class="rounded-token-md border border-tymeslot-200 bg-tymeslot-50 p-3 text-token-sm space-y-3">
@@ -168,7 +173,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             value="full"
             checked={@refund_form.choice == "full"}
           />
-          <span>
+          <span :if={@series?}>
+            <strong>{dgettext("dashboard_bookings", "Refund this session.")}</strong>
+            {dgettext(
+              "dashboard_bookings",
+              "Refunds one session's share of the series payment (%{amount}).",
+              amount: format_amount(@default_refund, @booking_payment.currency)
+            )}
+          </span>
+          <span :if={!@series?}>
             <strong>{dgettext("dashboard_bookings", "Full refund.")}</strong>
             {dgettext("dashboard_bookings", "Refunds the remaining balance (%{amount}).",
               amount: format_amount(@remaining, @booking_payment.currency)
