@@ -37,7 +37,7 @@ defmodule TymeslotWeb.ZoomDeauthController do
 
   @spec deauthorize(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def deauthorize(conn, params) do
-    with :ok <- RateLimiter.check(:webhook, ClientIP.get(conn)),
+    with :ok <- RateLimiter.check(:zoom_deauth, ClientIP.get(conn)),
          {:ok, secret} <- ZoomConfig.fetch_deauth_secret(),
          {:ok, raw_body} <- fetch_raw_body(conn),
          :ok <- verify_signature(conn, raw_body, secret) do

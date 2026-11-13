@@ -283,7 +283,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   # not the one write handler in the module a click loop can drive unbounded.
   def handle_event("approve_request", %{"id" => _id} = params, socket) do
     RateLimit.with_rate_limit(
-      RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)),
+      RateLimiter.check(:dashboard_meeting_approval, socket.assigns.current_user.id),
       socket,
       fn ->
         RequestActions.answer(socket, params, &Approval.approve/1,
@@ -339,7 +339,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   def handle_event("confirm_decline_request", params, socket) do
     RateLimit.with_rate_limit(
-      RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)),
+      RateLimiter.check(:dashboard_meeting_approval, socket.assigns.current_user.id),
       socket,
       fn ->
         reason = sanitize_decline_reason(Map.get(params, "reason"))
@@ -538,12 +538,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   defp validate_filter(filter) when filter in @valid_filters, do: {:ok, filter}
   defp validate_filter(_filter), do: {:error, "Invalid filter option"}
-
-  # Shares the emailed link's per-answer limiter (`meeting_approval:...`) but
-  # under a `"dashboard:"`-prefixed identifier keyed on the host, since the
-  # dashboard has an authenticated user and no client IP: the two surfaces
-  # cannot exhaust each other's budget.
-  defp dashboard_approval_key(socket), do: "dashboard:#{socket.assigns.current_user.id}"
 
   # A crafted socket frame can send a non-binary `reason` (e.g. a
   # `reason[x]=y` payload arrives as a map, not a string) or one containing a

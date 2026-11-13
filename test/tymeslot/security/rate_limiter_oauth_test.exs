@@ -1,10 +1,11 @@
 defmodule Tymeslot.Security.RateLimiterOAuthTest do
   @moduledoc """
-  Direct coverage for the three OAuth rate-limit buckets exposed by
+  Direct coverage for the OAuth rate-limit buckets exposed by
   `Tymeslot.Security.RateLimiter`:
 
     * initiation  — 10 per 10 minutes per IP
-    * callback    — 20 per 2 minutes per IP
+    * callback    — 20 per 2 minutes per IP, sign-in and integration
+                    connections each with their own bucket
     * completion  —  6 per 20 minutes per IP
 
   Each bucket is keyed separately so exhausting one does not trip another.
@@ -46,10 +47,10 @@ defmodule Tymeslot.Security.RateLimiterOAuthTest do
       ip = unique_ip()
 
       for _i <- 1..20 do
-        assert :ok = RateLimiter.check(:oauth_callback, ip)
+        assert :ok = RateLimiter.check(:oauth_signin_callback, ip)
       end
 
-      assert {:error, :rate_limited, message} = RateLimiter.check(:oauth_callback, ip)
+      assert {:error, :rate_limited, message} = RateLimiter.check(:oauth_signin_callback, ip)
       assert message =~ "OAuth callback"
     end
   end
@@ -80,7 +81,7 @@ defmodule Tymeslot.Security.RateLimiterOAuthTest do
       assert {:error, :rate_limited, _msg} = RateLimiter.check(:oauth_initiation, ip)
 
       # Every other bucket still has its full budget for this IP.
-      assert :ok = RateLimiter.check(:oauth_callback, ip)
+      assert :ok = RateLimiter.check(:oauth_signin_callback, ip)
       assert :ok = RateLimiter.check(:oauth_completion, ip)
     end
 
@@ -94,7 +95,20 @@ defmodule Tymeslot.Security.RateLimiterOAuthTest do
       assert {:error, :rate_limited, _msg} = RateLimiter.check(:oauth_completion, ip)
 
       assert :ok = RateLimiter.check(:oauth_initiation, ip)
-      assert :ok = RateLimiter.check(:oauth_callback, ip)
+      assert :ok = RateLimiter.check(:oauth_signin_callback, ip)
+    end
+
+    test "exhausting the integration callback budget does not refuse a sign-in callback" do
+      ip = unique_ip()
+
+      for _i <- 1..20 do
+        assert :ok = RateLimiter.check(:integration_oauth_callback, ip)
+      end
+
+      assert {:error, :rate_limited, _msg} = RateLimiter.check(:integration_oauth_callback, ip)
+
+      # A team behind one address connecting calendars can still sign in.
+      assert :ok = RateLimiter.check(:oauth_signin_callback, ip)
     end
 
     test "two different IPs on the same bucket have independent budgets" do

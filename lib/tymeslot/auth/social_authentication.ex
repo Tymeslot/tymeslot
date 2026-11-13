@@ -176,7 +176,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   end
 
   defp oauth_limit(:initiation, ip), do: RateLimiter.check(:oauth_initiation, ip)
-  defp oauth_limit(:callback, ip), do: RateLimiter.check(:oauth_callback, ip)
+  defp oauth_limit(:callback, ip), do: RateLimiter.check(:oauth_signin_callback, ip)
   defp oauth_limit(:completion, ip), do: RateLimiter.check(:oauth_completion, ip)
 
   @doc """

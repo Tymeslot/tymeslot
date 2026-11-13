@@ -65,7 +65,7 @@ defmodule TymeslotWeb.SlackOAuthController do
   def callback(conn, %{"code" => code, "state" => state}) do
     user_id = conn.assigns.current_user.id
 
-    with :ok <- RateLimiter.check(:oauth_callback, ClientIP.get(conn)),
+    with :ok <- RateLimiter.check(:integration_oauth_callback, ClientIP.get(conn)),
          {:ok, integration} <-
            Slack.complete_oauth_callback(user_id, code, state, callback_url()) do
       conn

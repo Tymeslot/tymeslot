@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandlerTest do
       test "a rate-limited callback is turned away", %{conn: conn} do
         user = Factory.insert(:user)
         conn = conn |> with_own_address() |> log_in_user(user)
-        exhaust_limit!(:oauth_callback, ClientIP.get(conn))
+        exhaust_limit!(:integration_oauth_callback, ClientIP.get(conn))
 
         state = State.generate(user.id, @state_secret)
         conn = get(conn, unquote(path), %{"code" => "code", "state" => state})
