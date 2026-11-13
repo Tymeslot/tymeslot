@@ -15,6 +15,9 @@ defmodule Tymeslot.Repo.Migrations.AddEmailVerificationToMeetingParticipants do
 
   use Ecto.Migration
 
+  # excellent_migrations:safety-assured-for-this-file column_removed
+  # The only columns removed are this migration's own, nullable ones, in `down/0`.
+
   @disable_ddl_transaction true
   @disable_migration_lock true
 
@@ -42,8 +45,6 @@ defmodule Tymeslot.Repo.Migrations.AddEmailVerificationToMeetingParticipants do
       )
     )
 
-    # Only this migration's own, nullable columns.
-    # excellent_migrations:safety-assured-for-next-line column_removed
     alter table(:meeting_participants) do
       remove_if_exists(:verification_deadline_at, :utc_datetime)
       remove_if_exists(:email_verified_at, :utc_datetime)
