@@ -281,8 +281,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
          |> reload_all(refresh_health: false)}
 
       {:error, :slot_taken} ->
-        # The slot was booked out from under the poll. Keep the poll open, show
-        # an inline error, and refresh conflict badges from the calendar.
+        # The slot was booked out from under the poll, perhaps by a booking the
+        # host cannot see (one still unverified or unpaid), so the copy names no
+        # meeting. Keep the poll open and refresh conflict badges.
         socket =
           socket
           |> put_slot_error(slot_id, dgettext("dashboard_polls", "This time is no longer free"))

@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
 
@@ -318,8 +319,50 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       send(lv.pid, {:create_ad_hoc_meeting_result, {:error, :time_conflict}})
       html = render(lv)
 
-      assert html =~ "You already have a meeting at this time."
+      assert html =~ "This time is no longer available. Please choose another time."
       refute html =~ "time_conflict"
+    end
+
+    # A booking still awaiting its attendee's email verification holds its
+    # slot but is hidden from the host, so the refusal must not speak of a
+    # meeting they cannot see.
+    test "a time held by a hidden booking is refused without naming a meeting", %{
+      conn: conn,
+      user: user
+    } do
+      start_at = DateTime.add(DateTime.utc_now(:second), 2, :day)
+      end_at = DateTime.add(start_at, 30, :minute)
+
+      insert(:awaiting_verification_meeting,
+        organizer_user_id: user.id,
+        start_time: start_at,
+        end_time: end_at
+      )
+
+      result =
+        EventCreation.run_create_ad_hoc_meeting(%{
+          title: "Catch-up",
+          start_time: start_at,
+          end_time: end_at,
+          attendee_name: "Ada Lovelace",
+          attendee_email: "ada@example.com",
+          attendee_timezone: "Etc/UTC",
+          organizer_user_id: user.id,
+          calendar_integration_id: nil,
+          calendar_id: nil,
+          video_integration_id: nil
+        })
+
+      assert result == {:error, :time_conflict}
+      assert Repo.aggregate(MeetingSchema, :count) == 1
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_create_form(lv)
+      send(lv.pid, {:create_ad_hoc_meeting_result, result})
+      html = render(lv)
+
+      assert html =~ "This time is no longer available. Please choose another time."
+      refute html =~ "You already have a meeting"
     end
 
     test "an unrecognised reason flashes a generic sentence, never the raw term",

@@ -495,11 +495,6 @@ msgstr "Outra pessoa organiza esta reunião, então o Tymeslot não pode mover n
 msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
 msgstr "Este é um agendamento em grupo. Para movê-lo, cancelá-lo ou mudar quem participa, use a própria reunião."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a meeting at this time. Please choose a different time."
-msgstr "Você já tem uma reunião marcada nesse horário. Escolha outro."
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "This repeat pattern can't be saved to Outlook."
@@ -560,3 +555,8 @@ msgstr "Adicione um título. Uma reunião sem participante principal é reconhec
 #, elixir-autogen, elixir-format
 msgid "Invite at least one guest."
 msgstr "Convide pelo menos uma pessoa."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr ""
