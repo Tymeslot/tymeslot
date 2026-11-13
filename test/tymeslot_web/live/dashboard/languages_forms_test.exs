@@ -196,6 +196,27 @@ defmodule TymeslotWeb.Dashboard.LanguagesFormsTest do
                "Deutsch: missing"
     end
 
+    test "each chip opens its language's review page at this meeting type", %{
+      conn: conn,
+      meeting_type: meeting_type
+    } do
+      view = open_meeting_type(conn, meeting_type)
+      anchor = "translate-meeting_types-meeting_type-#{meeting_type.id}"
+      target = "/dashboard/languages/fr?item=#{anchor}##{anchor}"
+
+      assert has_element?(view, "#{mark("name")} #{chip("fr", "missing")}[href='#{target}']")
+
+      assert has_element?(
+               view,
+               "#{mark("name")} #{chip("fr", "missing")}[aria-label='Français: missing. Translate it on the Languages page.']"
+             )
+
+      view |> element("#{mark("name")} #{chip("fr", "missing")}") |> render_click()
+
+      assert_patch(view, "/dashboard/languages/fr?item=#{anchor}")
+      assert has_element?(view, "##{anchor}[data-highlighted]")
+    end
+
     test "saving the original keeps the stored translation, now outdated", %{
       conn: conn,
       user: user,

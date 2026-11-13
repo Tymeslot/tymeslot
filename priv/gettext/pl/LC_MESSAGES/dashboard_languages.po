@@ -413,3 +413,8 @@ msgstr "Przetłumacz na stronie Języki"
 #, elixir-autogen, elixir-format
 msgid "globe"
 msgstr "globus"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_status.ex
+#, elixir-autogen, elixir-format
+msgid "%{status}. Translate it on the Languages page."
+msgstr "%{status}. Przetłumacz na stronie Języki."

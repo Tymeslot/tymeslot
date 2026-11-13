@@ -41,7 +41,8 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationStatus do
           fields: %{String.t() => [{String.t(), atom()}]},
           done: non_neg_integer(),
           total: non_neg_integer(),
-          link: String.t()
+          link: String.t(),
+          anchor: String.t()
         }
 
   @open [:missing, :outdated]
@@ -89,9 +90,14 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationStatus do
       done:
         Enum.count(fields, fn {_path, list} -> Enum.all?(list, &(elem(&1, 1) == :translated)) end),
       total: map_size(fields),
-      link: ~p"/dashboard/languages/#{target}?#{[item: anchor]}" <> "#" <> anchor
+      link: review_path(target, anchor),
+      anchor: anchor
     }
   end
+
+  # The record's card on `locale`'s review page, highlighted and scrolled to.
+  defp review_path(locale, anchor),
+    do: ~p"/dashboard/languages/#{locale}?#{[item: anchor]}" <> "#" <> anchor
 
   @doc """
   The id of a record's card on the Languages review page, also the `item`
@@ -226,16 +232,20 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationStatus do
     >
       <.icon name="hero-globe-alt-mini" class="w-4 h-4 shrink-0 text-turquoise-600" />
       <span class="sr-only">{dgettext("dashboard_languages", "Translatable")}</span>
-      <.pill
+      <.link
         :for={{locale, status} <- @open}
-        tone={:warning}
-        dot
+        patch={review_path(locale, @status.anchor)}
+        class="rounded-token-full transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-turquoise-500"
+        aria-label={chip_link_label(locale, status)}
         data-testid="translation-chip"
         data-locale={locale}
         data-status={status}
       >
-        {chip_text(locale, status)}
-      </.pill>
+        <.pill tone={:warning} dot>
+          {chip_text(locale, status)}
+          <.icon name="hero-arrow-right-micro" class="ml-0.5 w-3 h-3" />
+        </.pill>
+      </.link>
     </span>
     """
   end
@@ -267,6 +277,12 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationStatus do
       true -> nil
     end
   end
+
+  defp chip_link_label(locale, status),
+    do:
+      dgettext("dashboard_languages", "%{status}. Translate it on the Languages page.",
+        status: chip_text(locale, status)
+      )
 
   defp chip_text(locale, :missing),
     do:
