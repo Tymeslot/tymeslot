@@ -375,12 +375,6 @@ msgstr[1] "Les intégrations %{names} doivent être reconnectées. Tant que vous
 msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
 msgstr "Reconnectez %{names} : d’ici là, votre page de réservation pourrait ne pas recevoir de réservations"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
-#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Save changes"
-msgstr "Enregistrer les modifications"
-
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
@@ -423,3 +417,18 @@ msgstr "Votre page de réservation n’accepte pas encore de réservations"
 #, elixir-autogen, elixir-format
 msgid "Languages"
 msgstr "Langues"
+
+#: lib/tymeslot_web/components/dashboard/autosave.ex
+#, elixir-autogen, elixir-format
+msgid "Changes save when you leave a field."
+msgstr "Les modifications sont enregistrées dès que vous quittez un champ."
+
+#: lib/tymeslot_web/components/dashboard/autosave.ex
+#, elixir-autogen, elixir-format
+msgid "Not saved"
+msgstr "Non enregistré"
+
+#: lib/tymeslot_web/components/dashboard/autosave.ex
+#, elixir-autogen, elixir-format
+msgid "Saved"
+msgstr "Enregistré"

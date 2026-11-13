@@ -63,11 +63,6 @@ msgstr "Nom affiché"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
 #, elixir-autogen, elixir-format
-msgid "Display name updated"
-msgstr "Nom affiché mis à jour"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
-#, elixir-autogen, elixir-format
 msgid "Enter your full name"
 msgstr "Saisissez votre nom complet"
 
@@ -121,11 +116,6 @@ msgstr "Enregistrement en cours..."
 #, elixir-autogen, elixir-format
 msgid "Taken"
 msgstr "Déjà pris"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "This name will appear to visitors when they book meetings with you. Changes are saved automatically."
-msgstr "Ce nom sera visible par les visiteurs lorsqu’ils réservent une réunion avec vous. Les modifications sont enregistrées automatiquement."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
 #, elixir-autogen, elixir-format
@@ -296,11 +286,6 @@ msgstr "Accroche"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
 #, elixir-autogen, elixir-format
-msgid "Headline and bio saved"
-msgstr "Accroche et biographie enregistrées"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
-#, elixir-autogen, elixir-format
 msgid "Shown on your booking page by themes that introduce you, such as Folio. Leave an empty line between paragraphs."
 msgstr "Affiché sur votre page de réservation par les thèmes qui vous présentent, comme Folio. Laissez une ligne vide entre les paragraphes."
 
@@ -331,11 +316,6 @@ msgstr "Liens juridiques"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
 #, elixir-autogen, elixir-format
-msgid "Legal links saved"
-msgstr "Liens juridiques enregistrés"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
-#, elixir-autogen, elixir-format
 msgid "Legal notice (imprint)"
 msgstr "Mentions légales"
 
@@ -348,3 +328,8 @@ msgstr "Politique de confidentialité"
 #, elixir-autogen, elixir-format
 msgid "Shown in a small footer on your booking pages and on the pages guests open from your emails. Link the pages on your own website."
 msgstr "Affichés dans un petit pied de page sur vos pages de réservation et sur les pages que les invités ouvrent depuis vos e-mails. Indiquez les liens vers les pages correspondantes de votre propre site."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "This name will appear to visitors when they book meetings with you."
+msgstr "Ce nom sera visible par les visiteurs lorsqu’ils réservent une réunion avec vous."

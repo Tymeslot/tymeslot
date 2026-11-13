@@ -375,12 +375,6 @@ msgstr[1] ""
 msgid "Reconnect %{names}: until you do, your booking page may not take bookings"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/intro_form_component.ex
-#: lib/tymeslot_web/live/dashboard/profile_settings/legal_links_form_component.ex
-#, elixir-autogen, elixir-format
-msgid "Save changes"
-msgstr ""
-
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
@@ -422,4 +416,19 @@ msgstr ""
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "Languages"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/autosave.ex
+#, elixir-autogen, elixir-format
+msgid "Changes save when you leave a field."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/autosave.ex
+#, elixir-autogen, elixir-format
+msgid "Not saved"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/autosave.ex
+#, elixir-autogen, elixir-format
+msgid "Saved"
 msgstr ""
