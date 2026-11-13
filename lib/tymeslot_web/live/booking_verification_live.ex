@@ -47,7 +47,8 @@ defmodule TymeslotWeb.BookingVerificationLive do
        state: :loading,
        meeting: nil,
        token: nil,
-       rebook_path: nil
+       rebook_path: nil,
+       locale: nil
      )}
   end
 

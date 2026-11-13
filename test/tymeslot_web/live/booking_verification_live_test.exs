@@ -100,6 +100,9 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
       assert render(view) =~ "Ihre Buchung ist bis"
       refute render(view) =~ "Your booking is held until"
       assert has_element?(view, "[data-testid='confirm-booking']", "Buchung bestätigen")
+      # Screen readers take the language from the markup, and the root
+      # layout's <html lang> is fixed before the token is read.
+      assert has_element?(view, "div[lang='de']")
     end
 
     test "a tampered or stale token is invalid", %{conn: conn, user: user, type: type} do

@@ -21,10 +21,15 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   attr :meeting, :map, default: nil
   attr :rebook_path, :string, default: nil
 
+  # The booking's language, set once the token is read. The token read waits
+  # for the connected render, by which time the root layout's `<html lang>`
+  # is already fixed, so the page declares its own language here.
+  attr :locale, :string, default: nil
+
   @spec page(map()) :: Phoenix.LiveView.Rendered.t()
   def page(assigns) do
     ~H"""
-    <div class="min-h-screen bg-tymeslot-50 px-4 py-12">
+    <div lang={@locale} class="min-h-screen bg-tymeslot-50 px-4 py-12">
       <div class="mx-auto w-full max-w-2xl">
         <.glass_morphism_card>
           <div class="p-6 sm:p-8">
