@@ -111,6 +111,28 @@ defmodule Tymeslot.Meetings.GuestQueriesTest do
       uid = meeting.uid
       assert %{^uid => %{total: 2, accepted: 0, declined: 0, pending: 2}} = summaries
     end
+
+    test "counts only the guests of seats still held and not awaiting verification" do
+      user = insert(:user)
+      meeting = insert(:group_meeting, organizer_user: user, capacity: 4)
+      seated = insert(:participant, meeting: meeting)
+
+      held =
+        insert(:participant,
+          meeting: meeting,
+          verification_deadline_at: DateTime.add(DateTime.utc_now(:second), 30, :minute)
+        )
+
+      left = insert(:participant, meeting: meeting, cancelled_at: DateTime.utc_now(:second))
+
+      {:ok, _guests} = Guests.create_for_participant(meeting.id, seated.id, ["a@x.com"])
+      {:ok, _guests} = Guests.create_for_participant(meeting.id, held.id, ["b@x.com"])
+      {:ok, _guests} = Guests.create_for_participant(meeting.id, left.id, ["c@x.com"])
+
+      uid = meeting.uid
+
+      assert %{^uid => %{total: 1, pending: 1}} = GuestQueries.rsvp_summaries_for_user(user.id)
+    end
   end
 
   describe "guest ordering" do

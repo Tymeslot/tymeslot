@@ -11,6 +11,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
   alias Ecto.Changeset
   alias Tymeslot.Meetings.GuestSchema, as: Guest
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
@@ -77,10 +78,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
       |> where([g], g.meeting_id == ^meeting_id)
       |> where(
         [g],
-        is_nil(g.participant_id) or
-          g.participant_id in subquery(
-            from(p in Participant, where: is_nil(p.cancelled_at), select: p.id)
-          )
+        is_nil(g.participant_id) or g.participant_id in subquery(live_visible_seat_ids())
       )
       |> update([g],
         set: [notified_end_time: fragment("COALESCE(?, ?)", g.notified_end_time, ^previous_end)]
@@ -311,12 +309,25 @@ defmodule Tymeslot.Meetings.GuestQueries do
   end
 
   # Keeps guests with no participant, or whose participant still holds their
-  # seat, and preloads that participant so a caller can name the booker.
+  # seat and may be seen (not awaiting email verification), and preloads that
+  # participant so a caller can name the booker.
   defp live_owner(query) do
     query
     |> join(:left, [g], p in assoc(g, :participant), as: :owner)
-    |> where([g, owner: p], is_nil(g.participant_id) or is_nil(p.cancelled_at))
+    |> where(
+      [g],
+      is_nil(g.participant_id) or g.participant_id in subquery(live_visible_seat_ids())
+    )
     |> preload([owner: p], participant: p)
+  end
+
+  # The seats whose guests count as invited: live, and not held for their
+  # booker's email verification (`ParticipantQueries.where_visible/1`). A held
+  # seat's guests are nobody's business but the booker's until they verify.
+  defp live_visible_seat_ids do
+    ParticipantQueries.where_visible(
+      from(p in Participant, where: is_nil(p.cancelled_at), select: p.id)
+    )
   end
 
   # Entries are written as string-keyed maps and read back from jsonb the same
@@ -339,13 +350,16 @@ defmodule Tymeslot.Meetings.GuestQueries do
   """
   @spec rsvp_summaries_for_user(integer()) :: %{String.t() => Guest.summary()}
   def rsvp_summaries_for_user(user_id) do
-    # Not filtered for organiser visibility: callers look summaries up by the
-    # uids of cards that already are.
+    # The meeting is not filtered for organiser visibility: callers look
+    # summaries up by the uids of cards that already are. Its guests are,
+    # since a visible group slot may still carry a seat held for email
+    # verification, whose guests the organiser must not count.
     query =
       from(g in Guest,
         join: m in Meeting,
         on: m.id == g.meeting_id,
         where: m.organizer_user_id == ^user_id,
+        where: is_nil(g.participant_id) or g.participant_id in subquery(live_visible_seat_ids()),
         group_by: [m.uid, g.status],
         select: {m.uid, g.status, count(g.id)}
       )
