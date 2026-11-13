@@ -2,7 +2,8 @@ defmodule Tymeslot.Emails.Templates.PollInvitation do
   @moduledoc """
   Email inviting someone the host added by address to vote on a poll.
 
-  Carries what the host wrote about the poll, the candidate times in the
+  Carries what the host wrote about the poll, where the meeting will be held
+  (`PollPlace`), the candidate times in the
   invitee's timezone (the poll's when they have none), the deadline, and the
   invitee's personal voting link. Written in the language the invitee was
   given when invited, the host's.
@@ -15,6 +16,7 @@ defmodule Tymeslot.Emails.Templates.PollInvitation do
     Formatting,
     MjmlEmail,
     PollHost,
+    PollPlace,
     Sanitise,
     Styles,
     TemplateHelper,
@@ -43,10 +45,11 @@ defmodule Tymeslot.Emails.Templates.PollInvitation do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       times = candidate_times(poll, timezone, locale)
       deadline = formatted_deadline(poll, timezone, locale)
+      place = PollPlace.line(poll)
 
       html_body =
         TemplateHelper.compile_system_template(
-          mjml_content(poll, host_name, times, deadline, voting_url),
+          mjml_content(poll, host_name, {times, deadline, place}, voting_url),
           headline(poll, host_name),
           dgettext("emails_polls", "%{host} is looking for a time for %{title}.",
             host: host_name,
@@ -68,7 +71,7 @@ defmodule Tymeslot.Emails.Templates.PollInvitation do
       |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
       |> subject(headline(poll, host_name))
       |> html_body(html_body)
-      |> text_body(build_text_body(poll, host_name, times, deadline, voting_url))
+      |> text_body(build_text_body(poll, host_name, {times, deadline, place}, voting_url))
     end)
   end
 
@@ -94,11 +97,13 @@ defmodule Tymeslot.Emails.Templates.PollInvitation do
     )
   end
 
-  defp mjml_content(poll, host_name, times, deadline, voting_url) do
+  defp mjml_content(poll, host_name, {times, deadline, place}, voting_url) do
     """
     #{Text.centered_text(intro(host_name), padding: "4px 0 12px 0")}
 
     #{note_block(poll.description)}
+
+    #{PollPlace.mjml(place)}
 
     #{Text.section_title(dgettext("emails_polls", "Proposed times"))}
 
@@ -136,12 +141,12 @@ defmodule Tymeslot.Emails.Templates.PollInvitation do
     """
   end
 
-  defp build_text_body(poll, host_name, times, deadline, voting_url) do
+  defp build_text_body(poll, host_name, {times, deadline, place}, voting_url) do
     """
     #{headline(poll, host_name)}
 
     #{intro(host_name)}
-    #{note_text(poll.description)}
+    #{note_text(poll.description)}#{PollPlace.text(place)}
     #{dgettext("emails_polls", "Proposed times")}:
     #{Enum.map_join(times, "\n", &"- #{&1}")}
     #{deadline_text(deadline)}

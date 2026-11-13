@@ -519,3 +519,23 @@ msgstr "Так, надіслати"
 #, elixir-autogen, elixir-format
 msgid "before the event"
 msgstr "перед подією"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone is an equal guest who can accept or decline. Only you can move or cancel the meeting."
+msgstr "Усі є рівноправними гостями й можуть прийняти або відхилити запрошення. Лише ви можете перенести або скасувати зустріч."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Guests"
+msgstr "Гості"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Main participant"
+msgstr "Основний учасник"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The main participant can move or cancel the meeting. Turn this off to invite everyone as an equal guest."
+msgstr "Основний учасник може перенести або скасувати зустріч. Вимкніть це, щоб запросити всіх як рівноправних гостей."

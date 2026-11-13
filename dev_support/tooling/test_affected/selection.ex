@@ -548,10 +548,10 @@ defmodule Tymeslot.TestAffected.Selection do
         "no domain tag declared there"
 
       list when length(list) <= @tags_shown ->
-        Enum.map_join(list, ", ", &"--only #{&1}")
+        Enum.map_join(list, ", ", &inspect/1)
 
       list ->
-        "#{Enum.map_join(Enum.take(list, @tags_shown), ", ", &"--only #{&1}")} and #{length(list) - @tags_shown} more"
+        "#{Enum.map_join(Enum.take(list, @tags_shown), ", ", &inspect/1)} and #{length(list) - @tags_shown} more"
     end
   end
 

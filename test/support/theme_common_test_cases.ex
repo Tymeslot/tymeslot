@@ -90,7 +90,13 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
     html =
       render(
         &theme_module.render_poll_action/1,
-        Map.merge(assigns, %{poll: poll, tallies: %{}, voting_open: false, participant: nil})
+        Map.merge(assigns, %{
+          poll: poll,
+          poll_location: nil,
+          tallies: %{},
+          voting_open: false,
+          participant: nil
+        })
       )
 
     assert html =~ ~s(data-testid="poll-voting")

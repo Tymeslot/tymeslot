@@ -59,9 +59,11 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
 
   alias Tymeslot.Infrastructure.{HTTPClient, ProxyConfig, ProxyVerifier}
   alias Tymeslot.Infrastructure.ProxyIntegrationTest.Availability
+  alias Tymeslot.Test.SuiteConfig
 
   @moduletag Availability.moduletag()
   @moduletag :proxy_integration
+  @moduletag skip: SuiteConfig.unless_included(:proxy_integration)
   @moduletag :integration
   @moduletag timeout: 30_000
   @moduletag :infrastructure

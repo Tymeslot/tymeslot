@@ -35,6 +35,11 @@ defmodule TymeslotWeb.BrowserCase do
       import Tymeslot.Factory
       import TymeslotWeb.E2EHelpers
       import Wallaby.Query
+
+      # A domain sweep (`--only auth`) would otherwise run every browser test
+      # it reaches, failing them where chromedriver is not running; see
+      # `Tymeslot.Test.SuiteConfig.unless_included/1`.
+      @moduletag skip: Tymeslot.Test.SuiteConfig.unless_included(:e2e)
     end
   end
 

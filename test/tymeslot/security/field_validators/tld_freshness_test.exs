@@ -11,11 +11,13 @@ defmodule Tymeslot.Security.FieldValidators.TldFreshnessTest do
 
   use ExUnit.Case, async: true
 
-  @moduletag :security
-  @moduletag :tld_freshness
-
   alias Mix.Tasks.Tymeslot.SyncTlds
   alias Tymeslot.Security.FieldValidators.TLDList
+  alias Tymeslot.Test.SuiteConfig
+
+  @moduletag :security
+  @moduletag :tld_freshness
+  @moduletag skip: SuiteConfig.unless_included(:tld_freshness)
 
   test "every ending IANA delegates is accepted by the shipped list" do
     {_version, delegated} = SyncTlds.fetch_delegated!()

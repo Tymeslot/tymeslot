@@ -26,9 +26,6 @@ defmodule Tymeslot.Integrations.Calendar.NextcloudIntegrationTest do
       mix test test/tymeslot/integrations/calendar/nextcloud_integration_test.exs --include calendar_integration
   """
   use ExUnit.Case, async: false
-  @moduletag :calendar_integration
-  @moduletag :calendar
-  @moduletag :integrations
 
   import Tymeslot.ConfigTestHelpers
 
@@ -38,6 +35,12 @@ defmodule Tymeslot.Integrations.Calendar.NextcloudIntegrationTest do
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
   alias Tymeslot.Integrations.Calendar.Nextcloud.Provider, as: NextcloudProvider
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
+  alias Tymeslot.Test.SuiteConfig
+
+  @moduletag :calendar_integration
+  @moduletag skip: SuiteConfig.unless_included(:calendar_integration)
+  @moduletag :calendar
+  @moduletag :integrations
 
   @username "alice"
   @password "alicepassword123"

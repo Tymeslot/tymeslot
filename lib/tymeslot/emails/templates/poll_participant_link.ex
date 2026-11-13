@@ -16,6 +16,7 @@ defmodule Tymeslot.Emails.Templates.PollParticipantLink do
     Formatting,
     MjmlEmail,
     PollHost,
+    PollPlace,
     Sanitise,
     Styles,
     TemplateHelper,
@@ -38,9 +39,11 @@ defmodule Tymeslot.Emails.Templates.PollParticipantLink do
     deadline = formatted_deadline(poll, participant, locale)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      place = PollPlace.line(poll)
+
       html_body =
         TemplateHelper.compile_system_template(
-          mjml_content(poll, participant, host_name, deadline, voting_url),
+          mjml_content(poll, participant, host_name, {deadline, place}, voting_url),
           dgettext("emails_polls", "Your link to vote on %{title}", title: poll.title),
           dgettext("emails_polls", "%{host} is looking for a time for %{title}.",
             host: host_name,
@@ -62,13 +65,15 @@ defmodule Tymeslot.Emails.Templates.PollParticipantLink do
       |> MjmlEmail.put_reply_to(host_name, PollHost.email(poll))
       |> subject(dgettext("emails_polls", "Your link to vote on \"%{title}\"", title: poll.title))
       |> html_body(html_body)
-      |> text_body(build_text_body(poll, participant, host_name, deadline, voting_url))
+      |> text_body(build_text_body(poll, participant, host_name, {deadline, place}, voting_url))
     end)
   end
 
-  defp mjml_content(poll, participant, host_name, deadline, voting_url) do
+  defp mjml_content(poll, participant, host_name, {deadline, place}, voting_url) do
     """
     #{Text.centered_text(intro(poll, participant, host_name), padding: "4px 0 12px 0")}
+
+    #{PollPlace.mjml(place)}
 
     #{deadline_block(deadline)}
 
@@ -135,12 +140,12 @@ defmodule Tymeslot.Emails.Templates.PollParticipantLink do
     """
   end
 
-  defp build_text_body(poll, participant, host_name, deadline, voting_url) do
+  defp build_text_body(poll, participant, host_name, {deadline, place}, voting_url) do
     """
     #{dgettext("emails_polls", "Your link to vote on \"%{title}\"", title: poll.title)}
 
     #{intro(poll, participant, host_name)}
-    #{deadline_text(deadline)}
+    #{PollPlace.text(place)}#{deadline_text(deadline)}
     #{dgettext("emails_polls", "Vote here:")}
     #{voting_url}
 

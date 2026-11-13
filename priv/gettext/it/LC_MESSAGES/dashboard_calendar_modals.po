@@ -511,3 +511,23 @@ msgstr "Sì, invia"
 #, elixir-autogen, elixir-format
 msgid "before the event"
 msgstr "prima dell'evento"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone is an equal guest who can accept or decline. Only you can move or cancel the meeting."
+msgstr "Tutti sono ospiti alla pari e possono accettare o rifiutare. Solo tu puoi spostare o annullare la riunione."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Guests"
+msgstr "Ospiti"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Main participant"
+msgstr "Partecipante principale"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The main participant can move or cancel the meeting. Turn this off to invite everyone as an equal guest."
+msgstr "Il partecipante principale può spostare o annullare la riunione. Disattiva questa opzione per invitare tutti come ospiti alla pari."

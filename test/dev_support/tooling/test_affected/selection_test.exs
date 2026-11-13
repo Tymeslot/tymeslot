@@ -302,7 +302,7 @@ defmodule Tymeslot.TestAffected.SelectionTest do
 
       assert Enum.any?(
                plan.reasons,
-               &(&1 =~ "domains no upstream test carries" and &1 =~ "--only legal")
+               &(&1 =~ "domains no upstream test carries" and &1 =~ ":legal")
              )
     end
 

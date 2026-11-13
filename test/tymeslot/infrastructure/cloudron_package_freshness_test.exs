@@ -15,8 +15,11 @@ defmodule Tymeslot.Infrastructure.CloudronPackageFreshnessTest do
 
   use ExUnit.Case, async: true
 
+  alias Tymeslot.Test.SuiteConfig
+
   @moduletag :infrastructure
   @moduletag :cloudron_package_freshness
+  @moduletag skip: SuiteConfig.unless_included(:cloudron_package_freshness)
 
   @package_url "https://git.cloudron.io/packages/tymeslot-app"
   @package_dockerfile_url "#{@package_url}/-/raw/master/Dockerfile"
