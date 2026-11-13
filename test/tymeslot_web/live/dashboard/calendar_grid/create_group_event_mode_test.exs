@@ -157,6 +157,39 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateGroupEventModeTest do
              DateTime.new!(Date.add(event_date(), -1), ~T[12:00:00], "Etc/UTC")
   end
 
+  # A booking still awaiting its attendee's email verification holds its
+  # slot but is hidden from the host, so the refusal must not speak of a
+  # booking they cannot see.
+  test "a time held by a hidden booking is refused without naming a booking", %{
+    conn: conn,
+    user: user,
+    venue: venue
+  } do
+    start_at = DateTime.new!(event_date(), ~T[18:00:00], "Etc/UTC")
+
+    insert(:awaiting_verification_meeting,
+      organizer_user_id: user.id,
+      start_time: start_at,
+      end_time: DateTime.add(start_at, 30, :minute)
+    )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard")
+    open_group_event_form(lv)
+
+    fill_in(lv, "Introduction to X", %{
+      "max_participants" => "12",
+      "location" => "venue:#{venue.id}"
+    })
+
+    html = save(lv)
+
+    assert html =~ "This time is no longer available. Please choose another time."
+    refute html =~ "You already have a booking"
+    assert html =~ ~s(id="create-event-modal")
+    assert Repo.all(MeetingTypeSchema) == []
+    assert Repo.aggregate(MeetingSchema, :count) == 1
+  end
+
   test "keeps the dialog open and says what is missing", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard")
     open_group_event_form(lv)
