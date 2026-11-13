@@ -238,6 +238,72 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
     end
   end
 
+  describe "build_blocks/3: what the booker told the organiser" do
+    @details %{
+      attendee_message: "Bring the <Q3> figures\n& slides",
+      attendee_phone: "+44 20 7946 0000",
+      attendee_company: "Acme Ltd",
+      location: "1 High Street, Oxford",
+      location_kind: :in_person,
+      custom_fields_snapshot: [%{"id" => "q1", "type" => "text", "label" => "Topic"}],
+      custom_field_answers: %{"q1" => "Pricing <now>"},
+      approval_deadline_at: nil
+    }
+
+    for event <- [:meeting_created, :meeting_rescheduled, :meeting_requested] do
+      test "#{event} shows the notes, contact details, location and answers, escaped" do
+        texts =
+          EventTypes.to_event_type(unquote(event))
+          |> MessageBuilder.build_blocks(Map.merge(@meeting, @details), @timezone)
+          |> block_texts()
+
+        assert "*Notes*\n>Bring the &lt;Q3&gt; figures\n>&amp; slides" in texts
+        assert "*Where*\n1 High Street, Oxford" in texts
+        assert "*Phone*\n+44 20 7946 0000" in texts
+        assert "*Company*\nAcme Ltd" in texts
+        assert "*Topic*\nPricing &lt;now&gt;" in texts
+      end
+    end
+
+    test "a cancellation leaves them out" do
+      json =
+        "meeting.cancelled"
+        |> MessageBuilder.build_blocks(Map.merge(@meeting, @details), @timezone)
+        |> Jason.encode!()
+
+      refute json =~ "figures"
+      refute json =~ "Topic"
+    end
+
+    test "counts the answers past the cap in a context line" do
+      snapshot = for n <- 1..12, do: %{"id" => "q#{n}", "type" => "text", "label" => "Q#{n}"}
+
+      meeting =
+        Map.merge(@meeting, %{
+          custom_fields_snapshot: snapshot,
+          custom_field_answers: Map.new(1..12, &{"q#{&1}", "answer"})
+        })
+
+      texts =
+        "meeting.created"
+        |> MessageBuilder.build_blocks(meeting, @timezone)
+        |> block_texts()
+
+      assert "*Q10*\nanswer" in texts
+      refute "*Q11*\nanswer" in texts
+      assert "2 more answers in Tymeslot" in texts
+    end
+
+    # Every mrkdwn string in the blocks, whether a section's text, one of its
+    # fields, or a context element.
+    defp block_texts(blocks) do
+      for block <- blocks,
+          %{"type" => "mrkdwn", "text" => text} <-
+            [block["text"] | (block["fields"] || []) ++ (block["elements"] || [])],
+          do: text
+    end
+  end
+
   describe "escaping" do
     test "escapes Slack mrkdwn special characters in attendee_name" do
       meeting = %{@meeting | attendee_name: "<script>alert('xss')</script>"}

@@ -175,6 +175,69 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
     end
   end
 
+  describe "build_message/3: what the booker told the organiser" do
+    @details %{
+      attendee_message: "Bring the <Q3> figures & slides",
+      attendee_phone: "+44 20 7946 0000",
+      attendee_company: "Acme Ltd",
+      location: "1 High Street, Oxford",
+      location_kind: :in_person,
+      custom_fields_snapshot: [%{"id" => "q1", "type" => "text", "label" => "Topic"}],
+      custom_field_answers: %{"q1" => "Pricing <b>now</b>"},
+      approval_deadline_at: nil
+    }
+
+    for event <- [:meeting_created, :meeting_rescheduled, :meeting_requested] do
+      test "#{event} shows the notes, contact details, location and answers, escaped" do
+        message =
+          MessageBuilder.build_message(
+            EventTypes.to_event_type(unquote(event)),
+            Map.merge(@meeting, @details),
+            @timezone
+          )
+
+        assert message =~ "Bring the &lt;Q3&gt; figures &amp; slides"
+        assert message =~ "+44 20 7946 0000"
+        assert message =~ "Acme Ltd"
+        assert message =~ "1 High Street, Oxford"
+        assert message =~ "<b>Topic</b>: Pricing &lt;b&gt;now&lt;/b&gt;"
+      end
+    end
+
+    test "a cancellation leaves them out" do
+      message =
+        MessageBuilder.build_message(
+          EventTypes.to_event_type(:meeting_cancelled),
+          Map.merge(@meeting, @details),
+          @timezone
+        )
+
+      refute message =~ "figures"
+      refute message =~ "Topic"
+    end
+
+    test "counts the answers past the cap rather than listing them" do
+      snapshot = for n <- 1..11, do: %{"id" => "q#{n}", "type" => "text", "label" => "Q#{n}"}
+
+      meeting =
+        Map.merge(@meeting, %{
+          custom_fields_snapshot: snapshot,
+          custom_field_answers: Map.new(1..11, &{"q#{&1}", "answer"})
+        })
+
+      message =
+        MessageBuilder.build_message(
+          EventTypes.to_event_type(:meeting_created),
+          meeting,
+          @timezone
+        )
+
+      assert message =~ "<b>Q10</b>: answer"
+      refute message =~ "<b>Q11</b>"
+      assert message =~ "1 more answer in the dashboard"
+    end
+  end
+
   describe "build_test_message/0" do
     test "returns a test message" do
       msg = MessageBuilder.build_test_message()

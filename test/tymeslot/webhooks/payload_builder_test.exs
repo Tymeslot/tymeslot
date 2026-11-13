@@ -240,6 +240,49 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
     end
   end
 
+  describe "build_payload/3: what the booker and the host wrote" do
+    test "lists every question asked with its raw and rendered answer" do
+      meeting =
+        build(:meeting,
+          custom_fields_snapshot: [
+            %{"id" => "q1", "type" => "yes_no", "label" => "First call?"},
+            %{"id" => "q2", "type" => "text", "label" => "Left blank"}
+          ],
+          custom_field_answers: %{"q1" => true}
+        )
+
+      payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
+
+      assert payload.data.meeting.attendee.custom_field_answers == [
+               %{id: "q1", label: "First call?", type: "yes_no", value: true, display: "Yes"},
+               %{id: "q2", label: "Left blank", type: "text", value: nil, display: ""}
+             ]
+    end
+
+    test "states what kind of place the location is" do
+      meeting = build(:meeting, location: "1 High Street", location_kind: :in_person)
+
+      payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
+
+      assert payload.data.meeting.location_kind == "in_person"
+    end
+
+    test "carries the host's note to the guest" do
+      meeting = build(:meeting, organizer_note: "Agenda attached")
+
+      payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
+
+      assert payload.data.meeting.organizer.note == "Agenda attached"
+    end
+
+    test "reads a meeting with no location kind as null" do
+      payload =
+        PayloadBuilder.build_payload("meeting.created", build(:meeting, location_kind: nil), "1")
+
+      assert payload.data.meeting.location_kind == nil
+    end
+  end
+
   describe "build_payload/3 managed_by_host" do
     # A consumer must be able to tell a meeting only the host manages (Quick
     # Add without a main participant, a confirmed poll), whose attendee is
