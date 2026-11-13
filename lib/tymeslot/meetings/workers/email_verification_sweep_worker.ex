@@ -1,7 +1,9 @@
 defmodule Tymeslot.Meetings.Workers.EmailVerificationSweepWorker do
   @moduledoc """
   Cron backstop that releases unverified bookings, and unverified seats on
-  group meetings, whose deadline has passed.
+  group meetings, whose deadline has passed. A held group slot is never
+  expired here by its own deadline; it is voided when its last held seat
+  expires (`EmailVerification.expire_seat/1`).
 
   `EmailVerificationExpiryWorker` handles the punctual case; this catches the
   bookings whose job was lost. It runs every 5 minutes rather than every 15

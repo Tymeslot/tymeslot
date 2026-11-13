@@ -37,7 +37,9 @@ defmodule Tymeslot.Meetings.EmailVerification do
   `verify_seat/1` and `expire_seat/1`, implemented in
   `Tymeslot.Meetings.EmailVerification.Seats`. The first seat to be verified
   on a slot held for verification brings the slot to life; the last held seat
-  to expire on one voids it.
+  to expire on one voids it. A held slot's own `verification_deadline_at` only
+  hides it from the organiser: `expire/1` and `release/1` refuse a group slot,
+  and the sweep never lists one.
 
   `resend/1` sends the same verification email again while the booking is
   held. It never moves the deadline. At most three resends per booking, so at
@@ -290,6 +292,9 @@ defmodule Tymeslot.Meetings.EmailVerification do
 
   Silent by design: no email, webhook, calendar or video call, since none of
   them ever learned of the booking. Only the slot is freed.
+
+  A group slot is refused: it expires only through its seats
+  (`expire_seat/1`), whatever its own deadline says.
   """
   @spec expire(Meeting.t()) :: {:ok, Meeting.t()} | {:error, :not_awaiting_verification}
   def expire(%Meeting{} = meeting),
@@ -305,6 +310,9 @@ defmodule Tymeslot.Meetings.EmailVerification do
   @spec release(Meeting.t()) :: {:ok, Meeting.t()} | {:error, :not_awaiting_verification}
   def release(%Meeting{} = meeting),
     do: release_hold(meeting, :cancelled, "Unverified booking disowned by its attendee")
+
+  defp release_hold(%Meeting{} = meeting, _status, _message) when meeting.capacity > 1,
+    do: {:error, :not_awaiting_verification}
 
   defp release_hold(meeting, status, message) do
     changes = [status: status, cancelled_at: DateTime.truncate(Clock.utc_now(), :second)]

@@ -30,6 +30,7 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.Meetings.Workers.EmailVerificationExpiryWorker
+  alias Tymeslot.Meetings.Workers.EmailVerificationSweepWorker
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
@@ -258,6 +259,31 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
       assert reload(slot).status == :awaiting_verification
       assert reload(second).cancelled_at == nil
       assert_receive {:seat_update, _type_id}
+    end
+
+    test "a held slot past its own deadline outlives it while a seat's hold runs", ctx do
+      ago = DateTime.add(DateTime.utc_now(:second), -60)
+      slot = slot(ctx, :awaiting_verification, verification_deadline_at: ago)
+      first = held_seat(slot, "first@example.com", ago)
+      second = held_seat(slot, "second@example.com")
+      :ok = EmailVerificationJobs.schedule_expiry(slot)
+
+      assert {:ok, %{expired: 1, skipped: 0, failed: 0}} =
+               perform_job(EmailVerificationSweepWorker, %{})
+
+      assert %{cancelled_at: %DateTime{}} = reload(first)
+      assert reload(slot).status == :awaiting_verification
+
+      # Neither a stray slot-level job nor a direct release voids it.
+      assert {:discard, _reason} =
+               perform_job(EmailVerificationExpiryWorker, %{"meeting_id" => slot.id})
+
+      assert {:error, :not_awaiting_verification} = EmailVerification.expire(slot)
+      assert {:error, :not_awaiting_verification} = EmailVerification.release(slot)
+      assert reload(slot).status == :awaiting_verification
+
+      assert {:ok, _expired} = EmailVerification.expire_seat(second)
+      assert reload(slot).status == :expired
     end
 
     test "an expired seat on a live slot leaves it alone", ctx do
