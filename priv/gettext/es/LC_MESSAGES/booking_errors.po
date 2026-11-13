@@ -263,11 +263,6 @@ msgstr "Este tipo de reunión solo se puede reservar con un enlace de invitació
 
 #: lib/tymeslot_web/live/scheduling/invitation_messages.ex
 #, elixir-autogen, elixir-format
-msgid "This invitation link has already been used to book an appointment. To change it, use the link in your confirmation email."
-msgstr "Este enlace de invitación ya se ha usado para reservar una cita. Para cambiarla, usa el enlace de tu correo de confirmación."
-
-#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
-#, elixir-autogen, elixir-format
 msgid "This invitation link has expired. Please contact the host for a new one."
 msgstr "Este enlace de invitación ha caducado. Pide al anfitrión uno nuevo."
 
@@ -285,3 +280,8 @@ msgstr "Esta reserva todavía no está confirmada. Primero confírmala desde el 
 #, elixir-autogen, elixir-format
 msgid "This booking is not confirmed yet. If you do not confirm it, it will be released on its own."
 msgstr "Esta reserva todavía no está confirmada. Si no la confirmas, se liberará sola."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has already been used to book an appointment. To change it, use the link in the email we sent you."
+msgstr "Este enlace de invitación ya se ha usado para reservar una cita. Para cambiarla, usa el enlace del correo que te enviamos."
