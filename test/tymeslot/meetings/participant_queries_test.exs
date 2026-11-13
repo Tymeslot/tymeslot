@@ -374,7 +374,7 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
       assert [first.id, second.id] == [older.id, newer.id]
       assert %Tymeslot.Meetings.MeetingSchema{} = first.meeting
 
-      assert [_] = ParticipantQueries.list_expired_verifications(now, 1)
+      assert [_only] = ParticipantQueries.list_expired_verifications(now, 1)
     end
 
     test "unverified?/1 reads both columns", %{now: now} do
