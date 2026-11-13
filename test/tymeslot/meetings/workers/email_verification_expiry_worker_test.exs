@@ -4,7 +4,9 @@ defmodule Tymeslot.Meetings.Workers.EmailVerificationExpiryWorkerTest do
   stale jobs it must leave alone.
   """
 
-  use Tymeslot.DataCase, async: true
+  # async: false: the race case patches EmailVerification with :meck, which
+  # is global.
+  use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Tymeslot.Factory
@@ -64,11 +66,42 @@ defmodule Tymeslot.Meetings.Workers.EmailVerificationExpiryWorkerTest do
     assert reload(meeting).status == :awaiting_verification
   end
 
+  test "a booking verified while the job expires it is an expected discard" do
+    meeting =
+      insert(:awaiting_verification_meeting,
+        verification_deadline_at: DateTime.add(DateTime.utc_now(:second), -60)
+      )
+
+    # The other exit lands between the job's read and its expiry.
+    :meck.new(EmailVerification, [:passthrough])
+
+    :meck.expect(EmailVerification, :expire, fn held ->
+      {:ok, _released} = EmailVerification.release(held)
+      :meck.passthrough([held])
+    end)
+
+    try do
+      assert {:discard, reason} = perform_job(EmailVerificationExpiryWorker, args(meeting))
+      assert EmailVerificationExpiryWorker.expected_outcome?(reason)
+    after
+      :meck.unload(EmailVerification)
+    end
+
+    assert reload(meeting).status == :cancelled
+  end
+
   test "a deleted meeting is an expected discard" do
     assert {:discard, reason} =
              perform_job(EmailVerificationExpiryWorker, %{"meeting_id" => UUID.generate()})
 
     assert EmailVerificationExpiryWorker.expected_outcome?(reason)
+  end
+
+  test "a booking with no deadline gets no job" do
+    meeting = insert(:meeting)
+
+    assert :ok = EmailVerificationJobs.schedule_expiry(meeting)
+    refute_enqueued(worker: EmailVerificationExpiryWorker)
   end
 
   test "cancelling removes the job" do

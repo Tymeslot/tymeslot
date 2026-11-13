@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import Ecto.Query, only: [where: 2]
   import ExUnit.CaptureLog
   import Mox
   import Tymeslot.AvailabilityTestHelpers
@@ -203,6 +204,65 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
       assert {:error, :expired} = EmailVerification.verify(reload(meeting))
       assert {:error, :expired} = EmailVerification.verify(meeting)
       assert reload(meeting).status == :cancelled
+    end
+
+    test "verifying without a video room announces the booking to integrations", %{user: user} do
+      insert(:webhook, user: user, events: ["meeting.created"])
+      meeting = held(user)
+
+      assert {:ok, :verified, _verified} = EmailVerification.verify(meeting)
+
+      assert_enqueued(
+        worker: WebhookWorker,
+        args: %{"event_type" => "meeting.created", "meeting_id" => meeting.id}
+      )
+
+      assert %DateTime{} = reload(meeting).first_announced_at
+    end
+
+    test "an expiry that loses to a verification reports the booking as verified", %{
+      user: user
+    } do
+      meeting = held(user)
+      {:ok, :verified, _verified} = EmailVerification.verify(meeting)
+
+      # A copy read while still held, arriving after the deadline.
+      stale = %{meeting | verification_deadline_at: DateTime.add(DateTime.utc_now(:second), -60)}
+
+      assert {:ok, :already_verified, %{status: :confirmed}} = EmailVerification.verify(stale)
+      assert reload(meeting).status == :confirmed
+    end
+
+    test "a booking verified and later cancelled reads as expired", %{user: user} do
+      meeting = held(user)
+      {:ok, :verified, verified} = EmailVerification.verify(meeting)
+      Repo.update_all(where(MeetingSchema, id: ^meeting.id), set: [status: :cancelled])
+
+      assert {:error, :expired} = EmailVerification.verify(verified)
+    end
+
+    # The unique slot index holds unverified bookings too, so a confirmed row
+    # cannot share a held one's slot; this narrows it to confirmed rows only,
+    # inside the test's transaction, to reach the collision at verification.
+    test "a verification that collides with another booking releases the hold", %{user: user} do
+      meeting = held(user)
+
+      Repo.query!("DROP INDEX unique_confirmed_meeting_per_organizer_at_time")
+
+      insert(:meeting,
+        organizer_user_id: user.id,
+        start_time: meeting.start_time,
+        end_time: meeting.end_time
+      )
+
+      Repo.query!("""
+      CREATE UNIQUE INDEX unique_confirmed_meeting_per_organizer_at_time
+      ON meetings (organizer_user_id, start_time) WHERE status = 'confirmed'
+      """)
+
+      assert {:error, :expired} = quietly(fn -> EmailVerification.verify(meeting) end)
+      assert %{status: :expired, email_verified_at: nil} = reload(meeting)
+      refute_enqueued(worker: CalendarEventWorker)
     end
 
     test "an enqueue failure rolls back and keeps the hold", %{user: user} do

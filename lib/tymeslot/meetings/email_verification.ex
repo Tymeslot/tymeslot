@@ -118,10 +118,14 @@ defmodule Tymeslot.Meetings.EmailVerification do
   the reminders. A verification at or after the deadline releases the
   booking instead. `{:error, :not_scheduled}` means that work could not be
   queued; the booking is still held and the attendee may try again.
+
+  A booking no longer held is answered for as it is stored, not as the
+  caller's copy says: `{:ok, :already_verified, meeting}` while it stands,
+  and `{:error, :expired}` once released, which also covers a booking
+  verified and later cancelled, since its link no longer leads anywhere.
   """
   @spec verify(Meeting.t()) :: verify_result()
-  def verify(%Meeting{email_verified_at: %DateTime{}} = meeting),
-    do: {:ok, :already_verified, meeting}
+  def verify(%Meeting{email_verified_at: %DateTime{}} = meeting), do: answer_as_stored(meeting)
 
   def verify(%Meeting{} = meeting) do
     now = Clock.utc_now()
@@ -150,8 +154,8 @@ defmodule Tymeslot.Meetings.EmailVerification do
     end)
   end
 
-  # A deleted meeting type nilifies the column; an archived one is not
-  # returned. Either way the booking proceeds without approval.
+  # A deleted meeting type nilifies the column, so the booking proceeds
+  # without approval; an archived one is still read and its setting applies.
   defp meeting_type(%{meeting_type_id: type_id, organizer_user_id: user_id})
        when is_integer(type_id) and is_integer(user_id),
        do: MeetingTypes.get_meeting_type(type_id, user_id)
@@ -176,17 +180,9 @@ defmodule Tymeslot.Meetings.EmailVerification do
     {:ok, :verified, verified}
   end
 
-  # Lost a race with another exit (a second click, the expiry job): answer
-  # for the row as it now stands.
-  defp verify_outcome({:error, :not_awaiting_verification}, meeting) do
-    case MeetingQueries.get_meeting(meeting.id) do
-      {:ok, %Meeting{email_verified_at: %DateTime{}} = current} ->
-        {:ok, :already_verified, current}
-
-      _gone_or_released ->
-        {:error, :expired}
-    end
-  end
+  # Lost a race with another exit (a second click, the expiry job).
+  defp verify_outcome({:error, :not_awaiting_verification}, meeting),
+    do: answer_as_stored(meeting)
 
   defp verify_outcome({:error, :slot_taken}, meeting) do
     Logger.warning("Booking verification refused: the slot was taken",
@@ -206,9 +202,23 @@ defmodule Tymeslot.Meetings.EmailVerification do
     {:error, :not_scheduled}
   end
 
+  # The expiry can lose to a verification that passed its own deadline check
+  # an instant earlier, so the answer comes from the row, not the attempt.
   defp expire_instead(meeting) do
-    expire(meeting)
-    {:error, :expired}
+    case expire(meeting) do
+      {:ok, _expired} -> {:error, :expired}
+      {:error, :not_awaiting_verification} -> answer_as_stored(meeting)
+    end
+  end
+
+  defp answer_as_stored(meeting) do
+    with {:ok, %Meeting{email_verified_at: %DateTime{}} = current} <-
+           MeetingQueries.get_meeting(meeting.id),
+         false <- MeetingState.released_status?(current.status) do
+      {:ok, :already_verified, current}
+    else
+      _gone_released_or_never_verified -> {:error, :expired}
+    end
   end
 
   # The deadline itself counts as passed, as it does for the sweep.
@@ -309,8 +319,16 @@ defmodule Tymeslot.Meetings.EmailVerification do
   defp resend_refusal(meeting, now) do
     cond do
       not MeetingState.awaiting_verification?(meeting) -> {:error, :not_awaiting_verification}
-      deadline_reached?(meeting, now) -> expire_instead(meeting)
+      deadline_reached?(meeting, now) -> expire_for_resend(meeting)
       true -> {:error, :limit_reached}
+    end
+  end
+
+  # As `expire_instead/1`: a verification may have won in between.
+  defp expire_for_resend(meeting) do
+    case expire(meeting) do
+      {:ok, _expired} -> {:error, :expired}
+      {:error, :not_awaiting_verification} = refused -> refused
     end
   end
 end

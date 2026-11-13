@@ -20,9 +20,12 @@ defmodule Tymeslot.Meetings.EmailVerificationJobs do
 
   A failed insert is logged and otherwise ignored:
   `EmailVerificationSweepWorker` releases the booking within minutes, so the
-  failure costs punctuality, not correctness.
+  failure costs punctuality, not correctness. A booking with no deadline is
+  not gated and gets no job.
   """
   @spec schedule_expiry(%{atom() => term()}) :: :ok
+  def schedule_expiry(%{verification_deadline_at: nil}), do: :ok
+
   def schedule_expiry(%{verification_deadline_at: %DateTime{} = deadline} = meeting) do
     inserted =
       %{"meeting_id" => meeting.id}
