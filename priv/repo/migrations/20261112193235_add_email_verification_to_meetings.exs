@@ -7,7 +7,9 @@ defmodule Tymeslot.Repo.Migrations.AddEmailVerificationToMeetings do
   # Widening the status vocabulary: every row the old constraint admitted is
   # admitted by the new one, so validation cannot fail and nothing needs repair.
   # Migrations run offline (start.sh), so the brief lock blocks no traffic.
-  # The only columns removed are this migration's own, in `down/0`.
+  # The only columns removed are this migration's own, in `down/0`, and the
+  # only raw SQL besides the constraints is `down/0`'s delete of bookings
+  # that were never verified (see there).
   @known_before "'pending', 'awaiting_payment', 'awaiting_approval', 'confirmed', 'cancelled', 'completed', 'expired', 'reschedule_requested'"
   @known_after @known_before <> ", 'awaiting_verification'"
 
@@ -28,11 +30,19 @@ defmodule Tymeslot.Repo.Migrations.AddEmailVerificationToMeetings do
   end
 
   def down do
-    # A row written as awaiting_verification would violate the narrower set:
-    # expire it first, exactly as the domain's own expiry would.
-    execute(
-      "UPDATE meetings SET status = 'expired', cancelled_at = COALESCE(cancelled_at, NOW()) WHERE status = 'awaiting_verification'"
-    )
+    # Delete every booking that never left the gate verified, in any status:
+    # held, expired or disowned. Once the columns are gone the old code cannot
+    # tell them apart from bookings the organiser saw, and would show the
+    # organiser bookings that were never confirmed. This is what
+    # `EmailVerification.prune_unverified/1` does a day later in any case.
+    # Their guests and participants cascade; payments and polls nilify.
+    # Verified bookings stay. A held row with no deadline cannot be written,
+    # but would violate the narrower status set, so it goes too.
+    execute("""
+    DELETE FROM meetings
+    WHERE email_verified_at IS NULL
+      AND (verification_deadline_at IS NOT NULL OR status = 'awaiting_verification')
+    """)
 
     drop(constraint(:meetings, :meetings_status_must_be_known))
 
