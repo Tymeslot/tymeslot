@@ -38,6 +38,59 @@ html.quill-theme[data-embedded] .main-gradient.theme-grid .content-area {
 }
 
 /* ---------------------------------------------------------------------------
+   1b. Schedule step — the iframe is the only scroller
+   ---------------------------------------------------------------------------
+   Standalone, the schedule card is a viewport-locked app shell whose middle
+   scrolls (calendar.css, time-slots.css). In an embed the card flows to its
+   natural height instead, so those regions never overflow; left as scroll
+   containers with `overscroll-behavior: contain`, they still swallow a wheel
+   or touch scroll that starts over them, and the frame never moves. Release
+   every one of them so a scroll anywhere scrolls the frame. The slot list
+   body clips sideways, which would turn its released `overflow-y` back into
+   `auto`, so it is released on both axes. */
+html.quill-theme[data-embedded] .schedule-scroll,
+html.quill-theme[data-embedded] .calendar-slots-container,
+html.quill-theme[data-embedded] .slot-list,
+html.quill-theme[data-embedded] .slot-list__body {
+  overflow: visible;
+  max-height: none;
+  overscroll-behavior: auto;
+}
+
+/* A popup caps the frame at the host's viewport, and below Quill's 768px
+   container width the slot list stacks under the calendar, so Next Step
+   ends up below the fold. Keep the actions pinned to the frame's bottom
+   edge on a frosted strip of the card's own glass, which reads as the card
+   over any page background and blurs the times passing under it; the strip
+   stretches over the body's side padding so nothing shows past its ends.
+   This is the one blurred layer that moves on scroll. */
+html.quill-theme[data-embedded] .schedule-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-inline: calc(-1 * var(--space-xs));
+  padding: var(--space-xs);
+  background: var(--surface-dark-medium);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+}
+
+/* A time scrolled into view (keyboard focus, a scripted click) must land
+   above the pinned actions, not under them. Their height: a touch-sized
+   button and the strip's padding, with room to spare. */
+html.quill-theme[data-embedded]:has(.schedule-actions) {
+  scroll-padding-bottom: calc(var(--min-touch-target) + var(--space-3xl));
+}
+
+/* Every time is its own blurred layer, repainted on each scroll frame inside
+   an iframe inside a modal, which is what makes the popup lag. Over the
+   card's dark ground the blur shows nothing, so drop it. */
+html.quill-theme[data-embedded] .slot-list__slot {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ---------------------------------------------------------------------------
    2. Hide Host-Page Chrome
    --------------------------------------------------------------------------- */
 /* Hide video/gradient background — reduces load time inside the iframe. */
