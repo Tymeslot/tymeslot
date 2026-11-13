@@ -39,6 +39,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
     assigns =
       assign(assigns,
         pending: ApprovalDisplay.awaiting_approval?(assigns),
+        badge_pending: ConfirmationText.pending?(assigns),
+        badge_icon: ConfirmationText.badge_icon(assigns),
         follow_ups: ConfirmationText.follow_ups?(assigns),
         next_day_end: LocalizationHelpers.booking_next_day_end(assigns)
       )
@@ -54,9 +56,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
 
       <section class="folio-section folio-outcome" data-testid="folio-confirmation">
         <header class="folio-confirmation">
-          <span class={["folio-badge", @pending && "folio-badge--pending"]} aria-hidden="true">
-            <.icon :if={!@pending} name="hero-check" class="folio-badge__icon" />
-            <.icon :if={@pending} name="hero-clock" class="folio-badge__icon" />
+          <span class={["folio-badge", @badge_pending && "folio-badge--pending"]} aria-hidden="true">
+            <.icon name={@badge_icon} class="folio-badge__icon" />
           </span>
           <h2 class="folio-title" data-testid="confirmation-heading">{headline(assigns)}</h2>
           <p class="folio-lead" data-testid={!@follow_ups && "check-inbox"}>{message(assigns)}</p>

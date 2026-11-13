@@ -46,6 +46,24 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
   def follow_ups?(assigns), do: status(assigns) != :check_inbox
 
   @doc """
+  Whether the booking still waits on someone, its attendee's email or the
+  host's approval, so the step's badge and the line naming the address must
+  not read as a confirmation.
+  """
+  @spec pending?(map()) :: boolean()
+  def pending?(assigns), do: status(assigns) in [:check_inbox, :held]
+
+  @doc "The icon for the step's badge: an envelope, a clock, or a tick."
+  @spec badge_icon(map()) :: String.t()
+  def badge_icon(assigns) do
+    case status(assigns) do
+      :check_inbox -> "hero-envelope"
+      :held -> "hero-clock"
+      _confirmed_or_rescheduled -> "hero-check"
+    end
+  end
+
+  @doc """
   The headline while the booking waits for its attendee to confirm their
   email, in the voice of the theme with key `theme_key` where it has one.
   """

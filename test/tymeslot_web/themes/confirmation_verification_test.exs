@@ -50,6 +50,23 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
     end
   end
 
+  describe "ConfirmationText.badge_icon/1 and pending?/1" do
+    test "an envelope while the inbox is checked, a clock while held, a tick once confirmed" do
+      waiting = verification_assigns()
+      held = %{waiting | meeting_status: :awaiting_approval}
+      confirmed = %{waiting | meeting_status: :confirmed}
+
+      assert {ConfirmationText.badge_icon(waiting), ConfirmationText.pending?(waiting)} ==
+               {"hero-envelope", true}
+
+      assert {ConfirmationText.badge_icon(held), ConfirmationText.pending?(held)} ==
+               {"hero-clock", true}
+
+      assert {ConfirmationText.badge_icon(confirmed), ConfirmationText.pending?(confirmed)} ==
+               {"hero-check", false}
+    end
+  end
+
   describe "ConfirmationText.check_inbox_message/2" do
     test "states the deadline as a time in the attendee's timezone" do
       message =
@@ -112,6 +129,11 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
 
         assert find(html, "[data-testid='add-to-calendar']") == []
         assert Enum.reject(@help_copy, &(html =~ &1)) == @help_copy
+
+        # Nothing is confirmed yet: the badge takes its pending look, and
+        # the address line does not call the email a confirmation.
+        assert html =~ "badge--pending"
+        refute html =~ "Confirmation sent to"
       end
 
       # The page never holds the uid of a booking awaiting verification; were
@@ -145,6 +167,7 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
         assert find(html, "[data-testid='add-to-calendar']") != []
         assert find(html, "[data-testid='check-inbox']") == []
         assert find(html, "[data-testid='resend-verification']") == []
+        refute html =~ "badge--pending"
         # Anchors the check-inbox case's refute: the help copy it expects
         # gone is what every theme shows a confirmed booking.
         assert Enum.any?(@help_copy, &(html =~ &1))

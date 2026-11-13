@@ -40,6 +40,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
     assigns =
       assign(assigns,
         held: ApprovalDisplay.awaiting_approval?(assigns),
+        pending: ConfirmationText.pending?(assigns),
+        badge_icon: ConfirmationText.badge_icon(assigns),
         follow_ups: ConfirmationText.follow_ups?(assigns),
         location: BookingLocation.chosen_display(assigns),
         calendar_path: PathHandlers.calendar_ics_path(assigns),
@@ -52,9 +54,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
       <Components.brand theme_tokens={@theme_tokens} />
 
       <header class="paper-confirmation__header">
-        <div class={["paper-confirmation__badge", @held && "paper-confirmation__badge--pending"]}>
-          <.icon :if={!@held} name="hero-check" class="paper-confirmation__icon" />
-          <.icon :if={@held} name="hero-clock" class="paper-confirmation__icon" />
+        <div class={["paper-confirmation__badge", @pending && "paper-confirmation__badge--pending"]}>
+          <.icon name={@badge_icon} class="paper-confirmation__icon" />
         </div>
         <h1 class="paper-title" data-testid="confirmation-heading">{headline(assigns)}</h1>
         <p class="paper-confirmation__message" data-testid={!@follow_ups && "check-inbox"}>
