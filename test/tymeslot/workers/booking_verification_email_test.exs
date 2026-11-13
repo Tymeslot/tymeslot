@@ -134,4 +134,90 @@ defmodule Tymeslot.Workers.BookingVerificationEmailTest do
       assert sends == [1, 2]
     end
   end
+
+  describe "a seat verification email" do
+    defp held_seat(seat_attrs \\ %{}, slot_attrs \\ %{}) do
+      user = insert(:user)
+
+      slot =
+        insert(
+          :group_meeting,
+          Map.merge(
+            %{organizer_user: user, organizer_user_id: user.id, status: :confirmed},
+            slot_attrs
+          )
+        )
+
+      seat =
+        insert(
+          :participant,
+          Map.merge(
+            %{
+              meeting: slot,
+              meeting_id: slot.id,
+              verification_deadline_at: DateTime.add(DateTime.utc_now(:second), 20, :minute)
+            },
+            seat_attrs
+          )
+        )
+
+      {slot, seat}
+    end
+
+    defp seat_args(slot, seat, extra \\ %{}) do
+      Map.merge(
+        %{
+          "action" => "send_seat_email_verification",
+          "meeting_id" => slot.id,
+          "participant_id" => seat.id
+        },
+        extra
+      )
+    end
+
+    test "is sent once, with a token that opens the seat" do
+      {slot, seat} = held_seat()
+      job = persisted_job(EmailWorker, seat_args(slot, seat))
+
+      assert :ok = EmailWorker.perform(job)
+      assert_received {:email, email}
+      assert email.to == [{seat.name, seat.email}]
+
+      token = email.text_body |> String.split("/verify-booking/") |> List.last()
+      token = token |> String.split(~r/\s/) |> hd()
+      assert {:ok, {:seat, participant, _meeting}} = EmailVerificationToken.verify(token)
+      assert participant.id == seat.id
+
+      assert :ok = EmailWorker.perform(job)
+      refute_received {:email, _email}
+    end
+
+    test "is not sent for a verified, cancelled or lapsed seat, or a cancelled slot" do
+      now = DateTime.utc_now(:second)
+
+      cases = [
+        held_seat(%{email_verified_at: now}),
+        held_seat(%{cancelled_at: now}),
+        held_seat(%{verification_deadline_at: DateTime.add(now, -60)}),
+        held_seat(%{}, %{status: :cancelled})
+      ]
+
+      for {slot, seat} <- cases do
+        assert {:discard, _reason} = perform_job(EmailWorker, seat_args(slot, seat))
+      end
+
+      refute_received {:email, _email}
+    end
+
+    test "scheduling twice inserts one job, and a resend is its own" do
+      {slot, seat} = held_seat()
+
+      assert :ok = MeetingScheduler.schedule_seat_verification_email(slot.id, seat.id)
+      assert :ok = MeetingScheduler.schedule_seat_verification_email(slot.id, seat.id)
+      assert :ok = MeetingScheduler.schedule_seat_verification_email(slot.id, seat.id, 2)
+
+      sends = all_enqueued(worker: EmailWorker) |> Enum.map(& &1.args["send"]) |> Enum.sort()
+      assert sends == [1, 2]
+    end
+  end
 end

@@ -31,6 +31,7 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
   }
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Utils.DateTimeUtils
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -94,6 +95,26 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
       |> html_body(html_body)
       |> text_body(text_body_for(meeting, details, intro, verify_url, locale))
     end)
+  end
+
+  @doc """
+  The same email for one seat of a group meeting. The slot row carries no
+  attendee, so the seat supplies the recipient, locale, timezone and deadline.
+  """
+  @spec render_seat(Meeting.t(), ParticipantSchema.t(), String.t()) :: Swoosh.Email.t()
+  def render_seat(%Meeting{} = slot, %ParticipantSchema{} = seat, verify_url)
+      when is_binary(verify_url) do
+    render(
+      %{
+        slot
+        | attendee_name: seat.name,
+          attendee_email: seat.email,
+          attendee_timezone: seat.timezone,
+          attendee_locale: seat.locale,
+          verification_deadline_at: seat.verification_deadline_at
+      },
+      verify_url
+    )
   end
 
   defp heading, do: dgettext("emails_booking_requests", "Please confirm your booking")

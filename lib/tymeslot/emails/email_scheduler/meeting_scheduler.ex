@@ -291,6 +291,23 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
     do: schedule_seat_email(seat_action(:seat_confirmation), meeting_id, participant_id)
 
   @doc """
+  Schedules the verification email for one held seat of a group meeting.
+  `send` numbers it, so a resend is not swallowed by the first job.
+  """
+  @spec schedule_seat_verification_email(term(), term(), pos_integer()) ::
+          :ok | {:error, term()}
+  def schedule_seat_verification_email(meeting_id, participant_id, send \\ 1)
+      when is_integer(send) and send > 0 do
+    schedule_seat_email(
+      seat_action(:seat_email_verification),
+      meeting_id,
+      participant_id,
+      %{"send" => send},
+      [:send]
+    )
+  end
+
+  @doc """
   Schedules the cancellation emails for a single group-booking seat.
   `slot_freed?` says the seat was the last one and its leaving cancelled the
   meeting.

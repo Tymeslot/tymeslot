@@ -18,8 +18,10 @@ defmodule Tymeslot.Notifications.Email.BookingVerificationEmails do
   alias Tymeslot.Meetings.EmailVerificationToken
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Notifications.Email.DeliveryOutcome
   alias Tymeslot.Notifications.Email.MeetingEmails
+  alias Tymeslot.Notifications.Email.SeatJobs
   alias Tymeslot.Workers.DeliveryClaims
 
   @doc """
@@ -45,6 +47,59 @@ defmodule Tymeslot.Notifications.Email.BookingVerificationEmails do
         {:discard, "Meeting #{meeting.status}"}
       end
     end)
+  end
+
+  @doc """
+  Sends the verification link to one held seat of a group meeting.
+
+  Discards the job when the seat is cancelled, verified or past its deadline,
+  or when the slot no longer occupies its time. The token is signed here from
+  the current row and never stored in the job args.
+  """
+  @spec handle_seat_verification_email(%{String.t() => term()}, integer() | nil) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_seat_verification_email(
+        %{"meeting_id" => meeting_id, "participant_id" => participant_id} = args,
+        job_id
+      ) do
+    SeatJobs.with_seat(
+      meeting_id,
+      participant_id,
+      "seat email verification",
+      {:live_slot, :live},
+      fn slot, seat ->
+        if seat_held_and_in_time?(slot, seat) do
+          send_seat_link(slot, seat, seat_claim_key(args), job_id)
+        else
+          Logger.info("Skipping seat verification email - seat no longer held",
+            meeting_id: meeting_id,
+            participant_id: participant_id
+          )
+
+          {:discard, "Seat no longer awaiting verification"}
+        end
+      end
+    )
+  end
+
+  defp seat_held_and_in_time?(%Meeting{status: status}, %ParticipantSchema{} = seat) do
+    status in MeetingState.occupying() and ParticipantSchema.unverified?(seat) and
+      DateTime.compare(Clock.utc_now(), seat.verification_deadline_at) == :lt
+  end
+
+  defp seat_claim_key(args), do: "seat_verification:attendee:#{Map.get(args, "send", 1)}"
+
+  defp send_seat_link(slot, seat, key, job_id) do
+    result =
+      DeliveryClaims.once(job_id, key, fn ->
+        url = seat |> EmailVerificationToken.sign_seat() |> MeetingLinks.verification_url()
+
+        with {:ok, _sent} <-
+               Config.email_service_module().send_seat_email_verification(slot, seat, url),
+             do: :ok
+      end)
+
+    SeatJobs.send_result(result, "verification", meeting_id: slot.id, participant_id: seat.id)
   end
 
   defp held_and_in_time?(%Meeting{verification_deadline_at: %DateTime{} = deadline} = meeting) do
