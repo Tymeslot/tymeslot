@@ -16,6 +16,10 @@ defmodule Tymeslot.Bookings.CreateGroup do
   alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.SlotActivation
   alias Tymeslot.Bookings.Telemetry
+  alias Tymeslot.Clock
+  alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Meetings.EmailVerification
+  alias Tymeslot.Meetings.EmailVerificationJobs
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
@@ -86,31 +90,55 @@ defmodule Tymeslot.Bookings.CreateGroup do
   telemetry run once the seat has committed: none is durable, and a
   database error in a best-effort dispatcher must not cost the seat.
 
+  On a type requiring email verification (`EmailVerification.required?/1`)
+  the seat is held instead: it takes its place, so it counts against the
+  slot's capacity, but carries a verification deadline and owes only its
+  verification email and its expiry job. A slot this seat creates is held
+  too, with the seat's deadline, which only keeps it from the organiser: it
+  expires through its seats (`Tymeslot.Meetings.EmailVerification.Seats`).
+  Verifying the seat later schedules everything an ungated seat schedules
+  now. An ungated seat that finds a held slot (the host turned verification
+  off during a hold) counts at once, so it brings the slot to life.
+
   Options are the same ones `Tymeslot.Bookings.Create.execute/3` accepts;
   only `:with_video_room` matters here (see `SeatEffects.schedule_new_slot_effects/2`).
   """
   @spec create(map(), map(), keyword()) :: {:ok, map()} | {:error, Errors.classified_error()}
   def create(meeting_attrs, booking_data, opts \\ []) do
     %{meeting_type: meeting_type} = booking_data
+    deadline = verification_deadline(meeting_type, meeting_attrs.start_time)
 
     meeting_attrs
-    |> group_meeting_attrs(meeting_type)
-    |> GroupScheduling.book_seat(build_seat_request(booking_data),
-      on_booked: &schedule_seat_jobs(&1, opts),
+    |> group_meeting_attrs(meeting_type, deadline)
+    |> GroupScheduling.book_seat(build_seat_request(booking_data, deadline),
+      on_booked: &schedule_seat_jobs(&1, deadline, opts),
       join_only: FixedDates.sessions?(meeting_type)
     )
-    |> map_result(booking_data)
+    |> map_result(booking_data, deadline)
   end
 
-  defp map_result({:ok, %{meeting: meeting, on_booked_result: pending}}, _booking_data) do
+  # `nil` for an ungated seat.
+  defp verification_deadline(meeting_type, start_time) do
+    if EmailVerification.required?(meeting_type),
+      do: EmailVerification.deadline_for(Clock.utc_now(), start_time)
+  end
+
+  # The broadcast is still owed for a held seat: the slot's capacity changed.
+  defp map_result({:ok, %{meeting: meeting, on_booked_result: pending}}, _booking_data, deadline) do
     :ok = Activation.after_commit(pending)
-    Telemetry.booking_created()
+    record_booking(deadline)
     SeatEffects.broadcast_and_invalidate(meeting)
 
     {:ok, meeting}
   end
 
-  defp map_result({:error, :slot_full}, _booking_data), do: {:error, :slot_taken}
+  defp map_result(error, booking_data, _deadline), do: map_error(error, booking_data)
+
+  # A held seat is not a booking yet; it is counted when it is verified.
+  defp record_booking(nil), do: Telemetry.booking_created()
+  defp record_booking(%DateTime{}), do: :ok
+
+  defp map_error({:error, :slot_full}, _booking_data), do: {:error, :slot_taken}
 
   # `book_seat/3` exhausts its retry on a rare first-booker index collision
   # and surfaces the raw changeset. Its `organizer_user_id` error is worded
@@ -119,7 +147,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   # other lost-race case. A duplicate seat is worth naming: the booker has
   # this slot already, most likely from a second tab, and "try again" is the
   # wrong advice.
-  defp map_result({:error, %Ecto.Changeset{} = changeset}, booking_data) do
+  defp map_error({:error, %Ecto.Changeset{} = changeset}, booking_data) do
     cond do
       MeetingSchema.unique_slot_violation?(changeset) -> {:error, :slot_taken}
       duplicate_seat?(changeset) -> {:error, :already_booked}
@@ -127,7 +155,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
     end
   end
 
-  defp map_result({:error, reason}, booking_data),
+  defp map_error({:error, reason}, booking_data),
     do: {:error, Errors.classify_creation_error(reason, booking_data)}
 
   defp duplicate_seat?(%Ecto.Changeset{errors: errors}) do
@@ -148,16 +176,43 @@ defmodule Tymeslot.Bookings.CreateGroup do
   # immediately and still carry the link when it lands in time. Either way
   # the job sending them is the one the seat's `confirmation_sent_at` and
   # `organizer_notified_at` markers keep from sending twice.
-  defp schedule_seat_jobs(booking, opts) do
+  #
+  # A held seat owes only its verification email (rolled back with the seat
+  # if it cannot be queued) and its expiry job; nothing tells anyone else of
+  # it. An ungated seat on a held slot is the slot's first counting seat, so
+  # `SlotActivation` confirms the slot and gives this seat the first-seat
+  # effects.
+  defp schedule_seat_jobs(%{meeting: meeting, participant: participant}, %DateTime{}, _opts) do
+    with :ok <- EmailScheduler.schedule_seat_verification_email(meeting.id, participant.id) do
+      :ok = EmailVerificationJobs.schedule_seat_expiry(participant)
+      {:ok, []}
+    end
+  end
+
+  defp schedule_seat_jobs(
+         %{meeting: %MeetingSchema{status: :awaiting_verification} = meeting} = booking,
+         nil,
+         _opts
+       ),
+       do: SlotActivation.activate_seat_in_transaction(meeting, booking.participant)
+
+  defp schedule_seat_jobs(booking, nil, opts) do
     %{meeting: meeting, participant: participant, created_meeting?: created?} = booking
 
     SlotActivation.schedule_seat_effects(meeting, participant, created?, opts)
   end
 
-  defp group_meeting_attrs(meeting_attrs, meeting_type),
+  # Used only when this seat creates the slot.
+  defp group_meeting_attrs(meeting_attrs, meeting_type, nil),
     do: SeatEffects.slot_attrs(meeting_attrs, meeting_type.name)
 
-  defp build_seat_request(booking_data) do
+  defp group_meeting_attrs(meeting_attrs, meeting_type, %DateTime{} = deadline) do
+    meeting_attrs
+    |> SeatEffects.slot_attrs(meeting_type.name)
+    |> Map.merge(%{status: :awaiting_verification, verification_deadline_at: deadline})
+  end
+
+  defp build_seat_request(booking_data, deadline) do
     %{form_data: form_data, meeting_type: meeting_type} = booking_data
 
     %{
@@ -169,7 +224,8 @@ defmodule Tymeslot.Bookings.CreateGroup do
         message: Map.get(form_data, "message"),
         timezone: booking_data.user_timezone,
         locale: booking_data.attendee_locale,
-        custom_field_answers: booking_data.custom_field_answers
+        custom_field_answers: booking_data.custom_field_answers,
+        verification_deadline_at: deadline
       },
       guest_emails: guest_emails(booking_data),
       max_participants: meeting_type.max_participants
