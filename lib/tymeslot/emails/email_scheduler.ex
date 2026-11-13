@@ -20,6 +20,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
     participants' voting links and receipts
   - `SessionScheduler`: a planned session's participant list, at its
     registration close
+  - `SeriesScheduler`: a booking series' one confirmation, and the
+    cancellation of several of its sessions at once
   - `IntegrationScheduler` — integration health notifications and admin alerts
 
   Callers should reference this module directly — no delegation functions exist
@@ -34,6 +36,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
   alias Tymeslot.Emails.EmailScheduler.OnboardingScheduler
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
+  alias Tymeslot.Emails.EmailScheduler.SeriesScheduler
   alias Tymeslot.Emails.EmailScheduler.SessionScheduler
 
   # Meeting emails
@@ -43,6 +46,13 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_cancellation_emails(meeting_id), to: MeetingScheduler
   defdelegate schedule_reschedule_emails(meeting, original, opts \\ []), to: MeetingScheduler
   defdelegate schedule_end_change_emails(meeting), to: EndChangeScheduler
+
+  # Booking series emails
+
+  defdelegate schedule_series_confirmation_emails(series_id), to: SeriesScheduler
+
+  defdelegate schedule_series_cancellation_emails(series_id, occurrence_ids, cancelled_by),
+    to: SeriesScheduler
 
   defdelegate schedule_seat_cancellation_emails(meeting_id, participant_id, slot_freed?),
     to: MeetingScheduler

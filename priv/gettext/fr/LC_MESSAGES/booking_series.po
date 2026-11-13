@@ -1,0 +1,280 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "%{frequency} %{day} at %{time}"
+msgstr "%{frequency} %{day} à %{time}"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "%{frequency} at %{time}"
+msgstr "%{frequency} à %{time}"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every %{count} day"
+msgid_plural "Every %{count} days"
+msgstr[0] "Tous les jours"
+msgstr[1] "Tous les %{count} jours"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every %{count} month"
+msgid_plural "Every %{count} months"
+msgstr[0] "Tous les mois"
+msgstr[1] "Tous les %{count} mois"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every %{count} month on the same weekday"
+msgid_plural "Every %{count} months on the same weekday"
+msgstr[0] "Tous les mois, le même jour de la semaine"
+msgstr[1] "Tous les %{count} mois, le même jour de la semaine"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every %{count} week"
+msgid_plural "Every %{count} weeks"
+msgstr[0] "Toutes les semaines"
+msgstr[1] "Toutes les %{count} semaines"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every day"
+msgstr "Tous les jours"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every month"
+msgstr "Tous les mois"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every month on the same weekday"
+msgstr "Tous les mois, le même jour de la semaine"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every week"
+msgstr "Toutes les semaines"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Friday"
+msgstr "le vendredi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Monday"
+msgstr "le lundi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Saturday"
+msgstr "le samedi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Sunday"
+msgstr "le dimanche"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Thursday"
+msgstr "le jeudi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Tuesday"
+msgstr "le mardi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Wednesday"
+msgstr "le mercredi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Friday"
+msgstr "le premier vendredi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Monday"
+msgstr "le premier lundi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Saturday"
+msgstr "le premier samedi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Sunday"
+msgstr "le premier dimanche"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Thursday"
+msgstr "le premier jeudi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Tuesday"
+msgstr "le premier mardi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Wednesday"
+msgstr "le premier mercredi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Friday"
+msgstr "le quatrième vendredi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Monday"
+msgstr "le quatrième lundi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Saturday"
+msgstr "le quatrième samedi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Sunday"
+msgstr "le quatrième dimanche"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Thursday"
+msgstr "le quatrième jeudi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Tuesday"
+msgstr "le quatrième mardi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Wednesday"
+msgstr "le quatrième mercredi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Friday"
+msgstr "le dernier vendredi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Monday"
+msgstr "le dernier lundi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Saturday"
+msgstr "le dernier samedi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Sunday"
+msgstr "le dernier dimanche"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Thursday"
+msgstr "le dernier jeudi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Tuesday"
+msgstr "le dernier mardi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Wednesday"
+msgstr "le dernier mercredi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Friday"
+msgstr "le deuxième vendredi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Monday"
+msgstr "le deuxième lundi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Saturday"
+msgstr "le deuxième samedi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Sunday"
+msgstr "le deuxième dimanche"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Thursday"
+msgstr "le deuxième jeudi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Tuesday"
+msgstr "le deuxième mardi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Wednesday"
+msgstr "le deuxième mercredi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Friday"
+msgstr "le troisième vendredi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Monday"
+msgstr "le troisième lundi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Saturday"
+msgstr "le troisième samedi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Sunday"
+msgstr "le troisième dimanche"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Thursday"
+msgstr "le troisième jeudi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Tuesday"
+msgstr "le troisième mardi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Wednesday"
+msgstr "le troisième mercredi"

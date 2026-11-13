@@ -1,0 +1,160 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{attendee} booked %{count} session"
+msgid_plural "%{attendee} booked %{count} sessions"
+msgstr[0] "%{attendee} a réservé %{count} séance"
+msgstr[1] "%{attendee} a réservé %{count} séances"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "%{attendee} cancelled %{count} session"
+msgid_plural "%{attendee} cancelled %{count} sessions"
+msgstr[0] "%{attendee} a annulé %{count} séance"
+msgstr[1] "%{attendee} a annulé %{count} séances"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "%{attendee} cancelled the sessions below."
+msgstr "%{attendee} a annulé les séances ci-dessous."
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session booked"
+msgid_plural "%{count} sessions booked"
+msgstr[0] "%{count} séance réservée"
+msgstr[1] "%{count} séances réservées"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled"
+msgid_plural "%{count} sessions cancelled"
+msgstr[0] "%{count} séance annulée"
+msgstr[1] "%{count} séances annulées"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{meeting_type} with %{name}"
+msgstr "%{meeting_type} avec %{name}"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Book another time"
+msgstr "Réserver un autre créneau"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Annuler"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Annulé"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirmed"
+msgstr "Confirmé"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, I'm sorry, but I've had to cancel the sessions below."
+msgstr "Bonjour %{name}, je regrette, mais j’ai dû annuler les séances ci-dessous."
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, the sessions below are cancelled, as you asked. There is nothing more you need to do."
+msgstr "Bonjour %{name}, comme vous l’avez demandé, les séances ci-dessous sont annulées. Vous n’avez rien d’autre à faire."
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, your sessions are booked. Each one has its own links below, in case one of them needs to move."
+msgstr "Bonjour %{name}, vos séances sont réservées. Chacune a ses propres liens ci-dessous, au cas où l’une d’elles devrait être déplacée."
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "If you added these sessions to your calendar, the attached file removes them there."
+msgstr "Si vous avez ajouté ces séances à votre calendrier, le fichier joint les en retire."
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Join the video call"
+msgstr "Rejoindre l’appel vidéo"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Manage all sessions"
+msgstr "Gérer toutes les séances"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "New series"
+msgstr "Nouvelle série"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Open in dashboard"
+msgstr "Ouvrir dans le tableau de bord"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule"
+msgstr "Reporter"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Session %{position} of %{count}"
+msgstr "Séance %{position} sur %{count}"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "The attached calendar file adds every session to your calendar."
+msgstr "Le fichier de calendrier joint ajoute toutes les séances à votre calendrier."
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "The join link will be in your reminder."
+msgstr "Le lien de connexion figurera dans votre rappel."
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Total paid: %{amount}"
+msgstr "Total payé : %{amount}"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Would you like to book another time?"
+msgstr "Souhaitez-vous réserver un autre créneau ?"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "You cancelled %{count} session with %{attendee}"
+msgid_plural "You cancelled %{count} sessions with %{attendee}"
+msgstr[0] "Vous avez annulé %{count} séance avec %{attendee}"
+msgstr[1] "Vous avez annulé %{count} séances avec %{attendee}"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "You cancelled the sessions below. %{attendee} has been told."
+msgstr "Vous avez annulé les séances ci-dessous. Nous en avons informé %{attendee}."
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{count} session with %{host} is booked"
+msgid_plural "Your %{count} sessions with %{host} are booked"
+msgstr[0] "Votre séance avec %{host} est réservée"
+msgstr[1] "Vos %{count} séances avec %{host} sont réservées"

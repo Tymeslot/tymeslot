@@ -53,14 +53,14 @@ defmodule CredoChecks.GettextDomainBoundary do
     category: :design,
     param_defaults: [
       domains: ~w(
-        booking booking_confirmation booking_manage booking_polls booking_sessions
+        booking booking_confirmation booking_manage booking_polls booking_series booking_sessions
         booking_voice embed errors
         meeting_types
         common
         errors_input
         datetime booking_errors booking_payments
         emails emails_account emails_booking emails_booking_requests
-        emails_booking_changes
+        emails_booking_changes emails_booking_series
         emails_integrations emails_payments emails_polls
         auth auth_invitation auth_oauth account onboarding onboarding_wizard
         dashboard_common

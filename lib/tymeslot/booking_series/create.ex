@@ -224,9 +224,12 @@ defmodule Tymeslot.BookingSeries.Create do
           {one, [owed | pending]}
         end)
 
-      # The confirmation commits with the series. The placeholder cannot fail
-      # yet; the real one rolls the series back when it does.
-      {:ok, _scheduled} = Notifications.schedule_series_confirmation(series)
+      # The confirmation commits with the series: a series nobody would be
+      # told about is rolled back and booked again whole.
+      case Notifications.schedule_series_confirmation(series) do
+        {:ok, _job} -> :ok
+        {:error, reason} -> Repo.rollback(reason)
+      end
 
       {series, booked, pending |> Enum.reverse() |> Enum.concat()}
     end)

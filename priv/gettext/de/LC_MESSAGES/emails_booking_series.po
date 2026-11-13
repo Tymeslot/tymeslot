@@ -1,0 +1,160 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{attendee} booked %{count} session"
+msgid_plural "%{attendee} booked %{count} sessions"
+msgstr[0] "%{attendee} hat %{count} Termin gebucht"
+msgstr[1] "%{attendee} hat %{count} Termine gebucht"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "%{attendee} cancelled %{count} session"
+msgid_plural "%{attendee} cancelled %{count} sessions"
+msgstr[0] "%{attendee} hat %{count} Termin abgesagt"
+msgstr[1] "%{attendee} hat %{count} Termine abgesagt"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "%{attendee} cancelled the sessions below."
+msgstr "%{attendee} hat die folgenden Termine abgesagt."
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session booked"
+msgid_plural "%{count} sessions booked"
+msgstr[0] "%{count} Termin gebucht"
+msgstr[1] "%{count} Termine gebucht"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled"
+msgid_plural "%{count} sessions cancelled"
+msgstr[0] "%{count} Termin abgesagt"
+msgstr[1] "%{count} Termine abgesagt"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{meeting_type} with %{name}"
+msgstr "%{meeting_type} mit %{name}"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Book another time"
+msgstr "Anderen Termin buchen"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Absagen"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Abgesagt"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirmed"
+msgstr "Bestätigt"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, I'm sorry, but I've had to cancel the sessions below."
+msgstr "Hallo %{name}, es tut mir leid, aber ich musste die folgenden Termine absagen."
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, the sessions below are cancelled, as you asked. There is nothing more you need to do."
+msgstr "Hallo %{name}, wie gewünscht sind die folgenden Termine abgesagt. Sie müssen nichts weiter tun."
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, your sessions are booked. Each one has its own links below, in case one of them needs to move."
+msgstr "Hallo %{name}, Ihre Termine sind gebucht. Unten hat jeder Termin eigene Links, falls einer davon verschoben werden muss."
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "If you added these sessions to your calendar, the attached file removes them there."
+msgstr "Falls Sie diese Termine in Ihren Kalender eingetragen haben, entfernt die angehängte Datei sie dort."
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Join the video call"
+msgstr "Videoanruf beitreten"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Manage all sessions"
+msgstr "Alle Termine verwalten"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "New series"
+msgstr "Neue Serie"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Open in dashboard"
+msgstr "Im Dashboard öffnen"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule"
+msgstr "Verschieben"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Session %{position} of %{count}"
+msgstr "Termin %{position} von %{count}"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "The attached calendar file adds every session to your calendar."
+msgstr "Die angehängte Kalenderdatei trägt alle Termine in Ihren Kalender ein."
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "The join link will be in your reminder."
+msgstr "Den Beitrittslink erhalten Sie mit Ihrer Erinnerung."
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Total paid: %{amount}"
+msgstr "Insgesamt bezahlt: %{amount}"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Would you like to book another time?"
+msgstr "Möchten Sie einen anderen Termin buchen?"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "You cancelled %{count} session with %{attendee}"
+msgid_plural "You cancelled %{count} sessions with %{attendee}"
+msgstr[0] "Sie haben %{count} Termin mit %{attendee} abgesagt"
+msgstr[1] "Sie haben %{count} Termine mit %{attendee} abgesagt"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "You cancelled the sessions below. %{attendee} has been told."
+msgstr "Sie haben die folgenden Termine abgesagt. %{attendee} wurde darüber informiert."
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{count} session with %{host} is booked"
+msgid_plural "Your %{count} sessions with %{host} are booked"
+msgstr[0] "Ihr Termin mit %{host} ist gebucht"
+msgstr[1] "Ihre %{count} Termine mit %{host} sind gebucht"

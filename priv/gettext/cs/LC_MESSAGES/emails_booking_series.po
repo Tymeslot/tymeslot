@@ -1,0 +1,166 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{attendee} booked %{count} session"
+msgid_plural "%{attendee} booked %{count} sessions"
+msgstr[0] "Účastník %{attendee} si zarezervoval %{count} schůzku"
+msgstr[1] "Účastník %{attendee} si zarezervoval %{count} schůzky"
+msgstr[2] "Účastník %{attendee} si zarezervoval %{count} schůzek"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "%{attendee} cancelled %{count} session"
+msgid_plural "%{attendee} cancelled %{count} sessions"
+msgstr[0] "Účastník %{attendee} zrušil %{count} schůzku"
+msgstr[1] "Účastník %{attendee} zrušil %{count} schůzky"
+msgstr[2] "Účastník %{attendee} zrušil %{count} schůzek"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "%{attendee} cancelled the sessions below."
+msgstr "Účastník %{attendee} zrušil níže uvedené schůzky."
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session booked"
+msgid_plural "%{count} sessions booked"
+msgstr[0] "%{count} schůzka byla zarezervována"
+msgstr[1] "%{count} schůzky byly zarezervovány"
+msgstr[2] "%{count} schůzek bylo zarezervováno"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled"
+msgid_plural "%{count} sessions cancelled"
+msgstr[0] "%{count} schůzka byla zrušena"
+msgstr[1] "%{count} schůzky byly zrušeny"
+msgstr[2] "%{count} schůzek bylo zrušeno"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{meeting_type} with %{name}"
+msgstr "%{meeting_type} – %{name}"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Book another time"
+msgstr "Rezervovat jiný termín"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Zrušit schůzku"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Zrušeno"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirmed"
+msgstr "Potvrzeno"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, I'm sorry, but I've had to cancel the sessions below."
+msgstr "Dobrý den, %{name}, je mi líto, ale níže uvedené schůzky musím zrušit."
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, the sessions below are cancelled, as you asked. There is nothing more you need to do."
+msgstr "Dobrý den, %{name}, podle vašeho přání byly níže uvedené schůzky zrušeny. Nic dalšího už dělat nemusíte."
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, your sessions are booked. Each one has its own links below, in case one of them needs to move."
+msgstr "Dobrý den, %{name}, vaše schůzky jsou zarezervované. U každé z nich najdete níže vlastní odkazy pro případ, že by bylo potřeba některou přesunout."
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "If you added these sessions to your calendar, the attached file removes them there."
+msgstr "Pokud máte tyto schůzky v kalendáři, přiložený soubor je z něj odstraní."
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Join the video call"
+msgstr "Připojit se k videohovoru"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Manage all sessions"
+msgstr "Spravovat všechny schůzky"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "New series"
+msgstr "Nová série"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Open in dashboard"
+msgstr "Otevřít na nástěnce"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule"
+msgstr "Přesunout schůzku"
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "Session %{position} of %{count}"
+msgstr "Schůzka %{position} z %{count}"
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "The attached calendar file adds every session to your calendar."
+msgstr "Přiložený soubor přidá všechny schůzky do vašeho kalendáře."
+
+#: lib/tymeslot/emails/shared/series_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "The join link will be in your reminder."
+msgstr "Odkaz pro připojení najdete v připomínce."
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Total paid: %{amount}"
+msgstr "Celkem zaplaceno: %{amount}"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Would you like to book another time?"
+msgstr "Chcete si rezervovat jiný termín?"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "You cancelled %{count} session with %{attendee}"
+msgid_plural "You cancelled %{count} sessions with %{attendee}"
+msgstr[0] "Zrušena %{count} schůzka s účastníkem %{attendee}"
+msgstr[1] "Zrušeny %{count} schůzky s účastníkem %{attendee}"
+msgstr[2] "Zrušeno %{count} schůzek s účastníkem %{attendee}"
+
+#: lib/tymeslot/emails/templates/series_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "You cancelled the sessions below. %{attendee} has been told."
+msgstr "Níže uvedené schůzky byly zrušeny. Účastník %{attendee} o tom už ví."
+
+#: lib/tymeslot/emails/templates/series_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{count} session with %{host} is booked"
+msgid_plural "Your %{count} sessions with %{host} are booked"
+msgstr[0] "Máte zarezervovanou %{count} schůzku s hostitelem %{host}"
+msgstr[1] "Máte zarezervované %{count} schůzky s hostitelem %{host}"
+msgstr[2] "Máte zarezervováno %{count} schůzek s hostitelem %{host}"

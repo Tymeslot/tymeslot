@@ -32,6 +32,10 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               appointment_details()
             ) ::
               {:ok, any()} | {:error, any()}
+  @callback send_series_confirmation(:attendee | :organizer, String.t(), map()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_series_cancellation(:attendee | :organizer, String.t(), map()) ::
+              {:ok, any()} | {:error, any()}
   @callback send_registration_closed(
               String.t(),
               appointment_details(),

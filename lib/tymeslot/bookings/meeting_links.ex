@@ -18,7 +18,8 @@ defmodule Tymeslot.Bookings.MeetingLinks do
   changes their username or the deployment moves domain, so nothing that
   shows a link to anyone reads it.
 
-  Also here: the links a booking's other emails carry, the guest's RSVP
+  Also here: the booker's link to a whole series (`series_url/2`), the
+  links a booking's other emails carry, the guest's RSVP
   links (`guest_rsvp_urls/1`) and the host's request-review links
   (`approval_urls/1`).
 
@@ -132,6 +133,25 @@ defmodule Tymeslot.Bookings.MeetingLinks do
   defp view_url(_unsaved), do: meetings_list_url()
 
   defp meetings_list_url, do: UrlBuilder.build_url("/dashboard/meetings")
+
+  @doc """
+  The booker's link to the page managing every session of `series`, on the
+  organiser's public pages: `/:username/series/:series_uid`, built from the
+  username in `organizer_profile` (the organiser's current profile, `nil`
+  when they have none) and the application's base URL now, as the meeting
+  links are. The series uid is the bearer of the page.
+
+  `nil` for an organiser without a username: there is no uid-only form of
+  the series page to fall back on, and an email leaves a link without a URL
+  out.
+  """
+  @spec series_url(%{:uid => String.t(), optional(atom()) => term()}, map() | nil) ::
+          String.t() | nil
+  def series_url(%{uid: uid}, %{username: username})
+      when is_binary(uid) and is_binary(username) and username != "",
+      do: UrlBuilder.base_url() <> "/#{username}/series/#{uid}"
+
+  def series_url(_series, _organizer_profile), do: nil
 
   @doc """
   Where `page` for the booking with `uid` lives now, as a path.

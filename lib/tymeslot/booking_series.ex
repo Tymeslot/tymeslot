@@ -6,11 +6,13 @@ defmodule Tymeslot.BookingSeries do
   `preview/3` answers, before anything is written, which of the sessions a
   booker asks for can be booked (`Tymeslot.BookingSeries.Check`). The series
   is all-or-nothing: it is booked only when every occurrence is available.
-  `book/3` books it (`Tymeslot.BookingSeries.Create`).
+  `book/3` books it (`Tymeslot.BookingSeries.Create`). `describe_rule/3`
+  words a series' rhythm for anyone who shows it
+  (`Tymeslot.BookingSeries.Rule`).
   """
 
   alias Tymeslot.Availability.Schedules
-  alias Tymeslot.BookingSeries.{Check, Create, Occurrence, Plan}
+  alias Tymeslot.BookingSeries.{Check, Create, Occurrence, Plan, Rule, SeriesSchema}
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   @doc """
@@ -47,6 +49,16 @@ defmodule Tymeslot.BookingSeries do
   """
   @spec book(map(), map(), keyword()) :: Create.result()
   defdelegate book(meeting_params, form_data, opts \\ []), to: Create, as: :execute
+
+  @doc """
+  How the rhythm of a series or a series type reads in `locale`: "Every
+  week on Thursday at 17:00" with the `:first_start` option (in the zone it
+  is to be read in), "Every week" without. Nil for a flexible series or a
+  type that offers no recurring series. See `Tymeslot.BookingSeries.Rule`.
+  """
+  @spec describe_rule(SeriesSchema.t() | MeetingTypeSchema.t(), String.t(), keyword()) ::
+          String.t() | nil
+  defdelegate describe_rule(series_or_type, locale, opts \\ []), to: Rule, as: :describe
 
   defp plan(meeting_type, %DateTime{} = first_start, opts),
     do: Plan.recurring(meeting_type, first_start, Keyword.get(opts, :count), opts)

@@ -20,6 +20,21 @@ defmodule Tymeslot.BookingSeries.SeriesQueries do
     |> Repo.insert()
   end
 
+  @doc """
+  Fetches a series by id, unscoped: for system callers (the series' email
+  jobs), never for a request.
+  """
+  @spec get(binary()) :: {:ok, Series.t()} | {:error, :not_found}
+  def get(id) do
+    with {:ok, id} <- UUID.cast(id),
+         %Series{} = series <- Repo.get(Series, id) do
+      {:ok, series}
+    else
+      :error -> {:error, :not_found}
+      nil -> {:error, :not_found}
+    end
+  end
+
   @doc "Fetches a series by its bearer `uid`."
   @spec get_by_uid(String.t()) :: {:ok, Series.t()} | {:error, :not_found}
   def get_by_uid(uid) when is_binary(uid) do
