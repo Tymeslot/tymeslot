@@ -46,6 +46,7 @@ defmodule Tymeslot.Meetings.EmailVerification do
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Invitations
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.EmailVerificationJobs
   alias Tymeslot.Meetings.MeetingQueries
@@ -123,10 +124,11 @@ defmodule Tymeslot.Meetings.EmailVerification do
   an ungated booking would have started starts now, in one transaction: the
   calendar event, the video room, the confirmation or request emails and
   the reminders. A verification at or after the deadline releases the
-  booking instead, as does one whose meeting type has since been deleted:
-  without the type nobody can say whether the host must approve it, so it is
-  released silently (`{:error, :expired}`) rather than confirmed. An archived
-  type is still read and its settings apply. `{:error, :not_scheduled}` means
+  booking instead, as does one no longer wanted, released silently
+  (`{:error, :expired}`) rather than confirmed: one whose meeting type has
+  since been deleted, since without the type nobody can say whether the host
+  must approve it, and one made through an invitation link the host has since
+  revoked. An archived type is still read and its settings apply. `{:error, :not_scheduled}` means
   that work could not be queued; the booking is still held and the attendee
   may try again.
 
@@ -159,13 +161,20 @@ defmodule Tymeslot.Meetings.EmailVerification do
   # settings decide how. A deleted type nilifies the column, and without its
   # settings nobody can say whether the host must approve, so the hold is
   # released rather than confirmed past an approval it may have needed. An
-  # archived type is still read and its settings apply.
+  # archived type is still read and its settings apply. The host never sees a
+  # held booking, so may revoke the invitation link it came through
+  # meanwhile; the revocation stands and the hold is released.
   defp still_wanted(meeting) do
-    case meeting_type(meeting) do
-      %MeetingType{} = meeting_type -> {:ok, meeting_type}
-      nil -> :no_longer_wanted
+    with %MeetingType{} = meeting_type <- meeting_type(meeting),
+         false <- invitation_revoked?(meeting) do
+      {:ok, meeting_type}
+    else
+      _type_gone_or_invitation_revoked -> :no_longer_wanted
     end
   end
+
+  defp invitation_revoked?(%{invitation_id: nil}), do: false
+  defp invitation_revoked?(%{invitation_id: id}), do: Invitations.revoked?(id)
 
   defp complete(meeting, meeting_type, now) do
     changes =

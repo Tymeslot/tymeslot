@@ -25,6 +25,7 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Create
+  alias Tymeslot.Invitations
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.EmailVerificationJobs
   alias Tymeslot.Meetings.GuestQueries
@@ -232,6 +233,32 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
       meeting = held(user, meeting_type_id: type.id)
 
       assert {:ok, :verified, %{status: :awaiting_approval}} = EmailVerification.verify(meeting)
+    end
+
+    # The organiser never saw the held booking, so they may revoke the link it
+    # came through; the booking must not then appear on their calendar.
+    test "a booking through an invitation revoked during the hold is released", %{user: user} do
+      type = insert(:meeting_type, user: user, invitation_only: true)
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+      meeting = held(user, meeting_type_id: type.id, invitation_id: invitation.id)
+      :ok = EmailVerificationJobs.schedule_expiry(meeting)
+      {:ok, _revoked} = Invitations.revoke(user.id, invitation.id)
+
+      assert {:error, :expired} = EmailVerification.verify(meeting)
+
+      assert %{status: :expired, email_verified_at: nil} = reload(meeting)
+      refute_enqueued(worker: EmailVerificationExpiryWorker)
+      refute_enqueued(worker: CalendarEventWorker)
+      refute_enqueued(worker: EmailWorker)
+      refute_enqueued(worker: WebhookWorker)
+    end
+
+    test "a booking through an invitation still open is confirmed", %{user: user} do
+      type = insert(:meeting_type, user: user, invitation_only: true)
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+      meeting = held(user, meeting_type_id: type.id, invitation_id: invitation.id)
+
+      assert {:ok, :verified, %{status: :confirmed}} = EmailVerification.verify(meeting)
     end
 
     test "a booking released before verification stays released", %{user: user} do

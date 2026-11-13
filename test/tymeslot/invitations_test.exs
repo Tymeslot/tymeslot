@@ -235,6 +235,26 @@ defmodule Tymeslot.InvitationsTest do
     end
   end
 
+  describe "revoked?/1" do
+    test "is true once revoked and false again once reopened", %{user: user, type: type} do
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+      refute Invitations.revoked?(invitation.id)
+
+      {:ok, _revoked} = Invitations.revoke(user.id, invitation.id)
+      assert Invitations.revoked?(invitation.id)
+
+      {:ok, _reopened} = Invitations.reopen(user.id, invitation.id)
+      refute Invitations.revoked?(invitation.id)
+    end
+
+    test "an invitation that no longer exists is not revoked", %{user: user, type: type} do
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+      Repo.delete!(invitation)
+
+      refute Invitations.revoked?(invitation.id)
+    end
+  end
+
   describe "reopen/2" do
     test "frees a used invitation whose meeting was cancelled", %{user: user, type: type} do
       {:ok, invitation} = Invitations.create(user.id, type, %{release_on_cancel: false})

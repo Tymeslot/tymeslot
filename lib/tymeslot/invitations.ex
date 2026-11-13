@@ -117,6 +117,19 @@ defmodule Tymeslot.Invitations do
   end
 
   @doc """
+  Whether the invitation has been revoked (and not reopened since). An
+  invitation that no longer exists reads as not revoked.
+
+  For a booking held while its attendee confirms their email: the host never
+  sees it, so may revoke the link it came through meanwhile.
+
+  Intentionally not scoped to a host: the system asks with only the id.
+  """
+  @spec revoked?(pos_integer()) :: boolean()
+  def revoked?(id),
+    do: match?(%InvitationSchema{revoked_at: %DateTime{}}, InvitationQueries.get(id))
+
+  @doc """
   Makes a used invitation (whose meeting no longer holds a slot) or a revoked
   one bookable again. Meetings booked before the reopen stop counting.
 
