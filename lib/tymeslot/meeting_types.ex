@@ -41,7 +41,8 @@ defmodule Tymeslot.MeetingTypes do
   location label in their language, anything the host wrote as written; see
   `Tymeslot.MeetingTypes.LocationSelection.display_location/2`.
   """
-  @spec display_location(String.t() | nil, LocationOption.kind() | nil) :: String.t() | nil
+  @spec display_location(String.t(), LocationOption.kind() | nil) :: String.t()
+  @spec display_location(nil, LocationOption.kind() | nil) :: nil
   defdelegate display_location(location, kind), to: LocationSelection
 
   @doc """

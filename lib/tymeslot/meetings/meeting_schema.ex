@@ -326,10 +326,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:custom_fields_snapshot, {:array, :map}, default: [])
     field(:custom_field_answers, :map, default: %{})
 
-    # Attendees' copies of the snapshot strings above, one per locale booked
-    # in and translated, `%{locale => %{"meeting_type" => ..., ...}}` (nil
-    # when none); a group slot holds one per participant language. The plain
-    # columns keep the organiser's original
+    # Attendees' copies of the snapshot strings above, per locale, nil when
+    # none; the plain columns keep the organiser's original
     # (`Tymeslot.ContentTranslations.AttendeeTexts`).
     field(:attendee_texts, :map)
 

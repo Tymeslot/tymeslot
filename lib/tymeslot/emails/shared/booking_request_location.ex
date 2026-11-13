@@ -72,7 +72,8 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocation do
   language, a venue or the host's own text as written
   (`Tymeslot.MeetingTypes.display_location/2`).
   """
-  @spec display(String.t() | nil, atom() | nil) :: String.t() | nil
+  @spec display(String.t(), atom() | nil) :: String.t()
+  @spec display(nil, atom() | nil) :: nil
   def display(location, :in_person_to_arrange),
     do: MeetingTypes.display_location(location, :in_person)
 

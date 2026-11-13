@@ -326,7 +326,8 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   A default label is product wording rather than the host's text, so every
   reader sees it in their own language, translated or not.
   """
-  @spec display_location(String.t() | nil, LocationOption.kind() | nil) :: String.t() | nil
+  @spec display_location(String.t(), LocationOption.kind() | nil) :: String.t()
+  @spec display_location(nil, LocationOption.kind() | nil) :: nil
   def display_location(location, kind) when is_binary(location) do
     with {:ok, english} <- Map.fetch(@default_labels, kind),
          {:ok, rest} <- after_default(location, english) do
