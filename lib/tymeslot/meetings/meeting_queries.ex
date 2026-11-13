@@ -276,6 +276,41 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Counts one more verification email for a held booking, atomically, and
+  returns the meeting with its new count.
+
+  The guard is in the `WHERE` clause, so two concurrent resends cannot both
+  pass the cap: the booking must still be `:awaiting_verification`, its
+  deadline still ahead of `now`, and fewer than `max_sends` emails counted. A
+  `NULL` count is the one email sent with the booking. `{:error, :refused}`
+  when any guard fails; the caller reads the row to say which.
+  """
+  @spec count_verification_email(Ecto.UUID.t(), DateTime.t(), pos_integer()) ::
+          {:ok, Meeting.t()} | {:error, :refused}
+  def count_verification_email(meeting_id, %DateTime{} = now, max_sends)
+      when is_integer(max_sends) do
+    query =
+      from(m in Meeting,
+        where:
+          m.id == ^meeting_id and m.status == :awaiting_verification and
+            m.verification_deadline_at > ^now and
+            coalesce(m.verification_emails_sent, 1) < ^max_sends,
+        select: m,
+        update: [
+          set: [
+            verification_emails_sent: fragment("COALESCE(?, 1) + 1", m.verification_emails_sent),
+            updated_at: ^DateTime.truncate(now, :second)
+          ]
+        ]
+      )
+
+    case Repo.update_all(query, []) do
+      {1, [meeting]} -> {:ok, meeting}
+      {0, _none} -> {:error, :refused}
+    end
+  end
+
+  @doc """
   Moves a meeting to `:cancelled`, atomically, unless it is already over.
 
   Like `transition_from_awaiting_approval/2`, the guard is in the `WHERE`

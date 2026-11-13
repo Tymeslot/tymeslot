@@ -83,6 +83,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           approval_requested_at: DateTime.t() | nil,
           approval_deadline_at: DateTime.t() | nil,
           verification_deadline_at: DateTime.t() | nil,
+          verification_emails_sent: pos_integer() | nil,
           email_verified_at: DateTime.t() | nil,
           approval_resolved_at: DateTime.t() | nil,
           approval_declined_at: DateTime.t() | nil,
@@ -287,6 +288,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # Email verification clock; see `Tymeslot.Meetings.EmailVerification`.
     field(:verification_deadline_at, :utc_datetime)
     field(:email_verified_at, :utc_datetime)
+    field(:verification_emails_sent, :integer)
     # The host's optional note when declining. Absent whenever they gave no
     # reason, so it marks nothing on its own.
     field(:decline_reason, :string)
