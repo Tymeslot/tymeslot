@@ -912,34 +912,34 @@ msgstr "Rezervovat mohou jen lidé s odkazem na pozvání"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Ask invitees to confirm their email"
-msgstr ""
+msgstr "Žádat pozvané o potvrzení e-mailu"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for 30 minutes, and you are not notified."
-msgstr ""
+msgstr "Rezervace platí, teprve až pozvaná osoba klikne na odkaz, který jí pošleme e-mailem. Do té doby je termín 30 minut rezervován a vám nepřijde žádné oznámení."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Email confirmation"
-msgstr ""
+msgstr "Potvrzení e-mailu"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off email verification to enable group bookings."
-msgstr ""
+msgstr "Vypněte potvrzení e-mailu, chcete-li povolit skupinové rezervace."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off email verification to require payment."
-msgstr ""
+msgstr "Vypněte potvrzení e-mailu, chcete-li vyžadovat platbu."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off group bookings to ask invitees to confirm their email."
-msgstr ""
+msgstr "Vypněte skupinové rezervace, chcete-li žádat pozvané o potvrzení e-mailu."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
-msgstr ""
+msgstr "Vypněte platby, chcete-li žádat pozvané o potvrzení e-mailu. Platba už sama potvrzuje, kdo jsou."

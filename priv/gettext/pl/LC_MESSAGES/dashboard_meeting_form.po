@@ -909,34 +909,34 @@ msgstr "Rezerwować mogą tylko osoby z linkiem z zaproszeniem"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Ask invitees to confirm their email"
-msgstr ""
+msgstr "Proś zaproszonych o potwierdzenie adresu e-mail"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for 30 minutes, and you are not notified."
-msgstr ""
+msgstr "Rezerwacja liczy się dopiero wtedy, gdy zaproszona osoba kliknie link, który wyślemy jej e-mailem. Do tego czasu termin jest zablokowany przez 30 minut, a ty nie dostajesz powiadomienia."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Email confirmation"
-msgstr ""
+msgstr "Potwierdzenie adresu e-mail"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off email verification to enable group bookings."
-msgstr ""
+msgstr "Wyłącz potwierdzanie adresu e-mail, aby włączyć rezerwacje grupowe."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off email verification to require payment."
-msgstr ""
+msgstr "Wyłącz potwierdzanie adresu e-mail, aby wymagać płatności."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off group bookings to ask invitees to confirm their email."
-msgstr ""
+msgstr "Wyłącz rezerwacje grupowe, aby prosić zaproszonych o potwierdzenie adresu e-mail."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
-msgstr ""
+msgstr "Wyłącz płatności, aby prosić zaproszonych o potwierdzenie adresu e-mail. Płatność i tak potwierdza, kim są."

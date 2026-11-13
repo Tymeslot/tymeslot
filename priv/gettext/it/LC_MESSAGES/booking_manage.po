@@ -641,110 +641,110 @@ msgstr "Questa riunione è stata fissata tramite un sondaggio, quindi solo l'org
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "%{organizer} will confirm or decline it. We have emailed you the details."
-msgstr ""
+msgstr "%{organizer} la confermerà o la rifiuterà. Ti abbiamo inviato i dettagli via email."
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Book again"
-msgstr ""
+msgstr "Prenota di nuovo"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Booking cancelled"
-msgstr ""
+msgstr "Prenotazione annullata"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Check your inbox for the confirmation email."
-msgstr ""
+msgstr "Troverai l'email di conferma nella tua casella di posta."
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm booking"
-msgstr ""
+msgstr "Conferma la prenotazione"
 
 #: lib/tymeslot_web/live/booking_verification_live.ex
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm your booking"
-msgstr ""
+msgstr "Conferma la tua prenotazione"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Confirming..."
-msgstr ""
+msgstr "Conferma in corso…"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "I didn't make this booking"
-msgstr ""
+msgstr "Non ho fatto io questa prenotazione"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "It may be incomplete or out of date."
-msgstr ""
+msgstr "Potrebbe essere incompleto o non aggiornato."
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "It was not confirmed within 30 minutes, so the time was released."
-msgstr ""
+msgstr "Non è stata confermata entro 30 minuti, quindi l'orario è stato liberato."
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "The booking was cancelled and the time released."
-msgstr ""
+msgstr "La prenotazione è stata annullata e l'orario liberato."
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "The organiser"
-msgstr ""
+msgstr "L'organizzatore"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "This booking has expired"
-msgstr ""
+msgstr "Questa prenotazione è scaduta"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "This booking is already confirmed"
-msgstr ""
+msgstr "Questa prenotazione è già confermata"
 
 #: lib/tymeslot_web/live/booking_verification_live.ex
 #, elixir-autogen, elixir-format
 msgid "We could not confirm your booking just now. Please try again."
-msgstr ""
+msgstr "Non siamo riusciti a confermare la tua prenotazione in questo momento. Riprova."
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "We have emailed you the details and a calendar invitation."
-msgstr ""
+msgstr "Ti abbiamo inviato via email i dettagli e un invito di calendario."
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "With"
-msgstr ""
+msgstr "Con"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking is confirmed"
-msgstr ""
+msgstr "La tua prenotazione è confermata"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking is held until %{time}."
-msgstr ""
+msgstr "Teniamo la tua prenotazione fino a %{time}."
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Your request has been sent"
-msgstr ""
+msgstr "La tua richiesta è stata inviata"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Checking your link…"
-msgstr ""
+msgstr "Verifica del link in corso…"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "This only takes a moment."
-msgstr ""
+msgstr "Ci vorrà solo un momento."

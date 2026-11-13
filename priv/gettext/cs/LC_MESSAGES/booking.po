@@ -908,4 +908,4 @@ msgstr "%{page} s %{name}"
 #: lib/tymeslot_web/themes/shared/components/verification_notice.ex
 #, elixir-autogen, elixir-format
 msgid "We'll email you a link to confirm this booking."
-msgstr ""
+msgstr "E-mailem vám pošleme odkaz k potvrzení této rezervace."

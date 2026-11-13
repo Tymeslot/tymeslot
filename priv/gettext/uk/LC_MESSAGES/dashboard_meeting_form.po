@@ -912,34 +912,34 @@ msgstr "Бронювати можуть лише люди з посилання�
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Ask invitees to confirm their email"
-msgstr ""
+msgstr "Просити запрошених підтвердити електронну пошту"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for 30 minutes, and you are not notified."
-msgstr ""
+msgstr "Бронювання зараховується лише після того, як запрошений перейде за посиланням, яке ми надішлемо йому листом. Доти слот утримується 30 хвилин, а сповіщення вам не надходить."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Email confirmation"
-msgstr ""
+msgstr "Підтвердження електронної пошти"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off email verification to enable group bookings."
-msgstr ""
+msgstr "Вимкніть підтвердження електронної пошти, щоб увімкнути групові бронювання."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off email verification to require payment."
-msgstr ""
+msgstr "Вимкніть підтвердження електронної пошти, щоб вимагати оплату."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off group bookings to ask invitees to confirm their email."
-msgstr ""
+msgstr "Вимкніть групові бронювання, щоб просити запрошених підтвердити електронну пошту."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
-msgstr ""
+msgstr "Вимкніть оплату, щоб просити запрошених підтвердити електронну пошту. Оплата вже підтверджує, хто вони."

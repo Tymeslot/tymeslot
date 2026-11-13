@@ -907,34 +907,34 @@ msgstr "Solo pueden reservar las personas con un enlace de invitación"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Ask invitees to confirm their email"
-msgstr ""
+msgstr "Pedir a quien reserve que confirme su correo"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for 30 minutes, and you are not notified."
-msgstr ""
+msgstr "La reserva solo cuenta cuando quien reserva hace clic en el enlace que le enviamos por correo. Hasta entonces, la franja horaria queda reservada durante 30 minutos y no recibes ningún aviso."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Email confirmation"
-msgstr ""
+msgstr "Confirmación del correo"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off email verification to enable group bookings."
-msgstr ""
+msgstr "Desactiva la confirmación del correo para activar las reservas de grupo."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off email verification to require payment."
-msgstr ""
+msgstr "Desactiva la confirmación del correo para exigir un pago."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off group bookings to ask invitees to confirm their email."
-msgstr ""
+msgstr "Desactiva las reservas de grupo para pedir a quien reserve que confirme su correo."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
-msgstr ""
+msgstr "Desactiva los pagos para pedir a quien reserve que confirme su correo. Al pagar, ya confirma quién es."

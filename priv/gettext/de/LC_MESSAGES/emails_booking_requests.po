@@ -515,29 +515,29 @@ msgstr "Ihre Anfrage zurückziehen"
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm booking"
-msgstr ""
+msgstr "Buchung bestätigen"
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm your booking with %{organizer}"
-msgstr ""
+msgstr "Bestätigen Sie Ihre Buchung bei %{organizer}"
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, your booking is not confirmed yet."
-msgstr ""
+msgstr "Hallo %{name}, Ihre Buchung ist noch nicht bestätigt."
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "If you did not make this booking, ignore this email. Nothing will be booked."
-msgstr ""
+msgstr "Wenn Sie diese Buchung nicht vorgenommen haben, ignorieren Sie diese E-Mail. Es wird nichts gebucht."
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Please confirm your booking"
-msgstr ""
+msgstr "Bitte bestätigen Sie Ihre Buchung"
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking is not confirmed yet. Click the button below within %{minutes} minutes to confirm it, and we will hold the time for you until then."
-msgstr ""
+msgstr "Ihre Buchung ist noch nicht bestätigt. Klicken Sie innerhalb von %{minutes} Minuten auf die Schaltfläche unten, um sie zu bestätigen. Bis dahin halten wir die Zeit für Sie frei."

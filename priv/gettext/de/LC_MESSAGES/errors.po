@@ -864,9 +864,9 @@ msgstr "Einladungslinks"
 #: lib/tymeslot/meeting_types/email_verification_rule.ex
 #, elixir-autogen, elixir-format
 msgid "email verification cannot be combined with payment"
-msgstr ""
+msgstr "E-Mail-Bestätigung lässt sich nicht mit einer Zahlung kombinieren"
 
 #: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "group bookings cannot require email verification"
-msgstr "Gruppenbuchungen können keine Bestätigung erfordern"
+msgstr "Gruppenbuchungen können keine E-Mail-Bestätigung erfordern"

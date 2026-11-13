@@ -515,29 +515,29 @@ msgstr "відкликати запит"
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm booking"
-msgstr ""
+msgstr "Підтвердити бронювання"
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm your booking with %{organizer}"
-msgstr ""
+msgstr "%{organizer}: підтвердьте бронювання"
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, your booking is not confirmed yet."
-msgstr ""
+msgstr "Вітаю, %{name}! Ваше бронювання ще не підтверджено."
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "If you did not make this booking, ignore this email. Nothing will be booked."
-msgstr ""
+msgstr "Якщо ви не робили цього бронювання, проігноруйте цей лист. Нічого не буде заброньовано."
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Please confirm your booking"
-msgstr ""
+msgstr "Будь ласка, підтвердьте бронювання"
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking is not confirmed yet. Click the button below within %{minutes} minutes to confirm it, and we will hold the time for you until then."
-msgstr ""
+msgstr "Ваше бронювання ще не підтверджено. Натисніть кнопку нижче протягом %{minutes} хвилин, щоб підтвердити його. Доти слот залишається за вами."

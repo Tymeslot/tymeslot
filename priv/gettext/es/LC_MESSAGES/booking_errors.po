@@ -279,9 +279,9 @@ msgstr "Este enlace de invitación ya no es válido. Pide al anfitrión uno nuev
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "This booking is not confirmed yet. Confirm it from the link in your email first."
-msgstr ""
+msgstr "Esta reserva todavía no está confirmada. Primero confírmala desde el enlace de tu correo."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "This booking is not confirmed yet. If you do not confirm it, it will be released on its own."
-msgstr ""
+msgstr "Esta reserva todavía no está confirmada. Si no la confirmas, se liberará sola."
