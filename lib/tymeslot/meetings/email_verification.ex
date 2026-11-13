@@ -288,6 +288,9 @@ defmodule Tymeslot.Meetings.EmailVerification do
   @doc "Releases a held group seat its booker disowns; see `Tymeslot.Meetings.EmailVerification.Seats.release_seat/1`."
   defdelegate release_seat(seat), to: Seats
 
+  @doc "Releases every held seat on a slot; see `Tymeslot.Meetings.EmailVerification.Seats.release_all_held/1`."
+  defdelegate release_all_held(meeting_id), to: Seats
+
   @doc "Fetches a seat by id, for the booking page's resend; `{:error, :not_found}` once it was pruned."
   @spec fetch_seat(binary()) :: {:ok, Participant.t()} | {:error, :not_found}
   def fetch_seat(id) when is_binary(id), do: ParticipantQueries.get(id)

@@ -172,6 +172,23 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   def release_seat(%Participant{} = seat),
     do: release_held(seat, "Unverified seat disowned by its booker")
 
+  @doc """
+  Releases every held seat on a slot that is going away or moving: a host
+  cancelling the whole meeting, or moving a session they planned to a time
+  its held bookers never picked.
+
+  Silent like `expire_seat/1`, and its expiry jobs go with it, so a held
+  booker's link then reads expired. Runs inside the caller's transaction,
+  after the caller has locked or updated the slot row, so the lock order
+  (slot, then its seats) holds.
+  """
+  @spec release_all_held(binary()) :: :ok
+  def release_all_held(meeting_id) do
+    now = DateTime.truncate(Clock.utc_now(), :second)
+    {_count, seat_ids} = ParticipantQueries.cancel_unverified_for_meeting(meeting_id, now)
+    Enum.each(seat_ids, &EmailVerificationJobs.cancel_seat(%{id: &1}))
+  end
+
   defp release_held(seat, message) do
     now = DateTime.truncate(Clock.utc_now(), :second)
 

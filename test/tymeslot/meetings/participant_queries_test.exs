@@ -349,7 +349,8 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
       ungated = seat(meeting, [])
       other = held(insert(:meeting), now)
 
-      assert {1, nil} = ParticipantQueries.cancel_unverified_for_meeting(meeting.id, now)
+      assert {1, [held_id]} = ParticipantQueries.cancel_unverified_for_meeting(meeting.id, now)
+      assert held_id == held_seat.id
 
       assert Repo.get!(ParticipantSchema, held_seat.id).cancelled_at == now
       assert Repo.get!(ParticipantSchema, verified.id).cancelled_at == nil

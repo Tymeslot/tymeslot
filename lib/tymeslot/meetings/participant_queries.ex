@@ -336,12 +336,13 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     end
   end
 
-  @doc "Cancels every live unverified seat on a meeting."
-  @spec cancel_unverified_for_meeting(binary(), DateTime.t()) :: {non_neg_integer(), nil}
+  @doc "Cancels every live unverified seat on a meeting, returning their ids."
+  @spec cancel_unverified_for_meeting(binary(), DateTime.t()) :: {non_neg_integer(), [binary()]}
   def cancel_unverified_for_meeting(meeting_id, %DateTime{} = now) do
     Participant
     |> where([p], p.meeting_id == ^meeting_id)
     |> live_unverified()
+    |> select([p], p.id)
     |> update([p], set: [cancelled_at: ^now], inc: [ical_sequence: 1])
     |> Repo.update_all([])
   end

@@ -21,6 +21,9 @@ defmodule Tymeslot.Meetings.SeatVisibilityTest do
 
   alias Tymeslot.Meetings.{
     CalendarExport,
+    Cancellation,
+    EmailVerification,
+    EmailVerificationJobs,
     Guests,
     MeetingListQueries,
     MeetingSchema,
@@ -30,6 +33,8 @@ defmodule Tymeslot.Meetings.SeatVisibilityTest do
     Seats,
     SeatView
   }
+
+  alias Tymeslot.Meetings.Workers.EmailVerificationExpiryWorker
 
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
@@ -190,6 +195,26 @@ defmodule Tymeslot.Meetings.SeatVisibilityTest do
 
     assert [job] = jobs
     assert :ok = perform_job(EmailWorker, job.args)
+  end
+
+  test "the host cancelling the slot releases the held seat silently, with its expiry job", %{
+    meeting: meeting,
+    unverified: unverified
+  } do
+    {:ok, _held} =
+      Guests.create_for_participant(meeting.id, unverified.id, ["held@example.com"])
+
+    :ok = EmailVerificationJobs.schedule_seat_expiry(unverified)
+    expiry = [worker: EmailVerificationExpiryWorker, args: %{"participant_id" => unverified.id}]
+    assert_enqueued(expiry)
+
+    reloaded = Repo.get!(MeetingSchema, meeting.id)
+    assert {:ok, _cancelled} = Cancellation.cancel(reloaded, meeting.organizer_user_id, :none)
+
+    assert {:ok, %{cancelled_at: %DateTime{}} = released} = ParticipantQueries.get(unverified.id)
+    refute_enqueued(expiry)
+    refute_enqueued(worker: EmailWorker, args: %{"participant_id" => unverified.id})
+    assert {:error, :expired} = EmailVerification.verify_seat(released)
   end
 
   test "an unverified seat does not keep a slot alive", %{

@@ -32,6 +32,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -128,10 +129,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
 
       true ->
         # A seat still awaiting verification must not outlive its slot.
-        ParticipantQueries.cancel_unverified_for_meeting(
-          meeting.id,
-          DateTime.truncate(Clock.utc_now(), :second)
-        )
+        :ok = EmailVerification.release_all_held(meeting.id)
 
         flip_to_cancelled(locked)
     end
