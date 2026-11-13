@@ -104,12 +104,18 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   # record who was invited — but those guests no longer hold seats and their
   # RSVP links are inert, so showing them on the organiser's card would count
   # people who are not coming. Guests of a solo booking carry no participant
-  # and are always live.
+  # and are always live. Guests of a seat still awaiting verification are
+  # hidden with their booker, by the rule `ParticipantQueries.where_visible/1`
+  # applies (restated here, since the participant is not this query's first
+  # binding).
   defp live_guests_preload do
     from(g in GuestSchema,
       left_join: p in ParticipantSchema,
       on: p.id == g.participant_id,
-      where: is_nil(g.participant_id) or is_nil(p.cancelled_at),
+      where:
+        is_nil(g.participant_id) or
+          (is_nil(p.cancelled_at) and
+             (is_nil(p.verification_deadline_at) or not is_nil(p.email_verified_at))),
       order_by: [asc: g.inserted_at]
     )
   end
@@ -424,13 +430,17 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   # cancelled meeting every one, since a cancelled card records who had
   # booked it. Whoever released their spot before the meeting was cancelled
   # carries their own `cancelled_at`; those still booked when it was called
-  # off do not (cancelling a meeting leaves its participant rows alone).
+  # off do not (cancelling a meeting leaves its participant rows alone). A
+  # seat still awaiting verification is never listed, on any card: the
+  # organiser never had it.
   defp card_participants_preload do
-    from(p in ParticipantSchema,
-      join: m in Meeting,
-      on: m.id == p.meeting_id,
-      where: is_nil(p.cancelled_at) or m.status == :cancelled,
-      order_by: [asc: p.inserted_at, asc: p.id]
+    ParticipantQueries.where_visible(
+      from(p in ParticipantSchema,
+        join: m in Meeting,
+        on: m.id == p.meeting_id,
+        where: is_nil(p.cancelled_at) or m.status == :cancelled,
+        order_by: [asc: p.inserted_at, asc: p.id]
+      )
     )
   end
 end

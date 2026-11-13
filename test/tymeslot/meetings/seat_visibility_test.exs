@@ -21,6 +21,7 @@ defmodule Tymeslot.Meetings.SeatVisibilityTest do
 
   alias Tymeslot.Meetings.{
     CalendarExport,
+    Guests,
     MeetingListQueries,
     MeetingSchema,
     ParticipantQueries,
@@ -126,6 +127,27 @@ defmodule Tymeslot.Meetings.SeatVisibilityTest do
 
     assert {:ok, view} = SeatView.load(reloaded, verified.id, nil)
     assert SeatView.seats_taken(view) == 1
+  end
+
+  test "the organiser's meeting card lists neither the unverified seat nor its guests", %{
+    meeting: meeting,
+    verified: verified,
+    unverified: unverified
+  } do
+    {:ok, _kept} = Guests.create_for_participant(meeting.id, verified.id, ["kept@example.com"])
+
+    {:ok, _held} =
+      Guests.create_for_participant(meeting.id, unverified.id, ["held@example.com"])
+
+    assert [card] =
+             MeetingListQueries.list_meetings_for_organizer_paginated_cursor(
+               meeting.organizer_user_id,
+               []
+             )
+
+    assert [%{email: "verified@example.com"}] = card.participants
+    assert [%{email: "kept@example.com"}] = card.guests
+    assert Seats.seats_taken(card.participants, card.guests) == 2
   end
 
   test "an unverified seat's token opens nothing", %{meeting: meeting, unverified: unverified} do
