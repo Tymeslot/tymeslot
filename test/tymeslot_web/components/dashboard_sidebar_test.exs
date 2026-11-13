@@ -175,7 +175,7 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert Floki.attribute(disabled_copy_btn, "phx-hook") == []
     assert Floki.attribute(disabled_copy_btn, "aria-label") == ["Copy link to clipboard"]
 
-    assert disabled_copy_btn |> Floki.attribute("title") |> List.first() =~
+    assert reason_for(doc, disabled_copy_btn) =~
              "Set a username in Settings to enable this feature"
   end
 
@@ -202,7 +202,7 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert Floki.attribute(disabled_copy_btn, "aria-disabled") == ["true"]
     assert Floki.attribute(disabled_copy_btn, "aria-label") == ["Copy link to clipboard"]
 
-    assert disabled_copy_btn |> Floki.attribute("title") |> List.first() =~
+    assert reason_for(doc, disabled_copy_btn) =~
              "Connect a calendar in Calendar settings to enable this feature"
   end
 
@@ -398,15 +398,28 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert html =~ "Some Untranslated Extension"
   end
 
+  # The element a control's `aria-describedby` names, and its text.
+  defp reason_for(doc, control) do
+    [id] = Floki.attribute(control, "aria-describedby")
+    doc |> Floki.find("##{id}") |> Floki.text() |> String.trim()
+  end
+
   # The badge is a bare dot, so what it says is carried twice: as a tooltip
   # on the link and as screen-reader-only text after the label, led by a
   # comma so the label and the reason are read with a pause. Both must agree.
   defp integrations_badge_title(integration_status) do
-    link = integrations_link(:overview, integration_status)
+    assigns = %{
+      current_action: :overview,
+      integration_status: integration_status,
+      profile: %{username: "testuser"}
+    }
 
-    [title] = Floki.attribute(link, "title")
+    doc = Floki.parse_document!(render_component(&DashboardSidebar.sidebar/1, assigns))
+    [anchor | _rest] = Floki.find(doc, "[data-tooltip]:has(a[href$='integrations'])")
 
-    assert link |> Floki.find(".dashboard-nav-notification .sr-only") |> Floki.text() ==
+    title = anchor |> Floki.find("[role='tooltip']") |> Floki.text() |> String.trim()
+
+    assert anchor |> Floki.find(".dashboard-nav-notification .sr-only") |> Floki.text() ==
              ", " <> title
 
     title

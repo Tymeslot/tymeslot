@@ -272,13 +272,9 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeCreateJourneyTest do
       # not reach validation as one.
       view
       |> form("form[phx-submit='create_meeting_type']", %{
-        "meeting_type" => %{
-          "name" => "Custom Interval",
-          "duration" => "30",
-          "slot_interval" => "custom"
-        }
+        "meeting_type" => %{"name" => "Custom Interval", "duration" => "30"}
       })
-      |> render_submit()
+      |> render_submit(%{"meeting_type" => %{"slot_interval" => "custom"}})
 
       assert %{slot_interval_minutes: nil} = created_type(user, "Custom Interval")
     end

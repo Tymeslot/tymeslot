@@ -37,6 +37,21 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntriesTest do
 
       assert SeriesEntries.sent_sequence(event, "e-1") == 4
     end
+
+    test "writes the entries in UID order, whatever order they come in", %{
+      integration: integration
+    } do
+      event = occurrence(integration)
+
+      SeriesEntries.record(event, [
+        entry("e-3", @start, 1),
+        entry("e-1", @start, 1),
+        entry("e-2", @start, 1)
+      ])
+
+      # Listed by id, so in the order the rows were written.
+      assert Enum.map(SeriesEntries.recorded(event), & &1.uid) == ["e-1", "e-2", "e-3"]
+    end
   end
 
   describe "forget_stale/1" do

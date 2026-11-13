@@ -25,16 +25,20 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.LiveView
   alias Phoenix.PubSub
   alias Tymeslot.BookingPages
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.Demo
+  alias Tymeslot.Invitations
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
+  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Core.Registry, as: ThemeRegistry
   alias TymeslotWeb.Themes.Shared.EventHandlers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.PathHandlers
 
   @type ctx :: %{
           meeting: Tymeslot.Meetings.MeetingSchema.t(),
@@ -62,19 +66,67 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
 
   `rebook_path` points back to the meeting type's booking page so the
   attendee can try again, falling back to the host's overview page (or `/`
-  when the host has no public username).
+  when the host has no public username); see `rebook/3` for a meeting
+  booked through an invitation, which `guest?` decides: whether the visitor
+  proved they came back from this meeting's checkout
+  (`MeetingPayments.returned_from_checkout?/2`).
   """
-  @spec lookup_for_cancel(meeting_id :: String.t(), theme_slug :: String.t()) ::
+  @spec lookup_for_cancel(meeting_id :: String.t(), theme_slug :: String.t(), guest? :: boolean()) ::
           {:ok,
            %{
              meeting: Tymeslot.Meetings.MeetingSchema.t(),
              profile: Tymeslot.Profiles.ProfileSchema.t(),
-             rebook_path: String.t()
+             rebook_path: String.t() | nil,
+             invitation_held: boolean(),
+             invitation_withheld: boolean()
            }}
           | {:error, atom()}
-  def lookup_for_cancel(meeting_id, theme_slug) do
+  def lookup_for_cancel(meeting_id, theme_slug, guest?) do
     with {:ok, meeting, profile} <- organizer(meeting_id, theme_slug) do
-      {:ok, %{meeting: meeting, profile: profile, rebook_path: rebook_path(profile, meeting)}}
+      {:ok, Map.merge(%{meeting: meeting, profile: profile}, rebook(profile, meeting, guest?))}
+    end
+  end
+
+  @doc """
+  Where the attendee can try again: `rebook_path`, `invitation_held` and
+  `invitation_withheld`.
+
+  A meeting booked through an invitation goes back with the invitation's
+  token (`Invitations.retry_token/1`), since its type books only on one.
+  The token is a capability, so it is offered only to a visitor who proved
+  they are the meeting's guest (`guest?`: a matching checkout session id, or
+  the cancel URL's signed return token); anyone else holding only the
+  meeting id gets no way back (`rebook_path: nil`,
+  `invitation_withheld: true`) and is pointed to the invitation they were
+  sent. While the meeting still awaits its payment it holds the invitation,
+  which the booking page would refuse as used, so there is no path yet
+  (`rebook_path: nil`, `invitation_held: true`); the hold ends when the
+  checkout lapses, which the payment topic announces (`:expired`), and the
+  page asks again then.
+  """
+  @spec rebook(Tymeslot.Profiles.ProfileSchema.t(), Meeting.t(), boolean()) :: %{
+          rebook_path: String.t() | nil,
+          invitation_held: boolean(),
+          invitation_withheld: boolean()
+        }
+  def rebook(profile, meeting, guest?) do
+    case {Invitations.retry_token(meeting), guest?} do
+      {:none, _guest?} ->
+        %{
+          rebook_path: rebook_path(profile, meeting),
+          invitation_held: false,
+          invitation_withheld: false
+        }
+
+      {_held_or_token, false} ->
+        %{rebook_path: nil, invitation_held: false, invitation_withheld: true}
+
+      {:held, true} ->
+        %{rebook_path: nil, invitation_held: true, invitation_withheld: false}
+
+      {{:ok, token}, true} ->
+        path = PathHandlers.with_query(rebook_path(profile, meeting), %{"invite" => token})
+        %{rebook_path: path, invitation_held: false, invitation_withheld: false}
     end
   end
 
@@ -103,16 +155,51 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   Assigns the organiser's profile (`:organizer_profile`, which a theme's page
   shell may draw) and the legal links the page's footer shows
   (`:legal_links`, `Profiles.public_legal_links/1`: the organiser's own, else
-  the instance defaults). Called on the connected mount, once the meeting's
-  organiser is known.
+  the instance defaults), in the page's language (`assign_language/3`).
+  Called on the connected mount, once the meeting's organiser is known.
   """
-  @spec assign_organizer(LiveView.Socket.t(), Tymeslot.Profiles.ProfileSchema.t()) ::
+  @spec assign_organizer(LiveView.Socket.t(), Tymeslot.Profiles.ProfileSchema.t(), Meeting.t()) ::
           LiveView.Socket.t()
-  def assign_organizer(socket, profile) do
+  def assign_organizer(socket, profile, meeting) do
+    socket = assign_language(socket, profile, meeting)
+
     Component.assign(socket,
-      organizer_profile: profile,
+      organizer_profile: ContentTranslations.localise(profile, socket.assigns.content_locale),
       legal_links: Profiles.public_legal_links(profile)
     )
+  end
+
+  @doc """
+  Assigns the page's language on the dead render, so the first paint is
+  already in it and its switcher lists only the languages the organiser
+  offers: the meeting and its organiser are looked up for that alone, and
+  nothing else of theirs is shown before the connected mount has authorised
+  the visitor. A meeting not found leaves the page as the locale hook set it;
+  the connected mount sends the visitor away.
+  """
+  @spec assign_dead_render_language(LiveView.Socket.t(), String.t(), String.t()) ::
+          LiveView.Socket.t()
+  def assign_dead_render_language(socket, meeting_id, theme_slug) do
+    case organizer(meeting_id, theme_slug) do
+      {:ok, meeting, profile} -> assign_language(socket, profile, meeting)
+      {:error, _reason} -> socket
+    end
+  end
+
+  # The booking page's rule (`OrganizerHelpers.assign_page_language/3`): the
+  # visitor's own pick, else the language the meeting was booked in, else the
+  # browser's, among the languages the organiser offers, so the attendee
+  # comes back from Stripe in a language the booking page offers.
+  # `:offered_locales` restricts the switcher alike. A pick the organiser
+  # does not offer gives the original; when the URL's own `?locale=` asked
+  # for it, the page reloads with `?locale=` naming the original.
+  defp assign_language(socket, profile, meeting) do
+    socket = OrganizerHelpers.assign_page_language(socket, profile, meeting.attendee_locale)
+
+    if socket.assigns.stale_locale_param,
+      do:
+        LiveView.redirect(socket, external: build_path_with_locale(socket, socket.assigns.locale)),
+      else: socket
   end
 
   @doc """
@@ -231,7 +318,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   Mounts the payment-processing page. Authorises the meeting,
   subscribes to the payment topic, then reads meeting/payment state and
   assigns `:meeting`, `:payment`, `:organizer_profile` and `:legal_links`
-  (`assign_organizer/2`; none on the dead render, `no_organizer/1`),
+  (`assign_organizer/3`; none on the dead render, `no_organizer/1`, which
+  sets only the page's language, `assign_dead_render_language/3`),
   `:rebook_path` (where a failed checkout can start again) and the
   organiser's customisation (`assign_customization/2`) on success. On
   failure the socket is redirected to `/` with a generic flash so we never
@@ -263,13 +351,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           socket =
             socket
             |> assign_customization(profile)
-            |> assign_organizer(profile)
-            |> Component.assign(
-              loading: false,
-              meeting: meeting,
-              payment: payment,
-              rebook_path: rebook_path(profile, meeting)
-            )
+            |> assign_organizer(profile, meeting)
+            |> Component.assign(loading: false, meeting: meeting, payment: payment)
+            |> Component.assign(rebook(profile, meeting, true))
 
           {:ok, socket}
 
@@ -279,9 +363,17 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
     else
       socket =
         socket
+        |> assign_dead_render_language(meeting_id, theme_slug)
         |> no_customization()
         |> no_organizer()
-        |> Component.assign(loading: true, meeting: nil, payment: nil, rebook_path: nil)
+        |> Component.assign(
+          loading: true,
+          meeting: nil,
+          payment: nil,
+          rebook_path: nil,
+          invitation_held: false,
+          invitation_withheld: false
+        )
 
       {:ok, socket}
     end
@@ -294,7 +386,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
 
   Re-fetches the meeting, not just the payment: paid does not always mean
   confirmed (a paid, approval-gated booking moves to `:awaiting_approval`),
-  and a failed checkout expires the meeting rather than the payment alone.
+  and a failed checkout expires the meeting rather than the payment alone,
+  which frees an invitation it held, so the way back is asked again
+  (`rebook/3`; the processing page's visitor proved their session id).
   """
   @spec refresh(LiveView.Socket.t()) :: LiveView.Socket.t()
   def refresh(socket) do
@@ -302,8 +396,13 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
 
     socket =
       case Meetings.get_meeting(socket.assigns.meeting.id) do
-        {:ok, meeting} -> Component.assign(socket, :meeting, meeting)
-        {:error, :not_found} -> socket
+        {:ok, meeting} ->
+          socket
+          |> Component.assign(:meeting, meeting)
+          |> Component.assign(rebook(socket.assigns.organizer_profile, meeting, true))
+
+        {:error, :not_found} ->
+          socket
       end
 
     Component.assign(socket, :payment, payment)

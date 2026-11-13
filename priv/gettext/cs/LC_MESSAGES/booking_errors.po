@@ -250,3 +250,28 @@ msgstr "Schůzku se nepodařilo vytvořit. Zkuste to prosím znovu."
 #, elixir-autogen, elixir-format
 msgid "This booking page can't show times right now."
 msgstr "Tato rezervační stránka teď nemůže zobrazit termíny."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has already been used or is no longer valid. Please contact the host for a new one."
+msgstr "Tento odkaz na pozvání už byl použit nebo není platný. Požádejte prosím hostitele o nový."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type can be booked only with a personal invitation link."
+msgstr "Tento typ schůzky lze rezervovat pouze přes osobní odkaz na pozvání."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has already been used to book an appointment. To change it, use the link in your confirmation email."
+msgstr "Tento odkaz na pozvání už byl použit k rezervaci schůzky. Pokud ji chcete změnit, použijte odkaz v potvrzovacím e-mailu."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has expired. Please contact the host for a new one."
+msgstr "Platnost tohoto odkazu na pozvání vypršela. Požádejte prosím hostitele o nový."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link is no longer valid. Please contact the host for a new one."
+msgstr "Tento odkaz na pozvání už není platný. Požádejte prosím hostitele o nový."

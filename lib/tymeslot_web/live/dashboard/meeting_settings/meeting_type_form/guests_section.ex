@@ -73,13 +73,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GuestsSection do
       <div :if={@allow_guests} class="space-y-3">
         <.setting_row
           id="guest-limit-toggle"
-          label={dgettext("dashboard_meeting_form", "Limit the guests per booking")}
+          label={dgettext("dashboard_meeting_form", "Set the guests per booking")}
           description={
             dngettext(
               "dashboard_meeting_form",
-              "Without a limit, each booking may bring up to %{count} guest.",
-              "Without a limit, each booking may bring up to %{count} guests.",
-              Guests.max_guests()
+              "Without a number of your own, each booking may bring up to %{count} guest. Set one to allow fewer, or up to %{max}.",
+              "Without a number of your own, each booking may bring up to %{count} guests. Set one to allow fewer, or up to %{max}.",
+              Guests.default_booking_limit(),
+              max: Guests.max_guests()
             )
           }
           checked={@guest_limit != nil}

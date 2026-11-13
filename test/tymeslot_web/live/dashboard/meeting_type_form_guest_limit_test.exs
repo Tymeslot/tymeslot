@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGuestLimitTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.MeetingTypes
 
   setup :setup_dashboard_user
@@ -62,7 +63,33 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGuestLimitTest do
     |> element("input[phx-change='change_guest_limit']")
     |> render_change(%{"meeting_type" => %{"guest_limit_input" => "50"}})
 
-    assert reload(user, meeting_type.id).max_guests_per_booking == 10
+    assert reload(user, meeting_type.id).max_guests_per_booking == Guests.max_guests()
+  end
+
+  test "names the public page's default and how far a type may raise it", %{
+    conn: conn,
+    user: user
+  } do
+    view = edit(conn, insert_type(user, allow_guests: true))
+    html = render(view)
+
+    assert html =~ "Let invitees add up to #{Guests.default_booking_limit()} guests"
+    assert html =~ "each booking may bring up to #{Guests.default_booking_limit()} guests"
+    assert html =~ "or up to #{Guests.max_guests()}."
+  end
+
+  test "raises a type's limit above the public page's default", %{conn: conn, user: user} do
+    meeting_type = insert_type(user, allow_guests: true)
+    view = edit(conn, meeting_type)
+
+    view |> element("input[phx-click='toggle_guest_limit']") |> render_click()
+
+    view
+    |> element("input[phx-change='change_guest_limit']")
+    |> render_change(%{"meeting_type" => %{"guest_limit_input" => "#{Guests.max_guests()}"}})
+
+    assert reload(user, meeting_type.id).max_guests_per_booking == Guests.max_guests()
+    assert render(view) =~ "Let invitees add up to #{Guests.max_guests()} guests"
   end
 
   test "offers the limit only while guests are allowed", %{conn: conn, user: user} do

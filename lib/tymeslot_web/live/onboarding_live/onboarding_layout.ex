@@ -1,9 +1,36 @@
 defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   @moduledoc """
-  Split-screen layout component for the onboarding flow.
+  The layout every onboarding step sits in: a question column and a stage.
 
-  Renders a left content panel (progress dots, step content, navigation)
-  and a right illustration panel (hidden on mobile).
+  The question column holds the progress bar, the "Step N of 5" label, the
+  step's heading and description, the step's own content and the Back and
+  Continue row. The stage shows the host's booking page as it takes shape,
+  in a `StageFrame`, on the theme's canvas colour.
+
+  Markup order is the same at every size (question column first, then
+  stage), so the reading and tab order never change; only the stylesheet
+  (`onboarding.css`) moves them. From `lg` the column is a 480px panel on
+  the left, as tall as the screen and scrolling on its own when a step needs
+  more, and the stage fills the rest at full height; below `lg` the stage is
+  a card above the column. The Back and Continue row sticks to the bottom
+  of the screen at every size, and from `lg` the live step's finish does
+  too, so the way on is always in view.
+
+  ## Focus and announcements
+
+    * **Heading focus.** Each step's heading has an id of its own, so a new
+      step mounts a new heading. With `focus_heading` set, that heading takes
+      the keyboard focus as it mounts, so a step change lands keyboard and
+      screen-reader users at the start of the new step. The LiveView sets it
+      after the host's first action, never for the page load.
+    * **The live region.** The stage is decorative (`aria-hidden`). Whatever
+      it shows that a host should hear about goes in the one polite live
+      region in the question column: pass the sentence as
+      `stage_announcement`. The LiveView passes the stage's caption, so the
+      region and the caption under the stage agree; `""` says nothing. On
+      the live step a keep action's confirmation ("Copied", "Opened on your
+      phone") takes the region's place instead, since the caption no longer
+      changes there.
   """
 
   use Phoenix.Component
@@ -11,77 +38,139 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
 
   use TymeslotWeb.Components.CoreComponents, only: [action_button: 1, icon: 1]
 
+  alias Phoenix.LiveView.JS
+  alias TymeslotWeb.OnboardingLive.PreviewParts
+  alias TymeslotWeb.OnboardingLive.StageFrame
   alias TymeslotWeb.OnboardingLive.StepConfig
 
   @doc """
-  Renders the split-screen onboarding layout.
-
-  ## Attributes
-
-  * `current_step` - The current step atom
-  * `steps` - Ordered list of step atoms
-  * `show_skip_modal` - Whether the skip modal is visible
-  * `booking_page_live` - Whether the booking page accepts visitors, which
-    changes how the final step describes itself
+  Renders the onboarding layout.
 
   ## Slots
 
   * `inner_block` - The step-specific content
+  * `stage` - The page miniature, drawn at 400px wide; the stage scales it
   """
   attr :current_step, :atom, required: true
-  attr :steps, :list, required: true
-  attr :show_skip_modal, :boolean, default: false
   attr :next_disabled, :boolean, default: false
-  attr :booking_page_live, :boolean, default: true
+
+  attr :next_hint, :string,
+    default: nil,
+    doc: "why Continue is disabled, shown beside it; the field it names can be off screen"
+
+  attr :booking_page_live, :boolean,
+    default: true,
+    doc: "whether the booking page accepts visitors, which changes how the final step reads"
+
+  attr :focus_heading, :boolean,
+    default: false,
+    doc: "whether a newly mounted step heading takes the focus"
+
+  attr :stage_announcement, :string,
+    default: "",
+    doc: "the sentence the live region announces"
+
+  attr :stage_url, :string, required: true, doc: "the address the stage frame shows"
+  attr :stage_live, :boolean, default: false, doc: "shows the Live badge on the stage"
+  attr :stage_canvas, :string, required: true, doc: "the theme's canvas colour"
+  attr :stage_theme, :string, default: nil, doc: "the id of the theme the stage draws"
+  attr :stage_caption, :string, default: nil, doc: "a line under the stage frame"
+
+  attr :reserve_caption, :boolean,
+    default: false,
+    doc: "keeps the caption's line, unseen, while a caption is still to come"
+
+  attr :stage_iframe, :string,
+    default: nil,
+    doc: "the host's real page, which the stage shows instead of the miniature"
+
+  attr :show_nav, :boolean,
+    default: true,
+    doc: "whether Back and Continue show; the live step and provider forms have their own"
+
+  attr :stage_compact, :boolean,
+    default: false,
+    doc: "below lg, a short card, so the step's own controls are above the fold"
 
   slot :inner_block, required: true
-  slot :preview
+  slot :stage, required: true
 
   @spec onboarding_layout(map()) :: Phoenix.LiveView.Rendered.t()
   def onboarding_layout(assigns) do
     ~H"""
-    <div class="onboarding-container">
-      <div class="onboarding-content-panel">
-        <div class="onboarding-content-area">
-          <%!-- Progress indicator --%>
-          <div class="onboarding-progress">
-            <div class="onboarding-progress-dots">
-              <%= for step <- @steps do %>
-                <div class={progress_dot_class(step, @current_step, @steps)} />
-              <% end %>
-            </div>
-            <span class="onboarding-progress-label">
-              {dgettext("onboarding_wizard", "Step %{current} of %{total}",
-                current: StepConfig.step_number(@current_step, @steps),
-                total: StepConfig.step_count(@steps)
-              )}
-            </span>
-          </div>
+    <div class="onboarding-shell">
+      <section
+        class="onboarding-panel"
+        aria-labelledby={"onboarding-step-heading-#{@current_step}"}
+      >
+        <div class="onboarding-panel-inner">
+          <nav aria-label={dgettext("onboarding_wizard", "Setup progress")}>
+            <ol class="onboarding-progress">
+              <li
+                :for={step <- StepConfig.steps()}
+                class="onboarding-progress-segment"
+                data-state={segment_state(step, @current_step)}
+                aria-current={step == @current_step && "step"}
+              >
+                <span class="onboarding-progress-bar" />
+                <span class="onboarding-progress-name">{StepConfig.progress_label(step)}</span>
+              </li>
+            </ol>
+          </nav>
 
-          <%!-- Step header --%>
           <div class="onboarding-step-header">
-            <h1 class="onboarding-step-title">{StepConfig.step_title(@current_step)}</h1>
+            <p class="onboarding-step-label" data-role="onboarding-step-label">
+              {dgettext("onboarding_wizard", "Step %{current} of %{total}",
+                current: StepConfig.step_number(@current_step),
+                total: StepConfig.step_count()
+              )}
+            </p>
+            <h1
+              id={"onboarding-step-heading-#{@current_step}"}
+              class="onboarding-step-title"
+              tabindex="-1"
+              phx-mounted={@focus_heading && JS.focus()}
+            >
+              {StepConfig.step_title(@current_step, @booking_page_live)}
+            </h1>
             <p class="onboarding-step-description">
               {StepConfig.step_description(@current_step, @booking_page_live)}
             </p>
           </div>
 
-          <%!-- Step content --%>
-          <div class="onboarding-slide-in-left">
+          <p class="sr-only" aria-live="polite" data-role="stage-announcement">
+            {@stage_announcement}
+          </p>
+
+          <div id={"onboarding-step-#{@current_step}"} class="onboarding-slide-in-left">
             {render_slot(@inner_block)}
           </div>
 
-          <%!-- Navigation --%>
-          <div class="onboarding-nav">
-            <%= if StepConfig.show_back_button?(@current_step) do %>
-              <.action_button
-                variant={:secondary}
-                icon="hero-arrow-left-mini"
-                phx-click="previous_step"
-              >
-                {dgettext("onboarding_wizard", "Back")}
-              </.action_button>
-            <% end %>
+          <div
+            :if={@show_nav}
+            id="onboarding-nav"
+            class="onboarding-nav"
+            data-role="onboarding-nav"
+            phx-hook="StickyNavClearance"
+          >
+            <p
+              :if={@next_hint}
+              id="onboarding-nav-hint"
+              class="onboarding-nav-hint text-token-sm font-semibold text-red-600"
+              data-role="onboarding-nav-hint"
+            >
+              <.icon name="hero-exclamation-circle-mini" class="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{@next_hint}</span>
+            </p>
+
+            <.action_button
+              :if={StepConfig.show_back_button?(@current_step)}
+              variant={:ghost}
+              icon="hero-arrow-left-mini"
+              phx-click="previous_step"
+            >
+              {dgettext("onboarding_wizard", "Back")}
+            </.action_button>
 
             <div class="onboarding-nav-spacer" />
 
@@ -89,32 +178,52 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
               variant={StepConfig.next_button_variant(@current_step)}
               phx-click="next_step"
               disabled={@next_disabled}
+              aria-describedby={@next_hint && "onboarding-nav-hint"}
             >
               {StepConfig.next_button_text(@current_step)}
               <.icon name="hero-arrow-right-mini" class="w-5 h-5 shrink-0" />
             </.action_button>
           </div>
         </div>
-      </div>
+      </section>
 
-      <%!-- Live preview panel (hidden on mobile) --%>
-      <div class="onboarding-illustration-panel">
-        {render_slot(@preview)}
+      <%!-- The canvas colour is known from the first paint, so the stage
+           starts in the theme's colour rather than fading into it on every
+           load; a theme change later recolours with the transition. --%>
+      <div
+        id="onboarding-stage"
+        class="onboarding-stage"
+        data-role="onboarding-stage"
+        data-step={@current_step}
+        data-compact={@stage_compact}
+        data-theme={@stage_theme}
+        data-stage-fit
+        style={"--stage-canvas: #{@stage_canvas};" <> PreviewParts.scheme_style(@stage_canvas)}
+      >
+        <StageFrame.frame url={@stage_url} live={@stage_live} iframe_src={@stage_iframe}>
+          <StageFrame.scaled id="onboarding-stage-scale">
+            {render_slot(@stage)}
+          </StageFrame.scaled>
+        </StageFrame.frame>
+        <%!-- A caption still to come keeps its line, so the stage is sized
+             for it from the first paint and never shrinks when it lands. --%>
+        <p
+          :if={@stage_caption || @reserve_caption}
+          class={["onboarding-stage-caption text-token-sm", !@stage_caption && "invisible"]}
+          aria-hidden={!@stage_caption && "true"}
+        >
+          {@stage_caption || "\u00a0"}
+        </p>
       </div>
     </div>
     """
   end
 
-  defp progress_dot_class(step, current_step, steps) do
+  defp segment_state(step, current_step) do
     cond do
-      StepConfig.step_completed?(step, current_step, steps) ->
-        "onboarding-progress-dot onboarding-progress-dot--completed"
-
-      step == current_step ->
-        "onboarding-progress-dot onboarding-progress-dot--current"
-
-      true ->
-        "onboarding-progress-dot onboarding-progress-dot--upcoming"
+      step == current_step -> "current"
+      StepConfig.step_completed?(step, current_step) -> "done"
+      true -> "upcoming"
     end
   end
 end

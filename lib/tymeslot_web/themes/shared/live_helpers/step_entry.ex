@@ -14,15 +14,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     router: TymeslotWeb.Router,
     statics: TymeslotWeb.static_paths()
 
-  use Gettext, backend: TymeslotWeb.Gettext
-
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [connected?: 1, put_flash: 3, redirect: 2]
+  import Phoenix.LiveView, only: [connected?: 1, redirect: 2]
 
   alias Phoenix.HTML.Form
   alias Tymeslot.BookingPages
   alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Bookings.SubmissionToken
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.CustomFields
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
@@ -35,6 +34,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     AvailabilityHelpers,
     BookingConfig,
     CalendarHelpers,
+    EntryRefusal,
     NextAvailable,
     OrganizerHelpers
   }
@@ -46,6 +46,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Answers
   alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
+  alias TymeslotWeb.Themes.Shared.LiveHelpers.InvitationGate
   alias TymeslotWeb.Themes.Shared.PathHandlers
   alias TymeslotWeb.Themes.Shared.ReschedulePin
 
@@ -147,7 +148,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
       {:ok, socket} ->
         if closed?(socket),
-          do: leave_closed(socket),
+          do: leave(socket, :no_times_open),
           else: do_handle_schedule_entry(socket, params)
     end
   end
@@ -169,15 +170,6 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     end
   end
 
-  defp leave_closed(socket) do
-    socket
-    |> put_flash(
-      :info,
-      dgettext("booking", "This meeting type has no times open for booking right now.")
-    )
-    |> redirect(to: invalid_meeting_type_redirect_path(socket))
-  end
-
   # Every entry into the flow has to resolve `:meeting_type`, and a reschedule
   # resolves it exactly once, in `ReschedulePin`. The slug in the URL is not
   # consulted for one: two types can share a duration, and a stale reschedule
@@ -187,10 +179,12 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # a fresh booking uses. `step` is the step being entered, `:schedule` or
   # `:booking`, which a type found at another address is sent on to there.
   defp resolve_entry_meeting_type(socket, params, step) do
-    if ReschedulePin.pinned?(socket) do
-      {:ok, socket}
-    else
-      resolve_slug_meeting_type(socket, normalize_duration_param(params), params, step)
+    slug = normalize_duration_param(params)
+
+    cond do
+      ReschedulePin.pinned?(socket) -> {:ok, socket}
+      is_nil(slug) -> readmit_held(socket, params)
+      true -> resolve_slug_meeting_type(socket, slug, params, step)
     end
   end
 
@@ -216,19 +210,52 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     end
   end
 
-  defp assign_resolved_meeting_type(nil, socket, _params, _step) do
-    {:unresolvable,
-     socket
-     |> put_flash(:error, dgettext("booking", "Invalid meeting type"))
-     |> redirect(to: invalid_meeting_type_redirect_path(socket))}
-  end
+  defp assign_resolved_meeting_type(nil, socket, _params, _step),
+    do: refuse(socket, :invalid_type)
 
   defp assign_resolved_meeting_type(meeting_type, socket, params, step) do
     profile = socket.assigns[:organizer_profile]
 
     if at_own_address?(profile, meeting_type),
-      do: {:ok, assign_meeting_type(socket, meeting_type)},
+      do: admit(socket, meeting_type, params),
       else: {:unresolvable, redirect(socket, to: own_address(socket, meeting_type, params, step))}
+  end
+
+  # The entry gate of an invitation-only type (`InvitationGate`): the invitation
+  # it admits on becomes `:invitation` for the submit to claim. It runs after
+  # the redirect to the type's own address, which carries `?invite=` along with
+  # the page's query.
+  defp admit(socket, meeting_type, params) do
+    case InvitationGate.check(socket, meeting_type, params) do
+      {:ok, invitation} ->
+        {:ok, socket |> assign(:invitation, invitation) |> assign_meeting_type(meeting_type)}
+
+      {:error, reason} ->
+        refuse(socket, reason)
+    end
+  end
+
+  # An entry that names no type (the flow restarting on the type it holds)
+  # checks the held invitation-only type's invitation again: a link spent by
+  # the booking just made must not open the schedule for another.
+  defp readmit_held(socket, params) do
+    with %{} = meeting_type <- InvitationGate.held_type(socket),
+         {:error, reason} <- InvitationGate.check(socket, meeting_type, params) do
+      refuse(socket, reason)
+    else
+      _admitted_or_none -> {:ok, socket}
+    end
+  end
+
+  # Flashes why the entry was refused and sends the guest to the profile; an
+  # embed, where the flash cannot travel, carries the reason in the redirect
+  # (`EntryRefusal`).
+  defp refuse(socket, reason), do: {:unresolvable, leave(socket, reason)}
+
+  defp leave(socket, reason) do
+    socket
+    |> EntryRefusal.put(reason)
+    |> redirect(to: invalid_meeting_type_redirect_path(socket, reason))
   end
 
   # A booking page serves the types it lists, and those listed nowhere
@@ -261,23 +288,43 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
   # Carries the reschedule context across the redirect so a bad slug doesn't
   # silently turn a reschedule into a new, duplicate booking, and a demo's
-  # chosen theme so the visitor lands on the theme they were viewing.
-  defp invalid_meeting_type_redirect_path(socket) do
+  # chosen theme so the visitor lands on the theme they were viewing. Inside
+  # an embed the redirect stays an embed (`PathHandlers.put_embed_params/2`,
+  # from verified assigns only), or the guest would see the full profile page
+  # in the host's iframe, and carries `reason`, which the embed's lost flash
+  # cannot (`EntryRefusal.put_param/3`). The language the visitor picked, when
+  # it is the page's, goes along too: an embed's iframe gets no session to
+  # remember it.
+  defp invalid_meeting_type_redirect_path(socket, reason) do
     query =
       case socket.assigns[:reschedule_meeting_uid] do
         uid when is_binary(uid) and uid != "" -> %{"reschedule_meeting_uid" => uid}
         _other -> %{}
       end
 
-    PathHandlers.with_query(
-      "/" <> socket.assigns[:username_context],
-      Map.merge(query, PathHandlers.demo_theme_param(socket.assigns))
-    )
+    query =
+      query
+      |> Map.merge(picked_locale_param(socket.assigns))
+      |> Map.merge(PathHandlers.demo_theme_param(socket.assigns))
+      |> PathHandlers.put_embed_params(socket)
+      |> EntryRefusal.put_param(socket, reason)
+
+    PathHandlers.with_query("/" <> socket.assigns[:username_context], query)
   end
+
+  defp picked_locale_param(%{locale_choice: locale, locale: locale}) when is_binary(locale),
+    do: %{"locale" => locale}
+
+  defp picked_locale_param(_assigns), do: %{}
 
   @doc "Makes `meeting_type` the one this booking is for, with its questions, locations and booking window."
   @spec assign_meeting_type(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_meeting_type(socket, meeting_type) do
+    # Looked up afresh, not taken from the page's (already translated) list,
+    # so its texts are put into the page's content language here, before the
+    # questions and locations are read from it.
+    meeting_type = ContentTranslations.localise(meeting_type, socket.assigns[:content_locale])
+
     socket
     |> ChosenLength.keep_if_offered(meeting_type)
     |> assign(:meeting_type, meeting_type)
@@ -409,13 +456,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     slug = socket.assigns[:selected_duration] || params["slug"]
 
     if is_binary(username) && is_binary(slug) do
-      redirect(socket,
-        to:
-          PathHandlers.with_query(
-            "/#{username}/#{slug}",
-            PathHandlers.demo_theme_param(socket.assigns)
-          )
-      )
+      query =
+        socket.assigns
+        |> PathHandlers.demo_theme_param()
+        |> Map.merge(PathHandlers.invite_param(socket.assigns))
+        |> PathHandlers.put_embed_params(socket)
+
+      redirect(socket, to: PathHandlers.with_query("/#{username}/#{slug}", query))
     else
       redirect(socket, to: ~p"/")
     end
@@ -461,7 +508,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     form_data =
       ThemeFlow.build_booking_form_data(
         socket.assigns[:seat_move_context] || socket.assigns[:reschedule_context],
-        fragment_prefill(socket)
+        Map.merge(InvitationGate.prefill(socket.assigns[:invitation]), fragment_prefill(socket))
       )
 
     socket

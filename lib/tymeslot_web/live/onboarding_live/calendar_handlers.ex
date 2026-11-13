@@ -2,8 +2,15 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   @moduledoc """
   Calendar connection event handlers for the onboarding flow.
 
-  Handles OAuth initiation for Google and Outlook, inline CalDAV
-  credential entry, calendar discovery, and integration creation.
+  Choosing a tile acts at once: Google and Outlook go out to the provider's
+  sign-in, while Apple Calendar and other CalDAV servers open an inline
+  credential form whose discovery and integration creation run in the
+  background. Apple Calendar is the CalDAV family's iCloud member (`:apple`),
+  whose server address is fixed, so its form asks only for the Apple ID
+  email and an app-specific password.
+
+  A calendar that makes the page bookable starts the reveal of the host's
+  week on the stage (`WeekReveal`).
   """
 
   use TymeslotWeb, :verified_routes
@@ -16,8 +23,11 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
-  alias TymeslotWeb.OnboardingLive.StepConfig
+  alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias TymeslotWeb.OnboardingLive.NavigationHandlers
   alias TymeslotWeb.OnboardingLive.ThemeHandlers
+  alias TymeslotWeb.OnboardingLive.WeekReveal
 
   require Logger
   require Phoenix.LiveView
@@ -45,16 +55,17 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
     end
   end
 
-  # A host sent back from the share step keeps that through the provider's
-  # redirect, so connecting still leads straight back to the share step (by
-  # way of the theme step for a host who has not seen it).
-  defp oauth_return_path(%{assigns: %{returning_to_share: true, theme_unseen: true}}),
-    do: ~p"/onboarding/connect_calendar?#{[return: "theme"]}"
+  # The provider sends the host back to the calendar step on the route they
+  # left from (the dev and debug routes have their own `base_path`). A host
+  # sent back from the share step keeps that through the redirect, so
+  # connecting still leads straight back to the share step.
+  defp oauth_return_path(%{assigns: %{base_path: base_path} = assigns}) do
+    path = base_path <> "/connect_calendar"
 
-  defp oauth_return_path(%{assigns: %{returning_to_share: true}}),
-    do: ~p"/onboarding/connect_calendar?#{[return: "share"]}"
-
-  defp oauth_return_path(_socket), do: ~p"/onboarding/connect_calendar"
+    if assigns[:returning_to_share],
+      do: path <> "?" <> URI.encode_query(return: "share"),
+      else: path
+  end
 
   defp maybe_put_login_hint(opts, nil), do: opts
   defp maybe_put_login_hint(opts, email), do: Keyword.put(opts, :login_hint, email)
@@ -77,31 +88,88 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   end
 
   @doc """
-  Records the user's pending calendar choice without connecting. The actual
-  connection (or skip) happens when the user presses Continue. Selecting the
-  already-chosen option toggles it off, clearing the selection.
+  Acts on the tile the host chose: the OAuth providers redirect out, and
+  Apple Calendar and CalDAV open their inline form. Anything else, such as a
+  forged option, is ignored.
   """
-  @spec handle_select_option(String.t(), Phoenix.LiveView.Socket.t()) ::
+  @spec handle_choose_provider(String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_select_option(option, socket) when option in ~w(google outlook caldav skip) do
-    choice = if socket.assigns.calendar_choice == option, do: nil, else: option
-    {:noreply, Component.assign(socket, :calendar_choice, choice)}
-  end
-
-  def handle_select_option(_option, socket), do: {:noreply, socket}
+  def handle_choose_provider("google", socket), do: handle_connect_google(socket)
+  def handle_choose_provider("outlook", socket), do: handle_connect_outlook(socket)
+  def handle_choose_provider("apple", socket), do: open_form(socket, :connecting_apple)
+  def handle_choose_provider("caldav", socket), do: open_form(socket, :connecting_caldav)
+  def handle_choose_provider(_option, socket), do: {:noreply, socket}
 
   @doc """
-  Cancels CalDAV form and returns to provider selection.
+  Reconnects one of the host's paused calendars, named by id: an OAuth
+  provider goes out to its sign-in again, whose return switches the
+  calendar back on; Apple Calendar and CalDAV open their form to take a new
+  password. An id that is not one of the host's calendars is ignored.
+  """
+  @spec handle_reconnect(String.t(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_reconnect(id, socket) do
+    with {id, ""} <- Integer.parse(id),
+         %{} = calendar <- Enum.find(socket.assigns.connected_calendars, &(&1.id == id)) do
+      reconnect(calendar, socket)
+    else
+      _not_theirs -> {:noreply, socket}
+    end
+  end
+
+  defp reconnect(%{provider: "google"}, socket), do: handle_connect_google(socket)
+  defp reconnect(%{provider: "outlook"}, socket), do: handle_connect_outlook(socket)
+
+  defp reconnect(%{provider: "apple"} = calendar, socket),
+    do: open_form(socket, :connecting_apple, calendar)
+
+  defp reconnect(calendar, socket) do
+    if ProviderConfig.caldav_based?(calendar.provider),
+      do: open_form(socket, :connecting_caldav, calendar),
+      else: {:noreply, socket}
+  end
+
+  # A reconnect starts from what is known of the calendar, bar its password.
+  # The control that opened the form is gone with the tiles, so the focus
+  # moves to the form's first field.
+  defp open_form(socket, state, calendar \\ nil) do
+    first_field = if state == :connecting_apple, do: "apple_username", else: "caldav_url"
+
+    {:noreply,
+     socket
+     |> Component.assign(
+       calendar_state: state,
+       reconnecting_calendar: calendar && calendar.id,
+       caldav_form_data: known_fields(calendar),
+       caldav_form_errors: %{}
+     )
+     |> LiveView.push_event("focus", %{id: first_field})}
+  end
+
+  defp known_fields(nil), do: %{}
+
+  defp known_fields(calendar),
+    do: %{"url" => calendar.base_url || "", "username" => Map.get(calendar, :username) || ""}
+
+  @doc """
+  Cancels the Apple Calendar or CalDAV form and returns to the tiles, with
+  the focus back on the tile that opened it.
   """
   @spec handle_cancel_caldav(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_cancel_caldav(socket) do
+    tile = "calendar-provider-#{form_provider(socket)}"
+
     {:noreply,
      socket
-     |> Component.assign(:calendar_state, :selecting)
-     |> Component.assign(:caldav_form_data, %{})
-     |> Component.assign(:caldav_form_errors, %{})
-     |> Component.assign(:caldav_discovering, false)}
+     |> Component.assign(
+       calendar_state: :selecting,
+       reconnecting_calendar: nil,
+       caldav_form_data: %{},
+       caldav_form_errors: %{},
+       caldav_discovering: false
+     )
+     |> LiveView.push_event("focus", %{id: tile})}
   end
 
   @doc """
@@ -111,7 +179,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_validate_caldav(params, socket) do
     form_data = extract_caldav_params(params)
-    errors = validate_caldav_fields(form_data)
+    errors = validate_caldav_fields(form_provider(socket), form_data)
 
     {:noreply,
      socket
@@ -126,7 +194,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_discover_caldav(params, socket) do
     form_data = extract_caldav_params(params)
-    errors = validate_caldav_fields(form_data)
+    errors = validate_caldav_fields(form_provider(socket), form_data)
 
     if map_size(errors) > 0 do
       {:noreply,
@@ -152,36 +220,44 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
     }
   end
 
-  defp validate_caldav_fields(form_data) do
-    []
-    |> maybe_add_error(
-      form_data,
-      "url",
-      :url,
-      dgettext("onboarding_wizard", "Server URL is required")
-    )
-    |> maybe_add_error(
-      form_data,
-      "username",
-      :username,
-      dgettext("onboarding_wizard", "Username is required")
-    )
-    |> maybe_add_error(
-      form_data,
-      "password",
-      :password,
-      dgettext("onboarding_wizard", "Password is required")
-    )
-    |> Map.new()
+  # The form on screen: Apple Calendar's, or the generic CalDAV one.
+  defp form_provider(%{assigns: %{calendar_state: :connecting_apple}}), do: :apple
+  defp form_provider(_socket), do: :caldav
+
+  # A blank field is named as missing; anything else gets the same checks
+  # the dashboard's connection form makes as the host types. Apple
+  # Calendar's server is fixed, so its form has no address to check.
+  defp validate_caldav_fields(provider, form_data) do
+    for {key, field, missing} <- required_fields(provider),
+        error <- [field_error(Map.get(form_data, key, ""), field, missing)],
+        error != nil,
+        into: %{},
+        do: {field, error}
   end
 
-  defp maybe_add_error(errors, form_data, key, error_key, message) do
-    value = Map.get(form_data, key, "")
+  defp required_fields(:apple) do
+    [
+      {"username", :username, dgettext("onboarding_wizard", "Apple ID email is required")},
+      {"password", :password, dgettext("onboarding_wizard", "Password is required")}
+    ]
+  end
 
+  defp required_fields(:caldav) do
+    [
+      {"url", :url, dgettext("onboarding_wizard", "Server URL is required")},
+      {"username", :username, dgettext("onboarding_wizard", "Username is required")},
+      {"password", :password, dgettext("onboarding_wizard", "Password is required")}
+    ]
+  end
+
+  defp field_error(value, field, missing) do
     if String.trim(value) == "" do
-      [{error_key, message} | errors]
+      missing
     else
-      errors
+      case CalendarInputValidation.validate_single_field(field, value) do
+        {:ok, _sanitized} -> nil
+        {:error, message} -> message
+      end
     end
   end
 
@@ -195,6 +271,8 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
       {:noreply, socket}
     else
       user_id = socket.assigns.current_user.id
+      provider = form_provider(socket)
+      reconnecting = socket.assigns.reconnecting_calendar
 
       {:noreply,
        socket
@@ -203,29 +281,25 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
        |> Component.assign(:caldav_form_errors, %{})
        |> LiveView.start_async(
          :discover_caldav,
-         Tasks.with_context(fn -> run_caldav_discovery(user_id, form_data) end)
+         Tasks.with_context(fn ->
+           run_caldav_discovery(provider, user_id, reconnecting, form_data)
+         end)
        )}
     end
   end
 
   # Runs in the async task process — must not touch the socket. Returns a
   # tagged result the LiveView folds back in via handle_discover_caldav_result/2.
-  defp run_caldav_discovery(user_id, form_data) do
-    url = form_data["url"]
+  defp run_caldav_discovery(provider, user_id, nil, form_data) do
+    url = server_url(provider, form_data)
     username = form_data["username"]
     password = form_data["password"]
 
-    case Calendar.discover_and_filter_calendars(
-           :caldav,
-           url,
-           username,
-           password,
-           user_id
-         ) do
+    case Calendar.discover_and_filter_calendars(provider, url, username, password, user_id) do
       {:ok, %{discovery_credentials: credentials}} ->
         params = %{
-          "provider" => "caldav",
-          "name" => dgettext("onboarding_wizard", "CalDAV Calendar"),
+          "provider" => Atom.to_string(provider),
+          "name" => integration_name(provider),
           "url" => credentials[:url] || url,
           "username" => credentials[:username] || username,
           "password" => credentials[:password] || password
@@ -241,6 +315,28 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
         {:discovery_failed, reason}
     end
   end
+
+  # A paused calendar takes the new password and is switched back on, keeping
+  # the calendars it had.
+  defp run_caldav_discovery(provider, user_id, integration_id, form_data) do
+    params = %{
+      "url" => server_url(provider, form_data),
+      "username" => form_data["username"],
+      "password" => form_data["password"]
+    }
+
+    case Calendar.reconnect_and_resume_caldav_integration(user_id, integration_id, params) do
+      {:ok, _integration} -> :created
+      {:error, reason} -> {:reconnect_failed, reason}
+    end
+  end
+
+  # iCloud runs on one host, the one the dashboard's Apple form locks in.
+  defp server_url(:apple, _form_data), do: ProviderConfig.locked_url_for(:apple).url
+  defp server_url(:caldav, form_data), do: form_data["url"]
+
+  defp integration_name(:apple), do: dgettext("onboarding_wizard", "Apple Calendar")
+  defp integration_name(:caldav), do: dgettext("onboarding_wizard", "CalDAV Calendar")
 
   @doc """
   Folds a CalDAV discovery async result back into the socket. Dispatched from
@@ -279,6 +375,13 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
      |> Component.assign(:caldav_discovering, false)}
   end
 
+  def handle_discover_caldav_result({:ok, {:reconnect_failed, reason}}, socket) do
+    {:noreply,
+     socket
+     |> Component.assign(:caldav_form_errors, %{discovery: reconnect_error(reason)})
+     |> Component.assign(:caldav_discovering, false)}
+  end
+
   def handle_discover_caldav_result({:ok, {:discovery_failed, reason}}, socket) do
     {:noreply,
      socket
@@ -306,6 +409,23 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
      |> Component.assign(:caldav_discovering, false)}
   end
 
+  # The dashboard's own wording for each way a reconnect is refused.
+  defp reconnect_error(:invalid_credentials),
+    do: dgettext("dashboard_calendar_providers", "Could not sign in with those credentials")
+
+  defp reconnect_error(:duplicate_account),
+    do:
+      dgettext(
+        "dashboard_calendar_settings",
+        "Cannot reactivate - another active integration already uses this account"
+      )
+
+  defp reconnect_error(:not_found),
+    do: dgettext("dashboard_calendar_providers", "Integration not found")
+
+  defp reconnect_error(message) when is_binary(message), do: message
+  defp reconnect_error(reason), do: DisplayHelpers.connection_error_message(reason)
+
   defp refresh_connected_calendars(socket) do
     user_id = socket.assigns.current_user.id
     connected = Calendar.list_integrations(user_id)
@@ -313,7 +433,8 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
 
     socket
     |> Component.assign(:connected_calendars, connected)
-    |> Component.assign(:steps, StepConfig.steps(connected != []))
+    |> NavigationHandlers.assign_booking_page_live()
+    |> WeekReveal.maybe_start()
   end
 
   # The async result can settle after the user has already navigated away from
@@ -323,7 +444,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   defp maybe_reset_caldav_step(%{assigns: %{current_step: :connect_calendar}} = socket) do
     socket
     |> Component.assign(:calendar_state, :selecting)
-    |> Component.assign(:calendar_choice, nil)
+    |> Component.assign(:reconnecting_calendar, nil)
     |> Component.assign(:caldav_form_data, %{})
     |> Component.assign(:caldav_form_errors, %{})
   end

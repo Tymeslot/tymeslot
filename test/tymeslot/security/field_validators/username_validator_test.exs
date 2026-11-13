@@ -78,6 +78,42 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidatorTest do
     end
   end
 
+  describe "normalise/1" do
+    test "lowercases, folds accents, turns spaces into hyphens and drops the rest" do
+      assert UsernameValidator.normalise("Maya O!") == "maya-o"
+      assert UsernameValidator.normalise("José  Núñez") == "jose-nunez"
+      assert UsernameValidator.normalise("ana.maria@home") == "anamariahome"
+      assert UsernameValidator.normalise("  keep_this-one") == "keep_this-one"
+    end
+
+    test "keeps a trailing hyphen, so a space typed between two words survives" do
+      assert UsernameValidator.normalise("maya ") == "maya-"
+    end
+
+    test "leaves what it cannot fix for validate/2 to refuse" do
+      assert UsernameValidator.normalise("-maya") == "-maya"
+      assert {:error, _message} = UsernameValidator.validate(UsernameValidator.normalise("-maya"))
+    end
+
+    test "every normalised value uses only the characters the pattern allows" do
+      for text <- ["Ünïcödé Nämé", "a/b\\c?d#e", "tab\tand\nnewline", "日本語 name"] do
+        assert UsernameValidator.normalise(text) =~ ~r/\A[a-z0-9_-]*\z/
+      end
+    end
+  end
+
+  describe "problem/2" do
+    test "names each refusal validate/2 makes" do
+      assert UsernameValidator.problem("") == :required
+      assert UsernameValidator.problem("ab") == {:too_short, 3}
+      assert UsernameValidator.problem(String.duplicate("a", 31)) == {:too_long, 30}
+      assert UsernameValidator.problem("-maya") == :format
+      assert UsernameValidator.problem("admin", reserved_words: ["admin"]) == :reserved
+      assert UsernameValidator.problem(42) == :not_text
+      assert UsernameValidator.problem("maya-o") == nil
+    end
+  end
+
   describe "html_pattern/0" do
     # The profile form puts this on the input as a `pattern` attribute, and the
     # browser refuses to fire the submit event when it does not match — the

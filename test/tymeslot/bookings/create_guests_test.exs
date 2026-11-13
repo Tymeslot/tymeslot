@@ -63,6 +63,11 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
     %{meeting_params: meeting_params, form_data: form_data}
   end
 
+  defp crowded(meeting_params) do
+    emails = for n <- 1..Guests.max_guests(), do: "guest#{n}@example.com"
+    %{meeting_params | guest_emails: emails}
+  end
+
   test "persists sanitised guests when the meeting type allows guests" do
     %{meeting_params: meeting_params, form_data: form_data} =
       booking_setup(allow_guests: true)
@@ -93,6 +98,31 @@ defmodule Tymeslot.Bookings.CreateGuestsTest do
     assert {:ok, meeting} = Create.execute(meeting_params, form_data, skip_calendar_check: true)
 
     assert [%{email: "guest.one@example.com"}] = Guests.list_for_meeting(meeting.id)
+  end
+
+  # The client list is never trusted: a booking from the public page that
+  # sends the overall maximum still keeps only the page's default, unless the
+  # host raised the limit for the meeting type.
+  describe "with more guests than the public page's default" do
+    test "keeps the default when the meeting type sets no limit" do
+      %{meeting_params: meeting_params, form_data: form_data} =
+        booking_setup(allow_guests: true)
+
+      assert {:ok, meeting} =
+               Create.execute(crowded(meeting_params), form_data, skip_calendar_check: true)
+
+      assert length(Guests.list_for_meeting(meeting.id)) == Guests.default_booking_limit()
+    end
+
+    test "keeps all of them when the meeting type allows the maximum" do
+      %{meeting_params: meeting_params, form_data: form_data} =
+        booking_setup(allow_guests: true, max_guests_per_booking: Guests.max_guests())
+
+      assert {:ok, meeting} =
+               Create.execute(crowded(meeting_params), form_data, skip_calendar_check: true)
+
+      assert length(Guests.list_for_meeting(meeting.id)) == Guests.max_guests()
+    end
   end
 
   test "ignores guests when the meeting type disallows them" do

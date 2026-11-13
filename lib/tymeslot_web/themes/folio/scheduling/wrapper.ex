@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Wrapper do
     default: nil,
     doc: "the page's journey: a continuous page shows the switcher throughout"
 
+  attr :offered_locales, :list, default: nil, doc: "the locale codes the organiser offers"
   attr :language_dropdown_open, :boolean, default: nil
   attr :organizer_user_id, :integer, default: nil
   attr :should_show_branding, :boolean, default: false
@@ -62,6 +63,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Wrapper do
       <div class="booker-page folio-page">
         <div class="content-area">
           <ThemeShell.chrome
+            locales={@language_locales}
             language_class="folio-language"
             locale={@locale}
             language_dropdown_open={@language_dropdown_open}
@@ -76,6 +78,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Wrapper do
           theme_id={@theme_id}
           organizer_user_id={@organizer_user_id}
           should_show_branding={@should_show_branding}
+          owner_preview={@owner_preview}
           {Map.take(assigns, [:demo_mode])}
         />
         <LegalLinks.footer links={@legal_links} />

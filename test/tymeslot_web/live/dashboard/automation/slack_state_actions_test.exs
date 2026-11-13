@@ -156,7 +156,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
       open_slack_tab(view)
 
       view
-      |> element("button[title='Disconnect Slack']")
+      |> element("button[aria-label='Disconnect Slack']")
       |> render_click()
 
       assert render(view) =~ "Slack channel disconnected"
@@ -180,7 +180,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       html = open_slack_tab(view)
 
-      refute html =~ "title=\"Disconnect Slack\""
+      refute html =~ "aria-label=\"Disconnect Slack\""
     end
   end
 
@@ -282,7 +282,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       open_slack_tab(view)
 
-      view |> element("button[title='Edit']") |> render_click()
+      view |> element("button[aria-label='Edit']") |> render_click()
 
       html = render(view)
       assert html =~ "Original Name"
@@ -336,22 +336,12 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
       # First trigger validation so the form_values picks up channel_id, which the
       # hidden channel_name input depends on. Then submit.
       view
-      |> form("#slack-form", %{
-        "slack" => %{
-          "channel_id" => "C999",
-          "events" => ["meeting.created"]
-        }
-      })
-      |> render_change()
+      |> form("#slack-form", %{"slack" => %{"events" => ["meeting.created"]}})
+      |> render_change(%{"slack" => %{"channel_id" => "C999"}})
 
       view
-      |> form("#slack-form", %{
-        "slack" => %{
-          "channel_id" => "C999",
-          "events" => ["meeting.created"]
-        }
-      })
-      |> render_submit()
+      |> form("#slack-form", %{"slack" => %{"events" => ["meeting.created"]}})
+      |> render_submit(%{"slack" => %{"channel_id" => "C999"}})
 
       assert render(view) =~ "Slack channel saved"
 

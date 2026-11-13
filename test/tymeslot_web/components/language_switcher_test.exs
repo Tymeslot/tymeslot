@@ -48,4 +48,12 @@ defmodule TymeslotWeb.Components.LanguageSwitcherTest do
     assert [label] = Floki.attribute(doc, ".lang-switcher__button", "aria-label")
     assert label == "Deutsch, change language"
   end
+
+  test "shows the language name on the trigger at every screen width" do
+    doc = render_switcher()
+
+    assert [name] = Floki.find(doc, ".lang-switcher__button span")
+    assert Floki.text(name) =~ "Deutsch"
+    refute "hidden" in (name |> Floki.attribute("class") |> Enum.flat_map(&String.split/1))
+  end
 end

@@ -47,9 +47,42 @@
   // who may frame the page, so this purely cosmetic bail-out has no security role.
   const isPreview =
     params.get("preview") === "true" || params.get("preview") === "1";
-  if (isPreview) return;
+  if (isPreview) {
+    // The onboarding stage frames its own preview with `stage=1`
+    // (`PreviewMode.owner_path/3`), so the page can draw its preview chrome
+    // compactly in the stage's short phone card. A display hint only.
+    if (params.get("stage") === "1") {
+      document.documentElement.setAttribute("data-preview-stage", "");
+      announceStageReady();
+    }
+    return;
+  }
 
   document.documentElement.setAttribute("data-embedded", "");
+
+  // The onboarding stage keeps its miniature up until the page it frames has
+  // painted, and the frame's `load` event fires before this page's LiveView
+  // has joined. So once it has (the first `phx:page-loading-stop`), and two
+  // frames later, when that render is on screen, the page tells the stage
+  // (the `StageIframe` hook). Same origin only: the stage frames its own
+  // preview.
+  function announceStageReady() {
+    window.addEventListener(
+      "phx:page-loading-stop",
+      function () {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            try {
+              window.parent.postMessage({ type: "tymeslot-stage-ready" }, window.location.origin);
+            } catch (_) {
+              // The stage went away; it switches itself on after a delay.
+            }
+          });
+        });
+      },
+      { once: true }
+    );
+  }
 
   // --- Derive the allowed parent origin ---
   // Prefer document.referrer (browser-provided, hard to spoof). Fall back

@@ -19,6 +19,13 @@ No exceptions. Never *tu*.
 The catalogue is currently clean on this: 969 occurrences of *vous / votre / vos*, zero of
 *tu / ton / ta / toi*. Keep it that way.
 
+**One exception: words the host sends, in their own voice, to someone they know.** The
+onboarding share message (`Hi %{name}, you can pick a time with me here: %{url}` and its
+no-name variant) is written in *tu*: *Bonjour %{name}, tu peux choisir un créneau avec moi
+ici : %{url}*. The email-signature line (`Book a time with me: %{url}`) reaches strangers
+and stays *vous* (*Réservez un créneau avec moi*); the share subject is an infinitive
+(*Réserver un créneau avec moi*) so it fits either.
+
 **Imperative vs infinitive** follows the standard French-UI split, and it is consistent
 across the catalogue:
 
@@ -125,6 +132,11 @@ Settled while translating; reuse rather than re-coining.
 | "Free" as a price value | **Gratuit** (but tier *names* stay verbatim: Cloud Free, Cloud Pro, Pro, Enterprise) |
 | two-way sync | **synchronisation bidirectionnelle** |
 | free/busy | **libre/occupé** |
+| booking link | **lien de réservation** |
+| link (the username field: the host's address at `/<username>`) | **lien** (*Votre lien*, *Commencez votre lien par une lettre…*); never *nom d’utilisateur* in the onboarding wizard |
+| **keep** (your link: save it somewhere you will find it) | **garder** (*Ou gardez-le pour plus tard*, *Commencez par envoyer ou garder votre lien*); never *conserver* or *enregistrer* here, which read as a save action |
+| **Live** (onboarding step name and badge) | **En ligne** (*Votre page est en ligne*, *Presque en ligne*); *Live Preview* stays **Aperçu en direct** |
+| Look (onboarding step: the theme) | **Style** (*Votre style*, *Comparer les styles*) |
 | double bookings | **doubles réservations** |
 | minimum notice | **préavis minimum** |
 | booking window | **fenêtre de réservation** |
@@ -150,6 +162,15 @@ Settled while translating; reuse rather than re-coining.
 | Block this time / Blocked | **Bloquer ce créneau** / **Bloqué** |
 | Copy free times | **Copier les créneaux libres** |
 | Request (pill for a booking awaiting approval) / Expired | **Demande** / **Expirée** (feminine, agreeing with *demande*) |
+| translation (noun; booking-page languages) | **traduction** (f., pl. **traductions**); *%{language} translations* → **Traductions : %{language}**, *Your %{language} translations* → **Vos traductions (%{language})**: `%{language}` is filled with the language’s own name, so it goes after a colon or in brackets, never after *en* or *de* |
+| translate | **traduire**; the participle agrees with *textes* (*%{translated}/%{total} traduits*) |
+| original language (the language the host writes their texts in) | **langue d’origine**; *in %{language}* → **dans la langue d’origine (%{language})**; the original text is **l’original** (*s’affiche dans sa version originale*); the badge beside that language is **originale**, agreeing with *langue* |
+| translation language (a language the host translates into) | **langue de traduction** (pl. **langues de traduction**) |
+| language switcher (the visitor-facing control on the booking page) | **sélecteur de langue** |
+| Outdated (a translation whose original changed) | **Obsolète** (pl. **obsolètes**) |
+| Missing (a text not translated yet) | **Manquant** as the status pill; in running text the verb **manquer** (*certains textes manquent*) |
+| Translated (status) | **Traduit** |
+| Review (the link to a language's review page) | **Vérifier** |
 
 **Weekday abbreviations:** `Lun.` · `Mar.` · `Mer.` · `Jeu.` · `Ven.` · `Sam.` · `Dim.`
 **[SETTLED]**, with the full stop. French abbreviation by truncation takes a point, and
@@ -179,11 +200,16 @@ note the surface: the web app and the mobile app often differ.
 | Context | English | French |
 |---|---|---|
 | Apple (`account.apple.com`) | Sign-In and Security | **Connexion et sécurité** |
-| Apple | App-Specific Passwords (menu label) | **Mots de passe spécifiques aux applications** |
-| Apple | app-specific password (running prose) | **mot de passe spécifique à l’application** |
+| Apple | App-Specific Passwords (menu label) | **Mots de passe pour applications** |
+| Apple | app-specific password (running prose) | **mot de passe pour application** |
+| Apple | Apple Account / Apple ID | **compte Apple** (*le mot de passe de votre compte Apple*, *E-mail du compte Apple*) |
 
-> ⚠️ The Apple labels above are what the catalogue currently ships. Apple periodically renames
-> these screens (and has renamed "Apple ID" to "Apple Account"). **Re-verify against
+> Verified against `support.apple.com/fr-fr/102654` in November 2026 (*Dans la section
+> Connexion et sécurité, sélectionnez Mots de passe pour applications*). Older entries in
+> `dashboard_calendar_providers.po` still say *spécifique(s) à l’application/aux applications*
+> and *Apple ID* / *identifiant Apple*; they are drift to be aligned.
+>
+> ⚠️ Apple periodically renames these screens (and has renamed "Apple ID" to "Apple Account"). **Re-verify against
 > `support.apple.com/fr-fr` before editing them**. Do not treat this table as a licence to
 > stop checking.
 

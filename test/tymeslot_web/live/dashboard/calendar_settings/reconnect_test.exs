@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
 
       view
       |> element(
-        "button[phx-click='connect_provider'][phx-value-provider='google'][title='Reconnect integration']"
+        "button[phx-click='connect_provider'][phx-value-provider='google'][aria-label='Reconnect integration']"
       )
       |> render_click()
 
@@ -82,7 +82,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
 
       view
       |> element(
-        "button[phx-click='connect_provider'][phx-value-provider='outlook'][title='Reconnect integration']"
+        "button[phx-click='connect_provider'][phx-value-provider='outlook'][aria-label='Reconnect integration']"
       )
       |> render_click()
 

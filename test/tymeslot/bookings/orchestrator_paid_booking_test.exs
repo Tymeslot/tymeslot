@@ -27,7 +27,7 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
 
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.ConnectAccounts
+  alias Tymeslot.MeetingPayments.ConnectAccountRetirement
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -131,7 +131,7 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
     # half-made booking that had to be expired.
     test "refuses a paid booking outright when the host cannot accept charges, creating no meeting",
          %{user: user, meeting_type: meeting_type} do
-      ConnectAccounts.disconnect(user)
+      ConnectAccountRetirement.disconnect(user)
 
       params = %{
         form_data: %{

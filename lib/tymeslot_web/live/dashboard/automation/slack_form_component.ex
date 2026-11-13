@@ -322,12 +322,15 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
           {dgettext("dashboard_automation_chat", "Channel")} <span class="text-red-500">*</span>
         </label>
         <.action_button
+          id="slack-refresh-channels"
           variant={:secondary}
           size={:sm}
           phx-click="slack_refresh_channels"
           phx-target={@target}
           disabled={@loading?}
-          title={dgettext("dashboard_automation_chat", "Refresh channel list from Slack")}
+          tooltip={
+            !@loading? && dgettext("dashboard_automation_chat", "Refresh channel list from Slack")
+          }
         >
           <.icon
             name="hero-arrow-path"
@@ -369,9 +372,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
             )}
           </div>
         <% true -> %>
-          <.input
-            type="select"
+          <.select
+            id="slack-channel-select"
             name="slack[channel_id]"
+            aria-label={dgettext("dashboard_automation_chat", "Channel")}
             value={Map.get(@form_values, "channel_id")}
             prompt={dgettext("dashboard_automation_chat", "Pick a channel...")}
             options={channel_options(@channels)}
@@ -389,8 +393,8 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
     """
   end
 
-  # Builds `{label, value}` option tuples for the core `<.input type="select">`
-  # component. Private channels are suffixed so the user can tell them apart.
+  # Builds `{label, value}` option tuples for the core `<.select>` component.
+  # Private channels are suffixed so the user can tell them apart.
   defp channel_options(channels) do
     Enum.map(channels, fn c ->
       label =

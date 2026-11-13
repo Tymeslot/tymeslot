@@ -328,11 +328,6 @@ msgstr "Zarezervovat schůzku"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex
 #, elixir-autogen, elixir-format
-msgid "Booking system is currently unavailable."
-msgstr "Rezervační systém je momentálně nedostupný."
-
-#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex
-#, elixir-autogen, elixir-format
 msgid "Schedule a meeting"
 msgstr "Naplánovat schůzku"
 

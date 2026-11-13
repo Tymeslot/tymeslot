@@ -26,8 +26,8 @@ defmodule Tymeslot.Availability.Offer do
   capture it whole and nothing here depends on the web layer.
   """
 
-  alias Tymeslot.Availability.{Calculate, GroupSlots, Schedules, SessionSlots}
-  alias Tymeslot.Availability.Offer.{Range, Request}
+  alias Tymeslot.Availability.{BusyIntervals, Calculate, GroupSlots, Schedules, SessionSlots}
+  alias Tymeslot.Availability.Offer.{HostCalendar, Range, Request}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingTypes.FixedDates
@@ -65,6 +65,8 @@ defmodule Tymeslot.Availability.Offer do
       fetch, provided it is the seat that token names; whether the move
       vacates its meeting is still decided afresh.
     * `:demo_mode?` - whether the page is running as a demo.
+    * `:cached_calendar` - read a range's calendar through the cache
+      (`Offer.HostCalendar`), as a preview may; a booking page reads it fresh.
   """
   @type request :: %{
           required(:profile) => %{required(:user_id) => integer(), optional(atom()) => any()},
@@ -74,7 +76,8 @@ defmodule Tymeslot.Availability.Offer do
           optional(:reschedule) => RescheduleContext.t() | nil,
           optional(:reschedule_seat_token) => String.t() | nil,
           optional(:seat_move) => SeatMoveContext.t() | nil,
-          optional(:demo_mode?) => boolean() | nil
+          optional(:demo_mode?) => boolean() | nil,
+          optional(:cached_calendar) => boolean()
         }
 
   @doc """
@@ -132,13 +135,45 @@ defmodule Tymeslot.Availability.Offer do
   @spec slots_for_range(request(), Date.t(), Date.t(), String.t() | integer() | nil) ::
           {:ok, %{String.t() => [term()]}} | {:error, any()}
   def slots_for_range(request, %Date{} = start_date, %Date{} = end_date, duration) do
+    with {:ok, %{slots: slots}} <-
+           slots_and_busy_for_range(request, start_date, end_date, duration) do
+      {:ok, slots}
+    end
+  end
+
+  @doc """
+  `slots_for_range/4` together with the busy periods those slots were computed
+  from, for a view that shows both (a week preview).
+
+  The host's calendar is read once for the pair, so the free times and the busy
+  blocks cannot disagree and a caller does not pay two provider round trips.
+  `:starts` holds the same free times as `DateTime`s in the booker's zone.
+  `:busy` is every period that occupies the host's time in the range (blocking
+  calendar events and live bookings) as UTC `{start, end}` instants, unmerged,
+  buffers and notice not applied. `:windows` is the hours the host is actually
+  open on each date of the range: what `BusinessHours.owner_windows/4` resolves
+  (overrides, extra windows and overnight hours included) with time off taken
+  out, so a date wholly away has none and a part-day period can leave a window
+  in two pieces. A demo page has no starts, busy periods or windows. Fails
+  exactly as `slots_for_range/4` does.
+  """
+  @spec slots_and_busy_for_range(
+          request(),
+          Date.t(),
+          Date.t(),
+          String.t() | integer() | nil
+        ) :: {:ok, BusyIntervals.range_view()} | {:error, any()}
+  def slots_and_busy_for_range(request, %Date{} = start_date, %Date{} = end_date, duration) do
     with :ok <- Range.check_range(start_date, end_date) do
       if Request.demo?(request) do
-        Range.collect_days(start_date, end_date, fn date ->
-          slots_for_date(request, Date.to_iso8601(date), duration)
-        end)
+        with {:ok, slots} <-
+               Range.collect_days(start_date, end_date, fn date ->
+                 slots_for_date(request, Date.to_iso8601(date), duration)
+               end) do
+          {:ok, %{slots: slots, starts: %{}, busy: [], windows: []}}
+        end
       else
-        Range.free_slots_in_range(request, start_date, end_date, duration)
+        Range.slots_and_busy_in_range(request, start_date, end_date, duration)
       end
     end
   end
@@ -255,7 +290,7 @@ defmodule Tymeslot.Availability.Offer do
   defp free_slots(%{profile: %{user_id: user_id} = profile} = request, date, duration) do
     moving = Request.moving_meeting(request)
 
-    with {:ok, events} <- Request.booking_window_events(request, date) do
+    with {:ok, events} <- HostCalendar.booking_window(request, date) do
       duration_minutes = Request.bounded_duration(duration)
       meeting_type = request[:meeting_type]
 
@@ -312,7 +347,7 @@ defmodule Tymeslot.Availability.Offer do
       )
 
     AvailabilityCache.get_or_compute_events(cache_key, fn ->
-      with {:ok, events} <- Request.booking_window_events(request, start_date) do
+      with {:ok, events} <- HostCalendar.booking_window(request, start_date) do
         config =
           meeting_type
           |> Schedules.resolve_for(profile)

@@ -6,6 +6,7 @@ defmodule TymeslotWeb.StripeConnectWebhookTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
   alias Tymeslot.Payments.Webhooks.StripeEventQueries
   alias Tymeslot.PaymentTestHelpers
@@ -153,6 +154,64 @@ defmodule TymeslotWeb.StripeConnectWebhookTest do
       payload = ~s({"id":"evt_X","type":"account.updated"})
 
       assert conn |> post_connect(payload, "t=1,v1=X") |> response(503) == ""
+    end
+  end
+
+  describe "account.application.deauthorized" do
+    setup do
+      previous_checker = Application.get_env(:tymeslot, :feature_access_checker)
+      previous_payments = Application.get_env(:tymeslot, :meeting_payments_enabled)
+
+      Application.put_env(
+        :tymeslot,
+        :feature_access_checker,
+        Tymeslot.Features.DefaultAccessChecker
+      )
+
+      Application.put_env(:tymeslot, :meeting_payments_enabled, true)
+
+      on_exit(fn ->
+        Application.put_env(:tymeslot, :meeting_payments_enabled, previous_payments)
+        Application.put_env(:tymeslot, :feature_access_checker, previous_checker)
+      end)
+
+      :ok
+    end
+
+    test "a host removing Tymeslot at Stripe stops being offered paid types", %{conn: conn} do
+      user = insert(:user)
+      insert(:profile, user: user)
+
+      account =
+        insert(:connect_account,
+          user: user,
+          charges_enabled: true,
+          oauth_connected_at: ~U[2026-01-01 00:00:00Z]
+        )
+
+      paid = insert(:meeting_type, user: user, payment_required: true, price_cents: 5000)
+      free = insert(:meeting_type, user: user, name: "Free intro")
+
+      offered = fn ->
+        user.id |> MeetingTypes.get_public_meeting_types() |> Enum.map(& &1.id)
+      end
+
+      assert paid.id in offered.()
+
+      payload =
+        Jason.encode!(%{
+          "id" => unique_event_id("evt_DEAUTH"),
+          "type" => "account.application.deauthorized",
+          "created" => System.os_time(:second),
+          "account" => account.stripe_account_id,
+          "data" => %{
+            "object" => %{"id" => "ca_PLATFORM", "object" => "application", "name" => "Tymeslot"}
+          }
+        })
+
+      assert conn |> post_connect(payload) |> response(200) == ""
+
+      assert offered.() == [free.id]
     end
   end
 

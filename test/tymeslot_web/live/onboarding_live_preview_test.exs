@@ -1,13 +1,12 @@
 defmodule TymeslotWeb.OnboardingLivePreviewTest do
   @moduledoc """
   Covers the onboarding live-preview panel and the personalisation controls:
-  the profile step (avatar, name, booking link) and the conditional
-  `choose_theme` step (booking theme, colour scheme, real-page preview).
+  the profile step (avatar, name, booking link) and the `choose_theme` step
+  (booking theme, colour scheme).
 
   These assert the user-visible journey: the right-hand mock reflects the
-  organiser's in-progress data, the theme step appears only once a calendar is
-  connected, and theme/colour selections persist and drive a real full-page
-  preview of the booking page.
+  organiser's in-progress data, the theme step cannot be reached without a
+  calendar, and theme/colour selections persist and redraw the stage.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -20,6 +19,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.Themes.Catalog
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
@@ -32,38 +32,31 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
     {:ok, conn: setup_onboarding_session(tags.conn)}
   end
 
-  defp goto_profile(view) do
-    view |> element("button[phx-click='next_step']") |> render_click()
-    view
-  end
-
   defp host do
     String.replace(UrlBuilder.base_url(), ~r{^https?://}, "")
   end
 
   describe "live preview reflects in-progress profile data" do
-    test "welcome step shows the booking-page preview caption", %{conn: conn} do
-      {:ok, _view, html, _user} = setup_onboarding(conn)
-      assert html =~ "This is your live booking page"
-    end
-
     test "profile step preview reflects the typed name and booking link", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = goto_profile(view)
 
       html = fill_profile(view, "Ada Lovelace", "ada")
 
-      # Preview-specific markup: the profile caption and the joined link chip.
-      assert html =~ "Your page, your brand"
+      # Preview-specific markup: the name and the joined link chip.
       assert html =~ "Ada Lovelace"
-      assert html =~ "#{host()}/ada"
+
+      assert view
+             |> element(~s([data-role="stage-address"]))
+             |> render()
+             |> Floki.parse_fragment!()
+             |> Floki.text() =~
+               "#{host()}/ada"
     end
   end
 
   describe "live username validation" do
     test "flags a reserved username immediately while typing", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = goto_profile(view)
 
       html = fill_profile(view, "Ada Lovelace", "admin")
 
@@ -74,51 +67,49 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
       insert(:profile, %{username: "takenslot"})
 
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = goto_profile(view)
 
       html = fill_profile(view, "Ada Lovelace", "takenslot")
 
-      assert html =~ "already taken"
+      assert html =~ "Someone already has this link"
     end
 
     test "accepts an available username with no error", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = goto_profile(view)
 
       html = fill_profile(view, "Ada Lovelace", "ada-unique-handle")
 
       refute html =~ "reserved"
-      refute html =~ "already taken"
+      refute html =~ "already has this link"
     end
   end
 
   describe "choose_theme step gating" do
-    test "is skipped when no calendar is connected", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = navigate_to_scheduling_steps(view)
+    test "cannot be reached without a connected calendar", %{conn: conn} do
+      {conn, user} = onboarding_conn(conn)
+      insert(:profile, user: user, username: "nocal#{System.unique_integer([:positive])}")
+
+      {:ok, view, _html} = live(conn, "/onboarding/choose_theme")
       html = render(view)
 
-      # Skipping the calendar lands straight on the buffer step — no theme step.
       refute html =~ "Your booking theme"
-      assert html =~ "Buffer between meetings"
+      assert has_element?(view, ".onboarding-provider-cards")
     end
 
-    test "appears after the calendar step once a calendar is connected", %{conn: conn} do
+    test "follows the meeting step once a calendar is connected", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
-      html = view |> goto_choose_theme() |> render()
+      html = view |> navigate_to_theme_step() |> render()
 
       assert html =~ "Your booking theme"
-      assert html =~ "Preview booking page"
     end
   end
 
   describe "preview reshapes to the chosen theme" do
     test "starts as Quill (calendar grid) and switches to Rhythm on selection", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
-      view = goto_choose_theme(view)
+      view = navigate_to_theme_step(view)
 
       # Quill's signature month-calendar grid is present by default.
-      assert render(view) =~ "grid-cols-7"
+      assert render(view) =~ ~s(data-preview-part="month")
 
       html =
         view
@@ -126,79 +117,139 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
         |> render_click()
 
       # Rhythm has no month grid — its body is the compact week strip + list.
-      refute html =~ "grid-cols-7"
+      refute html =~ ~s(data-preview-part="month")
     end
   end
 
-  describe "real booking-page preview" do
-    test "opens a full-page standalone preview of the user's own page", %{conn: conn} do
+  describe "the look step and the stage" do
+    test "selecting a theme updates the theme and the stage", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
-      view = goto_choose_theme(view)
+      view = navigate_to_theme_step(view)
 
-      html =
-        view
-        |> element("button[phx-click='preview_booking_page']")
-        |> render_click()
+      assert has_element?(view, "#onboarding-stage[data-theme='1']")
+
+      view
+      |> element("[data-testid='theme-thumbnail'][phx-value-theme='2']")
+      |> render_click()
 
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
-
-      # The modal loads the real page standalone (no embed=1) so the video
-      # background renders and the page fills the frame — preview=true alone
-      # pins CSP frame-ancestors 'self' for same-origin framing.
-      assert html =~ "/#{profile.username}?preview=true"
-      refute html =~ "embed=1"
-      assert html =~ ~s(title="Booking page preview")
+      assert profile.booking_theme == "2"
+      assert has_element?(view, "#onboarding-stage[data-theme='2']")
+      refute has_element?(view, "#onboarding-stage[data-theme='1']")
+      # The stage draws Rhythm: its backdrop behind the glass card, no month grid.
+      assert has_element?(view, "#onboarding-stage [data-preview-part='backdrop']")
+      refute has_element?(view, "#onboarding-stage [data-preview-part='month']")
     end
 
-    test "tears the iframe down on close so a reopen reflects the latest theme", %{conn: conn} do
+    test "the preview button is gone", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
-      view = goto_choose_theme(view)
+      html = view |> navigate_to_theme_step() |> render()
 
-      view |> element("button[phx-click='preview_booking_page']") |> render_click()
-
-      closed =
-        view
-        |> element("#onboarding-theme-preview button[aria-label='Close modal']")
-        |> render_click()
-
-      # No iframe remains, so the next open loads a fresh frame (current theme).
-      refute closed =~ ~s(title="Booking page preview")
+      assert html =~ "Your booking theme"
+      refute has_element?(view, "[phx-click='preview_booking_page']")
+      refute html =~ "Preview booking page"
+      refute has_element?(view, "#onboarding-theme-preview")
     end
   end
 
-  describe "buffer step preview" do
-    test "shows both buffers as a labelled gap, not a slot", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = navigate_to_scheduling_steps(view)
-
-      assert render(view) =~ "15 min before, 15 min after"
+  describe "a headline for a theme that introduces the host" do
+    # The offered themes split by the catalogue fact the field follows.
+    defp intro_theme_id do
+      Enum.find_value(ThemeInfo.theme_options(), fn {_name, id} ->
+        Catalog.shows_intro?(id) && id
+      end)
     end
 
-    test "words a zero buffer plainly", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = navigate_to_scheduling_steps(view)
+    defp plain_theme_id do
+      Enum.find_value(ThemeInfo.theme_options(), fn {_name, id} ->
+        !Catalog.shows_intro?(id) && id
+      end)
+    end
+
+    test "choosing the theme offers the line; typing saves it and puts it under the name",
+         %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+      view = navigate_to_theme_step(view)
+      refute has_element?(view, "#onboarding-headline-form")
+
+      view
+      |> element("[data-testid='theme-thumbnail'][phx-value-theme='#{intro_theme_id()}']")
+      |> render_click()
+
+      assert has_element?(view, "#onboarding-headline-form input#onboarding-headline")
+
+      view
+      |> form("#onboarding-headline-form",
+        profile_intro: %{headline: "  Career coach for first-time managers "}
+      )
+      |> render_change()
+
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+      assert profile.headline == "Career coach for first-time managers"
+
+      assert view
+             |> element("#onboarding-stage [data-role='preview-headline']")
+             |> render() =~ "Career coach for first-time managers"
+
+      # Clearing the line clears the headline, and Continue still moves on.
+      view
+      |> form("#onboarding-headline-form", profile_intro: %{headline: ""})
+      |> render_change()
+
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+      assert profile.headline == nil
+      refute has_element?(view, "#onboarding-stage [data-role='preview-headline']")
+
+      click_continue(view)
+      assert has_element?(view, "#onboarding-stage[data-step='ready']")
+    end
+
+    test "a line past the cap is refused under the field and leaves the saved one",
+         %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+      view = navigate_to_theme_step(view)
+
+      view
+      |> element("[data-testid='theme-thumbnail'][phx-value-theme='#{intro_theme_id()}']")
+      |> render_click()
+
+      view
+      |> form("#onboarding-headline-form", profile_intro: %{headline: "Coach"})
+      |> render_change()
 
       html =
         view
-        |> element(
-          "button[phx-click='update_scheduling_preferences'][phx-value-buffer_before_minutes='0']"
+        |> form("#onboarding-headline-form",
+          profile_intro: %{headline: String.duplicate("a", 121)}
         )
-        |> render_click()
+        |> render_change()
 
-      assert html =~ "No buffer before, 15 min after"
+      assert html =~ ~s(aria-invalid="true")
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+      assert profile.headline == "Coach"
+    end
+
+    test "a theme that does not introduce the host has no field and no line on the stage",
+         %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+      {:ok, _profile} = Profiles.update_intro(profile, %{"headline" => "Career coach"})
+      view = navigate_to_theme_step(view)
+
+      view
+      |> element("[data-testid='theme-thumbnail'][phx-value-theme='#{plain_theme_id()}']")
+      |> render_click()
+
+      refute has_element?(view, "#onboarding-headline-form")
+      refute has_element?(view, "#onboarding-stage [data-role='preview-headline']")
     end
   end
 
   describe "ready step" do
     test "offers only the dashboard button, no redundant link", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
+      {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
 
-      view
-      |> navigate_to_minimum_notice_step()
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      html = render(view)
+      html = view |> navigate_to_ready_step() |> render()
       assert html =~ "Go to dashboard"
       refute html =~ "explore your dashboard first"
     end
@@ -207,7 +258,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
   describe "colour scheme selection" do
     test "tints the preview and persists the choice", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
-      view = goto_choose_theme(view)
+      view = navigate_to_theme_step(view)
 
       html =
         view
@@ -229,7 +280,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
 
     test "offers Quill's schemes in the order the wizard has always shown", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
-      html = view |> goto_choose_theme() |> render()
+      html = view |> navigate_to_theme_step() |> render()
 
       assert Regex.scan(~r/phx-value-choice="([^"]+)"/, html, capture: :all_but_first) ==
                Enum.map(~w(default turquoise purple sunset ocean forest rose monochrome), &[&1])
@@ -298,7 +349,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
   describe "booking theme selection" do
     test "persists the chosen theme", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
-      view = goto_choose_theme(view)
+      view = navigate_to_theme_step(view)
 
       view
       |> element("button[phx-value-theme='2']")
@@ -309,84 +360,47 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
     end
   end
 
-  describe "theme stories" do
-    test "the theme step opens with the stories and switches to every theme's look and back",
-         %{conn: conn} do
+  describe "theme picker" do
+    test "the theme step shows every theme's look and no stories", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
-      view = goto_choose_theme(view)
+      view = navigate_to_theme_step(view)
 
-      assert render(view) =~ "Which of these sounds like you?"
-      assert has_element?(view, "[data-testid='theme-story'][phx-value-theme='2']")
-
-      html = view |> element("button[phx-click='show_all_themes']") |> render_click()
-
-      refute html =~ "Which of these sounds like you?"
+      assert has_element?(view, "[data-testid='theme-thumbnail'][phx-value-theme='2']")
       refute has_element?(view, "[data-testid='theme-story']")
-      assert has_element?(view, "button[phx-value-theme='2']")
-
-      html = view |> element("button[phx-click='show_theme_stories']") |> render_click()
-
-      assert html =~ "Which of these sounds like you?"
+      refute render(view) =~ "Which of these sounds like you?"
     end
 
-    test "choosing a story saves its theme and reshapes the preview", %{conn: conn} do
+    test "a thumbnail saves its theme, reshapes the preview and stays shown across steps",
+         %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
-      view = goto_choose_theme(view)
+      view = navigate_to_theme_step(view)
 
       html =
         view
-        |> element("[data-testid='theme-story'][phx-value-theme='2']")
+        |> element("[data-testid='theme-thumbnail'][phx-value-theme='2']")
         |> render_click()
 
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
       assert profile.booking_theme == "2"
       # Rhythm's preview has no month grid (see "preview reshapes to the chosen theme").
-      refute html =~ "grid-cols-7"
-
-      assert has_element?(
-               view,
-               "[data-testid='theme-story'][phx-value-theme='2'][aria-pressed='true']"
-             )
-    end
-
-    test "a thumbnail picked from every theme's look saves its theme and stays shown across steps",
-         %{conn: conn} do
-      {:ok, view, _html, user} = setup_onboarding_with_calendar(conn)
-      view = goto_choose_theme(view)
-
-      view |> element("button[phx-click='show_all_themes']") |> render_click()
-      view |> element("[data-testid='theme-thumbnail'][phx-value-theme='2']") |> render_click()
-
-      {:ok, profile} = Profiles.get_or_create_profile(user.id)
-      assert profile.booking_theme == "2"
-
-      view |> element("button[phx-click='next_step']") |> render_click()
-      refute has_element?(view, "[data-testid='theme-thumbnail']")
+      refute html =~ ~s(data-preview-part="month")
 
       view |> element("button[phx-click='previous_step']") |> render_click()
+      refute has_element?(view, "[data-testid='theme-thumbnail']")
+
+      view |> element("button[phx-click='next_step']") |> render_click()
 
       assert has_element?(
                view,
                "[data-testid='theme-thumbnail'][phx-value-theme='2'][aria-pressed='true']"
              )
-
-      refute has_element?(view, "[data-testid='theme-story']")
     end
 
-    test "each picker groups its buttons under the question it asks", %{conn: conn} do
+    test "groups its buttons under the question it asks", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding_with_calendar(conn)
-      view = goto_choose_theme(view)
+      view = navigate_to_theme_step(view)
 
-      assert has_element?(view, "#theme-story-question", "Which of these sounds like you?")
-
-      assert has_element?(
-               view,
-               "[role='group'][aria-labelledby='theme-story-question'] [data-testid='theme-story']"
-             )
-
-      view |> element("button[phx-click='show_all_themes']") |> render_click()
-
-      assert has_element?(view, "#theme-look-question", "Pick the look and feel")
+      assert has_element?(view, "#theme-look-question", "Your booking theme")
 
       assert has_element?(
                view,
@@ -398,7 +412,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
   describe "avatar upload" do
     test "renders the upload control on the profile step", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      html = view |> goto_profile() |> render()
+      html = render(view)
 
       assert html =~ "Upload photo"
       assert html =~ ~s(phx-drop-target)
@@ -406,7 +420,6 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
 
     test "stores the uploaded photo on the profile", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      view = goto_profile(view)
 
       avatar =
         file_input(view, "#onboarding-avatar-form", :avatar, [
@@ -418,5 +431,36 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
       assert profile.avatar not in [nil, ""]
     end
+
+    test "without a photo the page shows the initials of the name being typed, then the photo",
+         %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+
+      fill_profile(view, "Ada Lovelace", "ada")
+      assert initials(view, "#onboarding-stage-scale [data-role='preview-initials']") == "AL"
+      assert initials(view, "[data-role='avatar-initials']") == "AL"
+
+      fill_profile(view, "Grace Hopper", "ada")
+      assert initials(view, "#onboarding-stage-scale [data-role='preview-initials']") == "GH"
+
+      view
+      |> file_input("#onboarding-avatar-form", :avatar, [
+        %{name: "me.png", content: @png, type: "image/png"}
+      ])
+      |> render_upload("me.png")
+
+      refute has_element?(view, "[data-role='preview-initials']")
+      refute has_element?(view, "[data-role='avatar-initials']")
+      assert render(view) =~ "Change photo"
+    end
+  end
+
+  defp initials(view, selector) do
+    view
+    |> element(selector)
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.text()
+    |> String.trim()
   end
 end

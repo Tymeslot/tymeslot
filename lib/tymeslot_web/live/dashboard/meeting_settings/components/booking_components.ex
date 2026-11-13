@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   use TymeslotWeb.Components.CoreComponents,
-    only: [icon: 1, pill: 1, spinner: 1, subsection_header: 1]
+    only: [icon: 1, pill: 1, spinner: 1, subsection_header: 1, tooltip: 1]
 
   import TymeslotWeb.Components.Icons.ProviderIcon
 
@@ -33,37 +33,39 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
       <.subsection_header icon="hero-face-smile" title={dgettext("dashboard_meeting_form", "Icon")} />
       <div class="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-14 lg:grid-cols-16 gap-1">
         <%= for {icon_value, icon_name} <- MeetingTypeSchema.valid_icons_with_names() do %>
-          <button
-            type="button"
-            phx-click={JS.push("select_icon", value: %{icon: icon_value}, target: @myself)}
-            class={[
-              "relative rounded-token-md border-2 transition-colors duration-200 group",
-              "w-10 h-10 flex items-center justify-center overflow-hidden",
-              if(@selected_icon == icon_value,
-                do:
-                  "bg-linear-to-br from-turquoise-50 to-turquoise-100 border-turquoise-500 shadow-md",
-                else:
-                  "bg-white/50 border-tymeslot-300/50 hover:border-turquoise-400/50 hover:bg-white/70"
-              )
-            ]}
-            style="width: 40px; height: 40px; min-width: 40px; min-height: 40px; max-width: 40px; max-height: 40px;"
-            title={icon_name}
-          >
-            <%= if icon_value == "none" do %>
-              <.icon name="hero-x-mark" class="w-6 h-6 text-tymeslot-400" />
-            <% else %>
-              <.icon
-                name={icon_value}
-                class={
+          <.tooltip text={icon_name}>
+            <button
+              type="button"
+              phx-click={JS.push("select_icon", value: %{icon: icon_value}, target: @myself)}
+              aria-label={icon_name}
+              class={[
+                "relative rounded-token-md border-2 transition-colors duration-200 group",
+                "w-10 h-10 flex items-center justify-center overflow-hidden",
+                if(@selected_icon == icon_value,
+                  do:
+                    "bg-linear-to-br from-turquoise-50 to-turquoise-100 border-turquoise-500 shadow-md",
+                  else:
+                    "bg-white/50 border-tymeslot-300/50 hover:border-turquoise-400/50 hover:bg-white/70"
+                )
+              ]}
+              style="width: 40px; height: 40px; min-width: 40px; min-height: 40px; max-width: 40px; max-height: 40px;"
+            >
+              <%= if icon_value == "none" do %>
+                <.icon name="hero-x-mark" class="w-6 h-6 text-tymeslot-400" />
+              <% else %>
+                <.icon
+                  name={icon_value}
+                  class={
                   "w-8 h-8 block " <>
                     if(@selected_icon == icon_value,
                       do: "text-turquoise-600",
                       else: "text-tymeslot-500 group-hover:text-turquoise-500"
                     )
                 }
-              />
-            <% end %>
-          </button>
+                />
+              <% end %>
+            </button>
+          </.tooltip>
         <% end %>
       </div>
       <p class="mt-2 text-token-sm text-tymeslot-600">
@@ -129,6 +131,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
           <% else %>
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               <%= for integration <- @calendar_integrations do %>
+                <%!-- native-title: repeats the integration name, which can truncate. --%>
                 <button
                   type="button"
                   disabled={@refreshing_calendars}

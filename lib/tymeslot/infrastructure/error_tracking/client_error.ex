@@ -17,6 +17,9 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ClientError do
      the process: its Plug and Phoenix integrations record `"request.*"` and
      `"live_view.*"` keys, its Oban integration `"job.*"` keys.
 
+  `Phoenix.LiveView.ReloadError` is the one exception to both: it is always
+  a client error.
+
   `Tymeslot.Infrastructure.ErrorTracking.Ignorer` asks this module for
   every report, whether it comes from an integration or from
   `Tymeslot.Infrastructure.CrashReporter`, so what counts as noise is decided
@@ -33,18 +36,26 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ClientError do
 
   @request_prefixes ["request.", "live_view."]
   @job_prefix "job."
+  @live_view_reload_error Atom.to_string(Phoenix.LiveView.ReloadError)
 
   @doc """
   Returns true when the exception, known by its module name as a string
   (`"Elixir.Phoenix.Router.NoRouteError"`, which is how ErrorTracker records
   it), maps to a 4xx response and `context` (an ErrorTracker context) shows
   it arose serving a request or a LiveView. The status is taken from the
-  exception's default struct.
+  exception's default struct. `Phoenix.LiveView.ReloadError` has no status
+  there and is a client error whatever the context.
 
   An unknown module, a non-exception kind (`"exit"`, `"throw"`) or any
   failure resolving it answers `false`. Never creates an atom.
   """
   @spec client_error_kind?(String.t(), map()) :: boolean()
+  # LiveView raises this on the page reload that follows a 4xx in connected
+  # mount, carrying that status only at runtime. A 5xx in connected mount never
+  # gets here, as it crashes the LiveView instead of asking for the reload; the
+  # one other way in is a reload cookie that fails verification.
+  def client_error_kind?(@live_view_reload_error, _context), do: true
+
   def client_error_kind?(kind, context),
     do: request_origin?(context) and client_status_kind?(kind)
 

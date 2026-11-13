@@ -84,6 +84,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
           phx-target={@target}
           novalidate
         >
+          <%!-- raw-input: sits in the .guest-add flex row beside the Add button and every theme styles it by .guest-add__input, which <.input> would move to the wrapper --%>
           <input
             type="email"
             name="guest_email"

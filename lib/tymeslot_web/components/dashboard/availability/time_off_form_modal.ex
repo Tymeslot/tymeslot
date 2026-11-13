@@ -20,9 +20,11 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.CoreComponents.DateTimePicker
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.CoreComponents.Modal
+  alias TymeslotWeb.Components.CoreComponents.Select
   alias TymeslotWeb.Components.Shared.TimeOptions
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -38,8 +40,8 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
   values as strings, `:errors`, a map of field to message rendered under the
   field it belongs to, `:min_starts_on`/`:min_ends_on` and
   `:max_starts_on`/`:max_ends_on`, the earliest and latest date each picker
-  offers, and `:conflicts`, the bookings that already sit inside the dates as
-  they currently stand.
+  offers, `:today`, the host's today they are drawn from, and `:conflicts`,
+  the bookings that already sit inside the dates as they currently stand.
 
   The bounds are a hint, not a guard: a typed or pasted date outside them
   still posts, and the changeset is what refuses it. They are here so the
@@ -80,55 +82,54 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
         phx-change="validate_time_off"
         phx-submit="save_time_off"
         phx-target={@myself}
+        novalidate
       >
         <div class="space-y-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Forms.input
-              type="date"
+            <DateTimePicker.date_picker
               id={"#{@id}-starts-on"}
               name="starts_on"
               value={Map.get(@period_data, :starts_on, "")}
               min={Map.get(@period_data, :min_starts_on)}
               max={Map.get(@period_data, :max_starts_on)}
-              label={dgettext("dashboard_availability", "First day away")}
+              today={Map.get(@period_data, :today)}
+              label={dgettext("dashboard_availability_time_off", "First day away")}
               errors={field_errors(@period_data, :starts_on)}
             />
-            <Forms.input
-              type="date"
+            <DateTimePicker.date_picker
               id={"#{@id}-ends-on"}
               name="ends_on"
               value={Map.get(@period_data, :ends_on, "")}
               min={Map.get(@period_data, :min_ends_on)}
               max={Map.get(@period_data, :max_ends_on)}
-              label={dgettext("dashboard_availability", "Last day away")}
+              today={Map.get(@period_data, :today)}
+              label={dgettext("dashboard_availability_time_off", "Last day away")}
               errors={field_errors(@period_data, :ends_on)}
             />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Forms.input
-              type="select"
+            <Select.select
               id={"#{@id}-start-time"}
               name="start_time"
               value={Map.get(@period_data, :start_time, "")}
               options={all_day_options(@time_format)}
-              label={dgettext("dashboard_availability", "Away from (first day)")}
+              label={dgettext("dashboard_availability_time_off", "Away from (first day)")}
               errors={field_errors(@period_data, :start_time)}
             />
-            <Forms.input
-              type="select"
+            <Select.select
               id={"#{@id}-end-time"}
               name="end_time"
               value={Map.get(@period_data, :end_time, "")}
               options={all_day_options(@time_format)}
-              label={dgettext("dashboard_availability", "Back at (last day)")}
+              label={dgettext("dashboard_availability_time_off", "Back at (last day)")}
               errors={field_errors(@period_data, :end_time)}
             />
           </div>
 
           <p class="text-token-sm text-tymeslot-500 font-medium">
             {dgettext(
-              "dashboard_availability",
+              "dashboard_availability_time_off",
               "Any day between the first and the last is blocked in full."
             )}
           </p>
@@ -149,7 +150,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
             <div class="min-w-0">
               <p class="font-bold text-amber-800">
                 {dngettext(
-                  "dashboard_availability",
+                  "dashboard_availability_time_off",
                   "1 booking already sits inside these dates",
                   "%{count} bookings already sit inside these dates",
                   @conflict_count,
@@ -158,7 +159,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
               </p>
               <p class="mt-1 text-token-sm font-medium text-amber-700">
                 {dgettext(
-                  "dashboard_availability",
+                  "dashboard_availability_time_off",
                   "Time off only stops new bookings. These keep their times until you move or cancel them."
                 )}
               </p>
@@ -175,7 +176,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
                 </li>
                 <li :if={@unlisted_conflicts > 0} class="font-medium">
                   {dngettext(
-                    "dashboard_availability",
+                    "dashboard_availability_time_off",
                     "and 1 more",
                     "and %{count} more",
                     @unlisted_conflicts,
@@ -190,7 +191,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
                 rel="noopener"
                 class="inline-block mt-3 text-token-sm font-bold text-amber-800 underline underline-offset-2 hover:text-amber-900"
               >
-                {dgettext("dashboard_availability", "Open your bookings in a new tab")}
+                {dgettext("dashboard_availability_time_off", "Open your bookings in a new tab")}
               </.link>
             </div>
           </div>
@@ -202,18 +203,18 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
             value={Map.get(@period_data, :label, "")}
             maxlength={Constraints.time_off_label_max_length()}
             phx-debounce="300"
-            label={dgettext("dashboard_availability", "Note (only you see this)")}
-            placeholder={dgettext("dashboard_availability", "Holiday")}
+            label={dgettext("dashboard_availability_time_off", "Note (only you see this)")}
+            placeholder={dgettext("dashboard_availability_time_off", "Holiday")}
             errors={field_errors(@period_data, :label)}
           />
         </div>
 
         <div class="flex justify-end gap-3 mt-8">
           <Buttons.action_button variant={:secondary} type="button" phx-click={@on_cancel}>
-            {dgettext("dashboard_availability", "Cancel")}
+            {dgettext("dashboard_availability_time_off", "Cancel")}
           </Buttons.action_button>
           <Buttons.action_button variant={:primary} type="submit">
-            {dgettext("dashboard_availability", "Save")}
+            {dgettext("dashboard_availability_time_off", "Save")}
           </Buttons.action_button>
         </div>
       </form>
@@ -221,8 +222,10 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
     """
   end
 
-  defp header_title(%{mode: :edit}), do: dgettext("dashboard_availability", "Edit time off")
-  defp header_title(_create), do: dgettext("dashboard_availability", "Add time off")
+  defp header_title(%{mode: :edit}),
+    do: dgettext("dashboard_availability_time_off", "Edit time off")
+
+  defp header_title(_create), do: dgettext("dashboard_availability_time_off", "Add time off")
 
   # The modal renders with no data at all before it has first been opened.
   defp conflicts(nil), do: []
@@ -238,6 +241,9 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
   # "All day" is the empty value the schema reads as nil, so the default choice
   # produces a whole-day period without the form having to special-case it.
   defp all_day_options(time_format) do
-    [{dgettext("dashboard_availability", "All day"), ""} | TimeOptions.time_options(time_format)]
+    [
+      {dgettext("dashboard_availability_time_off", "All day"), ""}
+      | TimeOptions.time_options(time_format)
+    ]
   end
 end

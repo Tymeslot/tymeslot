@@ -52,6 +52,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollShareLink do
           accessible name stays the action; the tooltip carries the reason. --%>
     <Buttons.icon_button
       :if={!@can_link?}
+      id={@id}
       icon="hero-clipboard"
       label={dgettext("dashboard_polls", "Copy poll link to clipboard")}
       tooltip={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}

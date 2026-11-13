@@ -115,3 +115,13 @@ msgstr "Vaše rezervace nebyla potvrzena. Kdykoli se můžete vrátit a zkusit 
 #, elixir-autogen, elixir-format
 msgid "Paid: %{amount}"
 msgstr "Zaplaceno: %{amount}"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed. Your invitation stays reserved for it until the unfinished checkout expires, and a link to book again will appear here as soon as it does."
+msgstr "Vaše rezervace nebyla potvrzena. Pozvánka zůstává pro tuto rezervaci blokovaná, dokud nevyprší nedokončená platba. Jakmile se tak stane, objeví se zde odkaz pro novou rezervaci."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed. To try again, open the invitation link you were sent."
+msgstr "Vaše rezervace není potvrzena. Chcete-li to zkusit znovu, otevřete odkaz s pozvánkou, který jste dostali."

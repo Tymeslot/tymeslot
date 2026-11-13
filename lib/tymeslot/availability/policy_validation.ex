@@ -59,21 +59,21 @@ defmodule Tymeslot.Availability.PolicyValidation do
 
       {value, ""} when value < min ->
         {:error,
-         dgettext("dashboard_availability", "%{setting} must be at least %{min}",
+         dgettext("dashboard_availability_policy", "%{setting} must be at least %{min}",
            setting: label(field),
            min: min
          )}
 
       {_value, ""} ->
         {:error,
-         dgettext("dashboard_availability", "%{setting} cannot be more than %{max}",
+         dgettext("dashboard_availability_policy", "%{setting} cannot be more than %{max}",
            setting: label(field),
            max: max
          )}
 
       _not_a_number ->
         {:error,
-         dgettext("dashboard_availability", "%{setting} must be a whole number",
+         dgettext("dashboard_availability_policy", "%{setting} must be a whole number",
            setting: label(field)
          )}
     end
@@ -85,13 +85,16 @@ defmodule Tymeslot.Availability.PolicyValidation do
   defp range(:advance_booking_days), do: Constraints.advance_booking_days_range()
   defp range(:min_advance_hours), do: Constraints.min_advance_hours_range()
 
-  defp label(:buffer_before_minutes), do: dgettext("dashboard_availability", "Buffer before")
-  defp label(:buffer_after_minutes), do: dgettext("dashboard_availability", "Buffer after")
+  defp label(:buffer_before_minutes),
+    do: dgettext("dashboard_availability_policy", "Buffer before")
+
+  defp label(:buffer_after_minutes), do: dgettext("dashboard_availability_policy", "Buffer after")
 
   defp label(:advance_booking_days),
-    do: dgettext("dashboard_availability", "Advance booking days")
+    do: dgettext("dashboard_availability_policy", "Advance booking days")
 
-  defp label(:min_advance_hours), do: dgettext("dashboard_availability", "Minimum advance hours")
+  defp label(:min_advance_hours),
+    do: dgettext("dashboard_availability_policy", "Minimum advance hours")
 
   defp log(field, outcome, metadata, details) do
     SecurityLogger.log_security_event(

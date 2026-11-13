@@ -12,7 +12,6 @@ defmodule TymeslotWeb.LiveCase do
 
   alias Phoenix.ConnTest
   alias Tymeslot.DataCase
-  alias Tymeslot.Test.WriteGuardianHelpers
   alias Tymeslot.TestMocks
 
   using do
@@ -41,7 +40,6 @@ defmodule TymeslotWeb.LiveCase do
     DataCase.reset_stateful_components(tags)
     Mox.set_mox_from_context(tags)
     TestMocks.setup_subscription_mocks()
-    WriteGuardianHelpers.stop_on_exit()
     {:ok, conn: ConnTest.build_conn()}
   end
 end

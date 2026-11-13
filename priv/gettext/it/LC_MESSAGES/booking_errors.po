@@ -250,3 +250,28 @@ msgstr "Impossibile creare la riunione. Riprova."
 #, elixir-autogen, elixir-format
 msgid "This booking page can't show times right now."
 msgstr "Questa pagina di prenotazione non può mostrare gli orari al momento."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has already been used or is no longer valid. Please contact the host for a new one."
+msgstr "Questo link di invito è già stato usato o non è più valido. Chiedine uno nuovo all'organizzatore."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type can be booked only with a personal invitation link."
+msgstr "Questo tipo di riunione si può prenotare solo con un link di invito personale."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has already been used to book an appointment. To change it, use the link in your confirmation email."
+msgstr "Questo link di invito è già stato usato per prenotare un appuntamento. Per modificarlo, usa il link nella tua email di conferma."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has expired. Please contact the host for a new one."
+msgstr "Questo link di invito è scaduto. Chiedine uno nuovo all'organizzatore."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link is no longer valid. Please contact the host for a new one."
+msgstr "Questo link di invito non è più valido. Chiedine uno nuovo all'organizzatore."

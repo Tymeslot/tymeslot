@@ -75,7 +75,7 @@ defmodule Tymeslot.Emails.Templates.ChargeDisputeOpenedTest do
       english = ChargeDisputeOpened.render(build_context())
       email = ChargeDisputeOpened.render(build_context(%{host_user_id: host.id}))
 
-      assert email.subject =~ "€50.00"
+      assert email.subject =~ "50,00\u00A0€"
       refute email.subject == english.subject
       assert email.text_body =~ "Hallo Bob Host,"
       refute email.text_body =~ "WHAT HAPPENS NEXT"

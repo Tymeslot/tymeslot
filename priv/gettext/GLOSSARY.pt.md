@@ -172,6 +172,15 @@ flow and in the dashboard.
 | Copy free times | Copiar horários livres |
 | Request · Expired (calendar pill for a booking request) | Pedido · Expirado (masculine, agreeing with *pedido*) |
 | put back (bookable times restored by undo) | restaurados |
+| translation (noun; booking-page languages) | tradução (pl. traduções); *"%{language} translations"* → *"Traduções: %{language}"*, *"Your %{language} translations"* → *"Suas traduções (%{language})"*: `%{language}` is filled with the language's own name, so it goes after a colon or in brackets, never after *em* or *para* |
+| translate | traduzir; the participle agrees with *textos* (*"%{translated}/%{total} traduzidos"*) |
+| original language (the language the host writes their texts in) | idioma original; *"in %{language}"* → *"no idioma original (%{language})"*; the original text is *o original*, and the badge beside that language reads *original* |
+| translation language (a language the host translates into) | idioma de tradução (pl. idiomas de tradução) |
+| language switcher (the visitor-facing control on the booking page) | seletor de idioma |
+| outdated (a translation whose original changed) | desatualizado (pl. desatualizados) |
+| missing (a text not translated yet) | **Sem tradução** as the status pill and in the filter (*"Só sem tradução ou desatualizados"*); in running text *faltando* (*"alguns textos estão faltando"*) |
+| translated (status) | traduzido |
+| review (the link to a language's review page) | Revisar |
 
 **Settings flash messages** put the name after a colon, *"Configuração ativada: %{name}."*
 (also *desativada*, *atualizada*), so the participle agrees with *configuração* and never
@@ -180,6 +189,19 @@ with whatever `%{name}` turns out to be.
 **Known issue, not yet settled:** *schedule* is **agenda** in `availability` and
 `meeting_form`, which collides with the calendar's **Agenda** view. Leave both as they
 are until the two are decided together.
+
+### Setup wizard (`onboarding_wizard`)
+
+| English | pt-BR | Note |
+|---|---|---|
+| booking link | **link de agendamento** | Never *link de reserva(s)*; *reserva* is not our noun anywhere. |
+| link (the username field, the host's `/<username>`) | **link** | Masculine: *Seu link*, *Este link já está em uso*. |
+| keep (your link: save it somewhere you'll find it) | **guardar** | *Ou guarde para depois*, *Primeiro envie ou guarde seu link*, *Seu link já está guardado*. Not *salvar*, which is the Save button. |
+| Live (step name and badge) · go live · You're live · Almost live | **No ar** · entrar no ar · Você está no ar · Quase no ar | Broadcast idiom, gender-free. |
+| Look (step name) | **Visual** | *Seu visual*, *Comparar os visuais*. |
+| Calendar (step name) | **Calendário** | Same word as everywhere else; never *Agenda* (the calendar's view name). |
+| intro call (the seeded meeting type) | **Conversa inicial** | Matches *discovery call* above. |
+| pick / book a time with me (the host's own casual message) | **marcar um horário comigo** | *Oi, %{name}! Você pode marcar um horário comigo aqui: %{url}*. The signature line keeps *Agende um horário comigo*. |
 
 ### Booking pages (a host's extra pages)
 

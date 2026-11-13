@@ -9,8 +9,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VisibilitySectio
   for (`phx-value-listed`), so a flip does what the host saw even when
   another tab changed the listing meanwhile.
 
+  Above them, a switch making the type invitation-only (`toggle_invitation_only`,
+  also to the parent), which hides it from every page; while it is on the page
+  switches are not shown. A group type cannot be invitation-only, so the switch
+  is disabled for one.
+
   Without a username there is no page to show a type on yet, so the section
-  says to choose one instead. While the plan does not allow changing booking
+  says to choose one instead (not for an invitation-only type, whose
+  `/invite/<token>` links need no username). While the plan does not allow changing booking
   pages (`BookingPages.editable?/1`), their switches are disabled; the
   username's own page is never gated.
   """
@@ -19,11 +25,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VisibilitySectio
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.BookingPages
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules
 
   attr :type, :map, default: nil
   attr :parent, :any, required: true
   attr :username, :string, default: nil
   attr :pages, :list, default: [], doc: "`PageVisibility.rows/4`, the username's page first"
+
+  attr :group, :boolean,
+    default: false,
+    doc: "Whether group bookings are on: invitation links are for one-to-one types only"
 
   attr :pages_editable, :boolean,
     default: true,
@@ -39,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VisibilitySectio
       />
 
       <p
-        :if={@username in [nil, ""]}
+        :if={@username in [nil, ""] and not @type.invitation_only}
         class="text-token-sm text-tymeslot-600"
         data-testid="visibility-needs-username"
       >
@@ -50,7 +61,27 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VisibilitySectio
       </p>
 
       <.setting_row
-        :for={page <- @pages}
+        id={"meeting-type-invitation-only-toggle-#{@type.id}"}
+        control={:switch}
+        label={dgettext("dashboard_meeting_form", "Only people with an invitation link can book")}
+        description={
+          dgettext(
+            "dashboard_meeting_form",
+            "Hidden from your booking pages. Each invitation link books one appointment."
+          )
+        }
+        checked={@type.invitation_only}
+        disabled={@group and not @type.invitation_only}
+        on_change="toggle_invitation_only"
+        target={@parent}
+        phx-value-id={@type.id}
+        phx-value-invitation_only={to_string(not @type.invitation_only)}
+      >
+        <:disabled_reason>{GroupRules.invitation_only_message()}</:disabled_reason>
+      </.setting_row>
+
+      <.setting_row
+        :for={page <- if(@type.invitation_only, do: [], else: @pages)}
         id={toggle_id(@type, page)}
         control={:switch}
         label={dgettext("dashboard_meeting_form", "Show on %{address}", address: "/" <> page.address)}
@@ -66,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.VisibilitySectio
       </.setting_row>
 
       <p
-        :if={@pages != [] and Enum.all?(@pages, &(not &1.checked))}
+        :if={not @type.invitation_only and @pages != [] and Enum.all?(@pages, &(not &1.checked))}
         class="text-token-sm text-tymeslot-500"
         data-testid="unlisted-note"
       >

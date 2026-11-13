@@ -16,9 +16,11 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Venues
 
   @type params :: %{
           required(:title) => String.t(),
@@ -35,8 +37,24 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           optional(:organizer_note) => String.t() | nil,
           optional(:attendee_locale) => String.t() | nil,
           optional(:reminders) => [%{value: pos_integer(), unit: String.t()}],
-          optional(:managed_by_host) => boolean()
+          optional(:managed_by_host) => boolean(),
+          optional(:location) => location() | nil
         }
+
+  @typedoc """
+  Where the meeting is held, as the organiser chose it: one of their saved
+  venues (`Tymeslot.Venues`), a place they typed in, or a place one of their
+  meeting types names, with its kind (a poll inheriting its type's location).
+  """
+  @type location ::
+          {:venue, pos_integer()}
+          | {:custom, String.t()}
+          | {:meeting_type, LocationOption.kind(), String.t()}
+
+  # As long as the details of a custom location on a meeting type
+  # (`Tymeslot.MeetingTypes.LocationOption`).
+  @custom_location_max_length 500
+  @no_location %{location: nil, location_kind: nil, venue_id: nil}
 
   @type error ::
           :title_required
@@ -45,6 +63,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           | :attendee_is_organizer
           | :end_before_start
           | :invalid_reminders
+          | :invalid_location
           | :time_conflict
           | :meeting_creation_failed
 
@@ -82,15 +101,72 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
     organizer = get_organizer_details(params.organizer_user_id)
 
     with :ok <- validate(params, organizer),
-         {:ok, reminders} <- validate_reminders(params[:reminders]) do
+         {:ok, reminders} <- validate_reminders(params[:reminders]),
+         {:ok, location} <- resolve_location(params[:location], params.organizer_user_id) do
       guest_emails = params[:guest_emails] || []
 
       params
       |> Map.put(:reminders, reminders)
       |> build_meeting_attrs(organizer)
+      |> Map.merge(location)
       |> run_transaction(guest_emails, opts)
     end
   end
+
+  @doc "The longest place an organiser may type in (`{:custom, text}`)."
+  @spec custom_location_max_length() :: pos_integer()
+  def custom_location_max_length, do: @custom_location_max_length
+
+  # The meeting's location fields, as a booking on a meeting type fills them
+  # (`Tymeslot.Bookings.MeetingAttributes`): the one-line text its calendar
+  # entry and emails show, what kind of place it is, and the saved venue it
+  # is at. A venue must be the organiser's own; its text is a snapshot
+  # (`Venues.display/1`), so editing the venue later does not rewrite what
+  # this meeting was set for. No location leaves all three empty.
+  defp resolve_location(nil, _organizer_user_id), do: {:ok, @no_location}
+
+  defp resolve_location({:venue, venue_id}, organizer_user_id) when is_integer(venue_id) do
+    case Venues.get_venue(organizer_user_id, venue_id) do
+      {:ok, venue} ->
+        {:ok, %{location: Venues.display(venue), location_kind: :in_person, venue_id: venue.id}}
+
+      {:error, _not_found} ->
+        {:error, :invalid_location}
+    end
+  end
+
+  defp resolve_location({:custom, text}, _organizer_user_id) when is_binary(text) do
+    case String.trim(text) do
+      "" ->
+        {:ok, @no_location}
+
+      place ->
+        if String.length(place) <= @custom_location_max_length,
+          do: {:ok, %{location: place, location_kind: :custom, venue_id: nil}},
+          else: {:error, :invalid_location}
+    end
+  end
+
+  # A meeting type's place is stored as a booking on that type stores it
+  # (`LocationSelection.display/2`): its whole line, label and details, whose
+  # lengths the type's own location already bounds, and its kind. An
+  # in-person place without a venue leaves the address to arrange, as such a
+  # booking does.
+  defp resolve_location({:meeting_type, kind, text}, _organizer_user_id)
+       when is_binary(text) and kind in [:in_person, :phone, :custom] do
+    if String.trim(text) == "",
+      do: {:ok, @no_location},
+      else:
+        {:ok,
+         %{
+           location: text,
+           location_kind: kind,
+           venue_id: nil,
+           address_to_arrange: kind == :in_person
+         }}
+  end
+
+  defp resolve_location(_location, _organizer_user_id), do: {:error, :invalid_location}
 
   defp validate(params, {_org_name, org_email, _org_username}) do
     cond do

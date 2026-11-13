@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
   configuration.
 
   This component acts as a container for specialized profile settings forms.
+  An overlay can append its own sections through `:profile_section_components`.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -23,7 +24,11 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
-    {:ok, assign(socket, saving: false)}
+    {:ok,
+     assign(socket,
+       saving: false,
+       section_components: Application.get_env(:tymeslot, :profile_section_components, [])
+     )}
   end
 
   @impl Phoenix.LiveComponent
@@ -103,6 +108,14 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
                   <.live_component
                     module={TimeFormatFormComponent}
                     id="time-format-form"
+                    current_user={@current_user}
+                  />
+                </div>
+
+                <div :for={module <- @section_components} class="border-t-2 border-tymeslot-50 pt-10">
+                  <.live_component
+                    module={module}
+                    id={"profile-section-#{inspect(module)}"}
                     current_user={@current_user}
                   />
                 </div>

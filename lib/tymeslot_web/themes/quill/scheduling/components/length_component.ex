@@ -119,16 +119,20 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.LengthComponent do
                     data-testid="next-step"
                     data-intent="continue"
                     disabled={is_nil(@chosen)}
-                    title={
-                      if is_nil(@chosen),
-                        do: dgettext("booking", "Please select a meeting duration first")
-                    }
+                    aria-describedby={if is_nil(@chosen), do: "next-step-hint"}
                     class="flex-1 gap-2"
                   >
                     {dgettext("booking", "Next")}
                     <.icon name="hero-arrow-right" class="inline-icon" />
                   </.action_button>
                 </div>
+                <p
+                  :if={is_nil(@chosen)}
+                  id="next-step-hint"
+                  class="mt-2 text-center text-sm opacity-80"
+                >
+                  {dgettext("booking", "Please select a meeting duration first")}
+                </p>
               </div>
             </.glass_morphism_card>
           </div>

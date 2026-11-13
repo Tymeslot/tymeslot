@@ -46,6 +46,7 @@ msgstr "Доступність"
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
 #: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Календар"
@@ -417,6 +418,12 @@ msgstr "Ваша сторінка бронювання перестала при
 #, elixir-autogen, elixir-format
 msgid "Your booking page isn't taking bookings yet"
 msgstr "Ваша сторінка бронювання ще не приймає бронювань"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#, elixir-autogen, elixir-format
+msgid "Languages"
+msgstr "Мови"
 
 #: lib/tymeslot_web/live/dashboard/calendar/zone_link.ex
 #, elixir-autogen, elixir-format

@@ -163,14 +163,44 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
 
   attr :rebook_path, :string, default: nil
 
-  @doc "The cancelled page body: the booking is not confirmed, with a way back."
+  attr :invitation_held, :boolean,
+    default: false,
+    doc: "the booking still holds the invitation it was made through (`PaymentReturn.rebook/3`)"
+
+  attr :invitation_withheld, :boolean,
+    default: false,
+    doc:
+      "the booking was made through an invitation, but the visitor did not prove they are its guest, so the page offers no link with its token (`PaymentReturn.rebook/3`)"
+
+  @doc """
+  The cancelled page body: the booking is not confirmed, with a way back, or,
+  while the booking still holds the invitation it was made through, when
+  there will be one, or, for a visitor not shown the invitation, where to
+  find it.
+  """
   @spec cancelled_body(map()) :: Phoenix.LiveView.Rendered.t()
   def cancelled_body(assigns) do
     ~H"""
     <h1 class="payment-page-heading">
       {dgettext("booking_payments", "Payment cancelled")}
     </h1>
-    <p class="payment-page-body">
+    <p :if={@invitation_held} class="payment-page-body" data-testid="payment-invitation-held">
+      {dgettext(
+        "booking_payments",
+        "Your booking is not confirmed. Your invitation stays reserved for it until the unfinished checkout expires, and a link to book again will appear here as soon as it does."
+      )}
+    </p>
+    <p
+      :if={@invitation_withheld}
+      class="payment-page-body"
+      data-testid="payment-invitation-withheld"
+    >
+      {dgettext(
+        "booking_payments",
+        "Your booking is not confirmed. To try again, open the invitation link you were sent."
+      )}
+    </p>
+    <p :if={!@invitation_held and !@invitation_withheld} class="payment-page-body">
       {dgettext(
         "booking_payments",
         "Your booking is not confirmed. You can return and try again at any time."

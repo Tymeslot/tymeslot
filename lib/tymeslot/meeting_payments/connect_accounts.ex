@@ -2,95 +2,226 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   @moduledoc """
   Stripe Connect lifecycle for hosts.
 
-  Owns the placeholder-first onboarding flow: a row is persisted before
-  Stripe is ever called so that a crash mid-flight cannot orphan a real
-  Stripe account. The Stripe API call itself is idempotency-keyed by that
-  placeholder row, which makes a retry after a crash safe.
+  A host connects a Stripe account they already have through Stripe Connect
+  OAuth. A `connect_accounts` row carries a single-use nonce for the attempt,
+  which is claimed before the authorisation code is exchanged: Stripe revokes
+  a connection whose code is consumed twice, so nothing may exchange a code
+  without winning that claim first.
   """
 
   require Logger
 
   alias Tymeslot.Features
-  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
-  alias Tymeslot.MeetingPayments.HeldMeetings
   alias Tymeslot.MeetingPayments.StripeAdapter
-  alias Tymeslot.Repo
+  alias Tymeslot.MeetingPayments.StripeConnectOAuth
+  alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
+  alias Tymeslot.MeetingTypes
+  alias Tymeslot.Profiles
   alias Tymeslot.Workers.SendConnectAccountRestricted
-  alias TymeslotWeb.Endpoint
 
   @type account :: ConnectAccountSchema.t()
 
-  @doc """
-  Starts (or resumes) Stripe Connect onboarding for `user`.
+  # Seconds: long enough for a host whose connection could not be saved to
+  # retry. A later disconnect or a refusal moves the job (see
+  # `DeauthorizeConnectAccount.schedule/2`); a connection that is kept leaves
+  # it to find a live row and do nothing.
+  @revocation_delay 3600
 
-  Enforces the feature gate itself, so a forged request cannot start
-  onboarding whatever the caller checked: the error is the
+  @doc """
+  Starts connecting a Stripe account for `user`, returning the Stripe URL to
+  send them to.
+
+  Enforces the feature gate itself, so a forged request cannot start a
+  connection whatever the caller checked: the error is the
   `Tymeslot.Features.check_access/2` reason (`:feature_disabled`,
   `:insufficient_plan`, …). `{:error, :stripe_required}` from that check
   counts as allowed, since establishing the account is what this flow is for.
 
-  A host whose row already carries a Stripe account (they left the hosted
-  onboarding part-way and came back) gets a fresh onboarding link for that
-  account; a new account is created only when the row has none. Returns
-  `{:error, :account_creation_restricted}` when Stripe has put a temporary
-  hold on the platform creating connected accounts, and
-  `{:error, :unsupported_currency}` when the new account's currency (its
-  country's) is not one meeting payments support.
+  A row with no account yet, or a legacy account the host never finished, can
+  start. Any other live row is `{:error, :already_connected}`. Without a
+  Connect client ID the result is `{:error, :oauth_not_configured}`.
   """
   @spec start_onboarding(user :: %{id: integer()}) ::
-          {:ok, %{url: String.t(), account: account()}} | {:error, term()}
+          {:ok, %{url: String.t(), account: account()}}
+          | {:error, :oauth_not_configured | :already_connected | term()}
   def start_onboarding(user) do
-    country = default_country()
+    with :ok <- check_onboarding_access(user.id),
+         :ok <- check_oauth_configured(),
+         {:ok, placeholder} <- ensure_placeholder(user.id),
+         :ok <- check_startable(placeholder),
+         nonce = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false),
+         {:ok, account} <- ConnectAccountQueries.set_oauth_nonce(placeholder, nonce) do
+      {:ok, %{url: StripeConnectOAuth.authorize_url(user.id, nonce), account: account}}
+    end
+  end
+
+  @doc """
+  Completes a connection when Stripe sends the host back with a `code`.
+
+  The nonce in `state` is claimed before the code is exchanged, so a replayed
+  or concurrent callback never reaches Stripe. When the account cannot be read
+  afterwards, or names no currency, nothing is saved and the result is
+  `{:error, :oauth_failed}`: the host retries with a fresh code.
+
+  Once the exchange has named an account no other host holds, its revocation
+  is scheduled an hour ahead, before anything else can fail: whatever stops
+  the connection from being saved, Tymeslot does not keep access to an
+  account it has no row for. A connection that is saved leaves that job to
+  find a live row and do nothing.
+
+  An account in a currency meeting payments do not support is refused and
+  queued for revocation, which leaves alone any account with a live row. An
+  account another host holds is refused and left connected, as it is theirs.
+  """
+  @spec complete_oauth_callback(user :: %{id: integer()}, code :: String.t(), state :: String.t()) ::
+          {:ok, account()}
+          | {:error,
+             :invalid_state
+             | :expired_state
+             | :user_mismatch
+             | :state_already_used
+             | :invalid_grant
+             | :oauth_failed
+             | :account_already_linked
+             | :unsupported_currency
+             | term()}
+  def complete_oauth_callback(user, code, state) do
+    # Stamped before the exchange: a revocation landing between the exchange
+    # and the save is then dated after the stamp, and not ignored as older.
+    connected_at = DateTime.utc_now(:second)
 
     with :ok <- check_onboarding_access(user.id),
-         {:ok, account} <- ensure_placeholder(user.id, country) do
-      onboard(account, country)
+         {:ok, nonce} <- verify_state_for(user.id, state),
+         :ok <- claim_nonce(user.id, nonce),
+         {:ok, %{stripe_user_id: stripe_account_id}} <- StripeAdapter.exchange_oauth_code(code),
+         :ok <- check_not_linked_elsewhere(stripe_account_id, user.id),
+         :ok <- enqueue_revocation(stripe_account_id, @revocation_delay) do
+      record_connection(user.id, stripe_account_id, connected_at)
     end
   end
 
-  defp onboard(%ConnectAccountSchema{stripe_account_id: stripe_account_id} = account, _country)
-       when is_binary(stripe_account_id) do
-    with {:ok, link} <- create_account_link(stripe_account_id) do
-      {:ok, %{url: link.url, account: account}}
+  defp check_oauth_configured do
+    if StripeConnectOAuth.configured?(), do: :ok, else: {:error, :oauth_not_configured}
+  end
+
+  defp check_startable(%ConnectAccountSchema{stripe_account_id: nil}), do: :ok
+
+  defp check_startable(%ConnectAccountSchema{oauth_connected_at: nil, details_submitted: false}),
+    do: :ok
+
+  defp check_startable(%ConnectAccountSchema{}), do: {:error, :already_connected}
+
+  defp verify_state_for(user_id, state) do
+    case StripeConnectOAuth.verify_state(state) do
+      {:ok, %{user_id: ^user_id, nonce: nonce}} -> {:ok, nonce}
+      {:ok, _other_user} -> {:error, :user_mismatch}
+      {:error, _reason} = error -> error
     end
   end
 
-  defp onboard(%ConnectAccountSchema{} = placeholder, country) do
-    with {:ok, stripe_account} <- create_stripe_account(placeholder, country),
-         :ok <- check_currency(stripe_account, country),
-         {:ok, link} <- create_account_link(stripe_account.id),
-         {:ok, account} <-
-           ConnectAccountQueries.update(placeholder, %{
-             stripe_account_id: stripe_account.id,
-             default_currency: stripe_account.default_currency,
-             status: :active
-           }) do
-      {:ok, %{url: link.url, account: account}}
+  defp claim_nonce(user_id, nonce) do
+    case ConnectAccountQueries.claim_oauth_nonce(user_id, nonce) do
+      :ok -> :ok
+      :error -> {:error, :state_already_used}
     end
   end
 
-  # Stripe gives a new account its country's currency. The country is the
-  # operator's MEETING_PAYMENTS_DEFAULT_COUNTRY, so a currency outside the
-  # allowlist is a configuration error no host can fix; it is logged for the
-  # operator, and the placeholder is left as it was, so onboarding can be
-  # retried once the setting is corrected.
-  defp check_currency(%{default_currency: currency}, country) do
-    if is_binary(currency) and Currency.allowed?(currency) do
-      :ok
-    else
-      Logger.error("Stripe Connect account created in an unsupported currency",
-        country: country,
-        currency: currency
-      )
-
-      {:error, :unsupported_currency}
+  # Runs after the exchange on purpose: Stripe names the account only there.
+  defp check_not_linked_elsewhere(stripe_account_id, user_id) do
+    case ConnectAccountQueries.by_stripe_account_id(stripe_account_id) do
+      nil -> :ok
+      %ConnectAccountSchema{user_id: ^user_id} -> :ok
+      %ConnectAccountSchema{} -> {:error, :account_already_linked}
     end
   end
+
+  # A read that fails, or names no currency, cannot produce a row that is safe
+  # to take payments on, so nothing is saved. The code is spent, and the
+  # revocation scheduled after the exchange stands.
+  defp record_connection(user_id, stripe_account_id, connected_at) do
+    read_at = DateTime.utc_now(:second)
+
+    case StripeAdapter.retrieve_account(stripe_account_id) do
+      {:ok, %{"default_currency" => currency} = snapshot} when is_binary(currency) ->
+        if Currency.allowed?(currency) do
+          connect_with_snapshot(user_id, stripe_account_id, snapshot, read_at, connected_at)
+        else
+          enqueue_revocation(stripe_account_id, 0)
+          {:error, :unsupported_currency}
+        end
+
+      _unusable ->
+        {:error, :oauth_failed}
+    end
+  end
+
+  # A failed insert is logged and not fatal: the callback carries on, as a
+  # connection it saves needs no revocation.
+  defp enqueue_revocation(stripe_account_id, delay_seconds) do
+    case DeauthorizeConnectAccount.schedule(stripe_account_id, delay_seconds) do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to enqueue the revocation of a Stripe connection",
+          stripe_account_id: stripe_account_id,
+          reason: LogFormat.reason(reason)
+        )
+    end
+  end
+
+  defp connect_with_snapshot(user_id, stripe_account_id, snapshot, read_at, connected_at) do
+    with {:ok, account} <- save_connection(user_id, stripe_account_id, snapshot, connected_at),
+         :ok <- apply_account_event(snapshot, read_at) do
+      {:ok, ConnectAccountQueries.get(account.id) || account}
+    end
+  end
+
+  # Reuses the host's live row, which is how a stuck legacy account gets
+  # replaced. The row is fetched afresh because a disconnect may have removed
+  # it during the exchange, and the code is spent either way.
+  defp save_connection(user_id, stripe_account_id, snapshot, connected_at) do
+    with {:ok, row} <- ensure_placeholder(user_id) do
+      row
+      |> ConnectAccountQueries.update(%{
+        stripe_account_id: stripe_account_id,
+        status: :active,
+        oauth_connected_at: connected_at,
+        oauth_nonce: nil,
+        country: snapshot["country"],
+        default_currency: connection_currency(user_id, snapshot["default_currency"]),
+        charges_enabled: false,
+        payouts_enabled: false,
+        details_submitted: false,
+        disabled_reason: nil,
+        last_account_event_at: nil
+      })
+      |> classify_link_conflict()
+    end
+  end
+
+  # Stored prices carry no currency, and a disconnect keeps them, so a host
+  # with prices stays in the currency they were set in whatever the new
+  # account's default is: 50.00 must not silently turn from euros into pounds.
+  defp connection_currency(user_id, stripe_default) do
+    last_currency = Profiles.last_charge_currency(user_id)
+
+    if Currency.allowed?(last_currency) and MeetingTypes.has_priced_meeting_types?(user_id),
+      do: last_currency,
+      else: stripe_default
+  end
+
+  defp classify_link_conflict({:error, %Ecto.Changeset{} = changeset} = error) do
+    if unique_violation?(changeset, :stripe_account_id),
+      do: {:error, :account_already_linked},
+      else: error
+  end
+
+  defp classify_link_conflict(result), do: result
 
   # Uses the shared boolean predicate for the yes/no decision, and falls back
   # to the raw `check_access/2` reason only when denied, so the caller can
@@ -99,209 +230,6 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
     if Features.meeting_payments_allowed?(user_id),
       do: :ok,
       else: Features.check_access(user_id, :meeting_payments)
-  end
-
-  # The user's profile carries no country field, so onboarding uses the
-  # operator-configured default (MEETING_PAYMENTS_DEFAULT_COUNTRY, "ch" when
-  # unset). Read at runtime because `config/runtime.exs` sets it.
-  defp default_country,
-    do: Application.get_env(:tymeslot, :meeting_payments_default_country, "ch")
-
-  @doc """
-  Disconnects the host's Stripe account.
-
-  Performs three steps in order so attendees cannot complete payment after
-  the account is gone:
-
-    1. Collect pending booking_payments for this host (no lock needed).
-    2. Expire each open Stripe Checkout Session (HTTP calls, outside any
-       DB transaction to avoid holding the connection open).
-    3. Atomic transaction: mark each booking_payment as `failed` (conditional
-       UPDATE — only when `status = 'pending'`, so a concurrent
-       `checkout.session.completed` webhook that has already moved the row to
-       `paid` is not overwritten), transition the linked `awaiting_payment`
-       meeting to `expired`, then soft-delete the connect_account row.
-
-  Returns `{:ok, %{cancelled_count: n, outstanding_refunds_count: m}}` on
-  success, `{:error, reason}` if the transaction fails.
-
-  ## Outstanding refunds
-
-  `outstanding_refunds_count` is measured before the soft delete and is not
-  acted on: these are cancelled bookings whose money the host still holds, and
-  disconnecting neither settles nor cancels them. It is reported because the
-  disconnect is the moment the host loses the ability to issue them from
-  Tymeslot (from here on only their Stripe dashboard can settle them), so the
-  caller can say so rather than let the obligation disappear quietly.
-
-  ## Race with checkout.session.completed
-
-  The conditional `UPDATE … WHERE status = 'pending'` in step 3 means a
-  `checkout.session.completed` webhook that has already flipped a row to `paid`
-  will not be overwritten — the update silently skips that row, and
-  `cancelled_count` reflects only the rows that were actually cancelled.
-
-  If the webhook arrives *after* step 3, it finds the meeting `expired` and
-  the payment `failed`, and the money has been taken all the same, so
-  `CheckoutSessionCompleted` does not ignore it: it confirms the booking
-  after all if the slot is still free (checked under the organiser's
-  schedule lock), and refunds the payment in full on the connected account
-  if the slot has been taken since, leaving the meeting expired.
-
-  ## Stripe session expiry failures
-
-  Stripe session expiry is best-effort. If a call fails (network error, session
-  already expired/completed) we log and continue — the meeting and booking_payment
-  are cancelled locally regardless, so the attendee cannot complete the booking
-  even if the Stripe session is still technically open.
-
-  ## Paid meeting types are left alone
-
-  Deliberately: `payment_required` and `price_cents` survive a disconnect so a
-  host who reconnects gets their prices back instead of re-entering every one.
-  The form no longer clears them by omission
-  (`Tymeslot.MeetingTypes.FormMapper.build_attrs/3`), the changeset no longer
-  fails unrelated saves over the stored flag
-  (`MeetingTypeSchema.validate_payment_fields/2`), and `Bookings.Create`
-  refuses a paid booking outright while charges are off, so nothing is taken
-  in the meantime. Clearing them here, as `MeetingPayments.change_default_currency/2`
-  does for a currency change, would destroy that state for the far more common
-  case of a temporary disconnect.
-  """
-  @spec disconnect(user :: %{id: integer()}) ::
-          {:ok,
-           %{cancelled_count: non_neg_integer(), outstanding_refunds_count: non_neg_integer()}}
-          | {:error, term()}
-  def disconnect(user) do
-    pending = BookingPaymentQueries.list_pending_for_host(user.id)
-    outstanding = BookingPaymentQueries.outstanding_refunds_summary_for_host(user.id)
-    account = ConnectAccountQueries.live_for_user(user.id)
-
-    expire_stripe_sessions(pending, account)
-
-    now = DateTime.utc_now(:second)
-
-    fn ->
-      {cancelled_count, expired} = cancel_pending_bookings(pending, now)
-      ConnectAccountQueries.soft_delete_for_user(user.id, now)
-
-      {%{cancelled_count: cancelled_count, outstanding_refunds_count: outstanding.count}, expired}
-    end
-    |> Repo.transaction()
-    |> announce_after_commit()
-  end
-
-  @doc """
-  Steps 1 to 3 of `disconnect/1` without the soft delete: expires the host's
-  open Stripe Checkout sessions and cancels their pending bookings, leaving
-  the Connect account in place. Used when a host's account is frozen pending
-  deletion, so no attendee can still pay for a booking the host will never
-  hold. A checkout that completes regardless is refunded by
-  `CheckoutSessionCompleted`.
-
-  Returns `{:ok, cancelled_count}`, or `{:error, reason}` if the transaction
-  fails.
-  """
-  @spec cancel_pending_checkouts(user :: %{id: integer()}) ::
-          {:ok, non_neg_integer()} | {:error, term()}
-  def cancel_pending_checkouts(user) do
-    pending = BookingPaymentQueries.list_pending_for_host(user.id)
-    expire_stripe_sessions(pending, ConnectAccountQueries.live_for_user(user.id))
-    now = DateTime.utc_now(:second)
-
-    fn -> cancel_pending_bookings(pending, now) end
-    |> Repo.transaction()
-    |> announce_after_commit()
-  end
-
-  # Returns the number of bookings cancelled and the meetings whose hold was
-  # released, which are announced only once the transaction has committed.
-  defp cancel_pending_bookings(pending, now) do
-    Enum.reduce(pending, {0, []}, fn payment, {count, expired} ->
-      case cancel_pending_booking(payment, now) do
-        {:ok, nil} -> {count + 1, expired}
-        {:ok, meeting} -> {count + 1, [meeting | expired]}
-        :skipped -> {count, expired}
-      end
-    end)
-  end
-
-  defp announce_after_commit({:ok, {result, expired}}) do
-    Enum.each(expired, &HeldMeetings.announce_expired/1)
-    {:ok, result}
-  end
-
-  defp announce_after_commit({:error, _reason} = error), do: error
-
-  # Cancel a pending booking_payment and, if it has a linked awaiting_payment
-  # meeting, transition that meeting to expired so the slot is released.
-  #
-  # Uses a conditional UPDATE that only writes when status = 'pending', so a
-  # concurrent checkout.session.completed webhook that has already flipped the
-  # row to 'paid' is not overwritten. The meeting is locked only after that
-  # claim, the same order the webhooks take their locks in.
-  #
-  # Returns `{:ok, expired_meeting | nil}` when the row was cancelled, and
-  # :skipped when it was already in a terminal state (a concurrent webhook
-  # beat us to it).
-  defp cancel_pending_booking(payment, now) do
-    case BookingPaymentQueries.cancel_if_pending(payment.id, now) do
-      {:ok, :cancelled} ->
-        {:ok, expire_held_meeting(payment.meeting_id)}
-
-      {:ok, :skipped} ->
-        :skipped
-
-      {:error, reason} ->
-        ErrorTracking.report_error(reason, nil, %{booking_payment_id: payment.id})
-        :skipped
-    end
-  end
-
-  # A meeting write that fails is logged and the cancellation stands: the
-  # payment's own `checkout.session.expired` event later expires a meeting
-  # still awaiting payment behind a cancelled payment
-  # (`Webhooks.FailAndExpire`).
-  defp expire_held_meeting(meeting_id) do
-    case HeldMeetings.expire(meeting_id) do
-      {:ok, :expired, meeting} ->
-        meeting
-
-      {:ok, :unchanged} ->
-        nil
-
-      {:error, reason} ->
-        Logger.warning("Failed to expire the meeting of a cancelled checkout",
-          meeting_id: meeting_id,
-          reason: LogFormat.reason(reason)
-        )
-
-        nil
-    end
-  end
-
-  defp expire_stripe_sessions(pending, account) do
-    stripe_account_id = account && account.stripe_account_id
-
-    Enum.each(pending, &expire_stripe_session(&1.stripe_checkout_session_id, stripe_account_id))
-  end
-
-  # Isolated per session: one that raises is logged like one that fails, so
-  # the rest are still expired and every booking is still cancelled locally.
-  defp expire_stripe_session(session_id, stripe_account_id) do
-    case StripeAdapter.expire_checkout_session(session_id, connect_account: stripe_account_id) do
-      {:ok, _session} -> :ok
-      {:error, reason} -> log_expire_failure(session_id, reason)
-    end
-  rescue
-    exception -> log_expire_failure(session_id, exception)
-  end
-
-  defp log_expire_failure(session_id, reason) do
-    Logger.warning("Failed to expire Stripe checkout session",
-      session_id: session_id,
-      reason: LogFormat.reason(reason)
-    )
   end
 
   @doc """
@@ -383,16 +311,13 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   defp maybe_notify_restriction(_updated, _previous), do: :ok
 
-  # The Stripe dashboard always lives at this canonical URL; we keep the
-  # link generic rather than per-account because account_link sessions are
-  # short-lived and would force us to call into Stripe synchronously.
+  # The Stripe dashboard always lives at this canonical URL.
   defp stripe_dashboard_url, do: "https://dashboard.stripe.com/"
 
-  @spec ensure_placeholder(integer(), String.t()) ::
-          {:ok, account()} | {:error, Ecto.Changeset.t()}
-  defp ensure_placeholder(user_id, country) do
+  @spec ensure_placeholder(integer()) :: {:ok, account()} | {:error, Ecto.Changeset.t()}
+  defp ensure_placeholder(user_id) do
     case ConnectAccountQueries.live_for_user(user_id) do
-      nil -> insert_or_fetch_placeholder(user_id, country)
+      nil -> insert_or_fetch_placeholder(user_id)
       %ConnectAccountSchema{} = account -> {:ok, account}
     end
   end
@@ -400,70 +325,24 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   # On concurrent requests the unique index on (user_id) WHERE deleted_at IS
   # NULL means only one insert wins. The loser gets a unique-constraint error;
   # we re-fetch to return the winner's row instead of propagating the error.
-  defp insert_or_fetch_placeholder(user_id, country) do
-    case ConnectAccountQueries.insert_placeholder(user_id, country) do
+  defp insert_or_fetch_placeholder(user_id) do
+    case ConnectAccountQueries.insert_placeholder(user_id) do
       {:ok, _account} = ok ->
         ok
 
-      {:error, %Ecto.Changeset{errors: [user_id: {_message, constraint_opts}]}}
-      when is_list(constraint_opts) ->
-        if Keyword.get(constraint_opts, :constraint) == :unique do
-          {:ok, ConnectAccountQueries.live_for_user(user_id)}
-        else
-          {:error, :unexpected_constraint}
-        end
-
-      {:error, _reason} = err ->
-        err
+      {:error, changeset} = error ->
+        if unique_violation?(changeset, :user_id),
+          do: {:ok, ConnectAccountQueries.live_for_user(user_id)},
+          else: error
     end
   end
 
-  # The idempotency key only protects a retry within Stripe's 24-hour key
-  # window; `onboard/2` never reaches here for a row that already has an
-  # account, which is what stops a later return creating a second one. It is
-  # keyed by the placeholder row rather than the user: a host who disconnects
-  # and starts again gets a new row, and must get a new account rather than
-  # Stripe's cached answer naming the one they just left.
-  defp create_stripe_account(%ConnectAccountSchema{id: placeholder_id}, country) do
-    %{
-      type: "standard",
-      country: country,
-      capabilities: %{
-        card_payments: %{requested: true},
-        transfers: %{requested: true}
-      }
-    }
-    |> StripeAdapter.create_account(idempotency_key: "connect_account:#{placeholder_id}")
-    |> classify_account_creation_error()
+  defp unique_violation?(%Ecto.Changeset{errors: errors}, field) do
+    case errors[field] do
+      {_message, opts} -> opts[:constraint] == :unique
+      nil -> false
+    end
   end
-
-  # Stripe's risk system can place a temporary hold on the platform's ability
-  # to create connected accounts ("…temporarily restricted your ability to
-  # create this type of connected account…"). It is lifted only from the
-  # Stripe Dashboard, so an immediate retry cannot succeed. The message text
-  # is the only signal Stripe gives to tell it apart from other invalid
-  # requests.
-  defp classify_account_creation_error(
-         {:error, %Stripe.Error{code: :invalid_request_error, message: message}} = error
-       )
-       when is_binary(message) do
-    if String.contains?(message, "temporarily restricted"),
-      do: {:error, :account_creation_restricted},
-      else: error
-  end
-
-  defp classify_account_creation_error(result), do: result
-
-  defp create_account_link(stripe_account_id) do
-    StripeAdapter.create_account_link(%{
-      account: stripe_account_id,
-      type: "account_onboarding",
-      refresh_url: dashboard_url("/dashboard/payments?refresh=1"),
-      return_url: dashboard_url("/dashboard/payments?return=1")
-    })
-  end
-
-  defp dashboard_url(path), do: Endpoint.url() <> path
 
   # Drop events whose timestamp is older than OR equal to the last recorded
   # event. Equal-timestamp replays (Stripe may redeliver with the same

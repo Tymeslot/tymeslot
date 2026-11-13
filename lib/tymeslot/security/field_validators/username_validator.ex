@@ -29,8 +29,10 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
   # the `v` flag, where a bare `-` that is not part of a range is a syntax
   # error; the browser then skips the attribute entirely. PCRE reads `\-` as a
   # literal hyphen, so the server-side regex means exactly the same.
-  @username_pattern "[a-z0-9][a-z0-9_\\-]*"
+  @username_chars "a-z0-9_\\-"
+  @username_pattern "[a-z0-9][#{@username_chars}]*"
   @username_regex ~r/^#{@username_pattern}$/
+  @disallowed_char ~r/[^#{@username_chars}]/
 
   @doc """
   The accepted username shape as an HTML `pattern` attribute value.
@@ -40,6 +42,10 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
   """
   @spec html_pattern() :: String.t()
   def html_pattern, do: @username_pattern
+
+  @doc "The shortest and longest username accepted by default, as `{min, max}`."
+  @spec length_range() :: {pos_integer(), pos_integer()}
+  def length_range, do: {@username_min_length, @username_max_length}
 
   @doc """
   Validates username with specific error messages.
@@ -59,78 +65,114 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
   caller's locale.
   """
   @spec validate(any(), keyword()) :: :ok | {:error, String.t()}
-  def validate(username, opts \\ [])
+  def validate(username, opts \\ []) do
+    case problem(username, opts) do
+      nil -> :ok
+      problem -> {:error, message(problem)}
+    end
+  end
 
-  def validate(nil, _opts), do: {:error, dgettext("errors_input", "Username is required")}
-  def validate("", _opts), do: {:error, dgettext("errors_input", "Username is required")}
+  @typedoc "Why a username is refused, for a caller that words it in its own terms."
+  @type problem ::
+          :required
+          | :not_text
+          | {:too_short, pos_integer()}
+          | {:too_long, pos_integer()}
+          | :format
+          | :reserved
 
-  def validate(username, opts) when is_binary(username) do
+  @doc """
+  Why `username` is refused, or `nil` when it is accepted: the rules
+  `validate/2` applies, as a value rather than a message, so a caller can say
+  it in its own words (onboarding calls the username a link). Takes the same
+  options as `validate/2`.
+  """
+  @spec problem(any(), keyword()) :: problem() | nil
+  def problem(username, opts \\ [])
+  def problem(nil, _opts), do: :required
+  def problem("", _opts), do: :required
+
+  def problem(username, opts) when is_binary(username) do
     min_length = Keyword.get(opts, :min_length, @username_min_length)
     max_length = Keyword.get(opts, :max_length, @username_max_length)
     reserved_words = Keyword.get(opts, :reserved_words, nil)
 
     trimmed_username = String.trim(username)
 
-    with :ok <- validate_length(trimmed_username, min_length, max_length),
-         :ok <- validate_format(trimmed_username) do
-      validate_reserved_words(trimmed_username, reserved_words)
-    end
+    length_problem(trimmed_username, min_length, max_length) ||
+      format_problem(trimmed_username) ||
+      reserved_problem(trimmed_username, reserved_words)
   end
 
-  def validate(_username, _opts) do
-    {:error, dgettext("errors_input", "Username must be a text value")}
+  def problem(_username, _opts), do: :not_text
+
+  @doc """
+  Brings typed text towards the accepted username shape: lowercase, accents
+  folded to their base letter, each run of whitespace one hyphen, and every
+  other character the shape does not allow dropped. Nothing else is changed,
+  so the result can still be refused (too short, or starting with a hyphen),
+  and `validate/2` says why.
+
+      iex> normalise("Maya O!")
+      "maya-o"
+  """
+  @spec normalise(String.t()) :: String.t()
+  def normalise(text) when is_binary(text) do
+    text
+    |> String.normalize(:nfd)
+    |> String.replace(~r/\p{Mn}/u, "")
+    |> String.downcase()
+    |> String.trim_leading()
+    |> String.replace(~r/\s+/u, "-")
+    |> String.replace(@disallowed_char, "")
   end
 
   # Private helper functions
 
-  defp validate_length(username, min_length, max_length) do
+  defp message(:required), do: dgettext("errors_input", "Username is required")
+  defp message(:not_text), do: dgettext("errors_input", "Username must be a text value")
+  defp message(:reserved), do: dgettext("errors_input", "This username is reserved")
+
+  defp message({:too_short, min_length}),
+    do:
+      dngettext(
+        "errors_input",
+        "Username must be at least %{count} character long",
+        "Username must be at least %{count} characters long",
+        min_length
+      )
+
+  defp message({:too_long, max_length}),
+    do:
+      dngettext(
+        "errors_input",
+        "Username must be at most %{count} character long",
+        "Username must be at most %{count} characters long",
+        max_length
+      )
+
+  defp message(:format),
+    do:
+      dgettext(
+        "errors_input",
+        "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
+      )
+
+  defp length_problem(username, min_length, max_length) do
     length = String.length(username)
 
     cond do
-      length < min_length ->
-        {:error,
-         dngettext(
-           "errors_input",
-           "Username must be at least %{count} character long",
-           "Username must be at least %{count} characters long",
-           min_length
-         )}
-
-      length > max_length ->
-        {:error,
-         dngettext(
-           "errors_input",
-           "Username must be at most %{count} character long",
-           "Username must be at most %{count} characters long",
-           max_length
-         )}
-
-      true ->
-        :ok
+      length < min_length -> {:too_short, min_length}
+      length > max_length -> {:too_long, max_length}
+      true -> nil
     end
   end
 
-  defp validate_format(username) do
-    if Regex.match?(@username_regex, username) do
-      :ok
-    else
-      {:error,
-       dgettext(
-         "errors_input",
-         "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
-       )}
-    end
-  end
+  defp format_problem(username),
+    do: if(Regex.match?(@username_regex, username), do: nil, else: :format)
 
-  defp validate_reserved_words(_username, nil), do: :ok
+  defp reserved_problem(_username, nil), do: nil
 
-  defp validate_reserved_words(username, reserved_words) when is_list(reserved_words) do
-    lowercase_username = String.downcase(username)
-
-    if lowercase_username in reserved_words do
-      {:error, dgettext("errors_input", "This username is reserved")}
-    else
-      :ok
-    end
-  end
+  defp reserved_problem(username, reserved_words) when is_list(reserved_words),
+    do: if(String.downcase(username) in reserved_words, do: :reserved, else: nil)
 end

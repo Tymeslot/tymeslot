@@ -83,6 +83,7 @@ defmodule TymeslotWeb.AccountLive do
         deletion_date={@delete_modal_data}
         feedback_options={@deletion_feedback_options}
         errors={@delete_errors}
+        values={@delete_values}
       />
     </div>
     """

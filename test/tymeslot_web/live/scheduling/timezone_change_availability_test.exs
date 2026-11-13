@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
   @host_zone "Europe/London"
   @booker_zone "Europe/Kyiv"
 
-  @date "[data-fact='date']"
+  @date "[data-fact='date']:not([data-alternate])"
   @time "[data-fact='time']"
 
   setup :verify_on_exit!

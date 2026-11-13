@@ -14,6 +14,7 @@ import {
   RhythmVideo,
   backgroundMotionStopped,
   isSlowConnection,
+  preferMobileSource,
 } from '../video_hooks';
 
 describe('isSlowConnection', () => {
@@ -472,5 +473,51 @@ describe('video hooks honour a stopped background', () => {
     hook.updated();
 
     expect(toggle.hidden).toBe(true);
+  });
+});
+
+/**
+ * Assigning `src` restarts a video's load, so the small-screen swap must leave
+ * a video alone when its `<source media>` already chose the mobile file.
+ */
+describe('preferMobileSource', () => {
+  const video = (currentSrc) => {
+    document.body.innerHTML = `
+      <video>
+        <source src="/videos/bg-desktop.webm" media="(min-width: 1024px)">
+        <source src="/videos/bg-mobile.mp4" media="(max-width: 768px)">
+        <source src="/videos/bg-original.mp4">
+      </video>
+    `;
+    const el = document.querySelector('video');
+    Object.defineProperty(el, 'currentSrc', {
+      value: currentSrc && new URL(currentSrc, window.location.href).href,
+    });
+    return el;
+  };
+
+  test('leaves a video already playing its mobile source untouched', () => {
+    const el = video('/videos/bg-mobile.mp4');
+
+    preferMobileSource([el]);
+
+    expect(el.hasAttribute('src')).toBe(false);
+  });
+
+  test('switches a video that chose another source to the mobile one', () => {
+    const el = video('/videos/bg-desktop.webm');
+
+    preferMobileSource([el]);
+
+    expect(el.getAttribute('src')).toBe('/videos/bg-mobile.mp4');
+  });
+
+  test('leaves a video without a mobile source untouched', () => {
+    document.body.innerHTML = '<video><source src="/videos/bg-original.mp4"></video>';
+    const el = document.querySelector('video');
+
+    preferMobileSource([el]);
+
+    expect(el.hasAttribute('src')).toBe(false);
   });
 });

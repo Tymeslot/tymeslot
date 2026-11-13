@@ -25,6 +25,7 @@ defmodule Tymeslot.DataCase do
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.LeftoverProcesses
 
   using do
     quote do
@@ -122,7 +123,9 @@ defmodule Tymeslot.DataCase do
   end
 
   @doc """
-  Sets up the sandbox based on the test tags.
+  Sets up the sandbox based on the test tags, and kills whatever the test
+  started under the application's supervisors before its owner stops (see
+  `Tymeslot.Test.LeftoverProcesses`).
   """
   @spec setup_sandbox(map()) :: :ok
   def setup_sandbox(tags) do
@@ -130,6 +133,7 @@ defmodule Tymeslot.DataCase do
     pid = Sandbox.start_owner!(Repo, shared: shared)
 
     on_exit(fn -> Sandbox.stop_owner(pid) end)
+    LeftoverProcesses.stop_on_exit()
   end
 
   @doc """

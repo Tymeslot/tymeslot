@@ -2,7 +2,7 @@
 
 /* The shared structure and the --lang-switcher-* colours are in
    shared/components/language-switcher.css; this file adds Quill's glass
-   treatment and responsive widths. */
+   treatment and responsive placement. */
 
 .lang-switcher__button {
   backdrop-filter: blur(var(--glass-blur-md));
@@ -50,21 +50,5 @@
   /* A demo page's theme switcher follows the language row. */
   .main-gradient.theme-grid .content-area > .language-switcher-wrapper.visible ~ .demo-theme-switcher {
     margin-top: var(--space-sm);
-  }
-
-  .lang-switcher__panel {
-    width: var(--dropdown-width-sm);
-  }
-}
-
-@media (min-width: 640px) and (max-width: 767px) {
-  .lang-switcher__panel {
-    width: var(--dropdown-width-md);
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1023px) {
-  .lang-switcher__panel {
-    width: var(--dropdown-width-md);
   }
 }

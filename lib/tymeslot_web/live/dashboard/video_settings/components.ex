@@ -95,7 +95,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
             "icon-button gap-1.5 px-3 py-1.5 text-token-sm font-bold",
             (@integration.needs_reauth && "icon-button--warning") || "icon-button--neutral"
           ]}
-          title={dgettext("dashboard_video", "Reconnect integration")}
           aria-label={dgettext("dashboard_video", "Reconnect integration")}
         >
           <.icon name="hero-arrow-path" class="w-4 h-4" /><span>{dgettext(
@@ -113,6 +112,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
           phx-target="#edit-video-modal"
         />
         <.icon_button
+          id={"video-delete-#{@integration.id}"}
           icon="hero-trash"
           variant={:danger}
           label={dgettext("dashboard_video", "Delete %{name}", name: @display_name)}

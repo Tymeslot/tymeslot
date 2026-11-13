@@ -34,12 +34,13 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
   # keeps what we enforce and what we tell the user from drifting apart.
   @complexity_rules [
     {:lowercase, ~S([a-z]),
-     dgettext_noop("auth", "Password must contain at least one lowercase letter")},
+     dgettext_noop("errors_input", "Password must contain at least one lowercase letter")},
     {:uppercase, ~S([A-Z]),
-     dgettext_noop("auth", "Password must contain at least one uppercase letter")},
-    {:number, ~S([0-9]), dgettext_noop("auth", "Password must contain at least one number")},
+     dgettext_noop("errors_input", "Password must contain at least one uppercase letter")},
+    {:number, ~S([0-9]),
+     dgettext_noop("errors_input", "Password must contain at least one number")},
     {:special, ~S([^A-Za-z0-9]),
-     dgettext_noop("auth", "Password must contain at least one special character")}
+     dgettext_noop("errors_input", "Password must contain at least one special character")}
   ]
 
   @compiled_complexity_rules Enum.map(@complexity_rules, fn {key, pattern, message} ->
@@ -70,8 +71,8 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
   @spec validate(any(), keyword()) :: :ok | {:error, String.t()}
   def validate(password, opts \\ [])
 
-  def validate(nil, _opts), do: {:error, dgettext("auth", "Password is required")}
-  def validate("", _opts), do: {:error, dgettext("auth", "Password is required")}
+  def validate(nil, _opts), do: {:error, dgettext("errors_input", "Password is required")}
+  def validate("", _opts), do: {:error, dgettext("errors_input", "Password is required")}
 
   def validate(password, opts) when is_binary(password) do
     min_length = Keyword.get(opts, :min_length, @password_min_length)
@@ -82,7 +83,7 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
   end
 
   def validate(_password, _opts) do
-    {:error, dgettext("auth", "Password must be a text value")}
+    {:error, dgettext("errors_input", "Password must be a text value")}
   end
 
   @doc """
@@ -110,15 +111,15 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
   end
 
   def validate_confirmation(_password, nil) do
-    {:error, dgettext("auth", "Password confirmation is required")}
+    {:error, dgettext("errors_input", "Password confirmation is required")}
   end
 
   def validate_confirmation(_password, "") do
-    {:error, dgettext("auth", "Password confirmation is required")}
+    {:error, dgettext("errors_input", "Password confirmation is required")}
   end
 
   def validate_confirmation(_password, _confirmation) do
-    {:error, dgettext("auth", "Password confirmation does not match")}
+    {:error, dgettext("errors_input", "Password confirmation does not match")}
   end
 
   # Private helper functions
@@ -128,7 +129,7 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
       String.length(password) < min_length ->
         {:error,
          dngettext(
-           "auth",
+           "errors_input",
            "Password must be at least %{count} character long",
            "Password must be at least %{count} characters long",
            min_length
@@ -137,7 +138,7 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
       byte_size(password) > @password_max_bytes ->
         {:error,
          dgettext(
-           "auth",
+           "errors_input",
            "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte.",
            count: @password_max_bytes
          )}
@@ -151,8 +152,11 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
     case Enum.find(@compiled_complexity_rules, fn {_key, regex, _message} ->
            not String.match?(password, regex)
          end) do
-      nil -> :ok
-      {_key, _regex, message} -> {:error, Gettext.dgettext(TymeslotWeb.Gettext, "auth", message)}
+      nil ->
+        :ok
+
+      {_key, _regex, message} ->
+        {:error, Gettext.dgettext(TymeslotWeb.Gettext, "errors_input", message)}
     end
   end
 end

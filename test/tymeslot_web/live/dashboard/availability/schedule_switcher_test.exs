@@ -134,6 +134,25 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
   end
 
   describe "creating a schedule" do
+    test "an empty name is refused beside the field, with the form left open", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+      before_count = length(Schedules.list_for_profile(profile.id))
+
+      view
+      |> element("[phx-click='show_schedule_form'][phx-value-mode='create']")
+      |> render_click()
+
+      assert has_element?(view, "#schedule-name-form[novalidate]")
+
+      view |> form("#schedule-name-form", %{"name" => ""}) |> render_submit()
+
+      assert has_element?(view, "#schedule-name-input-error")
+      assert length(Schedules.list_for_profile(profile.id)) == before_count
+    end
+
     test "creates it and switches the page onto the new schedule", %{
       conn: conn,
       profile: profile
@@ -219,8 +238,14 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
       # The button stays put and greys out, so the ceiling is visible rather
       # than inferred from a control that vanished.
       refute has_element?(view, "[phx-click='show_schedule_form'][phx-value-mode='create']")
-      assert has_element?(view, "button[disabled]", "New schedule")
-      assert render(view) =~ "reached the limit"
+
+      assert has_element?(
+               view,
+               "button[disabled][aria-describedby='schedule-limit-hint']",
+               "New schedule"
+             )
+
+      assert has_element?(view, "#schedule-limit-hint", "reached the limit")
 
       # Duplicating would also push past the cap, so the menu drops it too.
       view |> element("[phx-click='toggle_schedule_menu']") |> render_click()

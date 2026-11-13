@@ -170,10 +170,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
               label={dgettext("dashboard_meeting_types", "Copy link")}
               tooltip={dgettext("dashboard_meeting_types", "Copy link")}
               phx-hook="CopyOnClick"
+              phx-click="booking_link_copied"
+              phx-target={@parent_myself}
               data-copy-text={copy_url(@booking_base_url, @link_paths, event.type)}
               data-copy-feedback={dgettext("dashboard_meeting_types", "Booking link copied!")}
             />
             <Buttons.icon_button
+              id={"meeting-type-row-edit-#{event.type.id}"}
               icon="hero-pencil-square"
               size={:sm}
               label={dgettext("dashboard_meeting_types", "Edit %{name}", name: event.type.name)}
@@ -183,6 +186,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent do
               phx-target={@parent_myself}
             />
             <Buttons.icon_button
+              id={"meeting-type-row-delete-#{event.type.id}"}
               icon="hero-trash"
               variant={:danger}
               size={:sm}

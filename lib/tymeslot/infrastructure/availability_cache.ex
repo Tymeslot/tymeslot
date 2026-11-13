@@ -96,4 +96,22 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
 
     :ok
   end
+
+  @doc """
+  Invalidates a user's cached availability ranges but keeps their cached
+  booking-window events. For a change to what the host offers that cannot
+  change what their calendar holds or how far ahead it is read: their
+  weekly hours, or a meeting type's name, length or place. The ranges are
+  folded again from the same events, so the next read costs no provider
+  round trip. Anything that changes the events or the window (a calendar
+  connected, synced or removed, a booking, a schedule's booking window)
+  calls `invalidate_for_user/1`.
+  """
+  @spec invalidate_ranges_for_user(integer() | nil) :: :ok
+  def invalidate_ranges_for_user(nil), do: :ok
+
+  def invalidate_ranges_for_user(user_id) do
+    invalidate_together([{:pattern, {:range_availability, user_id, :_, :_, :_, :_, :_, :_}}])
+    :ok
+  end
 end

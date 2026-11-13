@@ -72,9 +72,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
           phx-change="switch_page"
           phx-target={@myself}
           class={["min-w-0 flex-1 basis-48", @tabs? && "md:hidden"]}
+          novalidate
         >
-          <.input
-            type="select"
+          <.select
             id="booking-page-select-input"
             name="page"
             icon="hero-document-text"
@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
           disabled={not @can_create}
           phx-click={@can_create && "show_new_page"}
           phx-target={@myself}
-          title={if(not @can_create, do: limit_message())}
+          aria-describedby={if(not @can_create, do: "booking-page-limit-hint")}
           data-testid="new-booking-page"
           aria-label={dgettext("dashboard_booking_pages", "New page")}
           class={[
@@ -110,7 +110,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PagesComponent do
         </button>
       </div>
 
-      <p :if={not @can_create} class="text-token-sm text-tymeslot-400 font-medium">
+      <p
+        :if={not @can_create}
+        id="booking-page-limit-hint"
+        class="text-token-sm text-tymeslot-400 font-medium"
+      >
         {limit_message()}
       </p>
 

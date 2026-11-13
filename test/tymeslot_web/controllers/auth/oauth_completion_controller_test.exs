@@ -12,6 +12,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
   @moduletag :auth
   @moduletag :controllers
 
+  import Phoenix.LiveViewTest
   import Tymeslot.Factory, only: [insert: 2]
   import Tymeslot.Test.OAuthProviderStub, only: [setup_providers: 1]
 
@@ -99,6 +100,41 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
                "Registration failed due to validation errors. Please check your information and try again."
 
       refute Repo.get_by(UserSchema, github_user_id: "12345")
+    end
+
+    test "an empty email comes back to the form with the error beside the field", %{conn: conn} do
+      conn = complete(conn, pending(email: "", email_from_provider: false), %{})
+
+      {:ok, view, _html} = live(recycle(conn), redirected_to(conn))
+
+      assert has_element?(view, "#complete-registration-form[novalidate]")
+      assert has_element?(view, "#email-error", "Email address is required")
+    end
+
+    test "what the visitor typed comes back with the error", %{conn: conn} do
+      Application.put_env(:tymeslot, :enforce_legal_agreements, true)
+
+      conn =
+        complete(conn, pending(email: "", email_from_provider: false), %{
+          "profile" => %{"full_name" => "Ada Lovelace"},
+          "auth" => %{"terms_accepted" => "true", "email" => "not-an-email"}
+        })
+
+      {:ok, view, _html} = live(recycle(conn), redirected_to(conn))
+
+      assert has_element?(view, "#email[value='not-an-email']")
+      assert has_element?(view, "#full-name[value='Ada Lovelace']")
+      assert has_element?(view, "#terms[checked]")
+    end
+
+    test "unaccepted terms come back with the error beside the checkbox", %{conn: conn} do
+      Application.put_env(:tymeslot, :enforce_legal_agreements, true)
+
+      conn = complete(conn, pending(), %{})
+
+      {:ok, view, _html} = live(recycle(conn), redirected_to(conn))
+
+      assert has_element?(view, "#complete-registration-terms-error", "must accept the terms")
     end
 
     test "fails if no email was typed", %{conn: conn} do

@@ -73,7 +73,7 @@ msgid "This sign-in option is not available."
 msgstr "Diese Anmeldeoption ist nicht verfügbar."
 
 #: lib/tymeslot_web/controllers/auth/invitation_controller.ex
-#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller/invitation_response.ex
 #, elixir-autogen, elixir-format
 msgid "Too many OAuth attempts. Please try again later."
 msgstr "Zu viele OAuth-Versuche. Bitte versuchen Sie es später erneut."

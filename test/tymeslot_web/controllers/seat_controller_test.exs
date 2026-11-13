@@ -11,6 +11,7 @@ defmodule TymeslotWeb.SeatControllerTest do
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Bookings.Create
+  alias Tymeslot.Locales
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Profiles
@@ -299,6 +300,49 @@ defmodule TymeslotWeb.SeatControllerTest do
 
       assert html =~ "Ihren Platz stornieren?"
       assert html =~ ~s(lang="de")
+    end
+
+    test "a seat page names the meeting as the participant's copy does", %{
+      conn: conn,
+      leaver: leaver,
+      meeting: meeting,
+      meeting_type: meeting_type
+    } do
+      # A group slot is titled with the type's original name.
+      assert meeting.title == meeting_type.name
+      leaver |> Changeset.change(%{locale: "de"}) |> Repo.update!()
+
+      meeting
+      |> Changeset.change(%{
+        attendee_texts: %{"de" => %{"meeting_type" => "Erstgespräch"}}
+      })
+      |> Repo.update!()
+
+      html = conn |> get(~p"/seat/#{leaver.management_token}/cancel") |> html_response(200)
+
+      assert html =~ "Erstgespräch"
+      refute html =~ meeting_type.name
+    end
+
+    # Their emails read a stored locale no longer supported as the booking
+    # pages' fallback (`Recipient.from_participant/1`); so does the page.
+    test "a seat page reads an unsupported stored locale as their emails do", %{
+      conn: conn,
+      leaver: leaver,
+      meeting: meeting,
+      meeting_type: meeting_type
+    } do
+      leaver |> Changeset.change(%{locale: "pt_BR"}) |> Repo.update!()
+      fallback = Locales.booking_default_locale()
+
+      meeting
+      |> Changeset.change(%{attendee_texts: %{fallback => %{"meeting_type" => "Kick-off"}}})
+      |> Repo.update!()
+
+      html = conn |> get(~p"/seat/#{leaver.management_token}/cancel") |> html_response(200)
+
+      assert html =~ "Kick-off"
+      refute html =~ meeting_type.name
     end
 
     test "an unknown link keeps the request's language", %{conn: conn} do

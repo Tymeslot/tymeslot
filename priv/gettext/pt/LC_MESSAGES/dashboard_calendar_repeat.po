@@ -555,3 +555,13 @@ msgstr "Indisponível: o novo término é anterior a este evento, então não h�
 #, elixir-autogen, elixir-format
 msgid "This series' first event hasn't been read from your calendar yet, so the events left in it can't be counted. Refresh the calendar and try again."
 msgstr "O primeiro evento desta série ainda não foi lido do seu calendário, então não é possível contar os eventos restantes. Atualize o calendário e tente novamente."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Ends"
+msgstr "Termina"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Repeat until"
+msgstr "Repetir até"

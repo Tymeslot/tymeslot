@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Shared.SocialAuthButtons do
   @spec social_auth_button(map()) :: Phoenix.LiveView.Rendered.t()
   defp social_auth_button(%{post: true} = assigns) do
     ~H"""
-    <form method="post" action={@href}>
+    <form method="post" action={@href} novalidate>
       <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
       <button
         type="submit"

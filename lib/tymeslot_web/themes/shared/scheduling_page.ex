@@ -51,13 +51,14 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
       wrapper={@page_wrapper}
       theme_tokens={assigns[:theme_tokens]}
       locale={assigns[:locale]}
+      offered_locales={assigns[:offered_locales]}
       language_dropdown_open={assigns[:language_dropdown_open]}
       current_state={assigns[:current_state]}
       journey={assigns[:journey]}
       organizer_user_id={@organizer_user_id}
       owner_preview={assigns[:owner_preview]}
       refused_calendars={assigns[:refused_calendars] || []}
-      should_show_branding={assigns[:should_show_branding]}
+      should_show_branding={branding(assigns)}
       legal_links={assigns[:legal_links]}
       {Map.take(assigns, [:demo_mode])}
     >
@@ -88,6 +89,12 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
     </.wrapper>
     """
   end
+
+  # The page's owner previewing it (a verified preview token) is not a
+  # visitor to win over, so their preview never carries the branding
+  # extension's invitation to make a page of their own.
+  defp branding(%{owner_preview: true}), do: false
+  defp branding(assigns), do: assigns[:should_show_branding]
 
   # The documented dynamic-component pattern: the theme's wrapper is a
   # function component chosen at runtime, so it is applied directly.

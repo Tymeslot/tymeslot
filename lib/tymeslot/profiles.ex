@@ -23,6 +23,7 @@ defmodule Tymeslot.Profiles do
   alias Tymeslot.Profiles.Usernames
   alias Tymeslot.Repo
   alias Tymeslot.Security.EncryptedString
+  alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Themes.Catalog
 
   @type user_id :: pos_integer()
@@ -72,6 +73,14 @@ defmodule Tymeslot.Profiles do
   """
   @spec get_profile_by_id(integer()) :: profile | nil
   defdelegate get_profile_by_id(profile_id), to: ProfileQueries, as: :get_with_user
+
+  @doc "The currency recorded as the one the user's prices were set in, if any."
+  @spec last_charge_currency(integer()) :: String.t() | nil
+  defdelegate last_charge_currency(user_id), to: ProfileQueries
+
+  @doc "Records the currency the user's prices were set in."
+  @spec record_last_charge_currency(integer(), String.t()) :: :ok
+  defdelegate record_last_charge_currency(user_id, currency), to: ProfileQueries
 
   @doc """
   Gets or creates a profile for a user.
@@ -183,6 +192,24 @@ defmodule Tymeslot.Profiles do
     end
   end
 
+  @doc """
+  Remembers when a host first copied or shared their booking link.
+
+  The stamp is a lower bound (copying is a client-side action the server only
+  hears about when the page is connected), so it must never gate behaviour.
+  Returns `{:ok, :shared}` only on the first share and `{:ok, :noop}` after.
+  """
+  @spec mark_booking_link_shared(profile()) :: {:ok, :shared | :noop}
+  def mark_booking_link_shared(%ProfileSchema{booking_link_first_shared_at: %DateTime{}}),
+    do: {:ok, :noop}
+
+  def mark_booking_link_shared(%ProfileSchema{id: profile_id}) do
+    case ProfileQueries.mark_booking_link_shared(profile_id, DateTime.utc_now(:second)) do
+      1 -> {:ok, :shared}
+      0 -> {:ok, :noop}
+    end
+  end
+
   # --- Profile Updates ---
 
   @doc """
@@ -239,6 +266,20 @@ defmodule Tymeslot.Profiles do
   """
   @spec update_legal_links(profile, map()) :: result(profile)
   defdelegate update_legal_links(profile, attrs), to: ProfileQueries
+
+  @doc """
+  Updates the booking languages: the original language, the translation
+  languages and whether the booking page is offered in every language
+  (`Tymeslot.ContentTranslations.Languages`). Stored translations are never
+  touched, so a removed language's texts come back when it is added again.
+  """
+  @spec update_booking_languages(profile, map()) :: result(profile)
+  defdelegate update_booking_languages(profile, attrs), to: ProfileQueries
+
+  @doc "A changeset for the booking languages form."
+  @spec change_booking_languages(profile, map()) :: Ecto.Changeset.t()
+  def change_booking_languages(%ProfileSchema{} = profile, attrs \\ %{}),
+    do: ProfileSchema.booking_languages_changeset(profile, attrs)
 
   @doc """
   The legal links a booking page shows. Each link is the organiser's own, else
@@ -321,6 +362,21 @@ defmodule Tymeslot.Profiles do
   defdelegate generate_default_username(user_id), to: Usernames
 
   @doc """
+  Suggests a booking link from a host's full name, or failing that their
+  `:email`, without writing anything; see
+  `Tymeslot.Profiles.Usernames.suggest/3`.
+  """
+  @spec suggest_username(String.t() | nil, user_id, keyword()) :: username
+  defdelegate suggest_username(full_name, user_id, opts \\ []), to: Usernames, as: :suggest
+
+  @doc """
+  Whether a username is no choice of the host's (blank, or the generated
+  default); see `Tymeslot.Profiles.Usernames.system_default?/2`.
+  """
+  @spec default_username?(username | nil, user_id) :: boolean()
+  defdelegate default_username?(username, user_id), to: Usernames, as: :system_default?
+
+  @doc """
   Checks if a username is available.
   """
   @spec username_available?(username) :: boolean()
@@ -333,6 +389,26 @@ defmodule Tymeslot.Profiles do
   @spec username_status(profile() | map() | nil, term()) ::
           :unchanged | :ok | {:invalid, String.t()} | :reserved | :taken
   defdelegate username_status(profile, username), to: Usernames, as: :status
+
+  @doc """
+  Brings typed text towards the accepted username shape (lowercase, spaces
+  to hyphens, disallowed characters dropped); see
+  `Tymeslot.Security.FieldValidators.UsernameValidator.normalise/1`.
+  """
+  @spec normalise_username(String.t()) :: username
+  defdelegate normalise_username(text), to: UsernameValidator, as: :normalise
+
+  @doc """
+  Why a username's shape is refused (`:required`, `{:too_short, min}`,
+  `{:too_long, max}`, `:format`), or `nil`; see
+  `Tymeslot.Security.FieldValidators.UsernameValidator.problem/2`.
+  """
+  @spec username_problem(term()) :: UsernameValidator.problem() | nil
+  defdelegate username_problem(username), to: UsernameValidator, as: :problem
+
+  @doc "The shortest and longest username accepted, as `{min, max}`."
+  @spec username_length_range() :: {pos_integer(), pos_integer()}
+  defdelegate username_length_range(), to: UsernameValidator, as: :length_range
 
   @doc """
   Why a profile changeset refused its username: `:taken` when another profile
@@ -529,6 +605,16 @@ defmodule Tymeslot.Profiles do
   @spec update_allowed_embed_domains(profile, String.t() | [String.t()]) :: result(profile)
   def update_allowed_embed_domains(%ProfileSchema{} = profile, domains),
     do: ProfileQueries.update_embed_domains(profile, EmbedDomains.normalize(domains))
+
+  @doc """
+  Whether the host has allowed at least one site to embed their booking page.
+  The default, `["none"]`, and an empty list both block embedding everywhere.
+  """
+  @spec embedding_enabled?(%{allowed_embed_domains: [String.t()] | nil}) :: boolean()
+  def embedding_enabled?(%{allowed_embed_domains: domains}) when domains in [nil, [], ["none"]],
+    do: false
+
+  def embedding_enabled?(%{allowed_embed_domains: _domains}), do: true
 
   # --- Organizer Context ---
 

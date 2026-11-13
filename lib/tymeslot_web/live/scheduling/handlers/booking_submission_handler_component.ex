@@ -48,10 +48,14 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias TymeslotWeb.Live.Scheduling.BookingConfig
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingGuards
+  alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Themes.Shared.BookingLocation
 
   require Logger
+
+  # Refusals the booking flow makes as designed; not failures worth an error log.
+  @expected_refusals [:invitation_required, :invitation_unavailable, :slot_taken]
 
   @doc """
   Submits a booking using the booking orchestrator.
@@ -215,6 +219,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   # check working as meant; `CalendarCheck` has already logged its cause.
   defp log_booking_error(:availability_unverifiable),
     do: Logger.info("Booking refused: the organiser's availability could not be verified")
+
+  defp log_booking_error(reason) when reason in @expected_refusals,
+    do: Logger.info("Booking refused", reason: LogFormat.reason(reason))
 
   defp log_booking_error(reason),
     do: Logger.error("Failed to create meeting appointment", reason: LogFormat.reason(reason))
@@ -401,7 +408,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   #      (or SaaS-demo-mode) orchestrator.
   defp booking_orchestrator(socket) do
     cond do
-      socket.assigns[:owner_preview] -> DemoOrchestrator
+      PreviewMode.owner_preview?(socket) -> DemoOrchestrator
       socket.assigns[:theme_preview] -> :preview_without_valid_token
       true -> Demo.get_orchestrator(socket)
     end
@@ -432,9 +439,14 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       location_option_id: BookingLocation.submitted_option_id(socket.assigns),
       location_phone: socket.assigns[:location_phone],
       location_video_integration_id: BookingLocation.submitted_video_id(socket.assigns),
-      location_venue_id: BookingLocation.submitted_venue_id(socket.assigns)
+      location_venue_id: BookingLocation.submitted_venue_id(socket.assigns),
+      invitation_id: invitation_id(socket.assigns[:invitation])
     }
   end
+
+  # The invitation the entry gate let this booking in on, if any.
+  defp invitation_id(%{id: id}), do: id
+  defp invitation_id(nil), do: nil
 
   defp handle_payment_required(socket, meeting, url, sanitized_params) do
     if socket.assigns[:embedded] do

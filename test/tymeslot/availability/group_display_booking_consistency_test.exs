@@ -29,12 +29,15 @@ defmodule Tymeslot.Availability.GroupDisplayBookingConsistencyTest do
   setup do
     TestMocks.setup_all_mocks()
 
-    %{user: user, profile_id: profile_id} = create_bookable_profile(timezone: @timezone)
+    %{user: user, profile_id: profile_id, schedule_id: schedule_id} =
+      create_bookable_profile(timezone: @timezone)
+
     meeting_type = insert(:meeting_type, user: user, max_participants: 2, duration_minutes: 30)
     date = next_bookable_weekday()
 
     config = %{
       profile_id: profile_id,
+      schedule_id: schedule_id,
       max_advance_booking_days: 90,
       min_advance_hours: 3,
       buffer_before_minutes: 15,

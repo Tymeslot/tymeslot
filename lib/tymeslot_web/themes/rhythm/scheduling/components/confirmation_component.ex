@@ -84,10 +84,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     {@meeting_type.name}
                   </span>
                   <span :if={!@meeting_type} class="ticket-label">
-                    {dgettext("booking", "Meeting Details")}
+                    {dgettext("booking_confirmation", "Meeting Details")}
                   </span>
                   <span class="ticket-badge">
-                    {dgettext("booking", "%{minutes} min",
+                    {dgettext("booking_confirmation", "%{minutes} min",
                       minutes:
                         Offer.duration_minutes(
                           @meeting_type,
@@ -105,7 +105,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     </div>
                     <div class="ticket-info">
                       <span class="ticket-value">{LocalizationHelpers.format_date(@selected_date)}</span>
-                      <span class="ticket-sublabel">{dgettext("booking", "Date")}</span>
+                      <span class="ticket-sublabel">{dgettext("booking_confirmation", "Date")}</span>
                     </div>
                   </div>
 
@@ -143,7 +143,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                         <span class="ticket-value">
                           {Profiles.display_name(@organizer_profile)}
                         </span>
-                        <span class="ticket-sublabel">{dgettext("booking", "Appointment host")}</span>
+                        <span class="ticket-sublabel">{dgettext(
+                          "booking_confirmation",
+                          "Appointment host"
+                        )}</span>
                       </div>
                     </div>
                   <% end %>
@@ -158,7 +161,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     </div>
                     <div class="ticket-info">
                       <span class="ticket-value">{BookingLocation.chosen_display(assigns)}</span>
-                      <span class="ticket-sublabel">{dgettext("booking", "Location")}</span>
+                      <span class="ticket-sublabel">{dgettext("booking_confirmation", "Location")}</span>
                       <LocationField.arranged_note :if={
                         BookingLocation.arranged_after_booking?(assigns)
                       } />
@@ -175,7 +178,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     </div>
                     <div class="ticket-info">
                       <span class="ticket-value">{MeetingPrice.paid_price(@paid_payment, @locale)}</span>
-                      <span class="ticket-sublabel">{dgettext("booking", "Paid")}</span>
+                      <span class="ticket-sublabel">{dgettext("booking_confirmation", "Paid")}</span>
                     </div>
                   </div>
 
@@ -185,7 +188,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     </div>
                     <div class="ticket-info">
                       <span class="ticket-value">{Enum.join(@guest_emails, ", ")}</span>
-                      <span class="ticket-sublabel">{dgettext("booking", "Guests")}</span>
+                      <span class="ticket-sublabel">{dgettext("booking_confirmation", "Guests")}</span>
                     </div>
                   </div>
                 </div>
@@ -193,7 +196,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                 <div class="ticket-footer">
                   <div class="email-confirmation">
                     <.icon name="hero-envelope" class="email-icon" />
-                    <span>{dgettext("booking", "Sent to")} <strong>{@email}</strong></span>
+                    <span>{dgettext("booking_confirmation", "Sent to")} <strong>{@email}</strong></span>
                   </div>
                 </div>
               </div>
@@ -213,8 +216,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                 >
                   <.icon name="hero-calendar-days" class="calendar-download-icon" />
                   {if ApprovalDisplay.awaiting_approval?(assigns),
-                    do: dgettext("booking", "Add tentative hold to calendar"),
-                    else: dgettext("booking", "Add to calendar")}
+                    do: dgettext("booking_confirmation", "Add tentative hold to calendar"),
+                    else: dgettext("booking_confirmation", "Add to calendar")}
                 </a>
                 <button
                   type="button"
@@ -224,19 +227,19 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   data-intent="restart"
                   class="confirmation-restart-link"
                 >
-                  {dgettext("booking", "Schedule Another Meeting")}
+                  {dgettext("booking_confirmation", "Schedule Another Meeting")}
                 </button>
 
                 <p class="help-text">
                   {if ApprovalDisplay.awaiting_approval?(assigns),
                     do:
                       dgettext(
-                        "booking",
+                        "booking_confirmation",
                         "Changed your mind? Your request email has a link to withdraw it."
                       ),
                     else:
                       dgettext(
-                        "booking",
+                        "booking_confirmation",
                         "Need to make changes? Check your email for reschedule options"
                       )}
                 </p>
@@ -254,9 +257,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   # not be announced as a confirmed meeting); only the wording is Rhythm's.
   defp headline(assigns) do
     case ConfirmationText.status(assigns) do
-      :held -> dgettext("booking", "Request sent!")
-      :rescheduled -> dgettext("booking", "Successfully Rescheduled!")
-      :confirmed -> dgettext("booking", "You're All Set!")
+      :held -> dgettext("booking_confirmation", "Request sent!")
+      :rescheduled -> dgettext("booking_confirmation", "Successfully Rescheduled!")
+      :confirmed -> dgettext("booking_confirmation", "You're All Set!")
     end
   end
 
@@ -266,7 +269,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
         ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :rhythm)
 
       _confirmed_or_rescheduled ->
-        dgettext("booking", "%{name}, your meeting %{organizer} is confirmed",
+        dgettext("booking_confirmation", "%{name}, your meeting %{organizer} is confirmed",
           name: assigns[:name],
           organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :rhythm)
         )

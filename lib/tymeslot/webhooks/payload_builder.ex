@@ -8,7 +8,9 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
 
   alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Utils.UrlBuilder
@@ -70,6 +72,11 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
       status: Atom.to_string(meeting.status),
       meeting_type: meeting.meeting_type,
       location: meeting.location,
+      # What `location` names: "video", "in_person", "phone" or "custom".
+      location_kind: meeting.location_kind && Atom.to_string(meeting.location_kind),
+      # Only the host moves or cancels such a meeting, and its `attendee` is
+      # the first of its guests rather than someone who booked it.
+      managed_by_host: HostManaged.managed?(meeting),
       organizer: build_organizer_data(meeting),
       attendee: build_attendee_data(meeting),
       guests: build_guests_data(meeting),
@@ -89,7 +96,8 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
       name: meeting.organizer_name,
       email: meeting.organizer_email,
       title: meeting.organizer_title,
-      user_id: meeting.organizer_user_id
+      user_id: meeting.organizer_user_id,
+      note: meeting.organizer_note
     }
   end
 
@@ -100,8 +108,28 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
       phone: meeting.attendee_phone,
       company: meeting.attendee_company,
       timezone: meeting.attendee_timezone,
-      message: meeting.attendee_message
+      message: meeting.attendee_message,
+      custom_field_answers: build_custom_field_answers(meeting)
     }
+  end
+
+  # Every question the meeting type asked, from the booking's snapshot, with
+  # the raw answer (`nil` where the booker left it blank) for routing on, and
+  # its rendered form for display.
+  defp build_custom_field_answers(meeting) do
+    answers = meeting.custom_field_answers || %{}
+
+    Enum.map(meeting.custom_fields_snapshot || [], fn field ->
+      value = answers[field["id"]]
+
+      %{
+        id: field["id"],
+        label: field["label"],
+        type: field["type"],
+        value: value,
+        display: AnswerRenderer.render(field, value)
+      }
+    end)
   end
 
   # Guests are read from the loaded association rather than fetched here, so

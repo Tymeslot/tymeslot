@@ -82,9 +82,9 @@ defmodule Tymeslot.Bookings.RescheduleGate do
   # It does not fall out of `Reschedule`'s `fetch_meeting_type/3`, which answers a different
   # question: with no id to look up, it matches a type by duration slug so that
   # the reschedule enforces the same *schedule* the grid the invitee saw was
-  # drawn from. Every account is seeded with types named "15 Minutes" and
-  # "30 Minutes", whose slugs are exactly what that lookup builds, so a
-  # 30-minute ad-hoc booking reliably resolves the host's stock 30-minute type.
+  # drawn from. A type a host created or renamed may or may not match that
+  # slug, so a 30-minute ad-hoc booking resolves a type only when one's slug
+  # is exactly what that lookup builds.
   # Reading `requires_approval` off it would send a booking made under no
   # meeting type into a gate on the strength of a setting the host ticked
   # somewhere else entirely, where it could then sit unanswered and be expired

@@ -23,6 +23,7 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
+  alias Tymeslot.Test.EnqueuedJobs
   alias Tymeslot.TestMocks
   alias Tymeslot.Webhooks
   alias Tymeslot.Workers.CalendarEventWorker
@@ -394,7 +395,7 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
       assert Repo.all(ParticipantSchema) == []
       # The calendar and reminder jobs were inserted before the failing one,
       # inside the same transaction, and went with it.
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(ctx.user) == []
     end
 
     test "a joining seat whose confirmation cannot be enqueued leaves the slot as it was",

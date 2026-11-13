@@ -6,6 +6,8 @@ defmodule Tymeslot.MeetingTypes.DuplicateMeetingTypeTest do
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Duplication
@@ -116,6 +118,83 @@ defmodule Tymeslot.MeetingTypes.DuplicateMeetingTypeTest do
 
       assert {:error, _reason} = MeetingTypes.duplicate_meeting_type(source)
       assert length(MeetingTypes.get_all_meeting_types(user.id)) == 1
+    end
+
+    test "keeps the translations, the name's reading as outdated" do
+      user = insert(:user)
+
+      source =
+        insert(:meeting_type,
+          user: user,
+          name: "Intro call",
+          description: "Thirty minutes to get to know each other",
+          custom_fields: [
+            %FieldDefinition{id: "company", type: "short_text", label: "Company", position: 0}
+          ],
+          translations: %{
+            "de" => %{
+              "name" => %{"text" => "Erstgespräch", "source" => :erlang.phash2("Intro call")},
+              "description" => %{
+                "text" => "Dreißig Minuten zum Kennenlernen",
+                "source" => :erlang.phash2("Thirty minutes to get to know each other")
+              },
+              "custom_fields/company/label" => %{
+                "text" => "Firma",
+                "source" => :erlang.phash2("Company")
+              }
+            }
+          }
+        )
+
+      assert {:ok, copy} = MeetingTypes.duplicate_meeting_type(source)
+
+      reloaded = MeetingTypes.get_meeting_type(copy.id, user.id)
+      assert reloaded.translations == source.translations
+      assert ContentTranslations.status(reloaded, "name", "de") == :outdated
+      assert ContentTranslations.status(reloaded, "description", "de") == :translated
+
+      assert ContentTranslations.status(reloaded, "custom_fields/company/label", "de") ==
+               :translated
+    end
+
+    test "leaves out translations the copy has no text or language for" do
+      user = insert(:user)
+      kept = %{"text" => "Erstgespräch", "source" => :erlang.phash2("Intro call")}
+
+      source =
+        :meeting_type
+        |> insert(user: user, name: "Intro call")
+        # Stored before the question went, and in a language since dropped.
+        |> Changeset.change(
+          translations: %{
+            "de" => %{
+              "name" => kept,
+              "custom_fields/gone/label" => %{"text" => "Weg", "source" => 1}
+            },
+            "xx" => %{"name" => %{"text" => "Xx", "source" => 1}}
+          }
+        )
+        |> Repo.update!()
+
+      assert {:ok, copy} = MeetingTypes.duplicate_meeting_type(source)
+
+      assert MeetingTypes.get_meeting_type(copy.id, user.id).translations == %{
+               "de" => %{"name" => kept}
+             }
+    end
+
+    test "a meeting type created with translations among its attributes stores none" do
+      user = insert(:user)
+
+      assert {:ok, created} =
+               MeetingTypes.create_meeting_type(%{
+                 user_id: user.id,
+                 name: "Intro call",
+                 duration_minutes: 30,
+                 translations: %{"de" => %{"name" => %{"text" => "Unchecked", "source" => 1}}}
+               })
+
+      assert MeetingTypes.get_meeting_type(created.id, user.id).translations == %{}
     end
 
     test "picks the next free name when a copy already exists" do

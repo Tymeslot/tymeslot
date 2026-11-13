@@ -38,11 +38,10 @@ defmodule TymeslotWeb.Dashboard.PollUsernameTest do
           "title" => "Launch planning",
           "duration" => "30",
           "timezone" => "Europe/Tallinn",
-          "slots" => %{"0" => "#{date}T09:00"},
           "invitees" => "ada@example.com"
         }
       })
-      |> render_submit()
+      |> render_submit(%{"poll" => %{"slots" => %{"0" => "#{date}T09:00"}}})
 
     assert html =~ "Set a username in your profile first"
     assert Polls.list_polls(ctx.user.id) == []

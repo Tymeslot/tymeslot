@@ -2,17 +2,16 @@ defmodule Tymeslot.Availability.Offer.Request do
   @moduledoc false
   # What `Tymeslot.Availability.Offer` and `Tymeslot.Availability.Offer.Range`
   # both read from a booking page's request (`Offer.request()`): the
-  # organiser's calendar and bookings as one busy set, the meeting being
-  # moved, the booking-limit check, the engine config and the bounded
-  # meeting length, and how found starts are labelled.
+  # organiser's calendar events (read by `Offer.HostCalendar`) and bookings
+  # as one busy set, the meeting being moved, the booking-limit check, the
+  # engine config and the bounded meeting length, and how found starts are
+  # labelled.
 
-  alias Tymeslot.Availability.Bookability
   alias Tymeslot.Availability.{GroupSlots, Reach, Schedules, TimeSlots}
   alias Tymeslot.Availability.Offer
+  alias Tymeslot.Availability.Offer.HostCalendar
   alias Tymeslot.Bookings.{Orchestrator, RescheduleSeat}
   alias Tymeslot.Demo
-  alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -62,51 +61,6 @@ defmodule Tymeslot.Availability.Offer.Request do
   def offered_slots(starts, _meeting_type, _date, _context), do: labels(starts)
 
   defp labels(starts), do: Enum.map(starts, &TimeSlots.format_datetime_slot/1)
-
-  # The provider fetch behind this is window-shaped, not month-shaped:
-  # `Events.get_calendar_events/3` ignores the date it is given and always asks
-  # for `today .. today + advance_booking_days`. Folding it under a key built
-  # from the 42-day *display* range would therefore store the same event list
-  # once per rendered month and guarantee a miss for anything that moves the
-  # calendar, worst of all the next-available forward search, which re-enters
-  # `Tymeslot.Availability.Offer.days_in_range/4` once per hop and would otherwise buy an identical round
-  # trip to the host's calendar each time, on exactly the fully booked hosts
-  # the search exists to help.
-  #
-  # So the events get their own entry, keyed on the user alone because that is
-  # the fetch's entire input. The folded map keeps its display-range key: the
-  # fold is what actually differs between hops. A date click reads the same
-  # entry, so picking a day after the month view costs no provider round trip
-  # either. Its slots can therefore be up to the cache's lifetime old; the
-  # booking submit re-reads the calendars uncached
-  # (`Tymeslot.Bookings.CalendarCheck`), and that read is what refuses a slot
-  # taken in the meantime.
-  #
-  # Errors stay uncached, for the reason `get_or_compute_events/2` exists at
-  # all: a timed-out calendar must be retried on the next request, not pinned
-  # empty for the TTL. `Tymeslot.Availability.changed/1` drops this
-  # entry with the folded maps, so a calendar sync cannot leave the two
-  # disagreeing about how fresh they are.
-  #
-  # The events are cached with the bookability rule already applied
-  # (`Tymeslot.Availability.Bookability`): an override and a calendar's
-  # settings both call `changed/1`, which drops this entry.
-  @spec booking_window_events(Offer.request(), Date.t()) :: {:ok, list()} | {:error, any()}
-  def booking_window_events(%{profile: %{user_id: user_id}} = request, start_date) do
-    AvailabilityCache.get_or_compute_events(
-      AvailabilityCache.booking_window_events_key(user_id),
-      fn ->
-        with {:ok, events} <-
-               CalendarEvents.get_calendar_events_from_context(
-                 start_date,
-                 user_id,
-                 calendar_context(request)
-               ) do
-          {:ok, Bookability.apply_to_window(events, user_id)}
-        end
-      end
-    )
-  end
 
   # Everything that occupies the host's time across `first_date..last_date`:
   # their connected calendars, plus their own live bookings, which reach the
@@ -205,16 +159,11 @@ defmodule Tymeslot.Availability.Offer.Request do
     Demo.demo_profile?(profile) || request[:demo_mode?] == true
   end
 
-  # The context map the calendar fetch reads. Its contract names this one key
-  # only, so the demo provider's extra keys stay out of it.
-  @spec calendar_context(Offer.request()) :: map()
-  def calendar_context(%{profile: profile}), do: %{organizer_profile: profile}
-
   # The context map the demo provider reads.
   @spec demo_context(Offer.request()) :: map()
   def demo_context(request) do
     request
-    |> calendar_context()
+    |> HostCalendar.context()
     |> Map.merge(%{demo_mode: request[:demo_mode?] == true, meeting_type: request[:meeting_type]})
   end
 

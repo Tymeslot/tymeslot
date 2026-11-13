@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
         "is-yes",
         @value == true && "is-selected"
       ]}>
+        <%!-- raw-input: sr-only radio drawn by the Yes tile around it --%>
         <input
           type="radio"
           name={"cq-#{@definition["id"]}"}
@@ -58,6 +59,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
         "is-no",
         @value == false && "is-selected"
       ]}>
+        <%!-- raw-input: sr-only radio drawn by the No tile around it --%>
         <input
           type="radio"
           name={"cq-#{@definition["id"]}"}

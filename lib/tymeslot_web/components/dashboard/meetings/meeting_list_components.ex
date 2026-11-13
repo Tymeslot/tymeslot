@@ -8,8 +8,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
-  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Navigation
+  alias TymeslotWeb.Components.CoreComponents.Select
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingCard
 
   # Filter Tabs
@@ -75,9 +75,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
       phx-change="filter_booking_page"
       phx-target={@target}
       class="lg:w-64"
+      novalidate
     >
-      <Forms.input
-        type="select"
+      <Select.select
         id="meetings-page-filter-select"
         name="page"
         label={dgettext("dashboard_bookings", "Booked through")}

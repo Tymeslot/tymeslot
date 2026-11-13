@@ -11,13 +11,21 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterTest do
 
   setup :verify_on_exit!
 
-  test "create_account/2 delegates to configured impl" do
-    expect(StripeAdapterMock, :create_account, fn _params, _opts ->
-      {:ok, %{id: "acct_TEST"}}
+  test "exchange_oauth_code/1 delegates to configured impl" do
+    expect(StripeAdapterMock, :exchange_oauth_code, fn code ->
+      {:ok, %{stripe_user_id: "acct_" <> code}}
     end)
 
-    assert {:ok, %{id: "acct_TEST"}} =
-             StripeAdapter.create_account(%{type: "standard"}, idempotency_key: "k")
+    assert {:ok, %{stripe_user_id: "acct_X"}} = StripeAdapter.exchange_oauth_code("X")
+  end
+
+  test "deauthorize_account/1 delegates to configured impl" do
+    expect(StripeAdapterMock, :deauthorize_account, fn id ->
+      assert id == "acct_X"
+      {:error, :not_connected}
+    end)
+
+    assert {:error, :not_connected} = StripeAdapter.deauthorize_account("acct_X")
   end
 
   test "create_checkout_session/2 delegates with opts" do

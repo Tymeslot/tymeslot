@@ -183,6 +183,30 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
       assert reload(theirs).status == :paid
     end
 
+    test "a refused partial amount stays a partial refund, with the amount kept", %{conn: conn} do
+      host = connected_host()
+      payment = paid_payment_for(host)
+
+      view = open_payments(conn, host)
+      push_to_component(view, "open_refund_modal", %{"id" => payment.id})
+
+      view
+      |> form("#refund-form", %{"refund_type" => "partial", "amount" => "999.00"})
+      |> render_submit()
+
+      assert has_element?(view, "input[name=refund_type][value=partial][checked]")
+      refute has_element?(view, "input[name=refund_type][value=full][checked]")
+      assert has_element?(view, "input[name=amount][value='999.00']")
+      assert has_element?(view, "#refund-form [role=alert]", "exceeds the remaining")
+      assert reload(payment).refunded_amount_cents == 0
+
+      # Reopening starts clean: neither the error nor the choice lingers.
+      push_to_component(view, "open_refund_modal", %{"id" => payment.id})
+
+      assert has_element?(view, "input[name=refund_type][value=full][checked]")
+      refute has_element?(view, "#refund-form [role=alert]")
+    end
+
     test "a payment that changes hands while the modal is open is not refunded",
          %{conn: conn} do
       host = connected_host()

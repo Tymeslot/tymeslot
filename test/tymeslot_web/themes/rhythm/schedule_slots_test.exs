@@ -272,6 +272,11 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
     target = Date.add(today, 1)
     date = Date.to_string(target)
 
+    # The strip opens on today's week and moves itself to the first bookable
+    # day once availability arrives. A step taken before that overshoots, so
+    # it is only decided once the page has landed.
+    wait_until(fn -> has_element?(view, "button.calendar-day.selected") end)
+
     unless has_element?(view, "button.calendar-day[phx-value-date='#{date}']") do
       view |> element("button[phx-click='next_week']") |> render_click()
     end

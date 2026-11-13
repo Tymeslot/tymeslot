@@ -6,16 +6,18 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
   import Tymeslot.BookingTestHelpers
   import Tymeslot.TestHelpers.Eventually
 
-  @moduletag backup_tests: true
-  @moduletag :bookings
-  @moduletag :security
-
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Test.SuiteConfig
   alias Tymeslot.TestMocks
+
+  @moduletag backup_tests: true
+  @moduletag skip: SuiteConfig.unless_included(:backup_tests)
+  @moduletag :bookings
+  @moduletag :security
 
   setup :verify_on_exit!
 

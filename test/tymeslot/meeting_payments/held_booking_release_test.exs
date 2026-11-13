@@ -54,7 +54,7 @@ defmodule Tymeslot.MeetingPayments.HeldBookingReleaseTest do
         hours: %{is_available: true, start_time: ~T[11:00:00], end_time: ~T[12:00:00]}
       )
 
-    {:ok, _account} = ConnectAccountQueries.insert_placeholder(host.id, "ch")
+    {:ok, _account} = ConnectAccountQueries.insert_placeholder(host.id)
     date = next_bookable_weekday()
     meeting = hold_slot(host, date, ~T[11:00:00])
 

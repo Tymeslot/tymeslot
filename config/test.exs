@@ -85,6 +85,7 @@ config :tymeslot, :extra_themes, [
     key: :fixture,
     name: "Fixture",
     heading_style: :generic,
+    shows_intro: true,
     customization_spec: Tymeslot.Test.FixtureThemeSpec,
     status: :beta,
     module: TymeslotWeb.Test.FixtureTheme.Theme
@@ -219,6 +220,11 @@ config :tymeslot, :email_service, Tymeslot.EmailServiceMock
 config :tymeslot, :transcoder, Tymeslot.Media.TranscoderMock
 config :tymeslot, :health_check_module, Tymeslot.Integrations.HealthCheckMock
 
+# Flag a CalDAV integration on the first rejected sync, as before the
+# threshold existed, so tests about what flagging does need not first fail
+# the sync three times. The threshold itself is tested with its own value.
+config :tymeslot, :caldav_reauth_after_failed_cycles, 1
+
 # MiroTalk test configuration
 config :tymeslot, :mirotalk_api,
   api_key: "test-api-key",
@@ -240,6 +246,14 @@ config :tymeslot, :radicale,
   username: "test",
   password: "test",
   calendar_path: "/test/calendar.ics/"
+
+# Every SSO provider off, whatever the shell exports: config/runtime.exs
+# does not read ENABLE_*_AUTH in test. Tests that need a provider on set
+# `:social_auth` themselves (see `Tymeslot.AppSettingsEnvHelpers`).
+config :tymeslot, :social_auth,
+  google_enabled: false,
+  github_enabled: false,
+  oauth_enabled: false
 
 # OAuth state secrets for test (signs/validates the `state` parameter).
 # Tests typically mock State.validate/2, but OAuthStateGuard still reads
@@ -299,7 +313,9 @@ config :tymeslot, :recaptcha, signup_enabled: false, booking_enabled: false
 # Payment system configuration for tests
 config :tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock
 config :tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock
+
 config :tymeslot, :stripe_adapter, Tymeslot.MeetingPayments.StripeAdapterMock
+config :tymeslot, :stripe_connect_client_id, "ca_test"
 config :tymeslot, :show_branding, true
 
 # Pricing configuration for tests

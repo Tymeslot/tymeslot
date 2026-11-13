@@ -207,7 +207,7 @@ defmodule Tymeslot.BookingPages do
   def meeting_type_paths(%{username: username}, meeting_types, pages, memberships) do
     Map.new(meeting_types, fn type ->
       listed_on = Map.get(memberships, type.id, MapSet.new())
-      home = if type.is_private, do: Enum.find(pages, &MapSet.member?(listed_on, &1.id))
+      home = if has_page_home?(type), do: Enum.find(pages, &MapSet.member?(listed_on, &1.id))
       {type.id, path_under(username, home, type)}
     end)
   end
@@ -221,13 +221,20 @@ defmodule Tymeslot.BookingPages do
   @doc """
   The page `meeting_type` belongs to: the oldest page listing it, when it is
   hidden from the profile's own page (`is_private`). nil for a type the
-  profile's own page lists, or one listed on no page at all.
+  profile's own page lists, one listed on no page at all, and an
+  invitation-only type, which no page offers (`PublicListing.offered/1`) and
+  so lives at `/<username>/<slug>` however it is listed.
   """
   @spec home_page(map()) :: page() | nil
+  def home_page(%{invitation_only: true}), do: nil
+
   def home_page(%{is_private: true, id: id}) when is_integer(id),
     do: BookingPageQueries.first_for_meeting_type(id)
 
   def home_page(_listed_on_own_page), do: nil
+
+  defp has_page_home?(%{invitation_only: true}), do: false
+  defp has_page_home?(type), do: type.is_private
 
   @doc "The page a profile was resolved through, by id, or nil."
   @spec page_id(map() | nil) :: integer() | nil
@@ -511,9 +518,12 @@ defmodule Tymeslot.BookingPages do
   any of the host's addresses may carry it. A type listed only on
   `/<username>` or on other pages belongs to its own address
   (`meeting_type_path/2`), and booking it here would record this page
-  against a type it does not offer.
+  against a type it does not offer. An invitation-only type is served by no
+  page: no page offers it, and its address is `/<username>/<slug>`.
   """
   @spec serves?(page(), map()) :: boolean()
+  def serves?(_page, %{invitation_only: true}), do: false
+
   def serves?(%BookingPageSchema{id: page_id}, %{id: type_id, is_private: private?})
       when is_integer(type_id) do
     case BookingPageQueries.page_ids_for_meeting_type(type_id) do

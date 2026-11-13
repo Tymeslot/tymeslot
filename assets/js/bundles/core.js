@@ -17,11 +17,18 @@ import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPag
 import { ClipboardCopy } from "../clipboard_hook"
 import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
 import { EmailLogoUpload } from "../hooks/email_logo_upload"
+import { CustomColourPicker } from "../hooks/custom_colour_picker"
 import { AutoUpload } from "../hooks/auto_upload"
 import { ScrollStrip } from "../hooks/scroll_strip"
+import { Select } from "../hooks/select"
+import { DateTimePicker } from "../hooks/date_time_picker"
+import { StageScale, prefitStages } from "../hooks/stage_scale"
+import { StickyNavClearance } from "../hooks/sticky_nav_clearance"
+import { ShareLink, StageIframe } from "../hooks/share_link"
 import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics"
 import { installImageFallback } from "../image_fallback"
 import { installClipboardCopy } from "../clipboard_copy"
+import { installTooltips } from "../tooltip"
 import { liveSocketPath } from "../live_socket_path"
 import { takeAttendeePrefill } from "../attendee_prefill"
 import { isPhone } from "../calendar/viewport.js"
@@ -31,6 +38,7 @@ installImageFallback()
 
 // Copy [data-clipboard-text] elements on click (replaces inline clipboard handlers).
 installClipboardCopy()
+installTooltips()
 
 // CSRF token
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -74,6 +82,10 @@ const CoreHooks = {
   // only on the element carrying phx-hook, so every other page ignores it.
   EmailLogoUpload,
 
+  // The admin email accent uses the theme customiser's colour picker, and
+  // /admin has no route bundle (see EmailLogoUpload above).
+  CustomColourPicker,
+
   // Onboarding's profile step mounts this for the avatar picker, and
   // onboarding runs its own live_session with no route bundle (see
   // RouteBundleHook), so the dashboard bundle's lazy-loaded copy never
@@ -85,8 +97,27 @@ const CoreHooks = {
   // Every tab strip and segmented control carries it, and those render on
   // pages without the dashboard bundle (the analytics page), so it
   // is registered for every page. It is a few lines.
-  ScrollStrip
+  ScrollStrip,
+
+  // `<.select>`, on every kind of page: the dashboard, onboarding, booking
+  // pages, and the marketing contact form.
+  Select,
+  DateTimePicker,
+
+  // The onboarding stage's page miniature and its sticky nav row; onboarding
+  // has no route bundle (see AutoUpload above), so they are registered here.
+  // Each is a few lines. So are the live step's share button and the
+  // iframe of the host's real page it switches on.
+  StageScale,
+  StickyNavClearance,
+  ShareLink,
+  StageIframe
 }
+
+// The onboarding stage's miniature is sized by a hook, which only mounts once
+// the socket connects; fitting it now keeps a reload from showing it small
+// and then growing (stage_scale.js).
+prefitStages()
 
 // /embed-live for framed pages and pages served as an embed (see liveSocketPath)
 const socketPath = liveSocketPath()

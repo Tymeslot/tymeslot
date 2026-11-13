@@ -41,6 +41,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard do
       "custom-question-option-card",
       @selected? && "is-selected"
     ]}>
+      <%!-- raw-input: sr-only control drawn by the option card and its indicator around it --%>
       <input
         type={@input_type}
         name={@name}

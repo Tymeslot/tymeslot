@@ -491,3 +491,56 @@ msgstr[2] "Ім'я користувача має містити щонайбіл
 #, elixir-autogen, elixir-format
 msgid "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
 msgstr "Ім'я користувача має починатися з літери або цифри та містити лише малі літери, цифри, підкреслення й дефіси"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password confirmation does not match"
+msgstr "Підтвердження пароля не збігається"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password confirmation is required"
+msgstr "Потрібно підтвердити пароль"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password is required"
+msgstr "Потрібно ввести пароль"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be a text value"
+msgstr "Пароль має бути текстом"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at least %{count} character long"
+msgid_plural "Password must be at least %{count} characters long"
+msgstr[0] "Пароль має містити щонайменше %{count} символ"
+msgstr[1] "Пароль має містити щонайменше %{count} символи"
+msgstr[2] "Пароль має містити щонайменше %{count} символів"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
+msgstr "Пароль має бути не довшим за %{count} байтів. Літери з діакритичними знаками та емодзі займають більше одного байта."
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain at least one lowercase letter"
+msgstr "Пароль має містити щонайменше одну малу літеру"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain at least one number"
+msgstr "Пароль має містити щонайменше одну цифру"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain at least one special character"
+msgstr "Пароль має містити щонайменше один спеціальний символ"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain at least one uppercase letter"
+msgstr "Пароль має містити щонайменше одну велику літеру"

@@ -297,20 +297,59 @@ defmodule Tymeslot.CustomFields.FieldDefinitionTest do
       refute bad.valid?
     end
 
-    test "time keeps min/max when switching from another bounded type" do
+    test "number → time drops bounds a time cannot read" do
       cs =
         FieldDefinition.changeset(
-          %FieldDefinition{
-            id: UUID.generate(),
-            type: "number",
-            label: "X",
-            min: "1",
-            max: "10"
-          },
+          %FieldDefinition{id: UUID.generate(), type: "number", label: "X", min: "1", max: "10"},
           %{"type" => "time"}
         )
 
-      # number → time is a bounded → bounded switch, so min/max are retained.
+      assert cs.valid?
+      assert Changeset.get_field(cs, :min) == nil
+      assert Changeset.get_field(cs, :max) == nil
+    end
+
+    # The editor posts the stale bound back through the date picker's hidden
+    # input, so the save carries it alongside the new type.
+    test "number → date drops a stale bound posted with the new type" do
+      cs =
+        FieldDefinition.changeset(
+          %FieldDefinition{id: UUID.generate(), type: "number", label: "X", min: "5"},
+          %{"type" => "date", "min" => "5", "max" => "2026-12-31"}
+        )
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :min) == nil
+      assert Changeset.get_field(cs, :max) == "2026-12-31"
+    end
+
+    test "date → time drops a date bound" do
+      cs =
+        FieldDefinition.changeset(
+          %FieldDefinition{id: UUID.generate(), type: "date", label: "X", min: "2026-01-01"},
+          %{"type" => "time", "min" => "2026-01-01"}
+        )
+
+      assert Changeset.get_field(cs, :min) == nil
+    end
+
+    test "number → date keeps a date bound entered after the switch" do
+      cs =
+        FieldDefinition.changeset(
+          %FieldDefinition{id: UUID.generate(), type: "number", label: "X", min: "5"},
+          %{"type" => "date", "min" => "2026-03-01"}
+        )
+
+      assert Changeset.get_field(cs, :min) == "2026-03-01"
+    end
+
+    test "number → number keeps its bounds" do
+      cs =
+        FieldDefinition.changeset(
+          %FieldDefinition{id: UUID.generate(), type: "number", label: "X", min: "1", max: "10"},
+          %{"label" => "Y"}
+        )
+
       assert Changeset.get_field(cs, :min) == "1"
       assert Changeset.get_field(cs, :max) == "10"
     end

@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   LiveComponent for editing an open poll from its results panel.
 
   Covers what can change while people vote (see `Tymeslot.Polls.Editing`):
-  the title and description, whether the host is emailed about new votes, who
+  the title and description, where the meeting will be held
+  (`PollLocationField`), whether the host is emailed about new votes, who
   can vote (switching to invited people only withdraws pending link requests,
   which the editor warns about with the count it reads when the choice is made), the
   voting deadline (moved, removed, or set again to reopen voting), the
@@ -22,13 +23,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   alias Ecto.Changeset
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.PollSchema
+  alias Tymeslot.Polls.{PollLocation, PollSchema}
 
   alias TymeslotWeb.Dashboard.Polls.{
     CandidateTimes,
     LocalTime,
     PollAccess,
     PollFormErrors,
+    PollLocationField,
     PollParticipantList,
     PollReminders,
     PollsComponent
@@ -62,11 +64,33 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       meeting_type_id: poll.meeting_type_id,
       kept_meeting_type:
         kept_meeting_type(poll, socket.assigns.meeting_types, socket.assigns.user_id),
+      location_options: Polls.location_options(socket.assigns.user_id, poll),
       new_times: [],
       time_counter: 0,
       reminder_picker: PollReminders.new(PollSchema.reminders(poll)),
       errors: %{}
     )
+    |> assign(location_state(poll))
+    |> assign_type_location()
+  end
+
+  defp location_state(poll) do
+    {choice, details} = PollLocation.choice(poll)
+    %{location_choice: choice, location_details: details}
+  end
+
+  # The selected type's location, which the poll takes while it has none of
+  # its own, read again only when the type changes.
+  defp assign_type_location(%{assigns: %{meeting_type_id: id, type_location_for: id}} = socket),
+    do: socket
+
+  defp assign_type_location(%{assigns: %{meeting_type_id: id} = assigns} = socket) do
+    location =
+      [assigns.kept_meeting_type | assigns.meeting_types]
+      |> Enum.find(&(&1 && &1.id == id))
+      |> PollLocation.of_meeting_type()
+
+    assign(socket, type_location: location, type_location_for: id)
   end
 
   @impl Phoenix.LiveComponent
@@ -101,8 +125,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           errors={error_list(@errors, :description)}
         />
 
-        <.input
-          type="datetime-local"
+        <.datetime_picker
+          id={"poll-deadline-#{@id}"}
           name="poll[deadline]"
           label={dgettext("dashboard_polls", "Voting deadline (optional)")}
           value={@deadline}
@@ -115,10 +139,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
               timezone: @poll.timezone
             )}
           </:description>
-        </.input>
+        </.datetime_picker>
 
-        <.input
-          type="select"
+        <.select
+          id="poll-editor-meeting-type"
           name="poll[meeting_type_id]"
           label={dgettext("dashboard_polls", "Meeting type (optional)")}
           value={@meeting_type_id}
@@ -129,7 +153,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           <:description>
             {dgettext(
               "dashboard_polls",
-              "Its calendar and video provider are used for the meeting when you confirm a time. The poll's times and title stay as they are."
+              "Its calendar is used for the meeting when you confirm a time, and its location while the poll has none of its own. The poll's times and title stay as they are."
             )}
             <span
               :if={kept_selected?(@kept_meeting_type, @meeting_type_id)}
@@ -143,7 +167,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
               )}
             </span>
           </:description>
-        </.input>
+        </.select>
+
+        <PollLocationField.field
+          id={"poll-location-#{@poll.id}"}
+          choice={@location_choice}
+          details={@location_details}
+          options={@location_options}
+          type_location={@type_location}
+          errors={@errors}
+        />
 
         <PollAccess.access_input
           id={"poll-access-#{@poll.id}"}
@@ -164,8 +197,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
           </p>
           <div :for={time <- @new_times} class="flex items-center gap-2">
             <div class="flex-1">
-              <.input
-                type="datetime-local"
+              <.datetime_picker
+                id={"poll-new-time-#{time.key}"}
                 name={"poll[new_times][#{time.key}]"}
                 value={time.value}
                 aria-label={dgettext("dashboard_polls", "New time")}
@@ -260,7 +293,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
        meeting_type_id: parse_id(Map.get(params, "meeting_type_id")),
        new_times:
          CandidateTimes.merge(socket.assigns.new_times, Map.get(params, "new_times", %{}))
-     )}
+     )
+     |> assign(PollLocationField.form_state(params, socket.assigns))
+     |> assign_type_location()}
   end
 
   def handle_event("add_time", _params, socket) do
@@ -290,6 +325,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   end
 
   defp save(socket, params) do
+    case PollFormErrors.finished_times(params, "new_times") do
+      :ok ->
+        save_details(socket, params)
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :errors, PollFormErrors.errors_for(reason, :new_times))}
+    end
+  end
+
+  defp save_details(socket, params) do
     %{poll: poll, user_id: user_id} = socket.assigns
 
     attrs = save_attrs(params, socket.assigns)
@@ -318,17 +363,16 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   end
 
   defp save_attrs(params, %{poll: poll} = assigns) do
-    Map.merge(
-      %{
-        "title" => Map.get(params, "title"),
-        "description" => Map.get(params, "description"),
-        "notify_on_vote" => Map.get(params, "notify_on_vote", "false"),
-        "invite_only" => PollAccess.invite_only?(Map.get(params, "access", assigns.access)),
-        "deadline_at" => LocalTime.to_utc(Map.get(params, "deadline"), poll.timezone),
-        "reminder_config" => PollReminders.to_config(assigns.reminder_picker)
-      },
-      meeting_type_change(params, poll)
-    )
+    %{
+      "title" => Map.get(params, "title"),
+      "description" => Map.get(params, "description"),
+      "notify_on_vote" => Map.get(params, "notify_on_vote", "false"),
+      "invite_only" => PollAccess.invite_only?(Map.get(params, "access", assigns.access)),
+      "deadline_at" => LocalTime.to_utc(Map.get(params, "deadline"), poll.timezone),
+      "reminder_config" => PollReminders.to_config(assigns.reminder_picker)
+    }
+    |> Map.merge(meeting_type_change(params, poll))
+    |> Map.merge(PollLocationField.attrs(params, :string_keys))
   end
 
   defp parse_id(value) when value in [nil, ""], do: nil
@@ -412,6 +456,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
       do: PollFormErrors.errors_for(reason, :new_times),
       else: editor_errors_for(reason)
   end
+
+  defp editor_errors_for(:location_not_found),
+    do: %{location_kind: [PollLocationField.not_found_message()]}
 
   defp editor_errors_for(:voting_closed),
     do: %{

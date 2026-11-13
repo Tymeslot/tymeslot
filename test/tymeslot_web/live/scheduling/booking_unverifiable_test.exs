@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Scheduling.BookingUnverifiableTest do
   @moduletag :bookings
   @moduletag :live
 
+  alias Ecto.Changeset
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -77,6 +78,29 @@ defmodule TymeslotWeb.Scheduling.BookingUnverifiableTest do
         |> render_submit()
 
         eventually(fn -> assert render(view) =~ "check the host" end)
+      end)
+
+    refute log =~ "Failed to create meeting appointment"
+    assert Repo.aggregate(MeetingSchema, :count, :id) == 0
+  end
+
+  # The page does not offer an invitation-only type without its invitation,
+  # so the type is closed to the public after the booker has reached the form.
+  test "an invitation refusal is not logged as an error",
+       %{conn: conn, profile: profile, event_type: event_type} do
+    view = navigate_to_booking_form(conn, profile, event_type)
+
+    event_type |> Changeset.change(invitation_only: true) |> Repo.update!()
+
+    log =
+      capture_log([level: :error], fn ->
+        view
+        |> form("form[data-testid='booking-form']", %{
+          "booking" => %{"name" => "Ada Booker", "email" => "ada@example.com"}
+        })
+        |> render_submit()
+
+        eventually(fn -> assert render(view) =~ "invitation" end)
       end)
 
     refute log =~ "Failed to create meeting appointment"

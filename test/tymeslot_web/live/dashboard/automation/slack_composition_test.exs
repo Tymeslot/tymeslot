@@ -103,10 +103,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCompositionTest do
       view |> element("button", "Slack") |> render_click()
 
       # Open the edit form for the webhook integration via the card's Edit
-      # button (title="Edit"); its phx-click carries the JS push event.
+      # button (aria-label="Edit"); its phx-click carries the JS push event.
       html =
         view
-        |> element("button[title='Edit']")
+        |> element("button[aria-label='Edit']")
         |> render_click()
 
       # The edit form must render, but the stored secret must not appear in the

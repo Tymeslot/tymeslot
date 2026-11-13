@@ -315,4 +315,21 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
       assert {:ok, ["new.com"]} = Profiles.add_embed_domains(profile, "new.com")
     end
   end
+
+  describe "embedding_enabled?/1" do
+    test "is false for the default and for every way of blocking all sites" do
+      assert insert(:profile).allowed_embed_domains == ["none"]
+      refute Profiles.embedding_enabled?(insert(:profile))
+
+      for domains <- [nil, [], ["none"]],
+          do: refute(Profiles.embedding_enabled?(%{allowed_embed_domains: domains}))
+    end
+
+    test "is true once a site may embed the booking page" do
+      profile = insert(:profile)
+      {:ok, updated} = Profiles.update_allowed_embed_domains(profile, ["example.com"])
+
+      assert Profiles.embedding_enabled?(updated)
+    end
+  end
 end

@@ -9,17 +9,17 @@ defmodule CredoChecks.UseCoreModal do
 
   ## Known gaps
 
-  # TODO: the pattern is positional and line-based, so it catches the spelling this
-  #       codebase actually writes and little else. Not flagged: the tokens in another
+  # TODO: the pattern is positional, so it catches the spelling this codebase
+  #       actually writes and little else. Not flagged: the tokens in another
   #       order (`justify-center` before `fixed inset-0`, or `inset-0 fixed`);
-  #       `top-0 left-0 right-0 bottom-0` written out instead of `inset-0`;
-  #       `place-items-center` instead of `justify-center`; and a `class` attribute the
-  #       formatter has wrapped across two lines, since the check reads the file line by
-  #       line. The z-index is correctly irrelevant: any value matches, as does none.
-  #       Hardening it means matching the tokens in any order within one attribute and
-  #       joining wrapped attributes before the match. Deferred rather than dropped: the
-  #       current pattern has no false positives, and a hand-rolled backdrop is copied
-  #       from the last hand-rolled backdrop, so the copies share a spelling.
+  #       `top-0 left-0 right-0 bottom-0` written out instead of `inset-0`; and
+  #       `place-items-center` instead of `justify-center`. The z-index is
+  #       correctly irrelevant: any value matches, as does none. Hardening it
+  #       means matching the tokens in any order within one attribute. Deferred
+  #       rather than dropped: the current pattern has no false positives, and
+  #       a hand-rolled backdrop is copied from the last hand-rolled backdrop,
+  #       so the copies share a spelling. A `class` attribute the formatter has
+  #       wrapped is caught: tags are read whole by `CredoChecks.HtmlTags`.
   """
 
   use Credo.Check,
@@ -44,6 +44,7 @@ defmodule CredoChecks.UseCoreModal do
 
   alias Credo.IssueMeta
   alias Credo.SourceFile
+  alias CredoChecks.HtmlTags
 
   # Matches any class string that contains both "fixed inset-0" and "justify-center",
   # which is the distinctive signature of a hand-rolled full-viewport modal backdrop.
@@ -61,15 +62,10 @@ defmodule CredoChecks.UseCoreModal do
     else
       issue_meta = IssueMeta.for(source_file, params)
 
-      source_file
-      |> SourceFile.lines()
-      |> Enum.reduce([], fn {line_no, line}, issues ->
-        if Regex.run(@backdrop_regex, line) do
-          [issue_for(issue_meta, line_no) | issues]
-        else
-          issues
-        end
-      end)
+      for %{line_no: line_no, text: text} <- HtmlTags.tags(source_file, "[.:]?[a-z][\\w.:-]*"),
+          Regex.match?(@backdrop_regex, text) do
+        issue_for(issue_meta, line_no)
+      end
     end
   end
 

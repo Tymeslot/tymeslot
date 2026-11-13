@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollDuration do
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.CoreComponents.Forms
+  alias TymeslotWeb.Components.CoreComponents.Select
   alias TymeslotWeb.Dashboard.DashboardFormat
 
   @doc """
@@ -76,9 +77,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollDuration do
     assigns = assign(assigns, :lengths, Lengths.offered(assigns.meeting_type))
 
     ~H"""
-    <Forms.input
+    <Select.select
       :if={length(@lengths) > 1}
-      type="select"
+      id="poll-duration-select"
       name="poll[duration]"
       label={dgettext("dashboard_polls", "Duration")}
       value={@duration}

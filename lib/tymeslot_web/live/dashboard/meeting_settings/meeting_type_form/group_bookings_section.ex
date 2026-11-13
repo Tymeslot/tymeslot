@@ -236,6 +236,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
 
   defp blocker_message(:plan), do: ContextErrors.group_bookings_not_allowed_message()
 
+  defp blocker_message(:invitation_only), do: GroupRules.invitation_only_message()
+
   defp blocker_message(:payment),
     do: dgettext("dashboard_meeting_form", "Turn off payments to enable group bookings.")
 

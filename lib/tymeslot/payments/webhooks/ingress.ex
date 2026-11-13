@@ -26,7 +26,15 @@ defmodule Tymeslot.Payments.Webhooks.Ingress do
       only: Connect events carry attendee details);
     * what an unregistered event type does: the platform endpoint raises an
       admin alert, since every type it should receive is either registered
-      or listed as deliberately ignored; the Connect endpoint logs it.
+      or listed as deliberately ignored; the Connect endpoint logs it;
+    * whether an event of the other mode is ignored (Connect only): a
+      connected Standard account keeps one `acct_` id in test and live mode,
+      and Stripe delivers both modes' events to the same production
+      endpoint, so a test-mode event must not touch a live connection. An
+      event whose boolean `livemode` differs from the deployment's mode
+      (live when the platform key contains `_live_`) is acknowledged with no
+      handler run, like a deliberately ignored type. When the key is unset or
+      `livemode` is missing, the event is handled as any other.
 
   Rejection details are logged here and never returned, so a caller has
   nothing to echo back to an unauthenticated sender.
@@ -39,6 +47,7 @@ defmodule Tymeslot.Payments.Webhooks.Ingress do
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.Webhooks.WebhookRegistry, as: ConnectRegistry
+  alias Tymeslot.Payments.Config
   alias Tymeslot.Payments.Webhooks.Idempotency
   alias Tymeslot.Payments.Webhooks.WebhookRegistry, as: PlatformRegistry
 
@@ -53,13 +62,15 @@ defmodule Tymeslot.Payments.Webhooks.Ingress do
       registry: PlatformRegistry,
       secret_key: :stripe_webhook_secret,
       store_payload?: true,
-      alert_unhandled?: true
+      alert_unhandled?: true,
+      skip_other_mode?: false
     },
     connect: %{
       registry: ConnectRegistry,
       secret_key: :stripe_connect_webhook_secret,
       store_payload?: false,
-      alert_unhandled?: false
+      alert_unhandled?: false,
+      skip_other_mode?: true
     }
   }
 
@@ -147,6 +158,35 @@ defmodule Tymeslot.Payments.Webhooks.Ingress do
 
   defp dispatch(spec, event_type, %{"data" => %{"object" => object}} = event)
        when is_binary(event_type) and is_map(object) do
+    case spec.skip_other_mode? && other_mode?(event) do
+      true ->
+        Logger.info("Ignoring Stripe webhook event of the other mode", event_type: event_type)
+        {:ok, :ignored}
+
+      _same_mode ->
+        dispatch_to_handler(spec, event_type, event)
+    end
+  end
+
+  defp dispatch(_spec, event_type, event) do
+    Logger.warning("Stripe webhook event carries no object",
+      event_type: event_type,
+      event_id: event["id"]
+    )
+
+    {:error, :permanent, :invalid_event}
+  end
+
+  defp other_mode?(%{"livemode" => livemode}) when is_boolean(livemode) do
+    case Config.stripe_api_key() do
+      key when is_binary(key) -> livemode != String.contains?(key, "_live_")
+      nil -> false
+    end
+  end
+
+  defp other_mode?(_event), do: false
+
+  defp dispatch_to_handler(spec, event_type, event) do
     case spec.registry.handler_for(event_type) do
       :ignore ->
         Logger.debug("Ignoring Stripe webhook event", event_type: event_type)
@@ -163,15 +203,6 @@ defmodule Tymeslot.Payments.Webhooks.Ingress do
 
         run_handler(handler, event)
     end
-  end
-
-  defp dispatch(_spec, event_type, event) do
-    Logger.warning("Stripe webhook event carries no object",
-      event_type: event_type,
-      event_id: event["id"]
-    )
-
-    {:error, :permanent, :invalid_event}
   end
 
   # Recorded by module alone: a handler's exception message can quote the

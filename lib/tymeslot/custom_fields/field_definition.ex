@@ -72,7 +72,8 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
   # *previous* type so we don't leak stale data. Fields that are also
   # meaningful for the new type are left untouched — e.g. `options` are
   # kept when switching between select types, and `min`/`max` are kept
-  # when switching between bounded types (number/date/time).
+  # when switching between bounded types (number/date/time), where
+  # `validate_bounds/2` then drops any bound the new type cannot read.
   #
   # Host-side UI shows a confirmation dialog before doing this — the
   # data-layer change here is the safety net.
@@ -108,9 +109,9 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
       "single_select" -> select_validations(cs)
       "multi_select" -> select_validations(cs)
       "note" -> validate_required(cs, [:body])
-      "number" -> validate_min_le_max(cs, :number)
-      "date" -> validate_min_le_max(cs, :date)
-      "time" -> validate_min_le_max(cs, :time)
+      "number" -> validate_bounds(cs, :number)
+      "date" -> validate_bounds(cs, :date)
+      "time" -> validate_bounds(cs, :time)
       _type -> cs
     end
   end
@@ -156,6 +157,24 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
     end
   end
 
+  # A bound the type cannot read is dropped, as the browser's native number,
+  # date and time inputs used to drop one: "5" kept from a number question
+  # turned date would otherwise disable every day on the booking page and
+  # reject every answer, while the host's picker shows the bound as empty.
+  defp validate_bounds(cs, type) do
+    cs
+    |> drop_unreadable_bound(:min, type)
+    |> drop_unreadable_bound(:max, type)
+    |> validate_min_le_max(type)
+  end
+
+  defp drop_unreadable_bound(cs, field, type) do
+    case get_field(cs, field) do
+      nil -> cs
+      value -> if parse_bound(type, value) == :error, do: put_change(cs, field, nil), else: cs
+    end
+  end
+
   defp validate_min_le_max(cs, type) do
     case {get_field(cs, :min), get_field(cs, :max)} do
       {nil, _max} -> cs
@@ -164,17 +183,14 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
     end
   end
 
+  # Both bounds parse: `validate_bounds/2` has dropped any that did not.
   defp validate_bound_order(cs, type, min, max) do
-    with {:ok, lo} <- parse_bound(type, min),
-         {:ok, hi} <- parse_bound(type, max) do
-      if bound_le?(type, lo, hi),
-        do: cs,
-        else: add_error(cs, :max, dgettext_noop("errors", "must be greater than or equal to min"))
-    else
-      # An unparseable bound skips the min<=max check; the changeset is
-      # returned unchanged because the values are not comparable.
-      :error -> cs
-    end
+    {:ok, lo} = parse_bound(type, min)
+    {:ok, hi} = parse_bound(type, max)
+
+    if bound_le?(type, lo, hi),
+      do: cs,
+      else: add_error(cs, :max, dgettext_noop("errors", "must be greater than or equal to min"))
   end
 
   defp parse_bound(:number, value) when is_binary(value) do

@@ -249,6 +249,36 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
 
       assert PathHandlers.build_path_with_locale(socket, "de") == "/johndoe/30-minutes?locale=de"
     end
+
+    test "carries the token of the invitation the page holds" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          live_action: :schedule,
+          duration: "30min",
+          invitation: %{token: "held-token"},
+          page_query_params: %{"invite" => "url-token"}
+        }
+      }
+
+      assert PathHandlers.build_path_with_locale(socket, "de") ==
+               "/johndoe/30-minutes?invite=held-token&locale=de"
+    end
+
+    test "carries the URL's token when the page holds no invitation" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          live_action: :schedule,
+          duration: "30min",
+          invitation: nil,
+          page_query_params: %{"invite" => "url-token"}
+        }
+      }
+
+      assert PathHandlers.build_path_with_locale(socket, "de") ==
+               "/johndoe/30-minutes?invite=url-token&locale=de"
+    end
   end
 
   describe "choices_query/1" do
@@ -301,6 +331,38 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
         assert PathHandlers.choices_query(socket) == %{"embed" => "1"}, "on #{outcome}"
       end
     end
+
+    # The booking spent the invitation; the address bar is copied and kept
+    # in history.
+    test "keeps the invitation token before the confirmation and drops it there" do
+      assigns = %{
+        live_action: :schedule,
+        journey: classic_journey(),
+        page_query_params: %{"embed" => "1", "invite" => "inv-tok"}
+      }
+
+      booking = %Phoenix.LiveView.Socket{assigns: Map.put(assigns, :current_state, :booking)}
+      done = %Phoenix.LiveView.Socket{assigns: Map.put(assigns, :current_state, :confirmation)}
+
+      assert PathHandlers.choices_query(booking)["invite"] == "inv-tok"
+      assert PathHandlers.choices_query(done) == %{"embed" => "1"}
+    end
+  end
+
+  describe "facts_address/1" do
+    test "drops the invitation token on the confirmation only" do
+      assigns = %{
+        username_context: "johndoe",
+        page_query_params: %{"invite" => "inv-tok"},
+        selected_duration: "30-minutes"
+      }
+
+      assert PathHandlers.facts_address(Map.put(assigns, :current_state, :schedule)) ==
+               "/johndoe/30-minutes?invite=inv-tok"
+
+      assert PathHandlers.facts_address(Map.put(assigns, :current_state, :confirmation)) ==
+               "/johndoe/thank-you"
+    end
   end
 
   describe "restart_path/2" do
@@ -330,6 +392,23 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
                "duration" => "30-minutes"
              }
     end
+
+    # The confirmation's address no longer carries the token, so the restart
+    # names the invitation the page holds, whose gate then says it is spent.
+    test "names the invitation the page holds" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          invitation: %{token: "inv-tok"},
+          page_query_params: %{"embed" => "1"}
+        }
+      }
+
+      assert URI.decode_query(URI.parse(PathHandlers.restart_path(socket)).query) == %{
+               "embed" => "1",
+               "invite" => "inv-tok"
+             }
+    end
   end
 
   defp classic_journey do
@@ -355,6 +434,18 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
 
       assert PathHandlers.organizer_scheduling_path(assigns) ==
                "/janedoe?reschedule_meeting_uid=abc-123"
+    end
+
+    test "carries the page's language with the reschedule uid" do
+      assigns = %{organizer_profile: %{username: "janedoe"}, meeting_uid: "abc", locale: "de"}
+
+      assert PathHandlers.organizer_scheduling_path(assigns) ==
+               "/janedoe?locale=de&reschedule_meeting_uid=abc"
+    end
+
+    test "carries no language without a meeting to reschedule" do
+      assigns = %{organizer_profile: %{username: "janedoe"}, locale: "de"}
+      assert PathHandlers.organizer_scheduling_path(assigns) == "/janedoe"
     end
 
     test "omits the reschedule param when meeting_uid is blank" do
@@ -496,6 +587,20 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
           assigns
         )
     }
+  end
+
+  describe "query_params/1" do
+    test "keeps the page's query but drops the route's segments and an entry refusal" do
+      params = %{
+        "username" => "host",
+        "slug" => "chat",
+        "embed" => "1",
+        "timezone" => "Etc/UTC",
+        "refused" => "invalid-type"
+      }
+
+      assert PathHandlers.query_params(params) == %{"embed" => "1", "timezone" => "Etc/UTC"}
+    end
   end
 
   describe "a demo page's chosen theme" do

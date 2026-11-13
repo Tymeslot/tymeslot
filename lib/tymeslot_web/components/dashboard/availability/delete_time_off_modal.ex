@@ -27,19 +27,22 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteTimeOffModal do
     <Modal.confirm_modal
       id={@id}
       show={@show}
-      title={dgettext("dashboard_availability", "Remove time off")}
-      confirm_label={dgettext("dashboard_availability", "Remove")}
+      title={dgettext("dashboard_availability_time_off", "Remove time off")}
+      confirm_label={dgettext("dashboard_availability_time_off", "Remove")}
       on_cancel={@on_cancel}
       on_confirm={@on_confirm}
     >
       <%= if @period_data do %>
         <p>
-          {dgettext("dashboard_availability", "Remove your time off for %{range}?",
+          {dgettext("dashboard_availability_time_off", "Remove your time off for %{range}?",
             range: Map.get(@period_data, :summary, "")
           )}
         </p>
         <p class="text-tymeslot-500">
-          {dgettext("dashboard_availability", "Those days become bookable again straight away.")}
+          {dgettext(
+            "dashboard_availability_time_off",
+            "Those days become bookable again straight away."
+          )}
         </p>
       <% end %>
     </Modal.confirm_modal>

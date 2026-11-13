@@ -43,7 +43,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
 
       <.meeting_summary meeting={@meeting} timezone={@timezone} />
 
-      <.form for={%{}} action={~p"/guest/#{@token}/#{@response}"} class="mt-6">
+      <.form for={%{}} action={~p"/guest/#{@token}/#{@response}"} class="mt-6" novalidate>
         <.action_button
           type="submit"
           variant={if accepting?, do: :primary, else: :secondary}

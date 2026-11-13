@@ -87,6 +87,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.PageSettingsComponent do
           phx-submit="save_details"
           phx-target={@myself}
           class="space-y-4"
+          novalidate
         >
           <%!-- A disabled fieldset disables every field in it without a
           `disabled` on each. --%>

@@ -1,0 +1,161 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} authentication failed - missing authorisation code or security token."
+msgstr "Ověření přes %{provider} se nezdařilo – chybí autorizační kód nebo bezpečnostní token."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller/invitation_response.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} authentication is not available"
+msgstr "Ověření přes %{provider} není k dispozici"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} authentication succeeded but session creation failed."
+msgstr "Ověření přes %{provider} proběhlo úspěšně, ale relaci se nepodařilo vytvořit."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller/invitation_response.ex
+#, elixir-autogen, elixir-format
+msgid "An error occurred during %{provider} authentication."
+msgstr "Během ověření přes %{provider} došlo k chybě."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Check your email: we've sent a link to finish signing up with %{provider}."
+msgstr "Zkontrolujte e-mail: poslali jsme vám odkaz k dokončení registrace přes %{provider}."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Create my account"
+msgstr "Vytvořit můj účet"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller/invitation_response.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to authenticate with %{provider}."
+msgstr "Ověření přes %{provider} se nezdařilo."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to create session. Please try again."
+msgstr "Relaci se nepodařilo vytvořit. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Finish signing up"
+msgstr "Dokončení registrace"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Missing OAuth provider information. Please try again."
+msgstr "Chybí informace o poskytovateli OAuth. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "OAuth authentication failed - missing provider."
+msgstr "Ověření OAuth se nezdařilo – chybí poskytovatel."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We could not send a new verification link; please try again later."
+msgstr "Před přihlášením prosím ověřte svou e-mailovou adresu. Nový ověřovací odkaz se nepodařilo odeslat; zkuste to prosím později."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We've sent you a new verification link."
+msgstr "Před přihlášením prosím ověřte svou e-mailovou adresu. Poslali jsme vám nový ověřovací odkaz."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to confirm your email address and create your account."
+msgstr "Stisknutím tlačítka níže potvrdíte svou e-mailovou adresu a vytvoříte účet."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#: lib/tymeslot_web/controllers/auth/oauth_controller/invitation_response.ex
+#, elixir-autogen, elixir-format
+msgid "Security validation failed. Please try again."
+msgstr "Bezpečnostní ověření se nezdařilo. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Successfully signed in with %{provider}."
+msgstr "Přihlášení přes %{provider} proběhlo úspěšně."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller/invitation_response.ex
+#, elixir-autogen, elixir-format
+msgid "This %{provider} account already signs in to another Tymeslot account. Use a different one, or choose another way to sign in."
+msgstr "Tento účet %{provider} už slouží k přihlášení do jiného účtu Tymeslot. Použijte jiný, nebo zvolte jiný způsob přihlášení."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This link is no longer valid. Please sign in to continue."
+msgstr "Tento odkaz již není platný. Pokračujte přihlášením."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many OAuth attempts. Please try again later."
+msgstr "Příliš mnoho pokusů o přihlášení přes OAuth. Zkuste to prosím později."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many authentication attempts. Please try again later."
+msgstr "Příliš mnoho pokusů o přihlášení. Zkuste to prosím později."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many registration attempts. Please try again later."
+msgstr "Příliš mnoho pokusů o registraci. Zkuste to prosím později."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many verification attempts. Please try again later."
+msgstr "Příliš mnoho pokusů o ověření. Zkuste to prosím později."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Unsupported OAuth provider."
+msgstr "Nepodporovaný poskytovatel OAuth."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Unsupported OAuth provider: %{provider}"
+msgstr "Nepodporovaný poskytovatel OAuth: %{provider}"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't send the link to finish signing up just now. Please try again later."
+msgstr "Odkaz k dokončení registrace se teď nepodařilo odeslat. Zkuste to prosím později."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller/invitation_response.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome to Tymeslot! You'll sign in with %{provider}."
+msgstr "Vítejte v aplikaci Tymeslot! Budete se přihlašovat přes %{provider}."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Welcome! You've successfully signed up with %{provider}."
+msgstr "Vítejte! Registrace přes %{provider} proběhla úspěšně."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller/invitation_response.ex
+#, elixir-autogen, elixir-format
+msgid "Your account is ready. Please sign in with %{provider} to continue."
+msgstr "Váš účet je připraven. Pokračujte přihlášením přes %{provider}."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your sign-up session has expired. Please sign in again."
+msgstr "Platnost vaší registrace vypršela. Přihlaste se prosím znovu."

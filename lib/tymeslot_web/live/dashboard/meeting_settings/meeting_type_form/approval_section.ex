@@ -75,11 +75,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ApprovalSection 
         </label>
 
         <div class="flex items-center gap-3">
-          <input
+          <.input
             type="number"
             id="approval-window-hours"
             name="meeting_type[approval_window_hours]"
-            class="input w-32"
+            class="w-32"
             value={@approval_window_hours}
             min={@window_range.first}
             max={@window_range.last}

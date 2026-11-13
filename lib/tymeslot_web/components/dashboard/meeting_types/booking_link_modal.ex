@@ -63,12 +63,14 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
           phx-submit="confirm_slug_change"
           phx-target={@myself}
           class="space-y-2"
+          novalidate
         >
           <label for="booking-link-slug" class="block font-medium text-tymeslot-700">
             {dgettext("dashboard_meeting_types", "Link address")}
           </label>
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-token-sm text-tymeslot-500 whitespace-nowrap">{@base_url}/</span>
+            <%!-- raw-input: monospace slug field sized to sit inline between the base-URL prefix and the Randomise button; the standard field's padding and font would break that row --%>
             <input
               type="text"
               id="booking-link-slug"

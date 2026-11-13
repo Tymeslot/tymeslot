@@ -137,6 +137,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard d
             </span>
             <.pill tone={@tone} dot pulse={@pulse}>{@status_label}</.pill>
           </div>
+          <%!-- native-title: repeats the summary, truncated only from sm up. --%>
           <p
             :if={@summary}
             data-part="summary"

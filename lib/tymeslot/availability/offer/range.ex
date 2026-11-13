@@ -2,15 +2,12 @@ defmodule Tymeslot.Availability.Offer.Range do
   @moduledoc false
   # The range half of `Tymeslot.Availability.Offer`: the starts and offered
   # times for every day of a range (`Offer.starts_in_range/5`,
-  # `Offer.slots_for_range/4`), with everything that does not depend on the
-  # day read once for the whole range.
+  # `Offer.slots_for_range/4`, `Offer.slots_and_busy_for_range/4`), with
+  # everything that does not depend on the day read once for the whole range.
 
-  alias Tymeslot.Availability.Bookability
-  alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Availability.{BusinessHours, BusyIntervals, Calculate, Intervals, Schedules}
   alias Tymeslot.Availability.Offer
-  alias Tymeslot.Availability.Offer.Request
-  alias Tymeslot.Availability.Schedules
-  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Availability.Offer.{HostCalendar, Request}
   alias Tymeslot.MeetingTypes.FixedDates
 
   # The longest range `Offer.slots_for_range/4` answers: six weeks, the month
@@ -56,32 +53,78 @@ defmodule Tymeslot.Availability.Offer.Range do
     end
   end
 
+  # `Offer.slots_and_busy_for_range/4` for a page that is not a demo:
   # `Offer.slots_for_date/3` for every day of a range, labelled from
-  # `range_starts/5`. Everything that does not depend on the day read once:
-  # the calendar (whose fetch covers the whole booking window whatever date
-  # it is given), the proven reschedule meeting, the booking-limit counts
-  # over the range, and the schedule's weekly hours, overrides and time off
-  # for the range and a day either side, which
-  # `Calculate.available_starts/6` then finds already in the config. The busy
-  # set is merged over the range, so each day sees every booking and event
-  # that a single date's read would merge for it alone.
-  @spec free_slots_in_range(Offer.request(), Date.t(), Date.t(), String.t() | integer() | nil) ::
-          {:ok, %{String.t() => [term()]}} | {:error, any()}
-  def free_slots_in_range(request, start_date, end_date, duration) do
+  # `range_starts/5`, with the busy periods and open hours they were computed
+  # from. Everything that does not depend on the day is read once: the
+  # calendar (whose fetch covers the whole booking window whatever date it is
+  # given), the proven reschedule meeting, the booking-limit counts over the
+  # range, and the schedule's weekly hours, overrides and time off for the
+  # range and a day either side, which `Calculate.available_starts/6` then
+  # finds already in the config. The busy set is merged over the range, so
+  # each day sees every booking and event that a single date's read would
+  # merge for it alone.
+  @spec slots_and_busy_in_range(
+          Offer.request(),
+          Date.t(),
+          Date.t(),
+          String.t() | integer() | nil
+        ) :: {:ok, BusyIntervals.range_view()} | {:error, any()}
+  def slots_and_busy_in_range(request, start_date, end_date, duration) do
     with {:ok, %{starts: starts, context: context}} <-
            range_starts(request, start_date, end_date, duration, :fresh) do
-      {:ok,
-       Map.new(starts, fn {date, day_starts} ->
-         {Date.to_iso8601(date),
-          Request.offered_slots(day_starts, request[:meeting_type], date, context)}
-       end)}
+      {:ok, range_view(request, starts, context, {start_date, end_date})}
     end
+  end
+
+  # What `Offer.slots_and_busy_for_range/4` answers, from the per-day starts
+  # and the busy set and config they were computed against.
+  defp range_view(request, starts, context, {start_date, end_date}) do
+    %{owner_timezone: owner_timezone, events: busy, config: config} = context
+
+    %{
+      slots:
+        Map.new(starts, fn {date, day_starts} ->
+          {Date.to_iso8601(date),
+           Request.offered_slots(day_starts, request[:meeting_type], date, context)}
+        end),
+      starts: Map.new(starts, fn {date, day_starts} -> {Date.to_iso8601(date), day_starts} end),
+      busy: BusyIntervals.of(busy, owner_timezone),
+      windows: open_windows(Date.range(start_date, end_date), owner_timezone, config)
+    }
+  end
+
+  # The hours the host is open: the schedule's windows less time off, as the
+  # slots of the same range are computed.
+  defp open_windows(dates, owner_timezone, %{schedule_id: schedule_id} = config) do
+    time_off = BusinessHours.time_off_intervals(dates, schedule_id, owner_timezone, config)
+
+    dates
+    |> BusinessHours.owner_windows(schedule_id, owner_timezone, config)
+    |> Enum.flat_map(&without_time_off(&1, time_off, owner_timezone))
+  end
+
+  # `Intervals` works on bare `{start, end}` pairs, so each surviving piece is
+  # put back into the window it came from, keeping its date and `extra` mark
+  # and only the breaks that still fall inside it.
+  defp without_time_off(window, time_off, owner_timezone) do
+    [{window.start_dt, window.end_dt}]
+    |> Intervals.subtract(time_off)
+    |> Enum.map(fn {start_dt, end_dt} = piece ->
+      %{
+        window
+        | start_dt: DateTime.shift_zone!(start_dt, owner_timezone),
+          end_dt: DateTime.shift_zone!(end_dt, owner_timezone),
+          breaks: Intervals.clip(window.breaks, piece)
+      }
+    end)
   end
 
   # The engine's starts for every day of the range, keyed by date, with the
   # busy set and config they were computed against (a group type's seat
   # overlay needs both). `:fresh` asks the calendar; `:cached` is the
-  # booking-window read the day and month views use.
+  # booking-window read the day and month views use (see
+  # `Offer.HostCalendar.for_range/3`).
   defp range_starts(
          %{profile: %{user_id: user_id} = profile} = request,
          start_date,
@@ -91,7 +134,7 @@ defmodule Tymeslot.Availability.Offer.Range do
        ) do
     moving = Request.moving_meeting(request)
 
-    with {:ok, events} <- range_events(request, {start_date, end_date}, events_source) do
+    with {:ok, events} <- HostCalendar.for_range(request, {start_date, end_date}, events_source) do
       duration_minutes = Request.bounded_duration(duration)
       meeting_type = request[:meeting_type]
 
@@ -138,25 +181,6 @@ defmodule Tymeslot.Availability.Offer.Range do
       end
     end
   end
-
-  # The fresh read gets the bookability rule the cached one is stored with.
-  defp range_events(
-         %{profile: %{user_id: user_id}} = request,
-         {start_date, _end_date} = dates,
-         :fresh
-       ) do
-    with {:ok, events} <-
-           CalendarEvents.get_calendar_events_from_context(
-             start_date,
-             user_id,
-             Request.calendar_context(request)
-           ) do
-      {:ok, Bookability.apply_to_dates(events, user_id, dates)}
-    end
-  end
-
-  defp range_events(request, {start_date, _end_date}, :cached),
-    do: Request.booking_window_events(request, start_date)
 
   # `day_result` for every day of the range, keyed by `key.(date)`; the first
   # day that fails fails the range.

@@ -2,8 +2,8 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   @moduledoc """
   Finds and scrubs the personal data invitees give a host, across every table
   that holds it: meetings, group seats, guests, poll participants, the
-  invitees a draft poll holds, booking payments and the outgoing delivery
-  logs.
+  invitees a draft poll holds, invitation links, booking payments and the
+  outgoing delivery logs.
 
   Pure data access. Which rows are scrubbed, and when, is decided by
   `Tymeslot.InviteeData`.
@@ -20,6 +20,7 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
 
   import Ecto.Query
 
+  alias Tymeslot.Invitations.InvitationSchema, as: Invitation
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.GuestSchema, as: Guest
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -297,6 +298,29 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   end
 
   @doc """
+  Clears the name and email of the invitation links a host addressed to
+  `email`, and of those that booked the meetings `meeting_ids` (the person's
+  own bookings, as `meeting_ids_for_attendee/2` selects them): a link
+  addressed by name only, or to another address than the one the person
+  booked under, still names them. Keeps each link, its token and its status.
+  Invitations hold the address lower-cased already. Keeps to `scope`'s
+  invitations.
+  """
+  @spec scrub_invitations(String.t(), [binary()], scope(), DateTime.t()) ::
+          {non_neg_integer(), nil}
+  def scrub_invitations(email, meeting_ids, scope, %DateTime{} = now) do
+    booked_with =
+      from(m in Meeting,
+        where: m.id in ^meeting_ids and not is_nil(m.invitation_id),
+        select: m.invitation_id
+      )
+
+    from(i in Invitation, where: i.email == ^email or i.id in subquery(booked_with))
+    |> scope_invitations(scope)
+    |> Repo.update_all(set: [name: nil, email: nil, updated_at: now])
+  end
+
+  @doc """
   Deletes the webhook, Slack and Telegram delivery logs of `meeting_ids`,
   whose payloads repeat the booking's details.
   """
@@ -357,6 +381,32 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
     Repo.update_all(query, [])
   end
 
+  @doc """
+  Clears the name and email on invitation links last changed before
+  `cutoff` whose meetings all ended before it, keeping each link, its token
+  and its status. A link with a meeting ending on or after `cutoff` is kept
+  until that meeting ages out too.
+  """
+  @spec clear_invitations_before(DateTime.t(), DateTime.t()) :: {non_neg_integer(), nil}
+  def clear_invitations_before(%DateTime{} = cutoff, %DateTime{} = now) do
+    recent_meetings =
+      from(m in Meeting,
+        where: m.invitation_id == parent_as(:invitation).id and m.end_time >= ^cutoff,
+        select: 1
+      )
+
+    query =
+      from(i in Invitation,
+        as: :invitation,
+        where: not is_nil(i.email) or not is_nil(i.name),
+        where: i.updated_at < ^cutoff,
+        where: not exists(recent_meetings),
+        update: [set: [name: nil, email: nil, updated_at: ^now]]
+      )
+
+    Repo.update_all(query, [])
+  end
+
   # The guard is what tells Dialyzer the count is an integer: the Repo's own
   # `delete_all` return carries no type for it.
   defp delete_rows(query), do: deleted_count(Repo.delete_all(query))
@@ -386,6 +436,11 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
 
   defp scope_joined_meeting(query, host_user_id) when is_integer(host_user_id),
     do: where(query, [meeting: m], m.organizer_user_id == ^host_user_id)
+
+  defp scope_invitations(query, :all), do: query
+
+  defp scope_invitations(query, host_user_id) when is_integer(host_user_id),
+    do: where(query, [i], i.user_id == ^host_user_id)
 
   defp scope_joined_poll(query, :all), do: query
 

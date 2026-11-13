@@ -30,6 +30,7 @@ defmodule Tymeslot.Emails.EmailActions do
   alias Tymeslot.Notifications.Email.GuestEmails
   alias Tymeslot.Notifications.Email.IntegrationEmails
   alias Tymeslot.Notifications.Email.MeetingEmails
+  alias Tymeslot.Notifications.Email.OnboardingEmails
   alias Tymeslot.Notifications.Email.PlannedSessionEmails
   alias Tymeslot.Notifications.Email.PollEmails
   alias Tymeslot.Notifications.Email.RescheduleEmails
@@ -134,6 +135,7 @@ defmodule Tymeslot.Emails.EmailActions do
       {["user_id", "new_email"], {AuthEmails, :handle_email_change_notification}},
     "send_email_change_confirmations" =>
       {["user_id", "old_email", "new_email"], {AuthEmails, :handle_email_change_confirmations}},
+    "send_booking_link_email" => {["user_id"], {OnboardingEmails, :handle_booking_link}},
     # Integrations
     "send_integration_unhealthy_notification" =>
       {["user_id", "integration_id", "integration_type"],

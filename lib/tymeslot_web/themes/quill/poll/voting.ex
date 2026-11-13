@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Themes.Quill.Poll.Voting do
   attr :theme_tokens, :any, required: true
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
+  attr :offered_locales, :list, default: nil
   attr :legal_links, :map, required: true
   attr :poll, :map, required: true
   attr :tallies, :map, required: true
@@ -25,6 +26,8 @@ defmodule TymeslotWeb.Themes.Quill.Poll.Voting do
   attr :participant, :map, default: nil
   attr :link_request, :atom, default: nil, values: [nil, :sent, :resent, :throttled]
   attr :invalid_link, :boolean, default: false
+  attr :poll_field_errors, :map, default: %{}
+  attr :poll_draft, :map, default: %{}
 
   @doc "Renders the poll voting page in Quill theme style."
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -34,6 +37,7 @@ defmodule TymeslotWeb.Themes.Quill.Poll.Voting do
       theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      offered_locales={assigns[:offered_locales]}
       legal_links={@legal_links}
       show_language_switcher={true}
     >
@@ -43,10 +47,13 @@ defmodule TymeslotWeb.Themes.Quill.Poll.Voting do
             <div class="p-8">
               <PollVotingComponents.poll_content
                 poll={@poll}
+                location={@poll_location}
                 tallies={@tallies}
                 voting_open={@voting_open}
                 participant={@participant}
                 link_request={@link_request}
+                field_errors={@poll_field_errors}
+                draft={@poll_draft}
                 invalid_link={@invalid_link}
               />
             </div>

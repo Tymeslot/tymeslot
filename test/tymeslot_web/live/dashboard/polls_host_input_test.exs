@@ -44,6 +44,42 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
   end
 
   describe "timezone picker" do
+    test "posts the zone chosen in the dropdown, and lists it in the trigger", %{conn: conn} do
+      %{user: user} = host([], timezone: "Europe/Tallinn")
+
+      {:ok, view, _html} = live(log_in(conn, user), ~p"/dashboard/polls")
+      view |> element("button", "New poll") |> render_click()
+
+      view |> element("#timezone-dropdown > button") |> render_click()
+      view |> element("[phx-value-timezone='Europe/Berlin']") |> render_click()
+
+      assert has_element?(
+               view,
+               "input[type=hidden][name='poll[timezone]'][value='Europe/Berlin']"
+             )
+
+      assert has_element?(view, "#timezone-dropdown button", "Berlin")
+      refute has_element?(view, "[phx-value-timezone='Europe/Tallinn']")
+    end
+
+    test "ignores a zone the list would never offer", %{conn: conn} do
+      %{user: user} = host([], timezone: "Europe/Tallinn")
+
+      {:ok, view, _html} = live(log_in(conn, user), ~p"/dashboard/polls")
+      view |> element("button", "New poll") |> render_click()
+
+      view |> element("#timezone-dropdown > button") |> render_click()
+
+      view
+      |> element("[phx-value-timezone='Europe/Berlin']")
+      |> render_click(%{"timezone" => "Mars/Olympus"})
+
+      assert has_element?(
+               view,
+               "input[type=hidden][name='poll[timezone]'][value='Europe/Tallinn']"
+             )
+    end
+
     test "offers and keeps a host's zone that the list does not carry", %{conn: conn} do
       %{user: user} = host([], timezone: "America/Detroit")
 
@@ -52,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
 
       assert has_element?(
                view,
-               "select[name='poll[timezone]'] option[selected][value='America/Detroit']"
+               "input[type=hidden][name='poll[timezone]'][value='America/Detroit']"
              )
 
       view |> element("button", "Add time") |> render_click()
@@ -60,14 +96,8 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
       date = Date.utc_today() |> Date.add(7) |> Date.to_iso8601()
 
       view
-      |> form("form[phx-submit='create_poll']", %{
-        "poll" => %{
-          "title" => "Detroit sync",
-          "duration" => "30",
-          "slots" => %{"0" => "#{date}T09:00"}
-        }
-      })
-      |> render_submit()
+      |> form("form[phx-submit='create_poll']", %{"poll" => %{"title" => "Detroit sync"}})
+      |> render_submit(%{"poll" => %{"duration" => "30", "slots" => %{"0" => "#{date}T09:00"}}})
 
       assert [%{timezone: "America/Detroit"}] = Polls.list_polls(user.id)
     end
@@ -86,19 +116,18 @@ defmodule TymeslotWeb.Dashboard.PollsHostInputTest do
 
       html =
         view
-        |> form("form[phx-submit='create_poll']", %{
+        |> form("form[phx-submit='create_poll']", %{"poll" => %{"title" => "Late poll"}})
+        |> render_submit(%{
           "poll" => %{
-            "title" => "Late poll",
             "duration" => "30",
             "timezone" => "Etc/UTC",
             "deadline" => "#{yesterday}T09:00",
             "slots" => %{"0" => "#{date}T09:00"}
           }
         })
-        |> render_submit()
 
       assert html =~ "The deadline must be in the future"
-      assert has_element?(view, "input[name='poll[deadline]'][aria-invalid='true']")
+      assert has_element?(view, "input[id^='poll-deadline'][aria-invalid='true']")
       assert Polls.list_polls(user.id) == []
     end
   end

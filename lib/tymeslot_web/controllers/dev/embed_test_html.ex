@@ -68,6 +68,7 @@ defmodule TymeslotWeb.Dev.EmbedTestHTML do
           </div>
           <div class="control-group">
             <label for="theme">Theme</label>
+            <%!-- raw-input: this dev-only page has no LiveView and loads no app CSS or hooks --%>
             <select id="theme">
               <option value="">User default</option>
               <option :for={{name, id} <- @themes} value={id}>{name} ({id})</option>

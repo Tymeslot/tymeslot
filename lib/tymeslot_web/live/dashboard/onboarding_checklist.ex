@@ -1,17 +1,29 @@
 defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   @moduledoc """
-  Dashboard onboarding widget: a compact, dismissible checklist of recommended
-  setup actions — connect a calendar, add video, customise the theme, review
-  meeting types, share the booking page — each linking straight to where it is
-  done.
+  Dashboard onboarding widget: a compact, dismissible checklist of what is
+  worth doing after the setup wizard, each item linking straight to where it is
+  done. The wizard already has the host connect a calendar, choose a theme, set
+  up a meeting type and keep their link, so the checklist carries only what it
+  leaves open:
 
-  Two of the items complete themselves from real state (a connected calendar or
-  video provider tick automatically); the rest, plus any the host wants to skip
-  (e.g. video for in-person-only scheduling), can be ticked off by hand and grey
-  out immediately. The whole widget can also be closed. Both the per-item ticks
-  and the global close persist on the user via `Tymeslot.Onboarding`.
+    * connect a calendar: done while one can take bookings, so it reopens when
+      the host disconnects it or its credentials are refused;
+    * add a video provider: done once one is connected;
+    * add your photo: done once the profile has an avatar;
+    * introduce yourself: done once the profile has a headline or a bio, and
+      offered only while the host's theme shows them on the booking page
+      (`Tymeslot.Themes.Catalog.shows_intro?/1`);
+    * add it to your website: done once a site may embed the booking page
+      (`Tymeslot.Profiles.embedding_enabled?/1`).
 
-  Gate rendering on `visible?/2`: the widget hides once every item is done or the
+  The provider items complete only from a real connection. The profile items can
+  also be ticked off by hand, for a host who wants to skip one, and grey out
+  immediately; once the profile itself has the thing, the item is done without a
+  tick and offers none. The whole widget can also be closed. Both the per-item
+  ticks and the global close persist on the user via `Tymeslot.Onboarding`; a
+  tick stored for an item no longer in the catalogue is ignored.
+
+  Gate rendering on `visible?/3`: the widget hides once every item is done or the
   host has closed it, so a fully set-up user never sees it and no empty container
   is left behind. Which items may be ticked by hand is a rule of
   `Tymeslot.Onboarding.manual_dashboard_setup_items/0`; the catalogue here only
@@ -21,18 +33,18 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Onboarding
-  alias Tymeslot.Scheduling.LinkAccessPolicy
+  alias Tymeslot.Profiles
+  alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Components.UI.CheckToggle
-  alias TymeslotWeb.Endpoint
 
   @doc """
   Whether the widget should render for this host: not closed, and at least one
   setup item still outstanding.
   """
-  @spec visible?(map(), map()) :: boolean()
-  def visible?(current_user, integration_status) do
+  @spec visible?(map(), map(), map() | nil) :: boolean()
+  def visible?(current_user, integration_status, profile) do
     not Onboarding.dashboard_setup_dismissed?(current_user) and
-      Enum.any?(items(integration_status, current_user), &(not &1.done))
+      Enum.any?(items(integration_status, current_user, profile), &(not &1.done))
   end
 
   attr :integration_status, :map, required: true
@@ -45,10 +57,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
   @spec onboarding_checklist(map()) :: Phoenix.LiveView.Rendered.t()
   def onboarding_checklist(assigns) do
-    items =
-      assigns.integration_status
-      |> items(assigns.current_user)
-      |> Enum.map(&with_copy_state(&1, assigns.integration_status, assigns.profile))
+    items = items(assigns.integration_status, assigns.current_user, assigns.profile)
 
     assigns
     |> assign(
@@ -79,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         <summary class="flex cursor-pointer list-none items-center gap-2 text-token-sm">
           <.pill tone={:brand}>{@done_count}/{@total}</.pill>
           <span class="font-bold text-tymeslot-800">
-            {dgettext("onboarding_wizard", "Finish setting up")}
+            {dgettext("dashboard_home", "Finish setting up")}
           </span>
           <span :if={@next_item} class="hidden truncate text-tymeslot-500 sm:inline">
             · {@next_item.title}
@@ -99,7 +108,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
       <.icon_button
         icon="hero-x-mark"
-        label={dgettext("onboarding_wizard", "Dismiss setup checklist")}
+        label={dgettext("dashboard_home", "Dismiss setup checklist")}
         size={:sm}
         phx-click="onboarding:dismiss"
       />
@@ -116,12 +125,12 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       data-tour="quick-actions"
       aria-labelledby="onboarding-checklist-title"
       phx-remove={JS.transition("onboarding-checklist--leaving", time: 500)}
-      title={dgettext("onboarding_wizard", "Finish setting up")}
+      title={dgettext("dashboard_home", "Finish setting up")}
       title_id="onboarding-checklist-title"
       description={
         dgettext(
-          "onboarding_wizard",
-          "A few recommended steps - tick off the ones you don't need."
+          "dashboard_home",
+          "A few recommended steps. Tick off the ones you don't need."
         )
       }
     >
@@ -129,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         <.pill tone={:brand} size={:sm}>{@done_count}/{@total}</.pill>
         <.icon_button
           icon="hero-x-mark"
-          label={dgettext("onboarding_wizard", "Dismiss setup checklist")}
+          label={dgettext("dashboard_home", "Dismiss setup checklist")}
           size={:sm}
           phx-click="onboarding:dismiss"
         />
@@ -156,14 +165,17 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
   defp item_row(assigns) do
     ~H"""
-    <div class={[
-      "flex flex-wrap items-center gap-3 sm:gap-4 p-4 rounded-token-2xl border-2 transition-all",
-      if(@item.done,
-        do: "bg-tymeslot-50/50 border-tymeslot-50",
-        else:
-          "bg-white border-turquoise-100 hover:border-turquoise-200 hover:shadow-lg hover:shadow-turquoise-500/5"
-      )
-    ]}>
+    <div
+      data-setup-item={@item.key}
+      class={[
+        "flex flex-wrap items-center gap-3 sm:gap-4 p-4 rounded-token-2xl border-2 transition-all",
+        if(@item.done,
+          do: "bg-tymeslot-50/50 border-tymeslot-50",
+          else:
+            "bg-white border-turquoise-100 hover:border-turquoise-200 hover:shadow-lg hover:shadow-turquoise-500/5"
+        )
+      ]}
+    >
       <%!-- Manual recommendations get a tick; deterministic provider items get
            none — they complete only from a real connection, so there is nothing
            to click. --%>
@@ -175,8 +187,8 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         phx_value_id={@item.key}
         label={
           if @item.done,
-            do: dgettext("onboarding_wizard", "Mark %{title} as not done", title: @item.title),
-            else: dgettext("onboarding_wizard", "Mark %{title} as done", title: @item.title)
+            do: dgettext("dashboard_home", "Mark %{title} as not done", title: @item.title),
+            else: dgettext("dashboard_home", "Mark %{title} as done", title: @item.title)
         }
       />
       <span :if={not @item.manual} class="shrink-0 w-6" aria-hidden="true"></span>
@@ -223,10 +235,8 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   @cta_class "shrink-0 w-full sm:w-32"
   defp cta_class, do: @cta_class
 
-  # The row's action. A done item shows a static "Done"; the share item copies
-  # the public booking link when the page is live (same readiness gate as the
-  # sidebar) and greys out otherwise; every other item links to where it is
-  # completed.
+  # The row's action: a static "Done" once the item is done, otherwise a link
+  # to where it is completed.
   attr :item, :map, required: true
 
   # A status rather than an action, so it needs none of the button geometry —
@@ -234,41 +244,8 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   defp item_cta(%{item: %{done: true}} = assigns) do
     ~H"""
     <span class="shrink-0 w-full sm:w-32 text-center text-token-xs font-black uppercase tracking-wider text-green-600">
-      {dgettext("onboarding_wizard", "Done")}
+      {dgettext("dashboard_home", "Done")}
     </span>
-    """
-  end
-
-  defp item_cta(%{item: %{action: :copy, shareable: true}} = assigns) do
-    ~H"""
-    <.action_button
-      id={"setup-copy-#{@item.key}"}
-      size={:sm}
-      icon="hero-clipboard"
-      class={cta_class()}
-      phx-hook="CopyOnClick"
-      data-copy-text={@item.copy_url}
-      data-copy-feedback={dgettext("onboarding_wizard", "Booking link copied to clipboard!")}
-    >
-      {@item.cta}
-    </.action_button>
-    """
-  end
-
-  defp item_cta(%{item: %{action: :copy}} = assigns) do
-    ~H"""
-    <%!-- `aria-disabled` rather than `disabled`, so the control stays focusable
-          and its tooltip still explains why the link cannot be copied yet. --%>
-    <.action_button
-      variant={:secondary}
-      size={:sm}
-      icon="hero-clipboard"
-      class={[cta_class(), "opacity-60"]}
-      aria-disabled="true"
-      title={@item.disabled_tooltip}
-    >
-      {@item.cta}
-    </.action_button>
     """
   end
 
@@ -284,42 +261,38 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
     """
   end
 
-  # Attaches the share item's live copy state. When the booking page is ready
-  # (same `LinkAccessPolicy` gate the sidebar uses) it carries the full link to
-  # copy; otherwise it carries the reason it is disabled. Other items pass through.
-  @spec with_copy_state(map(), map(), map() | nil) :: map()
-  defp with_copy_state(%{action: :copy} = item, integration_status, profile) do
-    if LinkAccessPolicy.can_link?(profile, integration_status) do
-      Map.merge(item, %{
-        shareable: true,
-        copy_url: Endpoint.url() <> LinkAccessPolicy.scheduling_path(profile)
-      })
-    else
-      Map.merge(item, %{
-        shareable: false,
-        disabled_tooltip: LinkAccessPolicy.disabled_tooltip(profile, integration_status)
-      })
+  # Merges live completion state onto the static catalogue, leaving out the
+  # items this host is not offered. An item is done when its underlying state
+  # is set or the host ticked it by hand; a stored tick for a key the
+  # catalogue no longer holds matches nothing, so it neither shows nor counts.
+  @spec items(map(), map(), map() | nil) :: [map()]
+  defp items(integration_status, current_user, profile) do
+    manual = current_user.dashboard_setup_done_items || []
+
+    for item <- catalog(), offered?(item.key, profile) do
+      if is_nil(item.auto) do
+        # A hand-tickable item the host has already done is done without a
+        # tick, and offers none: unticking it could not undo it.
+        settled? = settled?(item.key, profile)
+        Map.merge(item, %{manual: not settled?, done: settled? or item.key in manual})
+      else
+        # Deterministic items complete only from real state, never by hand.
+        Map.merge(item, %{manual: false, done: Map.get(integration_status, item.auto, false)})
+      end
     end
   end
 
-  defp with_copy_state(item, _integration_status, _profile), do: item
+  # A headline and bio are worth asking for only where a guest reads them.
+  defp offered?("intro", %{booking_theme: theme_id}), do: Catalog.shows_intro?(theme_id)
+  defp offered?("intro", _profile), do: false
+  defp offered?(_key, _profile), do: true
 
-  # Merges live completion state onto the static catalogue. An item is done when
-  # its underlying state is set (`auto_done`) or the host ticked it by hand.
-  @spec items(map(), map()) :: [map()]
-  defp items(integration_status, current_user) do
-    manual = current_user.dashboard_setup_done_items || []
+  defp settled?(_key, nil), do: false
+  defp settled?("avatar", profile), do: present?(profile.avatar)
+  defp settled?("intro", profile), do: present?(profile.headline) or present?(profile.bio)
+  defp settled?("embed", profile), do: Profiles.embedding_enabled?(profile)
 
-    Enum.map(catalog(), fn item ->
-      manual? = is_nil(item.auto)
-      # Deterministic items complete only from real state; manual ones only from
-      # the host's own ticks — the two never mix.
-      done =
-        if manual?, do: item.key in manual, else: Map.get(integration_status, item.auto, false)
-
-      Map.merge(item, %{manual: manual?, done: done})
-    end)
-  end
+  defp present?(value), do: is_binary(value) and value != ""
 
   # Static definition of the setup items. `auto` names the `integration_status`
   # key that completes the item automatically, or `nil` for manual-only items.
@@ -333,47 +306,47 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         key: "calendar",
         auto: :calendar_ready,
         icon: "hero-calendar-days",
-        title: dgettext("onboarding_wizard", "Connect a calendar"),
+        title: dgettext("dashboard_home", "Connect a calendar"),
         description:
-          dgettext("onboarding_wizard", "Your booking page can't take bookings without one"),
-        cta: dgettext("onboarding_wizard", "Connect"),
+          dgettext("dashboard_home", "Your booking page can't take bookings without one"),
+        cta: dgettext("dashboard_home", "Connect"),
         path: ~p"/dashboard/integrations?tab=calendars"
       },
       %{
         key: "video",
         auto: :has_video,
         icon: "hero-video-camera",
-        title: dgettext("onboarding_wizard", "Add a video provider"),
-        description: dgettext("onboarding_wizard", "Auto-add links to online meetings"),
-        cta: dgettext("onboarding_wizard", "Connect"),
+        title: dgettext("dashboard_home", "Add a video provider"),
+        description: dgettext("dashboard_home", "Auto-add links to online meetings"),
+        cta: dgettext("dashboard_home", "Connect"),
         path: ~p"/dashboard/integrations?tab=video"
       },
       %{
-        key: "theme",
+        key: "avatar",
         auto: nil,
-        icon: "hero-paint-brush",
-        title: dgettext("onboarding_wizard", "Customise your theme"),
-        description: dgettext("onboarding_wizard", "Make your booking page yours"),
-        cta: dgettext("onboarding_wizard", "Customise"),
-        path: ~p"/dashboard/pages"
+        icon: "hero-camera",
+        title: dgettext("dashboard_home", "Add your photo"),
+        description: dgettext("dashboard_home", "Let guests see who they're meeting"),
+        cta: dgettext("dashboard_home", "Add photo"),
+        path: ~p"/dashboard/settings"
       },
       %{
-        key: "meeting_types",
+        key: "intro",
         auto: nil,
-        icon: "hero-squares-2x2",
-        title: dgettext("onboarding_wizard", "Review your meeting types"),
-        description: dgettext("onboarding_wizard", "Tune durations and questions"),
-        cta: dgettext("onboarding_wizard", "Review"),
-        path: ~p"/dashboard/meeting-settings"
+        icon: "hero-chat-bubble-bottom-center-text",
+        title: dgettext("dashboard_home", "Introduce yourself"),
+        description: dgettext("dashboard_home", "Add a headline and a short bio"),
+        cta: dgettext("dashboard_home", "Write"),
+        path: ~p"/dashboard/settings"
       },
       %{
-        key: "share",
+        key: "embed",
         auto: nil,
-        action: :copy,
-        icon: "hero-arrow-top-right-on-square",
-        title: dgettext("onboarding_wizard", "Share your booking page"),
-        description: dgettext("onboarding_wizard", "Send guests your booking link"),
-        cta: dgettext("onboarding_wizard", "Copy link")
+        icon: "hero-code-bracket",
+        title: dgettext("dashboard_home", "Add it to your website"),
+        description: dgettext("dashboard_home", "Let visitors book without leaving your site"),
+        cta: dgettext("dashboard_home", "Set up"),
+        path: ~p"/dashboard/embed"
       }
     ]
   end

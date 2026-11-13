@@ -449,6 +449,92 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
     end
   end
 
+  describe "reconnect_and_resume_for_user/4" do
+    defp discovering(paths) do
+      fn _provider, url, username, password ->
+        {:ok,
+         %{
+           calendars:
+             Enum.map(paths, &%{"id" => &1, "path" => &1, "name" => &1, "type" => "calendar"}),
+           discovery_credentials: %{url: url, username: username, password: password}
+         }}
+      end
+    end
+
+    @new_credentials %{
+      "url" => "https://caldav.example.com",
+      "username" => "alice",
+      "password" => "newpass"
+    }
+
+    test "a paused integration gets the new password, keeps its calendars and is switched back on" do
+      integration = insert_decrypted_caldav_integration(%{is_active: false, needs_reauth: true})
+
+      assert {:ok, resumed} =
+               Reconnection.reconnect_and_resume_for_user(
+                 integration.user_id,
+                 integration.id,
+                 @new_credentials,
+                 discover: discovering(["/calendars/alice/default/", "/calendars/alice/work/"])
+               )
+
+      assert resumed.is_active
+      refute resumed.needs_reauth
+
+      stored =
+        CalendarIntegrationSchema
+        |> Repo.get!(integration.id)
+        |> CalendarIntegrationSchema.decrypt_credentials()
+
+      assert stored.is_active
+      assert stored.password == "newpass"
+      assert stored.calendar_paths == ["/calendars/alice/default/"]
+    end
+
+    test "chooses every discovered calendar when none of the chosen ones is found" do
+      integration = insert_decrypted_caldav_integration(%{is_active: false})
+
+      assert {:ok, resumed} =
+               Reconnection.reconnect_and_resume_for_user(
+                 integration.user_id,
+                 integration.id,
+                 @new_credentials,
+                 discover: discovering(["/calendars/alice/home/"])
+               )
+
+      assert resumed.calendar_paths == ["/calendars/alice/home/"]
+    end
+
+    test "refused credentials leave the integration paused" do
+      integration = insert_decrypted_caldav_integration(%{is_active: false})
+
+      assert {:error, :invalid_credentials} =
+               Reconnection.reconnect_and_resume_for_user(
+                 integration.user_id,
+                 integration.id,
+                 @new_credentials,
+                 discover: fn _provider, _url, _username, _password ->
+                   {:error, {:auth, "Unauthorised"}}
+                 end
+               )
+
+      refute Repo.get!(CalendarIntegrationSchema, integration.id).is_active
+    end
+
+    test "another host's integration is not found" do
+      integration = insert_decrypted_caldav_integration(%{is_active: false})
+      stranger = Factory.insert(:user)
+
+      assert {:error, :not_found} =
+               Reconnection.reconnect_and_resume_for_user(
+                 stranger.id,
+                 integration.id,
+                 @new_credentials,
+                 discover: discovering(["/calendars/alice/default/"])
+               )
+    end
+  end
+
   defp insert_decrypted_caldav_integration(overrides) do
     {plaintext_username, overrides} = Map.pop(overrides, :username, "alice")
     {plaintext_password, overrides} = Map.pop(overrides, :password, "oldpass")

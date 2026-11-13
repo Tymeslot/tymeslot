@@ -14,25 +14,42 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
   alias Tymeslot.Timezones
 
   @doc """
-  Handles toggling the timezone dropdown visibility.
+  Swaps the timezone line for the picker, opened.
   """
-  @spec handle_toggle_timezone_dropdown(Phoenix.LiveView.Socket.t()) ::
+  @spec handle_edit_timezone(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_toggle_timezone_dropdown(socket) do
+  def handle_edit_timezone(socket) do
     {:noreply,
      Component.assign(socket,
-       timezone_dropdown_open: !socket.assigns.timezone_dropdown_open
+       timezone_editing: true,
+       timezone_dropdown_open: true,
+       timezone_focus_change: false
      )}
   end
 
   @doc """
-  Handles closing the timezone dropdown.
+  Handles toggling the timezone dropdown visibility.
+  """
+  @spec handle_toggle_timezone_dropdown(Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_toggle_timezone_dropdown(%{assigns: %{timezone_dropdown_open: true}} = socket),
+    do: handle_close_timezone_dropdown(socket)
+
+  def handle_toggle_timezone_dropdown(socket),
+    do: {:noreply, Component.assign(socket, timezone_dropdown_open: true)}
+
+  @doc """
+  Handles closing the timezone dropdown, which returns to the timezone line.
   """
   @spec handle_close_timezone_dropdown(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_close_timezone_dropdown(socket) do
-    {:noreply, Component.assign(socket, timezone_dropdown_open: false)}
-  end
+  def handle_close_timezone_dropdown(socket),
+    do: {:noreply, Component.assign(socket, back_to_timezone_line())}
+
+  # Closing the picker, with or without a choice, folds it back into the
+  # timezone line and hands the focus to its Change button.
+  defp back_to_timezone_line,
+    do: [timezone_dropdown_open: false, timezone_editing: false, timezone_focus_change: true]
 
   @doc """
   Handles timezone search functionality.
@@ -53,10 +70,7 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
   @spec handle_change_timezone(String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_change_timezone(timezone, socket) do
-    socket =
-      socket
-      |> Component.assign(:timezone_dropdown_open, false)
-      |> Component.assign(:timezone_search, "")
+    socket = Component.assign(socket, :timezone_search, "")
 
     case Timezones.validate(timezone) do
       {:ok, validated_timezone} ->
@@ -64,7 +78,7 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
           {:ok, profile} ->
             {:noreply,
              socket
-             |> Component.assign(:profile, profile)
+             |> Component.assign([profile: profile] ++ back_to_timezone_line())
              |> Component.assign(:form_errors, %{})}
 
           {:error, _reason} ->

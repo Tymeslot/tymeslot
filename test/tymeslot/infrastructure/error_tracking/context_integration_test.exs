@@ -21,8 +21,9 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ContextIntegrationTest do
 
   alias ErrorTracker.Error
   alias ErrorTracker.Occurrence
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.SignedToken
   alias Tymeslot.Workers.ColourWriteBackWorker
 
   @uuid ~r/\A[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/
@@ -39,16 +40,24 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ContextIntegrationTest do
   describe "a controller action" do
     setup do
       with_config(:tymeslot,
-        meeting_payments_enabled: true,
-        feature_access_checker: Tymeslot.Features.DefaultAccessChecker
+        feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+        slack_notifications_allowed: true,
+        slack_oauth_available: true,
+        slack_client_id: "slack-test-client-id",
+        slack_client_secret: "slack-test-client-secret",
+        http_client_module: Tymeslot.HTTPClientMock
       )
 
+      RateLimiter.clear_all()
       :ok
     end
 
     test "records the user, request id and correlation id", %{conn: conn, user: user} do
-      expect(StripeAdapterMock, :create_account, fn _params, _opts -> raise "stripe exploded" end)
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        raise "slack exploded"
+      end)
 
+      state = SignedToken.sign(:slack_oauth_state, user.id)
       request_id = "context-integration-request-0001"
       correlation_id = "context-integration-correlation-0001"
 
@@ -57,7 +66,9 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ContextIntegrationTest do
         |> put_req_header("x-request-id", request_id)
         |> put_req_header("x-correlation-id", correlation_id)
 
-      assert_error_sent 500, fn -> post(conn, ~p"/dashboard/payments/connect") end
+      assert_error_sent 500, fn ->
+        get(conn, ~p"/api/slack/oauth/callback?code=c&state=#{state}")
+      end
 
       context = occurrence_context!("Elixir.RuntimeError")
       assert context["user_id"] == user.id

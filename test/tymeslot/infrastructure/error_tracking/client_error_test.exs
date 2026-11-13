@@ -37,6 +37,23 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ClientErrorTest do
              )
     end
 
+    test "is true, without a warning, for LiveView's reload after a 4xx in connected mount" do
+      log =
+        capture_log(fn ->
+          assert ClientError.client_error_kind?(
+                   "Elixir.Phoenix.LiveView.ReloadError",
+                   @request
+                 )
+        end)
+
+      refute log =~ "Could not tell whether an exception is a client error"
+    end
+
+    test "is true for LiveView's reload error whatever its origin" do
+      assert ClientError.client_error_kind?("Elixir.Phoenix.LiveView.ReloadError", @job)
+      assert ClientError.client_error_kind?("Elixir.Phoenix.LiveView.ReloadError", %{})
+    end
+
     test "is false, with a warning, when the status cannot be resolved" do
       log =
         capture_log(fn ->

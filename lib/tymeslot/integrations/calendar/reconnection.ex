@@ -108,6 +108,53 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   end
 
   @doc """
+  Reconnects one of `user_id`'s own CalDAV-family integrations in a single
+  step and switches it back on: for a flow with no calendar picker, such as
+  setup, where a paused calendar should simply work again.
+
+  Discovery checks the new credentials as `reconnect/3` does. The calendars
+  stay as they were chosen; when none of them is found any more, every
+  discovered calendar is chosen instead. A paused integration is then
+  reactivated, which is refused with `{:error, :duplicate_account}` when
+  another active integration already uses the same account. Takes the
+  options `reconnect/3` takes.
+  """
+  @spec reconnect_and_resume_for_user(pos_integer(), pos_integer(), params(), keyword()) ::
+          {:ok, integration()}
+          | {:error, :not_found | :duplicate_account | :no_calendars_selected}
+          | reconnect_error()
+  def reconnect_and_resume_for_user(user_id, integration_id, params, opts \\ [])
+      when is_integer(user_id) and is_integer(integration_id) and is_map(params) do
+    with {:ok, integration} <- Management.get_calendar_integration(integration_id, user_id),
+         {:ok, :needs_calendar_selection, payload} <- reconnect(integration, params, opts),
+         {:ok, updated} <-
+           finalise_account_change(integration, payload, kept_paths(integration, payload)) do
+      resume(updated)
+    end
+  end
+
+  defp kept_paths(%CalendarIntegrationSchema{calendar_paths: chosen}, %{calendars: calendars}) do
+    discovered = Enum.map(calendars, &CalendarEntry.normalize(&1).path)
+
+    case Enum.filter(discovered, fn path ->
+           Enum.any?(chosen, &UriUtils.uri_safe_match?(path, &1))
+         end) do
+      [] -> discovered
+      kept -> kept
+    end
+  end
+
+  defp resume(%CalendarIntegrationSchema{is_active: true} = integration), do: {:ok, integration}
+
+  defp resume(%CalendarIntegrationSchema{} = integration) do
+    case Management.reconnect_integration(integration, %{is_active: true}) do
+      {:ok, resumed} -> {:ok, resumed}
+      {:error, %Ecto.Changeset{} = changeset} -> {:error, {:changeset, changeset}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
   Persist the new URL, credentials, and calendar selection picked by the
   user. Returns `{:error, :no_calendars_selected}` if the selection is
   empty.

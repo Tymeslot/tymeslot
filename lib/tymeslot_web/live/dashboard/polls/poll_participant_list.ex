@@ -71,6 +71,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollParticipantList do
             </div>
             <div class="flex shrink-0 items-center gap-1">
               <.icon_button
+                id={"poll-resend-#{participant.id}"}
                 icon="hero-paper-airplane"
                 label={resend_label(participant)}
                 tooltip={resend_tooltip(participant, @voting_open?)}
@@ -81,6 +82,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollParticipantList do
                 data-testid="poll-resend-invitation"
               />
               <.icon_button
+                id={"poll-remove-#{participant.id}"}
                 icon="hero-user-minus"
                 label={
                   dgettext("dashboard_polls", "Remove %{name} from the poll", name: name(participant))

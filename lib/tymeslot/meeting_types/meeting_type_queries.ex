@@ -3,6 +3,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   Database queries for meeting types.
   """
   import Ecto.Query, warn: false
+  alias Tymeslot.ContentTranslations
+  alias Tymeslot.Invitations.InvitationSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
 
@@ -53,15 +55,19 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
-  Gets the publicly listed meeting types for a user (active and not private),
-  ordered by sort_order. Private types are reachable only by their direct link,
-  so they are excluded from the public overview this query feeds.
+  Gets the publicly listed meeting types for a user (active, neither private
+  nor invitation-only), ordered by sort_order. Private types are reachable
+  only by their direct link, and invitation-only types only through a personal
+  invitation link, so both are excluded from the public overview this query
+  feeds.
   """
   @spec list_public_meeting_types(integer()) :: [MeetingTypeSchema.t()]
   def list_public_meeting_types(user_id) do
     query =
       from(mt in MeetingTypeSchema,
-        where: mt.user_id == ^user_id and mt.is_active == true and mt.is_private == false,
+        where:
+          mt.user_id == ^user_id and mt.is_active == true and mt.is_private == false and
+            mt.invitation_only == false,
         order_by: [asc: mt.sort_order, asc: mt.name],
         preload: [:video_integration, :calendar_integration]
       )
@@ -134,12 +140,21 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   `opts` are forwarded to `MeetingTypeSchema.changeset/3` so callers can
   thread payment-validation context (`:price_settable`,
   `:host_charges_enabled`, `:currency_minimum_cents`) into the changeset.
+
+  The changeset never casts `translations`, which only
+  `Tymeslot.ContentTranslations` writes. A copy carries its source's in the
+  `:translations` option (`Tymeslot.MeetingTypes.Duplication.translations/1`),
+  pruned to the copy's own texts and checked
+  (`Tymeslot.ContentTranslations.put_copied/2`).
   """
   @spec create_meeting_type(map(), keyword()) ::
           {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
   def create_meeting_type(attrs, opts \\ []) do
+    {translations, opts} = Keyword.pop(opts, :translations)
+
     %MeetingTypeSchema{}
     |> MeetingTypeSchema.changeset(attrs, opts)
+    |> ContentTranslations.put_copied(translations)
     |> Repo.insert()
   end
 
@@ -192,12 +207,26 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
-  Deletes a meeting type.
+  Deletes a meeting type with its invitation links, keeping its meetings.
+
+  The invitations go first, in a statement of their own. Deleting the type
+  alone would reach a meeting booked through one of its invitations by two
+  paths at once (the type's link nilified, and the invitation's cascade
+  nilifying the meeting's), and Postgres applies only the first update to a
+  row within one statement, so the meeting would keep pointing at a deleted
+  invitation and the delete would fail on its foreign key.
   """
   @spec delete_meeting_type(MeetingTypeSchema.t()) ::
           {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
-  def delete_meeting_type(meeting_type) do
-    Repo.delete(meeting_type)
+  def delete_meeting_type(%MeetingTypeSchema{id: id} = meeting_type) do
+    Repo.transaction(fn ->
+      Repo.delete_all(from(i in InvitationSchema, where: i.meeting_type_id == ^id))
+
+      case Repo.delete(meeting_type) do
+        {:ok, deleted} -> deleted
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
   end
 
   @doc """
@@ -305,6 +334,17 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
     Repo.exists?(
       from(mt in MeetingTypeSchema,
         where: mt.user_id == ^user_id and mt.is_active == true
+      )
+    )
+  end
+
+  @doc "Checks if a user has at least one meeting type with a price set."
+  @spec has_priced_meeting_types?(integer()) :: boolean()
+  def has_priced_meeting_types?(user_id) do
+    Repo.exists?(
+      from(mt in MeetingTypeSchema,
+        where:
+          mt.user_id == ^user_id and mt.payment_required == true and not is_nil(mt.price_cents)
       )
     )
   end

@@ -5,7 +5,9 @@
 // The server renders a JSON feed of {key, fire_at_ms, title, body} entries on
 // the element's data-reminders attribute (refreshed on every 60s tick) and a
 // data-enabled flag from the user's preference. This hook polls and fires a
-// Notification when an entry's fire instant crosses its polling window. No
+// Notification when an entry's fire instant crosses its polling window. It
+// never asks for permission: that needs a user gesture, so the settings modal's
+// toggle does it (desktop_reminder_permission.js). No
 // service worker / push — notifications only fire while the tab is open.
 
 const POLL_MS = 30000
@@ -25,14 +27,12 @@ export const DesktopReminders = {
     this._fired = new Set()
     this._lastCheck = null
     this._feed = this._readFeed()
-    this._maybeRequestPermission()
     this._tick()
     this._timer = setInterval(() => this._tick(), POLL_MS)
   },
 
   updated() {
     this._feed = this._readFeed()
-    this._maybeRequestPermission()
   },
 
   destroyed() {
@@ -49,16 +49,6 @@ export const DesktopReminders = {
     } catch (_e) {
       return []
     }
-  },
-
-  _maybeRequestPermission() {
-    if (!this._enabled()) return
-    if (typeof Notification === "undefined") return
-    if (Notification.permission !== "default") return
-
-    const result = Notification.requestPermission()
-    // Modern browsers return a promise; guard the legacy callback form.
-    if (result && typeof result.catch === "function") result.catch(() => {})
   },
 
   _tick() {

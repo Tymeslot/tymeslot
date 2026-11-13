@@ -22,8 +22,7 @@ defmodule TymeslotWeb.Shared.Auth.ButtonComponents do
         :value,
         :"phx-click",
         :"phx-submit",
-        :"phx-value-state",
-        :"data-confirm",
+        :"phx-value-to",
         :"aria-label",
         :"aria-describedby"
       ])
@@ -54,7 +53,6 @@ defmodule TymeslotWeb.Shared.Auth.ButtonComponents do
         :target,
         :rel,
         :"phx-click",
-        :"data-confirm",
         :"aria-label",
         :"aria-describedby"
       ])

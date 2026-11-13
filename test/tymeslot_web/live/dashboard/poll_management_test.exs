@@ -59,16 +59,16 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       view
       |> form("form[phx-submit='create_poll']", %{
+        "poll" => %{"title" => "Offsite", "invitees" => "ada@example.com"}
+      })
+      |> render_submit(%{
         "poll" => %{
-          "title" => "Offsite",
           "duration" => "30",
           "timezone" => "Europe/Berlin",
           "deadline" => "#{deadline}T12:00",
-          "invitees" => "ada@example.com",
           "slots" => %{"0" => "#{date}T09:00"}
         }
       })
-      |> render_submit()
 
       assert [poll] = Polls.list_polls(user.id)
 
@@ -98,16 +98,16 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       view
       |> form("form[phx-submit='create_poll']", %{
+        "poll" => %{"title" => "Offsite", "invitees" => "ada@example.com"}
+      })
+      |> render_submit(%{
         "poll" => %{
-          "title" => "Offsite",
           "duration" => "30",
           "timezone" => "Europe/Berlin",
           "deadline" => "#{deadline}T12:00",
-          "invitees" => "ada@example.com",
           "slots" => %{"0" => "#{date}T09:00"}
         }
       })
-      |> render_submit()
 
       assert [poll] = Polls.list_polls(user.id)
       assert %{value: 2, unit: "days"} in PollSchema.reminders(poll)
@@ -142,15 +142,15 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       view
       |> form("form[phx-submit='create_poll']", %{
+        "poll" => %{"title" => "Offsite", "invitees" => ""}
+      })
+      |> render_submit(%{
         "poll" => %{
-          "title" => "Offsite",
           "duration" => "30",
           "timezone" => "Europe/Berlin",
-          "invitees" => "",
           "slots" => %{"0" => "#{date}T09:00"}
         }
       })
-      |> render_submit()
 
       assert [%{title: "Offsite"}] = Polls.list_polls(user.id)
     end
@@ -185,14 +185,10 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       view |> element("[data-testid='poll-new-times'] button", "Add time") |> render_click()
 
       view
-      |> form("[data-testid='poll-details-form']", %{
-        "poll" => %{
-          "title" => "Offsite",
-          "deadline" => local(in_days(5)),
-          "new_times" => %{"0" => local(in_days(9))}
-        }
+      |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Offsite"}})
+      |> render_submit(%{
+        "poll" => %{"deadline" => local(in_days(5)), "new_times" => %{"0" => local(in_days(9))}}
       })
-      |> render_submit()
 
       {:ok, updated} = Polls.get_poll_for_host(poll.id, user.id)
       assert DateTime.compare(updated.deadline_at, in_days(4)) == :gt
@@ -223,10 +219,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       view = open_editor(conn, poll)
 
       view
-      |> form("[data-testid='poll-details-form']", %{
-        "poll" => %{"title" => "Offsite", "meeting_type_id" => to_string(meeting_type.id)}
-      })
-      |> render_submit()
+      |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Offsite"}})
+      |> render_submit(%{"poll" => %{"meeting_type_id" => to_string(meeting_type.id)}})
 
       assert Repo.get!(PollSchema, poll.id).meeting_type_id == meeting_type.id
       await_slot_health(view)
@@ -248,7 +242,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       assert has_element?(
                view,
-               "select[name='poll[meeting_type_id]'] option[selected][value='#{switched_off.id}']"
+               "select[data-name='poll[meeting_type_id]'] option[selected][value='#{switched_off.id}']"
              )
 
       assert has_element?(view, "[data-testid='poll-kept-meeting-type']", "Old office hours")
@@ -268,10 +262,8 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       html =
         view
-        |> form("[data-testid='poll-details-form']", %{
-          "poll" => %{"title" => "Offsite", "deadline" => local(in_days(-1))}
-        })
-        |> render_submit()
+        |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => "Offsite"}})
+        |> render_submit(%{"poll" => %{"deadline" => local(in_days(-1))}})
 
       assert html =~ "The deadline must be in the future"
       assert has_element?(view, "[data-testid='poll-details-form']")
@@ -283,7 +275,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
 
       assert has_element?(
                view,
-               "[data-testid='poll-remove-participant'][aria-label='Remove Joker from the poll'][title='Remove from the poll']"
+               "[data-testid='poll-remove-participant'][aria-label='Remove Joker from the poll'][aria-describedby$='-tip']"
              )
 
       view |> element("[data-testid='poll-remove-participant']") |> render_click()
@@ -477,7 +469,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       assert has_element?(
                view,
                resend_button(grace) <>
-                 "[aria-label='Resend invitation to Grace'][title='Resend invitation']"
+                 "[aria-label='Resend invitation to Grace'][aria-describedby$='-tip']"
              )
 
       view |> element(resend_button(grace)) |> render_click()
@@ -498,7 +490,7 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       assert has_element?(
                view,
                resend_button(ada) <>
-                 "[aria-label='Resend voting link to Ada'][title='Resend voting link']"
+                 "[aria-label='Resend voting link to Ada'][aria-describedby$='-tip']"
              )
 
       view |> element(resend_button(ada)) |> render_click()
@@ -581,8 +573,10 @@ defmodule TymeslotWeb.Dashboard.PollManagementTest do
       assert has_element?(
                view,
                open <>
-                 "[aria-disabled='true'][title='Voting on this poll has closed. Move the deadline to send links again.']"
+                 "[aria-disabled='true'][aria-describedby$='-tip']:not([phx-click])"
              )
+
+      assert has_element?(view, "[role='tooltip']", "Voting on this poll has closed.")
     end
 
     test "says so when the poll is no longer open", %{conn: conn, poll: poll} do

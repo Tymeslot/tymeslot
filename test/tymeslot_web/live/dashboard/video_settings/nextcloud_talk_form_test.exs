@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
 
       assert has_element?(
                view,
-               "#nextcloud-talk-video-integration-form p.form-error",
+               "#nextcloud-talk-video-integration-form .form-field-error",
                @refused
              )
 
@@ -419,7 +419,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
 
       assert has_element?(
                view,
-               "#edit-video-integration-form p.form-error",
+               "#edit-video-integration-form .form-field-error",
                "Enter the app password again"
              )
 
@@ -461,7 +461,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
       |> form("#edit-video-integration-form", integration: %{client_secret: "Wrong-Password"})
       |> render_submit()
 
-      assert has_element?(view, "#edit-video-integration-form p.form-error", @refused)
+      assert has_element?(view, "#edit-video-integration-form .form-field-error", @refused)
       assert has_element?(view, "#edit_nextcloud_talk_client_secret.input-error")
       refute render(view) =~ "Failed to update integration"
 
@@ -489,7 +489,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
                "Wait a few minutes before trying again."
              )
 
-      refute has_element?(view, "#edit-video-integration-form p.form-error")
+      refute has_element?(view, "#edit-video-integration-form .form-field-error")
       refute render(view) =~ "Failed to update integration"
 
       assert {:ok, %{client_secret: @app_password}} =

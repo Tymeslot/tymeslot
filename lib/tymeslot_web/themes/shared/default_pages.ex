@@ -10,8 +10,10 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   `:payment_cancelled`), the page's `theme_tokens` (`nil` on a payment
   page's dead render, which reads no data), the organiser's
   `organizer_profile` (`nil` on that dead render too), the organiser's
-  `legal_links` (which the shell hands to its wrapper), `locale` and
-  `language_dropdown_open`, and the body as its inner block; it draws the
+  `legal_links` (which the shell hands to its wrapper), `locale`,
+  `language_dropdown_open` and `offered_locales` (the languages the
+  organiser offers, nil for every one, which the shell hands to its wrapper
+  for the switcher), and the body as its inner block; it draws the
   theme's wrapper and card (with the `booker-card` hook class) around it. A
   shell is free to ignore any of them but `page`: only Folio's draws the
   organiser, so a shell that has no use for the profile declares no attr
@@ -68,7 +70,9 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
         organizer_profile: assigns[:organizer_profile],
         participant: assigns[:participant],
         link_request: assigns[:link_request],
-        invalid_link: assigns[:invalid_link] || false
+        invalid_link: assigns[:invalid_link] || false,
+        poll_field_errors: assigns[:poll_field_errors] || %{},
+        poll_draft: assigns[:poll_draft] || %{}
       )
 
     ~H"""
@@ -79,6 +83,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
       organizer_profile={@organizer_profile}
       locale={assigns[:locale]}
       language_dropdown_open={assigns[:language_dropdown_open]}
+      offered_locales={assigns[:offered_locales]}
       legal_links={assigns[:legal_links]}
     >
       <div class={["manage-page", @page_class]} data-testid={@page_testid}>
@@ -103,10 +108,13 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
     ~H"""
     <PollVotingComponents.poll_content
       poll={@poll}
+      location={@poll_location}
       tallies={@tallies}
       voting_open={@voting_open}
       participant={@participant}
       link_request={@link_request}
+      field_errors={@poll_field_errors}
+      draft={@poll_draft}
       invalid_link={@invalid_link}
     />
     """
@@ -130,7 +138,11 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   defp body(%{page: :payment_cancelled} = assigns) do
     ~H"""
     <MeetingPageBodies.status_icon icon="hero-x-circle" tone="danger" />
-    <PaymentReturnComponents.cancelled_body rebook_path={@rebook_path} />
+    <PaymentReturnComponents.cancelled_body
+      rebook_path={@rebook_path}
+      invitation_held={assigns[:invitation_held] || false}
+      invitation_withheld={assigns[:invitation_withheld] || false}
+    />
     """
   end
 

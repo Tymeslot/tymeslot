@@ -47,7 +47,9 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
         bindings = %{name: name, organizer_name: organizer_name}
 
         Voice.line(voice, :held_message_named, bindings, fn ->
-          dgettext("booking", "%{name}, your request to %{organizer_name} has been sent.",
+          dgettext(
+            "booking_confirmation",
+            "%{name}, your request to %{organizer_name} has been sent.",
             name: name,
             organizer_name: organizer_name
           )
@@ -55,7 +57,7 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
 
       _no_organizer_name ->
         Voice.line(voice, :held_message, %{name: name}, fn ->
-          dgettext("booking", "%{name}, your request has been sent.", name: name)
+          dgettext("booking_confirmation", "%{name}, your request has been sent.", name: name)
         end)
     end
   end
@@ -76,7 +78,7 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
 
       name ->
         Voice.line(Voice.of(theme_key), :organizer_fragment, %{name: name}, fn ->
-          dgettext("booking", "with %{name}", name: name)
+          dgettext("booking_confirmation", "with %{name}", name: name)
         end)
     end
   end

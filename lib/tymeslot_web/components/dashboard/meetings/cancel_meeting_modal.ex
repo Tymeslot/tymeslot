@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.Money
+  alias Tymeslot.Meetings.HostManaged
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
@@ -46,6 +47,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   attr :confirm_event, :string, required: true
   attr :target, :any, required: true
   attr :booking_payment, :map, default: nil
+  attr :refund_error, :map, default: %{}, doc: "`:amount` and `:acknowledgement` messages"
+  attr :refund_form, :map, default: %{choice: "full", amount: "", acknowledged: false}
 
   @spec cancel_meeting_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_meeting_modal(assigns) do
@@ -73,12 +76,18 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         phx-submit={@confirm_event}
         phx-target={@target}
         class="space-y-4"
+        novalidate
       >
         <p>
           {confirm_question(@meeting, @timezone, @time_format)}
         </p>
 
-        <.paid_options :if={@paid?} booking_payment={@booking_payment} />
+        <.paid_options
+          :if={@paid?}
+          booking_payment={@booking_payment}
+          refund_error={@refund_error}
+          refund_form={@refund_form}
+        />
         <p :if={not @paid?} class="text-tymeslot-500">
           {if Helpers.group_meeting?(@meeting),
             do:
@@ -98,30 +107,46 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   end
 
   # A group meeting has no single attendee to name: it is with however many
-  # people currently hold a seat on it.
+  # people currently hold a seat on it. Nor has a meeting the host manages:
+  # the one in its attendee fields is only the first of its guests, so it is
+  # named by its title, as its card is.
   defp confirm_question(meeting, timezone, time_format) do
     scheduled_for =
       "#{Helpers.format_meeting_date(meeting, timezone)} • #{Helpers.format_meeting_time(meeting, timezone, time_format)}"
 
-    if Helpers.group_meeting?(meeting) do
-      count = length(Helpers.participants(meeting))
+    cond do
+      Helpers.group_meeting?(meeting) ->
+        count = length(Helpers.participants(meeting))
 
-      dngettext(
-        "dashboard_bookings",
-        "Are you sure you want to cancel this group meeting with %{count} participant scheduled for %{when}?",
-        "Are you sure you want to cancel this group meeting with %{count} participants scheduled for %{when}?",
-        count,
-        when: scheduled_for
-      )
-    else
-      dgettext(
-        "dashboard_bookings",
-        "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?",
-        name: meeting.attendee_name,
-        when: scheduled_for
-      )
+        dngettext(
+          "dashboard_bookings",
+          "Are you sure you want to cancel this group meeting with %{count} participant scheduled for %{when}?",
+          "Are you sure you want to cancel this group meeting with %{count} participants scheduled for %{when}?",
+          count,
+          when: scheduled_for
+        )
+
+      HostManaged.managed?(meeting) ->
+        dgettext(
+          "dashboard_bookings",
+          "Are you sure you want to cancel “%{title}” scheduled for %{when}? Every guest is told.",
+          title: meeting.title,
+          when: scheduled_for
+        )
+
+      true ->
+        dgettext(
+          "dashboard_bookings",
+          "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?",
+          name: meeting.attendee_name,
+          when: scheduled_for
+        )
     end
   end
+
+  attr :booking_payment, :map, required: true
+  attr :refund_error, :map, default: %{}
+  attr :refund_form, :map, required: true
 
   defp paid_options(assigns) do
     assigns = assign(assigns, :remaining, refundable_remaining(assigns.booking_payment))
@@ -137,11 +162,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
       <div class="space-y-2">
         <label class="flex items-start gap-2">
-          <input
+          <Forms.input
             type="radio"
             name="cancel_refund_choice"
             value="full"
-            checked
+            checked={@refund_form.choice == "full"}
           />
           <span>
             <strong>{dgettext("dashboard_bookings", "Full refund.")}</strong>
@@ -152,10 +177,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </label>
 
         <label class="flex items-start gap-2">
-          <input
+          <Forms.input
             type="radio"
             name="cancel_refund_choice"
             value="partial"
+            checked={@refund_form.choice == "partial"}
           />
           <span>
             <strong>{dgettext("dashboard_bookings", "Partial refund.")}</strong>
@@ -172,14 +198,17 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             max={Money.to_major_string(@remaining, @booking_payment.currency)}
             step="0.01"
             placeholder={"0.00 #{String.upcase(@booking_payment.currency)}"}
+            value={@refund_form.amount}
+            errors={List.wrap(@refund_error[:amount])}
           />
         </div>
 
         <label class="flex items-start gap-2">
-          <input
+          <Forms.input
             type="radio"
             name="cancel_refund_choice"
             value="none"
+            checked={@refund_form.choice == "none"}
           />
           <span>
             <strong>{dgettext("dashboard_bookings", "Cancel without refund.")}</strong>
@@ -191,10 +220,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </label>
 
         <label class="flex items-start gap-2 ml-6">
+          <%!-- raw-input: acknowledgement checkbox inside its inline label beside the text; <.input> would nest block wrappers inside the label --%>
           <input
             type="checkbox"
             name="cancel_refund_no_refund_ack"
             value="true"
+            checked={@refund_form.acknowledged}
           />
           <span class="text-tymeslot-700">
             {dgettext(
@@ -203,6 +234,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             )}
           </span>
         </label>
+        <p
+          :if={@refund_error[:acknowledgement]}
+          id="cancel-refund-ack-error"
+          class="form-error ml-6"
+          role="alert"
+        >
+          {@refund_error[:acknowledgement]}
+        </p>
       </div>
     </div>
     """

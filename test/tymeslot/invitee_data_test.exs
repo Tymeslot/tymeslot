@@ -9,6 +9,8 @@ defmodule Tymeslot.InviteeDataTest do
 
   alias Ecto.UUID
   alias Tymeslot.Clock
+  alias Tymeslot.Invitations
+  alias Tymeslot.Invitations.InvitationSchema
   alias Tymeslot.InviteeData
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.GuestQueries
@@ -45,6 +47,17 @@ defmodule Tymeslot.InviteeDataTest do
       )
 
     guest
+  end
+
+  defp invite(host, attrs) do
+    type = insert(:meeting_type, user: host, invitation_only: true)
+    {:ok, invitation} = Invitations.create(host.id, type, attrs)
+    {type, invitation}
+  end
+
+  defp last_changed(invitation, days_ago) do
+    at = DateTime.utc_now() |> DateTime.add(-days_ago, :day) |> DateTime.truncate(:second)
+    {1, nil} = Repo.update_all(where(InvitationSchema, id: ^invitation.id), set: [updated_at: at])
   end
 
   defp poll_with_slot_ended(days_ago, host) do
@@ -127,6 +140,7 @@ defmodule Tymeslot.InviteeDataTest do
                guests: 1,
                poll_participants: 1,
                draft_polls: 1,
+               invitations: 0,
                booking_payments: 1,
                deliveries: 1
              }
@@ -217,6 +231,58 @@ defmodule Tymeslot.InviteeDataTest do
       assert %{location: "Room 4"} = Repo.get!(MeetingSchema, meeting.id)
     end
 
+    test "erasing an invitee scrubs their invitations" do
+      host = insert(:user)
+      {type, invitation} = invite(host, %{name: "Ada Parent", email: "Ada@Example.com"})
+      {_type, other} = invite(host, %{name: "Bob Parent", email: "bob@example.com"})
+      past_meeting(organizer_user: host, attendee_email: @email, invitation_id: invitation.id)
+
+      assert {:ok, %{invitations: 1}} = InviteeData.erase(@email)
+
+      assert %{name: nil, email: nil, token_hash: token_hash} =
+               Repo.get!(InvitationSchema, invitation.id)
+
+      assert token_hash == invitation.token_hash
+
+      assert [%{invitation: %{id: id, email: nil}, status: :used}] =
+               Invitations.list(host.id, type)
+
+      assert id == invitation.id
+
+      assert %{name: "Bob Parent", email: "bob@example.com"} =
+               Repo.get!(InvitationSchema, other.id)
+    end
+
+    test "scrubs an invitation addressed by name only that the person booked through" do
+      host = insert(:user)
+      {_type, invitation} = invite(host, %{name: "Ada Parent"})
+      past_meeting(organizer_user: host, attendee_email: @email, invitation_id: invitation.id)
+
+      assert {:ok, %{invitations: 1}} = InviteeData.erase(@email)
+      assert %{name: nil, email: nil} = Repo.get!(InvitationSchema, invitation.id)
+    end
+
+    test "scrubs an invitation sent to one address and booked under another" do
+      host = insert(:user)
+      {_type, invitation} = invite(host, %{name: "Ada Parent", email: "ada.work@example.com"})
+      past_meeting(organizer_user: host, attendee_email: @email, invitation_id: invitation.id)
+
+      {_type, untouched} =
+        invite(host, %{name: "Bob Parent", email: "bob@example.com"})
+
+      past_meeting(
+        organizer_user: host,
+        attendee_email: "bob@example.com",
+        invitation_id: untouched.id
+      )
+
+      assert {:ok, %{invitations: 1}} = InviteeData.erase(@email)
+      assert %{name: nil, email: nil} = Repo.get!(InvitationSchema, invitation.id)
+
+      assert %{name: "Bob Parent", email: "bob@example.com"} =
+               Repo.get!(InvitationSchema, untouched.id)
+    end
+
     test "rejects a blank or missing email" do
       assert {:error, :invalid_email} = InviteeData.erase("   ")
       assert {:error, :invalid_email} = InviteeData.erase(nil)
@@ -245,6 +311,18 @@ defmodule Tymeslot.InviteeDataTest do
 
       assert [%{email: @email}] =
                PollSchema.draft_invitees(Repo.get!(PollSchema, their_draft.id))
+    end
+
+    test "a host-scoped erasure leaves another host's invitation alone" do
+      host = insert(:user)
+      other_host = insert(:user)
+      {_type, mine} = invite(host, %{name: "Ada Parent", email: @email})
+      {_type, theirs} = invite(other_host, %{name: "Ada Parent", email: @email})
+
+      assert {:ok, %{invitations: 1}} = InviteeData.erase_for_host(host.id, @email)
+
+      assert %{name: nil, email: nil} = Repo.get!(InvitationSchema, mine.id)
+      assert %{name: "Ada Parent", email: @email} = Repo.get!(InvitationSchema, theirs.id)
     end
 
     test "is not blocked by the person's upcoming booking with another host" do
@@ -317,6 +395,39 @@ defmodule Tymeslot.InviteeDataTest do
                PollSchema.draft_invitees(Repo.get!(PollSchema, recent.id))
 
       assert {0, nil} = InviteeData.anonymise_expired(730)
+    end
+
+    test "clears the name and email of invitations last changed before the window" do
+      host = insert(:user)
+      {_type, old} = invite(host, %{name: "Ada Parent", email: @email})
+      last_changed(old, 731)
+
+      assert {1, nil} = InviteeData.anonymise_expired(730)
+
+      assert %{name: nil, email: nil, token_hash: token_hash} =
+               Repo.get!(InvitationSchema, old.id)
+
+      assert token_hash == old.token_hash
+      assert {0, nil} = InviteeData.anonymise_expired(730)
+    end
+
+    test "keeps the name and email of invitations changed inside the window" do
+      host = insert(:user)
+      {_type, recent} = invite(host, %{name: "Ada Parent", email: @email})
+      last_changed(recent, 700)
+
+      assert {0, nil} = InviteeData.anonymise_expired(730)
+      assert %{name: "Ada Parent", email: @email} = Repo.get!(InvitationSchema, recent.id)
+    end
+
+    test "keeps an old invitation whose meeting ended inside the window" do
+      host = insert(:user)
+      {_type, invitation} = invite(host, %{name: "Ada Parent", email: @email})
+      last_changed(invitation, 731)
+      past_meeting(ended(700) ++ [organizer_user: host, invitation_id: invitation.id])
+
+      assert {0, nil} = InviteeData.anonymise_expired(730)
+      assert %{name: "Ada Parent", email: @email} = Repo.get!(InvitationSchema, invitation.id)
     end
 
     test "passes over what it has already anonymised" do

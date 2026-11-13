@@ -271,7 +271,7 @@
   /* Language switcher (shared/components/language-switcher.css) */
   --lang-switcher-surface: rgba(0, 0, 0, 0.6);
   --lang-switcher-surface-hover: rgba(0, 0, 0, 0.7);
-  --lang-switcher-panel-surface: rgba(0, 0, 0, 0.9);
+  --lang-switcher-panel-surface: rgba(0, 0, 0, 0.97);
   --lang-switcher-panel-line: var(--border-light);
   --lang-switcher-item-line: var(--border-subtle);
   --lang-switcher-item-hover: var(--surface-light);

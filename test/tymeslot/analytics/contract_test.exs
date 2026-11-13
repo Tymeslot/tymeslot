@@ -34,12 +34,43 @@ defmodule Tymeslot.Analytics.ContractTest do
     end
 
     assert :ok = Contract.validate!("onboarding_step_completed", %{step: "profile"})
+  end
 
-    assert :ok =
-             Contract.validate!("onboarding_step_completed", %{
-               step: "connect_calendar",
-               skipped: true
-             })
+  describe "the onboarding events" do
+    test "validate with their declared props" do
+      assert :ok = Contract.validate!("onboarding_step_viewed", %{step: "meeting"})
+      assert :ok = Contract.validate!("onboarding_step_completed", %{step: "profile"})
+      assert :ok = Contract.validate!("guest_preview_opened", %{})
+
+      for result <- ~w(ok slow failed),
+          do: assert(:ok = Contract.validate!("calendar_reveal_loaded", %{result: result}))
+
+      for channel <- Contract.share_channels(),
+          do: assert(:ok = Contract.validate!("booking_link_shared", %{channel: channel}))
+    end
+
+    test "onboarding_step_completed with skipped raises: no step can be skipped" do
+      assert_raise ArgumentError, ~r/prop :skipped not declared/, fn ->
+        Contract.validate!("onboarding_step_completed", %{step: "profile", skipped: true})
+      end
+    end
+
+    test "booking_link_kept is not a client event: kept links come from server telemetry" do
+      assert_raise ArgumentError, ~r/unknown analytics event/, fn ->
+        Contract.validate!("booking_link_kept", %{method: "copy"})
+      end
+    end
+
+    test "a value outside an event's declared set raises" do
+      assert_raise ArgumentError, ~r/value outside its declared set/, fn ->
+        Contract.validate!("calendar_reveal_loaded", %{result: "timeout"})
+      end
+
+      # The onboarding keeps are not dashboard share channels.
+      assert_raise ArgumentError, ~r/value outside its declared set/, fn ->
+        Contract.validate!("booking_link_shared", %{channel: "first_person"})
+      end
+    end
   end
 
   describe "non-strict mode (analytics_strict: false)" do

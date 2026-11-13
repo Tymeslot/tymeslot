@@ -128,6 +128,22 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.FilterTest do
              }
     end
 
+    test "redacts an invitation token in the recorded URI, query and params" do
+      context = %{
+        "live_view.uri" => "https://book.example.com/jane/intro?invite=inv-tok-1",
+        "live_view.params" => %{"username" => "jane", "invite" => "inv-tok-1"},
+        "request.query" => "invite=inv-tok-1&duration=30",
+        "request.params" => %{"invite" => "inv-tok-1"}
+      }
+
+      sanitized = Filter.sanitize(context)
+
+      refute inspect(sanitized) =~ "inv-tok-1"
+      assert sanitized["live_view.uri"] == "https://book.example.com/jane/intro?invite=[REDACTED]"
+      assert sanitized["request.query"] == "invite=[REDACTED]&duration=30"
+      assert sanitized["live_view.params"] == %{"username" => "jane", "invite" => "[REDACTED]"}
+    end
+
     test "masks capabilities in URL-bearing request headers" do
       token = String.duplicate("reset", 5)
 

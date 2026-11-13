@@ -55,7 +55,11 @@ defmodule TymeslotWeb.AccountLiveDeleteTest do
   end
 
   defp submit(view, params) do
-    view |> form("#delete-account-form", delete_account: params) |> render_submit()
+    {select, fields} = Map.split(params, [:reason, "reason"])
+
+    view
+    |> form("#delete-account-form", delete_account: fields)
+    |> render_submit(delete_account: select)
   end
 
   # The redirect carries its flash as a signed token; the login page it lands
@@ -63,6 +67,16 @@ defmodule TymeslotWeb.AccountLiveDeleteTest do
   defp login_page_html(result, conn) do
     {:ok, conn} = follow_redirect(result, conn)
     html_response(conn, 200)
+  end
+
+  test "a refused submit keeps the feedback but never the password", %{conn: conn} do
+    with_config(:tymeslot, collect_deletion_feedback: true)
+    view = open_modal(conn)
+
+    submit(view, %{current_password: "wrong-password", comment: "Too expensive"})
+
+    assert has_element?(view, "#delete-account-comment", "Too expensive")
+    refute has_element?(view, "#delete-account-current-password[value='wrong-password']")
   end
 
   test "the modal asks for the password and says what happens to bookings", %{conn: conn} do

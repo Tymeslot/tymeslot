@@ -18,6 +18,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.BookingPages
   alias Tymeslot.Features
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   alias Tymeslot.MeetingPayments.{
     ApplicationFee,
@@ -30,6 +31,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
+  alias Tymeslot.SignedToken
   alias Tymeslot.Themes.Catalog, as: ThemeCatalog
   alias TymeslotWeb.Endpoint
 
@@ -292,8 +294,65 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     "#{Endpoint.url()}/themes/#{theme_slug}/payment-processing/#{meeting_id}"
   end
 
+  # Stripe documents `{CHECKOUT_SESSION_ID}` for the success URL only, so the
+  # cancel URL carries a proof of its own: a token signed for this meeting,
+  # which only Stripe and the guest's browser ever see
+  # (`returned_from_checkout?/2`).
   defp cancel_url(theme_slug, meeting_id) do
-    "#{Endpoint.url()}/themes/#{theme_slug}/payment-cancelled/#{meeting_id}"
+    "#{Endpoint.url()}/themes/#{theme_slug}/payment-cancelled/#{meeting_id}?" <>
+      URI.encode_query(%{"return_token" => SignedToken.sign(:checkout_return, meeting_id)})
+  end
+
+  @doc """
+  Whether `return_token`, from the query of a booking's checkout cancel URL,
+  was signed for the meeting `meeting_id`: the visitor came back from that
+  booking's own checkout, so is its guest. False for a missing, tampered,
+  expired or other meeting's token.
+  """
+  @spec returned_from_checkout?(String.t(), String.t() | nil) :: boolean()
+  def returned_from_checkout?(meeting_id, return_token)
+      when is_binary(meeting_id) and is_binary(return_token) do
+    SignedToken.verify(:checkout_return, return_token) == {:ok, meeting_id}
+  end
+
+  def returned_from_checkout?(_meeting_id, _return_token), do: false
+
+  @doc """
+  Ends the open Stripe Checkout of a booking whose guest has just left it
+  (`returned_from_checkout?/2` holds), rather than letting it run to its
+  timeout.
+
+  Only Stripe's session is expired here. Stripe then sends
+  `checkout.session.expired`, and its handler (`Webhooks.FailAndExpire`)
+  fails the payment, expires the held meeting and announces it, exactly as
+  for a checkout that lapsed. A session Stripe has already completed cannot
+  be expired, so a payment that beat this call is confirmed as usual, and
+  one completed after it cannot happen. Returns `:ok` when there was nothing
+  open to expire.
+  """
+  @spec abandon_checkout(String.t()) :: :ok | {:error, term()}
+  def abandon_checkout(meeting_id) do
+    case BookingPaymentQueries.by_meeting_id(meeting_id) do
+      %{status: :pending, stripe_checkout_session_id: "cs_" <> _rest = session_id} = payment ->
+        expire_stripe_session(session_id, payment.stripe_account_id)
+
+      _nothing_open ->
+        :ok
+    end
+  end
+
+  defp expire_stripe_session(session_id, stripe_account_id) do
+    case StripeAdapter.expire_checkout_session(session_id, connect_account: stripe_account_id) do
+      {:ok, _session} ->
+        :ok
+
+      {:error, reason} = error ->
+        Logger.info("Could not expire an abandoned checkout session",
+          reason: LogFormat.reason(reason)
+        )
+
+        error
+    end
   end
 
   @doc """

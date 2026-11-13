@@ -47,7 +47,6 @@ defmodule TymeslotWeb.Components.BackgroundMotionToggle do
       data-label-pause={dgettext("common", "Pause background video")}
       data-label-play={dgettext("common", "Play background video")}
       aria-label={dgettext("common", "Pause background video")}
-      title={dgettext("common", "Pause background video")}
       phx-hook="BackgroundMotionToggle"
     >
       <%!-- Both icons ship; theme CSS shows the one matching data-state, so the

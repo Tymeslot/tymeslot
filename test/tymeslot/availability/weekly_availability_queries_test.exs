@@ -7,7 +7,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueriesTest do
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
 
   describe "default business hours (user onboarding)" do
-    test "creates sensible default schedule for new users" do
+    test "a new profile is bookable Monday to Friday 9 to 5" do
       schedule = insert(:availability_schedule)
 
       {:ok, _count} = WeeklyAvailabilityQueries.create_default_weekly_days(schedule.id)
@@ -20,8 +20,8 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueriesTest do
       weekdays = Enum.filter(days, &(&1.day_of_week in 1..5))
       assert length(weekdays) == 5
       assert Enum.all?(weekdays, &(&1.is_available == true))
-      assert Enum.all?(weekdays, &(&1.start_time == ~T[11:00:00]))
-      assert Enum.all?(weekdays, &(&1.end_time == ~T[19:30:00]))
+      assert Enum.all?(weekdays, &(&1.start_time == ~T[09:00:00]))
+      assert Enum.all?(weekdays, &(&1.end_time == ~T[17:00:00]))
 
       # Weekends should be unavailable by default
       weekends = Enum.filter(days, &(&1.day_of_week in 6..7))

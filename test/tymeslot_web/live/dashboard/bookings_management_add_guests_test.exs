@@ -58,6 +58,19 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
     view |> form("#stage-guest-form", %{"email" => email}) |> render_submit()
   end
 
+  describe "a refused address" do
+    test "stays in the field to correct, with the reason beside it", %{conn: conn, user: user} do
+      meeting = insert(:meeting, organizer_user_id: user.id, organizer_email: user.email)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("#add-guests-#{meeting.id}") |> render_click()
+
+      stage(view, "not-an-email")
+
+      assert has_element?(view, "#stage-guest-email[value='not-an-email']")
+      assert has_element?(view, "#stage-guest-form + p[role=alert]")
+    end
+  end
+
   describe "adding guests" do
     test "invites the addresses the host enters", %{conn: conn, user: user} do
       meeting = upcoming_meeting(user)

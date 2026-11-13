@@ -54,6 +54,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.Meetings.UniqueInvitation
+  alias Tymeslot.Meetings.UniqueSlot
   alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Repo
 
@@ -241,7 +243,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # expiry released it. The first attempt takes no schedule lock and backs
   # out on finding that case; the second runs under the organiser's schedule
   # lock with the slot counted free (`Scheduling.reinstate_with_conflict_check/2`),
-  # and a slot found taken refunds the payment instead.
+  # and a slot found taken refunds the payment instead. So does a booking made
+  # through an invitation that has been booked again since the expiry: the
+  # invitation index refuses the second live booking it would make.
   defp complete(payment, event_id, object) do
     case LockedPayment.run(
            payment,
@@ -270,6 +274,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
       case Scheduling.reinstate_with_conflict_check(meeting, write_fn) do
         {:error, reason} when reason in [:time_conflict, :organizer_required] ->
           refund_late_payment(payment, event_id, object)
+
+        {:error, %Ecto.Changeset{} = changeset} = error ->
+          if UniqueInvitation.violation?(changeset) or UniqueSlot.violation?(changeset),
+            do: refund_late_payment(payment, event_id, object),
+            else: error
 
         result ->
           result

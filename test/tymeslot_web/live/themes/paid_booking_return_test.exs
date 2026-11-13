@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
         %{cancel_url: cancel_url} = book_to_checkout(conn, profile)
         slug = unquote(theme.slug)
 
-        assert cancel_url =~ ~r{^/themes/#{slug}/payment-cancelled/[^/?]+$}
+        assert cancel_url =~ ~r{^/themes/#{slug}/payment-cancelled/[^/?]+\?return_token=[^&]+$}
 
         {:ok, view, _html} = live(conn, cancel_url)
         shell = "[data-testid='#{slug}-payment-cancelled']"

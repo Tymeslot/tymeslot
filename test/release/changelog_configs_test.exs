@@ -11,8 +11,11 @@ defmodule Tymeslot.Release.ChangelogConfigsTest do
   """
   use ExUnit.Case, async: true
 
+  alias Tymeslot.Test.SuiteConfig
+
   @moduletag :utils
   @moduletag :git_cliff
+  @moduletag skip: SuiteConfig.unless_included(:git_cliff)
 
   # One commit per rendering decision the config makes. The `core` and `saas`
   # scopes are retired and refused at commit time, but they run throughout the

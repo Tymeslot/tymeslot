@@ -45,7 +45,7 @@ defmodule TymeslotWeb.AuthLiveFeatureFlagsTest do
     test "blocks navigate_to signup event", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/auth/login")
 
-      render_hook(view, "navigate_to", %{"state" => "signup"})
+      render_hook(view, "navigate_to", %{"to" => "signup"})
 
       assert has_element?(view, "#login-form")
     end
@@ -105,7 +105,7 @@ defmodule TymeslotWeb.AuthLiveFeatureFlagsTest do
     test "blocks navigate_to signup event", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/auth/login")
 
-      render_hook(view, "navigate_to", %{"state" => "signup"})
+      render_hook(view, "navigate_to", %{"to" => "signup"})
 
       refute has_element?(view, "#signup-form")
     end
@@ -113,7 +113,7 @@ defmodule TymeslotWeb.AuthLiveFeatureFlagsTest do
     test "blocks navigate_to reset_password event", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/auth/login")
 
-      render_hook(view, "navigate_to", %{"state" => "reset_password"})
+      render_hook(view, "navigate_to", %{"to" => "reset_password"})
 
       refute has_element?(view, "#reset-password-form")
     end

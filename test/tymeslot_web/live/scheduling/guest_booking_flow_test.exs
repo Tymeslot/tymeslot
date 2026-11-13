@@ -255,8 +255,8 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
 
         form_event(view, :toggle_guests, nil)
 
-        # Fill the list to the maximum.
-        Enum.each(1..Guests.max_guests(), fn n ->
+        # Fill the list to the public page's default, the type setting none.
+        Enum.each(1..Guests.default_booking_limit(), fn n ->
           form_event(view, :add_guest, "guest#{n}@example.com")
         end)
 
@@ -264,7 +264,7 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
         form_event(view, :add_guest, "overflow@example.com")
         _drain = :sys.get_state(view.pid)
 
-        assert render(view) =~ "You can add up to #{Guests.max_guests()} guests"
+        assert render(view) =~ "You can add up to #{Guests.default_booking_limit()} guests"
       end
 
       @tag :capture_log
@@ -420,6 +420,60 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
           |> Enum.sort()
 
         assert guest_emails == ["first@example.com", "second@example.com"]
+      end
+    end
+
+    describe "#{theme.name}: guest field — a limit above the booking page's default" do
+      @describetag theme_id: theme.id
+
+      setup %{user: user} do
+        limit = Guests.default_booking_limit() + 1
+
+        meeting_type =
+          insert(:meeting_type,
+            user: user,
+            duration_minutes: 30,
+            name: "Bring The Team",
+            is_active: true,
+            allow_guests: true,
+            max_guests_per_booking: limit
+          )
+
+        %{meeting_type: meeting_type, limit: limit}
+      end
+
+      @tag :capture_log
+      test "a booker can bring every guest the meeting type allows", %{
+        conn: conn,
+        profile: profile,
+        limit: limit
+      } do
+        view = navigate_to_booking_form(conn, profile, nil)
+
+        form_event(view, :toggle_guests, nil)
+
+        invited = for n <- 1..limit, do: "guest#{n}@example.com"
+        Enum.each(invited, &form_event(view, :add_guest, &1))
+
+        _drain = :sys.get_state(view.pid)
+
+        view
+        |> form("form[phx-submit='submit']", %{
+          "booking" => %{
+            "name" => "Team Booker",
+            "email" => "team@example.com",
+            "message" => ""
+          }
+        })
+        |> render_submit()
+
+        _drain = :sys.get_state(view.pid)
+
+        assert has_element?(view, "[data-testid='confirmation-heading']")
+        [meeting] = Repo.all_by(MeetingSchema, attendee_email: "team@example.com")
+
+        assert meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email) |> Enum.sort() ==
+                 Enum.sort(invited)
       end
     end
   end

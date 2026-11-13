@@ -29,10 +29,32 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
     default: true,
     doc: "Whether to show the visual label; off where a heading above already names the field"
 
+  attr :show_help, :boolean,
+    default: true,
+    doc: "Whether to show the line under the picker saying what the timezone is used for"
+
+  attr :inline, :boolean,
+    default: false,
+    doc: """
+    Opens the list in the page flow under the field instead of floating over the
+    content above it, so the page grows to hold it (and can scroll it clear of a
+    bar stuck to the bottom of the screen)
+    """
+
+  attr :field_name, :string,
+    default: nil,
+    doc: "When set, a hidden input posts the timezone under this name, for use inside a form"
+
   @spec timezone_dropdown(map()) :: Phoenix.LiveView.Rendered.t()
   def timezone_dropdown(assigns) do
     ~H"""
     <div class={["relative", @class]}>
+      <input
+        :if={@field_name}
+        type="hidden"
+        name={@field_name}
+        value={Profiles.timezone(@profile)}
+      />
       <%!-- Visual label only: it names no control (the trigger below carries its
            own accessible name), so it must not be a <label> element. --%>
       <div :if={@show_label} class="label">
@@ -49,10 +71,12 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         on_close="close_timezone_dropdown"
         target={@target}
         position={:top_start}
+        unstyled={@inline}
+        panel_attrs={[{"data-nav-clearance-box", true}]}
         role="dialog"
         panel_label={dgettext("common", "Select timezone")}
         trigger_class="group relative cursor-pointer z-50 w-full text-left"
-        class="right-0 max-h-64 brand-card overflow-hidden"
+        class={"max-h-64 brand-card overflow-hidden " <> if(@inline, do: "mt-1", else: "right-0")}
       >
         <:trigger>
           <span class="sr-only">{dgettext("common", "Your Timezone")}:</span>
@@ -93,12 +117,14 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         <:panel>
           <div class="p-3 border-b border-white/20">
             <div class="relative">
+              <%!-- raw-input: borderless search box inside the dropdown panel with a magnifier overlay, not a labelled form field --%>
               <input
                 id="timezone-search"
                 type="text"
                 phx-keyup="search_timezone"
                 phx-target={@target}
                 name="value"
+                form="timezone-search-detached"
                 value={@timezone_search || ""}
                 placeholder={dgettext("common", "Search cities, countries, or timezones...")}
                 aria-label={dgettext("common", "Search timezones")}
@@ -114,13 +140,14 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
           <div class="max-h-48 overflow-y-auto">
             <div class="p-1">
               <%= for {label, value, offset} <- Timezones.search(@timezone_search || "") do %>
-                <div
+                <button
+                  type="button"
                   phx-click="change_timezone"
                   phx-value-timezone={value}
                   phx-target={@target}
-                  class="w-full text-left px-3 py-2.5 text-sm rounded-lg cursor-pointer transition-all duration-200 hover:bg-cyan-50 hover:shadow-sm border border-transparent hover:border-cyan-200"
+                  class="w-full text-left px-3 py-2.5 text-sm rounded-lg cursor-pointer transition-all duration-200 hover:bg-cyan-50 hover:shadow-sm focus-visible:bg-cyan-50 border border-transparent hover:border-cyan-200"
                 >
-                  <div class="flex items-center gap-3 flex-1 min-w-0">
+                  <span class="flex items-center gap-3 flex-1 min-w-0">
                     <%= if country_code = Timezones.country_code(value) do %>
                       <.timezone_flag
                         country_code={country_code}
@@ -128,21 +155,21 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                         class="w-5 h-3 shrink-0 rounded-sm shadow-sm"
                       />
                     <% end %>
-                    <div class="flex-1 min-w-0">
-                      <div class="font-medium truncate text-tymeslot-800">{label}</div>
-                      <div class="text-xs mt-0.5 text-tymeslot-600">
+                    <span class="block flex-1 min-w-0">
+                      <span class="block font-medium truncate text-tymeslot-800">{label}</span>
+                      <span class="block text-xs mt-0.5 text-tymeslot-600">
                         {TimezoneHelpers.format_local_time(value)} {dgettext("common", "local time")} • {offset}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                      </span>
+                    </span>
+                  </span>
+                </button>
               <% end %>
             </div>
           </div>
         </:panel>
       </.dropdown>
 
-      <p class="mt-2 text-sm text-tymeslot-600">
+      <p :if={@show_help} class="mt-2 text-sm text-tymeslot-600">
         {dgettext("common", "This timezone will be used for your availability and scheduling.")}
       </p>
     </div>

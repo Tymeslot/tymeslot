@@ -26,15 +26,18 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Bookings.Create.PaidBooking
   alias Tymeslot.Bookings.Telemetry
   alias Tymeslot.CustomFields
+  alias Tymeslot.Invitations
   alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.Meetings.UniqueInvitation
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.Lengths
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias UUID
@@ -171,7 +174,8 @@ defmodule Tymeslot.Bookings.Create do
           BookingPages.existing_id(
             Map.get(meeting_params, :booking_page_id),
             Map.get(meeting_params, :organizer_user_id)
-          )
+          ),
+        invitation_id: invitation_id(meeting_type, meeting_params)
       }
 
       # Read once, here, so the booking-limit pre-check and the calendar
@@ -185,6 +189,14 @@ defmodule Tymeslot.Bookings.Create do
   end
 
   defp default_locale, do: Locales.booking_default_locale()
+
+  # An invitation is recorded only on the type that asks for one: an id sent
+  # with a booking on an open type is ignored, so the meeting never counts
+  # against an invitation it did not need.
+  defp invitation_id(%{invitation_only: true}, meeting_params),
+    do: Map.get(meeting_params, :invitation_id)
+
+  defp invitation_id(_meeting_type, _meeting_params), do: nil
 
   defp resolve_meeting_type_for_duration(meeting_params) do
     type_id = Map.get(meeting_params, :meeting_type_id)
@@ -217,6 +229,7 @@ defmodule Tymeslot.Bookings.Create do
         # Meeting type active check
         with :ok <- validate_host_accepting(user_id),
              :ok <- validate_meeting_type_active(booking_data),
+             :ok <- validate_invitation(booking_data),
              :ok <- CreateGroup.ensure_taking_seats(booking_data),
              :ok <- validate_payments_available(booking_data, user_id) do
           validate_time(booking_data, user_id)
@@ -273,6 +286,24 @@ defmodule Tymeslot.Bookings.Create do
     do: {:error, :meeting_type_inactive}
 
   defp validate_meeting_type_active(%{meeting_type: nil}), do: {:error, :meeting_type_not_found}
+
+  # An invitation-only type is booked only through one of its own invitations,
+  # still available. This is the friendly pre-check; the invitation index
+  # (`Tymeslot.Meetings.UniqueInvitation`) is what keeps two bookings racing
+  # on one invitation from both landing, see `create_meeting/1`.
+  defp validate_invitation(%{meeting_type: %{invitation_only: true} = type, invitation_id: id})
+       when is_integer(id) do
+    # `CreateGroup` would book a group type without recording the invitation,
+    # leaving it unspent, so such a type is never claimable.
+    if MeetingTypeSchema.group?(type),
+      do: {:error, :invitation_unavailable},
+      else: Invitations.check_claimable(id, type.id)
+  end
+
+  defp validate_invitation(%{meeting_type: %{invitation_only: true}}),
+    do: {:error, :invitation_required}
+
+  defp validate_invitation(_booking_data), do: :ok
 
   # A direct load of `/:username/:slug/book` performs no step transition, so
   # none of the booking page's own guards on the offered slots ever run for
@@ -424,12 +455,22 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
+  # A booking that lost its invitation to another one committed first (both
+  # passed `validate_invitation/1`, serialised on the organiser's schedule
+  # lock), or whose invitation was deleted since, is refused by the database
+  # at insert, not by the pre-check.
   defp create_meeting(meeting_attrs) do
     case Scheduling.create_meeting_with_conflict_check(meeting_attrs) do
-      {:ok, meeting} -> {:ok, meeting}
-      {:error, :time_conflict} -> {:error, :time_conflict}
-      {:error, {:validation_error, _changeset}} -> {:error, :validation_error}
-      {:error, reason} -> {:error, reason}
+      {:ok, meeting} ->
+        {:ok, meeting}
+
+      {:error, {:validation_error, changeset}} ->
+        if UniqueInvitation.unavailable?(changeset),
+          do: {:error, :invitation_unavailable},
+          else: {:error, :validation_error}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

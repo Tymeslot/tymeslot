@@ -226,16 +226,23 @@ defmodule Tymeslot.Webhooks do
   @doc """
   Sends one of `user_id`'s webhooks a test payload (see
   `test_webhook_connection/2`). Refused, sending nothing, while the owner's
-  plan doesn't include automations.
+  plan doesn't include automations or the webhook is switched off.
   """
   @spec test_webhook(integer(), integer()) ::
-          :ok | {:error, :not_found | String.t() | Features.access_error()}
+          :ok
+          | {:error, :not_found | :webhook_inactive | String.t() | Features.access_error()}
   def test_webhook(user_id, id) do
     with_webhook(user_id, id, fn webhook ->
       with :ok <- Features.check_access(user_id, :automations_allowed),
+           :ok <- ensure_active(webhook),
            do: test_webhook_connection(webhook.url, webhook.webhook_token)
     end)
   end
+
+  # A paused webhook is not tested, so the dashboard's inert Test button stands
+  # for something the server also holds to.
+  defp ensure_active(%{is_active: true}), do: :ok
+  defp ensure_active(%{is_active: false}), do: {:error, :webhook_inactive}
 
   @doc """
   Tests a webhook connection by sending a test payload.

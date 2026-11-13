@@ -126,6 +126,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
           phx-target={@myself}
           data-auto-upload="true"
           class="flex flex-col items-center gap-6"
+          novalidate
         >
           <input type="hidden" name="asset_field" value="background_video_path" />
           <div class="w-full max-w-md">

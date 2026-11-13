@@ -134,8 +134,8 @@ defmodule Tymeslot.Meetings do
 
   @doc """
   Returns everyone on the meeting who should receive attendee-facing
-  notifications: the attendee for solo meetings, one entry per live
-  participant for group meetings. See `Tymeslot.Meetings.Recipient`.
+  notifications: the attendee of a solo meeting the host does not manage,
+  one entry per live participant of a group one. See `Meetings.Recipient`.
   """
   @spec recipients(MeetingSchema.t()) :: [Recipient.t()]
   defdelegate recipients(meeting), to: Recipient, as: :for_meeting

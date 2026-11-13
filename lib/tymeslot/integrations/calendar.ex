@@ -559,6 +559,19 @@ defmodule Tymeslot.Integrations.Calendar do
     as: :reconnect_for_user
 
   @doc """
+  Reconnect an existing CalDAV-family integration in one step, keeping its
+  calendar selection, and switch it back on if it was paused. See
+  `Reconnection.reconnect_and_resume_for_user/4`.
+  """
+  @spec reconnect_and_resume_caldav_integration(user_id(), integration_id(), map()) ::
+          {:ok, integration()}
+          | {:error, :not_found | :duplicate_account | :no_calendars_selected}
+          | Reconnection.reconnect_error()
+  defdelegate reconnect_and_resume_caldav_integration(user_id, integration_id, params),
+    to: Reconnection,
+    as: :reconnect_and_resume_for_user
+
+  @doc """
   Finalise the account-change branch by persisting the user's selected
   calendars alongside the new credentials. See
   `reconnect_caldav_integration/3` and `Reconnection.finalise_for_user/3`.

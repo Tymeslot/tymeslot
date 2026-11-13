@@ -287,6 +287,15 @@ if config_env() == :prod do
            System.get_env("TRUST_PRIVATE_CLIENT_IPS")
          )
 
+  # Public proxy ranges (a CDN's edges, a cloud load balancer) whose addresses
+  # are proxy hops rather than visitors. Like the flag above, this one key drives
+  # the LiveView socket path and, through `ClientIP.remote_ip_proxies/0`, the
+  # `RemoteIp` plug. An entry that does not parse stops the release here rather
+  # than raising inside `RemoteIp` on every request.
+  config :tymeslot,
+         :trusted_proxies,
+         Tymeslot.Security.TrustedProxies.from_env(System.get_env("TRUSTED_PROXIES"))
+
   # Configure Oban for production
   # Queue definitions in config.exs are loaded at runtime by application.ex
   # This allows SaaS to extend Core queues via :oban_additional_queues config
@@ -488,13 +497,25 @@ if config_env() == :prod do
     if stripe_connect_webhook_secret do
       config :tymeslot, :stripe_connect_webhook_secret, stripe_connect_webhook_secret
     end
+
+    # Stripe Connect client ID (`ca_...`): needed to start a new OAuth
+    # connection; hosts already connected keep working without it.
+    stripe_connect_client_id = String.trim(System.get_env("STRIPE_CONNECT_CLIENT_ID", ""))
+
+    if stripe_connect_client_id != "" do
+      config :tymeslot, :stripe_connect_client_id, stripe_connect_client_id
+    else
+      Logger.warning(
+        "STRIPE_CONNECT_CLIENT_ID not set: hosts cannot connect a Stripe account by OAuth"
+      )
+    end
   end
 end
 
 # Self-host opt-in for the meeting-payments feature. Off by default — flipping
 # MEETING_PAYMENTS_ENABLED=true requires the instance owner to register their
-# instance as a Stripe platform and supply STRIPE_SECRET_KEY plus
-# STRIPE_CONNECT_WEBHOOK_SECRET above. The optional application fee is taken
+# instance as a Stripe platform and supply STRIPE_SECRET_KEY,
+# STRIPE_CONNECT_WEBHOOK_SECRET and STRIPE_CONNECT_CLIENT_ID above. The optional application fee is taken
 # from each charge in basis points (0–10000); defaults to 0 so no platform cut
 # is taken unless the operator explicitly sets one.
 case String.downcase(System.get_env("MEETING_PAYMENTS_ENABLED", "false")) do
@@ -503,12 +524,6 @@ case String.downcase(System.get_env("MEETING_PAYMENTS_ENABLED", "false")) do
 
   _ ->
     :ok
-end
-
-case System.get_env("MEETING_PAYMENTS_DEFAULT_COUNTRY") do
-  nil -> :ok
-  "" -> :ok
-  code -> config :tymeslot, :meeting_payments_default_country, String.downcase(code)
 end
 
 case System.get_env("MEETING_PAYMENTS_APPLICATION_FEE_BP") do
@@ -561,6 +576,14 @@ if config_env() in [:dev, :test] do
   config :tymeslot,
          :stripe_connect_webhook_secret,
          System.get_env("STRIPE_CONNECT_WEBHOOK_SECRET")
+
+  # Dev only: config/test.exs pins a fake value, which an exported real
+  # client ID must not override.
+  with :dev <- config_env(),
+       client_id when client_id != "" <-
+         String.trim(System.get_env("STRIPE_CONNECT_CLIENT_ID", "")) do
+    config :tymeslot, :stripe_connect_client_id, client_id
+  end
 end
 
 # Telegram integration feature flags (Core defaults)
@@ -611,18 +634,27 @@ cloudron_oidc_available? =
 # 1. Explicit ENABLE_OAUTH_AUTH env var always wins
 # 2. Cloudron OIDC addon auto-enables if present
 # 3. Default: false
+# Always false in test, so the shell's ENABLE_OAUTH_AUTH and OAUTH_* vars can
+# neither turn the provider on nor fail the suite at boot in the checks below.
 oauth_enabled =
-  case System.get_env("ENABLE_OAUTH_AUTH") do
-    "true" -> true
-    "false" -> false
-    nil -> cloudron_oidc_available?
-    other -> raise ~s(ENABLE_OAUTH_AUTH must be "true" or "false", got: #{inspect(other)})
-  end
+  config_env() != :test and
+    case System.get_env("ENABLE_OAUTH_AUTH") do
+      "true" -> true
+      "false" -> false
+      nil -> cloudron_oidc_available?
+      other -> raise ~s(ENABLE_OAUTH_AUTH must be "true" or "false", got: #{inspect(other)})
+    end
 
-config :tymeslot, :social_auth,
-  google_enabled: System.get_env("ENABLE_GOOGLE_AUTH", "false") == "true",
-  github_enabled: System.get_env("ENABLE_GITHUB_AUTH", "false") == "true",
-  oauth_enabled: oauth_enabled
+# Not seeded in test, for the same reason as the reCAPTCHA flags below:
+# config/test.exs switches every provider off, so a developer shell that
+# exports ENABLE_GOOGLE_AUTH (as env.sh does) cannot give the sign-in lockout
+# tests a working path they did not set up.
+if config_env() != :test do
+  config :tymeslot, :social_auth,
+    google_enabled: System.get_env("ENABLE_GOOGLE_AUTH", "false") == "true",
+    github_enabled: System.get_env("ENABLE_GITHUB_AUTH", "false") == "true",
+    oauth_enabled: oauth_enabled
+end
 
 # Generic OAuth / OIDC Provider Configuration
 # For SSO authentication with any OAuth2/OIDC-compliant identity provider

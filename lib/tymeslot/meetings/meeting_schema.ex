@@ -15,10 +15,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   alias Tymeslot.ChangesetValidators.TrackingParams
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.UniqueInvitation
   alias Tymeslot.Meetings.UniqueSlot
   alias Tymeslot.MeetingTypes.LocationOption
-
-  @unique_slot_constraint UniqueSlot.constraint()
 
   @type calendar_sync_status :: :externally_deleted | :externally_modified
 
@@ -101,6 +100,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           seen_calendar_end_time: DateTime.t() | nil,
           custom_fields_snapshot: [map()],
           custom_field_answers: map(),
+          attendee_texts: map() | nil,
           show_as_free: boolean(),
           attachments_snapshot: [map()],
           utm_source: String.t() | nil,
@@ -113,7 +113,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           visitor_hash: String.t() | nil,
           invitee_data_erased_at: DateTime.t() | nil,
           booking_page_id: integer() | nil,
+          invitation_id: integer() | nil,
           booking_page: any() | Ecto.Association.NotLoaded.t() | nil,
+          confirming_poll: any() | Ecto.Association.NotLoaded.t() | nil,
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -324,6 +326,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:custom_fields_snapshot, {:array, :map}, default: [])
     field(:custom_field_answers, :map, default: %{})
 
+    # Attendees' per-locale copies of the snapshot strings above; the plain
+    # columns keep the organiser's original (`ContentTranslations.AttendeeTexts`).
+    field(:attendee_texts, :map)
+
     # Confirmed from a poll: only its host manages it (`Tymeslot.Meetings.HostManaged`).
     field(:managed_by_host, :boolean, default: false)
 
@@ -357,6 +363,12 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # direct link under it, or a booking that came through no page at all.
     # Deleting the page nils it (`on_delete: :nilify_all`).
     belongs_to(:booking_page, Tymeslot.BookingPages.BookingPageSchema, type: :id)
+    # The poll this meeting was confirmed from, if any.
+    has_one(:confirming_poll, Tymeslot.Polls.PollSchema, foreign_key: :confirmed_meeting_id)
+
+    # The single-use invitation link booked through, if any; at most one live
+    # meeting carries it (`Tymeslot.Meetings.UniqueInvitation`).
+    field(:invitation_id, :id)
 
     # Stamped once the retention purge has removed everything the invitees
     # gave, so the purge passes over the meeting from then on. See
@@ -440,6 +452,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :last_notified_state,
     :custom_fields_snapshot,
     :custom_field_answers,
+    :attendee_texts,
     :show_as_free,
     :attachments_snapshot,
     :utm_source,
@@ -533,15 +546,14 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   def status_changeset(meeting, attrs) do
     meeting
     |> cast(attrs, @status_transition_fields)
-    |> unique_constraint([:organizer_user_id, :start_time],
-      name: @unique_slot_constraint,
-      message: dgettext_noop("errors", "You already have a confirmed meeting at this time.")
-    )
+    |> UniqueSlot.constrain()
+    |> UniqueInvitation.constrain()
   end
 
   defp base_changeset(meeting, attrs, required_fields) do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)
+    |> UniqueInvitation.cast_on_insert(attrs)
     |> ensure_calendar_uid()
     |> ensure_seen_calendar_end()
     |> validate_required([:calendar_uid | required_fields])
@@ -572,13 +584,11 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> calculate_duration()
     |> unique_constraint(:uid)
     |> unique_constraint(:calendar_uid)
-    |> unique_constraint([:organizer_user_id, :start_time],
-      name: @unique_slot_constraint,
-      message: dgettext_noop("errors", "You already have a confirmed meeting at this time.")
-    )
+    |> UniqueSlot.constrain()
     |> check_constraint(:end_time, name: :meetings_end_after_start)
     |> foreign_key_constraint(:venue_id)
     |> foreign_key_constraint(:booking_page_id)
+    |> UniqueInvitation.constrain()
   end
 
   # A new meeting gets its own calendar identity, generated independently of

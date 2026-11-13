@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelectTest do
     assert [_select] =
              Floki.find(
                doc,
-               "form#cq-form-q9[phx-change='answer'][phx-submit='next_step'] select[name='value']"
+               "form#cq-form-q9[phx-change='answer'][phx-submit='next_step'] select[data-name='value']"
              )
 
     assert Floki.find(doc, "select[phx-change]") == []
@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelectTest do
     # select alone: a label or an error inside it would pull the chevron off
     # the select's middle.
     assert [wrapper] = Floki.find(doc, "form#cq-form-q9 .custom-question-select")
-    assert [_select] = Floki.find(wrapper, "select[name='value']")
+    assert [_select] = Floki.find(wrapper, "select[data-name='value']")
     assert Floki.find(wrapper, "label, .form-field-error, p") == []
   end
 end

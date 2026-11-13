@@ -168,6 +168,57 @@ describe('embedded context detection', () => {
     expect(window.parent.postMessage).not.toHaveBeenCalled()
   })
 
+  test('marks the onboarding stage\'s own preview (?stage=1), and only it', () => {
+    runScript({ isEmbedded: true, search: '?preview=true&stage=1' })
+    expect(document.documentElement.hasAttribute('data-preview-stage')).toBe(true)
+    expect(document.documentElement.hasAttribute('data-embedded')).toBe(false)
+
+    document.documentElement.removeAttribute('data-preview-stage')
+    runScript({ isEmbedded: true, search: '?preview=true' })
+    expect(document.documentElement.hasAttribute('data-preview-stage')).toBe(false)
+  })
+
+  test('the stage preview tells the stage once its LiveView has painted, and only then', () => {
+    const frames = []
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => frames.push(cb))
+    // An earlier test's stage run left its one-off listener on the window.
+    window.dispatchEvent(new Event('phx:page-loading-stop'))
+    frames.length = 0
+    runScript({ isEmbedded: true, search: '?preview=true&stage=1' })
+
+    // The static render has loaded, but the LiveView has not joined yet.
+    expect(window.parent.postMessage).not.toHaveBeenCalled()
+
+    window.dispatchEvent(new Event('phx:page-loading-stop'))
+    // Two frames on: the joined render is on screen.
+    frames.shift()()
+    expect(window.parent.postMessage).not.toHaveBeenCalled()
+    frames.shift()()
+
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
+    expect(window.parent.postMessage).toHaveBeenCalledWith(
+      { type: 'tymeslot-stage-ready' },
+      window.location.origin
+    )
+
+    // A later navigation inside the page does not say so again.
+    window.dispatchEvent(new Event('phx:page-loading-stop'))
+    expect(frames).toHaveLength(0)
+  })
+
+  test('a preview outside the stage never reports ready', () => {
+    const frames = []
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => frames.push(cb))
+    window.dispatchEvent(new Event('phx:page-loading-stop'))
+    frames.length = 0
+    runScript({ isEmbedded: true, search: '?preview=true' })
+
+    window.dispatchEvent(new Event('phx:page-loading-stop'))
+
+    expect(frames).toHaveLength(0)
+    expect(window.parent.postMessage).not.toHaveBeenCalled()
+  })
+
   test('still embeds normally for a non-preview iframe', () => {
     runScript({ isEmbedded: true, search: '?embed=1' })
 

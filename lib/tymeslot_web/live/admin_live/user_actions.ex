@@ -35,7 +35,7 @@ defmodule TymeslotWeb.AdminLive.UserActions do
          |> assign(:invite_form, invite_form())
          |> put_flash(
            :info,
-           dgettext("dashboard_admin", "Invitation sent to %{email}.", email: user.email)
+           dgettext("dashboard_admin_users", "Invitation sent to %{email}.", email: user.email)
          )
          |> push_patch(to: ~p"/admin/users")}
 
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.AdminLive.UserActions do
            socket
            |> put_flash(
              :info,
-             dgettext("dashboard_admin", "A new invitation is on its way to %{email}.",
+             dgettext("dashboard_admin_users", "A new invitation is on its way to %{email}.",
                email: user.email
              )
            )
@@ -87,7 +87,7 @@ defmodule TymeslotWeb.AdminLive.UserActions do
            |> clear_pending_action()
            |> put_flash(
              :info,
-             dgettext("dashboard_admin", "The invitation to %{email} is cancelled.",
+             dgettext("dashboard_admin_users", "The invitation to %{email} is cancelled.",
                email: user.email
              )
            )
@@ -109,23 +109,23 @@ defmodule TymeslotWeb.AdminLive.UserActions do
        do: invite_error_message(reason)
 
   defp cancel_invitation_error_message(_other),
-    do: dgettext("dashboard_admin", "Could not cancel the invitation. Please try again.")
+    do: dgettext("dashboard_admin_users", "Could not cancel the invitation. Please try again.")
 
   defp invite_error_message(:invalid_email),
-    do: dgettext("dashboard_admin", "Enter a valid email address.")
+    do: dgettext("dashboard_admin_users", "Enter a valid email address.")
 
   defp invite_error_message(:email_taken),
-    do: dgettext("dashboard_admin", "An account with this email address already exists.")
+    do: dgettext("dashboard_admin_users", "An account with this email address already exists.")
 
   defp invite_error_message(:no_sign_in_method),
     do:
       dgettext(
-        "dashboard_admin",
+        "dashboard_admin_users",
         "Invitations need a way to sign in. Enable password authentication or a social sign-in provider first."
       )
 
   defp invite_error_message(:not_invited),
-    do: dgettext("dashboard_admin", "This user has no pending invitation.")
+    do: dgettext("dashboard_admin_users", "This user has no pending invitation.")
 
   defp invite_error_message(:email_not_sent), do: invitation_not_sent_message()
 
@@ -133,12 +133,12 @@ defmodule TymeslotWeb.AdminLive.UserActions do
     do: role_change_error_message(:invite, reason)
 
   defp invite_error_message(_other),
-    do: dgettext("dashboard_admin", "Could not send the invitation. Please try again.")
+    do: dgettext("dashboard_admin_users", "Could not send the invitation. Please try again.")
 
   defp invitation_not_sent_message,
     do:
       dgettext(
-        "dashboard_admin",
+        "dashboard_admin_users",
         "The account was created, but the invitation email could not be sent. Use Resend invitation to try again."
       )
 
@@ -149,12 +149,13 @@ defmodule TymeslotWeb.AdminLive.UserActions do
         {:noreply, assign(socket, :pending_action, %{kind: kind, id: user_id, email: email})}
 
       :error ->
-        {:noreply, put_flash(socket, :error, dgettext("dashboard_admin", "Invalid user id."))}
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_admin_users", "Invalid user id."))}
     end
   end
 
   def open_pending_action(_kind, _params, socket) do
-    {:noreply, put_flash(socket, :error, dgettext("dashboard_admin", "Invalid request."))}
+    {:noreply, put_flash(socket, :error, dgettext("dashboard_admin_users", "Invalid request."))}
   end
 
   @spec clear_pending_action(socket()) :: socket()
@@ -185,7 +186,8 @@ defmodule TymeslotWeb.AdminLive.UserActions do
         fun.(user_id)
 
       :error ->
-        {:noreply, put_flash(socket, :error, dgettext("dashboard_admin", "Invalid user id."))}
+        {:noreply,
+         put_flash(socket, :error, dgettext("dashboard_admin_users", "Invalid user id."))}
     end
   end
 
@@ -204,7 +206,7 @@ defmodule TymeslotWeb.AdminLive.UserActions do
         {:noreply,
          socket
          |> clear_pending_action()
-         |> put_flash(:info, dgettext("dashboard_admin", "User promoted to admin."))
+         |> put_flash(:info, dgettext("dashboard_admin_users", "User promoted to admin."))
          |> push_patch(to: ~p"/admin/users")}
 
       {:error, reason} ->
@@ -226,14 +228,17 @@ defmodule TymeslotWeb.AdminLive.UserActions do
         {:noreply,
          socket
          |> clear_pending_action()
-         |> put_flash(:info, dgettext("dashboard_admin", "You have been demoted from admin."))
+         |> put_flash(
+           :info,
+           dgettext("dashboard_admin_users", "You have been demoted from admin.")
+         )
          |> redirect(to: ~p"/dashboard")}
 
       {:ok, _user} ->
         {:noreply,
          socket
          |> clear_pending_action()
-         |> put_flash(:info, dgettext("dashboard_admin", "User demoted from admin."))
+         |> put_flash(:info, dgettext("dashboard_admin_users", "User demoted from admin."))
          |> push_patch(to: ~p"/admin/users")}
 
       {:error, reason} ->
@@ -245,26 +250,26 @@ defmodule TymeslotWeb.AdminLive.UserActions do
   end
 
   defp role_change_error_message(_action, :not_found),
-    do: dgettext("dashboard_admin", "User not found.")
+    do: dgettext("dashboard_admin_users", "User not found.")
 
   defp role_change_error_message(_action, :forbidden),
-    do: dgettext("dashboard_admin", "Admin access required.")
+    do: dgettext("dashboard_admin_users", "Admin access required.")
 
   defp role_change_error_message(_action, :admin_ui_disabled),
-    do: dgettext("dashboard_admin", "Admin UI is disabled.")
+    do: dgettext("dashboard_admin_users", "Admin UI is disabled.")
 
   defp role_change_error_message(:demote, :last_admin),
     do:
       dgettext(
-        "dashboard_admin",
+        "dashboard_admin_users",
         "Cannot demote this admin: no other admin can sign in. Make sure another admin can sign in first."
       )
 
   defp role_change_error_message(:promote, %Ecto.Changeset{}),
-    do: dgettext("dashboard_admin", "Could not promote user.")
+    do: dgettext("dashboard_admin_users", "Could not promote user.")
 
   defp role_change_error_message(:demote, %Ecto.Changeset{}),
-    do: dgettext("dashboard_admin", "Could not demote user.")
+    do: dgettext("dashboard_admin_users", "Could not demote user.")
 
   defp handle_delete(user_id, socket) do
     case Auth.delete_account_now(socket.assigns.current_user, user_id) do
@@ -275,7 +280,7 @@ defmodule TymeslotWeb.AdminLive.UserActions do
          |> put_flash(
            :info,
            dgettext(
-             "dashboard_admin",
+             "dashboard_admin_users",
              "Deleting %{email}. The account leaves this list once the deletion has run.",
              email: pending.email
            )
@@ -292,7 +297,7 @@ defmodule TymeslotWeb.AdminLive.UserActions do
 
   defp delete_error_message(:self) do
     dgettext(
-      "dashboard_admin",
+      "dashboard_admin_users",
       "You cannot delete your own account here. Use your account settings instead."
     )
   end
@@ -300,12 +305,13 @@ defmodule TymeslotWeb.AdminLive.UserActions do
   defp delete_error_message(:last_admin),
     do:
       dgettext(
-        "dashboard_admin",
+        "dashboard_admin_users",
         "Cannot delete this admin: no other admin can sign in. Make sure another admin can sign in first."
       )
 
   defp delete_error_message(reason) when reason in [:not_found, :forbidden, :admin_ui_disabled],
     do: role_change_error_message(:delete, reason)
 
-  defp delete_error_message(_other), do: dgettext("dashboard_admin", "Could not delete user.")
+  defp delete_error_message(_other),
+    do: dgettext("dashboard_admin_users", "Could not delete user.")
 end

@@ -24,11 +24,36 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
 
   @version 20_260_930_073_021
 
+  # `polls.venue_id`, added later, references venues, so that migration is
+  # stepped down first for this one's `down` to drop the table. The sandbox
+  # rolls both back with the test.
+  @poll_location_version 20_261_111_141_041
+
+  setup do
+    MigrationRunner.down!(@poll_location_version)
+    :ok
+  end
+
   defp put_raw_locations(meeting_type, locations) do
     Repo.query!("UPDATE meeting_types SET locations = $2::jsonb[] WHERE id = $1", [
       meeting_type.id,
       locations
     ])
+  end
+
+  # Raw SQL, as the rest of this file: the table is as this migration left
+  # it, without the columns later migrations add to the schema.
+  defp insert_raw_venue(user, name) do
+    %{rows: [[id]]} =
+      Repo.query!(
+        """
+        INSERT INTO venues (user_id, name, position, inserted_at, updated_at)
+        VALUES ($1, $2, 0, now(), now()) RETURNING id
+        """,
+        [user.id, name]
+      )
+
+    id
   end
 
   defp locations(meeting_type) do
@@ -481,14 +506,14 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
 
     # Saved after the migration, as the Locations page allows: a name and
     # no description.
-    studio = insert(:venue, user: user, name: "Studio", description: nil)
+    studio_id = insert_raw_venue(user, "Studio")
 
     put_raw_locations(meeting_type, [
       %{
         "id" => "loc-studio",
         "kind" => "in_person",
         "label" => "Our studio",
-        "venue_ids" => [studio.id],
+        "venue_ids" => [studio_id],
         "position" => 0
       }
     ])

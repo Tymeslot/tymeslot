@@ -117,15 +117,22 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     {:noreply,
      socket
      |> ModalHook.show_modal(:delete, DeletionDate.format(due_at, socket.assigns.current_user))
-     |> assign(:delete_errors, %{})}
+     |> assign(:delete_errors, %{})
+     |> assign(:delete_values, %{})}
   end
 
   def handle_event("close_delete_account_modal", _params, socket) do
-    {:noreply, socket |> ModalHook.hide_modal(:delete) |> assign(:delete_errors, %{})}
+    {:noreply,
+     socket
+     |> ModalHook.hide_modal(:delete)
+     |> assign(:delete_errors, %{})
+     |> assign(:delete_values, %{})}
   end
 
   def handle_event("request_account_deletion", %{"delete_account" => params}, socket) do
     opts = ClientIP.request_opts(socket) ++ [current_session_token: socket.assigns.session_token]
+    # Everything but the password, which is never sent back to the browser.
+    socket = assign(socket, :delete_values, Map.delete(params, "current_password"))
 
     case Auth.request_account_deletion(socket.assigns.current_user, params, opts) do
       {:ok, pending} ->

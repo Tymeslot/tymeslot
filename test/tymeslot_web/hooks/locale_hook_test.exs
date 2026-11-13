@@ -62,4 +62,34 @@ defmodule TymeslotWeb.Hooks.LocaleHookTest do
       assert socket.assigns.locale == "en"
     end
   end
+
+  describe "the visitor's pick and the browser's languages" do
+    test "the mount URL's ?locale= is the pick, over the dead render's" do
+      session = %{"locale_choice" => "fr", "browser_locales" => ["de", "it"]}
+
+      {:cont, socket} = LocaleHook.on_mount(:default, %{"locale" => "pl"}, session, socket())
+
+      assert socket.assigns.locale_choice == "pl"
+      assert socket.assigns.browser_locales == ["de", "it"]
+      assert socket.assigns.locale_param == "pl"
+    end
+
+    test "without one, the dead render's pick, or none" do
+      {:cont, socket} =
+        LocaleHook.on_mount(:default, %{}, %{"locale_choice" => "fr"}, socket())
+
+      assert socket.assigns.locale_choice == "fr"
+      assert socket.assigns.locale_param == nil
+
+      {:cont, socket} = LocaleHook.on_mount(:default, %{"locale" => "xx"}, %{}, socket())
+      assert socket.assigns.locale_choice == nil
+    end
+
+    test "a session signed before the browser's languages were carried has its locale" do
+      {:cont, socket} =
+        LocaleHook.on_mount(:default, %{}, %{"resolved_locale" => "de"}, socket())
+
+      assert socket.assigns.browser_locales == ["de"]
+    end
+  end
 end

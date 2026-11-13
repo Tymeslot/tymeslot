@@ -172,8 +172,17 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionAllEventsBusyTest d
       view = open_calendars(conn)
       toggle = "[data-testid='all-events-busy-toggle'][phx-value-id='#{integration.id}']"
 
-      assert has_element?(view, "#{toggle}[disabled][aria-pressed='true']")
-      assert has_element?(view, "#{toggle}[title^='Turn on Block to use this']")
+      assert has_element?(view, "#{toggle}[aria-disabled='true'][aria-pressed='true']")
+
+      [describedby] =
+        view
+        |> element(toggle)
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.attribute("aria-describedby")
+
+      assert has_element?(view, "##{describedby}[role='tooltip']", "Turn on Block to use this")
+      refute has_element?(view, "#{toggle}[phx-click]")
 
       # The event the disabled button cannot send, forged at the component.
       view
@@ -201,7 +210,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionAllEventsBusyTest d
       toggle = "[data-testid='all-events-busy-toggle'][phx-value-id='#{integration.id}']"
 
       assert has_element?(view, toggle)
-      refute has_element?(view, "#{toggle}[disabled]")
+      refute has_element?(view, "#{toggle}[aria-disabled='true']")
     end
 
     test "is not offered on a calendar that is not a subscription", %{conn: conn, user: user} do

@@ -37,6 +37,7 @@ msgid "Could not save: %{reason}"
 msgstr "Не вдалося зберегти: %{reason}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Could not sign in with those credentials"
 msgstr "Не вдалося ввійти з цими обліковими даними"
@@ -57,6 +58,7 @@ msgid "Integration Name"
 msgstr "Назва інтеграції"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
+#: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Integration not found"
 msgstr "Інтеграцію не знайдено"
@@ -229,7 +231,7 @@ msgstr "Налаштування → Безпека"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Sign-In and Security → App-Specific Passwords"
-msgstr "Вхід і безпека → Паролі застосунків"
+msgstr "Вхід і безпека → Паролі для програм"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
@@ -279,7 +281,7 @@ msgstr "Ім'я користувача"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "app-specific password"
-msgstr "пароль застосунку"
+msgstr "пароль для програми"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
@@ -642,3 +644,23 @@ msgstr "Якщо після підключення ви відкликали с�
 #, elixir-autogen, elixir-format
 msgid "Keep this password for as long as you use Tymeslot. Revoking it, or changing your Apple ID password, disconnects iCloud, and your booking page offers no times until you reconnect."
 msgstr "Зберігайте цей пароль, доки користуєтеся Tymeslot. Якщо його відкликати або змінити пароль від Apple ID, iCloud відключиться, і ваша сторінка бронювання не пропонуватиме жодного слота, доки ви знову не підключите iCloud."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Enter your Apple ID email and that password below."
+msgstr "Потім введіть нижче адресу електронної пошти Apple ID і цей пароль."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Open your Apple Account"
+msgstr "Відкрийте свій обліковий запис Apple"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Under Sign-In and Security, choose App-Specific Passwords and create one."
+msgstr "У розділі «Вхід і безпека» виберіть «Паролі для програм» і створіть новий пароль."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "iCloud needs an app-specific password, not your Apple ID password."
+msgstr "Для iCloud потрібен пароль для програми, а не пароль Apple ID."

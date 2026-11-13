@@ -29,7 +29,7 @@ defmodule TymeslotWeb.EmailLinkConfirmHTML do
         <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">{@title}</h1>
         <p class="mt-2 text-token-base text-tymeslot-600">{@body}</p>
 
-        <form method="post" action={@action} class="mt-6">
+        <form method="post" action={@action} class="mt-6" novalidate>
           <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
           <.action_button type="submit" class="w-full">{@button}</.action_button>
         </form>

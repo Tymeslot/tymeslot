@@ -63,7 +63,7 @@ defmodule TymeslotWeb.GettextPseudoTest do
 
     test "German renders the real translation without markers" do
       Gettext.put_locale(Backend, "de")
-      result = Gettext.dgettext(Backend, "booking", "Meeting Confirmed!")
+      result = Gettext.dgettext(Backend, "booking_confirmation", "Meeting Confirmed!")
 
       assert result == "Termin bestätigt!"
       refute result =~ "⟦"
@@ -71,7 +71,7 @@ defmodule TymeslotWeb.GettextPseudoTest do
 
     test "English renders the real translation without markers" do
       Gettext.put_locale(Backend, "en")
-      result = Gettext.dgettext(Backend, "booking", "Meeting Confirmed!")
+      result = Gettext.dgettext(Backend, "booking_confirmation", "Meeting Confirmed!")
 
       assert result == "Meeting Confirmed!"
       refute result =~ "⟦"

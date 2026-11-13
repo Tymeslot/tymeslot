@@ -3,7 +3,10 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
   Shared helpers for onboarding basic settings validation and persistence.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.Component
+  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.Settings
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
@@ -21,18 +24,51 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
 
   @doc """
   Validates the given params using the onboarding input processor.
+
+  The step calls the username a link, so a refused one is explained in those
+  words (`link_error/1`) rather than the validator's.
   """
   @spec validate_basic_settings(Phoenix.LiveView.Socket.t(), map()) ::
           {:ok, map()} | {:error, map()}
   @basic_settings_field_spec [{"full_name", :full_name}, {"username", :username}]
 
   def validate_basic_settings(socket, params) do
-    InputProcessor.validate_form(
-      params,
-      @basic_settings_field_spec,
-      metadata: metadata(socket),
-      universal_opts: [allow_html: false]
-    )
+    case InputProcessor.validate_form(
+           params,
+           @basic_settings_field_spec,
+           metadata: metadata(socket),
+           universal_opts: [allow_html: false]
+         ) do
+      {:error, %{username: _refused} = errors} ->
+        {:error, %{errors | username: link_error(params["username"]) || errors.username}}
+
+      result ->
+        result
+    end
+  end
+
+  @doc """
+  Why `link` cannot be the host's link, in the step's own words, or `nil`
+  when its shape is fine (it may still be reserved or taken).
+  """
+  @spec link_error(term()) :: String.t() | nil
+  def link_error(link) do
+    case Profiles.username_problem(link) do
+      nil ->
+        nil
+
+      problem when problem in [:format, :reserved] ->
+        dgettext("onboarding_wizard", "Start your link with a letter or a number.")
+
+      # Blank, too short or too long: the one rule worth stating is the length.
+      _length ->
+        {min, max} = Profiles.username_length_range()
+
+        dgettext("onboarding_wizard", "Your link needs %{min} to %{max} characters.",
+          min: min,
+          max: max
+        )
+    end
   end
 
   @doc """
@@ -55,18 +91,43 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
   end
 
   @doc """
-  Builds the initial form_data map from the current user and profile on the socket.
+  Assigns the profile step's form from the current user and profile on the
+  socket (the profile may still be `nil` on a first visit).
+
+  The name is the profile's, else the account's, never a placeholder. A host with no link of
+  their own yet (blank, or the generated default) gets one suggested from
+  that name, or failing it their email, and `link_suggested` is set: until
+  they type in the link field, a new name replaces the suggestion. The
+  suggestion is a field value only; nothing is written until Continue.
   """
-  @spec build_form_data(Phoenix.LiveView.Socket.t()) :: map()
-  def build_form_data(socket) do
+  @spec assign_form_data(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def assign_form_data(socket) do
     user = socket.assigns.current_user
     profile = socket.assigns.profile
+    # The name on the profile is the one the host last saved here, so Back
+    # shows it; the account's name stands in until there is one.
+    full_name = Enum.find([profile && profile.full_name, user.name], "", &present?/1)
+    username = profile && profile.username
+    suggested? = Profiles.default_username?(username, user.id)
 
-    %{
-      "full_name" => user.name || profile.full_name || "",
-      "username" => profile.username || ""
-    }
+    Component.assign(socket,
+      form_data: %{
+        "full_name" => full_name,
+        "username" => if(suggested?, do: suggest_link(user, full_name), else: username)
+      },
+      link_suggested: suggested?,
+      link_input: nil
+    )
   end
+
+  defp present?(name), do: is_binary(name) and String.trim(name) != ""
+
+  @doc """
+  The booking link suggested for `user` under `full_name`.
+  """
+  @spec suggest_link(map(), String.t() | nil) :: String.t()
+  def suggest_link(user, full_name),
+    do: Profiles.suggest_username(full_name, user.id, email: user.email)
 
   @doc """
   Applies validation errors to the socket.

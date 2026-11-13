@@ -14,8 +14,10 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.SuiteConfig
 
   @moduletag :calendar_integration
+  @moduletag skip: SuiteConfig.unless_included(:calendar_integration)
   @moduletag :calendar
   @moduletag :integrations
 

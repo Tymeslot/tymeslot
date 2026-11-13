@@ -158,6 +158,7 @@ defmodule Tymeslot.Emails.Shared.CalendarEventContent do
       ical_uid: Map.get(details, :ical_uid),
       other_entries: Map.get(details, :other_entries, []),
       location: details.location,
+      location_type: location_type(details),
       meeting_url: join_link(details),
       # The attachment states the link itself, in CONFERENCE and its own
       # description line, so the provider's join line is left out.

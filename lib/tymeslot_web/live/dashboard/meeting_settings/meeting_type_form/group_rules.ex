@@ -4,8 +4,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
   group bookings on, and how the form explains it.
 
   The rules themselves belong to the domain: the meeting-type changeset
-  refuses a group type that requires payment or approval, offers more than
-  one length, or whose location is not fixed in advance (`Tymeslot.MeetingTypes.GroupLocationRule`), and
+  refuses a group type that is invitation-only, requires payment or
+  approval, offers more than one length, or whose location is not fixed in advance (`Tymeslot.MeetingTypes.GroupLocationRule`), and
   `Tymeslot.MeetingTypes.FormValidation` refuses enabling group bookings
   without plan access. This module asks the same questions of the form's
   unsaved state, so the toggle can be disabled with a reason instead of
@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
   @typedoc "Why group bookings cannot be turned on right now."
   @type blocker ::
           :plan
+          | :invitation_only
           | :payment
           | :approval
           | :lengths
@@ -37,6 +38,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
     cond do
       not Map.get(assigns, :group_bookings_allowed, true) ->
         :plan
+
+      # Invitation links book one person each (`Tymeslot.MeetingTypes.GroupValidation`).
+      match?(%{type: %{invitation_only: true}}, assigns) ->
+        :invitation_only
 
       # Hosts who lost charge capability cannot reach the payments toggle, so
       # turning group bookings on clears `payment_required` for them instead.
@@ -73,6 +78,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
       :ok -> nil
       {:error, reason} -> {:location, reason}
     end
+  end
+
+  @doc """
+  Why an invitation-only type cannot take group bookings, and a group type
+  cannot be made invitation-only.
+  """
+  @spec invitation_only_message() :: String.t()
+  def invitation_only_message do
+    dgettext("dashboard_meeting_form", "Invitation links work only for one-to-one meeting types.")
   end
 
   @doc """

@@ -105,7 +105,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   Lists all `pending` booking payments for a host that still carry a
   `stripe_checkout_session_id`.
 
-  Used by `Tymeslot.MeetingPayments.ConnectAccounts.disconnect/1` to
+  Used by `Tymeslot.MeetingPayments.ConnectAccountRetirement.disconnect/1` to
   collect open checkout sessions that must be expired before disconnecting.
   """
   @spec list_pending_for_host(integer()) :: [BookingPaymentSchema.t()]

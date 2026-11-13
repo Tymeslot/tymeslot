@@ -16,8 +16,8 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   alias Tymeslot.Clock
   alias Tymeslot.Repo
 
-  @default_start_time ~T[11:00:00]
-  @default_end_time ~T[19:30:00]
+  @default_start_time ~T[09:00:00]
+  @default_end_time ~T[17:00:00]
 
   @doc """
   The start time given to weekdays in a freshly created schedule.

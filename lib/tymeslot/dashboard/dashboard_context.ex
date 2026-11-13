@@ -39,7 +39,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
 
   @doc """
   Whether the user has set up each part the dashboard nudges them towards: a
-  calendar a booking can be written to, a video integration, an active
+  calendar a booking can be written to, a video integration and an active
   meeting type.
 
   `has_calendar` says only that such a calendar is connected (polls gate on

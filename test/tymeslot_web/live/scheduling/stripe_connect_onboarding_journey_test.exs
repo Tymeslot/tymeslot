@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
   @moduledoc """
-  A host connecting Stripe, end to end: the host starts Connect onboarding
-  from the dashboard, Stripe reports the account can take charges through a
+  A host connecting Stripe, end to end: the host starts the Connect
+  authorisation from the dashboard and completes it, Stripe reports the account can take charges through a
   signed `account.updated` delivered to the Connect webhook endpoint, and the
   host's paid meeting type, hidden from the booking page until then, can be
   booked through to Stripe Checkout.
@@ -13,10 +13,12 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
   """
 
   use TymeslotWeb.LiveCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :integration
   @moduletag :payments
 
+  import Ecto.Query, only: [where: 2]
   import Mox
   import Tymeslot.AuthTestHelpers, only: [log_in_user: 2]
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
@@ -27,6 +29,7 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -84,30 +87,69 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
     user: user,
     profile: profile
   } do
-    # Step 1: the host starts onboarding and is sent to Stripe.
-    expect(StripeAdapterMock, :create_account, fn _params, _opts ->
-      {:ok, %{id: @account_id, default_currency: "eur"}}
-    end)
-
-    expect(StripeAdapterMock, :create_account_link, fn params ->
-      assert params.account == @account_id
-      {:ok, %{url: "https://connect.stripe.com/setup/journey"}}
-    end)
-
+    # Step 1: the host starts the connection, is sent to Stripe and comes back
+    # with a code for the account they chose.
     host_conn =
       conn |> setup_session() |> log_in_user(user) |> post("/dashboard/payments/connect")
 
-    assert redirected_to(host_conn, 302) == "https://connect.stripe.com/setup/journey"
+    authorise_url = URI.parse(redirected_to(host_conn, 302))
+    assert authorise_url.host == "connect.stripe.com"
+    %{"state" => state} = URI.decode_query(authorise_url.query)
+
+    expect(StripeAdapterMock, :exchange_oauth_code, fn "code_journey" ->
+      {:ok, %{stripe_user_id: @account_id}}
+    end)
+
+    expect(StripeAdapterMock, :retrieve_account, fn @account_id ->
+      {:ok,
+       %{
+         "id" => @account_id,
+         "country" => "DE",
+         "default_currency" => "eur",
+         "charges_enabled" => false,
+         "payouts_enabled" => false,
+         "details_submitted" => false,
+         "requirements" => %{"disabled_reason" => nil}
+       }}
+    end)
+
+    callback_conn =
+      build_conn()
+      |> setup_session()
+      |> log_in_user(user)
+      |> get("/dashboard/payments/connect/callback", %{"code" => "code_journey", "state" => state})
+
+    assert redirected_to(callback_conn, 302) == "/dashboard/payments?return=1"
+
+    # The host lands on the payments page with the flash, and the `return`
+    # marker survives the hop to the hub, which queues a resync of the account.
+    {:ok, _hub, hub_html} =
+      callback_conn
+      |> recycle()
+      |> live("/dashboard/payments?return=1")
+      |> follow_redirect(recycle(callback_conn))
+
+    assert hub_html =~ "Stripe connected."
+    assert_enqueued(worker: ResyncConnectAccount, args: %{stripe_account_id: @account_id})
+
+    # The resync would read the account again; the webhook below is this
+    # step's only update, so the queued job is set aside.
+    Oban.cancel_all_jobs(
+      where(Oban.Job, worker: "Tymeslot.MeetingPayments.Workers.ResyncConnectAccount")
+    )
 
     account = Repo.get_by!(ConnectAccountSchema, user_id: user.id)
     assert account.stripe_account_id == @account_id
+    # The account's own country, not an operator default.
+    assert account.country == "DE"
     refute account.charges_enabled
 
     # Until Stripe says otherwise, the paid type is not offered.
     refute "paid-consult" in offered_types(profile)
 
-    # Step 2: Stripe reports the account can take charges.
-    now = System.os_time(:second)
+    # Step 2: Stripe reports the account can take charges, a moment after the
+    # snapshot read at connection time, which events no newer than are dropped.
+    now = System.os_time(:second) + 1
 
     payload =
       Jason.encode!(%{

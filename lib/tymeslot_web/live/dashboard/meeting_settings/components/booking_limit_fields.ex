@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields do
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
+  use TymeslotWeb.Components.CoreComponents, only: [input: 1]
 
   alias Tymeslot.Validation.Constraints
 
@@ -51,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields do
         <label for={"#{@id}-#{field}"} class="block text-token-sm font-medium text-tymeslot-700">
           {label}
         </label>
-        <input
+        <.input
           type="number"
           id={"#{@id}-#{field}"}
           name={input_name(@as, field)}
@@ -60,7 +61,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields do
           max={@range.last}
           step="1"
           placeholder={dgettext("dashboard_meeting_form", "No limit")}
-          class="input"
           aria-describedby={field == :max_bookings_per_week && "#{@id}-week-start"}
           {@rest}
         />

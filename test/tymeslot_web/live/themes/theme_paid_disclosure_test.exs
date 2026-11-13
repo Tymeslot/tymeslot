@@ -87,8 +87,23 @@ defmodule TymeslotWeb.Live.Themes.ThemePaidDisclosureTest do
   defp reschedule_label(_shared), do: "Reschedule Meeting"
 
   # The submit's `aria-describedby` and the price element's id, as rendered.
+  # Quill also links the "required fields" hint while the form is incomplete,
+  # which is not what these tests are about.
   defp described_by(view) do
-    view |> element("[data-testid='submit-booking']") |> render() |> attribute("aria-describedby")
+    view
+    |> element("[data-testid='submit-booking']")
+    |> render()
+    |> attribute("aria-describedby")
+    |> without_required_fields_hint()
+  end
+
+  defp without_required_fields_hint(nil), do: nil
+
+  defp without_required_fields_hint(ids) do
+    case String.split(ids) -- ["submit-booking-hint"] do
+      [] -> nil
+      kept -> Enum.join(kept, " ")
+    end
   end
 
   defp attribute(html, name) do

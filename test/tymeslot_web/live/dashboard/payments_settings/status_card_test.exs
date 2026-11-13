@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest do
         })
 
       assert html =~ "Finish connecting Stripe"
-      assert html =~ "Continue onboarding"
+      assert html =~ "Connect your Stripe account"
       refute html =~ "Restricted"
       refute html =~ "Reason: requirements.past_due"
     end
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest do
       assert html =~ "Connected and ready"
       assert html =~ "Charges and payouts are enabled."
       # A fully-onboarded account never shows the resume button.
-      refute html =~ "Continue onboarding"
+      refute html =~ "Connect your Stripe account"
     end
 
     test "a legacy currency checkout cannot charge renders the unsupported-currency state" do
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest do
       assert html =~ "Pending Stripe review"
       assert html =~ "Stripe is reviewing your account."
       # Nothing for the host to do while Stripe reviews — no resume button.
-      refute html =~ "Continue onboarding"
+      refute html =~ "Connect your Stripe account"
     end
 
     test "incomplete account (no details submitted) prompts to finish onboarding with a button" do
@@ -131,12 +131,37 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest do
       # Distinct from pending-review: nothing has been submitted to Stripe yet.
       assert html =~ "Finish connecting Stripe"
       refute html =~ "Pending Stripe review"
-      # The apostrophe is HTML-escaped in the rendered output.
-      assert html =~ "haven&#39;t finished onboarding yet."
-      # The host can resume onboarding directly from the banner.
-      assert html =~ "Continue onboarding"
+      assert html =~ "Your Stripe account is not connected yet."
+      # The host can start the connection directly from the banner.
+      assert html =~ "Connect your Stripe account"
       assert html =~ ~s(action="/dashboard/payments/connect")
       assert html =~ ~s(method="post")
+      refute html =~ "Finish setup in Stripe"
+    end
+
+    test "an OAuth-connected incomplete account links to the Stripe dashboard, not the POST form" do
+      html =
+        render_card(%{
+          deleted_at: nil,
+          disabled_reason: nil,
+          charges_enabled: false,
+          payouts_enabled: false,
+          details_submitted: false,
+          default_currency: "eur",
+          oauth_connected_at: DateTime.utc_now()
+        })
+
+      assert html =~
+               "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
+
+      assert [link] =
+               html
+               |> Floki.parse_fragment!()
+               |> Floki.find(~s(a[href="https://dashboard.stripe.com/"]))
+
+      assert Floki.text(link) =~ "Finish setup in Stripe"
+      refute html =~ ~s(action="/dashboard/payments/connect")
+      refute html =~ "Connect your Stripe account"
     end
   end
 

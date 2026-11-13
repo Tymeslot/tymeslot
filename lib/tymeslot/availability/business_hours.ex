@@ -16,14 +16,13 @@ defmodule Tymeslot.Availability.BusinessHours do
   alias Tymeslot.Availability.Intervals
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Availability.TimeOffPeriodQueries
+  alias Tymeslot.Availability.WeeklyAvailabilityQueries
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Availability.Window
   alias Tymeslot.Utils.DateTimeUtils
 
-  # Fallback business hours configuration (for backwards compatibility)
-  @fallback_start_time ~T[11:00:00]
-  @fallback_end_time ~T[19:30:00]
-  # Monday to Friday
+  # Fallback business hours (for backwards compatibility): the hours a new
+  # account gets, Monday to Friday
   @fallback_working_days 1..5
 
   @typedoc "Availability for a single day of the week from a weekly schedule entry."
@@ -170,7 +169,11 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   defp opening(date, nil, _config) do
     if Date.day_of_week(date) in @fallback_working_days,
-      do: %{start_time: @fallback_start_time, end_time: @fallback_end_time, ends_next_day: false},
+      do: %{
+        start_time: WeeklyAvailabilityQueries.default_start_time(),
+        end_time: WeeklyAvailabilityQueries.default_end_time(),
+        ends_next_day: false
+      },
       else: :closed
   end
 

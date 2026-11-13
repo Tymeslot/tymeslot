@@ -285,10 +285,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         phx-change="update_customisation"
         phx-target={@myself}
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        novalidate
       >
         <%!-- Layout --%>
-        <.input
-          type="select"
+        <.select
           id="embed-layout"
           name="customise[layout]"
           label={dgettext("dashboard_embed", "Layout")}
@@ -306,11 +306,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
               "Column adapts to any container width. Default centres the booker - useful when you want a self-contained card inside a wide page."
             )}
           </:description>
-        </.input>
+        </.select>
 
         <%!-- Language --%>
-        <.input
-          type="select"
+        <.select
           id="embed-language"
           name="customise[locale]"
           label={dgettext("dashboard_embed", "Language")}
@@ -326,7 +325,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
               "Language for the booking page. Auto follows each visitor's browser preference."
             )}
           </:description>
-        </.input>
+        </.select>
 
         <%!-- No step: the server accepts any pixel value in range, and a
         stored width like 320 or 1024 is not a multiple of anything round.

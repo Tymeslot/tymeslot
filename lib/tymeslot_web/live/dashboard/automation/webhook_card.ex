@@ -55,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
       </:last_activity>
       <:actions>
         <.loading_button
+          id={"webhook-test-#{@webhook.id}"}
           variant={:secondary}
           size={:sm}
           icon="hero-bolt"
@@ -62,10 +63,10 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
           loading_text={dgettext("dashboard_automation", "Testing")}
           disabled={@paused or !@webhook.is_active}
           phx-click={!@paused && @on_test}
-          title={
+          tooltip={
             cond do
+              @paused -> nil
               !@webhook.is_active -> dgettext("dashboard_automation", "Enable webhook to test")
-              @testing -> dgettext("dashboard_automation", "Testing...")
               true -> dgettext("dashboard_automation", "Test Connection")
             end
           }
@@ -73,11 +74,12 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
           {dgettext("dashboard_automation", "Test")}
         </.loading_button>
         <.action_button
+          id={"webhook-logs-#{@webhook.id}"}
           variant={:secondary}
           size={:sm}
           icon="hero-document-text"
           phx-click={@on_view_deliveries}
-          title={dgettext("dashboard_automation", "View Delivery Logs")}
+          tooltip={dgettext("dashboard_automation", "View Delivery Logs")}
         >
           {dgettext("dashboard_automation", "Logs")}
         </.action_button>
@@ -90,6 +92,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
           phx-click={!@paused && @on_edit}
         />
         <.icon_button
+          id={"webhook-delete-#{@webhook.id}"}
           icon="hero-trash"
           variant={:danger}
           label={dgettext("dashboard_automation", "Delete %{name}", name: @webhook.name)}

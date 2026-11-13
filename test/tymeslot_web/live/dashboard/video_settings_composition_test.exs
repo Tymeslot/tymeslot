@@ -335,7 +335,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
 
       assert has_element?(
                view,
-               "#edit-video-integration-form p.form-error",
+               "#edit-video-integration-form .form-field-error",
                "Use lowercase: {{meeting_id}} not {{MEETING_ID}} or {{Meeting_Id}}"
              )
 

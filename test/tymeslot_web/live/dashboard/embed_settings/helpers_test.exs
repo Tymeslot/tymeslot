@@ -341,6 +341,54 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
       refute code =~ "data-locale"
     end
 
+    test "popup snippet is a plain link to the booking page and never a native alert" do
+      code =
+        Helpers.embed_code("popup", %{
+          username: "alice",
+          base_url: "https://x.test",
+          booking_url: "https://x.test/alice"
+        })
+
+      assert code =~ ~s(<a href="https://x.test/alice" target="_blank" rel="noopener")
+
+      assert code =~
+               "if(window.TymeslotBooking){event.preventDefault();TymeslotBooking.open('alice'"
+
+      refute code =~ "alert("
+      refute code =~ "<button"
+    end
+
+    test "popup snippet link carries the layout and language, HTML-attribute-escaped" do
+      code =
+        Helpers.embed_code("popup", %{
+          username: "alice",
+          base_url: "https://x.test",
+          booking_url: "https://x.test/alice",
+          layout: "column",
+          locale: "de"
+        })
+
+      assert code =~ ~s(href="https://x.test/alice?layout=column&amp;locale=de")
+    end
+
+    test "popup snippet link escapes a hostile booking URL out of the attribute" do
+      code =
+        Helpers.embed_code("popup", %{
+          username: "alice",
+          base_url: "https://x.test",
+          booking_url: ~s(https://x.test/alice" onfocus="x)
+        })
+
+      refute code =~ ~s(" onfocus=")
+      assert code =~ "&quot; onfocus=&quot;x"
+    end
+
+    test "popup snippet falls back to the public page when no booking URL is known" do
+      code = Helpers.embed_code("popup", %{username: "alice", base_url: "https://x.test"})
+
+      assert code =~ ~s(href="https://x.test/alice")
+    end
+
     test "popup snippet emits locale in the JS options" do
       assigns = %{username: "alice", base_url: "https://x.test", locale: "de"}
 

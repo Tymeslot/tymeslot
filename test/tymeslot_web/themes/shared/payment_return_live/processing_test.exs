@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
 
   alias Ecto.Changeset
   alias Phoenix.PubSub
+  alias Tymeslot.Invitations
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Webhooks.FailAndExpire
   alias Tymeslot.Meetings.MeetingQueries
@@ -355,6 +356,55 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     refute html =~ "Confirming your payment"
   end
 
+  test "a failed payment through an invitation offers the way back with the invitation", %{
+    conn: conn,
+    user: user,
+    profile: profile
+  } do
+    {:ok, _profile} = Profiles.change_username(profile, "payhost")
+    type = insert(:meeting_type, user: user, slug: "coaching", invitation_only: true)
+    {:ok, invitation} = Invitations.create(user.id, type, %{})
+
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        meeting_type_id: type.id,
+        invitation_id: invitation.id,
+        status: :awaiting_payment
+      )
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      status: :pending,
+      stripe_account_id: "acct_TEST",
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    {:ok, view, _html} =
+      live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    # Mounted while the meeting still held the invitation; the failure frees
+    # it, and the page asks again where the guest can go back to.
+    assert :ok =
+             FailAndExpire.handle(
+               %{
+                 "id" => "evt_async_failed_#{System.unique_integer([:positive])}",
+                 "account" => "acct_TEST",
+                 "data" => %{
+                   "object" => %{"id" => "cs_TEST", "client_reference_id" => meeting.id}
+                 }
+               },
+               "checkout.session.async_payment_failed",
+               :async_payment_failed
+             )
+
+    html = render(view)
+    assert html =~ "Payment not completed"
+    token = URI.encode_www_form(invitation.token)
+    assert html =~ ~s(href="/payhost/coaching?invite=#{token}")
+  end
+
   test "returning after a failed payment shows the failed outcome instead of spinning", %{
     conn: conn,
     user: user
@@ -523,7 +573,10 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     assert html =~ "Confirming your payment"
   end
 
-  test "dead render does not load page data", %{conn: conn, user: user} do
+  # The dead render reads the meeting and its organiser for the page's
+  # language alone (`PaymentReturn.assign_dead_render_language/3`); the
+  # payment is the connected mount's, once the visitor is authorised.
+  test "dead render does not load the payment", %{conn: conn, user: user} do
     meeting = insert(:meeting, organizer_user_id: user.id, status: :awaiting_payment)
 
     insert(:booking_payment,
@@ -535,7 +588,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     ref = make_ref()
     parent = self()
     handler_id = "quill-payment-processing-dead-render-#{inspect(ref)}"
-    data_sources = ~w(meetings booking_payments)
+    data_sources = ~w(booking_payments)
 
     :telemetry.attach(
       handler_id,

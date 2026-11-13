@@ -211,12 +211,11 @@
 
 /* ===== Dropdown chevron: a single-select with more than five options =====
 
-   The select is appearance-none, so its arrow is the .select-chevron icon
-   that <.input type="select"> draws beside it. These rules restyle that
+   The field's arrow is the .select-chevron icon that <.select> draws
+   beside it. These rules restyle that
    icon for the booking page: themed position, size and colour from the
    token, in place of its dashboard utilities (unlayered, so these beat
-   them). The select's padding rule outranks each theme's
-   `.<theme>-wrapper select.input` padding. */
+   them). The padding rule outranks each theme's `.input` padding. */
 
 .scheduling-app .custom-question-select .select-chevron {
   position: absolute;
@@ -229,6 +228,7 @@
   pointer-events: none;
 }
 
-.scheduling-app .custom-question-select select.input {
+.scheduling-app .custom-question-select select.input,
+.scheduling-app .custom-question-select .select-trigger {
   padding-inline-end: calc(var(--space-sm) * 2 + 1rem);
 }

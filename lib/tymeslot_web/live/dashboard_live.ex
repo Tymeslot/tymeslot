@@ -36,9 +36,11 @@ defmodule TymeslotWeb.DashboardLive do
   alias Tymeslot.Meetings
   alias Tymeslot.Onboarding
   alias TymeslotWeb.Components.DashboardLayout
+  alias TymeslotWeb.Components.Shared.PickerPreferences
   alias TymeslotWeb.Components.TourOverlay
   alias TymeslotWeb.Dashboard.AgendaRefresh
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
+  alias TymeslotWeb.Dashboard.BookingLinkShare
   alias TymeslotWeb.Dashboard.CalendarFocus
   alias TymeslotWeb.Dashboard.CalendarMessages
   alias TymeslotWeb.Dashboard.CalendarUpNextStrip
@@ -119,9 +121,9 @@ defmodule TymeslotWeb.DashboardLive do
     end
   end
 
-  # Builds the hub URL for a legacy redirect, carrying the Stripe onboarding
-  # return markers (`?return=1`/`?refresh=1`) through so the hub still triggers
-  # the capability resync once the user lands on the payments tab.
+  # Builds the hub URL for a legacy redirect, carrying the Stripe return markers
+  # (`?return=1` from the OAuth callback, `?refresh=1` from old links) through
+  # so the hub still triggers the capability resync on the payments tab.
   defp hub_tab_path(tab, params) do
     passthrough =
       for key <- [:return, :refresh],
@@ -269,7 +271,7 @@ defmodule TymeslotWeb.DashboardLive do
                phones. --%>
           <div id="calendar-strips" class="shrink-0">
             <div
-              :if={OnboardingChecklist.visible?(@current_user, @integration_status)}
+              :if={OnboardingChecklist.visible?(@current_user, @integration_status, @profile)}
               class="px-3 pt-2 md:px-4"
             >
               <OnboardingChecklist.onboarding_checklist
@@ -350,6 +352,7 @@ defmodule TymeslotWeb.DashboardLive do
   @spec handle_info({:time_format_updated, String.t()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:time_format_updated, time_format}, socket) do
+    PickerPreferences.put_time_format(time_format)
     {:noreply, assign(socket, time_format: time_format)}
   end
 
@@ -521,24 +524,23 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_event("tour:" <> action, params, socket),
     do: TourEventHandlers.handle_event(action, params, socket)
 
-  def handle_event("onboarding:toggle", %{"id" => key}, socket) do
-    case Onboarding.toggle_dashboard_setup_item(socket.assigns.current_user, key) do
-      {:ok, user} -> {:noreply, assign(socket, :current_user, user)}
-      {:error, _reason} -> {:noreply, socket}
-    end
-  end
+  def handle_event("onboarding:toggle", %{"id" => key}, socket),
+    do:
+      keep_user(Onboarding.toggle_dashboard_setup_item(socket.assigns.current_user, key), socket)
 
-  def handle_event("onboarding:dismiss", _params, socket) do
-    case Onboarding.dismiss_dashboard_setup(socket.assigns.current_user) do
-      {:ok, user} -> {:noreply, assign(socket, :current_user, user)}
-      {:error, _changeset} -> {:noreply, socket}
-    end
-  end
+  def handle_event("booking_link_copied", params, socket),
+    do: BookingLinkShare.handle_copied(socket, params["channel"])
 
   def handle_event("calendar:toggle_focus", _params, socket),
     do: {:noreply, CalendarFocus.toggle(socket)}
 
+  def handle_event("onboarding:dismiss", _params, socket),
+    do: keep_user(Onboarding.dismiss_dashboard_setup(socket.assigns.current_user), socket)
+
   # Private functions
+
+  defp keep_user({:ok, user}, socket), do: {:noreply, assign(socket, :current_user, user)}
+  defp keep_user({:error, _reason}, socket), do: {:noreply, socket}
 
   @spec handle_saving_animation(Phoenix.LiveView.Socket.t(), non_neg_integer()) ::
           Phoenix.LiveView.Socket.t()

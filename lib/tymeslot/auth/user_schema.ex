@@ -43,6 +43,7 @@ defmodule Tymeslot.Auth.UserSchema do
           github_user_id: String.t() | nil,
           google_user_id: String.t() | nil,
           onboarding_completed_at: DateTime.t() | nil,
+          onboarding_meeting_confirmed_at: DateTime.t() | nil,
           dashboard_tour_seen_at: DateTime.t() | nil,
           dashboard_setup_done_items: [String.t()],
           dashboard_setup_dismissed_at: DateTime.t() | nil,
@@ -85,6 +86,7 @@ defmodule Tymeslot.Auth.UserSchema do
     field(:github_user_id, :string)
     field(:google_user_id, :string)
     field(:onboarding_completed_at, :utc_datetime)
+    field(:onboarding_meeting_confirmed_at, :utc_datetime)
     field(:dashboard_tour_seen_at, :utc_datetime)
     field(:dashboard_setup_done_items, {:array, :string}, default: [])
     field(:dashboard_setup_dismissed_at, :utc_datetime)

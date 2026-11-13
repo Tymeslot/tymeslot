@@ -52,7 +52,7 @@ defmodule TymeslotWeb.AdminLiveSupportBoxTest do
         |> follow_redirect(conn, ~p"/admin/email")
 
       lv
-      |> element(~s{button[phx-value-key="admin_alerts_enabled"][phx-value-state="true"]})
+      |> element(~s{button[phx-value-key="admin_alerts_enabled"][phx-value-enabled="true"]})
       |> render_click()
 
       # Enabled without a recipient, alerts still reach no one.

@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Components.CoreComponents.DateTimePicker.Value
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{Autosave, OfferedTimeHandlers}
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -337,6 +338,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   defp parse_close(value, _timezone) when value in [nil, ""], do: {:ok, nil}
 
   defp parse_close(value, timezone) when is_binary(value) do
+    if Value.unfinished(value), do: {:error, :unfinished_close}, else: read_close(value, timezone)
+  end
+
+  defp read_close(value, timezone) do
     with [date, time] <- String.split(value, "T", parts: 2),
          {:ok, date} <- Date.from_iso8601(date),
          {:ok, time} <- Time.from_iso8601(pad_seconds(time)),
@@ -358,6 +363,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
 
   defp error_message(:start_in_past),
     do: dgettext("dashboard_meeting_fixed_dates", "The date has to lie in the future.")
+
+  # The picker says under itself which half is missing.
+  defp error_message(:unfinished_close), do: nil
 
   defp error_message(:invalid_registration_close),
     do:

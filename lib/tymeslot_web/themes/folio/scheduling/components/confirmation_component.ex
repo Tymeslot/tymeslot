@@ -70,18 +70,18 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
 
         <section class="folio-details" aria-labelledby="folio-details-heading">
           <h2 id="folio-details-heading" class="folio-eyebrow">
-            {dgettext("booking", "Meeting Details")}
+            {dgettext("booking_confirmation", "Meeting Details")}
           </h2>
           <p :if={@meeting_type} class="folio-details__subject" data-testid="chosen-meeting-type">
             {@meeting_type.name}
           </p>
           <dl class="folio-details__list">
             <div class="folio-details__row">
-              <dt>{dgettext("booking", "Date")}</dt>
+              <dt>{dgettext("booking_confirmation", "Date")}</dt>
               <dd>{LocalizationHelpers.format_date(@selected_date)}</dd>
             </div>
             <div class="folio-details__row">
-              <dt>{dgettext("booking", "Time")}</dt>
+              <dt>{dgettext("booking_confirmation", "Time")}</dt>
               <dd>
                 {LocalizationHelpers.format_slot_label(@selected_time)}
                 <span
@@ -94,21 +94,21 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
               </dd>
             </div>
             <div class="folio-details__row">
-              <dt>{dgettext("booking", "Timezone")}</dt>
+              <dt>{dgettext("booking_confirmation", "Timezone")}</dt>
               <dd>
                 {LocalizationHelpers.format_zone_label(@selected_date, @selected_time, @user_timezone)}
               </dd>
             </div>
             <div class="folio-details__row">
-              <dt>{dgettext("booking", "Duration")}</dt>
+              <dt>{dgettext("booking_confirmation", "Duration")}</dt>
               <dd>
-                {dgettext("booking", "%{minutes} min",
+                {dgettext("booking_confirmation", "%{minutes} min",
                   minutes: Offer.duration_minutes(@meeting_type, @duration)
                 )}
               </dd>
             </div>
             <div :if={@organizer_profile} class="folio-details__row">
-              <dt>{dgettext("booking", "Appointment host")}</dt>
+              <dt>{dgettext("booking_confirmation", "Appointment host")}</dt>
               <dd>{Profiles.display_name(@organizer_profile)}</dd>
             </div>
             <div
@@ -116,7 +116,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
               class="folio-details__row"
               data-testid="confirmation-location"
             >
-              <dt>{dgettext("booking", "Location")}</dt>
+              <dt>{dgettext("booking_confirmation", "Location")}</dt>
               <dd>
                 {BookingLocation.chosen_display(assigns)}
                 <LocationField.arranged_note
@@ -126,12 +126,12 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
               </dd>
             </div>
             <div :if={@guest_emails not in [nil, []]} class="folio-details__row">
-              <dt>{dgettext("booking", "Guests")}</dt>
+              <dt>{dgettext("booking_confirmation", "Guests")}</dt>
               <dd>{Enum.join(@guest_emails, ", ")}</dd>
             </div>
           </dl>
           <p class="folio-muted">
-            {dgettext("booking", "Sent to")} <strong>{@email}</strong>
+            {dgettext("booking_confirmation", "Sent to")} <strong>{@email}</strong>
           </p>
         </section>
 
@@ -150,8 +150,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
           >
             <.icon name="hero-calendar-days" class="folio-button__icon" />
             {if @pending,
-              do: dgettext("booking", "Add tentative hold to calendar"),
-              else: dgettext("booking", "Add to calendar")}
+              do: dgettext("booking_confirmation", "Add tentative hold to calendar"),
+              else: dgettext("booking_confirmation", "Add to calendar")}
           </a>
           <button
             type="button"
@@ -168,8 +168,15 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
         <p class="folio-muted folio-confirmation__help">
           {if @pending,
             do:
-              dgettext("booking", "Changed your mind? Your request email has a link to withdraw it."),
-            else: dgettext("booking", "Need to make changes? Check your email for reschedule options")}
+              dgettext(
+                "booking_confirmation",
+                "Changed your mind? Your request email has a link to withdraw it."
+              ),
+            else:
+              dgettext(
+                "booking_confirmation",
+                "Need to make changes? Check your email for reschedule options"
+              )}
         </p>
       </section>
     </div>
@@ -243,7 +250,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
         ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :folio)
 
       _confirmed_or_rescheduled ->
-        dgettext("booking", "%{name}, your meeting %{organizer} is confirmed",
+        dgettext("booking_confirmation", "%{name}, your meeting %{organizer} is confirmed",
           name: assigns[:name],
           organizer: ConfirmationText.organizer_fragment(assigns[:organizer_profile], :folio)
         )

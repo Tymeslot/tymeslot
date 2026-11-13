@@ -243,6 +243,10 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target = Date.add(today, 1)
 
+    # The grid moves itself to the first bookable day once availability
+    # arrives, so the month is only read after the page has landed.
+    wait_until(fn -> has_element?(view, "button.calendar-day--selected") end)
+
     BookingTestHelpers.show_month(view, target)
 
     date = Date.to_string(target)

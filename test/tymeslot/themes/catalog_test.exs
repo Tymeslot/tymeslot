@@ -36,6 +36,19 @@ defmodule Tymeslot.Themes.CatalogTest do
     assert Catalog.default().heading_style == :generic
   end
 
+  # Only Folio's masthead presents the organiser's headline and bio today;
+  # the dashboard asks a host for them on that fact alone.
+  test "says which shipped themes show the organiser's headline and bio" do
+    showing =
+      for {key, facts} <- Catalog.all(), facts.shows_intro, facts.status == :active, do: key
+
+    assert showing == [:folio]
+    assert Catalog.shows_intro?("4")
+    refute Catalog.shows_intro?("1")
+    refute Catalog.shows_intro?("unknown")
+    refute Catalog.shows_intro?(nil)
+  end
+
   test "names each theme's customisation spec" do
     assert Catalog.customization_spec("1") == {:ok, Tymeslot.ThemeCustomizations.QuillSpec}
     assert Catalog.customization_spec("2") == {:ok, Tymeslot.ThemeCustomizations.RhythmSpec}
@@ -69,6 +82,8 @@ defmodule Tymeslot.Themes.CatalogTest do
                Catalog.merge_extra_themes!(shipped, [own])
 
       refute Map.has_key?(merged, :module)
+      # A fact an extra theme leaves out takes its default.
+      assert merged.shows_intro == false
 
       assert_raise ArgumentError, ~r/:own \(id "1"\) clashes with .*:quill \(id "1"\)/, fn ->
         Catalog.merge_extra_themes!(shipped, [%{own | id: "1"}])

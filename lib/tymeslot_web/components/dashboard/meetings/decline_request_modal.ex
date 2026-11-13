@@ -52,6 +52,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
         phx-submit={@confirm_event}
         phx-target={@target}
         class="space-y-4"
+        novalidate
       >
         <p>
           {dgettext(

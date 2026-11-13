@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal
   alias TymeslotWeb.Dashboard.MeetingSettings.EventsListComponent
+  alias TymeslotWeb.Dashboard.MeetingSettings.InvitationsComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent
@@ -62,20 +63,37 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
                 </:actions>
               </.section_header>
 
+              <%!-- An invitation-only type is booked through its invitation
+                    links, not a direct link anyone can use. --%>
+              <.live_component
+                :if={@editing_type && @editing_type.invitation_only}
+                module={InvitationsComponent}
+                id={"invitations-#{@editing_type.id}"}
+                meeting_type={@editing_type}
+                profile={@profile}
+                current_user_id={@current_user.id}
+                time_format={@time_format}
+              />
+
               <%!-- Direct booking link, always at hand while editing (needs a username) --%>
-              <div :if={@editing_type && booking_base_url(@profile)} class="space-y-2">
+              <div
+                :if={@editing_type && not @editing_type.invitation_only && booking_base_url(@profile)}
+                class="space-y-2"
+              >
                 <div class="flex flex-wrap items-center gap-2">
-                  <input
+                  <.input
                     type="text"
                     readonly
                     aria-label={dgettext("dashboard_integrations", "Direct booking link")}
                     value={type_url(assigns, @editing_type)}
-                    class="font-mono text-token-sm flex-1 min-w-[12rem] px-4 py-2.5 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50 text-tymeslot-600 cursor-default"
+                    class="font-mono flex-1 min-w-[12rem]"
                   />
                   <.action_button
                     variant={:secondary}
                     id={"copy-booking-link-#{@editing_type.id}"}
                     phx-hook="CopyOnClick"
+                    phx-click="booking_link_copied"
+                    phx-target={@myself}
                     data-copy-text={type_url(assigns, @editing_type)}
                     data-copy-feedback={dgettext("dashboard_integrations", "Booking link copied!")}
                   >
@@ -120,6 +138,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               booking_pages={@booking_pages}
               page_memberships={@page_memberships}
               pages_editable={@pages_editable}
+              profile={@profile}
             />
 
             <BookingLinkModal.booking_link_modal

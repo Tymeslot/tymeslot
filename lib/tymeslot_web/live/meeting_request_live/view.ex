@@ -115,7 +115,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
       </div>
 
       <div :if={@choosing == :decline} class="mt-6 border-t border-tymeslot-200 pt-6">
-        <form id="decline-request-form" phx-submit="decline">
+        <form id="decline-request-form" phx-submit="decline" novalidate>
           <.input
             type="textarea"
             name="reason"

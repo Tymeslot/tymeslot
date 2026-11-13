@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Test.FixtureTheme.ClipsPanel do
       <p>Clips</p>
       <form
         :for={field <- declared(@uploads)}
+        novalidate
         id={"fixture-clip-upload-#{field}"}
         phx-change="upload_asset"
         phx-submit="upload_asset"

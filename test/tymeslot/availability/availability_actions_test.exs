@@ -136,8 +136,8 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
       updated = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert updated.is_available == true
-      assert updated.start_time == ~T[11:00:00]
-      assert updated.end_time == ~T[19:30:00]
+      assert updated.start_time == ~T[09:00:00]
+      assert updated.end_time == ~T[17:00:00]
     end
 
     test "creates day when toggling a day that doesn't exist yet", %{schedule: schedule} do
@@ -152,8 +152,8 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
       assert %{
                is_available: true,
-               start_time: ~T[11:00:00],
-               end_time: ~T[19:30:00]
+               start_time: ~T[09:00:00],
+               end_time: ~T[17:00:00]
              } = WeeklySchedule.get_day_availability(schedule.id, 3)
     end
   end

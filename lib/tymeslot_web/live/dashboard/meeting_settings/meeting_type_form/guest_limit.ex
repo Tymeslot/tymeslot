@@ -2,9 +2,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GuestLimit do
   @moduledoc """
   The meeting-type form's limit on the guests one booking may bring
   (`max_guests_per_booking`), shown under the guests switch: off keeps the
-  overall limit (`Tymeslot.Meetings.Guests.max_guests/0`), on takes a number
-  in `Constraints.guests_per_booking_range/0`. Held as the form's
-  `:guest_limit` assign, `nil` while off.
+  public page's default (`Tymeslot.Meetings.Guests.default_booking_limit/0`),
+  on takes a number in `Constraints.guests_per_booking_range/0`, fewer or
+  more than that default. Held as the form's `:guest_limit` assign, `nil`
+  while off.
   """
 
   alias Phoenix.Component

@@ -110,6 +110,16 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
 
       assert BookingLocation.choice_required?(assigns(%{location_options: [offices()]}))
       assert {:error, :venue_choice} = GroupLocationRule.check([offices()])
+
+      single_phone =
+        assigns(%{
+          location_options: [call_me()],
+          location_venue_choices: %{},
+          selected_location_id: "loc-call"
+        })
+
+      assert BookingLocation.choice_required?(single_phone)
+      assert {:error, :booker_phone} = GroupLocationRule.check([call_me()])
     end
   end
 
@@ -312,6 +322,24 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
       assert BookingLocation.kept_location(assigns(to_arrange)).address_to_arrange
       assert BookingLocation.arranged_after_booking?(assigns(to_arrange))
       assert BookingLocation.chosen_display(assigns(to_arrange)) == "Headquarters"
+    end
+
+    test "reads a kept default label in the visitor's language" do
+      kept =
+        rescheduling(%{
+          reschedule_location: %{
+            option_id: "loc-hq",
+            venue_id: nil,
+            location: "In person",
+            address_to_arrange: true
+          },
+          selected_location_id: "loc-hq"
+        })
+
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert BookingLocation.kept_location(assigns(kept)).location == "Vor Ort"
+        assert BookingLocation.chosen_display(assigns(kept)) == "Vor Ort"
+      end)
     end
 
     test "shows no venue chosen on the meeting's location, and yields once the booker picks one" do

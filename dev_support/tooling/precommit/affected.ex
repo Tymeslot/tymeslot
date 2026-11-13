@@ -26,10 +26,11 @@ defmodule Tymeslot.Precommit.Affected do
 
   The repository that consumes Core as a path dependency cannot see a Core
   change in its own diff, yet its build and suite run against it. The caller
-  therefore passes the path dependency's changes as `:upstream`. Any of them
-  that reaches the Elixir build keeps the static steps running and takes the
-  full suite, because no path in this repository resolves to what a Core change
-  affects here.
+  therefore passes the path dependency's checkout as `:upstream_dir`. Any Core
+  change that reaches the Elixir build keeps the static steps running, and the
+  suite takes what `Tymeslot.TestAffected.Selection` carries over: this
+  repository's tests in the domains the Core change reaches, the directory
+  named by `:upstream_tests`, or the full suite when the Core change widens.
 
   `select/4` is pure; `narrow/2` reads git and the disk through
   `Tymeslot.TestAffected.Workspace` and prints the plan it arrived at.
@@ -43,7 +44,7 @@ defmodule Tymeslot.Precommit.Affected do
   @type t :: %{
           steps: [Runner.step()],
           skipped: [{name :: String.t(), reason :: String.t()}],
-          suite: Selection.plan() | :upstream
+          suite: Selection.plan()
         }
 
   @dep_files ~w[mix.exs mix.lock]
@@ -86,21 +87,35 @@ defmodule Tymeslot.Precommit.Affected do
 
   `:base` widens the diff to every commit since the branch left it, as for
   `mix test.affected --base`. `:upstream_dir` is the checkout of the path
-  dependency whose changes this repository builds against, if any.
+  dependency whose changes this repository builds against, if any, and
+  `:upstream_tests` the directory of this repository's tests that check the
+  two against each other.
   """
   @spec narrow([Runner.step()], keyword()) :: t()
   def narrow(steps, opts) do
     base = Keyword.get(opts, :base)
     changed = Workspace.changed_files(base)
-    upstream = upstream_changes(Keyword.get(opts, :upstream_dir), base)
-    narrowed = select(steps, changed, Workspace.index(), upstream: upstream)
+    {upstream, upstream_index} = upstream(Keyword.get(opts, :upstream_dir), base)
+
+    narrowed =
+      select(steps, changed, Workspace.index(),
+        upstream: upstream,
+        upstream_index: upstream_index,
+        upstream_tests: Keyword.get(opts, :upstream_tests)
+      )
 
     report(changed, upstream, narrowed.suite)
     narrowed
   end
 
-  defp upstream_changes(nil, _base), do: []
-  defp upstream_changes(dir, base), do: Workspace.changed_files(base, dir)
+  defp upstream(nil, _base), do: {[], nil}
+
+  defp upstream(dir, base) do
+    case Workspace.changed_files(base, dir) do
+      [] -> {[], nil}
+      changed -> {changed, Workspace.index(dir)}
+    end
+  end
 
   defp report(changed, upstream, suite) do
     upstream_note = if upstream == [], do: "", else: ", #{length(upstream)} in Core"
@@ -114,9 +129,6 @@ defmodule Tymeslot.Precommit.Affected do
 
     Mix.shell().info("  suite: #{describe_suite(suite)}")
   end
-
-  defp describe_suite(:upstream),
-    do: "full, because Core changed and this repository's diff cannot show what that affects"
 
   defp describe_suite(%{scope: :nothing}), do: "not run, no change reaches it"
 
@@ -135,13 +147,15 @@ defmodule Tymeslot.Precommit.Affected do
 
   `changed` are this repository's changed paths, `index` its suite (see
   `Tymeslot.TestAffected.Workspace`). `:upstream` lists the path dependency's
-  changed paths and defaults to none.
+  changed paths and defaults to none; `:upstream_index` is that dependency's
+  index, required when `:upstream` is not empty, and `:upstream_tests` is
+  passed through to `Tymeslot.TestAffected.Selection.plan/3`.
   """
   @spec select([Runner.step()], [String.t()], Selection.index(), keyword()) :: t()
   def select(steps, changed, index, opts \\ []) do
     upstream = Keyword.get(opts, :upstream, [])
     build_changed? = Enum.any?(changed ++ upstream, &reaches_build?/1)
-    suite = suite(changed, upstream, index)
+    suite = suite(changed, index, opts)
 
     {kept, skipped} =
       Enum.reduce(steps, {[], []}, fn step, {kept, skipped} ->
@@ -170,8 +184,6 @@ defmodule Tymeslot.Precommit.Affected do
     end
   end
 
-  defp test_step(step, :upstream), do: {:run, step}
-
   defp test_step(_step, %{scope: :nothing}),
     do: {:skip, "no change reaches the Elixir suite"}
 
@@ -183,10 +195,17 @@ defmodule Tymeslot.Precommit.Affected do
   defp test_step({name, args, env}, %{scope: :selection, files: files}),
     do: {:run, {name, args ++ files, env}}
 
-  defp suite(changed, upstream, index) do
-    if Enum.any?(upstream, &reaches_build?/1),
-      do: :upstream,
-      else: Selection.plan(changed, index)
+  defp suite(changed, index, opts) do
+    upstream =
+      case Keyword.get(opts, :upstream, []) do
+        [] -> nil
+        paths -> {paths, Keyword.fetch!(opts, :upstream_index)}
+      end
+
+    Selection.plan(changed, index,
+      upstream: upstream,
+      upstream_tests: Keyword.get(opts, :upstream_tests)
+    )
   end
 
   defp reaches_build?(path), do: Selection.classify(path) != :ignore

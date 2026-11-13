@@ -285,7 +285,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       |> render_change(%{"reminder" => %{"value" => "400"}})
 
       view
-      |> element(~s|select[name="reminder[unit]"]|)
+      |> element(~s|input[type=hidden][name="reminder[unit]"]|)
       |> render_change(%{"reminder" => %{"unit" => "days"}})
 
       html = view |> element("button[phx-click='add_reminder']") |> render_click()
@@ -352,21 +352,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       view |> element("#meeting-type-form-tabs-tab-reminders") |> render_click()
       view |> element("button[phx-click='toggle_custom_reminder']") |> render_click()
 
-      assert has_element?(
-               view,
-               ~s|select[name="reminder[unit]"] option[value="minutes"][selected]|
-             )
+      unit = ~s|select[data-name="reminder[unit]"]|
+
+      assert has_element?(view, unit <> ~s| option[value="minutes"][selected]|)
 
       view
-      |> element(~s|select[name="reminder[unit]"]|)
+      |> element(~s|input[type=hidden][name="reminder[unit]"]|)
       |> render_change(%{"reminder" => %{"unit" => "hours"}})
 
-      assert has_element?(view, ~s|select[name="reminder[unit]"] option[value="hours"][selected]|)
-
-      refute has_element?(
-               view,
-               ~s|select[name="reminder[unit]"] option[value="minutes"][selected]|
-             )
+      assert has_element?(view, unit <> ~s| option[value="hours"][selected]|)
+      refute has_element?(view, unit <> ~s| option[value="minutes"][selected]|)
     end
   end
 

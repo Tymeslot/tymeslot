@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollFormErrors do
 
   alias Ecto.Changeset
   alias Tymeslot.Polls.PollSchema
+  alias TymeslotWeb.Components.CoreComponents.DateTimePicker.Value
   alias TymeslotWeb.Helpers.FormErrors
 
   @reasons [:too_many_slots, :slot_in_past, :payment_required_type, :meeting_type_not_found]
@@ -21,7 +22,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollFormErrors do
   def shared_reason?(reason), do: reason in @reasons
 
   @doc "The errors for `reason`, with any about the times under `slots_field`."
-  @spec errors_for(atom(), atom()) :: %{atom() => [String.t()]}
+  @spec errors_for(atom() | {:unfinished_times, map()}, atom()) :: %{atom() => [String.t()]}
+  def errors_for({:unfinished_times, errors}, _slots_field), do: errors
+
+  def errors_for(:no_slots, slots_field),
+    do: %{slots_field => [dgettext("dashboard_polls", "Add at least one candidate time")]}
+
   def errors_for(:too_many_slots, slots_field), do: %{slots_field => [too_many_message()]}
 
   def errors_for(:slot_in_past, slots_field),
@@ -51,6 +57,25 @@ defmodule TymeslotWeb.Dashboard.Polls.PollFormErrors do
           dgettext("dashboard_polls", "The deadline must be in the future")
         ]),
       else: errors
+  end
+
+  @doc """
+  Refuses a save when the deadline, or any of the time rows under
+  `rows_param`, is a date with no time (or a time with no date), rather than
+  read it as blank. The error's map goes to the form's errors: a half-filled
+  row shows its own message under it, so a form refused for its rows alone
+  gets an empty map, with nothing to add but nothing saved without the row.
+  """
+  @spec finished_times(map(), String.t()) :: :ok | {:error, {:unfinished_times, map()}}
+  def finished_times(params, rows_param) do
+    rows = Map.get(params, rows_param)
+    rows_unfinished? = is_map(rows) and Enum.any?(Map.values(rows), &Value.unfinished/1)
+
+    case Value.unfinished(Map.get(params, "deadline")) do
+      nil when rows_unfinished? -> {:error, {:unfinished_times, %{}}}
+      nil -> :ok
+      reason -> {:error, {:unfinished_times, %{deadline_at: [Value.message(reason)]}}}
+    end
   end
 
   @doc "The error for one time too many."

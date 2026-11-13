@@ -2,8 +2,8 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   @moduledoc """
   Navigation event handlers for the onboarding flow.
 
-  Handles step navigation including next/previous step transitions,
-  skip modal management, step skipping, and onboarding completion.
+  Handles step navigation including next/previous step transitions and
+  onboarding completion.
   """
 
   use TymeslotWeb, :verified_routes
@@ -12,41 +12,193 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Ecto.Changeset
   alias Phoenix.Component
   alias Phoenix.LiveView
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
+  alias Tymeslot.Utils.QrCode
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Analytics
-  alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Hooks.ModalHook
+  alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
-  alias TymeslotWeb.OnboardingLive.CalendarHandlers
+  alias TymeslotWeb.OnboardingLive.MeetingHandlers
   alias TymeslotWeb.OnboardingLive.ProfileHandlers
-  alias TymeslotWeb.OnboardingLive.ReadyStep
   alias TymeslotWeb.OnboardingLive.StepConfig
 
-  # The fields each preference step edits, keyed as in `form_errors`.
-  @preference_step_fields %{
-    buffer_time: [:buffer_before_minutes, :buffer_after_minutes],
-    booking_window: [:advance_booking_days],
-    minimum_notice: [:min_advance_hours]
-  }
+  @doc """
+  Records that the host kept their booking link on the last step, by one of
+  the methods the step's own buttons send (`Onboarding.keep_methods/0` but
+  `phone`): the first keep completes onboarding and stamps the profile's
+  first share (`Onboarding.keep_booking_link/3`), so closing the tab
+  afterwards loses nothing. The method comes from the client, so anything
+  else is ignored. Keeping it again is harmless; the confirmation shows the
+  latest.
+
+  A first-person keep says how it went (`via`), since that decides what the
+  confirmation may claim: `mail` (the mail client was opened, nothing is
+  sent yet) and `copy` (the message was copied) each confirm as their own
+  `kept_method`, while the share sheet's `first_person` confirms as sent.
+  """
+  @spec handle_keep_link(Phoenix.LiveView.Socket.t(), map()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_keep_link(socket, %{"method" => method} = params) do
+    # `phone` is the server's to claim: the handoff page opening on another
+    # device says so (`handle_phone_opened/1`), never the client.
+    if method != "phone" and method in Onboarding.keep_methods(),
+      do: {:noreply, keep_on_ready(socket, method, confirmation(method, params["via"]))},
+      else: {:noreply, socket}
+  end
+
+  def handle_keep_link(socket, _params), do: {:noreply, socket}
+
+  @first_person_via %{"mail" => "mail_app", "copy" => "message_copy"}
+
+  defp confirmation("first_person", via) when is_map_key(@first_person_via, via),
+    do: Map.fetch!(@first_person_via, via)
+
+  defp confirmation(method, _via), do: method
 
   @doc """
-  Records that the host shared their booking link from the final step.
-
-  The channel comes from the client, so anything outside the step's own
-  channels is dropped rather than reported.
+  The host's booking page was opened from the handoff link (the QR code) on
+  another device, which keeps the link by `phone`.
   """
-  @spec handle_share_booking_link(Phoenix.LiveView.Socket.t(), term()) ::
+  @spec handle_phone_opened(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_share_booking_link(socket, channel) do
-    if channel in ReadyStep.share_channels() do
-      {:noreply, Analytics.push(socket, "booking_link_shared", %{channel: channel})}
-    else
-      {:noreply, socket}
+  def handle_phone_opened(socket), do: {:noreply, keep_on_ready(socket, "phone", "phone")}
+
+  defp keep_on_ready(%{assigns: %{current_step: :ready}} = socket, method, confirmation),
+    do: keep_link(socket, method, confirmation)
+
+  defp keep_on_ready(socket, _method, _confirmation), do: socket
+
+  defp keep_link(socket, method, confirmation) do
+    %{current_user: user, profile: profile} = socket.assigns
+
+    case Onboarding.keep_booking_link(user, profile, method) do
+      {:ok, completed} ->
+        socket
+        |> Component.assign(current_user: completed, kept_method: confirmation)
+        |> LiveView.clear_flash()
+
+      {:error, {:email, _reason}} ->
+        LiveView.put_flash(
+          socket,
+          :error,
+          dgettext("onboarding_wizard", "We couldn't send the email. Try another option.")
+        )
+
+      {:error, _reason} ->
+        LiveView.put_flash(
+          socket,
+          :error,
+          dgettext("onboarding_wizard", "Something went wrong. Please try again.")
+        )
     end
   end
+
+  @doc """
+  The host pressed "Go to dashboard" before keeping their link: the focus
+  moves to the first-person button, whose card pulses once (`ShareLink`).
+  """
+  @spec handle_finish_locked(Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_finish_locked(socket),
+    do: {:noreply, LiveView.push_event(socket, "share_link:focus", %{})}
+
+  @doc """
+  Whether "Go to dashboard" still waits for a keep action. A page that is
+  not live offers nothing to keep, so finishing stays open there, and so
+  does a debug route on an account that finished onboarding long ago: there
+  is nothing left for this visit to complete.
+  """
+  @spec finish_locked?(map()) :: boolean()
+  def finish_locked?(%{kept_method: nil, booking_page_live: live} = assigns),
+    do: live != false and not settled_debug_visit?(assigns)
+
+  def finish_locked?(_assigns), do: false
+
+  defp settled_debug_visit?(%{live_action: action, current_user: user})
+       when action in [:debug_welcome, :debug_step],
+       do: Onboarding.onboarding_completed?(user)
+
+  defp settled_debug_visit?(_assigns), do: false
+
+  @doc """
+  The share step's own state, on the connected render only (the static
+  render shows the miniature the live page then switches on over):
+
+    * the subscription that hears the handoff being opened, made once per
+      LiveView process (`share_subscribed`);
+    * the owner-preview path the stage's iframe shows, built for the
+      profile's username and the meeting the wizard set up
+      (`share_preview_key`) and rebuilt when either changes, so a patch
+      never re-signs the token and reloads the page, but a new link never
+      shows the old one. It opens at that meeting's own step, the dates
+      and times the miniature it fades in over drew, not at the page's
+      list of meeting types, so the stage does not change design as the
+      real page arrives. The handoff link and its QR code go with it;
+      they are signed only when the QR code is shown
+      (`handle_show_handoff_qr/1`), so its hour starts then.
+  """
+  @spec assign_share_state(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def assign_share_state(%{assigns: %{profile: %{username: username}}} = socket)
+      when is_binary(username) do
+    if LiveView.connected?(socket) do
+      socket |> subscribe_once() |> build_preview(username)
+    else
+      socket
+    end
+  end
+
+  def assign_share_state(socket), do: socket
+
+  defp subscribe_once(%{assigns: %{share_subscribed: true}} = socket), do: socket
+
+  defp subscribe_once(socket) do
+    :ok = Onboarding.subscribe(socket.assigns.current_user.id)
+    Component.assign(socket, :share_subscribed, true)
+  end
+
+  defp build_preview(socket, username) do
+    slug = meeting_slug(socket.assigns[:meeting_type])
+
+    if socket.assigns[:share_preview_key] == {username, slug} do
+      socket
+    else
+      Component.assign(socket,
+        share_username: username,
+        share_preview_key: {username, slug},
+        # Relative: the stage frames the page from this origin (`frame-src 'self'`).
+        owner_preview_url:
+          PreviewMode.owner_path(username, socket.assigns.current_user.id,
+            stage: true,
+            meeting_slug: slug
+          ),
+        handoff_url: nil,
+        handoff_qr: nil
+      )
+    end
+  end
+
+  defp meeting_slug(%{name: name} = meeting_type) when is_binary(name),
+    do: MeetingTypes.effective_slug(meeting_type)
+
+  defp meeting_slug(_none), do: nil
+
+  @doc """
+  Shows the QR code of the handoff link: the host's page, absolute (a phone
+  opens it), carrying `handoff=1` and a token signed now.
+  """
+  @spec handle_show_handoff_qr(Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_show_handoff_qr(%{assigns: %{share_username: username}} = socket)
+      when is_binary(username) do
+    url = PreviewMode.owner_url(username, socket.assigns.current_user.id, handoff: true)
+    {:noreply, Component.assign(socket, handoff_url: url, handoff_qr: QrCode.svg_data_uri(url))}
+  end
+
+  def handle_show_handoff_qr(socket), do: {:noreply, socket}
 
   @doc """
   Handles the next step navigation event.
@@ -63,105 +215,122 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       :connect_calendar ->
         handle_calendar_continue(socket)
 
+      :meeting ->
+        handle_meeting_continue(socket)
+
       :ready ->
-        handle_complete_onboarding(socket, redirect_to: ~p"/dashboard")
+        handle_finish(socket)
 
       step ->
-        if refused_value?(socket, step),
-          do: {:noreply, socket},
-          else: {:noreply, advance_step(socket, step)}
+        {:noreply, advance_step(socket, step)}
     end
   end
 
-  # A refused value is never saved, so advancing past it would silently keep
-  # the last valid one. Continue stays put instead, leaving the field's error
-  # beside the value it describes.
-  defp refused_value?(socket, step) do
-    errors = Map.get(socket.assigns, :form_errors, %{})
-    Enum.any?(Map.get(@preference_step_fields, step, []), &Map.has_key?(errors, &1))
+  # A kept link has already completed onboarding, so finishing only
+  # navigates (on a debug route, back to where it started), as it does on a
+  # debug route on a settled account (`finish_locked?/1`). A page that is
+  # not live has nothing to keep and finishes as before.
+  defp handle_finish(%{assigns: %{kept_method: method}} = socket) when is_binary(method) do
+    {:noreply, LiveView.redirect(socket, to: finish_path(socket))}
   end
 
-  # Continue on the calendar step is a forced choice: act on the selected
-  # option rather than blindly advancing. OAuth providers redirect out; CalDAV
-  # opens the inline form; "skip" (or an already-connected calendar) advances.
-  defp handle_calendar_continue(socket) do
-    case socket.assigns.calendar_choice do
-      "google" ->
-        CalendarHandlers.handle_connect_google(socket)
+  defp handle_finish(%{assigns: %{booking_page_live: false}} = socket),
+    do: {:noreply, complete_onboarding(socket, ~p"/dashboard")}
 
-      "outlook" ->
-        CalendarHandlers.handle_connect_outlook(socket)
+  defp handle_finish(socket) do
+    if finish_locked?(socket.assigns),
+      do: handle_finish_locked(socket),
+      else: {:noreply, LiveView.redirect(socket, to: finish_path(socket))}
+  end
 
-      "caldav" ->
-        {:noreply, Component.assign(socket, :calendar_state, :connecting_caldav)}
+  defp finish_path(socket) do
+    if socket.assigns.live_action in [:debug_welcome, :debug_step],
+      do: socket.assigns.base_path,
+      else: ~p"/dashboard"
+  end
 
-      "skip" ->
-        # Don't advance immediately: Tymeslot only makes sense with a calendar
-        # connected, so nudge the user to reconsider before proceeding.
-        {:noreply, ModalHook.show_modal(socket, :skip_calendar)}
+  # A calendar is required: Continue leaves the calendar step only once the
+  # page is bookable, the same rule that keeps every later step out of reach
+  # without one. The tiles connect; Continue only moves on.
+  defp handle_calendar_continue(%{assigns: %{booking_page_live: true}} = socket),
+    do: {:noreply, advance_step(socket, :connect_calendar)}
 
-      _none ->
-        if socket.assigns.connected_calendars == [] do
-          {:noreply, socket}
-        else
-          {:noreply, advance_step(socket, :connect_calendar)}
-        end
+  defp handle_calendar_continue(socket), do: {:noreply, socket}
+
+  # The meeting step saves what is still pending (a name typed and never
+  # left) and moves on only with every field valid.
+  defp handle_meeting_continue(socket) do
+    case MeetingHandlers.continue(socket) do
+      {:ok, socket} -> {:noreply, advance_step(socket, :meeting)}
+      {:error, socket} -> {:noreply, socket}
     end
   end
 
   # A host sent back from the share step to connect a calendar has already
   # answered every step after it, so the calendar step leads straight back to
-  # the share step, and is not counted as completed a second time. The one
-  # exception is the theme step, which only a host with a calendar sees: one
-  # who skipped the calendar first meets it now, on the way back.
-  defp advance_step(socket, step, props \\ %{}) do
+  # the share step, and is not counted as completed a second time.
+  defp advance_step(socket, step) do
     returning? = step == :connect_calendar and socket.assigns.returning_to_share
-
-    next =
-      cond do
-        returning? -> return_step(socket.assigns)
-        step == :choose_theme and socket.assigns.returning_to_share -> :ready
-        true -> StepConfig.next_step(step, socket.assigns.steps) || step
-      end
+    next = if returning?, do: :ready, else: StepConfig.next_step(step) || step
 
     socket
-    |> Component.assign(:current_step, next)
     |> then(fn socket ->
       if returning?,
         do: socket,
-        else:
-          Analytics.push(
-            socket,
-            "onboarding_step_completed",
-            Map.put(props, :step, to_string(step))
-          )
+        else: Analytics.push(socket, "onboarding_step_completed", %{step: to_string(step)})
     end)
+    |> go_to_step(next)
     |> LiveView.clear_flash()
     |> then(&if(next == :ready, do: enter_share_step(&1), else: &1))
+    |> then(&if(next == :meeting, do: MeetingHandlers.ensure_loaded(&1, true), else: &1))
   end
 
   # Records which variant of the share step the host sees. Reloading
   # `/onboarding/ready` does not count as a view; arriving back from the
   # calendar step does, flagged `returned`, since whether that fixed the page
   # is what it measures.
-  defp return_step(%{theme_unseen: true, steps: steps}),
-    do: if(:choose_theme in steps, do: :choose_theme, else: :ready)
-
-  defp return_step(_assigns), do: :ready
-
   defp enter_share_step(socket) do
     returned? = socket.assigns.returning_to_share
 
     socket =
       socket
       |> assign_booking_page_live()
-      |> Component.assign(returning_to_share: false, theme_unseen: false)
+      |> assign_share_state()
+      |> Component.assign(:returning_to_share, false)
 
     Analytics.push(socket, "share_step_viewed", %{
       page_live: socket.assigns.booking_page_live,
       returned: returned?
     })
   end
+
+  @doc """
+  Shows `step` and records the view (`onboarding_step_viewed`). Every way
+  onto a step goes through here: forward, back, the share step's way back
+  to the calendar step, and landing on one by its address (a resume or a
+  reload), so the views of a step count everyone who saw it.
+  """
+  @spec enter_step(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
+  def enter_step(socket, step) do
+    socket
+    |> Component.assign(:current_step, step)
+    |> Analytics.push("onboarding_step_viewed", %{step: Atom.to_string(step)})
+  end
+
+  @doc """
+  "Try booking yourself" on the live step (`guest_preview_opened`): opens
+  the host's page at full size, at any screen width, to make a test booking.
+  """
+  @spec handle_try_booking(Phoenix.LiveView.Socket.t(), map()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_try_booking(%{assigns: %{current_step: :ready}} = socket, _params) do
+    socket
+    |> Analytics.push("guest_preview_opened", %{})
+    |> ModalHook.show_modal(:stage_preview)
+    |> then(&{:noreply, &1})
+  end
+
+  def handle_try_booking(socket, _params), do: {:noreply, socket}
 
   @doc """
   Checks whether the booking page is actually live, with the same rule the
@@ -184,121 +353,94 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   def handle_return_to_calendar_step(socket) do
     {:noreply,
      socket
-     |> Component.assign(
-       current_step: :connect_calendar,
-       calendar_choice: nil,
-       returning_to_share: true,
-       theme_unseen: :choose_theme not in socket.assigns.steps
-     )
+     |> Component.assign(:returning_to_share, true)
+     |> go_to_step(:connect_calendar)
      |> LiveView.clear_flash()}
   end
 
   @doc """
   Handles the previous step navigation event.
 
-  Moves back to the previous step in the onboarding flow,
-  preserving any necessary form data.
+  Moves back one step. The profile step is redrawn from the saved profile, so
+  it shows what was stored rather than an edit that was never saved; a link
+  that is still blank or the generated `user_<id>` default shows a suggestion
+  instead (see `BasicSettingsShared.assign_form_data/1`).
   """
   @spec handle_previous_step(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_previous_step(socket) do
-    case socket.assigns.current_step do
-      :connect_calendar ->
+    case StepConfig.previous_step(socket.assigns.current_step) do
+      nil ->
+        {:noreply, socket}
+
+      prev ->
         {:noreply,
          socket
-         |> Component.assign(
-           :current_step,
-           StepConfig.previous_step(:connect_calendar, socket.assigns.steps)
-         )
-         |> Component.assign(:form_data, BasicSettingsShared.build_form_data(socket))
+         |> go_to_step(prev)
+         |> refresh_form_data(prev)
          |> LiveView.clear_flash()}
-
-      step when step in [:buffer_time, :booking_window, :minimum_notice] ->
-        {:noreply,
-         socket
-         |> Component.assign(:current_step, StepConfig.previous_step(step, socket.assigns.steps))
-         |> LiveView.clear_flash()}
-
-      :ready ->
-        {:noreply,
-         socket
-         |> Component.assign(
-           :current_step,
-           StepConfig.previous_step(:ready, socket.assigns.steps)
-         )
-         |> Component.assign_new(:custom_input_mode, fn ->
-           CustomInputModeHelper.default_custom_mode()
-         end)
-         |> LiveView.clear_flash()}
-
-      step ->
-        case StepConfig.previous_step(step, socket.assigns.steps) do
-          nil ->
-            {:noreply, socket}
-
-          prev ->
-            {:noreply, socket |> Component.assign(:current_step, prev) |> LiveView.clear_flash()}
-        end
     end
   end
 
   @doc """
-  Handles showing the skip onboarding modal.
+  Shows `step` when the address brought the host to it rather than one of
+  the wizard's controls: a reload, a resume, or the browser's Back and
+  Forward through the steps the wizard has patched into its history. The
+  step is drawn as the wizard's own Back draws it (`handle_previous_step/1`),
+  from what is saved. The flash stays: on a fresh mount it can be the
+  calendar provider's word on the connection just made.
   """
-  @spec handle_show_skip_modal(Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_show_skip_modal(socket) do
-    {:noreply, ModalHook.show_modal(socket, :skip)}
-  end
+  @spec enter_by_address(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
+  def enter_by_address(socket, step), do: socket |> enter_step(step) |> refresh_form_data(step)
 
   @doc """
-  Handles hiding the skip onboarding modal.
+  Moves the host to `step` from one of the wizard's own controls: shows it
+  (`enter_step/2`) and patches the address to the step's own, so a reload
+  lands on the step on screen and the browser's Back returns to the one
+  before. The query string travels along (a debug fixture), bar the share
+  step's return flag, which goes only with the calendar step it applies to.
+  `OnboardingLive.handle_params/3` knows the patch as its own by
+  `patched_step` and draws nothing a second time.
   """
-  @spec handle_hide_skip_modal(Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_hide_skip_modal(socket) do
-    {:noreply, ModalHook.hide_modal(socket, :skip)}
+  @spec go_to_step(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
+  def go_to_step(socket, step) do
+    socket
+    |> enter_step(step)
+    |> Component.assign(:patched_step, step)
+    |> LiveView.push_patch(to: step_path(socket, step))
   end
+
+  defp step_path(socket, step) do
+    query =
+      socket.assigns
+      |> Map.get(:step_query, %{})
+      |> Map.delete("return")
+      |> then(fn query ->
+        if step == :connect_calendar and socket.assigns.returning_to_share,
+          do: Map.put(query, "return", "share"),
+          else: query
+      end)
+
+    path = socket.assigns.base_path <> "/" <> Atom.to_string(step)
+    if query == %{}, do: path, else: path <> "?" <> URI.encode_query(query)
+  end
+
+  defp refresh_form_data(socket, :profile), do: BasicSettingsShared.assign_form_data(socket)
+
+  defp refresh_form_data(socket, :meeting), do: MeetingHandlers.ensure_loaded(socket, true)
+  defp refresh_form_data(socket, _step), do: socket
 
   @doc """
-  Confirms proceeding past the calendar step without a connected calendar.
-
-  Closes the nudge modal and advances to the next step, recording the skip.
+  Returns the onboarding route prefix the request was served on, from its
+  URI: `/onboarding`, or a debug mount such as `/dev/onboarding` or
+  `/debug/onboarding`, so a debug session stays on the route it came in on.
   """
-  @spec handle_confirm_skip_calendar(Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_confirm_skip_calendar(socket) do
-    {:noreply,
-     socket
-     |> ModalHook.hide_modal(:skip_calendar)
-     |> advance_step(:connect_calendar, %{skipped: true})}
-  end
-
-  @doc """
-  Dismisses the calendar nudge modal, returning the user to the calendar step.
-  """
-  @spec handle_hide_skip_calendar_modal(Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_hide_skip_calendar_modal(socket) do
-    {:noreply, ModalHook.hide_modal(socket, :skip_calendar)}
-  end
-
-  @doc """
-  Handles skipping the onboarding process entirely.
-  """
-  @spec handle_skip_onboarding(Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_skip_onboarding(socket) do
-    handle_complete_onboarding(socket)
-  end
-
-  # Completes the onboarding flow, marking it done and redirecting. The
-  # `:redirect_to` option sets the path to redirect to (default: `/dashboard`).
-  @spec handle_complete_onboarding(Phoenix.LiveView.Socket.t(), keyword()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  defp handle_complete_onboarding(socket, opts \\ []) do
-    redirect_to = Keyword.get(opts, :redirect_to, ~p"/dashboard")
-    {:noreply, complete_onboarding(socket, redirect_to)}
+  @spec base_path(String.t()) :: String.t()
+  def base_path(uri) do
+    case uri |> URI.parse() |> Map.get(:path) |> Kernel.||("") |> String.split("/", trim: true) do
+      [prefix, "onboarding" | _rest] when prefix != "onboarding" -> "/" <> prefix <> "/onboarding"
+      _other -> "/onboarding"
+    end
   end
 
   # -------------------------------------------------------------------
@@ -332,7 +474,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
                       "Debug: Onboarding would be completed. Redirecting to debug start."
                     )
                   )
-                  |> LiveView.redirect(to: ~p"/debug/onboarding")
+                  |> LiveView.redirect(to: socket.assigns.base_path)
                 else
                   socket
                   |> LiveView.put_flash(
@@ -376,8 +518,8 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
           socket
           |> Component.assign(:profile, profile)
           |> Component.assign(:booking_url, booking_url)
-          |> Component.assign(:current_step, :connect_calendar)
           |> Analytics.push("onboarding_step_completed", %{step: "profile"})
+          |> go_to_step(:connect_calendar)
           |> LiveView.clear_flash()
 
         {:noreply, socket}

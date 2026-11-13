@@ -14,7 +14,6 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
       html = render_component(&FlagHelpers.safe_flag/1, country_code: :usa, class: "w-6 h-4")
 
       assert html =~ "<svg"
-      refute html =~ "Flag not available"
     end
 
     test "renders fallback icon for Algeria (:dza) which has no Flagpack flag" do
@@ -25,7 +24,6 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
           fallback_icon: "hero-globe-europe-africa"
         )
 
-      assert html =~ "Flag not available"
       assert html =~ globe_icon()
     end
 
@@ -37,14 +35,11 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
           show_fallback: false
         )
 
-      refute html =~ "Flag not available"
       refute html =~ "<svg"
     end
 
     test "renders the default globe fallback for nil country code" do
       html = render_component(&FlagHelpers.safe_flag/1, country_code: nil, class: "w-6 h-4")
-
-      assert html =~ "Flag not available"
       assert html =~ globe_icon()
     end
   end
@@ -68,7 +63,6 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
           fallback_icon: "hero-globe-europe-africa"
         )
 
-      assert html =~ "Flag not available"
       assert html =~ globe_icon()
     end
 
@@ -80,7 +74,7 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
           fallback_icon: "hero-globe-europe-africa"
         )
 
-      assert html =~ "Flag not available"
+      assert html =~ globe_icon()
     end
   end
 

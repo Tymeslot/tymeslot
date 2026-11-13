@@ -165,6 +165,40 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
       refute html =~ "Last triggered"
     end
 
+    test "explains why Test is unavailable, and offers no click, on an inactive webhook" do
+      webhook = %{
+        id: 1,
+        name: "Inactive Webhook",
+        url: "https://example.com/webhook",
+        is_active: false,
+        events: [],
+        last_triggered_at: nil,
+        last_status: nil,
+        disabled_reason: nil
+      }
+
+      assigns = %{
+        webhook: webhook,
+        testing: false,
+        target: "#webhook-1",
+        on_edit: "edit",
+        on_delete: "delete",
+        on_toggle: "toggle",
+        on_test: "test",
+        on_view_deliveries: "logs"
+      }
+
+      doc = Floki.parse_fragment!(render_component(&WebhookCard.webhook_card/1, assigns))
+      button = Floki.find(doc, "button#webhook-test-1")
+
+      assert Floki.attribute(button, "aria-disabled") == ["true"]
+      assert Floki.attribute(button, "phx-click") == []
+      assert Floki.attribute(button, "aria-describedby") == ["webhook-test-1-tip"]
+
+      assert doc |> Floki.find("#webhook-test-1-tip[role='tooltip']") |> Floki.text() =~
+               "Enable webhook to test"
+    end
+
     # An auto-disabled webhook (`Webhooks.record_delivery_failure/2` past the
     # failure threshold) must tell the user why, not just that it stopped.
     test "surfaces the disabled reason for an auto-disabled webhook" do

@@ -8,6 +8,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookRegistry do
   """
 
   alias Tymeslot.MeetingPayments.Webhooks.{
+    AccountDeauthorized,
     AccountUpdated,
     ChargeDisputeClosed,
     ChargeDisputeCreated,
@@ -36,7 +37,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookRegistry do
       "charge.refunded" => ChargeRefunded,
       "charge.dispute.created" => ChargeDisputeCreated,
       "charge.dispute.closed" => ChargeDisputeClosed,
-      "account.updated" => AccountUpdated
+      "account.updated" => AccountUpdated,
+      "account.application.deauthorized" => AccountDeauthorized
     }
   end
 end

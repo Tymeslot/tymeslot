@@ -34,6 +34,7 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
           booking_heading: String.t() | nil,
           booking_greeting: String.t() | nil,
           booking_instruction: String.t() | nil,
+          translations: map(),
           profile: ProfileSchema.t() | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -53,6 +54,10 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
     field(:booking_heading, :string)
     field(:booking_greeting, :string)
     field(:booking_instruction, :string)
+
+    # Translations of the texts above (`Tymeslot.ContentTranslations`). No
+    # changeset here casts it, so a form save can never wipe it.
+    field(:translations, :map, default: %{})
 
     belongs_to(:profile, ProfileSchema)
 

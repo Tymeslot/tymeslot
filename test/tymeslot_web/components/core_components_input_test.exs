@@ -31,6 +31,71 @@ defmodule TymeslotWeb.Components.CoreComponentsInputTest do
     assert html =~ "can&#39;t be blank"
   end
 
+  describe "number field keypad" do
+    defp keypad(attrs) do
+      fn assigns ->
+        ~H"""
+        <Forms.input id="amount" name="amount" type={@type} value="" {@attrs} />
+        """
+      end
+      |> render_component(%{
+        type: Map.get(attrs, :type, "number"),
+        attrs: Map.delete(attrs, :type)
+      })
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("input")
+      |> LazyHTML.attribute("inputmode")
+    end
+
+    test "a whole number from zero up asks for the numeric keypad" do
+      assert keypad(%{min: 1, step: "1"}) == ["numeric"]
+    end
+
+    test "a fractional step asks for the decimal keypad" do
+      assert keypad(%{min: "0.01", step: "0.01"}) == ["decimal"]
+    end
+
+    test "a field that can go negative asks for no keypad, so the minus key stays" do
+      assert keypad(%{}) == []
+      assert keypad(%{min: -10, step: "1"}) == []
+    end
+
+    test "a caller's inputmode wins" do
+      assert keypad(%{min: 1, inputmode: "text"}) == ["text"]
+    end
+
+    test "only number fields get a keypad" do
+      assert keypad(%{type: "text", min: 1}) == []
+    end
+  end
+
+  describe "textarea rows" do
+    defp render_textarea(assigns) do
+      fn assigns ->
+        ~H"""
+        <Forms.input id="bio" name="bio" type="textarea" value="" {@attrs} />
+        """
+      end
+      |> render_component(%{attrs: assigns})
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("textarea")
+    end
+
+    test "the caller's rows reach the textarea" do
+      assert LazyHTML.attribute(render_textarea(%{rows: 7}), "rows") == ["7"]
+    end
+
+    test "the height is left to rows: no minimum height overrules a small value" do
+      [class] = LazyHTML.attribute(render_textarea(%{rows: 2}), "class")
+
+      refute class =~ "min-h-"
+    end
+
+    test "falls back to four rows when the caller passes none" do
+      assert LazyHTML.attribute(render_textarea(%{}), "rows") == ["4"]
+    end
+  end
+
   test "a valid field carries no aria-invalid or aria-describedby" do
     html = render_input(%{id: "user_email", errors: []})
 
@@ -114,7 +179,6 @@ defmodule TymeslotWeb.Components.CoreComponentsInputTest do
             name="field"
             label="Field"
             type={@type}
-            options={[{"One", "1"}]}
             required={@required}
           />
           """
@@ -125,7 +189,7 @@ defmodule TymeslotWeb.Components.CoreComponentsInputTest do
       |> LazyHTML.query("#field")
     end
 
-    for {type, tag} <- [{"text", "input"}, {"select", "select"}, {"textarea", "textarea"}] do
+    for {type, tag} <- [{"text", "input"}, {"textarea", "textarea"}] do
       test "renders on a #{type} control" do
         control = render_control(unquote(type), true)
 
@@ -139,6 +203,76 @@ defmodule TymeslotWeb.Components.CoreComponentsInputTest do
 
       assert LazyHTML.tag(control) == ["input"]
       assert LazyHTML.attribute(control, "required") == []
+    end
+  end
+
+  describe "radio" do
+    defp render_radio(attrs) do
+      html =
+        render_component(
+          fn assigns ->
+            ~H"""
+            <Forms.input type="radio" name="choice" {@attrs} />
+            """
+          end,
+          %{attrs: attrs}
+        )
+
+      LazyHTML.from_fragment(html)
+    end
+
+    test "a checked radio renders checked with its own value and no text-field styling" do
+      html = render_radio(id: "choice-full", value: "full", checked: true)
+      radio = LazyHTML.query(html, "input[type=radio]")
+
+      assert LazyHTML.attribute(radio, "checked") == [""]
+      assert LazyHTML.attribute(radio, "value") == ["full"]
+      refute "input" in String.split(hd(LazyHTML.attribute(radio, "class")))
+    end
+
+    test "an unchecked radio renders no checked attribute" do
+      radio = LazyHTML.query(render_radio(value: "partial", checked: false), "input")
+
+      assert LazyHTML.attribute(radio, "checked") == []
+    end
+
+    test "an unlabelled radio renders the bare control, with no wrapper or derived id" do
+      html = render_radio(value: "full")
+
+      assert Enum.empty?(LazyHTML.query(html, "div"))
+      assert Enum.empty?(LazyHTML.query(html, "label"))
+      assert LazyHTML.attribute(LazyHTML.query(html, "input"), "id") == []
+    end
+
+    test "a labelled radio sits inside its label, so a group sharing a name repeats no id" do
+      html = render_radio(value: "full", label: "Full refund")
+
+      assert Enum.count(LazyHTML.query(html, "label > input[type=radio]")) == 1
+      assert LazyHTML.text(LazyHTML.query(html, "label")) =~ "Full refund"
+      assert LazyHTML.attribute(LazyHTML.query(html, "input"), "id") == []
+    end
+  end
+
+  describe "readonly" do
+    defp render_readonly(readonly) do
+      render_component(
+        fn assigns ->
+          ~H"""
+          <Forms.input id="token" name="token" type="text" value="abc" readonly={@readonly} />
+          """
+        end,
+        %{readonly: readonly}
+      )
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("#token")
+    end
+
+    test "renders the attribute on the control" do
+      assert LazyHTML.attribute(render_readonly(true), "readonly") == [""]
+    end
+
+    test "readonly={false} leaves no attribute on the control" do
+      assert LazyHTML.attribute(render_readonly(false), "readonly") == []
     end
   end
 end

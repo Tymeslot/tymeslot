@@ -98,11 +98,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.MiroTalkInternalNameTest do
       view = open_mirotalk_form(conn)
 
       view |> element("#mirotalk_base_url") |> render_blur(%{"value" => @server})
-      assert has_element?(view, "#mirotalk_base_url-error p.form-error", @refused)
+      assert has_element?(view, "#mirotalk_base_url-error.form-field-error", @refused)
 
       submit_mirotalk_form(view)
 
-      assert has_element?(view, "#mirotalk_base_url-error p.form-error", @refused)
+      assert has_element?(view, "#mirotalk_base_url-error.form-field-error", @refused)
       assert Video.list_integrations(user.id) == []
     end
   end

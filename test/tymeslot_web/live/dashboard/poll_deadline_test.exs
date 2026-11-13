@@ -197,14 +197,13 @@ defmodule TymeslotWeb.Dashboard.PollDeadlineTest do
 
     html =
       view
-      |> form("[data-testid='poll-details-form']", %{
+      |> form("[data-testid='poll-details-form']", %{"poll" => %{"title" => poll.title}})
+      |> render_submit(%{
         "poll" => %{
-          "title" => poll.title,
           "deadline" => tallinn_local(passed),
           "new_times" => %{"0" => tallinn_local(DateTime.add(passed, 10, :day))}
         }
       })
-      |> render_submit()
 
     assert html =~ "Voting has closed. Move the deadline to add times."
     assert has_element?(view, "[data-testid='poll-details-form']")

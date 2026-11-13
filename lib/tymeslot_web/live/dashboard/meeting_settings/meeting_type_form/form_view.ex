@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Validation.Constraints
+  alias TymeslotWeb.Dashboard.Languages.TranslationStatus
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.PageVisibility
 
@@ -93,7 +94,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     assigns =
       assign(assigns,
         tabs_id: @tabs_id,
-        create_hint_id: "meeting-type-form-#{assigns.id}-create-hint"
+        create_hint_id: "meeting-type-form-#{assigns.id}-create-hint",
+        translation_status:
+          if(assigns.is_edit,
+            do:
+              TranslationStatus.build(
+                assigns.profile,
+                :meeting_types,
+                :meeting_type,
+                assigns.type
+              )
+          )
       )
 
     ~H"""
@@ -105,6 +116,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
         class="space-y-6"
         novalidate
       >
+        <TranslationStatus.strip status={@translation_status} />
+
         <div class="space-y-2">
           <.tab_bar
             id={@tabs_id}
@@ -147,7 +160,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
                 |> Enum.map(&Helpers.format_errors/1)
               }
               icon="hero-tag"
-            />
+            >
+              <:label_suffix>
+                <TranslationStatus.mark status={@translation_status} path="name" />
+              </:label_suffix>
+            </.input>
 
             <.lengths_field
               form_data={@form_data}
@@ -167,8 +184,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             ) %>
           <% slot_interval_custom? = SlotIntervalField.custom?(assigns, slot_interval_value) %>
           <div>
-            <.input
-              type="select"
+            <.select
+              id="meeting-type-slot-interval"
               name="meeting_type[slot_interval]"
               label={dgettext("dashboard_meeting_form", "Booking slot interval")}
               value={
@@ -236,7 +253,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               |> Enum.map(&Helpers.format_errors/1)
             }
             icon="hero-document-text"
-          />
+          >
+            <:label_suffix>
+              <TranslationStatus.mark status={@translation_status} path="description" />
+            </:label_suffix>
+          </.input>
 
           <.icon_picker
             selected_icon={@selected_icon}
@@ -262,6 +283,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             venues={@venues}
             form_id={@id}
             group_bookings_enabled={@group_bookings_enabled}
+            translation_status={@translation_status}
             errors={
               @form_errors
               |> FormValidationHelpers.field_errors(:locations)
@@ -316,6 +338,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             payment_required={@payment_required}
             blocker={
               GroupRules.enable_blocker(%{
+                type: @type,
                 group_bookings_allowed: @group_bookings_allowed,
                 payment_required: @payment_required,
                 payments_charges_enabled: @payments_charges_enabled,
@@ -402,6 +425,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           <.visibility_section
             type={@type}
             parent={@parent_myself}
+            group={@group_bookings_enabled}
             username={@username}
             pages={PageVisibility.rows(@username, @booking_pages, @page_memberships, @type)}
             pages_editable={@pages_editable}
@@ -424,6 +448,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             form_id={@id}
             allowed={@custom_questions_allowed}
             current_user={@current_user}
+            translation_status={@translation_status}
           />
         </.card>
 

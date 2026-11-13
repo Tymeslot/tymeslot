@@ -113,17 +113,16 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
       refute html =~ "Buttons may be hard to read."
     end
 
-    test "picking the swatch does not autosave, and a stale hex submit can't be raced by it",
+    test "picking a colour does not autosave, and a stale hex submit can't be raced by it",
          %{conn: conn} do
       {:ok, _settings} = AppSettings.update(%{email_brand_accent: "#123456"})
       {:ok, lv, _html} = live(conn, ~p"/admin/email")
 
-      # Simulate the swatch commit that used to write straight to
-      # `AppSettings` on blur.
+      # The picker's hook commits this payload when the admin lets go.
       html =
         lv
-        |> form("#admin-setting-form-email_brand_accent")
-        |> render_change(%{"value" => "#abcdef"})
+        |> element("#email-brand-accent-colour-picker")
+        |> render_hook("preview_accent", %{"choice" => "#abcdef"})
 
       # The pick is a preview only - nothing is persisted, and the hex field
       # mirrors it so the admin sees what they just picked.
@@ -151,6 +150,19 @@ defmodule TymeslotWeb.AdminLiveEmailBrandingTest do
       assert html =~ ~s(id="setting-swatch-email_brand_accent")
       assert html =~ ~s(aria-describedby="email-brand-accent-feedback")
       assert html =~ ~s(id="email-brand-accent-feedback" aria-live="polite")
+    end
+
+    test "the accent colour opens the in-house picker, never the browser's", %{conn: conn} do
+      {:ok, _settings} = AppSettings.update(%{email_brand_accent: "#123456"})
+      {:ok, lv, html} = live(conn, ~p"/admin/email")
+
+      refute html =~ ~s(type="color")
+
+      assert lv
+             |> element(
+               ~s([phx-hook="CustomColourPicker"][data-event="preview_accent"][data-initial-hex="#123456"])
+             )
+             |> has_element?()
     end
   end
 

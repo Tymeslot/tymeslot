@@ -26,7 +26,7 @@ defmodule Tymeslot.Emails.EmailActionsTest do
     send_poll_invitation
     send_poll_new_times send_poll_cancelled
     send_seat_session_moved
-    send_registration_closed
+    send_registration_closed send_booking_link_email
   )
 
   test "every action keeps the name jobs are already queued under" do

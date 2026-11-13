@@ -99,7 +99,11 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   # `to`, `cc`, `bcc` and `reply_to` are `{name, address}` pairs, and
   # `subject` and `title` routinely name the other party ("Meeting Cancelled
   # with Jane Doe"). `to` is matched whole only: `redirect_to` is a path.
-  @sensitive_exact_keys ~w(identifier meeting_uid to cc bcc reply_to subject title)
+  #
+  # `invite` is a booking page's invitation token, carried as a query
+  # parameter: whoever holds an unspent one can book. Matched whole only, so
+  # `invited_at` and `invitation_id` stay readable.
+  @sensitive_exact_keys ~w(identifier meeting_uid invite to cc bcc reply_to subject title)
 
   # A visitor's IP address is truncated rather than blanked: the network
   # (/24 for IPv4, /48 for IPv6, see `IPNormaliser.truncate_for_log/1`) still

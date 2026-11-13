@@ -57,6 +57,25 @@ describe('EmbedPreview', () => {
     expect(url.searchParams.get('preview_token')).toBe(TOKEN);
   });
 
+  test('Inline rebuilds the preview when a re-render empties the container', () => {
+    // LiveView patches the server-rendered (empty) children back in when the
+    // surrounding component re-renders, e.g. on switching to the preview tab,
+    // with every data attribute unchanged.
+    const hook = mountHook('inline');
+    hook.el.innerHTML = '\n    ';
+    hook.updated();
+
+    expect(hook.el.querySelector('iframe')).not.toBeNull();
+  });
+
+  test('Inline keeps its iframe when an update changes nothing', () => {
+    const hook = mountHook('inline');
+    const iframe = hook.el.querySelector('iframe');
+    hook.updated();
+
+    expect(hook.el.querySelector('iframe')).toBe(iframe);
+  });
+
   test('Popup hands the preview token to the embed script', () => {
     const hook = mountHook('popup');
     hook.el.querySelector('button').click();
@@ -147,5 +166,56 @@ describe('EmbedPreview', () => {
 
     expect(hook.el.querySelector('button')).toBeNull();
     expect(open).not.toHaveBeenCalled();
+  });
+
+  describe('when the booking script never loads', () => {
+    test('Popup says so under the button instead of raising a native alert', () => {
+      vi.useFakeTimers();
+      delete window.TymeslotBooking;
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+      const hook = mountHook('popup', { loadingMessage: 'Still loading, try again.' });
+      hook.el.querySelector('button').click();
+      vi.advanceTimersByTime(200 * 13);
+
+      const status = hook.el.querySelector('[data-load-status]');
+      expect(status.textContent).toBe('Still loading, try again.');
+      expect(status.getAttribute('role')).toBe('status');
+      expect(alertSpy).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    test('a later click, once the script has arrived, opens the modal without the stale message', () => {
+      vi.useFakeTimers();
+      delete window.TymeslotBooking;
+
+      const hook = mountHook('popup', { loadingMessage: 'Still loading.' });
+      hook.el.querySelector('button').click();
+      vi.advanceTimersByTime(200 * 13);
+      expect(hook.el.querySelector('[data-load-status]')).not.toBeNull();
+
+      // The script arrives after the retries ran out; the direct branch runs.
+      window.TymeslotBooking = { open };
+      hook.el.querySelector('button').click();
+
+      expect(open).toHaveBeenCalled();
+      expect(hook.el.querySelector('[data-load-status]')).toBeNull();
+      vi.useRealTimers();
+    });
+
+    test('the message goes away once the script arrives and the modal opens', () => {
+      vi.useFakeTimers();
+      delete window.TymeslotBooking;
+
+      const hook = mountHook('popup', { loadingMessage: 'Still loading.' });
+      hook.showLoadingMessage();
+      hook.el.querySelector('button').click();
+      window.TymeslotBooking = { open };
+      vi.advanceTimersByTime(200);
+
+      expect(hook.el.querySelector('[data-load-status]')).toBeNull();
+      expect(open).toHaveBeenCalled();
+      vi.useRealTimers();
+    });
   });
 });

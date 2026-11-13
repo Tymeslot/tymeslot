@@ -73,8 +73,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.CurrencySelector do
   # Tag label combining the currency symbol and code, e.g. "$ USD" or "€ EUR".
   # Currencies without a distinct glyph (the symbol falls back to the code)
   # show the code alone rather than duplicating it ("CHF", not "CHF CHF").
+  # The glyph is the plain one in every language, since the code beside it
+  # already names the currency ("$ USD", not "US$ USD").
   defp currency_tag_label(code) do
-    symbol = String.trim(Money.symbol(code))
+    symbol = String.trim(Money.symbol(code, locale: "en"))
     upper = String.upcase(code)
     if symbol == upper, do: upper, else: "#{symbol} #{upper}"
   end

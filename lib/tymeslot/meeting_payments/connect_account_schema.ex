@@ -3,7 +3,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
   Stripe Connect account linked to a Tymeslot host.
 
   status values:
-    * `:creating` — placeholder row; Stripe.Account.create has not yet succeeded
+    * `:creating` — placeholder row; waiting for the OAuth connection
     * `:active`   — Stripe account exists and the row tracks its current state
     * `:deleted`  — host disconnected or was deleted; user_id nilified
   """
@@ -29,6 +29,10 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
     field :last_synced_at, :utc_datetime
     field :last_account_event_at, :utc_datetime
     field :deleted_at, :utc_datetime
+    # Non-null: connected through OAuth. Null: legacy AccountLink row or placeholder.
+    field :oauth_connected_at, :utc_datetime
+    # Single-use marker for an authorise attempt in flight.
+    field :oauth_nonce, :string
     field :status, Ecto.Enum, values: [:creating, :active, :deleted], default: :creating
 
     belongs_to :user, UserSchema, type: :id
@@ -39,6 +43,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
     user_id stripe_account_id country default_currency
     charges_enabled payouts_enabled details_submitted disabled_reason
     last_synced_at last_account_event_at deleted_at status
+    oauth_connected_at oauth_nonce
   )a
 
   @spec changeset(t(), map()) :: Ecto.Changeset.t()

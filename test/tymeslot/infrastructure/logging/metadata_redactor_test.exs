@@ -30,6 +30,22 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
              }
     end
 
+    test "redacts an invitation token under the whole key invite only" do
+      term = %{
+        "params" => %{"invite" => "inv-tok-1", "duration" => "30"},
+        invite: "inv-tok-2",
+        invited_at: "2026-11-06",
+        invitation_id: 7
+      }
+
+      assert MetadataRedactor.redact(term) == %{
+               "params" => %{"invite" => "[REDACTED]", "duration" => "30"},
+               invite: "[REDACTED]",
+               invited_at: "2026-11-06",
+               invitation_id: 7
+             }
+    end
+
     test "stops at max_depth/0, leaving deeper terms as they are" do
       nest = fn levels, inner -> Enum.reduce(1..levels, inner, &%{"n#{&1}" => &2}) end
       max = MetadataRedactor.max_depth()

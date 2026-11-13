@@ -42,11 +42,10 @@ defmodule TymeslotWeb.Dashboard.PollEmailLimitsTest do
         "title" => "Launch planning",
         "duration" => "30",
         "timezone" => "Europe/Tallinn",
-        "slots" => %{"0" => "#{date}T09:00"},
         "invitees" => invitees
       }
     })
-    |> render_submit()
+    |> render_submit(%{"poll" => %{"slots" => %{"0" => "#{date}T09:00"}}})
 
     view
   end

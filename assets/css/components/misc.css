@@ -41,3 +41,34 @@
     display: none !important;
   }
 }
+
+
+/* ===================================
+   TOOLTIP
+   =================================== */
+
+/* The wrapper takes no box, so the control stays a direct participant in its
+   flex or grid parent. Placement comes from assets/js/tooltip.js. */
+@layer components {
+  .tooltip-anchor {
+    display: contents;
+  }
+
+  .tooltip-bubble[popover] {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    max-width: min(20rem, calc(100vw - 16px));
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 0;
+    border-radius: var(--radius-lg);
+    background: var(--color-neutral-800);
+    color: white;
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    line-height: 1.4;
+    box-shadow: var(--shadow-glass-md);
+    pointer-events: auto;
+    white-space: normal;
+  }
+}

@@ -162,6 +162,11 @@ Settled while translating; reuse rather than re-coining.
 | **Wk** (calendar column header) | **Sett**: no full stop |
 | gradient / preset | **gradiente** / **preset** |
 | booking link | **link di prenotazione** |
+| **link** (the username field in the setup wizard: the part of the booking URL the host chooses) | **link** (masculine, invariable): `Il tuo link`, `Questo link è già di qualcun altro` |
+| **keep** (your link: save it somewhere you'll find it again) | **salvare**: `Oppure salvalo per dopo`, `Prima invia o salva il tuo link`. Never `tenere` |
+| **app-specific password** (Apple's term) | Apple's own Italian UI: **password specifica per l'app**, the Apple Account menu item **Password specifiche per le app**, the section **Accesso e sicurezza**, and **Account Apple** (capital A, as Apple writes it). `Apple ID` stays **ID Apple** where the source says Apple ID |
+| **Live** (the setup step name and the page-status badge) / *goes live* | **Online** / **andare online**: `Quasi online`, `La tua pagina non è ancora online`. Not `Live`, not `Attivo` |
+| **Book a time with me** / *pick a time with me* (the host's own share and signature line) | **Fissa un appuntamento con me** (the `fissare un appuntamento` idiom) |
 | **booking horizon / advance booking window** | **finestra di prenotazione**: the dashboard term, used on every marketing and profession page too |
 | **analytics** (our booking analytics feature) | **statistiche** (`statistiche sulle prenotazioni`); never `analytics` for our own feature |
 | third-party analytics / tracking | **strumenti di analisi di terze parti** (product names such as Google Analytics stay verbatim) |
@@ -180,6 +185,15 @@ Settled while translating; reuse rather than re-coining.
 | put back (bookable times, undo) | **ripristinare** |
 | booking request (calendar pill) / Expired (pill) | **Richiesta** / **Scaduta**; `decaduta senza risposta` for "expired without an answer" |
 | Accept (a booking request) | **Accetta**, matching `dashboard_bookings` |
+| translation (noun; booking-page languages) | **traduzione** (f., pl. **traduzioni**); *%{language} translations* → **Traduzioni: %{language}**, *Your %{language} translations* → **Le tue traduzioni (%{language})**: `%{language}` is filled with the language's own name, so it goes after a colon or in brackets, never after an article or *in* |
+| translate | **tradurre**; the participle agrees with *testi* (*%{translated}/%{total} tradotti*) |
+| original language (the language the host writes their texts in) | **lingua originale**; *in %{language}* → **nella lingua originale (%{language})**; the original text is **l'originale** (*nella versione originale*), and the badge beside that language reads **originale** |
+| translation language (a language the host translates into) | **lingua di traduzione** (pl. **lingue di traduzione**) |
+| language switcher (the visitor-facing control on the booking page) | **selettore della lingua** |
+| Outdated (a translation whose original changed) | **Da aggiornare** (invariable: *%{count} da aggiornare*, *sono da aggiornare*) |
+| Missing (a text not translated yet) | **Mancante** (pl. **mancanti**) |
+| Translated (status) | **Tradotto** |
+| Review (the link to a language's review page) | **Controlla** |
 
 **Weekday abbreviations:** Lun · Mar · Mer · Gio · Ven · Sab · Dom
 

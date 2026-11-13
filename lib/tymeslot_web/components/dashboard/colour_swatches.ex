@@ -40,40 +40,41 @@ defmodule TymeslotWeb.Components.Dashboard.ColourSwatches do
 
     ~H"""
     <div role="group" aria-label={@group_label} class="flex flex-wrap items-center gap-1.5">
-      <button
-        :for={{key, label, swatch_class} <- @palette}
-        type="button"
-        phx-click={@event}
-        phx-value-colour={key}
-        phx-target={@target}
-        title={label}
-        aria-label={label}
-        aria-pressed={to_string(@selected == key)}
-        {@values}
-        class={[
-          "w-6 h-6 rounded-token-full ring-2 ring-offset-1 transition-all",
-          swatch_class,
-          (@selected == key && "ring-turquoise-500") || "ring-transparent hover:ring-tymeslot-300"
-        ]}
-      ></button>
-      <button
-        type="button"
-        phx-click={@event}
-        phx-value-colour="default"
-        phx-target={@target}
-        title={clear_label()}
-        aria-label={clear_label()}
-        aria-pressed={to_string(is_nil(@selected))}
-        {@values}
-        class={[
-          "w-6 h-6 rounded-token-full ring-2 ring-offset-1 transition-all",
-          "inline-flex items-center justify-center border border-tymeslot-300 bg-white",
-          (is_nil(@selected) && "ring-turquoise-500 text-turquoise-700") ||
-            "ring-transparent text-tymeslot-500 hover:ring-tymeslot-300"
-        ]}
-      >
-        <.icon name="hero-no-symbol-micro" class="w-3.5 h-3.5" />
-      </button>
+      <.tooltip :for={{key, label, swatch_class} <- @palette} text={label}>
+        <button
+          type="button"
+          phx-click={@event}
+          phx-value-colour={key}
+          phx-target={@target}
+          aria-label={label}
+          aria-pressed={to_string(@selected == key)}
+          {@values}
+          class={[
+            "w-6 h-6 rounded-token-full ring-2 ring-offset-1 transition-all",
+            swatch_class,
+            (@selected == key && "ring-turquoise-500") || "ring-transparent hover:ring-tymeslot-300"
+          ]}
+        ></button>
+      </.tooltip>
+      <.tooltip text={clear_label()}>
+        <button
+          type="button"
+          phx-click={@event}
+          phx-value-colour="default"
+          phx-target={@target}
+          aria-label={clear_label()}
+          aria-pressed={to_string(is_nil(@selected))}
+          {@values}
+          class={[
+            "w-6 h-6 rounded-token-full ring-2 ring-offset-1 transition-all",
+            "inline-flex items-center justify-center border border-tymeslot-300 bg-white",
+            (is_nil(@selected) && "ring-turquoise-500 text-turquoise-700") ||
+              "ring-transparent text-tymeslot-500 hover:ring-tymeslot-300"
+          ]}
+        >
+          <.icon name="hero-no-symbol-micro" class="w-3.5 h-3.5" />
+        </button>
+      </.tooltip>
     </div>
     """
   end

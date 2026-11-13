@@ -9,12 +9,14 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
   import Mox
 
   alias Ecto.Changeset
+  alias Ecto.UUID
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.CheckoutSessions
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Profiles
+  alias Tymeslot.SignedToken
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Endpoint
 
@@ -310,7 +312,11 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
           cancel = URI.parse(params.cancel_url)
           assert String.starts_with?(params.cancel_url, origin <> "/")
           assert cancel.path == "/themes/#{slug}/payment-cancelled/#{meeting.id}"
-          assert cancel.query == nil
+          # Stripe fills `{CHECKOUT_SESSION_ID}` in only on the success URL,
+          # so the cancel URL carries the guest's proof of its own.
+          assert %{"return_token" => token} = URI.decode_query(cancel.query)
+          assert map_size(URI.decode_query(cancel.query)) == 1
+          assert MeetingPayments.returned_from_checkout?(meeting.id, token)
 
           {:ok, %{id: "cs_URL", url: "https://checkout.stripe.com/cs_URL"}}
         end)
@@ -318,6 +324,91 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
         assert {:ok, %{checkout_url: "https://checkout.stripe.com/cs_URL"}} =
                  CheckoutSessions.create_session_for_booking(meeting)
       end
+    end
+  end
+
+  describe "returned_from_checkout?/2" do
+    test "holds only for a return token signed for that meeting" do
+      meeting_id = UUID.generate()
+      token = SignedToken.sign(:checkout_return, meeting_id)
+
+      assert CheckoutSessions.returned_from_checkout?(meeting_id, token)
+      refute CheckoutSessions.returned_from_checkout?(UUID.generate(), token)
+      refute CheckoutSessions.returned_from_checkout?(meeting_id, token <> "x")
+      refute CheckoutSessions.returned_from_checkout?(meeting_id, nil)
+
+      # A token signed for another purpose over the same id is no proof.
+      refute CheckoutSessions.returned_from_checkout?(
+               meeting_id,
+               SignedToken.sign(:booking_preview, meeting_id)
+             )
+    end
+  end
+
+  describe "abandon_checkout/1" do
+    setup %{user: user, meeting_type: mt} do
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          status: :awaiting_payment
+        )
+
+      %{meeting: meeting}
+    end
+
+    test "expires the open Stripe session on the host's connected account", %{
+      user: user,
+      meeting: meeting
+    } do
+      insert(:booking_payment,
+        meeting: meeting,
+        host_user_id: user.id,
+        stripe_account_id: "acct_HOST",
+        stripe_checkout_session_id: "cs_OPEN"
+      )
+
+      expect(StripeAdapterMock, :expire_checkout_session, fn "cs_OPEN", opts ->
+        assert opts[:connect_account] == "acct_HOST"
+        {:ok, %{id: "cs_OPEN", status: "expired"}}
+      end)
+
+      assert :ok = CheckoutSessions.abandon_checkout(meeting.id)
+
+      # The local hold is left to the `checkout.session.expired` webhook.
+      assert BookingPaymentQueries.by_meeting_id(meeting.id).status == :pending
+    end
+
+    test "returns Stripe's refusal, such as for a session it already completed", %{
+      user: user,
+      meeting: meeting
+    } do
+      insert(:booking_payment,
+        meeting: meeting,
+        host_user_id: user.id,
+        stripe_checkout_session_id: "cs_DONE"
+      )
+
+      expect(StripeAdapterMock, :expire_checkout_session, fn "cs_DONE", _opts ->
+        {:error, %{message: "This Checkout Session is not open."}}
+      end)
+
+      assert {:error, _reason} = CheckoutSessions.abandon_checkout(meeting.id)
+    end
+
+    test "calls Stripe for nothing that is not an open checkout", %{user: user, meeting: meeting} do
+      # No payment row at all.
+      assert :ok = CheckoutSessions.abandon_checkout(meeting.id)
+
+      insert(:booking_payment,
+        meeting: meeting,
+        host_user_id: user.id,
+        status: :paid,
+        stripe_checkout_session_id: "cs_PAID"
+      )
+
+      # Mox raises on any call to the adapter here.
+      assert :ok = CheckoutSessions.abandon_checkout(meeting.id)
     end
   end
 end

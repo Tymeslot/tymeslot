@@ -45,6 +45,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingRaceTest do
           insert(:profile,
             user: user,
             booking_theme: unquote(theme.id),
+            timezone: "America/New_York",
             username: "race-#{unquote(theme.slug)}"
           )
 

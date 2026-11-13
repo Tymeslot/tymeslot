@@ -13,11 +13,13 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   alias Phoenix.LiveView
   alias Tymeslot.BookingPages
   alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.Demo
   alias Tymeslot.Polls
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
+  alias TymeslotWeb.Live.Scheduling.PreviewToken
   alias TymeslotWeb.Themes.Core.{Context, ErrorBoundary, MeetingManagement, PollVoting, Registry}
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
 
@@ -121,6 +123,8 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
 
     case MeetingManagement.validate_and_load_meeting(meeting_uid, action, profile.user_id) do
       {:ok, meeting} ->
+        {socket, profile} = follow_attendee_language(socket, profile, meeting)
+
         # A booking made through a booking page is managed in that page's look.
         profile = BookingPages.for_meeting(profile, meeting)
 
@@ -162,6 +166,15 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
          |> LiveView.put_flash(:error, refusal_message(reason))
          |> LiveView.redirect(to: ~p"/")}
     end
+  end
+
+  # A meeting's pages speak the language the attendee booked in, unless the
+  # visitor picked another (`?locale=`, the language switcher's): the emailed
+  # links carry no locale, and the attendee may open them anywhere
+  # (`OrganizerHelpers.follow_booked_language/2`).
+  defp follow_attendee_language(socket, profile, meeting) do
+    socket = OrganizerHelpers.follow_booked_language(socket, meeting.attendee_locale)
+    {socket, socket.assigns[:organizer_profile] || profile}
   end
 
   # A cancel or reschedule refusal. A reason `BookingErrorMessage` does not
@@ -264,12 +277,19 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   # The message is assigned, deliberately not flashed. The scheduling layout
   # renders a flash group of its own on top of the root layout's, so a flash
   # here surfaced the same sentence twice above a card already carrying it.
+  #
+  # The refused mount never reaches the theme's own mount, where an owner
+  # preview is recognised, so it is recognised here too: the owner looking
+  # at their own page (the onboarding stage) is not a visitor to win over,
+  # and the page carries no branding invitation for them
+  # (`Shared.SchedulingPage`).
   defp mount_readiness_error(profile, params, socket, reason) do
     case prepare_theme_context(profile, params, socket) do
       {:ok, _context, socket} ->
         {:ok,
          socket
          |> LiveView.clear_flash()
+         |> assign(:owner_preview, PreviewToken.owner?(params["preview_token"], profile.user_id))
          |> assign(:scheduling_error_message, LinkAccessPolicy.reason_to_message(reason))}
 
       {:error, error_socket} ->
@@ -287,7 +307,10 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
        ) do
     socket =
       socket
-      |> assign(:organizer_profile, profile)
+      |> assign(
+        :organizer_profile,
+        ContentTranslations.localise(profile, socket.assigns[:content_locale])
+      )
       |> assign(:booking_window_days, OrganizerHelpers.booking_window_days(profile))
       |> assign(:meeting, meeting)
       |> assign(:meeting_uid, meeting_uid)

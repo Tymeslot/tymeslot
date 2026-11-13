@@ -192,7 +192,12 @@ defmodule TymeslotWeb.Dashboard.BookingPagesManageTest do
 
     {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
-    assert has_element?(view, "[data-testid='new-booking-page'][disabled]")
+    assert has_element?(
+             view,
+             "[data-testid='new-booking-page'][disabled][aria-describedby='booking-page-limit-hint']"
+           )
+
+    assert has_element?(view, "#booking-page-limit-hint")
   end
 
   test "a tab switches to its page", %{conn: conn, profile: profile} do

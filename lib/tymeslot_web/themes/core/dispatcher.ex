@@ -84,14 +84,16 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     # on the static (crawler) render, where no conn is available.
     socket = assign(socket, :request_path, URI.parse(url).path || "/")
 
-    # Sync locale from params if present
-    socket =
-      if locale = params["locale"] do
-        LocaleHandler.handle_locale_change(socket, locale)
-      else
-        socket
-      end
+    # Sync locale from params if present. A change on a page showing the
+    # organiser's texts reloads it, as does a pick the organiser does not
+    # offer, and nothing else is handled then.
+    case LocaleHandler.handle_locale_change(socket, params["locale"], url) do
+      {:reload, socket} -> {:noreply, socket}
+      {:cont, socket} -> handle_page_params(params, url, socket)
+    end
+  end
 
+  defp handle_page_params(params, url, socket) do
     # Check if this is a meeting management action
     action = socket.assigns[:live_action]
 

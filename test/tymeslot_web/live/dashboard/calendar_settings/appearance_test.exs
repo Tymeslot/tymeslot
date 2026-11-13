@@ -98,6 +98,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.AppearanceTest do
       |> render_submit()
 
       assert reload(integration, user).name == "Calendar"
+      assert has_element?(view, "#calendar-selection-name-error")
+      # The refused value stays: the old name beside this error would be wrong.
+      refute has_element?(view, "#calendar-selection-name[value='Calendar']")
     end
 
     test "refuses once the write rate limit is spent", %{conn: conn, user: user} do

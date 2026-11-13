@@ -78,6 +78,7 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               {:ok, any()} | {:error, any()}
   @callback send_social_signup_confirmation(user_map(), String.t(), String.t()) ::
               {:ok, any()} | {:error, any()}
+  @callback send_booking_link(user_map(), String.t()) :: {:ok, any()} | {:error, any()}
   @callback send_email_change_verification(user_map(), String.t(), String.t()) ::
               {:ok, any()} | {:error, any()}
   @callback send_email_change_notification(user_map(), String.t()) ::

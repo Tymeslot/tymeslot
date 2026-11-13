@@ -53,6 +53,7 @@ defmodule TymeslotWeb.Components.Dashboard.BookingPages.NewPageModal do
         phx-submit="create_page"
         phx-target={@target}
         class="space-y-6"
+        novalidate
       >
         <.input
           field={used_errors(@form[:name])}

@@ -6,6 +6,7 @@ defmodule Tymeslot.Emails.EmailService do
 
   - `AppointmentEmails` — confirmations, reminders, cancellations
   - `AuthEmails` — email verification, password reset
+  - `OnboardingEmails`: mail a new host asks for while setting up (their booking link)
   - `AccountEmails` — email change verification, notification, confirmation
   - `CalendarEmails` — sync errors, external booking changes, invitations, reschedule requests
   - `IntegrationEmails` — integration health notifications, admin alerts
@@ -21,7 +22,8 @@ defmodule Tymeslot.Emails.EmailService do
     AppointmentEmails,
     AuthEmails,
     CalendarEmails,
-    IntegrationEmails
+    IntegrationEmails,
+    OnboardingEmails
   }
 
   alias Tymeslot.Workers.SendConfiguredEmail
@@ -204,6 +206,11 @@ defmodule Tymeslot.Emails.EmailService do
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_social_signup_confirmation(recipient, provider, confirm_url), to: AuthEmails
+
+  # Onboarding emails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_booking_link(user, booking_url), to: OnboardingEmails
 
   # Account emails
 

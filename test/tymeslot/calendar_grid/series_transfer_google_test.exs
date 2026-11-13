@@ -24,6 +24,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.EnqueuedJobs
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias Tymeslot.Workers.SyncRequest
 
@@ -292,7 +293,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
       assert [%{method: :post}] = requests()
       assert_series_cached(source, [first, occurrence])
       assert Repo.reload!(room).provider_calendar_id == @source_calendar
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
 
     test "a move to the calendar the series is on is refused before anything is sent", %{
@@ -306,7 +307,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
 
       assert requests() == []
       assert_series_cached(source, [occurrence])
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
   end
 
@@ -406,7 +407,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
       assert [%{method: :get}, %{method: :post}] = requests()
       assert_series_cached(source, [first, occurrence])
       assert Repo.reload!(room).calendar_integration_id == source.id
-      assert all_enqueued() == []
+      assert EnqueuedJobs.for_user(user) == []
     end
 
     test "a master the source will not delete is left behind, and the copy kept", %{

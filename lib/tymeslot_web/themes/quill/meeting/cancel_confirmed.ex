@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.ContentTranslations.AttendeeTexts
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper
 
   use TymeslotWeb.Components.CoreComponents
@@ -14,6 +15,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
   attr :meeting, :map, default: nil, doc: "the cancelled meeting"
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
+  attr :offered_locales, :list, default: nil
   attr :legal_links, :map, required: true
 
   @doc """
@@ -26,6 +28,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
       theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      offered_locales={assigns[:offered_locales]}
       legal_links={@legal_links}
       show_language_switcher={true}
     >
@@ -45,11 +48,14 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
                   {dgettext("booking_manage", "Meeting Cancelled")}
                 </h1>
                 <p
-                  :if={assigns[:meeting] && @meeting.meeting_type not in [nil, ""]}
+                  :if={
+                    assigns[:meeting] &&
+                      AttendeeTexts.text(@meeting, :meeting_type, assigns[:locale]) not in [nil, ""]
+                  }
                   class="meeting-page-subject"
                   data-testid="chosen-meeting-type"
                 >
-                  {@meeting.meeting_type}
+                  {AttendeeTexts.text(@meeting, :meeting_type, assigns[:locale])}
                 </p>
                 <p class="text-lg mb-8 meeting-page-lead">
                   {dgettext("booking_manage", "Your meeting has been successfully cancelled.")}

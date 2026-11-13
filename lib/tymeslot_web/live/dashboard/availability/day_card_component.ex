@@ -80,18 +80,19 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
             phx-target={@myself}
             phx-debounce="500"
             class="day-hours-inline flex items-center gap-2 shrink-0"
+            novalidate
           >
             <input type="hidden" name="day" value={@day} />
-            <.input
-              type="select"
+            <.select
+              id={"day-hours-start-#{@day}"}
               name="start"
               options={TimeOptions.time_options(@time_format)}
               value={@start_value}
               aria-label={dgettext("dashboard_availability", "Start Time")}
             />
             <span class="text-tymeslot-400">–</span>
-            <.input
-              type="select"
+            <.select
+              id={"day-hours-end-#{@day}"}
               name="end"
               options={@end_options}
               value={@end_value}
@@ -226,8 +227,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
           />
         </div>
         <div class="w-32">
-          <.input
-            type="select"
+          <.select
             id={"add-break-start-#{@day}"}
             name="start"
             label={dgettext("dashboard_availability", "From")}
@@ -238,8 +238,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
           />
         </div>
         <div class="w-32">
-          <.input
-            type="select"
+          <.select
             id={"add-break-end-#{@day}"}
             name="end"
             label={dgettext("dashboard_availability", "Until")}

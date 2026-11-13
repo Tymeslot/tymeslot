@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingDeepLinkTest do
   @moduletag :live
 
   import Mox
+  import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -106,6 +107,19 @@ defmodule TymeslotWeb.Live.Scheduling.BookingDeepLinkTest do
              live(conn, "/#{profile.username}/99999/book?date=#{date}&time=10:00%20AM")
 
     assert to == "/#{profile.username}"
+    assert flash["error"] =~ "Invalid meeting type"
+  end
+
+  @tag :capture_log
+  test "a dead link with a chosen time is refused on a theme asking for the time and details together",
+       %{conn: conn, date: date} do
+    # Each fact this one screen collects resolves the slug on entry. A slug
+    # that names nothing has them all refuse it, and a page redirects once.
+    seed_booking_account("3", "paperhost", "Etc/UTC")
+
+    assert {:error, {:redirect, %{to: "/paperhost", flash: flash}}} =
+             live(conn, "/paperhost/renamed-type/book?date=#{date}&time=10:00%20AM")
+
     assert flash["error"] =~ "Invalid meeting type"
   end
 

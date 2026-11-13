@@ -14,6 +14,37 @@ defmodule Tymeslot.Precommit.RunnerHelpersTest do
     end
   end
 
+  # Only the suite carries a timeout, so it alone keeps the default priority; a
+  # niced suite would hand its partitions the lower priority too.
+  describe "launcher/1" do
+    test "starts either repository's suite at the default priority" do
+      assert Runner.launcher(["test"]) == {"mix", ["test"]}
+
+      assert Runner.launcher(["test.elixir", "--partitions", "4"]) ==
+               {"mix", ["test.elixir", "--partitions", "4"]}
+    end
+
+    test "starts every other step under nice" do
+      nice = System.find_executable("nice")
+
+      for args <- [["dialyzer.incremental"], ["credo", "--strict"], ["test.js"]] do
+        assert Runner.launcher(args) == {nice, ["-n", "10", "mix" | args]}
+      end
+    end
+
+    # The kernel caps niceness at 19, and the workspace `mix.sh` already runs
+    # the whole gate at 10, so the expected value is capped too.
+    test "the command it builds lowers the priority of what it runs" do
+      {nice, ["-n", increment, "mix" | _args]} = Runner.launcher(["credo"])
+      {own, 0} = System.cmd(nice, [], env: [])
+      {lowered, 0} = System.cmd(nice, ["-n", increment, nice], env: [])
+      own = own |> String.trim() |> String.to_integer()
+
+      assert String.to_integer(String.trim(lowered)) ==
+               min(own + String.to_integer(increment), 19)
+    end
+  end
+
   # The fixture is a warning the compiler printed verbatim while building this
   # repository as a path dependency, so the pattern is pinned to the real
   # location format rather than to a guess at it.

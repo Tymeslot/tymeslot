@@ -4,9 +4,35 @@ defmodule TymeslotWeb.Components.CoreComponentsFormsTest do
   @moduletag :components
   @moduletag :ui
 
+  import Phoenix.Component, only: [sigil_H: 2]
+  import Phoenix.LiveViewTest, only: [render_component: 2]
+
   alias Gettext.Plural
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Gettext, as: Backend
+
+  describe "form_wrapper/1" do
+    defp render_wrapper(assigns) do
+      fn assigns ->
+        ~H"""
+        <Forms.form_wrapper for={%{}} {@attrs}>
+          <input name="x" />
+        </Forms.form_wrapper>
+        """
+      end
+      |> render_component(%{attrs: assigns})
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("form")
+    end
+
+    test "leaves validation to the server by default" do
+      assert LazyHTML.attribute(render_wrapper(%{}), "novalidate") == [""]
+    end
+
+    test "can opt back in to browser validation" do
+      assert LazyHTML.attribute(render_wrapper(%{novalidate: false}), "novalidate") == []
+    end
+  end
 
   describe "translate_error/1 with a {msg, opts} changeset error tuple" do
     test "routes through gettext instead of returning the raw English msgid unconditionally" do

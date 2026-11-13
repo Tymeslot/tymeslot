@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   alias TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable
   alias TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards
   alias TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart
+  alias TymeslotWeb.Dashboard.BookingLinkShare
   alias TymeslotWeb.Dashboard.ComponentDispatch
   alias TymeslotWeb.Dashboard.DashboardFormat
   alias TymeslotWeb.Helpers.PageTitles
@@ -84,6 +85,9 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   end
 
   def handle_event("set_range", _params, socket), do: {:noreply, socket}
+
+  def handle_event("booking_link_copied", params, socket),
+    do: BookingLinkShare.handle_copied(socket, params["channel"])
 
   # Metrics are cached for 60s, so a just-recorded visit may not show on a plain
   # reload. Refresh drops the cache entry and recomputes, giving the organizer an

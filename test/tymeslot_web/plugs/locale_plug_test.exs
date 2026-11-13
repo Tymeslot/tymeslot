@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> LocalePlug.call([])
 
       assert conn.assigns.locale == "de"
-      assert get_session(conn, :chosen_locale) == "de"
+      assert get_session(conn, :booking_chosen_locale) == "de"
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
     end
 
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
 
       # de can only come from the query param, so it winning proves priority.
       assert conn.assigns.locale == "de"
-      assert get_session(conn, :chosen_locale) == "de"
+      assert get_session(conn, :booking_chosen_locale) == "de"
     end
 
     test "prioritizes query parameter over Accept-Language header", %{conn: _conn} do
@@ -419,7 +419,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
       # URL restates the path locale on every request, so it is not
       # remembered; the explicit ?locale= choice is.
       assert conn.assigns.locale == "de"
-      assert get_session(conn, :chosen_locale) == "en"
+      assert get_session(conn, :booking_chosen_locale) == "en"
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
     end
 
@@ -509,7 +509,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> fetch_session()
         |> LocalePlug.call([])
 
-      assert get_session(conn, :chosen_locale) == "de"
+      assert get_session(conn, :booking_chosen_locale) == "de"
     end
 
     test "does not persist a locale detected from the header", %{conn: conn} do
@@ -603,6 +603,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
       assert LocalePlug.live_session_data(conn) == %{
                "resolved_locale" => "fr",
                "ambient_locale" => "de",
+               "browser_locales" => ["de"],
                "visitor_week_start" => "monday"
              }
     end
@@ -618,7 +619,8 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
       assert LocalePlug.live_session_data(conn) == %{
                "resolved_locale" => "it",
                "ambient_locale" => "it",
-               "path_locale" => "it"
+               "path_locale" => "it",
+               "browser_locales" => []
              }
     end
   end

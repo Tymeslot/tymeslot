@@ -1,0 +1,224 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pl\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{from} to %{to}"
+msgstr "%{from} – %{to}"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{range}, from %{time}"
+msgstr "%{range}, od %{time}"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "%{range}, until %{time}"
+msgstr "%{range}, do %{time}"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "1 booking already sits inside these dates"
+msgid_plural "%{count} bookings already sit inside these dates"
+msgstr[0] "W tych dniach jest już 1 rezerwacja"
+msgstr[1] "W tych dniach są już %{count} rezerwacje"
+msgstr[2] "W tych dniach jest już %{count} rezerwacji"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 booking sits inside this time off. It stays in your diary until you move or cancel it."
+msgid_plural "%{count} bookings sit inside this time off. They stay in your diary until you move or cancel them."
+msgstr[0] "1 rezerwacja przypada na czas tej nieobecności. Pozostaje w kalendarzu, dopóki nie zmienisz jej terminu albo jej nie odwołasz."
+msgstr[1] "%{count} rezerwacje przypadają na czas tej nieobecności. Pozostają w kalendarzu, dopóki nie zmienisz ich terminu albo ich nie odwołasz."
+msgstr[2] "%{count} rezerwacji przypada na czas tej nieobecności. Pozostają w kalendarzu, dopóki nie zmienisz ich terminu albo ich nie odwołasz."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Add a period and those days stop being offered, without touching your calendars."
+msgstr "Dodaj okres, a te dni przestaną być oferowane – bez zmian w kalendarzach."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Add time off"
+msgstr "Dodaj nieobecność"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "All day"
+msgstr "Cały dzień"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Any day between the first and the last is blocked in full."
+msgstr "Każdy dzień między pierwszym a ostatnim jest zablokowany w całości."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Anything you add appears here."
+msgstr "Wszystko, co dodasz, pojawi się tutaj."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Away from (first day)"
+msgstr "Nieobecność od (pierwszy dzień)"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Back at (last day)"
+msgstr "Nieobecność do (ostatni dzień)"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Could not remove your time off"
+msgstr "Nie udało się usunąć nieobecności"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save your time off"
+msgstr "Nie udało się zapisać nieobecności"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Current and upcoming"
+msgstr "Trwające i nadchodzące"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Days you are away. These apply to every schedule and every meeting type, and nobody booking you sees why those days are closed."
+msgstr "Dni nieobecności. Dotyczą każdego harmonogramu i każdego typu spotkania, a osoby rezerwujące nie widzą, dlaczego te dni są zamknięte."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Edit time off"
+msgstr "Edytuj nieobecność"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "First day away"
+msgstr "Pierwszy dzień nieobecności"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Holiday"
+msgstr "Urlop"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Last day away"
+msgstr "Ostatni dzień nieobecności"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "No time off booked"
+msgstr "Brak zaplanowanych nieobecności"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "No upcoming time off"
+msgstr "Brak nadchodzących nieobecności"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Note (only you see this)"
+msgstr "Notatka (widzisz ją tylko ty)"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Open your bookings in a new tab"
+msgstr "Otwórz rezerwacje w nowej karcie"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Past"
+msgstr "Minione"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Remove"
+msgstr "Usuń"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Remove time off"
+msgstr "Usuń nieobecność"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Remove your time off for %{range}?"
+msgstr "Usunąć nieobecność: %{range}?"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr "Zapisz"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "That time off no longer exists"
+msgstr "Ta nieobecność już nie istnieje"
+
+#: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Those days become bookable again straight away."
+msgstr "Te dni od razu znów będą dostępne do rezerwacji."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time Off"
+msgstr "Nieobecności"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time off added"
+msgstr "Dodano nieobecność"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Time off only stops new bookings. These keep their times until you move or cancel them."
+msgstr "Nieobecność blokuje tylko nowe rezerwacje. Istniejące pozostają bez zmian, dopóki nie zmienisz ich terminu albo ich nie odwołasz."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time off removed"
+msgstr "Usunięto nieobecność"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time off that ended in the last %{count} days. It no longer affects your availability."
+msgstr "Nieobecności zakończone w ciągu ostatnich %{count} dn. Nie wpływają już na dostępność."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time off updated"
+msgstr "Zaktualizowano nieobecność"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "You already have the maximum of %{count} time off periods"
+msgstr "Osiągnięto maksymalną liczbę nieobecności: %{count}"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "and 1 more"
+msgid_plural "and %{count} more"
+msgstr[0] "i jeszcze 1"
+msgstr[1] "i jeszcze %{count}"
+msgstr[2] "i jeszcze %{count}"

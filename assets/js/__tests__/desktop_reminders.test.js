@@ -77,15 +77,28 @@ describe("DesktopReminders hook", () => {
     hook.destroyed()
   })
 
-  it("requests permission but does not fire when permission is not granted", () => {
+  it("never asks for permission itself, and fires nothing while it is not granted", () => {
     global.Notification.permission = "default"
     const { hook } = makeHook([{ key: "k1", fire_at_ms: now - 1000, title: "t", body: "b" }])
 
     hook.mounted()
+    hook.updated()
 
-    expect(global.Notification.requestPermission).toHaveBeenCalled()
+    // A request outside a user gesture is ignored by Firefox and Safari; the
+    // settings toggle makes it (desktop_reminder_permission.js).
+    expect(global.Notification.requestPermission).not.toHaveBeenCalled()
     // The constructor itself is never invoked (only the static helpers were).
     expect(global.Notification).not.toHaveBeenCalled()
+    hook.destroyed()
+  })
+
+  it("keeps refreshing its feed on updates now that it asks for nothing", () => {
+    const { hook, el } = makeHook([])
+    hook.mounted()
+    el.dataset.reminders = JSON.stringify([{ key: "k3", fire_at_ms: 1, title: "t", body: "b" }])
+    hook.updated()
+
+    expect(hook._feed).toEqual([{ key: "k3", fire_at_ms: 1, title: "t", body: "b" }])
     hook.destroyed()
   })
 

@@ -115,3 +115,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Paid: %{amount}"
 msgstr ""
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed. Your invitation stays reserved for it until the unfinished checkout expires, and a link to book again will appear here as soon as it does."
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed. To try again, open the invitation link you were sent."
+msgstr ""

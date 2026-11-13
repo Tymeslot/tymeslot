@@ -4,12 +4,8 @@ defmodule Tymeslot.Profiles.Settings do
   This module coordinates updates across multiple profile aspects.
   """
 
-  alias Tymeslot.Availability.AvailabilityScheduleSchema
-  alias Tymeslot.Availability.Schedules
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
-
-  @policy_param_keys ~w(buffer_before_minutes buffer_after_minutes advance_booking_days min_advance_hours)
 
   @type profile :: ProfileSchema.t()
 
@@ -52,29 +48,6 @@ defmodule Tymeslot.Profiles.Settings do
     case ProfileSchema.basic_changeset(profile, details) do
       %{valid?: true} -> :ok
       changeset -> {:error, changeset}
-    end
-  end
-
-  @doc """
-  Updates one scheduling preference on the profile's default availability
-  schedule.
-
-  Used by the onboarding wizard, which sets the account's starting policy before
-  any additional schedule exists. The wizard submits one field at a time, so
-  whichever of the four is present in `params` is the one that is written.
-  """
-  @spec update_scheduling_preferences(ProfileSchema.t(), %{String.t() => term()}) ::
-          {:ok, AvailabilityScheduleSchema.t()} | {:error, term()}
-  def update_scheduling_preferences(profile, params) do
-    case {Map.take(params, @policy_param_keys), Schedules.get_default(profile.id)} do
-      {_policy_params, nil} ->
-        {:error, :no_default_schedule}
-
-      {policy_params, schedule} when map_size(policy_params) == 0 ->
-        {:ok, schedule}
-
-      {policy_params, schedule} ->
-        Schedules.update_policy(schedule, policy_params)
     end
   end
 

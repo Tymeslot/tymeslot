@@ -228,7 +228,11 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
         end)
 
       assert attr_of(doc, "button", "aria-label") == ["Remove time off"]
-      assert attr_of(doc, "button", "title") == ["Remove time off"]
+      assert attr_of(doc, "button", "title") == []
+
+      assert doc |> LazyHTML.query("[role=tooltip]") |> LazyHTML.text() |> String.trim() ==
+               "Remove time off"
+
       assert attr_of(doc, "button", "type") == ["button"]
       assert classes(doc, "button") == ["icon-button", "icon-button--danger", "icon-button--md"]
       assert attr_of(doc, "button > svg", "aria-hidden") == ["true"]
@@ -259,11 +263,12 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
   end
 
   describe "icon_button/1 tooltip" do
-    test "keeps the action as the accessible name and puts the reason in the title" do
+    test "keeps the action as the accessible name and puts the reason in the tooltip" do
       doc =
         render_doc(fn assigns ->
           ~H"""
           <Buttons.icon_button
+            id="copy"
             icon="hero-clipboard"
             label="Copy link"
             tooltip="Publish the page to share its link"
@@ -273,7 +278,12 @@ defmodule TymeslotWeb.Components.CoreComponentsButtonsTest do
         end)
 
       assert attr_of(doc, "button", "aria-label") == ["Copy link"]
-      assert attr_of(doc, "button", "title") == ["Publish the page to share its link"]
+      assert attr_of(doc, "button", "aria-describedby") == ["copy-tip"]
+      assert attr_of(doc, "button", "title") == []
+
+      assert doc |> LazyHTML.query("#copy-tip") |> LazyHTML.text() |> String.trim() ==
+               "Publish the page to share its link"
+
       assert attr_of(doc, "button", "aria-disabled") == ["true"]
       assert attr_of(doc, "button", "disabled") == []
     end

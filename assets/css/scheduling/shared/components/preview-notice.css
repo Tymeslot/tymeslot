@@ -51,6 +51,24 @@
   flex-shrink: 0;
 }
 
+/* In the onboarding stage's short phone card (html[data-preview-stage],
+   set by iframe_embed.js) the page is a glimpse a few hundred pixels tall:
+   the notice keeps its words but drops the icon and most of its padding,
+   so the page under it stays in view. */
+@media (max-height: 30rem) {
+  :where(html:not([data-embedded])) {
+    &[data-preview-stage] .preview-notice {
+      padding: var(--space-3xs) var(--space-2xs);
+      margin-bottom: var(--space-2xs);
+      border-radius: var(--radius-md);
+    }
+
+    &[data-preview-stage] .preview-notice-icon {
+      display: none;
+    }
+  }
+}
+
 .preview-notice-link {
   color: inherit;
   text-decoration: underline;

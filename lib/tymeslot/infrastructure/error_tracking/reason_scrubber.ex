@@ -45,7 +45,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber do
   # pattern in `Tymeslot.Infrastructure.Logging.EmailMasker`. The next boot then masks every reason already
   # stored under the new rules, once (see
   # `Tymeslot.Workers.ErrorTrackerMaintenanceWorker.enqueue_full_remask/0`).
-  @rules_version 1
+  @rules_version 2
 
   @doc """
   Attaches the telemetry handler. Idempotent, so safe to call on

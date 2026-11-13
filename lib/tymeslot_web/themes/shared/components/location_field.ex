@@ -107,6 +107,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
             data-testid="location-option"
             data-location-id={option.id}
           >
+            <%!-- raw-input: radio hidden by .location-option__radio; the location option card around it is what the booker sees --%>
             <input
               type="radio"
               name="location_option"
@@ -142,6 +143,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
             data-testid="video-provider-option"
             data-video-integration-id={choice.id}
           >
+            <%!-- raw-input: radio hidden by .location-option__radio; the video provider option card around it is what the booker sees --%>
             <input
               type="radio"
               name="location_video_provider"
@@ -177,6 +179,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
             data-testid="venue-option"
             data-venue-id={venue.id}
           >
+            <%!-- raw-input: radio hidden by .location-option__radio; the venue card around it is what the booker sees --%>
             <input
               type="radio"
               name="location_venue"
@@ -231,6 +234,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.LocationField do
         <label class="location-phone__label" for="location-phone-input">
           {dgettext("booking", "Your phone number")}
         </label>
+        <%!-- raw-input: every theme styles the phone box by .location-phone__input, which <.input> would move to the wrapper; its label is the form's own --%>
         <input
           type="tel"
           id="location-phone-input"

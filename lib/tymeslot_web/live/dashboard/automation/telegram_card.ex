@@ -117,6 +117,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
           phx-click={@on_disconnect}
         />
         <.icon_button
+          id={"telegram-delete-#{@integration.id}"}
           icon="hero-trash"
           variant={:danger}
           label={dgettext("dashboard_automation_chat", "Delete %{name}", name: @integration.name)}

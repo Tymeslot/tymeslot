@@ -40,15 +40,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
   @spec text_like(map()) :: Phoenix.LiveView.Rendered.t()
   def text_like(assigns) do
     ~H"""
-    <form
-      id={"cq-form-#{@definition["id"]}"}
-      phx-change="answer"
-      phx-submit="next_step"
-      phx-target={@myself}
-      data-fact="answer"
-      data-question={@definition["id"]}
-    >
-      <input type="hidden" name="question" value={@definition["id"]} />
+    <.answer_form definition={@definition} myself={@myself}>
       <.input
         id={"cq-input-#{@definition["id"]}"}
         type={@input_type}
@@ -59,6 +51,29 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.TextInput do
         autofocus={@autofocus}
         {@rest}
       />
+    </.answer_form>
+    """
+  end
+
+  attr :definition, :map, required: true
+  attr :myself, :any, required: true
+  slot :inner_block, required: true
+
+  @doc "The form around one answer's field, for an input that is not a plain text-like one."
+  @spec answer_form(map()) :: Phoenix.LiveView.Rendered.t()
+  def answer_form(assigns) do
+    ~H"""
+    <form
+      id={"cq-form-#{@definition["id"]}"}
+      phx-change="answer"
+      phx-submit="next_step"
+      phx-target={@myself}
+      data-fact="answer"
+      data-question={@definition["id"]}
+      novalidate
+    >
+      <input type="hidden" name="question" value={@definition["id"]} />
+      {render_slot(@inner_block)}
     </form>
     """
   end

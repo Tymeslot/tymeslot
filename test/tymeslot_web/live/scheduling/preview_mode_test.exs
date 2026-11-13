@@ -60,6 +60,14 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewModeTest do
       refute PreviewToken.owner?(token, 43)
     end
 
+    test "opens at a meeting type's own step when given its slug" do
+      path = PreviewMode.owner_path("alice", 42, meeting_slug: "coffee-chat", stage: true)
+
+      assert %URI{path: "/alice/coffee-chat", query: query} = URI.parse(path)
+      assert URI.decode_query(query)["stage"] == "1"
+      assert URI.parse(PreviewMode.owner_path("alice", 42, meeting_slug: nil)).path == "/alice"
+    end
+
     test "includes the previewed theme when one is given" do
       path = PreviewMode.owner_path("alice", 42, theme: "2")
       %{query: query} = URI.parse(path)
