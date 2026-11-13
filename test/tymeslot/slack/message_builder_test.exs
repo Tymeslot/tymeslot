@@ -68,6 +68,33 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
     end
   end
 
+  describe "build_blocks/3 — a meeting the host manages" do
+    # Without a main participant, its first guest fills the attendee fields
+    # under their address for a name; the host arranged it, nobody booked it.
+    @managed Map.merge(@meeting, %{
+               managed_by_host: true,
+               attendee_name: "guest@example.com",
+               attendee_email: "guest@example.com"
+             })
+
+    test "is announced as a new meeting, not a booking, naming the guest's address once" do
+      [header, %{"text" => %{"text" => summary}} | _rest] =
+        MessageBuilder.build_blocks("meeting.created", @managed, @timezone)
+
+      assert header["text"]["text"] == "New meeting"
+      assert summary =~ ~r/\nWith guest@example\.com$/
+    end
+
+    test "a poll-confirmed one keeps its guest's name beside the address" do
+      meeting = Map.put(@managed, :attendee_name, "Ada Lovelace")
+
+      [_header, %{"text" => %{"text" => summary}} | _rest] =
+        MessageBuilder.build_blocks("meeting.created", meeting, @timezone)
+
+      assert summary =~ "With Ada Lovelace (guest@example.com)"
+    end
+  end
+
   describe "build_blocks/3 — meeting.cancelled" do
     test "includes the cancellation reason in a quote block" do
       meeting = %{@meeting | cancellation_reason: "Schedule conflict"}

@@ -44,6 +44,52 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
     end
   end
 
+  describe "build_message/3 for a meeting the host manages" do
+    # Without a main participant, its first guest fills the attendee fields
+    # under their address for a name. The host arranged, moved and cancelled
+    # it; the guest did none of that.
+    @managed Map.merge(@meeting, %{
+               managed_by_host: true,
+               attendee_name: "guest@example.com",
+               attendee_email: "guest@example.com"
+             })
+
+    test "says the host arranged it, naming the guest's address once" do
+      msg = MessageBuilder.build_message("meeting.created", @managed, @timezone)
+
+      assert msg =~ "You arranged <i>Meeting</i> with <b>guest@example.com</b>"
+      refute msg =~ "booked"
+      assert length(String.split(msg, "guest@example.com")) == 2
+    end
+
+    test "does not say the guest moved or cancelled it" do
+      moved = MessageBuilder.build_message("meeting.rescheduled", @managed, @timezone)
+      cancelled = MessageBuilder.build_message("meeting.cancelled", @managed, @timezone)
+
+      assert moved =~ "Moved <i>Meeting</i> with <b>guest@example.com</b>"
+      assert cancelled =~ "Cancelled <i>Meeting</i> with <b>guest@example.com</b>"
+    end
+
+    test "an ordinary booking still says who booked it" do
+      msg = MessageBuilder.build_message("meeting.created", @meeting, @timezone)
+
+      assert msg =~ "<b>John Smith</b> booked <i>Meeting</i>"
+      assert msg =~ "john@example.com"
+    end
+
+    test "a poll-confirmed one names its guest, with the address beneath" do
+      msg =
+        MessageBuilder.build_message(
+          "meeting.created",
+          Map.put(@managed, :attendee_name, "Ada Lovelace"),
+          @timezone
+        )
+
+      assert msg =~ "with <b>Ada Lovelace</b>"
+      assert msg =~ "guest@example.com"
+    end
+  end
+
   describe "build_message/3" do
     test "builds meeting.requested message with the deadline to respond by" do
       meeting = Map.put(@meeting, :approval_deadline_at, ~U[2026-03-09 18:00:00Z])

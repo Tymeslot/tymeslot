@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Locales
+  alias Tymeslot.Meetings.AttendeeName
   alias Tymeslot.Payments
 
   @doc """
@@ -268,7 +269,9 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
     case attendee_email do
       email when is_binary(email) and email != "" ->
-        attendee_name = Map.get(meeting_details, :attendee_name)
+        # No CN where the name is only the address again (a meeting the host
+        # manages names its first guest by their address).
+        attendee_name = AttendeeName.display_name(meeting_details)
 
         "SCHEDULE-AGENT=CLIENT#{cn_param(attendee_name)}:mailto:" <>
           Format.sanitize_ical_value(email)
