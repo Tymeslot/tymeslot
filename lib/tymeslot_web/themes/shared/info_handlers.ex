@@ -43,7 +43,8 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
 
   def route(:close_dropdown, socket), do: handle_close_dropdown(socket)
 
-  def route(:verification_resend_ready, socket), do: VerificationResend.ready(socket)
+  def route({:verification_resend_ready, token}, socket),
+    do: VerificationResend.ready(socket, token)
 
   def route({:fetch_available_slots, date, duration, timezone}, socket),
     do: handle_fetch_available_slots(socket, date, duration, timezone)

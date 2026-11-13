@@ -107,13 +107,28 @@ defmodule TymeslotWeb.Live.Scheduling.VerificationPreviewTest do
     assert Repo.aggregate(MeetingSchema, :count, :id) == 0
   end
 
+  @tag :capture_log
+  test "a forged resend on a page with no held booking does nothing", %{conn: conn} do
+    %{profile: profile} = seed("1", "verify-forged", true)
+    {:ok, view, _html} = live(conn, "/#{profile.username}")
+    client_ip = :sys.get_state(view.pid).socket.assigns[:client_ip]
+    before = RateLimiter.remaining(:booking_verification_resend, client_ip)
+
+    render_hook(view, "resend_verification_email", %{})
+
+    assert Process.alive?(view.pid)
+    refute has_element?(view, "[data-testid='resend-verification-status']")
+    refute_enqueued(worker: EmailWorker)
+    assert RateLimiter.remaining(:booking_verification_resend, client_ip) == before
+  end
+
   describe "Resend email (Quill)" do
     setup %{conn: conn} do
       %{user: user, profile: profile} = seed("1", "verify-resend", true)
       {:ok, view, _html} = live(conn, "/#{profile.username}")
       BookingDriver.book(view, attendee: @attendee)
 
-      %{view: view, meeting: Repo.get_by!(MeetingSchema, organizer_user_id: user.id)}
+      %{view: view, user: user, meeting: Repo.get_by!(MeetingSchema, organizer_user_id: user.id)}
     end
 
     @tag :capture_log
@@ -134,11 +149,32 @@ defmodule TymeslotWeb.Live.Scheduling.VerificationPreviewTest do
       render_hook(view, "resend_verification_email", %{})
       assert reload(meeting).verification_emails_sent == 2
 
-      send(view.pid, :verification_resend_ready)
+      {_timer, token} = cooldown(view)
+      send(view.pid, {:verification_resend_ready, token})
       refute has_element?(view, "[data-testid='resend-verification'][disabled]")
 
       resend(view)
       assert_enqueued(worker: EmailWorker, args: verification_send(meeting, 3))
+    end
+
+    @tag :capture_log
+    test "an earlier booking's cooldown never ends a later booking's",
+         %{view: view} do
+      resend(view)
+      {first_timer, first_token} = cooldown(view)
+
+      view |> element("[data-testid='schedule-another']") |> render_click()
+      refute cooldown(view)
+      refute Process.read_timer(first_timer)
+
+      BookingDriver.book(view, attendee: @attendee)
+      assert Repo.aggregate(MeetingSchema, :count, :id) == 2
+      resend(view)
+
+      send(view.pid, {:verification_resend_ready, first_token})
+      assert has_element?(view, "[data-testid='resend-verification'][disabled]")
+      assert render(view) =~ "Sent again"
+      assert cooldown(view)
     end
 
     @tag :capture_log
@@ -192,6 +228,8 @@ defmodule TymeslotWeb.Live.Scheduling.VerificationPreviewTest do
   defp resend(view) do
     view |> element("[data-testid='resend-verification']") |> render_click()
   end
+
+  defp cooldown(view), do: :sys.get_state(view.pid).socket.assigns[:verification_resend_cooldown]
 
   defp verification_send(meeting, send) do
     %{"action" => "send_booking_email_verification", "meeting_id" => meeting.id, "send" => send}

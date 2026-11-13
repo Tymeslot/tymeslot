@@ -57,7 +57,10 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
         assert [message] = find(html, "[data-testid='check-inbox']")
         assert Floki.text(message) =~ "ana@example.com"
         assert Floki.text(message) =~ "30 minutes"
-        assert Floki.text(find(html, "[data-testid='confirmation-heading']")) =~ "Check your inbox"
+
+        assert Floki.text(find(html, "[data-testid='confirmation-heading']")) =~
+                 "Check your inbox"
+
         assert find(html, "[data-testid='resend-verification']") != []
 
         assert find(html, "[data-testid='add-to-calendar']") == []

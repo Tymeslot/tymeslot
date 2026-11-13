@@ -17,7 +17,10 @@ defmodule TymeslotWeb.Themes.Shared.VerificationResend do
   before the domain is asked. After a resend the button stays disabled for a
   short cooldown, so a double press cannot spend two of the booking's resends;
   the server refuses the event meanwhile, as it does once nothing more can be
-  sent.
+  sent. The cooldown belongs to the booking it was started for: its timer is
+  kept in `:verification_resend_cooldown` and carries a token of its own, so a
+  leftover timer from an earlier booking on the same page never ends a later
+  booking's cooldown, and forgetting the booking cancels it.
   """
 
   import Phoenix.Component, only: [assign: 2]
@@ -44,12 +47,25 @@ defmodule TymeslotWeb.Themes.Shared.VerificationResend do
   def remember(socket, meeting) do
     id = if MeetingState.awaiting_verification?(meeting), do: meeting.id
 
-    assign(socket, verification_meeting_id: id, verification_resend: nil)
+    socket
+    |> forget()
+    |> assign(verification_meeting_id: id)
   end
 
-  @doc "Forgets the booking, for a fresh start on the same page."
+  @doc "Forgets the booking, for a fresh start on the same page, and stops its cooldown."
   @spec forget(Socket.t()) :: Socket.t()
-  def forget(socket), do: assign(socket, verification_meeting_id: nil, verification_resend: nil)
+  def forget(socket) do
+    case socket.assigns[:verification_resend_cooldown] do
+      {timer, _token} -> Process.cancel_timer(timer)
+      nil -> :ok
+    end
+
+    assign(socket,
+      verification_meeting_id: nil,
+      verification_resend: nil,
+      verification_resend_cooldown: nil
+    )
+  end
 
   @doc "Handles a press of \"Resend email\"."
   @spec resend(Socket.t()) :: {:noreply, Socket.t()}
@@ -67,12 +83,19 @@ defmodule TymeslotWeb.Themes.Shared.VerificationResend do
     end
   end
 
-  @doc "Ends the cooldown after a resend: the button may be pressed again."
-  @spec ready(Socket.t()) :: {:noreply, Socket.t()}
-  def ready(%{assigns: %{verification_resend: :sent}} = socket),
-    do: {:noreply, show(socket, nil)}
+  @doc """
+  Ends the cooldown started with `token`: the button may be pressed again. A
+  token from any other cooldown (an earlier booking's) changes nothing.
+  """
+  @spec ready(Socket.t(), reference()) :: {:noreply, Socket.t()}
+  def ready(%{assigns: %{verification_resend_cooldown: {_timer, token}}} = socket, token) do
+    {:noreply,
+     socket
+     |> assign(verification_resend_cooldown: nil)
+     |> show(nil)}
+  end
 
-  def ready(socket), do: {:noreply, socket}
+  def ready(socket, _stale_token), do: {:noreply, socket}
 
   # A booking gone altogether was deleted after it expired unverified.
   defp resend_for(socket, id) do
@@ -83,8 +106,12 @@ defmodule TymeslotWeb.Themes.Shared.VerificationResend do
   end
 
   defp outcome(socket, {:ok, _meeting}) do
-    Process.send_after(self(), :verification_resend_ready, @cooldown_ms)
-    show(socket, :sent)
+    token = make_ref()
+    timer = Process.send_after(self(), {:verification_resend_ready, token}, @cooldown_ms)
+
+    socket
+    |> assign(verification_resend_cooldown: {timer, token})
+    |> show(:sent)
   end
 
   defp outcome(socket, {:error, :limit_reached}), do: show(socket, :limit_reached)
