@@ -463,11 +463,6 @@ msgstr "Потрібно підключити Stripe"
 msgid "Work hours not found"
 msgstr "Робочий час не знайдено"
 
-#: lib/tymeslot/meetings/unique_slot.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a confirmed meeting at this time."
-msgstr "У вас уже є підтверджена зустріч на цей час."
-
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "already has a spot at this time"
@@ -888,3 +883,8 @@ msgstr "підтвердження електронної пошти не мож
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require email verification"
 msgstr "групові бронювання не можуть вимагати підтвердження електронної пошти"
+
+#: lib/tymeslot/meetings/unique_slot.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr ""

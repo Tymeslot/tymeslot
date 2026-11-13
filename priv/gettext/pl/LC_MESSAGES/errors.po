@@ -467,11 +467,6 @@ msgstr "Stripe musi być podłączony"
 msgid "Work hours not found"
 msgstr "Nie znaleziono godzin pracy"
 
-#: lib/tymeslot/meetings/unique_slot.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a confirmed meeting at this time."
-msgstr "Masz już potwierdzone spotkanie w tym terminie."
-
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "already has a spot at this time"
@@ -892,3 +887,8 @@ msgstr "potwierdzania adresu e-mail nie można łączyć z płatnością"
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require email verification"
 msgstr "rezerwacje grupowe nie mogą wymagać potwierdzenia adresu e-mail"
+
+#: lib/tymeslot/meetings/unique_slot.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr ""

@@ -17,12 +17,21 @@ defmodule Tymeslot.Meetings.UniqueSlot do
 
   @constraint :unique_confirmed_meeting_per_organizer_at_time
 
-  @doc "Declares the index on a meeting changeset."
+  @doc """
+  Declares the index on a meeting changeset. The message names no meeting:
+  the row holding the slot may be one the host cannot see yet (awaiting its
+  attendee's email verification), and the flows that answer a violation
+  map it to a lost race rather than showing this message.
+  """
   @spec constrain(Ecto.Changeset.t()) :: Ecto.Changeset.t()
   def constrain(changeset) do
     unique_constraint(changeset, [:organizer_user_id, :start_time],
       name: @constraint,
-      message: dgettext_noop("errors", "You already have a confirmed meeting at this time.")
+      message:
+        dgettext_noop(
+          "errors",
+          "This time is no longer available. Please choose another time."
+        )
     )
   end
 

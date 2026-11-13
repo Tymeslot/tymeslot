@@ -447,11 +447,6 @@ msgstr "Stripe muss verbunden sein"
 msgid "Work hours not found"
 msgstr "Arbeitszeiten nicht gefunden"
 
-#: lib/tymeslot/meetings/unique_slot.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a confirmed meeting at this time."
-msgstr "Sie haben zu dieser Zeit bereits einen bestätigten Termin."
-
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "already has a spot at this time"
@@ -870,3 +865,8 @@ msgstr "E-Mail-Bestätigung lässt sich nicht mit einer Zahlung kombinieren"
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require email verification"
 msgstr "Gruppenbuchungen können keine E-Mail-Bestätigung erfordern"
+
+#: lib/tymeslot/meetings/unique_slot.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr ""

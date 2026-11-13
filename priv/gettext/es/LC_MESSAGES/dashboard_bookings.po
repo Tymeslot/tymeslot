@@ -749,11 +749,6 @@ msgstr "No se pudo mover la reunión. Inténtalo de nuevo."
 msgid "The new time must be in the future."
 msgstr "El nuevo horario debe estar en el futuro."
 
-#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a meeting at that time."
-msgstr "Ya tienes una reunión a esa hora."
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Poll"
@@ -906,3 +901,8 @@ msgstr "¿Quieres cancelar «%{title}», programada para el %{when}? Se avisará
 #, elixir-autogen, elixir-format
 msgid "Managed by you"
 msgstr "Gestionada por ti"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr ""

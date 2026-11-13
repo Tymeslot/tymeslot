@@ -470,11 +470,6 @@ msgstr "Je nutné připojit Stripe"
 msgid "Work hours not found"
 msgstr "Pracovní doba nebyla nalezena"
 
-#: lib/tymeslot/meetings/unique_slot.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a confirmed meeting at this time."
-msgstr "V tuto dobu už máte potvrzenou schůzku."
-
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "already has a spot at this time"
@@ -895,3 +890,8 @@ msgstr "potvrzení e-mailu nelze kombinovat s platbou"
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require email verification"
 msgstr "skupinové rezervace nemohou vyžadovat potvrzení e-mailu"
+
+#: lib/tymeslot/meetings/unique_slot.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr ""
