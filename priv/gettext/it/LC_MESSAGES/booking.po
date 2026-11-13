@@ -897,3 +897,8 @@ msgstr "Al momento questo tipo di riunione non ha orari disponibili da prenotare
 #, elixir-autogen, elixir-format
 msgid "%{page} with %{name}"
 msgstr "%{page} con %{name}"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "We'll email you a link to confirm this booking."
+msgstr ""

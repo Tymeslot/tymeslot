@@ -45,6 +45,7 @@ defmodule TymeslotWeb.Test.JourneyFixtures.Moments.Confirmation do
   # the words are the fixture's own, the held one as the shipped themes put it.
   defp headline(assigns) do
     case ConfirmationText.status(assigns) do
+      :check_inbox -> "Check your inbox"
       :held -> "Request sent!"
       :rescheduled -> "Rescheduled"
       :confirmed -> "Booked"

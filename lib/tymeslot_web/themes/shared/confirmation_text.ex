@@ -8,25 +8,71 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
   approval is announced as a request, never as a confirmed meeting; the
   approval check runs before the reschedule check, because a gated reschedule
   re-enters the hold (see `Tymeslot.Bookings.Reschedule`).
+
+  A booking waiting for its attendee to confirm their email address
+  (`:check_inbox`) is checked before either: a gated approval booking is held
+  for verification first, and only becomes a request once verified. Owner
+  preview never reaches it, as a simulated booking skips verification.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Meetings.EmailVerification
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Profiles
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.Voice
 
-  @type status :: :held | :rescheduled | :confirmed
+  @type status :: :check_inbox | :held | :rescheduled | :confirmed
 
-  @doc "Which of the three outcomes the confirmation step describes."
+  @doc "Which of the four outcomes the confirmation step describes."
   @spec status(map()) :: status()
   def status(assigns) do
     cond do
+      check_inbox?(assigns) -> :check_inbox
       ApprovalDisplay.awaiting_approval?(assigns) -> :held
       assigns[:is_rescheduling] -> :rescheduled
       true -> :confirmed
     end
+  end
+
+  @doc """
+  Whether the step offers what follows a booking: the calendar file and the
+  hints to reschedule or withdraw. A booking still waiting for its attendee
+  to confirm their email offers neither, as it is not a booking yet.
+  """
+  @spec follow_ups?(map()) :: boolean()
+  def follow_ups?(assigns), do: status(assigns) != :check_inbox
+
+  @doc """
+  The headline while the booking waits for its attendee to confirm their
+  email, in the voice of the theme with key `theme_key` where it has one.
+  """
+  @spec check_inbox_headline(Catalog.theme_key() | nil) :: String.t()
+  def check_inbox_headline(theme_key \\ nil) do
+    Voice.line(Voice.of(theme_key), :check_inbox, %{}, fn ->
+      dgettext("booking_confirmation", "Check your inbox")
+    end)
+  end
+
+  @doc """
+  The sentence under the check-your-inbox headline: where the link went and
+  how long the time is held, in the voice of the theme with key `theme_key`
+  where it has one.
+  """
+  @spec check_inbox_message(String.t() | nil, Catalog.theme_key() | nil) :: String.t()
+  def check_inbox_message(email, theme_key \\ nil) do
+    minutes = EmailVerification.hold_minutes()
+
+    Voice.line(Voice.of(theme_key), :check_inbox_message, %{email: email, minutes: minutes}, fn ->
+      dgettext(
+        "booking_confirmation",
+        "We have sent a link to %{email}. Click it within %{minutes} minutes to confirm your booking. Until then the time is held for you.",
+        email: email,
+        minutes: minutes
+      )
+    end)
   end
 
   @doc """
@@ -81,5 +127,10 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
           dgettext("booking_confirmation", "with %{name}", name: name)
         end)
     end
+  end
+
+  defp check_inbox?(assigns) do
+    MeetingState.awaiting_verification_status?(assigns[:meeting_status]) and
+      assigns[:owner_preview] != true
   end
 end
