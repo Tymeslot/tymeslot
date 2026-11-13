@@ -123,8 +123,12 @@ defmodule Tymeslot.Meetings.EmailVerification do
   an ungated booking would have started starts now, in one transaction: the
   calendar event, the video room, the confirmation or request emails and
   the reminders. A verification at or after the deadline releases the
-  booking instead. `{:error, :not_scheduled}` means that work could not be
-  queued; the booking is still held and the attendee may try again.
+  booking instead, as does one whose meeting type has since been deleted:
+  without the type nobody can say whether the host must approve it, so it is
+  released silently (`{:error, :expired}`) rather than confirmed. An archived
+  type is still read and its settings apply. `{:error, :not_scheduled}` means
+  that work could not be queued; the booking is still held and the attendee
+  may try again.
 
   A booking no longer held is answered for as it is stored, not as the
   caller's copy says: `{:ok, :already_verified, meeting}` while it stands,
@@ -140,14 +144,33 @@ defmodule Tymeslot.Meetings.EmailVerification do
     cond do
       not MeetingState.awaiting_verification?(meeting) -> {:error, :expired}
       deadline_reached?(meeting, now) -> expire_instead(meeting)
-      true -> meeting |> complete(now) |> verify_outcome(meeting)
+      true -> verify_held(meeting, now)
     end
   end
 
-  defp complete(meeting, now) do
+  defp verify_held(meeting, now) do
+    case still_wanted(meeting) do
+      {:ok, meeting_type} -> meeting |> complete(meeting_type, now) |> verify_outcome(meeting)
+      :no_longer_wanted -> expire_instead(meeting)
+    end
+  end
+
+  # Whether the booking may still go ahead, with the meeting type whose
+  # settings decide how. A deleted type nilifies the column, and without its
+  # settings nobody can say whether the host must approve, so the hold is
+  # released rather than confirmed past an approval it may have needed. An
+  # archived type is still read and its settings apply.
+  defp still_wanted(meeting) do
+    case meeting_type(meeting) do
+      %MeetingType{} = meeting_type -> {:ok, meeting_type}
+      nil -> :no_longer_wanted
+    end
+  end
+
+  defp complete(meeting, meeting_type, now) do
     changes =
       [email_verified_at: DateTime.truncate(now, :second)] ++
-        Map.to_list(Approval.request_attributes(meeting_type(meeting), now, meeting.start_time))
+        Map.to_list(Approval.request_attributes(meeting_type, now, meeting.start_time))
 
     Repo.transaction(fn ->
       with {:ok, verified} <-
@@ -161,8 +184,6 @@ defmodule Tymeslot.Meetings.EmailVerification do
     end)
   end
 
-  # A deleted meeting type nilifies the column, so the booking proceeds
-  # without approval; an archived one is still read and its setting applies.
   defp meeting_type(%{meeting_type_id: type_id, organizer_user_id: user_id})
        when is_integer(type_id) and is_integer(user_id),
        do: MeetingTypes.get_meeting_type(type_id, user_id)

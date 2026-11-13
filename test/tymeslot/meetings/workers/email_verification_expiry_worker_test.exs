@@ -105,7 +105,14 @@ defmodule Tymeslot.Meetings.Workers.EmailVerificationExpiryWorkerTest do
   end
 
   test "cancelling removes the job" do
-    meeting = insert(:awaiting_verification_meeting)
+    type = insert(:meeting_type)
+
+    meeting =
+      insert(:awaiting_verification_meeting,
+        organizer_user_id: type.user_id,
+        meeting_type_id: type.id
+      )
+
     :ok = EmailVerificationJobs.schedule_expiry(meeting)
 
     {:ok, :verified, _verified} = EmailVerification.verify(meeting)

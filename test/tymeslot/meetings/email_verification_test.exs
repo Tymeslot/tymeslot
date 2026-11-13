@@ -199,6 +199,41 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
       assert reload(meeting).status == :expired
     end
 
+    # The type's settings decide what verifying does (approval, above); with
+    # the type gone they cannot be read, so the booking must not go ahead
+    # without the approval it may have needed.
+    test "a held booking whose meeting type was deleted is released, not confirmed", %{
+      user: user
+    } do
+      type = insert(:meeting_type, user: user, requires_approval: true)
+      meeting = held(user, meeting_type_id: type.id)
+      :ok = EmailVerificationJobs.schedule_expiry(meeting)
+      Repo.delete!(type)
+
+      assert {:error, :expired} = EmailVerification.verify(reload(meeting))
+
+      assert %{status: :expired, email_verified_at: nil} = reload(meeting)
+      refute_enqueued(worker: EmailVerificationExpiryWorker)
+      refute_enqueued(worker: CalendarEventWorker)
+      refute_enqueued(worker: VideoRoomWorker)
+      refute_enqueued(worker: EmailWorker)
+      refute_enqueued(worker: WebhookWorker)
+    end
+
+    test "an archived meeting type's settings still apply", %{user: user} do
+      type =
+        insert(:meeting_type,
+          user: user,
+          requires_approval: true,
+          approval_window_hours: 24,
+          is_active: false
+        )
+
+      meeting = held(user, meeting_type_id: type.id)
+
+      assert {:ok, :verified, %{status: :awaiting_approval}} = EmailVerification.verify(meeting)
+    end
+
     test "a booking released before verification stays released", %{user: user} do
       meeting = held(user)
       {:ok, _released} = EmailVerification.release(meeting)
@@ -493,14 +528,21 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
     end
   end
 
+  # On a meeting type of the organiser's own unless `attrs` names one: a held
+  # booking whose type is gone is never confirmed.
   defp held(user, attrs \\ []) do
-    insert(
-      :awaiting_verification_meeting,
-      Keyword.merge(
-        [organizer_user_id: user.id, organizer_email: user.email, video_integration_id: nil],
-        attrs
-      )
-    )
+    defaults = [
+      organizer_user_id: user.id,
+      organizer_email: user.email,
+      video_integration_id: nil
+    ]
+
+    attrs =
+      Keyword.put_new_lazy(attrs, :meeting_type_id, fn ->
+        insert(:meeting_type, user: user).id
+      end)
+
+    insert(:awaiting_verification_meeting, Keyword.merge(defaults, attrs))
   end
 
   # A booking that left the gate without being confirmed (`status` is
