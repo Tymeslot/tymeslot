@@ -115,8 +115,8 @@ defmodule Tymeslot.MeetingPayments.MoneyTest do
       {-123_450, "eur", "fr", [], "-1#{@nbsp}234,50#{@nbsp}€"},
       {1000, "chf", "cs", [], "10,00#{@nbsp}CHF"},
       {1500, "usd", "es", [], "15,00#{@nbsp}$"},
-      {123_450, "eur", "pt", [], "€1.234,50"},
-      {1000, "chf", "pt", [], "CHF 10,00"},
+      {123_450, "eur", "pt", [], "€#{@nbsp}1.234,50"},
+      {1000, "chf", "pt", [], "CHF#{@nbsp}10,00"},
       {1050, "eur", "xx", [], "€10.50"}
     ]
 

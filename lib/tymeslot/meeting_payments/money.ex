@@ -33,9 +33,12 @@ defmodule Tymeslot.MeetingPayments.Money do
   }
 
   # The locales that write the symbol after the amount ("45,00 €"). Spanish
-  # follows the RAE here, though Latin American shops often put "$" first;
-  # Brazilian Portuguese leads with the symbol, as English does.
+  # follows the RAE here, though Latin American shops often put "$" first.
   @symbol_after_locales ~w(de fr it cs pl uk es)
+
+  # The locales that lead with the symbol but set it off by a space, as
+  # Brazilian Portuguese does ("R$ 45,00", "€ 45,00").
+  @spaced_symbol_before_locales ~w(pt)
 
   @type currency :: String.t()
 
@@ -105,10 +108,11 @@ defmodule Tymeslot.MeetingPayments.Money do
   its upper-case code where it has none, and the amount, grouped and
   separated by the locale's conventions, with any minus sign in front of both.
 
-  The symbol leads in English and Brazilian Portuguese, flush against a sign
-  (`€10.50`) and a space from a code (`CHF 10.00`). It trails, after a
-  non-breaking space so the two never wrap apart, in the locales that write it
-  after the amount (`10,50 €`, `10,00 CHF`).
+  The symbol leads in English, flush against a sign (`€10.50`) and a space
+  from a code (`CHF 10.00`), and in Brazilian Portuguese, a space from either
+  (`€ 10,50`). It trails in the locales that write it after the amount
+  (`10,50 €`, `10,00 CHF`). A space beside a sign is non-breaking, so the two
+  never wrap apart.
 
   Options:
 
@@ -176,6 +180,7 @@ defmodule Tymeslot.MeetingPayments.Money do
   defp place_symbol(number, symbol, locale) do
     cond do
       symbol_after?(locale) -> number <> "\u00A0" <> symbol
+      locale in @spaced_symbol_before_locales -> symbol <> "\u00A0" <> number
       # A letter code such as "CHF" needs a space before the digits, where a
       # sign such as "€" sits flush against them.
       String.match?(symbol, ~r/^\p{L}+$/u) -> symbol <> " " <> number
