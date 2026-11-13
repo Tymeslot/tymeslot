@@ -556,12 +556,12 @@ msgstr ""
 msgid "This series' first event hasn't been read from your calendar yet, so the events left in it can't be counted. Refresh the calendar and try again."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Ends"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Repeat until"
 msgstr ""

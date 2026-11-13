@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
         size={:sm}
         icon="hero-plus"
         aria-keyshortcuts="c"
-        title={dgettext("dashboard_calendar", "Create")}
+        tooltip={dgettext("dashboard_calendar", "Create")}
         phx-click={JS.dispatch("calendar:quick-create", to: "#calendar-canvas")}
         class="shrink-0"
       >
@@ -134,6 +134,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
           class="mt-1 w-72 rounded-token-xl bg-white p-3 shadow-lg ring-1 ring-tymeslot-200"
         >
           <:trigger>
+            <%!-- native-title: repeats the period, which can truncate. --%>
             <span
               id="calendar-period-title"
               title={PeriodLabels.title(@view, @date, @days, @locale)}
@@ -145,6 +146,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
               {PeriodLabels.title(@view, @date, @days, @locale)}
             </span>
             <%!-- A day's full date only fits the widest toolbar; narrower, it is "Wed 30 Sep". --%>
+            <%!-- native-title: repeats the day's date, which can truncate. --%>
             <span
               :if={@view == :day}
               id="calendar-period-title-short"

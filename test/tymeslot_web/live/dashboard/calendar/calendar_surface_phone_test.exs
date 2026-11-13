@@ -257,7 +257,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePhoneTest do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(phone(conn), ~p"/dashboard/calendar")
 
-      assert has_element?(lv, "#calendar-phone-today[aria-label='Today'][title='Today']")
+      assert has_element?(lv, "#calendar-phone-today[aria-label='Today']")
+      assert has_element?(lv, "#calendar-phone-today + [role='tooltip']", "Today")
       assert has_element?(lv, "#calendar-phone-today span[aria-hidden='true']", "14")
     end
 

@@ -57,8 +57,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeetingFields do
           placeholder={dgettext("dashboard_calendar_events", "Ada Lovelace")}
         />
         <div>
-          <.input
-            type="select"
+          <.select
             id="calendar-panel-meeting-locale"
             name="locale"
             value={@values["locale"]}

@@ -158,24 +158,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
             {account.name}
           </span>
           <.lock :if={account.read_only} label={dgettext("dashboard_calendar", "Read only")} />
-          <span
+          <.tooltip
             :if={MapSet.member?(@syncing_ids, account.id)}
-            data-syncing
-            class="shrink-0 text-tymeslot-400"
-            title={dgettext("dashboard_calendar", "Syncing")}
+            text={dgettext("dashboard_calendar", "Syncing")}
           >
-            <.icon name="hero-arrow-path-mini" class="h-4 w-4 motion-safe:animate-spin" />
-            <span class="sr-only">{dgettext("dashboard_calendar", "Syncing")}</span>
-          </span>
-          <span
+            <span data-syncing class="shrink-0 text-tymeslot-400">
+              <.icon name="hero-arrow-path-mini" class="h-4 w-4 motion-safe:animate-spin" />
+              <span class="sr-only">{dgettext("dashboard_calendar", "Syncing")}</span>
+            </span>
+          </.tooltip>
+          <.tooltip
             :if={MapSet.member?(@problem_ids, account.id)}
-            data-sync-problem
-            class="shrink-0 text-amber-600"
-            title={dgettext("dashboard_calendar", "Sync problem")}
+            text={dgettext("dashboard_calendar", "Sync problem")}
           >
-            <.icon name="hero-exclamation-triangle-mini" class="h-4 w-4" />
-            <span class="sr-only">{dgettext("dashboard_calendar", "Sync problem")}</span>
-          </span>
+            <span data-sync-problem class="shrink-0 text-amber-600">
+              <.icon name="hero-exclamation-triangle-mini" class="h-4 w-4" />
+              <span class="sr-only">{dgettext("dashboard_calendar", "Sync problem")}</span>
+            </span>
+          </.tooltip>
           <.icon_button
             :if={
               not MapSet.member?(@syncing_ids, account.id) and
@@ -272,10 +272,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
 
   defp lock(assigns) do
     ~H"""
-    <span class="shrink-0 text-tymeslot-400" title={@label}>
-      <.icon name="hero-lock-closed-mini" class="h-4 w-4" />
-      <span id={@id} class="sr-only">{@label}</span>
-    </span>
+    <.tooltip text={@label}>
+      <span data-read-only class="shrink-0 text-tymeslot-400">
+        <.icon name="hero-lock-closed-mini" class="h-4 w-4" />
+        <span id={@id} class="sr-only">{@label}</span>
+      </span>
+    </.tooltip>
     """
   end
 
@@ -292,15 +294,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
     >
       {dgettext("dashboard_calendar", "Doesn't block")}
     </span>
-    <span
-      :if={!@spell_out}
-      data-not-blocking
-      class="shrink-0 text-tymeslot-400"
-      title={dgettext("dashboard_calendar", "Doesn't block")}
-    >
-      <.icon name="hero-eye-mini" class="h-4 w-4" />
-      <span id={@id} class="sr-only">{dgettext("dashboard_calendar", "Doesn't block")}</span>
-    </span>
+    <.tooltip :if={!@spell_out} text={dgettext("dashboard_calendar", "Doesn't block")}>
+      <span data-not-blocking class="shrink-0 text-tymeslot-400">
+        <.icon name="hero-eye-mini" class="h-4 w-4" />
+        <span id={@id} class="sr-only">{dgettext("dashboard_calendar", "Doesn't block")}</span>
+      </span>
+    </.tooltip>
     """
   end
 

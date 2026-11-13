@@ -203,6 +203,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
         />
         <form
           :if={@event}
+          novalidate
           id="calendar-panel-calendar-form"
           phx-change="panel:transfer"
           phx-target={@surface}

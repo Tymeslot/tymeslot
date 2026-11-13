@@ -91,21 +91,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PhoneHeader do
       </button>
       <%!-- Today's date on a calendar tile, as phone calendars show it: the
            word took the period's room at 360px. --%>
-      <button
-        type="button"
-        id="calendar-phone-today"
-        class={@control}
-        aria-label={dgettext("dashboard_calendar", "Today")}
-        title={dgettext("dashboard_calendar", "Today")}
-        phx-click={Navigation.js(@view, @today, from: {@view, @date})}
-      >
-        <span
-          aria-hidden="true"
-          class="inline-flex h-6 w-6 items-center justify-center rounded-token-md border-2 border-current text-token-xs font-bold tabular-nums"
+      <.tooltip text={dgettext("dashboard_calendar", "Today")}>
+        <button
+          type="button"
+          id="calendar-phone-today"
+          class={@control}
+          aria-label={dgettext("dashboard_calendar", "Today")}
+          phx-click={Navigation.js(@view, @today, from: {@view, @date})}
         >
-          {@today.day}
-        </span>
-      </button>
+          <span
+            aria-hidden="true"
+            class="inline-flex h-6 w-6 items-center justify-center rounded-token-md border-2 border-current text-token-xs font-bold tabular-nums"
+          >
+            {@today.day}
+          </span>
+        </button>
+      </.tooltip>
       <%!-- Filters never hide silently: amber, with the count, while calendars are hidden. --%>
       <button
         type="button"

@@ -340,9 +340,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTest do
     # A narrow toolbar keeps only the icon; the name stays for screen readers and the tooltip.
     assert has_element?(
              lv,
-             "#calendar-create[title='Create'] span[class~='@max-5xl:sr-only']",
+             "#calendar-create[aria-describedby='calendar-create-tip'] span[class~='@max-5xl:sr-only']",
              "Create"
            )
+
+    assert has_element?(lv, "#calendar-create-tip[role='tooltip']", "Create")
 
     ops =
       html

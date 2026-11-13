@@ -99,7 +99,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
-    assert has_element?(lv, "#calendar-account-#{feed.id} [title='Read only']")
+    assert has_element?(
+             lv,
+             "#calendar-account-#{feed.id} [data-read-only] + [role='tooltip']",
+             "Read only"
+           )
   end
 
   test "an account id that is not the organiser's changes nothing", %{conn: conn, user: user} do
@@ -256,7 +260,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
       holidays = ~s|#calendar-account-#{personal.id} li[data-calendar-row="holidays"]|
       diary = ~s|#calendar-account-#{personal.id} li[data-calendar-row="diary"]|
 
-      assert has_element?(lv, ~s|#{holidays} [data-not-blocking][title="Doesn't block"]|)
+      assert has_element?(
+               lv,
+               "#{holidays} [data-not-blocking] + [role='tooltip']",
+               "Doesn't block"
+             )
+
       assert has_element?(lv, "#{holidays} [data-not-blocking] .sr-only", "Doesn't block")
       refute has_element?(lv, "#{diary} [data-not-blocking]")
     end

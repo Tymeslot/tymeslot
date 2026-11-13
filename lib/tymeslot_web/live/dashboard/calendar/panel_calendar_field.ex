@@ -29,8 +29,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelCalendarField do
 
     ~H"""
     <div id={"calendar-panel-calendar-field-#{@version}"}>
-      <.input
-        type="select"
+      <.select
         id="calendar-panel-calendar"
         name="calendar"
         label={dgettext("dashboard_calendar_editing", "Calendar")}
@@ -46,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelCalendarField do
   end
 
   @doc """
-  The choices as `<.input type="select">` option groups,
+  The choices as `<.select>` option groups,
   `[{account name, [{calendar name, key}]}]`, keeping the rail's order
   (`choices/1` lists each account's calendars together).
   """

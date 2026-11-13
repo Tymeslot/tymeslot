@@ -204,8 +204,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       upload(lv, @two_events)
 
       lv
-      |> form("#calendar-import-calendar", %{"calendar" => "#{integration.id}:family"})
-      |> render_change()
+      |> form("#calendar-import-calendar")
+      |> render_change(%{"calendar" => "#{integration.id}:family"})
 
       start_import(lv)
 

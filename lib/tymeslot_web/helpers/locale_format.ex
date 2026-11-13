@@ -365,6 +365,21 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   end
 
   @doc """
+  Formats a date led by its full weekday name, without the year.
+  - en: Monday, 5 February
+  - de: Montag, 5. Februar
+  - cs: pondělí 5. února
+  - fr: lundi 5 février
+  - pt: segunda-feira, 5 de fevereiro
+  - es: lunes, 5 de febrero
+  """
+  @spec format_weekday_day_month(Calendar.date(), String.t()) :: String.t()
+  def format_weekday_day_month(date, locale) do
+    weekday_prefix(date, locale) <>
+      day_month(date, format_month_name(date.month, locale), locale)
+  end
+
+  @doc """
   Formats a compact day and abbreviated month, without the year.
   - en: 5 Feb
   - de: 5. Feb

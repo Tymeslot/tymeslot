@@ -142,12 +142,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
 
           <form
             :if={@ics_import.stage == :ready}
+            novalidate
             id="calendar-import-calendar"
             phx-change="calendar:ics_calendar"
             phx-target={@target}
           >
-            <.input
-              type="select"
+            <.select
               id="calendar-import-calendar-select"
               name="calendar"
               label={dgettext("dashboard_calendar_import", "Import into")}
@@ -192,7 +192,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
   @spec drop_zone(map()) :: Phoenix.LiveView.Rendered.t()
   def drop_zone(assigns) do
     ~H"""
-    <form id="calendar-ics-upload" phx-change="calendar:ics_validate" phx-target={@target}>
+    <form id="calendar-ics-upload" phx-change="calendar:ics_validate" phx-target={@target} novalidate>
       <%!-- The import dialog's picker button is the control keyboard and
             screen reader users meet, so the input is out of the tab order and
             the accessibility tree. It stays rendered (no `hidden`), or neither

@@ -256,47 +256,41 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
           aria_label={dgettext("dashboard_calendar_editing", "All day")}
         />
       </div>
-      <form id="calendar-panel-timing" phx-change="panel:timing" phx-target={@target}>
+      <form id="calendar-panel-timing" phx-change="panel:timing" phx-target={@target} novalidate>
         <fieldset disabled={@disabled} class="space-y-2">
           <div class="grid grid-cols-2 gap-2">
-            <.input
+            <.date_picker
               id="calendar-panel-start-date"
               name="start_date"
-              type="date"
               label={dgettext("dashboard_calendar_editing", "Starts")}
               value={@timing.start_date}
-              phx-debounce="blur"
+              disabled={@disabled}
             />
-            <.input
+            <.time_picker
               :if={!@timing.all_day}
               id="calendar-panel-start-time"
               name="start_time"
-              type="time"
-              step="300"
               label={dgettext("dashboard_calendar_editing", "Start time")}
               value={@timing.start_time}
-              phx-debounce="blur"
+              disabled={@disabled}
             />
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <.input
+            <.date_picker
               id="calendar-panel-end-date"
               name="end_date"
-              type="date"
               label={dgettext("dashboard_calendar_editing", "Ends")}
               value={@timing.end_date}
               errors={List.wrap(@error)}
-              phx-debounce="blur"
+              disabled={@disabled}
             />
-            <.input
+            <.time_picker
               :if={!@timing.all_day}
               id="calendar-panel-end-time"
               name="end_time"
-              type="time"
-              step="300"
               label={dgettext("dashboard_calendar_editing", "End time")}
               value={@timing.end_time}
-              phx-debounce="blur"
+              disabled={@disabled}
             />
           </div>
         </fieldset>

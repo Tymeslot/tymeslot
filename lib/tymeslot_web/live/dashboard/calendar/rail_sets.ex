@@ -152,6 +152,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.RailSets do
   defp editor(assigns) do
     ~H"""
     <form
+      novalidate
       id={"#{@id_prefix}-set-form"}
       phx-submit="calendar:save_set"
       phx-target={@target}

@@ -58,6 +58,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
 
     ~H"""
     <form
+      novalidate
       id="calendar-panel-new-form"
       class="space-y-4"
       phx-change="panel:draft_change"
@@ -85,15 +86,29 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         id="calendar-panel-new-span"
         class={["grid gap-2", if(@values["all_day"], do: "grid-cols-2", else: "grid-cols-1")]}
       >
-        <.input
-          type={if @values["all_day"], do: "date", else: "datetime-local"}
+        <.date_picker
+          :if={@values["all_day"]}
           id="calendar-panel-new-start"
           name="start"
           value={@values["start"]}
           label={dgettext("dashboard_calendar_editing", "Starts")}
         />
-        <.input
-          type={if @values["all_day"], do: "date", else: "datetime-local"}
+        <.datetime_picker
+          :if={!@values["all_day"]}
+          id="calendar-panel-new-start"
+          name="start"
+          value={@values["start"]}
+          label={dgettext("dashboard_calendar_editing", "Starts")}
+        />
+        <.date_picker
+          :if={@values["all_day"]}
+          id="calendar-panel-new-end"
+          name="end"
+          value={@shown_end}
+          label={dgettext("dashboard_calendar_editing", "Ends")}
+        />
+        <.datetime_picker
+          :if={!@values["all_day"]}
           id="calendar-panel-new-end"
           name="end"
           value={@shown_end}
@@ -102,8 +117,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
       </div>
       <PanelCalendarField.calendar_field choices={@calendar_choices} value={@values["calendar"]} />
       <div :if={!@meeting and !@group}>
-        <.input
-          type="select"
+        <.select
           id="calendar-panel-new-free"
           name="free"
           label={dgettext("dashboard_calendar_editing", "Show as")}

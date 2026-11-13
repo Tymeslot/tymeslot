@@ -21,7 +21,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayPreferences do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Locales.WeekStart
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias TymeslotWeb.Components.Shared.PickerPreferences
   alias TymeslotWeb.Dashboard.Calendar.ReminderFeed
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Live.Shared.Flash
@@ -57,7 +59,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayPreferences do
       when week_start in @week_starts do
     if week_start == socket.assigns.preferences.week_start_day,
       do: {:noreply, socket},
-      else: {:noreply, save(socket, :week_start_day, week_start, :window)}
+      else:
+        {:noreply, socket |> save(:week_start_day, week_start, :window) |> picker_week_start()}
   end
 
   def handle("calendar:set_time_format", %{"option" => format}, socket) do
@@ -82,6 +85,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayPreferences do
       {:error, _changeset} ->
         failed(socket)
     end
+  end
+
+  # The surface renders in the dashboard's process, so the date pickers' week
+  # start follows the saved one from here (`PickerPreferences`).
+  defp picker_week_start(socket) do
+    PickerPreferences.put_week_start(WeekStart.parse(socket.assigns.preferences.week_start_day))
+    socket
   end
 
   defp toggle(socket, key, effect),

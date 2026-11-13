@@ -64,6 +64,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
       </ul>
       <form
         :if={@organiser}
+        novalidate
         id="calendar-panel-guest-form"
         class="flex items-end gap-2"
         phx-submit="panel:guest_invite"

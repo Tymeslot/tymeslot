@@ -38,7 +38,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTimezoneTest do
              ~s|#calendar-rail-timezone[aria-label="Times shown in Kyiv, Ukraine"]|
            )
 
-    assert has_element?(lv, ~s|#calendar-rail-timezone[title="Times shown in Kyiv, Ukraine"]|)
+    assert has_element?(
+             lv,
+             "#calendar-rail-timezone + [role='tooltip']",
+             "Times shown in Kyiv, Ukraine"
+           )
 
     lv |> element("#calendar-rail-timezone") |> render_click()
     assert_patch(lv, ~p"/dashboard/settings")

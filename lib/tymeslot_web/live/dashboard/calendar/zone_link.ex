@@ -37,22 +37,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.ZoneLink do
       )
 
     ~H"""
-    <.link
-      id={@id}
-      patch={~p"/dashboard/settings"}
-      title={@label}
-      aria-label={@label}
-      class={[
-        "flex min-h-11 items-center rounded-token-md hover:bg-tymeslot-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400 md:min-h-8",
-        @class
-      ]}
-    >
-      <AvailabilityHelpers.timezone_display
-        timezone_display={@display}
-        country_code={@country_code}
-        title={false}
-      />
-    </.link>
+    <.tooltip text={@label}>
+      <.link
+        id={@id}
+        patch={~p"/dashboard/settings"}
+        aria-label={@label}
+        class={[
+          "flex min-h-11 items-center rounded-token-md hover:bg-tymeslot-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400 md:min-h-8",
+          @class
+        ]}
+      >
+        <AvailabilityHelpers.timezone_display
+          timezone_display={@display}
+          country_code={@country_code}
+          title={false}
+        />
+      </.link>
+    </.tooltip>
     """
   end
 end

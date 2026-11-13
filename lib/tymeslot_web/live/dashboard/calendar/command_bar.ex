@@ -47,6 +47,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CommandBar do
         </h2>
         <%!-- Never submitted by the browser: the hook takes Enter. phx-submit is the fallback. --%>
         <form
+          novalidate
           id="calendar-command-form"
           class="cal-command-form"
           phx-change="calendar:command_query"
@@ -54,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CommandBar do
           phx-target={@target}
         >
           <.icon name="hero-magnifying-glass" class="h-5 w-5 shrink-0 text-tymeslot-500" />
+          <%!-- raw-input: the command bar's combobox, drawn bare inside its own search row and driven by the canvas hook --%>
           <input
             id="calendar-command-input"
             name="q"

@@ -59,8 +59,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGroupEventFields do
           step="1"
         />
         <div>
-          <.input
-            type="select"
+          <.select
             id="calendar-panel-group-event-location"
             name="group_location"
             label={dgettext("dashboard_group_events", "Location")}
@@ -78,8 +77,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGroupEventFields do
             )}
           </p>
         </div>
-        <.input
-          type="datetime-local"
+        <.datetime_picker
           id="calendar-panel-group-event-closes-at"
           name="closes_at"
           label={

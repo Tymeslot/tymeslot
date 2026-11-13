@@ -131,11 +131,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
       )
 
     ~H"""
-    <form id="calendar-panel-reminder" phx-change="panel:reminder" phx-target={@target}>
-      <.input
+    <form id="calendar-panel-reminder" phx-change="panel:reminder" phx-target={@target} novalidate>
+      <.select
         id="calendar-panel-reminder-choice"
         name="reminder"
-        type="select"
         label={dgettext("dashboard_calendar_editing", "Reminder")}
         value={@choice}
         options={@options}

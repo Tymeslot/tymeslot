@@ -480,9 +480,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   # A changed start moves the end with it, keeping the length.
   defp follow_start(form, old, ["start"]) do
     with true <- form["all_day"] == old["all_day"],
-         {:ok, old_start} <- wall(old["start"]),
-         {:ok, old_end} <- wall(old["end"]),
-         {:ok, new_start} <- wall(form["start"]) do
+         {:ok, old_start} <- wall(old["start"], old["all_day"]),
+         {:ok, old_end} <- wall(old["end"], old["all_day"]),
+         {:ok, new_start} <- wall(form["start"], form["all_day"]) do
       length = NaiveDateTime.diff(old_end, old_start)
       %{form | "end" => format_wall(NaiveDateTime.add(new_start, length), form["all_day"])}
     else
@@ -492,15 +492,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
 
   defp follow_start(form, _old, _target), do: form
 
-  defp wall(text) when is_binary(text) do
-    case String.length(text) do
-      10 -> with {:ok, date} <- Date.from_iso8601(text), do: NaiveDateTime.new(date, ~T[00:00:00])
-      16 -> NaiveDateTime.from_iso8601(text <> ":00")
-      _other -> :error
+  # A timed draft's date and time picker posts the date alone while its time
+  # is missing; that is unreadable here, not midnight.
+  defp wall(text, all_day) when is_binary(text) do
+    case {String.length(text), all_day == true} do
+      {10, true} ->
+        with {:ok, date} <- Date.from_iso8601(text), do: NaiveDateTime.new(date, ~T[00:00:00])
+
+      {16, false} ->
+        NaiveDateTime.from_iso8601(text <> ":00")
+
+      _other ->
+        :error
     end
   end
 
-  defp wall(_text), do: :error
+  defp wall(_text, _all_day), do: :error
 
   defp format_wall(naive, true), do: naive |> NaiveDateTime.to_date() |> Date.to_iso8601()
   defp format_wall(naive, _timed), do: naive |> NaiveDateTime.to_iso8601() |> String.slice(0, 16)

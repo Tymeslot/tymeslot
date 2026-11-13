@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGroupEvent do
   alias Tymeslot.Utils.ChangesetErrors
   alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Validation.Constraints
+  alias TymeslotWeb.Components.CoreComponents.DateTimePicker.Value
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
   alias TymeslotWeb.Dashboard.Calendar.PanelState
@@ -227,21 +228,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGroupEvent do
 
   defp integer(_value), do: nil
 
-  defp registration_close(value, _timezone) when value in [nil, ""], do: {:ok, nil}
-
-  defp registration_close(value, timezone) when is_binary(value) do
-    with {:ok, naive} <- NaiveDateTime.from_iso8601(seconds(value)),
-         {:ok, closes_at} <- in_zone(naive, timezone) do
-      {:ok, DateTime.truncate(closes_at, :second)}
-    else
-      _invalid -> {:error, error_message(:invalid_registration_close)}
+  # The picker posts the half it has of a date and time left unfinished, which
+  # is refused with what is missing rather than read as no close.
+  defp registration_close(value, timezone) do
+    case Value.parse(value) do
+      {:ok, nil} -> {:ok, nil}
+      {:ok, naive} -> close_in_zone(naive, timezone)
+      {:error, :invalid} -> {:error, error_message(:invalid_registration_close)}
+      {:error, unfinished} -> {:error, Value.message(unfinished)}
     end
   end
 
-  defp registration_close(_value, _timezone),
-    do: {:error, error_message(:invalid_registration_close)}
-
-  defp seconds(text), do: if(String.length(text) == 16, do: text <> ":00", else: text)
+  defp close_in_zone(naive, timezone) do
+    case in_zone(naive, timezone) do
+      {:ok, closes_at} -> {:ok, DateTime.truncate(closes_at, :second)}
+      {:error, _reason} -> {:error, error_message(:invalid_registration_close)}
+    end
+  end
 
   # A wall time the clock skips counts from just after the gap; one it
   # passes twice, from the first time.

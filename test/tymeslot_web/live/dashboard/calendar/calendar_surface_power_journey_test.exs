@@ -270,8 +270,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePowerJourneyTest do
 
       # 3. Family is chosen in the picker, and the import starts.
       lv
-      |> form("#calendar-import-calendar", %{"calendar" => "#{integration.id}:family"})
-      |> render_change()
+      |> form("#calendar-import-calendar")
+      |> render_change(%{"calendar" => "#{integration.id}:family"})
 
       flush_pushes(lv)
       lv |> element("#calendar-import-start") |> render_click()

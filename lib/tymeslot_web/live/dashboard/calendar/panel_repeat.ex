@@ -263,13 +263,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelRepeat do
   def repeat_field(assigns) do
     ~H"""
     <div class="space-y-1">
-      <form id="calendar-panel-repeat" phx-change="panel:repeat" phx-target={@target}>
+      <form id="calendar-panel-repeat" phx-change="panel:repeat" phx-target={@target} novalidate>
         <%!-- A new id draws the select again, with the server's value. --%>
         <div id={"calendar-panel-repeat-field-#{@version}"}>
-          <.input
+          <.select
             id="calendar-panel-repeat-preset"
             name="preset"
-            type="select"
             label={dgettext("dashboard_calendar_editing", "Repeat")}
             value={@repeat.current}
             options={@repeat.options}

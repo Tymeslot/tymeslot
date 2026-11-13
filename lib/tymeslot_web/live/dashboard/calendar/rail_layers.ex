@@ -64,12 +64,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.RailLayers do
           />
         </div>
         <form
+          novalidate
           id={"#{@id_prefix}-bookable-form"}
           phx-change="calendar:bookable_type"
           phx-target={@target}
         >
-          <.input
-            type="select"
+          <.select
             id={"#{@id_prefix}-bookable-type"}
             name="id"
             label={dgettext("dashboard_calendar_booking", "Meeting type")}

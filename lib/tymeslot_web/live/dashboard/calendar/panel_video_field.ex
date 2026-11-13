@@ -80,13 +80,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideoField do
         </.action_button>
         <form
           :if={match?([_first, _second | _rest], @video_integrations)}
+          novalidate
           id="calendar-panel-video-form"
           phx-change="panel:video"
           phx-target={@surface}
         >
           <div id={"calendar-panel-video-field-#{@version}"}>
-            <.input
-              type="select"
+            <.select
               id="calendar-panel-video-choice"
               name="video_integration_id"
               label={dgettext("dashboard_calendar_editing", "Add video call")}
@@ -107,9 +107,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelVideoField do
   @spec video_choice(map()) :: Phoenix.LiveView.Rendered.t()
   def video_choice(assigns) do
     ~H"""
-    <.input
+    <.select
       :if={@video_integrations != []}
-      type="select"
       id="calendar-panel-new-video"
       name="video_integration_id"
       label={dgettext("dashboard_calendar_editing", "Video call")}

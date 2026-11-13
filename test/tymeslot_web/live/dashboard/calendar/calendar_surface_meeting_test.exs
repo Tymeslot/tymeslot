@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.Changeset
+  alias Tymeslot.CalendarGrid.MeetingParams
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingConflictQueries
@@ -296,7 +297,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     integration: integration
   } do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    guests = for n <- 1..12, do: "guest#{n}@example.com"
+    max = MeetingParams.max_guests()
+    guests = for n <- 1..(max + 1), do: "guest#{n}@example.com"
     more_options(lv, integration, %{"guests" => guests})
     as_meeting(lv)
     trace(lv)
@@ -306,7 +308,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     assert has_element?(
              lv,
              "#calendar-panel [role=status]",
-             "You can invite at most 11 guests at once."
+             "You can invite at most #{max} guests at once."
            )
 
     refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
@@ -317,7 +319,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     user: user,
     integration: integration
   } do
-    for _n <- 1..20, do: :ok = RateLimiter.check(:dashboard_quick_add_meeting, user.id)
+    for _n <- 1..10, do: :ok = RateLimiter.check(:dashboard_quick_add_meeting, user.id)
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
     more_options(lv, integration)

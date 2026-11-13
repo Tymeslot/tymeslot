@@ -59,9 +59,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelTimingTest do
   test "shows the event's times on the organiser's clock", %{lv: lv, review: review} do
     edit(lv, review)
 
-    assert has_element?(lv, "#calendar-panel-start-date[value='2026-10-14']")
-    assert has_element?(lv, "#calendar-panel-start-time[value='10:00']")
-    assert has_element?(lv, "#calendar-panel-end-time[value='11:00']")
+    assert has_element?(
+             lv,
+             "#calendar-panel-start-date-field [data-picker-value][value='2026-10-14']"
+           )
+
+    assert has_element?(lv, "#calendar-panel-start-time-field [data-picker-value][value='10:00']")
+    assert has_element?(lv, "#calendar-panel-end-time-field [data-picker-value][value='11:00']")
   end
 
   test "a later start takes the end with it", %{lv: lv, review: review} do
@@ -161,7 +165,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelTimingTest do
     test "shows its last day, not the stored end", %{lv: lv, offsite: offsite} do
       edit(lv, offsite)
 
-      assert has_element?(lv, "#calendar-panel-end-date[value='2026-10-15']")
+      assert has_element?(
+               lv,
+               "#calendar-panel-end-date-field [data-picker-value][value='2026-10-15']"
+             )
+
       refute has_element?(lv, "#calendar-panel-start-time")
     end
 
