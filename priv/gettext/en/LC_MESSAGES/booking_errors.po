@@ -288,15 +288,15 @@ msgstr ""
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "This meeting type can't be booked as a series at the moment. You can book a single session."
-msgstr ""
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
-#, elixir-autogen, elixir-format
 msgid "This meeting type is booked as a series. Please choose your sessions."
 msgstr ""
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
 msgid "Two of your sessions overlap. Please choose different times."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type can't be booked as a series at the moment."
 msgstr ""

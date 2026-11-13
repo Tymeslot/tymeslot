@@ -135,7 +135,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
         :ok
 
       {:error, reason} ->
-        with :proceed <- police(reason, Map.get(slot, :organizer_user_id)), do: :ok
+        with :proceed <- police(reason, Map.get(slot, :organizer_user_id), false), do: :ok
     end
   end
 
@@ -211,28 +211,22 @@ defmodule Tymeslot.Bookings.CalendarCheck do
         ok
 
       {:error, reason} ->
-        with :proceed <- police(reason, organizer_user_id),
-             do: proceed_many(Keyword.get(opts, :strict_calendar, false), organizer_user_id)
+        strict? = Keyword.get(opts, :strict_calendar, false)
+
+        with :proceed <- police(reason, organizer_user_id, strict?),
+             do: {:ok, %{busy: MapSet.new()}}
     end
-  end
-
-  defp proceed_many(false, _organizer_user_id), do: {:ok, %{busy: MapSet.new()}}
-
-  defp proceed_many(true, organizer_user_id) do
-    Logger.warning("Calendar unreachable for a strict check, refusing booking",
-      organizer_user_id: organizer_user_id
-    )
-
-    {:error, :availability_unverifiable}
   end
 
   # The refusal policy `enforce/3` and `enforce_many/3` share: the error a
   # probe failure refuses with, or `:proceed` for a transport failure, which
-  # each caller answers with its own nothing-busy result.
-  defp police(reason, _organizer_user_id) when reason in [:organizer_required, :slot_unavailable],
-    do: {:error, reason}
+  # each caller answers with its own nothing-busy result. A strict caller
+  # refuses a transport failure too.
+  defp police(reason, _organizer_user_id, _strict?)
+       when reason in [:organizer_required, :slot_unavailable],
+       do: {:error, reason}
 
-  defp police(reason, organizer_user_id) when reason in @unverifiable_reasons do
+  defp police(reason, organizer_user_id, _strict?) when reason in @unverifiable_reasons do
     Logger.warning("Calendar availability could not be verified, refusing booking",
       reason: LogFormat.reason(reason),
       organizer_user_id: organizer_user_id
@@ -241,7 +235,16 @@ defmodule Tymeslot.Bookings.CalendarCheck do
     {:error, :availability_unverifiable}
   end
 
-  defp police(reason, organizer_user_id) do
+  defp police(reason, organizer_user_id, true) do
+    Logger.warning("Calendar availability check failed, refusing booking",
+      reason: LogFormat.reason(reason),
+      organizer_user_id: organizer_user_id
+    )
+
+    {:error, :availability_unverifiable}
+  end
+
+  defp police(reason, organizer_user_id, false) do
     Logger.warning("Calendar availability check failed, proceeding with booking",
       reason: LogFormat.reason(reason),
       organizer_user_id: organizer_user_id

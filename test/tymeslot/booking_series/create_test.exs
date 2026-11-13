@@ -19,6 +19,7 @@ defmodule Tymeslot.BookingSeries.CreateTest do
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Bookings.Orchestrator
+  alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Occurrence
   alias Tymeslot.BookingSeries.SeriesSchema
@@ -27,6 +28,7 @@ defmodule Tymeslot.BookingSeries.CreateTest do
   alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.VideoRoomWorker
 
   setup :verify_on_exit!
 
@@ -204,6 +206,83 @@ defmodule Tymeslot.BookingSeries.CreateTest do
 
     assert status == {:unavailable, :limit_reached}
     assert series_count() == 0
+  end
+
+  test "a session taken in the meantime comes back through the booking submission", %{
+    host: host,
+    today: today
+  } do
+    insert(:meeting,
+      organizer_user_id: host.user.id,
+      start_time: at(today, 14),
+      end_time: DateTime.add(at(today, 14), 30, :minute),
+      status: :confirmed
+    )
+
+    type = series_type(host)
+
+    assert {:error, {:occurrences_unavailable, [%Occurrence{position: 2}]}} =
+             Orchestrator.submit_booking(
+               %{form_data: form_data(), meeting_params: params(host, type, weekly(today, 3))},
+               organizer_user_id: host.user.id
+             )
+
+    assert series_count() == 0
+  end
+
+  test "a video type's sessions each get a room, announced with the series", %{
+    host: host,
+    today: today
+  } do
+    video = insert(:video_integration, user: host.user, provider: "mirotalk")
+    type = series_type(host, allow_video: true, video_integration_id: video.id)
+
+    assert {:ok, %{meetings: meetings}} =
+             BookingSeries.book(params(host, type, weekly(today, 3)), form_data(),
+               with_video_room: true
+             )
+
+    rooms = all_enqueued(worker: VideoRoomWorker)
+
+    assert rooms |> Enum.map(& &1.args["meeting_id"]) |> Enum.sort() ==
+             meetings |> Enum.map(& &1.id) |> Enum.sort()
+
+    # The room holds back no announcement: each session is announced with
+    # the series, and none sends a confirmation of its own.
+    assert Enum.all?(rooms, &(&1.args["announce"] == false))
+    assert jobs(EmailWorker, "send_confirmation_emails") == []
+    assert Enum.all?(Repo.all(MeetingSchema), &match?(%DateTime{}, &1.announced_at))
+  end
+
+  test "rescheduling one session keeps it in the series and announces a reschedule", %{
+    host: host,
+    today: today
+  } do
+    type = series_type(host)
+
+    assert {:ok, %{series: series, meetings: [_first, second, _third]}} =
+             book_series(host, type, weekly(today, 3))
+
+    new_params = %{
+      date: Date.to_iso8601(Date.add(today, 15)),
+      time: "11:00",
+      duration: 30,
+      user_timezone: "Etc/UTC"
+    }
+
+    assert {:ok, _moved} = Reschedule.execute(second.uid, new_params, host.user.id)
+
+    moved = Repo.get!(MeetingSchema, second.id)
+    assert moved.start_time == DateTime.add(at(today, 15), 1, :hour)
+    assert {moved.series_id, moved.series_position} == {series.id, 2}
+
+    assert [_one] =
+             all_enqueued(
+               worker: EmailWorker,
+               args: %{"action" => "send_reschedule_emails", "meeting_id" => second.id}
+             )
+
+    assert jobs(EmailWorker, "send_confirmation_emails") == []
   end
 
   test "the window applies only to the first occurrence", %{host: host, today: today} do

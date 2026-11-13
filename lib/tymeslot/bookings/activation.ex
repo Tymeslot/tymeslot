@@ -171,9 +171,21 @@ defmodule Tymeslot.Bookings.Activation do
   # the room to wait for: the room is created on its own, and the occurrence
   # is announced now, without emails. Its reminders, composed when they are
   # sent, carry the room's link by then.
+  #
+  # The integration fan-out returned here (webhooks, Telegram, Slack, one
+  # event per session) runs after the series commits, before the room job
+  # has run, so its payloads carry no join link. That is accepted for now:
+  # the per-session events are to be replaced by one series event, raised
+  # once every session's room exists.
+  #
+  # Unlike a booking of its own, which falls back to announcing without a
+  # room, a session whose room job cannot be enqueued fails: the series
+  # rolls back and is retried whole, as for any other job it cannot queue.
   defp schedule_video_room(meeting, :series) do
-    _scheduled_or_failed = VideoRoomWorker.schedule_video_room_creation(meeting.id)
-    notify(meeting, :series)
+    case VideoRoomWorker.schedule_video_room_creation(meeting.id) do
+      :ok -> notify(meeting, :series)
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp notify(meeting, announce) do

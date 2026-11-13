@@ -11,24 +11,19 @@ defmodule Tymeslot.Bookings.Create do
     Activation,
     BuildParams,
     CalendarCheck,
-    CalendarJobs,
     CreateGroup,
     Errors,
     MeetingAttributes,
-    Policy,
     ScheduleCheck,
     Validation
   }
 
   alias Tymeslot.Bookings.Create.PaidBooking
+  alias Tymeslot.Bookings.Create.Persist
   alias Tymeslot.Bookings.Create.Prepare
   alias Tymeslot.Bookings.Telemetry
   alias Tymeslot.Meetings.BookingLimits.Checker
-  alias Tymeslot.Meetings.Guests
-  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.PlannedSessions
-  alias Tymeslot.Meetings.Scheduling
-  alias Tymeslot.Meetings.UniqueInvitation
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.SeriesSettings
@@ -217,8 +212,8 @@ defmodule Tymeslot.Bookings.Create do
 
       Prepare.paid?(booking_data) ->
         PaidBooking.create(meeting_attrs, booking_data,
-          create_meeting: &create_meeting/1,
-          create_guests: &create_guests/2,
+          create_meeting: &Persist.create_meeting/1,
+          create_guests: &Persist.create_guests/2,
           classify_error: &Errors.classify_creation_error(&1, booking_data),
           on_created: &Telemetry.booking_created/0
         )
@@ -248,61 +243,11 @@ defmodule Tymeslot.Bookings.Create do
       # booking that loses its slot leaves none behind, and a booking whose
       # emails cannot be queued is not made; the integration fan-out waits
       # for the commit (`Activation.activate_in_transaction/2`).
-      with {:ok, meeting} <- create_meeting(meeting_attrs),
-           {:ok, _guests} <- create_guests(meeting, booking_data),
-           {:ok, _result} <- schedule_calendar_job(meeting),
-           {:ok, pending} <- Activation.activate_in_transaction(meeting, opts) do
-        {meeting, pending}
-      else
-        {:error, reason} ->
-          Repo.rollback(reason)
+      case Persist.persist_and_activate(meeting_attrs, booking_data, opts) do
+        {:ok, meeting_and_pending} -> meeting_and_pending
+        {:error, reason} -> Repo.rollback(reason)
       end
     end)
-  end
-
-  # Persists the attendee-added guests, but only when the meeting type allows
-  # guests. Sanitisation (format, de-dup, self-exclusion, cap) is re-applied
-  # here server-side — the client list is never trusted. Runs inside the
-  # booking transaction so a guest failure rolls the whole booking back.
-  @doc false
-  @spec create_guests(MeetingSchema.t(), map()) :: {:ok, list()} | {:error, term()}
-  def create_guests(meeting, booking_data) do
-    if Policy.guests_allowed?(booking_data) do
-      booking_data
-      |> Map.get(:guest_emails, [])
-      |> Guests.sanitize_emails(
-        meeting.attendee_email,
-        Guests.limit_for(Map.get(booking_data, :meeting_type))
-      )
-      |> then(&Guests.create_for_meeting(meeting.id, &1, :booker))
-    else
-      {:ok, []}
-    end
-  end
-
-  # A booking that lost its invitation to another one committed first (both
-  # passed `validate_invitation/1`, serialised on the organiser's schedule
-  # lock), or whose invitation was deleted since, is refused by the database
-  # at insert, not by the pre-check.
-  @doc false
-  @spec create_meeting(map()) :: {:ok, MeetingSchema.t()} | {:error, term()}
-  def create_meeting(meeting_attrs) do
-    case Scheduling.create_meeting_with_conflict_check(meeting_attrs) do
-      {:ok, meeting} ->
-        {:ok, meeting}
-
-      {:error, {:validation_error, changeset}} ->
-        if UniqueInvitation.unavailable?(changeset),
-          do: {:error, :invitation_unavailable},
-          else: {:error, :validation_error}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp schedule_calendar_job(meeting) do
-    CalendarJobs.schedule_job(meeting, "create")
   end
 
   defp map_transaction_result({:ok, {meeting, pending_integrations}}, _booking_data) do

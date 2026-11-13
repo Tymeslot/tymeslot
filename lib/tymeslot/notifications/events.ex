@@ -171,10 +171,13 @@ defmodule Tymeslot.Notifications.Events do
   defp schedule_created_notifications(meeting, true),
     do: Orchestrator.schedule_meeting_notifications(meeting)
 
+  # `{:ok, :not_sendable}` (a meeting that cannot be emailed) passes through
+  # as it is, as `schedule_meeting_notifications/1` reports it.
   defp schedule_created_notifications(meeting, false) do
     case Orchestrator.schedule_reminder_notifications(meeting) do
+      :ok -> {:ok, :reminders_scheduled}
+      {:ok, _outcome} = outcome -> outcome
       {:error, _reason} = error -> error
-      _scheduled -> {:ok, :reminders_scheduled}
     end
   end
 

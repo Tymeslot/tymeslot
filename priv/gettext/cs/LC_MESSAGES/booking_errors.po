@@ -288,11 +288,6 @@ msgstr "Některé z vašich termínů už nejsou k dispozici. Zkontrolujte je pr
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
 #, elixir-autogen, elixir-format
-msgid "This meeting type can't be booked as a series at the moment. You can book a single session."
-msgstr "Tento typ schůzky teď nelze rezervovat jako sérii. Můžete si rezervovat jeden termín."
-
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
-#, elixir-autogen, elixir-format
 msgid "This meeting type is booked as a series. Please choose your sessions."
 msgstr "Tento typ schůzky se rezervuje jako série. Vyberte prosím své termíny."
 
@@ -300,3 +295,8 @@ msgstr "Tento typ schůzky se rezervuje jako série. Vyberte prosím své termí
 #, elixir-autogen, elixir-format
 msgid "Two of your sessions overlap. Please choose different times."
 msgstr "Dva z vašich termínů se překrývají. Vyberte prosím jiné časy."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type can't be booked as a series at the moment."
+msgstr "Tento typ schůzky teď nelze rezervovat jako sérii."

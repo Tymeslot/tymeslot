@@ -29,14 +29,12 @@ defmodule Tymeslot.BookingSeries.Create do
   alias Tymeslot.Bookings.{
     Activation,
     BuildParams,
-    CalendarJobs,
-    Create,
     Errors,
     MeetingAttributes,
     Telemetry
   }
 
-  alias Tymeslot.Bookings.Create.Prepare
+  alias Tymeslot.Bookings.Create.{Persist, Prepare}
   alias Tymeslot.BookingSeries.{Check, Notifications, Occurrence, Plan, SeriesQueries}
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Meetings.Approval
@@ -240,12 +238,10 @@ defmodule Tymeslot.BookingSeries.Create do
   # already poisoned it, so the first failure rolls back at once, naming the
   # session it happened to.
   defp book_occurrence(meeting_attrs, booking_data, activation_opts) do
-    with {:ok, meeting} <- Create.create_meeting(meeting_attrs),
-         {:ok, _guests} <- Create.create_guests(meeting, booking_data),
-         {:ok, _job} <- CalendarJobs.schedule_job(meeting, "create"),
-         {:ok, pending} <- Activation.activate_in_transaction(meeting, activation_opts) do
-      {meeting, pending}
-    else
+    case Persist.persist_and_activate(meeting_attrs, booking_data, activation_opts) do
+      {:ok, meeting_and_pending} ->
+        meeting_and_pending
+
       {:error, reason} ->
         Repo.rollback({:occurrence_failed, meeting_attrs.series_position, reason})
     end

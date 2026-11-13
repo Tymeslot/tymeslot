@@ -103,10 +103,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   end
 
   def message(:series_not_offered) do
-    dgettext(
-      "booking_errors",
-      "This meeting type can't be booked as a series at the moment. You can book a single session."
-    )
+    dgettext("booking_errors", "This meeting type can't be booked as a series at the moment.")
   end
 
   def message(:series_required) do

@@ -6,9 +6,10 @@ defmodule Tymeslot.BookingSeries.CreateRaceTest do
   synchronous and why `on_exit` deletes what it committed).
 
   Both pass every check made before the booking transaction, since neither
-  booking exists yet. Each contender parks right after inserting its first
-  meeting, so the winner holds the organiser's schedule lock while the
-  loser waits on it and then finds the winner's meeting.
+  booking exists yet. Each order is staged in turn: the first contender
+  parks right after inserting its first meeting, holding the organiser's
+  schedule lock, and the second is held until it waits on that lock, then
+  finds the first one's meeting. Never a partial series.
   """
 
   use Tymeslot.DataCase, async: false
@@ -19,7 +20,7 @@ defmodule Tymeslot.BookingSeries.CreateRaceTest do
   import Ecto.Query, only: [from: 2]
   import Mox
   import Tymeslot.AvailabilityTestHelpers, only: [create_always_bookable_profile: 1]
-  import Tymeslot.Test.RaceConductor, only: [race: 1, unboxed: 1]
+  import Tymeslot.Test.RaceConductor, only: [unboxed: 1]
 
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Bookings.Create
@@ -75,7 +76,8 @@ defmodule Tymeslot.BookingSeries.CreateRaceTest do
     %{user: user, type: type, today: Date.utc_today()}
   end
 
-  test "a single booking and a series racing for one slot: exactly one wins", ctx do
+  # The contested slot is the series' second session.
+  setup ctx do
     contested = ctx.today |> Date.add(14) |> DateTime.new!(~T[10:00:00], "Etc/UTC")
 
     params = %{
@@ -88,47 +90,73 @@ defmodule Tymeslot.BookingSeries.CreateRaceTest do
     series = %{mode: :recurring, first_start: DateTime.add(contested, -7, :day), count: 3}
     single = %{date: DateTime.to_date(contested), time: "10:00"}
 
-    [single_result, series_result] =
-      race([
-        fn hold ->
-          park_after_insert(hold, fn -> Create.execute(Map.merge(params, single), form()) end)
-        end,
-        fn hold ->
-          park_after_insert(hold, fn ->
-            BookingSeries.book(Map.put(params, :series, series), form())
-          end)
-        end
-      ])
-
-    {meetings, series_rows} =
-      unboxed(fn ->
-        {Repo.all(from(m in MeetingSchema, where: m.organizer_user_id == ^ctx.user.id)),
-         Repo.aggregate(
-           from(s in SeriesSchema, where: s.organizer_user_id == ^ctx.user.id),
-           :count
-         )}
-      end)
-
-    case {single_result, series_result} do
-      {{:ok, %MeetingSchema{}}, {:error, {:occurrences_unavailable, unavailable}}} ->
-        assert [%Occurrence{position: 2, status: {:unavailable, :booked}}] = unavailable
-        assert [%{series_id: nil, start_time: ^contested}] = meetings
-        assert series_rows == 0
-
-      {{:error, :slot_taken}, {:ok, %{meetings: booked}}} ->
-        assert length(booked) == 3
-        assert length(meetings) == 3
-        assert Enum.all?(meetings, &(&1.series_id != nil))
-        assert series_rows == 1
-
-      other ->
-        flunk("expected exactly one winner, got #{inspect(other)}")
-    end
+    %{
+      contested: contested,
+      book_single: fn -> Create.execute(Map.merge(params, single), form()) end,
+      book_series: fn -> BookingSeries.book(Map.put(params, :series, series), form()) end
+    }
   end
 
-  defp park_after_insert(hold, fun) do
-    RaceConductor.arm(hold, RaceConductor.insert_into("meetings"))
-    fun.()
+  test "the single booking takes the lock first: the series is refused whole", ctx do
+    {single_result, series_result} = staged(ctx.book_single, ctx.book_series)
+
+    assert {:ok, %MeetingSchema{}} = single_result
+
+    assert {:error, {:occurrences_unavailable, [%Occurrence{} = lost]}} = series_result
+    assert %Occurrence{position: 2, status: {:unavailable, :booked}} = lost
+
+    {meetings, series_rows} = committed(ctx)
+    contested = ctx.contested
+    assert [%{series_id: nil, start_time: ^contested}] = meetings
+    assert series_rows == 0
+  end
+
+  test "the series takes the lock first: the single booking is told the slot is taken", ctx do
+    {series_result, single_result} = staged(ctx.book_series, ctx.book_single)
+
+    assert {:ok, %{meetings: booked}} = series_result
+    assert length(booked) == 3
+    assert single_result == {:error, :slot_taken}
+
+    {meetings, series_rows} = committed(ctx)
+    assert length(meetings) == 3
+    assert Enum.all?(meetings, &(&1.series_id != nil))
+    assert series_rows == 1
+  end
+
+  # Runs `first` until it has inserted its first meeting, holding the
+  # organiser's schedule lock, then starts `second` and waits until it is
+  # blocked on that lock, before letting `first` commit. Either step not
+  # happening fails the test, so the race is always the one staged.
+  defp staged(first, second) do
+    test_pid = self()
+
+    holder =
+      Task.async(fn ->
+        unboxed(fn ->
+          RaceConductor.arm(
+            RaceConductor.park_here(test_pid),
+            RaceConductor.insert_into("meetings")
+          )
+
+          first.()
+        end)
+      end)
+
+    assert_receive {:parked, holder_pid}, 10_000
+
+    waiter = Task.async(fn -> unboxed(second) end)
+    assert RaceConductor.await_finished_or_blocked(waiter) == :blocked
+
+    send(holder_pid, :release)
+    {Task.await(holder, 30_000), Task.await(waiter, 30_000)}
+  end
+
+  defp committed(ctx) do
+    unboxed(fn ->
+      {Repo.all(from(m in MeetingSchema, where: m.organizer_user_id == ^ctx.user.id)),
+       Repo.aggregate(from(s in SeriesSchema, where: s.organizer_user_id == ^ctx.user.id), :count)}
+    end)
   end
 
   defp form, do: %{"name" => "Racer", "email" => "racer@example.com", "message" => ""}
