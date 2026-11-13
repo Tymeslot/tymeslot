@@ -31,6 +31,14 @@ defmodule Tymeslot.Meetings.EmailVerification do
     * `release/1`: the attendee says they did not make the booking. Identical
       to `expire/1` but recorded as `:cancelled`.
 
+  ## Group seats
+
+  A seat on a group meeting goes through the same gate, one seat at a time:
+  `verify_seat/1` and `expire_seat/1`, implemented in
+  `Tymeslot.Meetings.EmailVerification.Seats`. The first seat to be verified
+  on a slot held for verification brings the slot to life; the last held seat
+  to expire on one voids it.
+
   `resend/1` sends the same verification email again while the booking is
   held. It never moves the deadline. At most three resends per booking, so at
   most four emails including the one sent with the booking; the count lives
@@ -48,10 +56,12 @@ defmodule Tymeslot.Meetings.EmailVerification do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Invitations
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.EmailVerification.Seats
   alias Tymeslot.Meetings.EmailVerificationJobs
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
   alias Tymeslot.Repo
@@ -258,11 +268,22 @@ defmodule Tymeslot.Meetings.EmailVerification do
     end
   end
 
-  # The deadline itself counts as passed, as it does for the sweep.
-  defp deadline_reached?(%{verification_deadline_at: %DateTime{} = deadline}, now),
+  @doc """
+  Whether a held booking or seat can no longer be verified at `now`. The
+  deadline itself counts as passed, as it does for the sweep.
+  """
+  @spec deadline_reached?(%{verification_deadline_at: DateTime.t() | nil}, DateTime.t()) ::
+          boolean()
+  def deadline_reached?(%{verification_deadline_at: %DateTime{} = deadline}, now),
     do: DateTime.compare(now, deadline) != :lt
 
-  defp deadline_reached?(_meeting, _now), do: false
+  def deadline_reached?(_booking_or_seat, _now), do: false
+
+  @doc "Counts a held group seat; see `Tymeslot.Meetings.EmailVerification.Seats.verify_seat/1`."
+  defdelegate verify_seat(seat), to: Seats
+
+  @doc "Releases a held group seat; see `Tymeslot.Meetings.EmailVerification.Seats.expire_seat/1`."
+  defdelegate expire_seat(seat), to: Seats
 
   @doc """
   Releases a held booking whose deadline has passed.
@@ -299,21 +320,25 @@ defmodule Tymeslot.Meetings.EmailVerification do
   end
 
   @doc """
-  Deletes bookings that never left the gate, `hours` after their deadline.
+  Deletes bookings and group seats that never left the gate, `hours` after
+  their deadline.
 
-  Covers both ways out without verifying: expired (`expire/1`) and released
-  (`release/1`). The organiser never saw them, so unlike a booking that was
-  once confirmed they are deleted, not anonymised; guests go with them.
-  Returns the `{count, nil}` of the delete.
+  Covers both ways out without verifying: expired (`expire/1`,
+  `expire_seat/1`) and released (`release/1`). The organiser never saw them,
+  so unlike a booking that was once confirmed they are deleted, not
+  anonymised; guests go with them.
+  Returns the `{count, nil}` of bookings and seats deleted together.
   """
   @spec prune_unverified(non_neg_integer()) :: {non_neg_integer(), nil}
   def prune_unverified(hours \\ @unverified_retention_hours) do
     cutoff = DateTime.add(Clock.utc_now(), -hours, :hour)
-    {count, _rows} = result = MeetingQueries.delete_unverified_lapsed_before(cutoff)
+    {bookings, _rows} = MeetingQueries.delete_unverified_lapsed_before(cutoff)
+    {seats, _rows} = ParticipantQueries.delete_unverified_cancelled_before(cutoff)
 
-    if count > 0, do: Logger.info("Pruned unverified bookings", deleted_count: count)
+    if bookings + seats > 0,
+      do: Logger.info("Pruned unverified bookings", deleted_count: bookings, seat_count: seats)
 
-    result
+    {bookings + seats, nil}
   end
 
   @doc """

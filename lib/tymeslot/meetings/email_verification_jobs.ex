@@ -1,7 +1,7 @@
 defmodule Tymeslot.Meetings.EmailVerificationJobs do
   @moduledoc """
-  The per-meeting job that releases an unverified booking at its deadline,
-  and its removal.
+  The job that releases an unverified booking, or an unverified seat on a
+  group meeting, at its deadline, and its removal.
 
   Cancellation is best-effort: a job already executing cannot be deleted. The
   job does not rely on it, since it re-reads the meeting and checks it is
@@ -29,20 +29,29 @@ defmodule Tymeslot.Meetings.EmailVerificationJobs do
   @spec schedule_expiry(%{atom() => term()}) :: :ok
   def schedule_expiry(%{verification_deadline_at: nil}), do: :ok
 
-  def schedule_expiry(%{verification_deadline_at: %DateTime{} = deadline} = meeting) do
-    inserted =
-      %{"meeting_id" => meeting.id}
-      |> EmailVerificationExpiryWorker.new(scheduled_at: deadline)
-      |> Oban.insert()
+  def schedule_expiry(%{verification_deadline_at: %DateTime{} = deadline} = meeting),
+    do: insert(%{"meeting_id" => meeting.id}, deadline, meeting_id: meeting.id)
 
-    case inserted do
+  @doc """
+  Schedules the release of this held group seat at its
+  `verification_deadline_at`, as `schedule_expiry/1` does for a booking and
+  failing safe the same way.
+  """
+  @spec schedule_seat_expiry(%{atom() => term()}) :: :ok
+  def schedule_seat_expiry(%{verification_deadline_at: nil}), do: :ok
+
+  def schedule_seat_expiry(%{verification_deadline_at: %DateTime{} = deadline} = seat),
+    do: insert(%{"participant_id" => seat.id}, deadline, participant_id: seat.id)
+
+  defp insert(args, deadline, log_metadata) do
+    case args |> EmailVerificationExpiryWorker.new(scheduled_at: deadline) |> Oban.insert() do
       {:ok, _job} ->
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to schedule email verification expiry",
-          meeting_id: meeting.id,
-          reason: LogFormat.reason(reason)
+        Logger.error(
+          "Failed to schedule email verification expiry",
+          [reason: LogFormat.reason(reason)] ++ log_metadata
         )
     end
 
@@ -53,6 +62,13 @@ defmodule Tymeslot.Meetings.EmailVerificationJobs do
   @spec cancel(%{atom() => term()}) :: :ok
   def cancel(meeting) do
     Jobs.delete_meeting_jobs(EmailVerificationExpiryWorker, meeting.id)
+    :ok
+  end
+
+  @doc "Removes the pending expiry job of a group seat that is no longer held."
+  @spec cancel_seat(%{atom() => term()}) :: :ok
+  def cancel_seat(seat) do
+    Jobs.delete_participant_jobs(EmailVerificationExpiryWorker, seat.id)
     :ok
   end
 end

@@ -14,6 +14,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   alias Tymeslot.Bookings.Errors
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.SeatEffects
+  alias Tymeslot.Bookings.SlotActivation
   alias Tymeslot.Bookings.Telemetry
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.Guests
@@ -21,7 +22,6 @@ defmodule Tymeslot.Bookings.CreateGroup do
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.GroupAccess
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.Notifications.Events
 
   @doc "True when the booking's meeting type holds more than one seat."
   @spec applicable?(map()) :: boolean()
@@ -151,21 +151,8 @@ defmodule Tymeslot.Bookings.CreateGroup do
   defp schedule_seat_jobs(booking, opts) do
     %{meeting: meeting, participant: participant, created_meeting?: created?} = booking
 
-    with {:ok, _job} <- SeatEffects.schedule_calendar_job(meeting, created?),
-         {:ok, defer_emails?} <- schedule_new_slot_jobs(created?, meeting, opts),
-         {{:ok, _scheduled}, pending} <-
-           Events.seat_booked_deferred(meeting, participant, defer_emails?: defer_emails?) do
-      {:ok, pending}
-    else
-      {{:error, reason}, _pending} -> {:error, reason}
-      {:error, reason} -> {:error, reason}
-    end
+    SlotActivation.schedule_seat_effects(meeting, participant, created?, opts)
   end
-
-  defp schedule_new_slot_jobs(false, _meeting, _opts), do: {:ok, false}
-
-  defp schedule_new_slot_jobs(true, meeting, opts),
-    do: SeatEffects.schedule_new_slot_effects(meeting, Keyword.put(opts, :announce, true))
 
   defp group_meeting_attrs(meeting_attrs, meeting_type),
     do: SeatEffects.slot_attrs(meeting_attrs, meeting_type.name)

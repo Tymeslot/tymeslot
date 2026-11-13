@@ -328,6 +328,22 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     |> Repo.all()
   end
 
+  @doc """
+  Deletes the seats cancelled without ever being verified whose verification
+  deadline is before `cutoff`. Their guests cascade. A seat verified and
+  cancelled later has `email_verified_at` set and is never touched.
+  """
+  @spec delete_unverified_cancelled_before(DateTime.t()) :: {non_neg_integer(), nil}
+  def delete_unverified_cancelled_before(%DateTime{} = cutoff) do
+    Participant
+    |> where(
+      [p],
+      not is_nil(p.cancelled_at) and is_nil(p.email_verified_at) and
+        not is_nil(p.verification_deadline_at) and p.verification_deadline_at < ^cutoff
+    )
+    |> Repo.delete_all()
+  end
+
   defp unverified_by_id(participant_id) do
     Participant
     |> where([p], p.id == ^participant_id)
