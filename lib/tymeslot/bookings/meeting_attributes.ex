@@ -121,7 +121,11 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
     # archived — while a request is outstanding, and the deadline promised to
     # the invitee must not move underneath them.
     %{status: status, approval_requested_at: requested_at, approval_deadline_at: deadline_at} =
-      approval_attributes(meeting_type_record, params.start_datetime)
+      Approval.request_attributes(
+        meeting_type_record,
+        Clock.utc_now(),
+        params.start_datetime
+      )
 
     # Build complete meeting attributes map
     %{
@@ -238,24 +242,6 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
       booking_page_id: params.booking_page_id,
       invitation_id: params.invitation_id
     }
-  end
-
-  # A booking on a meeting type requiring manual approval is held rather than
-  # confirmed, and carries the clock the host is answering against. Everything
-  # else confirms on submission exactly as before, with all three keys nil.
-  defp approval_attributes(meeting_type_record, start_datetime) do
-    if Approval.required?(meeting_type_record) and not is_nil(start_datetime) do
-      requested_at = DateTime.truncate(Clock.utc_now(), :second)
-
-      %{
-        status: :awaiting_approval,
-        approval_requested_at: requested_at,
-        approval_deadline_at:
-          Approval.deadline_for(meeting_type_record, requested_at, start_datetime)
-      }
-    else
-      %{status: :confirmed, approval_requested_at: nil, approval_deadline_at: nil}
-    end
   end
 
   # Snapshots host-uploaded meeting-type attachments as plain maps so the
