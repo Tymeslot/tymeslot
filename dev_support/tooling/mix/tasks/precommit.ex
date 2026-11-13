@@ -6,14 +6,14 @@ defmodule Mix.Tasks.Precommit do
 
       $ mix precommit
       $ mix precommit --fail-fast
-      $ mix precommit --affected               # before a commit
+      $ mix precommit --affected               # the working tree
       $ mix precommit --affected --base main   # the whole branch
 
   `--affected` runs only the steps the diff can reach, and narrows the suite
   the way `mix test.affected` does; `Tymeslot.Precommit.Affected` has the
-  rules. It is the pre-commit check. The full gate, without it, is what runs
-  before a push or a release, because the narrowed suite misses cross-domain
-  coupling that only the whole suite catches.
+  rules. It is the everyday gate. The full gate, without it, runs for large or
+  wide-reaching changes, on main and before a release, because the narrowed
+  suite misses cross-domain coupling that only the whole suite catches.
 
   Every step remains individually runnable (`mix credo --strict`, `mix test`,
   and so on); this only removes the chance of applying the gate by halves.

@@ -2,8 +2,8 @@ defmodule Tymeslot.Precommit.Affected do
   @moduledoc """
   Narrows the gate to the steps a diff can affect, for `mix precommit --affected`.
 
-  The full gate is the push-time check. Before a commit, most of its steps
-  cannot be affected by most diffs, and the suite is the only step that costs
+  The full gate is for large changes, main and releases. For everything else,
+  most of its steps cannot be affected by most diffs, and the suite is the only step that costs
   real time, so this keeps the gate's shape and drops what the diff cannot
   reach:
 
