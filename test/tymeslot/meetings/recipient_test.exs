@@ -158,6 +158,18 @@ defmodule Tymeslot.Meetings.RecipientTest do
       assert [%{kind: :participant, email: "joiner@example.com"}] = Meetings.recipients(meeting)
     end
 
+    # Its attendee fields hold its first guest, who is told with the guests.
+    test "a meeting the host manages lists no attendee" do
+      meeting =
+        insert(:meeting,
+          managed_by_host: true,
+          attendee_name: "first@example.com",
+          attendee_email: "first@example.com"
+        )
+
+      assert Meetings.recipients(meeting) == []
+    end
+
     test "a solo meeting lists only its attendee" do
       meeting = insert(:meeting, attendee_name: "Solo Booker", attendee_email: "solo@example.com")
 
