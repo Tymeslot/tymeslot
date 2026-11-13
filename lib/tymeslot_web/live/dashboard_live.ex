@@ -93,6 +93,7 @@ defmodule TymeslotWeb.DashboardLive do
        first_dashboard_visit: first_visit?,
        agenda: nil,
        calendar_focus: nil,
+       nav_expanded: false,
        viewport_fit: :cover
      )}
   end
@@ -240,6 +241,8 @@ defmodule TymeslotWeb.DashboardLive do
       full_width={@live_action == :calendar}
       compact_nav={@live_action == :calendar}
       focus={@calendar_focus_active}
+      nav_rail={@live_action == :calendar and not @nav_expanded}
+      nav_rail_toggle={@live_action == :calendar}
       sidebar_extensions={@sidebar_extensions}
       unseen_announcements={@unseen_announcements}
     >
@@ -533,6 +536,11 @@ defmodule TymeslotWeb.DashboardLive do
 
   def handle_event("calendar:toggle_focus", _params, socket),
     do: {:noreply, CalendarFocus.toggle(socket)}
+
+  # The calendar shows the menu as an icon rail so the grid gets the width;
+  # this widens it again for the rest of the visit.
+  def handle_event("nav:toggle_rail", _params, socket),
+    do: {:noreply, update(socket, :nav_expanded, &(not &1))}
 
   def handle_event("onboarding:dismiss", _params, socket),
     do: keep_user(Onboarding.dismiss_dashboard_setup(socket.assigns.current_user), socket)

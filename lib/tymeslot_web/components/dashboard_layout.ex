@@ -31,6 +31,15 @@ defmodule TymeslotWeb.Components.DashboardLayout do
     doc: "focus mode: from the lg breakpoint the menu is hidden (see `CalendarFocus`)"
 
   attr :sidebar_extensions, :list, default: []
+
+  attr :nav_rail, :boolean,
+    default: false,
+    doc: "from the lg breakpoint, the menu is a narrow column of icons"
+
+  attr :nav_rail_toggle, :boolean,
+    default: false,
+    doc: "offer the control that switches the menu between full width and the rail"
+
   attr :unseen_announcements, :list, default: []
   slot :inner_block, required: true
 
@@ -66,6 +75,8 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           automations_allowed={@automations_allowed}
           analytics_allowed={@analytics_allowed}
           sidebar_extensions={@sidebar_extensions}
+          rail={@nav_rail}
+          rail_toggle={@nav_rail_toggle}
         />
 
         <%!-- Main Content Area --%>
