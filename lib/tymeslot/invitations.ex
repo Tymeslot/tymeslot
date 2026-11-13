@@ -91,7 +91,7 @@ defmodule Tymeslot.Invitations do
     user_id
     |> InvitationQueries.list_for_meeting_type(meeting_type_id, opts)
     |> Enum.map(fn %InvitationSchema{meetings: all_meetings} = invitation ->
-      meetings = Enum.filter(all_meetings, &MeetingState.visible_to_organiser?/1)
+      meetings = visible_to_host(all_meetings)
       consuming = InvitationStatus.consuming_meeting(invitation, meetings)
 
       %{
@@ -136,6 +136,13 @@ defmodule Tymeslot.Invitations do
   A revoked invitation whose expiry has passed is refused with
   `{:error, :expired}`, since reopening it would only leave it expired; nothing
   is written.
+
+  Judged on the meetings the host can see, as `list/3` is, so every Reopen the
+  list offers works. A link the host revoked while a booking through it
+  awaited its attendee's email verification therefore reopens; the held
+  booking keeps occupying the link (a second booker is still refused) and, if
+  its attendee then verifies, goes ahead on a link the host has made bookable
+  again. Had the host left it revoked, verification would refuse it instead.
   """
   @spec reopen(pos_integer(), pos_integer()) ::
           {:ok, InvitationSchema.t()} | {:error, :not_found | :not_reopenable | :expired}
@@ -143,7 +150,7 @@ defmodule Tymeslot.Invitations do
     now = Clock.utc_now()
 
     with_invitation(user_id, id, fn invitation ->
-      with :ok <- check_reopenable(invitation, consuming_meeting(invitation), now) do
+      with :ok <- check_reopenable(invitation, host_consuming_meeting(invitation), now) do
         invitation |> InvitationSchema.reopen_changeset(now) |> InvitationQueries.update()
       end
     end)
@@ -251,6 +258,15 @@ defmodule Tymeslot.Invitations do
 
   defp consuming_meeting(%InvitationSchema{id: id} = invitation),
     do: InvitationStatus.consuming_meeting(invitation, MeetingQueries.list_for_invitation(id))
+
+  # The consuming meeting as the host sees it: bookings hidden from the host
+  # (`MeetingState.visible_to_organiser?/1`) do not count.
+  defp host_consuming_meeting(%InvitationSchema{id: id} = invitation) do
+    meetings = id |> MeetingQueries.list_for_invitation() |> visible_to_host()
+    InvitationStatus.consuming_meeting(invitation, meetings)
+  end
+
+  defp visible_to_host(meetings), do: Enum.filter(meetings, &MeetingState.visible_to_organiser?/1)
 
   defp status_of(invitation),
     do: InvitationStatus.status(invitation, consuming_meeting(invitation), Clock.utc_now())
