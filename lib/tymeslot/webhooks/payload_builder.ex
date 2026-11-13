@@ -9,6 +9,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Utils.UrlBuilder
@@ -70,6 +71,9 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
       status: Atom.to_string(meeting.status),
       meeting_type: meeting.meeting_type,
       location: meeting.location,
+      # Only the host moves or cancels such a meeting, and its `attendee` is
+      # the first of its guests rather than someone who booked it.
+      managed_by_host: HostManaged.managed?(meeting),
       organizer: build_organizer_data(meeting),
       attendee: build_attendee_data(meeting),
       guests: build_guests_data(meeting),
