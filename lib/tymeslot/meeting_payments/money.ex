@@ -40,6 +40,15 @@ defmodule Tymeslot.MeetingPayments.Money do
   # Brazilian Portuguese does ("R$ 45,00", "€ 45,00").
   @spaced_symbol_before_locales ~w(pt)
 
+  # Symbols a locale writes differently from `@symbols`, matching CLDR and
+  # each locale's catalogues: Portuguese and Spanish mark the US dollar as
+  # "US$" ("US$ 10", "10 US$"), Polish writes the code ("10 USD").
+  @locale_symbols %{
+    "es" => %{"usd" => "US$"},
+    "pl" => %{"usd" => "USD"},
+    "pt" => %{"usd" => "US$"}
+  }
+
   @type currency :: String.t()
 
   @doc """
@@ -110,7 +119,7 @@ defmodule Tymeslot.MeetingPayments.Money do
 
   The symbol leads in English, flush against a sign (`€10.50`) and a space
   from a code (`CHF 10.00`), and in Brazilian Portuguese, a space from either
-  (`€ 10,50`). It trails in the locales that write it after the amount
+  (`€ 10,50`, `US$ 10,50`). It trails in the locales that write it after the amount
   (`10,50 €`, `10,00 CHF`). A space beside a sign is non-breaking, so the two
   never wrap apart.
 
@@ -141,7 +150,7 @@ defmodule Tymeslot.MeetingPayments.Money do
       |> major_digits(minor_units(code), Keyword.get(opts, :trim_zero_minor, false))
       |> localise_number(locale)
 
-    sign <> place_symbol(number, String.trim(symbol(code)), locale)
+    sign <> place_symbol(number, String.trim(symbol(code, locale: locale)), locale)
   end
 
   @doc """
@@ -152,19 +161,28 @@ defmodule Tymeslot.MeetingPayments.Money do
   def symbol_after?(locale), do: locale in @symbol_after_locales
 
   @doc """
-  The prefix `format/3` puts before an amount: the currency's symbol, or its
-  upper-case code and a space where it has none. For a currency tag beside a
-  form input.
+  The prefix `format/3` puts before an amount: the currency's symbol as
+  `:locale` writes it, or its upper-case code and a space where it has none.
+  For a currency tag beside a form input. `:locale` defaults to the current
+  `TymeslotWeb.Gettext` locale.
 
       iex> Money.symbol("gbp")
       "£"
       iex> Money.symbol("chf")
       "CHF "
+      iex> Money.symbol("usd", locale: "pt")
+      "US$"
   """
-  @spec symbol(currency()) :: String.t()
-  def symbol(currency) when is_binary(currency) do
+  @spec symbol(currency(), keyword()) :: String.t()
+  def symbol(currency, opts \\ []) when is_binary(currency) do
     code = String.downcase(currency)
-    Map.get_lazy(@symbols, code, fn -> String.upcase(code) <> " " end)
+    locale = Keyword.get_lazy(opts, :locale, fn -> Gettext.get_locale(TymeslotWeb.Gettext) end)
+
+    @locale_symbols
+    |> Map.get(locale, %{})
+    |> Map.get_lazy(code, fn ->
+      Map.get_lazy(@symbols, code, fn -> String.upcase(code) <> " " end)
+    end)
   end
 
   defp localise_number(digits, locale) do
