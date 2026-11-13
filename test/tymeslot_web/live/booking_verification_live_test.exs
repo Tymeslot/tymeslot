@@ -21,6 +21,7 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
   @moduletag :bookings
 
   alias Ecto.Changeset
+  alias Tymeslot.Invitations
   alias Tymeslot.Meetings.EmailVerificationToken
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -71,7 +72,11 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
     test "loading the link does not confirm the booking", %{conn: conn, user: user, type: type} do
       meeting = held(user, type)
 
-      assert conn |> get(path(meeting)) |> html_response(200)
+      static = conn |> get(path(meeting)) |> html_response(200)
+      assert static =~ "Checking your link…"
+      refute static =~ "This link is not valid"
+      refute static =~ "confirm-booking"
+
       {:ok, view, _html} = live(conn, path(meeting))
 
       assert has_element?(view, "[data-testid='confirm-booking']")
@@ -114,6 +119,45 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
       assert render(view) =~ "This booking has expired"
       assert has_element?(view, "[data-testid='rebook-link'][href='/verify-host/intro']")
       refute has_element?(view, "[data-testid='confirm-booking']")
+    end
+
+    test "an expired hold that still holds its invitation links back without it", %{
+      conn: conn,
+      user: user
+    } do
+      type = insert(:meeting_type, user: user, slug: "by-invite", invitation_only: true)
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+
+      # Past the deadline, but the expiry job has not run yet.
+      meeting =
+        held(user, type,
+          invitation_id: invitation.id,
+          verification_deadline_at: DateTime.add(DateTime.utc_now(:second), -1, :minute)
+        )
+
+      {:ok, view, _html} = live(conn, path(meeting))
+
+      assert render(view) =~ "This booking has expired"
+      assert has_element?(view, "[data-testid='rebook-link'][href='/verify-host/by-invite']")
+      refute render(view) =~ invitation.token
+    end
+
+    test "a booking verified and later cancelled shows the invalid card", %{
+      conn: conn,
+      user: user,
+      type: type
+    } do
+      meeting =
+        held(user, type,
+          status: :cancelled,
+          email_verified_at: DateTime.utc_now(:second),
+          cancelled_at: DateTime.utc_now(:second)
+        )
+
+      {:ok, view, _html} = live(conn, path(meeting))
+
+      assert render(view) =~ "This link is not valid"
+      refute render(view) =~ "This booking is already confirmed"
     end
   end
 
@@ -217,6 +261,21 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
       refute_enqueued(worker: EmailWorker)
       refute_enqueued(worker: WebhookWorker)
       refute_enqueued(worker: CalendarEventWorker)
+    end
+
+    test "reloading after a release shows the released card", %{
+      conn: conn,
+      user: user,
+      type: type
+    } do
+      meeting = held(user, type)
+      {:ok, view, _html} = live(conn, path(meeting))
+      view |> element("[data-testid='release-booking']") |> render_click()
+
+      {:ok, reloaded, _html} = live(conn, path(meeting))
+
+      assert render(reloaded) =~ "The booking was cancelled and the time released."
+      refute has_element?(reloaded, "[data-testid='confirm-booking']")
     end
   end
 

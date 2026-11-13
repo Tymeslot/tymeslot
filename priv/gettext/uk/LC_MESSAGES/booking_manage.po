@@ -738,3 +738,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your request has been sent"
 msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Checking your link…"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This only takes a moment."
+msgstr ""

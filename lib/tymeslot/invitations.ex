@@ -205,7 +205,8 @@ defmodule Tymeslot.Invitations do
   checkout cancelled or failed) needs to book through the same invitation
   again: `{:ok, token}`, the link's token, for a link back to the booking
   page and never for a log; `:held` while `meeting` itself still awaits its
-  payment, so holds the invitation until its checkout lapses; `:none` for a
+  payment or its attendee's email verification, so holds the invitation
+  until its checkout or its hold lapses; `:none` for a
   meeting booked without an invitation, or whose invitation is gone. Whether
   the link then books is the entry gate's decision, which says why when it
   does not.
@@ -216,7 +217,7 @@ defmodule Tymeslot.Invitations do
   def retry_token(%MeetingSchema{invitation_id: nil}), do: :none
 
   def retry_token(%MeetingSchema{invitation_id: id} = meeting) do
-    if MeetingState.awaiting_payment?(meeting) do
+    if MeetingState.awaiting_payment?(meeting) or MeetingState.awaiting_verification?(meeting) do
       :held
     else
       case InvitationQueries.get(id) do

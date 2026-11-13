@@ -2,7 +2,8 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   @moduledoc """
   Markup for the page an attendee confirms a held booking on.
 
-  The booking is either still held (`:awaiting`, or `:failed` when a
+  Until the socket connects the page only says it is checking the link
+  (`:loading`). Then the booking is either still held (`:awaiting`, or `:failed` when a
   confirmation could not be completed and may be tried again), or the page
   reports where it ended up: confirmed, sent to the host for approval,
   already confirmed, released by the attendee, expired, or a link we cannot
@@ -136,6 +137,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   defp outcome_icon(:verified_request), do: "hero-paper-airplane"
   defp outcome_icon(:released), do: "hero-x-circle"
   defp outcome_icon(:expired), do: "hero-clock"
+  defp outcome_icon(:loading), do: "hero-envelope"
   defp outcome_icon(_state), do: "hero-question-mark-circle"
 
   defp outcome_title(:verified), do: dgettext("booking_manage", "Your booking is confirmed")
@@ -148,6 +150,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
 
   defp outcome_title(:released), do: dgettext("booking_manage", "Booking cancelled")
   defp outcome_title(:expired), do: dgettext("booking_manage", "This booking has expired")
+  defp outcome_title(:loading), do: dgettext("booking_manage", "Checking your link…")
   defp outcome_title(_state), do: dgettext("booking_manage", "This link is not valid")
 
   defp outcome_body(:verified, _meeting) do
@@ -175,6 +178,10 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
       "booking_manage",
       "It was not confirmed within 30 minutes, so the time was released."
     )
+  end
+
+  defp outcome_body(:loading, _meeting) do
+    dgettext("booking_manage", "This only takes a moment.")
   end
 
   defp outcome_body(_state, _meeting) do

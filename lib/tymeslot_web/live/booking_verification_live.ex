@@ -43,7 +43,7 @@ defmodule TymeslotWeb.BookingVerificationLive do
     {:ok,
      assign(socket,
        page_title: dgettext("booking_manage", "Confirm your booking"),
-       state: :invalid,
+       state: :loading,
        meeting: nil,
        token: nil,
        rebook_path: nil
@@ -51,7 +51,9 @@ defmodule TymeslotWeb.BookingVerificationLive do
   end
 
   # The token read is a database read, so it waits for the connected render
-  # rather than running on the static one a plain GET triggers.
+  # rather than running on the static one a plain GET triggers. Until then
+  # the page says only that it is checking the link (`:loading`), so neither
+  # a scanner's GET nor the first paint calls a good link invalid.
   @impl Phoenix.LiveView
   def handle_params(%{"token" => token}, _uri, socket) do
     socket = assign(socket, :token, token)
@@ -166,13 +168,22 @@ defmodule TymeslotWeb.BookingVerificationLive do
   end
 
   # The token proves the visitor is the guest, so an invitation the booking
-  # used is offered back with the link.
+  # used is offered back with the link. Past its deadline but before the
+  # expiry job has run, the booking still holds its invitation, which the
+  # booking page would refuse as used, so the link leaves the token off.
   defp rebook_path(%{organizer_user_id: user_id} = meeting) when is_integer(user_id) do
     case Profiles.get_profile(user_id) do
       nil -> nil
-      profile -> PaymentReturn.rebook(profile, meeting, true).rebook_path
+      profile -> rebook_path(profile, meeting)
     end
   end
 
   defp rebook_path(_meeting), do: nil
+
+  defp rebook_path(profile, meeting) do
+    case PaymentReturn.rebook(profile, meeting, true) do
+      %{invitation_held: true} -> PaymentReturn.booking_path(profile, meeting)
+      %{rebook_path: path} -> path
+    end
+  end
 end

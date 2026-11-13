@@ -352,6 +352,20 @@ defmodule Tymeslot.InvitationsTest do
       assert Invitations.retry_token(meeting) == :held
     end
 
+    test "is held while the meeting still awaits its email verification", %{
+      user: user,
+      type: type
+    } do
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+
+      meeting =
+        book(invitation, user, :awaiting_verification,
+          verification_deadline_at: DateTime.add(DateTime.utc_now(:second), -1, :minute)
+        )
+
+      assert Invitations.retry_token(meeting) == :held
+    end
+
     test "is none for a meeting booked without an invitation", %{user: user} do
       meeting = insert(:meeting, organizer_user: user, status: :expired)
 
