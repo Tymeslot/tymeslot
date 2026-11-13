@@ -867,6 +867,6 @@ msgid "email verification cannot be combined with payment"
 msgstr ""
 
 #: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "group bookings cannot require email verification"
 msgstr ""
