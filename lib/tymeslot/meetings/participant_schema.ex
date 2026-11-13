@@ -22,6 +22,8 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
   @type t :: %__MODULE__{
           id: binary() | nil,
           meeting_id: binary() | nil,
+          series_id: binary() | nil,
+          series_position: integer() | nil,
           name: String.t() | nil,
           email: String.t() | nil,
           phone: String.t() | nil,
@@ -72,6 +74,11 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     field(:cancelled_at, :utc_datetime)
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
+
+    # The booking series this seat is an occurrence of; read
+    # `series_position` only together with `series_id`.
+    belongs_to(:series, Tymeslot.BookingSeries.SeriesSchema, type: :binary_id)
+    field(:series_position, :integer)
 
     has_many(:guests, Tymeslot.Meetings.GuestSchema,
       foreign_key: :participant_id,

@@ -111,6 +111,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           tracking_params: map(),
           visitor_hash: String.t() | nil,
           invitee_data_erased_at: DateTime.t() | nil,
+          series_id: Ecto.UUID.t() | nil,
+          series_position: integer() | nil,
           booking_page_id: integer() | nil,
           invitation_id: integer() | nil,
           booking_page: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -369,6 +371,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # gave, so the purge passes over the meeting from then on. See
     # `Tymeslot.InviteeData`.
     field(:invitee_data_erased_at, :utc_datetime)
+
+    # Read `series_position` only with `series_id`: a nilified series leaves it.
+    belongs_to(:series, Tymeslot.BookingSeries.SeriesSchema, type: :binary_id)
+    field(:series_position, :integer)
 
     timestamps(type: :utc_datetime)
   end

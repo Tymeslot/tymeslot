@@ -50,6 +50,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
           dispute_closed_at: DateTime.t() | nil,
           host_deleted_at: DateTime.t() | nil,
           meeting_id: Ecto.UUID.t() | nil,
+          series_id: Ecto.UUID.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -86,6 +87,8 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     field :host_deleted_at, :utc_datetime
 
     belongs_to :meeting, MeetingSchema, type: :binary_id
+    # A paid series has one payment, owned by the series (`meeting_id` nil).
+    belongs_to :series, Tymeslot.BookingSeries.SeriesSchema, type: :binary_id
 
     timestamps(type: :utc_datetime)
   end
