@@ -72,7 +72,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.ExtraGuests do
 
   def same_address?(_left, _right), do: false
 
-  defp normalise_address(email), do: email |> String.trim() |> String.downcase()
+  @doc "An address as the checks compare it: trimmed and downcased."
+  @spec normalise_address(String.t()) :: String.t()
+  def normalise_address(email), do: email |> String.trim() |> String.downcase()
 
   @doc """
   Records the name typed with an extra guest's address, when it is one a

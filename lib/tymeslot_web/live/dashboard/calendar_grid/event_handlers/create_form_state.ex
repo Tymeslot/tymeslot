@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Locales
-  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.UniversalSanitizer
   alias Tymeslot.Validation.AddressList
@@ -191,7 +190,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   Turns the meeting's main participant on or off.
 
   Turning it off invites a main guest already typed in first among the
-  guests, if `check_extra_guest/3` takes them (the host's own address is
+  guests, if `ExtraGuests.check/3` takes them (the host's own address is
   refused with its usual message). Name and address stay hidden, for switching back.
   """
   @spec handle_toggle_create_main_participant(map(), Phoenix.LiveView.Socket.t()) ::
@@ -203,15 +202,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     do: %{creating | main_participant: true}
 
   defp toggle_main_participant(creating, organizer_email) do
-    main_guest = normalise_address(creating.guest_email)
+    main_guest = ExtraGuests.normalise_address(creating.guest_email)
     without_main = %{creating | main_participant: false}
 
-    case check_extra_guest(without_main, main_guest, organizer_email) do
+    case ExtraGuests.check(without_main, main_guest, organizer_email) do
       :ok ->
         %{without_main | guest_emails: [main_guest | creating.guest_emails]}
 
       {:error, message} ->
-        if same_address?(main_guest, organizer_email),
+        if ExtraGuests.same_address?(main_guest, organizer_email),
           do: Map.put(without_main, :guest_email_error, message),
           else: without_main
     end
