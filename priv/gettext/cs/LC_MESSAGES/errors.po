@@ -889,11 +889,6 @@ msgstr "odkazy na pozvání"
 
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
-msgid "cannot include the original language"
-msgstr "nesmí obsahovat původní jazyk"
-
-#: lib/tymeslot/profiles/profile_schema.ex
-#, elixir-autogen, elixir-format
 msgid "cannot list a language twice"
 msgstr "nesmí obsahovat jeden jazyk dvakrát"
 

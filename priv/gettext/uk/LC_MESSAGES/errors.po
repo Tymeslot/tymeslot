@@ -882,11 +882,6 @@ msgstr "посилань із запрошенням"
 
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
-msgid "cannot include the original language"
-msgstr "не може містити мову оригіналу"
-
-#: lib/tymeslot/profiles/profile_schema.ex
-#, elixir-autogen, elixir-format
 msgid "cannot list a language twice"
 msgstr "не може містити ту саму мову двічі"
 

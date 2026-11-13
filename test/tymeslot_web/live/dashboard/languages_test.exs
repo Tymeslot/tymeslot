@@ -43,57 +43,67 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
   end
 
   describe "the settings" do
-    test "adding a translation language and showing only the own languages persist", %{
+    test "turning the switch off and ticking a language persist", %{
       conn: conn,
       profile: profile
     } do
       {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
 
-      view |> element("#add-language-form") |> render_change(%{"locale" => "de"})
-
-      assert Repo.reload!(profile).translation_locales == ["de"]
-      assert has_element?(view, "[data-testid='translation-languages'] li[data-locale='de']")
-
       view |> element("#offer-all-locales") |> render_click()
+      assert Repo.reload!(profile).offer_all_locales == false
+
+      view |> element("#language-de") |> render_click()
 
       reloaded = Repo.reload!(profile)
       assert reloaded.offer_all_locales == false
       assert reloaded.translation_locales == ["de"]
+      assert has_element?(view, "#language-de[checked]")
     end
 
-    test "names the languages invitees can choose, as the switch and translations change", %{
+    test "with the switch on every language is ticked and locked; off, only the chosen ones", %{
       conn: conn,
       profile: profile
     } do
-      with_languages(profile, offer_all_locales: false)
+      with_languages(profile, content_locale: "en", translation_locales: ["de"])
       {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
 
-      assert offered(view) == "Invitees can choose: English (original)."
-
-      view |> element("#add-language-form") |> render_change(%{"locale" => "de"})
-      assert offered(view) == "Invitees can choose: English (original), Deutsch."
+      for code <- Locales.supported_codes(),
+          do: assert(has_element?(view, "#language-#{code}[checked][disabled]"))
 
       view |> element("#offer-all-locales") |> render_click()
-      all = offered(view)
-      assert all =~ "Invitees can choose: English (original), "
 
-      for %{name: name} <- Locales.supported(), do: assert(all =~ name)
-
-      view |> element("#offer-all-locales") |> render_click()
-      view |> element("[data-testid='remove-locale-de']") |> render_click()
-      view |> element("[data-testid='confirm-remove-language']") |> render_click()
-      assert offered(view) == "Invitees can choose: English (original)."
+      assert has_element?(view, "#language-en[checked][disabled]")
+      assert has_element?(view, "#language-de[checked]")
+      refute has_element?(view, "#language-de[disabled]")
+      refute has_element?(view, "#language-fr[checked]")
+      refute has_element?(view, "#language-fr[disabled]")
     end
 
-    test "with all languages off and no translations, says only the original is offered", %{
+    test "making a ticked language the original and back leaves it ticked", %{
       conn: conn,
       profile: profile
     } do
-      with_languages(profile, offer_all_locales: false)
+      with_languages(profile,
+        content_locale: "en",
+        translation_locales: ["de"],
+        offer_all_locales: false
+      )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
 
-      assert render(view) =~ "visitors see no language switcher"
+      view |> element("[data-testid='make-original-de']") |> render_click()
+
+      reloaded = Repo.reload!(profile)
+      assert reloaded.content_locale == "de"
+      assert reloaded.translation_locales == ["de"]
+      assert has_element?(view, "#language-de[checked][disabled]")
+      refute has_element?(view, "#language-en[checked]")
+
+      view |> element("[data-testid='make-original-en']") |> render_click()
+
+      assert Repo.reload!(profile).content_locale == "en"
+      assert has_element?(view, "#language-de[checked]")
+      refute has_element?(view, "#language-de[disabled]")
     end
 
     test "removing a language asks first, and keeps its translations", %{
@@ -101,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
       user: user,
       profile: profile
     } do
-      with_languages(profile, translation_locales: ["de", "fr"])
+      with_languages(profile, translation_locales: ["de", "fr"], offer_all_locales: false)
       meeting_type = meeting_type_with_question(user)
 
       {:ok, _entity} =
@@ -111,7 +121,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
 
-      view |> element("[data-testid='remove-locale-de']") |> render_click()
+      view |> element("#language-de") |> render_click()
 
       assert has_element?(view, "#remove-language-modal")
       assert Repo.reload!(profile).translation_locales == ["de", "fr"]
@@ -120,16 +130,21 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
 
       assert Repo.reload!(profile).translation_locales == ["fr"]
       refute has_element?(view, "#remove-language-modal")
-      refute has_element?(view, "[data-testid='translation-languages'] li[data-locale='de']")
+
+      refute has_element?(
+               view,
+               "[data-testid='booking-languages'] li[data-locale='de'][data-ticked='true']"
+             )
+
       assert stored_translation(meeting_type, user, "name") == "Erstgespräch"
     end
 
     test "cancelling the removal keeps the language", %{conn: conn, profile: profile} do
-      with_languages(profile, translation_locales: ["de"])
+      with_languages(profile, translation_locales: ["de"], offer_all_locales: false)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
 
-      view |> element("[data-testid='remove-locale-de']") |> render_click()
+      view |> element("#language-de") |> render_click()
       view |> element("#remove-language-modal button", "Cancel") |> render_click()
 
       refute has_element?(view, "#remove-language-modal")
@@ -342,9 +357,11 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
       assert render(view) =~ "Nothing to save: no translation changed."
     end
 
-    test "a language that is not a translation language goes back to the settings", %{
-      conn: conn
+    test "a language the booking page is not offered in goes back to the settings", %{
+      conn: conn,
+      profile: profile
     } do
+      with_languages(profile, offer_all_locales: false)
       {:ok, view, _html} = live(conn, ~p"/dashboard/languages/fr")
 
       assert_patch(view, ~p"/dashboard/languages")
@@ -404,14 +421,5 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
              view,
              "#translate-meeting_types-meeting_type-#{other.id}[data-highlighted]"
            )
-  end
-
-  defp offered(view) do
-    view
-    |> element("[data-testid='offered-languages']")
-    |> render()
-    |> Floki.parse_fragment!()
-    |> Floki.text()
-    |> String.trim()
   end
 end

@@ -15,6 +15,8 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
     * `:user_id`, `:kind` and `:record` - whose translations, and which
       record (`Catalogue.entity/0`'s `kind` and `record`);
     * `:locale` - the translation language;
+    * `:original` - the language the originals are written in, which names
+      the column each original is shown in;
     * `:paths` - only these texts of the record (a card that edits part of
       it), or nil for all of them;
     * `:only_open` - show only the texts still missing or outdated;
@@ -43,6 +45,8 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  import TymeslotWeb.Components.FlagHelpers, only: [locale_flag: 1]
+
   alias Tymeslot.ContentTranslations
   alias Tymeslot.ContentTranslations.Catalogue
   alias TymeslotWeb.Components.CoreComponents.Forms
@@ -56,6 +60,7 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
        errors: %{},
        leave_unsaved: false,
        paths: nil,
+       original: nil,
        only_open: false,
        notify: nil
      )}
@@ -329,6 +334,8 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
             }
             errors={Map.get(@errors, field.path, [])}
             confirmable={confirmable?(assigns, field.path)}
+            locale={@locale}
+            original={@original}
             target={@myself}
           />
           <Forms.field_error errors={Map.get(@errors, :base, [])} />
@@ -354,29 +361,67 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
   attr :value, :string, default: nil
   attr :errors, :list, default: []
   attr :confirmable, :boolean, default: false
+  attr :locale, :string, required: true
+  attr :original, :string, default: nil
   attr :target, :any, required: true
 
+  # The original on the left and the box for its translation on the right
+  # (stacked on a narrow screen), each headed by its language's flag, so
+  # what goes where needs no reading.
   defp translation_field(assigns) do
+    assigns = assign(assigns, :language, Labels.language_name(assigns.locale))
+
     ~H"""
-    <div data-path={@field.path} data-status={@status}>
-      <.input
-        id={@id}
-        name={"translation[#{@field.path}]"}
-        type={if @field.multiline, do: "textarea", else: "text"}
-        rows={4}
-        value={@value}
-        maxlength={@field.max_length}
-        label={label(@field)}
-        errors={@errors}
-        phx-debounce="300"
-      >
-        <:description>
-          <span class="flex items-start justify-between gap-3">
-            <span class="flex-1 min-w-0 whitespace-pre-line break-words">{original_line(@field)}</span>
-            <span class="shrink-0"><.status_badge status={@status} /></span>
-          </span>
-        </:description>
-      </.input>
+    <div data-path={@field.path} data-status={@status} class="space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h3 class="text-token-sm font-bold text-tymeslot-800">{label(@field)}</h3>
+        <.status_badge status={@status} />
+      </div>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div class="space-y-2 min-w-0">
+          <div class="flex items-center gap-2 text-token-xs font-bold uppercase tracking-wide text-tymeslot-500">
+            <.locale_flag :if={@original} locale={@original} class="w-5 h-4" />
+            {if @original,
+              do:
+                dgettext("dashboard_languages", "%{language} (original)",
+                  language: Labels.language_name(@original)
+                ),
+              else: dgettext("dashboard_languages", "Original")}
+          </div>
+          <div
+            id={"#{@id}-original"}
+            class="rounded-token-lg bg-tymeslot-50 border border-tymeslot-100 px-4 py-3 text-tymeslot-800 break-words"
+            data-testid="original-text"
+          >
+            <%!-- On one line: the span keeps line breaks, so the template's own would show as a blank first line. --%>
+            <span class="whitespace-pre-line">{@field.original}</span>
+          </div>
+        </div>
+        <div class="space-y-2 min-w-0">
+          <label
+            for={@id}
+            class="flex items-center gap-2 text-token-xs font-bold uppercase tracking-wide text-tymeslot-500"
+          >
+            <.locale_flag locale={@locale} class="w-5 h-4" />
+            {@language}
+            <span class="sr-only">{label(@field)}</span>
+          </label>
+          <.input
+            id={@id}
+            name={"translation[#{@field.path}]"}
+            type={if @field.multiline, do: "textarea", else: "text"}
+            rows={4}
+            value={@value}
+            maxlength={@field.max_length}
+            placeholder={
+              dgettext("dashboard_languages", "Type the %{language} version", language: @language)
+            }
+            errors={@errors}
+            aria-describedby={"#{@id}-original"}
+            phx-debounce="300"
+          />
+        </div>
+      </div>
       <div
         :if={@status == :outdated}
         class="mt-2 flex flex-wrap items-center justify-between gap-3"
@@ -404,11 +449,6 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
     </div>
     """
   end
-
-  # On one line in the template: the span keeps line breaks, so the
-  # template's own would show as a blank first line.
-  defp original_line(field),
-    do: dgettext("dashboard_languages", "Original: %{text}", text: field.original)
 
   attr :status, :atom, required: true
 

@@ -207,16 +207,53 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
                Catalogue.save(other.id, {:profile, profile.id}, "de", %{"headline" => "X"})
     end
 
-    test "refuses a language that is not a translation language", %{
+    test "offering only their own languages, refuses one they don't translate into", %{
       user: user,
+      profile: profile,
       meeting_type: meeting_type
     } do
+      profile |> Changeset.change(offer_all_locales: false) |> Repo.update!()
+
       assert {:error, %Changeset{} = changeset} =
                Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "fr", %{
                  "name" => "Appel"
                })
 
       assert [{:translations, {"is not a translation language", _opts}}] = changeset.errors
+      assert Repo.reload!(profile).translation_locales == ["de"]
+    end
+
+    test "offering every language, the first text saved in one makes it a translation language",
+         %{user: user, profile: profile, meeting_type: meeting_type} do
+      assert {:ok, %{record: saved}} =
+               Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "fr", %{
+                 "name" => "Appel"
+               })
+
+      assert ContentTranslations.text(saved, "name", "fr") == "Appel"
+      assert Repo.reload!(profile).translation_locales == ["de", "fr"]
+
+      assert {:ok, _entity} =
+               Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "fr", %{
+                 "name" => "Premier appel"
+               })
+
+      assert Repo.reload!(profile).translation_locales == ["de", "fr"]
+    end
+
+    test "refuses the original, even offering every language", %{
+      user: user,
+      profile: profile,
+      meeting_type: meeting_type
+    } do
+      profile |> Changeset.change(content_locale: "en") |> Repo.update!()
+
+      assert {:error, %Changeset{}} =
+               Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "en", %{
+                 "name" => "Intro"
+               })
+
+      assert Repo.reload!(profile).translation_locales == ["de"]
     end
 
     test "drops a stored language no longer supported rather than refusing the save", %{
@@ -314,10 +351,13 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
       assert ContentTranslations.status(reloaded, "name", "de") == :outdated
     end
 
-    test "refuses a language that is not a translation language", %{
+    test "offering only their own languages, refuses one they don't translate into", %{
       user: user,
+      profile: profile,
       meeting_type: meeting_type
     } do
+      profile |> Changeset.change(offer_all_locales: false) |> Repo.update!()
+
       assert {:error, %Changeset{} = changeset} =
                Catalogue.confirm(user.id, {:meeting_type, meeting_type.id}, "fr", ["name"])
 

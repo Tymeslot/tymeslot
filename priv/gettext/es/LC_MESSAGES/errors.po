@@ -871,11 +871,6 @@ msgstr "enlaces de invitación"
 
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
-msgid "cannot include the original language"
-msgstr "no puede incluir el idioma original"
-
-#: lib/tymeslot/profiles/profile_schema.ex
-#, elixir-autogen, elixir-format
 msgid "cannot list a language twice"
 msgstr "no puede incluir un idioma dos veces"
 

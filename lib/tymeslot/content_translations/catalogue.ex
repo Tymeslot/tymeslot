@@ -168,7 +168,27 @@ defmodule Tymeslot.ContentTranslations.Catalogue do
 
     with {:ok, profile} <- fetch_profile(user_id),
          {:ok, record} <- fetch(kind, id, user_id, profile) do
-      Repo.transaction(fn -> save_locked(record, kind, locale, {texts, confirmed}, profile) end)
+      Repo.transaction(fn ->
+        entity = save_locked(record, kind, locale, {texts, confirmed}, profile)
+        adopt_language(profile, locale)
+        entity
+      end)
+    end
+  end
+
+  # Offering every language, the organiser can translate into any of them;
+  # the first text saved in one makes it one of their translation languages,
+  # which the forms then show the status of.
+  defp adopt_language(profile, locale) do
+    locales = Languages.chosen(profile)
+
+    if locale in locales do
+      :ok
+    else
+      case Profiles.update_booking_languages(profile, %{translation_locales: locales ++ [locale]}) do
+        {:ok, _profile} -> :ok
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
     end
   end
 
@@ -227,7 +247,7 @@ defmodule Tymeslot.ContentTranslations.Catalogue do
     translations = record |> translate.() |> ContentTranslations.prune(record)
     changeset = ContentTranslations.changeset(record, translations)
 
-    if locale in Languages.translation_locales(profile),
+    if locale in Languages.translatable(profile),
       do: changeset,
       else:
         Changeset.add_error(

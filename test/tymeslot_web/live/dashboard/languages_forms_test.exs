@@ -381,13 +381,15 @@ defmodule TymeslotWeb.Dashboard.LanguagesFormsTest do
     end
   end
 
-  test "saving on the review page in a language removed in another tab shows the translated error",
+  test "saving on the review page in a language no longer offered shows the translated error",
        %{conn: conn, profile: profile} do
     conn = init_test_session(conn, %{chosen_locale: "pl"})
     {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
     editor = "#translation-intro-profile-#{profile.id}"
 
-    profile |> Changeset.change(translation_locales: ["fr"]) |> Repo.update!()
+    profile
+    |> Changeset.change(translation_locales: ["fr"], offer_all_locales: false)
+    |> Repo.update!()
 
     view
     |> form("#{editor}-form", %{"translation" => %{"headline" => "Karrierecoach"}})

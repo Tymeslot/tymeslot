@@ -1,43 +1,41 @@
 defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   @moduledoc """
-  The Languages page: which languages the organiser's booking pages are
-  offered in, and their texts' translations.
+  The Languages page, in two tabs (`<.tab_bar>`):
 
-  At `/dashboard/languages` it holds the settings (`Tymeslot.Profiles.update_booking_languages/2`):
-  the original language, the translation languages with how far each has got,
-  and whether the booking page is offered in every language. At
-  `/dashboard/languages/:language` it lists every translatable record
-  (`Tymeslot.ContentTranslations.Catalogue.items/1`) with a
-  `TranslationEditor` each: the one place translations are written. The
-  forms that edit the originals link here (`TranslationStatus`), with
-  `?item=` naming the record's card, which is highlighted, and the same as a
-  fragment, which the browser scrolls to.
+    * **Settings**, at `/dashboard/languages` (`SettingsTab`): the original
+      language, the languages invitees can choose (ticking one makes it a
+      translation language) and whether every other language is offered too,
+      saved through `Tymeslot.Profiles.update_booking_languages/2`.
+    * **Translations**, at `/dashboard/languages/:language`
+      (`TranslationsTab`): a flag tab per translation language, and every
+      translatable record (`Tymeslot.ContentTranslations.Catalogue.items/1`)
+      with a `TranslationEditor` each, the one place translations are
+      written. The forms that edit the originals link here
+      (`TranslationStatus`), with `?item=` naming the record's card, which
+      is highlighted, and the same as a fragment, which the browser scrolls
+      to.
 
-  Under "Booking page languages" the page names the languages invitees can
-  choose, as the switch and the translation languages leave them.
+  Unticking a translation language asks first (`RemoveLanguageModal`); its
+  texts are kept, so ticking the language again brings them back.
 
-  Removing a translation language asks first (`RemoveLanguageModal`); its
-  texts are kept, so adding the language again brings them back.
-
-  Leaving the review page for all languages, or turning "Only missing or
-  outdated" on or off (which takes away the editors of what is then hidden),
-  first has every editor on the page save what was typed in it
-  (`TranslationEditor.leave/2`); the page moves on once each has, and stays
-  where it is if one could not.
+  Switching tab or language, or turning "Only missing or outdated" on or off
+  (which takes away the editors of what is then hidden), first has every
+  editor on the page save what was typed in it (`TranslationEditor.leave/2`);
+  the page moves on once each has, and stays where it is if one could not.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.FlagHelpers, only: [locale_flag: 1]
-
   alias Tymeslot.ContentTranslations.Catalogue
   alias Tymeslot.ContentTranslations.Languages
+  alias Tymeslot.Locales
   alias Tymeslot.Profiles
   alias TymeslotWeb.Components.CoreComponents.Forms
-  alias TymeslotWeb.Dashboard.Languages.Labels
+  alias TymeslotWeb.Components.CoreComponents.Navigation
   alias TymeslotWeb.Dashboard.Languages.RemoveLanguageModal
+  alias TymeslotWeb.Dashboard.Languages.SettingsTab
   alias TymeslotWeb.Dashboard.Languages.TranslationEditor
-  alias TymeslotWeb.Dashboard.Languages.TranslationStatus
+  alias TymeslotWeb.Dashboard.Languages.TranslationsTab
 
   @groups [:booking_texts, :intro, :meeting_types, :venues]
 
@@ -60,10 +58,12 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   # them, without reading everything back.
   @impl Phoenix.LiveComponent
   def update(%{translation_saved: entity}, %{assigns: %{items: %{} = items}} = socket) do
-    {:ok, socket |> assign(:items, replace_record(items, entity)) |> count_progress()}
+    socket = socket |> refresh_profile() |> assign(:items, replace_record(items, entity))
+    {:ok, count_progress(socket)}
   end
 
-  def update(%{translation_saved: _entity}, socket), do: {:ok, load(socket)}
+  def update(%{translation_saved: _entity}, socket),
+    do: {:ok, socket |> refresh_profile() |> load()}
 
   # One editor has saved what was typed in it before `action`; the last one
   # to do so runs it.
@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
 
   def update(assigns, socket) do
     socket = assign(socket, assigns)
-    locales = Languages.translation_locales(socket.assigns.profile)
+    locales = Languages.translatable(socket.assigns.profile)
     # `:language`, not `:locale`: `LocalePlug` takes a `locale` param as the
     # visitor's choice of interface language, which would turn the dashboard
     # into the language under review.
@@ -111,6 +111,21 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
     end
   end
 
+  # The first translation saved in a language makes it one of the
+  # organiser's (`Catalogue.save/5`), so the profile is read again.
+  defp refresh_profile(socket) do
+    case Profiles.get_profile_by_user_id(socket.assigns.current_user.id) do
+      {:ok, profile} ->
+        if profile.translation_locales != socket.assigns.profile.translation_locales,
+          do: send(self(), {:profile_updated, profile})
+
+        assign(socket, :profile, profile)
+
+      {:error, :not_found} ->
+        socket
+    end
+  end
+
   # One read of everything translatable, from which every language's
   # progress is counted.
   defp load(socket) do
@@ -119,14 +134,8 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
     |> count_progress()
   end
 
-  defp count_progress(%{assigns: %{items: items, review_locale: review_locale}} = socket) do
-    locales =
-      if review_locale,
-        do: [review_locale],
-        else: Languages.translation_locales(socket.assigns.profile)
-
-    assign(socket, :progress, Catalogue.progress(items, locales))
-  end
+  defp count_progress(%{assigns: %{items: items, profile: profile}} = socket),
+    do: assign(socket, :progress, Catalogue.progress(items, Languages.translatable(profile)))
 
   # Each group keeps its own fields of the record (the profile appears in
   # two, with different texts), so only the record is replaced.
@@ -141,25 +150,39 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("set_original", %{"content_locale" => code}, socket),
-    do: {:noreply, save(socket, %{content_locale: code})}
+  def handle_event("set_original", %{"locale" => code}, socket) do
+    profile = socket.assigns.profile
 
-  def handle_event("add_locale", %{"locale" => code}, socket) when code != "" do
-    locales = Languages.translation_locales(socket.assigns.profile)
-    {:noreply, save(socket, %{translation_locales: locales ++ [code]})}
+    # A ticked language made the original stays ticked (`Languages.chosen/1`),
+    # so making another one the original again changes nothing else.
+    if code == Languages.original(profile),
+      do: {:noreply, socket},
+      else: {:noreply, save(socket, %{content_locale: code})}
   end
 
-  def handle_event("add_locale", _params, socket), do: {:noreply, socket}
+  # Ticking a language adds it; unticking asks first (`RemoveLanguageModal`).
+  def handle_event("toggle_locale", %{"locale" => code}, socket) do
+    profile = socket.assigns.profile
+    locales = Languages.translation_locales(profile)
+
+    cond do
+      code == Languages.original(profile) ->
+        {:noreply, socket}
+
+      code in locales ->
+        {:noreply, assign(socket, :removing_locale, code)}
+
+      code in Locales.supported_codes() ->
+        {:noreply, save(socket, %{translation_locales: Languages.chosen(profile) ++ [code]})}
+
+      true ->
+        {:noreply, socket}
+    end
+  end
 
   def handle_event("toggle_offer_all", _params, socket) do
     offer_all = not Languages.restricted?(socket.assigns.profile)
     {:noreply, save(socket, %{offer_all_locales: not offer_all})}
-  end
-
-  def handle_event("remove_locale", %{"locale" => code}, socket) do
-    if code in Languages.translation_locales(socket.assigns.profile),
-      do: {:noreply, assign(socket, :removing_locale, code)},
-      else: {:noreply, socket}
   end
 
   def handle_event("cancel_remove", _params, socket),
@@ -169,7 +192,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
     do: {:noreply, socket}
 
   def handle_event("confirm_remove", _params, %{assigns: %{removing_locale: code}} = socket) do
-    locales = Languages.translation_locales(socket.assigns.profile) -- [code]
+    locales = Languages.chosen(socket.assigns.profile) -- [code]
 
     {:noreply,
      socket
@@ -177,11 +200,38 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
      |> save(%{translation_locales: locales})}
   end
 
+  def handle_event("switch_tab", %{"tab" => "settings"}, socket),
+    do: {:noreply, after_drafts_saved(socket, {:patch, ~p"/dashboard/languages"})}
+
+  def handle_event("switch_tab", %{"tab" => "translations"}, socket) do
+    case first_language(socket.assigns) do
+      nil -> {:noreply, socket}
+      code -> {:noreply, after_drafts_saved(socket, {:patch, ~p"/dashboard/languages/#{code}"})}
+    end
+  end
+
+  def handle_event("switch_tab", _params, socket), do: {:noreply, socket}
+
+  def handle_event("switch_language", %{"tab" => code}, socket) do
+    if code in Languages.translatable(socket.assigns.profile),
+      do: {:noreply, after_drafts_saved(socket, {:patch, ~p"/dashboard/languages/#{code}"})},
+      else: {:noreply, socket}
+  end
+
   def handle_event("toggle_only_open", _params, socket),
     do: {:noreply, after_drafts_saved(socket, :toggle_only_open)}
 
-  def handle_event("leave_review", _params, socket),
-    do: {:noreply, after_drafts_saved(socket, :leave_review)}
+  # The language with the most left to translate, so the tab opens where
+  # there is work; the first one when everything is done.
+  # Among the organiser's own languages first: offering every language,
+  # the rest are all untouched.
+  defp first_language(%{profile: profile, progress: progress}) do
+    case {Languages.translation_locales(profile), Languages.translatable(profile)} do
+      {[], []} -> nil
+      {[], [first | _rest]} -> first
+      {own, _all} -> Enum.max_by(own, &TranslationsTab.open_count(progress[&1]))
+    end
+  end
 
   defp after_drafts_saved(socket, action) do
     case editor_ids(socket.assigns) do
@@ -203,8 +253,8 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
 
   defp run(socket, :toggle_only_open), do: update(socket, :only_open, &(not &1))
 
-  defp run(socket, :leave_review) do
-    send(self(), {:patch, ~p"/dashboard/languages"})
+  defp run(socket, {:patch, path}) do
+    send(self(), {:patch, path})
     socket
   end
 
@@ -233,7 +283,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   end
 
   defp reload(socket) do
-    locales = Languages.translation_locales(socket.assigns.profile)
+    locales = Languages.translatable(socket.assigns.profile)
     socket |> assign(:loaded_for, {socket.assigns.review_locale, locales}) |> load()
   end
 
@@ -248,321 +298,119 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    original = Languages.original(assigns.profile)
+    locales = Languages.translation_locales(assigns.profile)
+
     assigns =
       assign(assigns,
-        original: Languages.original(assigns.profile),
-        locales: Languages.translation_locales(assigns.profile),
+        original: original,
+        # While a language waits on "Remove?", its box shows unticked, as the
+        # click left it; cancelling ticks it again.
+        locales: locales -- [assigns.removing_locale],
+        chosen: locales,
+        all_locales: Languages.translatable(assigns.profile),
         offer_all: not Languages.restricted?(assigns.profile),
-        # The original first, then the rest in their usual order.
-        offered:
-          Enum.uniq([Languages.original(assigns.profile) | Languages.offered(assigns.profile)])
+        active_tab: if(assigns.review_locale, do: "translations", else: "settings"),
+        open: Enum.sum_by(locales, &TranslationsTab.open_count(assigns.progress[&1]))
       )
 
     ~H"""
     <div>
       <.dashboard_page icon="hero-language" title={dgettext("dashboard_languages", "Languages")}>
-        <%= if @review_locale do %>
-          <.review
-            locale={@review_locale}
-            progress={@progress[@review_locale]}
-            items={@items}
-            only_open={@only_open}
-            user_id={@current_user.id}
-            item={(@params || %{})["item"]}
-            myself={@myself}
-          />
-        <% else %>
-          <.settings
-            original={@original}
-            locales={@locales}
-            offer_all={@offer_all}
-            offered={@offered}
-            progress={@progress}
-            myself={@myself}
-          />
-        <% end %>
+        <p class="text-tymeslot-600 max-w-2xl">
+          {dgettext(
+            "dashboard_languages",
+            "Choose which languages invitees can see your booking pages in, then translate your texts into them. This applies to every booking page."
+          )}
+        </p>
+
+        <.tab_bar
+          id="languages-tabs"
+          active_tab={@active_tab}
+          tabs={top_tabs(@all_locales, @open)}
+          target={@myself}
+          aria_label={dgettext("dashboard_languages", "Languages")}
+        />
+        <p :if={@all_locales == []} id="translations-tab-hint" class="text-token-sm text-tymeslot-500">
+          {dgettext(
+            "dashboard_languages",
+            "Tick a language under Booking page languages to translate your texts into it."
+          )}
+        </p>
+
+        <div
+          role="tabpanel"
+          id={Navigation.panel_id("languages-tabs", @active_tab)}
+          aria-labelledby={Navigation.tab_id("languages-tabs", @active_tab)}
+          class="space-y-6"
+        >
+          <%= if @review_locale do %>
+            <TranslationsTab.translations_tab
+              locale={@review_locale}
+              locales={@all_locales}
+              chosen={@chosen}
+              original={@original}
+              progress={@progress}
+              sections={sections(@items, @review_locale, @only_open)}
+              loaded={@items != nil}
+              only_open={@only_open}
+              user_id={@current_user.id}
+              item={(@params || %{})["item"]}
+              editor_id={&editor_id/2}
+              notify={{__MODULE__, "languages"}}
+              myself={@myself}
+            />
+          <% else %>
+            <SettingsTab.settings_tab
+              original={@original}
+              locales={@locales}
+              offer_all={@offer_all}
+              progress={@progress}
+              myself={@myself}
+            />
+          <% end %>
+        </div>
       </.dashboard_page>
 
       <RemoveLanguageModal.remove_language_modal
         :if={@removing_locale}
         locale={@removing_locale}
-        original={@original}
-        offer_all={@offer_all}
         myself={@myself}
       />
     </div>
     """
   end
 
-  attr :original, :string, required: true
-  attr :locales, :list, required: true
-  attr :offer_all, :boolean, required: true
-  attr :offered, :list, required: true, doc: "the languages invitees can choose"
-  attr :progress, :map, required: true
-  attr :myself, :any, required: true
+  defp top_tabs(locales, open) do
+    translations = %{
+      id: "translations",
+      label: dgettext("dashboard_languages", "Translations"),
+      icon: "hero-language"
+    }
 
-  defp settings(assigns) do
-    ~H"""
-    <p class="text-tymeslot-600 max-w-2xl">
-      {dgettext(
-        "dashboard_languages",
-        "Choose the language you write your booking pages in, and translate your texts into other languages. These settings apply to every booking page."
-      )}
-    </p>
+    translations =
+      cond do
+        locales == [] ->
+          Map.merge(translations, %{disabled: true, describedby: "translations-tab-hint"})
 
-    <.card
-      title={dgettext("dashboard_languages", "Original language")}
-      description={dgettext("dashboard_languages", "The language your texts are written in.")}
-      icon="hero-pencil-square"
-    >
-      <.form
-        for={%{}}
-        id="original-language-form"
-        novalidate
-        phx-change="set_original"
-        phx-target={@myself}
-      >
-        <.select
-          id="content-locale"
-          name="content_locale"
-          value={@original}
-          options={Labels.language_options(@locales)}
-          aria-label={dgettext("dashboard_languages", "Original language")}
-        />
-      </.form>
-    </.card>
+        open > 0 ->
+          Map.merge(translations, %{
+            status: :warning,
+            status_label: dgettext("dashboard_languages", "Some texts still need translating")
+          })
 
-    <.card
-      title={dgettext("dashboard_languages", "Translations")}
-      description={
-        dgettext(
-          "dashboard_languages",
-          "Invitees who choose one of these languages see your texts translated. A text you leave untranslated, or whose translation is outdated, shows in the original."
-        )
-      }
-      icon="hero-language"
-    >
-      <div class="space-y-6">
-        <ul
-          :if={@locales != []}
-          class="divide-y divide-tymeslot-100"
-          data-testid="translation-languages"
-        >
-          <li
-            :for={code <- @locales}
-            class="flex flex-wrap items-center justify-between gap-3 py-3"
-            data-locale={code}
-          >
-            <div class="flex items-center gap-3 min-w-0">
-              <.locale_flag locale={code} class="w-6 h-4" />
-              <span class="font-bold text-tymeslot-800">{Labels.language_name(code)}</span>
-              <.progress_summary progress={@progress[code]} />
-            </div>
-            <div class="flex items-center gap-2">
-              <.action_link
-                patch={~p"/dashboard/languages/#{code}"}
-                variant={:secondary}
-                size={:sm}
-                icon="hero-pencil-square"
-              >
-                {dgettext("dashboard_languages", "Review")}
-              </.action_link>
-              <.icon_button
-                icon="hero-trash"
-                variant={:danger}
-                size={:sm}
-                label={
-                  dgettext("dashboard_languages", "Remove %{language}",
-                    language: Labels.language_name(code)
-                  )
-                }
-                phx-click="remove_locale"
-                phx-value-locale={code}
-                phx-target={@myself}
-                data-testid={"remove-locale-#{code}"}
-              />
-            </div>
-          </li>
-        </ul>
+        true ->
+          translations
+      end
 
-        <p :if={@locales == []} class="text-token-sm text-tymeslot-500">
-          {dgettext("dashboard_languages", "No translations yet.")}
-        </p>
-
-        <.form
-          :if={Labels.language_options([@original | @locales]) != []}
-          for={%{}}
-          id="add-language-form"
-          novalidate
-          phx-change="add_locale"
-          phx-target={@myself}
-        >
-          <.select
-            id="add-translation-locale"
-            name="locale"
-            value=""
-            prompt={dgettext("dashboard_languages", "Add a translation…")}
-            options={Labels.language_options([@original | @locales])}
-            label={dgettext("dashboard_languages", "Add translation")}
-          />
-        </.form>
-      </div>
-    </.card>
-
-    <.card
-      title={dgettext("dashboard_languages", "Booking page languages")}
-      icon="hero-globe-alt"
-    >
-      <div class="space-y-4">
-        <.setting_row
-          id="offer-all-locales"
-          control={:switch}
-          label={dgettext("dashboard_languages", "Offer the booking page in every language")}
-          description={
-            dgettext(
-              "dashboard_languages",
-              "You decide which languages invitees can choose. On: every language Tymeslot supports, with your texts in %{language} wherever you have no translation (buttons, dates and emails are always translated). Off: only %{language} and your translation languages.",
-              language: Labels.language_name(@original)
-            )
-          }
-          checked={@offer_all}
-          on_change="toggle_offer_all"
-          target={@myself}
-        />
-        <p class="text-token-sm text-tymeslot-700" data-testid="offered-languages">
-          {dgettext("dashboard_languages", "Invitees can choose: %{languages}.",
-            languages: Enum.map_join(@offered, ", ", &TranslationStatus.language_label(&1, @original))
-          )}
-        </p>
-        <.info_box :if={not @offer_all and @locales == []} variant={:info}>
-          {dgettext(
-            "dashboard_languages",
-            "Your booking page is offered only in %{language}, so visitors see no language switcher. Add a translation to offer another language.",
-            language: Labels.language_name(@original)
-          )}
-        </.info_box>
-      </div>
-    </.card>
-    """
-  end
-
-  attr :progress, :map, default: nil
-
-  defp progress_summary(%{progress: nil} = assigns), do: ~H""
-
-  defp progress_summary(assigns) do
-    ~H"""
-    <span class="text-token-sm text-tymeslot-500" data-testid="translation-progress">
-      {dgettext("dashboard_languages", "%{translated}/%{total} translated",
-        translated: @progress.translated,
-        total: @progress.total
-      )}
-    </span>
-    <.pill :if={@progress.outdated > 0} tone={:warning} dot>
-      {dngettext(
-        "dashboard_languages",
-        "%{count} outdated",
-        "%{count} outdated",
-        @progress.outdated
-      )}
-    </.pill>
-    """
-  end
-
-  attr :locale, :string, required: true
-  attr :progress, :map, default: nil
-  attr :items, :map, default: nil
-  attr :only_open, :boolean, required: true
-  attr :user_id, :integer, required: true
-  attr :item, :string, default: nil, doc: "the card a form linked to, highlighted"
-  attr :myself, :any, required: true
-
-  defp review(assigns) do
-    assigns =
-      assign(assigns, :sections, sections(assigns.items, assigns.locale, assigns.only_open))
-
-    ~H"""
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <.locale_flag locale={@locale} class="w-8 h-6" />
-        <.subsection_header
-          level={2}
-          size={:lg}
-          title={
-            dgettext("dashboard_languages", "%{language} translations",
-              language: Labels.language_name(@locale)
-            )
-          }
-        />
-        <.progress_summary progress={@progress} />
-      </div>
-      <.action_button
-        variant={:ghost}
-        size={:sm}
-        icon="hero-arrow-left"
-        phx-click="leave_review"
-        phx-target={@myself}
-        data-testid="all-languages"
-      >
-        {dgettext("dashboard_languages", "All languages")}
-      </.action_button>
-    </div>
-
-    <.setting_row
-      id="only-open-translations"
-      control={:switch}
-      label={dgettext("dashboard_languages", "Only missing or outdated")}
-      checked={@only_open}
-      on_change="toggle_only_open"
-      target={@myself}
-    />
-
-    <.empty_state
-      :if={@items && @sections == []}
-      icon="hero-check-circle"
-      title={
-        if @only_open,
-          do: dgettext("dashboard_languages", "Everything is translated"),
-          else: dgettext("dashboard_languages", "Nothing to translate yet")
-      }
-      description={
-        if @only_open,
-          do: dgettext("dashboard_languages", "No text is missing or outdated in this language."),
-          else:
-            dgettext(
-              "dashboard_languages",
-              "Write your booking page texts and meeting types first; they appear here to translate."
-            )
-      }
-    />
-
-    <section :for={{group, entities} <- @sections} class="space-y-4" data-group={group}>
-      <.subsection_header level={2} title={group_title(group)} />
-      <.card
-        :for={entity <- entities}
-        id={TranslationStatus.anchor(group, entity.kind, entity.id)}
-        title={entity_title(group, entity)}
-        class={[
-          "scroll-mt-24",
-          @item == TranslationStatus.anchor(group, entity.kind, entity.id) &&
-            "ring-2 ring-turquoise-400"
-        ]}
-        data-highlighted={@item == TranslationStatus.anchor(group, entity.kind, entity.id)}
-      >
-        <.live_component
-          module={TranslationEditor}
-          id={editor_id(group, entity)}
-          user_id={@user_id}
-          kind={entity.kind}
-          record={entity.record}
-          locale={@locale}
-          paths={Enum.map(entity.fields, & &1.path)}
-          only_open={@only_open}
-          notify={{__MODULE__, "languages"}}
-        />
-      </.card>
-    </section>
-    """
+    [
+      %{
+        id: "settings",
+        label: dgettext("dashboard_languages", "Settings"),
+        icon: "hero-cog-6-tooth"
+      },
+      translations
+    ]
   end
 
   # The groups with something to show, each with its records that have.
@@ -581,15 +429,4 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
       only_open: only_open
     ) != []
   end
-
-  defp group_title(:booking_texts), do: dgettext("dashboard_languages", "Booking page texts")
-  defp group_title(:intro), do: dgettext("dashboard_languages", "About you")
-  defp group_title(:meeting_types), do: dgettext("dashboard_languages", "Meeting types")
-  defp group_title(:venues), do: dgettext("dashboard_languages", "Locations")
-
-  defp entity_title(:booking_texts, %{kind: :profile}),
-    do: dgettext("dashboard_languages", "Your booking page")
-
-  defp entity_title(:intro, _entity), do: dgettext("dashboard_languages", "Headline and bio")
-  defp entity_title(_group, %{name: name}), do: name
 end

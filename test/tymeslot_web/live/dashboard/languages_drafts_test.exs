@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesDraftsTest do
       |> form("##{component}-form", %{"translation" => %{"name" => "Erstgespräch"}})
       |> render_change()
 
-      view |> element("[data-testid='all-languages']") |> render_click()
+      view |> element("#languages-tabs-tab-settings") |> render_click()
 
       assert_patch(view, ~p"/dashboard/languages")
       assert meeting_type_translation(meeting_type, user, "name") == "Erstgespräch"
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesDraftsTest do
       refute has_element?(view, "##{component}")
     end
 
-    test "All languages stays when what was typed cannot be saved, and leaves when asked again",
+    test "Settings stays when what was typed cannot be saved, and leaves when asked again",
          %{conn: conn, user: user, profile: profile, meeting_type: meeting_type} do
       component = "translation-meeting_types-meeting_type-#{meeting_type.id}"
       {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
@@ -105,16 +105,18 @@ defmodule TymeslotWeb.Dashboard.LanguagesDraftsTest do
       |> form("##{component}-form", %{"translation" => %{"name" => "Erstgespräch"}})
       |> render_change()
 
-      # Another tab removes German meanwhile.
-      profile |> Changeset.change(translation_locales: ["fr"]) |> Repo.update!()
+      # Another tab stops offering German meanwhile.
+      profile
+      |> Changeset.change(translation_locales: ["fr"], offer_all_locales: false)
+      |> Repo.update!()
 
-      view |> element("[data-testid='all-languages']") |> render_click()
+      view |> element("#languages-tabs-tab-settings") |> render_click()
       settle(view)
 
       assert has_element?(view, "##{component}-form input[value='Erstgespräch']")
       assert render(view) =~ "Try again to leave without saving them."
 
-      view |> element("[data-testid='all-languages']") |> render_click()
+      view |> element("#languages-tabs-tab-settings") |> render_click()
       settle(view)
 
       assert_patch(view, ~p"/dashboard/languages")
@@ -177,28 +179,17 @@ defmodule TymeslotWeb.Dashboard.LanguagesDraftsTest do
   end
 
   describe "the remove-language dialog" do
-    test "says the language is no longer offered when only chosen ones are", %{
+    test "says the language will no longer be offered", %{
       conn: conn,
       profile: profile
     } do
       profile |> Changeset.change(offer_all_locales: false) |> Repo.update!()
       {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
 
-      view |> element("[data-testid='remove-locale-de']") |> render_click()
+      view |> element("#language-de") |> render_click()
 
       assert view |> element("[data-testid='remove-language-effect']") |> render() =~
                "will no longer be offered in Deutsch"
-    end
-
-    test "says invitees can still choose it, in the original, when all are offered", %{
-      conn: conn
-    } do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
-
-      view |> element("[data-testid='remove-locale-de']") |> render_click()
-
-      assert view |> element("[data-testid='remove-language-effect']") |> render() =~
-               "invitees can still choose Deutsch, but they will see your texts in English"
     end
   end
 end

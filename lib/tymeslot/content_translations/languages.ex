@@ -43,7 +43,16 @@ defmodule Tymeslot.ContentTranslations.Languages do
   code no longer supported is left out.
   """
   @spec translation_locales(map() | nil) :: [String.t()]
-  def translation_locales(profile) do
+  def translation_locales(profile), do: chosen(profile) -- [original(profile)]
+
+  @doc """
+  The supported languages the organiser has ticked, as stored, which may
+  include the original: making a ticked language the original keeps it in
+  the list, so making another one the original again ticks it as before.
+  Change the list from this, not from `translation_locales/1`.
+  """
+  @spec chosen(map() | nil) :: [String.t()]
+  def chosen(profile) do
     supported = Locales.supported_codes()
 
     codes = (profile && Map.get(profile, :translation_locales)) || []
@@ -66,6 +75,13 @@ defmodule Tymeslot.ContentTranslations.Languages do
       Locales.supported_codes()
     end
   end
+
+  @doc """
+  The languages the organiser can translate into: every language the booking
+  page is offered in except the original.
+  """
+  @spec translatable(map() | nil) :: [String.t()]
+  def translatable(profile), do: offered(profile) -- [original(profile)]
 
   @doc "Whether the booking page may be shown in `locale`."
   @spec offers?(map() | nil, term()) :: boolean()
@@ -146,7 +162,7 @@ defmodule Tymeslot.ContentTranslations.Languages do
   end
 
   defp fallback(profile) do
-    translations = translation_locales(profile)
+    translations = chosen(profile)
 
     Enum.find(
       [Locales.booking_default_locale(), Locales.default_locale() | Locales.supported_codes()],

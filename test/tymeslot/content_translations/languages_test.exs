@@ -101,6 +101,18 @@ defmodule Tymeslot.ContentTranslations.LanguagesTest do
       assert Languages.offered(profile) == ["en", "de", "fr"]
     end
 
+    test "translatable/1 is every offered language but the original" do
+      all =
+        profile(content_locale: "en", translation_locales: ["en", "de"], offer_all_locales: true)
+
+      assert Languages.translatable(all) == Locales.supported_codes() -- ["en"]
+
+      own =
+        profile(content_locale: "en", translation_locales: ["en", "de"], offer_all_locales: false)
+
+      assert Languages.translatable(own) == ["de"]
+    end
+
     test "only a translation language shows translated texts" do
       profile =
         profile(content_locale: "en", translation_locales: ["de"], offer_all_locales: true)
@@ -140,15 +152,17 @@ defmodule Tymeslot.ContentTranslations.LanguagesTest do
       assert Repo.get!(ProfileSchema, profile.id).content_locale == saved.content_locale
     end
 
-    test "refuses the fallback as a translation language while the original is unset", %{
+    test "the fallback can be ticked while the original is unset, and stays the original", %{
       profile: profile
     } do
-      assert {:error, changeset} =
-               Profiles.update_booking_languages(profile, %{
-                 translation_locales: [Locales.booking_default_locale()]
-               })
+      fallback = Locales.booking_default_locale()
 
-      assert %{translation_locales: [_message]} = errors_on(changeset)
+      assert {:ok, saved} =
+               Profiles.update_booking_languages(profile, %{translation_locales: [fallback]})
+
+      assert saved.content_locale == fallback
+      assert Languages.chosen(saved) == [fallback]
+      assert Languages.translation_locales(saved) == []
     end
 
     test "a new profile offers every language with no translations", %{profile: profile} do
@@ -169,14 +183,17 @@ defmodule Tymeslot.ContentTranslations.LanguagesTest do
       assert %{content_locale: [_message]} = errors_on(changeset)
     end
 
-    test "refuses the original as a translation language", %{profile: profile} do
-      assert {:error, changeset} =
+    test "keeps the original ticked, but does not translate into it", %{profile: profile} do
+      assert {:ok, saved} =
                Profiles.update_booking_languages(profile, %{
                  content_locale: "de",
-                 translation_locales: ["de"]
+                 translation_locales: ["de", "fr"]
                })
 
-      assert %{translation_locales: [_message]} = errors_on(changeset)
+      assert saved.translation_locales == ["de", "fr"]
+      assert Languages.chosen(saved) == ["de", "fr"]
+      assert Languages.translation_locales(saved) == ["fr"]
+      assert Languages.content_locale(saved, "de") == nil
     end
 
     test "refuses a language listed twice", %{profile: profile} do

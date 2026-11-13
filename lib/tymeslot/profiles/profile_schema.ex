@@ -363,8 +363,9 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   read as until now, `Languages.original/1`, is saved), `translation_locales`
   and `offer_all_locales`.
 
-  Every code must be a supported locale, a translation language may not be
-  the original, and none may be listed twice. Removing a translation language
+  Every code must be a supported locale, and none may be listed twice. The
+  list may hold the original, which is then not translated into
+  (`Languages.translation_locales/1`). Removing a translation language
   leaves its stored texts in `translations`, so adding it again restores them.
   """
   @spec booking_languages_changeset(t(), map()) :: Ecto.Changeset.t()
@@ -391,7 +392,6 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   end
 
   defp validate_translation_locales(changeset, supported) do
-    original = get_field(changeset, :content_locale)
     codes = get_field(changeset, :translation_locales) || []
 
     cond do
@@ -400,13 +400,6 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           changeset,
           :translation_locales,
           dgettext_noop("errors", "is not a supported language")
-        )
-
-      original in codes ->
-        add_error(
-          changeset,
-          :translation_locales,
-          dgettext_noop("errors", "cannot include the original language")
         )
 
       Enum.uniq(codes) != codes ->
