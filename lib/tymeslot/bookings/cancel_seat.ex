@@ -107,8 +107,9 @@ defmodule Tymeslot.Bookings.CancelSeat do
   The side effects of a seat `cancel_in_transaction/1` gave up, once the
   caller's transaction has committed: the availability change, the emptied
   meeting's cancellation or the host event's refresh, and the seat's
-  `meeting.cancelled` for integrations. `emails: false` sends the seat's
-  cancellation emails to nobody, for a caller that tells both sides itself.
+  `meeting.cancelled` for integrations. `emails: false` schedules no email,
+  for the seat or for a meeting it emptied, for a caller that tells both
+  sides itself.
   """
   @spec finish(released(), keyword()) :: :ok
   def finish(%{meeting: meeting, participant: participant, outcome: outcome}, opts \\ []) do
@@ -117,7 +118,7 @@ defmodule Tymeslot.Bookings.CancelSeat do
 
     case outcome do
       {:cancelled, cancelled_meeting} ->
-        Cancel.finalise_cancellation(cancelled_meeting)
+        Cancel.finalise_cancellation(cancelled_meeting, emails: emails?)
         Events.seat_cancelled(meeting, participant, slot_freed: true, emails: emails?)
 
       :seats_remain ->

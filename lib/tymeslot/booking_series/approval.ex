@@ -14,7 +14,9 @@ defmodule Tymeslot.BookingSeries.Approval do
     * `decline/3`, `expire/1` and `withdraw/3` release every session still
       held, refund a paid series' one payment in full, once, and send one
       email: the booker's decline or expiry notice, or for a withdrawal the
-      series cancellation to both.
+      series cancellation to both. The series is closed with its sessions
+      when nothing of it is left to come
+      (`Tymeslot.BookingSeries.Cancel.close_in_transaction/1`).
 
   Each takes the organiser's schedule lock, then the series row, then its
   sessions in series order, as every writer of a series does, and moves
@@ -46,6 +48,7 @@ defmodule Tymeslot.BookingSeries.Approval do
   alias Tymeslot.Auth.UserSchema, as: User
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Activation
+  alias Tymeslot.BookingSeries.Cancel, as: SeriesCancel
   alias Tymeslot.BookingSeries.Notifications
   alias Tymeslot.BookingSeries.SeriesQueries
   alias Tymeslot.BookingSeries.SeriesSchema
@@ -303,7 +306,7 @@ defmodule Tymeslot.BookingSeries.Approval do
   # Release
 
   defp release(series, changes, announce) do
-    case Repo.transaction(fn -> Enum.map(lock_held(series), &release_session(&1, changes)) end) do
+    case Repo.transaction(fn -> release_in_transaction(series, changes) end) do
       {:ok, released} ->
         Logger.info("Series request released",
           series_id: series.id,
@@ -319,6 +322,14 @@ defmodule Tymeslot.BookingSeries.Approval do
         Logger.info("Series release skipped", series_id: series.id, reason: reason)
         error
     end
+  end
+
+  # Released whole, a series request has nothing left to come: it is closed
+  # with its sessions.
+  defp release_in_transaction(series, changes) do
+    released = Enum.map(lock_held(series), &release_session(&1, changes))
+    :ok = SeriesCancel.close_in_transaction(series.id)
+    released
   end
 
   defp release_session(meeting, changes) do

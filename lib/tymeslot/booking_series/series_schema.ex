@@ -7,6 +7,12 @@ defmodule Tymeslot.BookingSeries.SeriesSchema do
   `recurring` series repeats at one time on a fixed rhythm (`frequency` and
   `interval`); a `flexible` one has its sessions picked at different times and
   needs no rule. `uid` is the bearer for the attendee's series page.
+
+  `cancelled_at` says no session of the series is left to come: the rest
+  were cancelled, whether all at once or one at a time, or its request was
+  released. It does not mean every session was cancelled; sessions that
+  already took place keep their own status
+  (`Tymeslot.BookingSeries.Cancel`).
   """
 
   use Ecto.Schema
@@ -93,7 +99,7 @@ defmodule Tymeslot.BookingSeries.SeriesSchema do
     |> check_constraint(:occurrences_count, name: :booking_series_count_check)
   end
 
-  @doc "Marks the series cancelled (\"cancel all remaining\")."
+  @doc "Marks the series closed: no session of it is left to come."
   @spec cancel_changeset(t(), DateTime.t()) :: Ecto.Changeset.t()
   def cancel_changeset(%__MODULE__{} = series, %DateTime{} = cancelled_at) do
     change(series, cancelled_at: cancelled_at)

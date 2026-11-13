@@ -26,11 +26,16 @@ defmodule Tymeslot.BookingSeries.Cancel do
       releases them whole when it expires. A series with nothing else left
       has `:nothing_to_cancel`.
 
-  A host cancelling a paid series refunds its one payment once, after the
-  sessions are cancelled and outside any transaction: by default the
-  remaining sessions' share (`unit_price_cents` for each session
-  cancelled, capped at what remains). A booker's cancellation never
-  refunds.
+  A host cancelling a paid series refunds its one payment once: by default
+  the remaining sessions' share (`unit_price_cents` for each session
+  cancelled, capped at what remains). The refund is a job
+  (`Tymeslot.MeetingPayments.Workers.SeriesHostRefund`) inserted in the
+  transaction that cancels the sessions, so it is recorded with them and
+  its Stripe call never runs inside that transaction. The job re-checks the
+  payment under its row lock; a refund it cannot make is recorded as an
+  error (and so alerted on), and the money stays on the payment for the
+  host to refund by hand (see the worker for what the host is shown). A booker's cancellation
+  never refunds.
 
   Takes the organiser's schedule lock, then the series row, then its
   sessions, as every writer of a series does, and cancels inside that
@@ -38,9 +43,9 @@ defmodule Tymeslot.BookingSeries.Cancel do
   cancel, email or refund a session twice: the second finds
   `:nothing_to_cancel`.
 
-  The series is closed (`cancelled_at`) once nothing of it is left to come,
-  whether by cancelling it whole or its sessions one at a time
-  (`maybe_close/1`).
+  The series is closed (`cancelled_at`) once nothing of it is left to come:
+  cancelled whole, its sessions cancelled one at a time (`maybe_close/1`),
+  or its request released (`close_in_transaction/1`).
   """
 
   require Logger
@@ -56,6 +61,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Workers.SeriesHostRefund
   alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
@@ -65,7 +71,20 @@ defmodule Tymeslot.BookingSeries.Cancel do
 
   @type occurrence :: Meeting.t() | Participant.t()
   @type refund_choice :: :none | :remaining | {:amount, pos_integer()}
-  @type refund_outcome :: :none | {:refunded, non_neg_integer()}
+  @type refund_refusal :: :not_paid | :outside_refund_window | :under_dispute
+
+  @typedoc """
+  What became of the refund: none asked for or owed (`:none`), a refund
+  job inserted for `cents` (`{:scheduled, cents}`), the default refund
+  left unmade because the payment cannot be refunded
+  (`{:not_refunded, reason}`), or, for a withdrawn series request, what
+  the withdrawal refunded (`{:refunded, cents}`).
+  """
+  @type refund_outcome ::
+          :none
+          | {:scheduled, pos_integer()}
+          | {:not_refunded, refund_refusal()}
+          | {:refunded, pos_integer()}
 
   @type result ::
           {:ok, %{cancelled: [occurrence()], refund: refund_outcome()}}
@@ -74,7 +93,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
              | :not_found
              | :exceeds_remaining
              | :invalid_amount
-             | {:refund_failed, term()}
+             | refund_refusal()
              | term()}
 
   @doc """
@@ -86,15 +105,17 @@ defmodule Tymeslot.BookingSeries.Cancel do
     * `:acting_user` - the organiser, who must own the series; anyone else,
       or none, gets `{:error, :not_found}` before anything is touched.
     * `:refund` - the organiser's refund of a paid series: `:remaining`
-      (the default), `{:amount, cents}` or `:none`. An amount that is not
-      a positive integer is `:invalid_amount`, one above what remains
-      `:exceeds_remaining`, both refused before anything is cancelled.
-      Ignored for an attendee, whose cancellation never refunds, and for a
-      series request, which is refunded in full when withdrawn.
+      (the default), `{:amount, cents}` or `:none`. Ignored for an
+      attendee, whose cancellation never refunds, and for a series request,
+      which is refunded in full when withdrawn.
 
-  `{:error, {:refund_failed, reason}}` reports a refund that failed after
-  the sessions were cancelled; they stay cancelled, and the host can
-  settle the refund from Stripe.
+  An explicit `{:amount, cents}` is refused before anything is cancelled
+  when it cannot be made: `:invalid_amount` for one that is not a positive
+  integer, `:exceeds_remaining` for one above what remains, and the
+  payment's refusal (`:not_paid`, also for a series with no payment,
+  `:outside_refund_window`, `:under_dispute`). The default `:remaining`
+  on a payment that cannot be refunded cancels without a refund and says
+  why (`refund: {:not_refunded, reason}`).
   """
   @spec cancel_remaining(SeriesSchema.t(), keyword()) :: result()
   def cancel_remaining(%SeriesSchema{} = series, opts) do
@@ -111,15 +132,20 @@ defmodule Tymeslot.BookingSeries.Cancel do
 
   @doc """
   Closes `series` (stamps `cancelled_at`) when nothing of it is left to
-  come, after one of its sessions was cancelled. Does nothing to a series
-  already closed, one with a session still to come, or one that is gone.
-  Never fails the cancellation that called it.
+  come, after one of its sessions was cancelled on its own. Does nothing to
+  a series already closed, one with a session still to come, or one that
+  is gone.
+
+  Runs in a transaction of its own and is called outside any: a failure is
+  logged and never fails the cancellation that called it. Inside a
+  transaction, call `close_in_transaction/1` instead, whose failure is the
+  transaction's.
   """
   @spec maybe_close(SeriesSchema.t() | binary()) :: :ok
   def maybe_close(%SeriesSchema{id: id}), do: maybe_close(id)
 
   def maybe_close(series_id) when is_binary(series_id) do
-    {:ok, :ok} = Repo.transaction(fn -> close(series_id, Clock.utc_now()) end)
+    {:ok, :ok} = Repo.transaction(fn -> close_in_transaction(series_id) end)
     :ok
   rescue
     exception ->
@@ -131,39 +157,68 @@ defmodule Tymeslot.BookingSeries.Cancel do
       :ok
   end
 
+  @doc """
+  `maybe_close/1` inside the caller's transaction: locks the series row
+  (after the schedule lock, before any session, as every writer of a
+  series does), re-reads it, and closes it when nothing of it is left to
+  come. Raises on a failed write, for the caller's transaction to roll
+  back.
+  """
+  @spec close_in_transaction(binary()) :: :ok
+  def close_in_transaction(series_id) when is_binary(series_id) do
+    now = Clock.utc_now()
+
+    with %SeriesSchema{cancelled_at: nil} = series <- SeriesQueries.lock(series_id),
+         false <- series |> SeriesQueries.list_occurrences() |> Enum.any?(&remaining?(&1, now)) do
+      {:ok, _closed} = SeriesQueries.mark_cancelled(series, now)
+    end
+
+    :ok
+  end
+
   # Ownership, and the refund the host's choice implies, are settled before
   # anything is cancelled: a refusal must not leave cancelled sessions.
   defp authorise(_series, :attendee, _opts), do: {:ok, :none}
 
   defp authorise(series, :organizer, opts) do
     with :ok <- owned_by(series, Keyword.get(opts, :acting_user)) do
-      plan_refund(series, Keyword.get(opts, :refund, :remaining))
+      series.id
+      |> MeetingPayments.payment_for_series()
+      |> plan_refund(Keyword.get(opts, :refund, :remaining))
     end
   end
 
   defp owned_by(%SeriesSchema{organizer_user_id: owner_id}, %User{id: owner_id}), do: :ok
-
   defp owned_by(_series, _user), do: {:error, :not_found}
 
-  defp plan_refund(_series, :none), do: {:ok, :none}
+  defp plan_refund(_payment, :none), do: {:ok, :none}
+  defp plan_refund(nil, :remaining), do: {:ok, :none}
 
-  defp plan_refund(series, choice) do
-    case MeetingPayments.payment_for_series(series.id) do
-      nil -> {:ok, :none}
-      payment -> validate_refund(payment, choice)
+  defp plan_refund(payment, :remaining) do
+    case MeetingPayments.refund_refusal(payment) do
+      :ok -> {:ok, {:remaining, payment}}
+      {:error, reason} -> {:ok, {:not_refunded, reason}}
     end
   end
 
-  defp validate_refund(payment, :remaining), do: {:ok, {:remaining, payment}}
-
-  defp validate_refund(payment, {:amount, cents}) when is_integer(cents) and cents > 0 do
-    if MeetingPayments.refund_outstanding?(payment) and
-         cents <= MeetingPayments.refundable_remaining_cents(payment),
-       do: {:ok, {:amount, payment, cents}},
-       else: {:error, :exceeds_remaining}
+  defp plan_refund(payment, {:amount, cents}) when is_integer(cents) and cents > 0 do
+    with :ok <- refusal(payment),
+         :ok <- within_remaining(payment, cents) do
+      {:ok, {:amount, payment, cents}}
+    end
   end
 
-  defp validate_refund(_payment, _choice), do: {:error, :invalid_amount}
+  defp plan_refund(_payment, _choice), do: {:error, :invalid_amount}
+
+  defp refusal(nil), do: {:error, :not_paid}
+  defp refusal(payment), do: MeetingPayments.refund_refusal(payment)
+
+  defp within_remaining(payment, cents) do
+    if MeetingPayments.refund_outstanding?(payment) and
+         cents <= MeetingPayments.refundable_remaining_cents(payment),
+       do: :ok,
+       else: {:error, :exceeds_remaining}
+  end
 
   # Series request
 
@@ -176,15 +231,14 @@ defmodule Tymeslot.BookingSeries.Cancel do
     end
   end
 
-  # Withdrawn whole, refunded whole by the withdrawal itself. A request the
-  # host answered meanwhile is no request any more: what is left of it is
-  # cancelled as any series is.
+  # Withdrawn whole, refunded whole and closed by the withdrawal itself. A
+  # request the host answered meanwhile is no request any more: what is
+  # left of it is cancelled as any series is.
   defp withdraw_request(series, caller, refund_plan) do
     refunded_before = refunded_cents(series)
 
     case Approval.withdraw(series, caller) do
       {:ok, released} ->
-        maybe_close(series)
         {:ok, %{cancelled: released, refund: refund_since(series, refunded_before)}}
 
       {:error, :not_awaiting_approval} ->
@@ -212,11 +266,11 @@ defmodule Tymeslot.BookingSeries.Cancel do
   # Cancel all
 
   defp cancel_all(series, caller, refund_plan) do
-    case Repo.transaction(fn -> cancel_in_transaction(series, caller) end) do
-      {:ok, {locked, cancelled}} ->
+    case Repo.transaction(fn -> cancel_in_transaction(series, caller, refund_plan) end) do
+      {:ok, {cancelled, refund}} ->
         Logger.info("Series cancelled", series_id: series.id, sessions: length(cancelled))
         after_commit(cancelled)
-        refund(locked, cancelled, refund_plan)
+        {:ok, %{cancelled: occurrences(cancelled), refund: refund}}
 
       {:error, reason} = error ->
         Logger.info("Series not cancelled",
@@ -228,10 +282,10 @@ defmodule Tymeslot.BookingSeries.Cancel do
     end
   end
 
-  defp cancel_in_transaction(series, caller) do
-    now = Clock.utc_now()
+  defp cancel_in_transaction(series, caller, refund_plan) do
     :ok = MeetingConflictQueries.lock_organizer_schedule(series.organizer_user_id)
     locked = SeriesQueries.lock(series) || Repo.rollback(:not_found)
+    now = Clock.utc_now()
 
     cancelled =
       locked
@@ -242,10 +296,13 @@ defmodule Tymeslot.BookingSeries.Cancel do
 
     if cancelled == [], do: Repo.rollback(:nothing_to_cancel)
 
-    close(locked.id, now)
+    :ok = close_in_transaction(locked.id)
 
-    case Notifications.schedule_series_cancellation(locked, occurrences(cancelled), caller) do
-      {:ok, _job} -> {locked, cancelled}
+    with {:ok, _job} <-
+           Notifications.schedule_series_cancellation(locked, occurrences(cancelled), caller),
+         {:ok, refund} <- schedule_refund(locked, cancelled, refund_plan) do
+      {cancelled, refund}
+    else
       {:error, reason} -> Repo.rollback(reason)
     end
   end
@@ -260,8 +317,10 @@ defmodule Tymeslot.BookingSeries.Cancel do
     end
   end
 
+  # The series is closed once, by `cancel_in_transaction/3`, not by each
+  # session's cancellation.
   defp cancel_occurrence(%Meeting{} = meeting, caller) do
-    case CancelMeeting.execute(meeting, caller: caller, announce: false) do
+    case CancelMeeting.execute(meeting, caller: caller, announce: false, close_series: false) do
       {:ok, cancelled} -> cancelled
       {:error, reason} -> Repo.rollback(reason)
     end
@@ -291,54 +350,44 @@ defmodule Tymeslot.BookingSeries.Cancel do
 
   # Refund
 
-  defp refund(_series, cancelled, :none), do: ok(cancelled, :none)
+  defp schedule_refund(_series, _cancelled, :none), do: {:ok, :none}
 
-  defp refund(series, cancelled, {:remaining, payment}) do
-    payment = MeetingPayments.get_payment(payment.id)
+  defp schedule_refund(_series, _cancelled, {:not_refunded, _reason} = outcome),
+    do: {:ok, outcome}
 
-    share =
-      min(
-        (series.unit_price_cents || 0) * length(cancelled),
-        MeetingPayments.refundable_remaining_cents(payment)
-      )
+  # The remaining sessions' share, read in this transaction; the job reads
+  # the payment again under its lock and refuses more than remains then.
+  defp schedule_refund(series, cancelled, {:remaining, payment}) do
+    case MeetingPayments.get_payment(payment.id) do
+      nil ->
+        {:ok, :none}
 
-    if share > 0 and MeetingPayments.refund_outstanding?(payment),
-      do: issue_refund(series, cancelled, payment, share),
-      else: ok(cancelled, :none)
-  end
+      current ->
+        share =
+          min(
+            (series.unit_price_cents || 0) * length(cancelled),
+            MeetingPayments.refundable_remaining_cents(current)
+          )
 
-  defp refund(series, cancelled, {:amount, payment, cents}),
-    do: issue_refund(series, cancelled, payment, cents)
-
-  defp issue_refund(series, cancelled, payment, cents) do
-    case MeetingPayments.refund_payment_for_host(payment.id, series.organizer_user_id, cents) do
-      {:ok, _payment} ->
-        ok(cancelled, {:refunded, cents})
-
-      {:error, reason} ->
-        Logger.error("Series cancelled, but its refund failed",
-          series_id: series.id,
-          reason: LogFormat.reason(reason)
-        )
-
-        {:error, {:refund_failed, reason}}
+        if share > 0 and MeetingPayments.refund_outstanding?(current),
+          do: insert_refund(series, current, share),
+          else: {:ok, :none}
     end
   end
 
-  defp ok(cancelled, refund), do: {:ok, %{cancelled: occurrences(cancelled), refund: refund}}
+  defp schedule_refund(series, _cancelled, {:amount, payment, cents}),
+    do: insert_refund(series, MeetingPayments.get_payment(payment.id) || payment, cents)
+
+  defp insert_refund(series, payment, cents) do
+    with {:ok, _job} <-
+           payment
+           |> SeriesHostRefund.new_for(series.organizer_user_id, cents)
+           |> Oban.insert() do
+      {:ok, {:scheduled, cents}}
+    end
+  end
 
   # Remaining
-
-  # Under the series row lock, re-read: a session cancelled in the same
-  # transaction may have closed it already.
-  defp close(series_id, now) do
-    with %SeriesSchema{cancelled_at: nil} = series <- SeriesQueries.lock(series_id),
-         false <- series |> SeriesQueries.list_occurrences() |> Enum.any?(&remaining?(&1, now)) do
-      {:ok, _closed} = SeriesQueries.mark_cancelled(series, now)
-    end
-
-    :ok
-  end
 
   defp remaining?(%Meeting{} = meeting, now),
     do: not MeetingState.terminal?(meeting) and upcoming?(meeting, now)

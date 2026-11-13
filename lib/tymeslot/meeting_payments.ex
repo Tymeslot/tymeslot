@@ -443,6 +443,15 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate default_cancellation_refund_cents(payment), to: Refunds
 
   @doc """
+  Why `payment` cannot be refunded at all (`:not_paid`,
+  `:outside_refund_window`, `:under_dispute`), or `:ok`; see
+  `Refunds.refusal/1`.
+  """
+  @spec refund_refusal(booking_payment()) ::
+          :ok | {:error, :not_paid | :outside_refund_window | :under_dispute}
+  defdelegate refund_refusal(payment), to: Refunds, as: :refusal
+
+  @doc """
   Returns `true` when the payment still owes the attendee money and was paid
   within the 60-day refund window.
   """

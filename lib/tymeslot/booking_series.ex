@@ -66,7 +66,9 @@ defmodule Tymeslot.BookingSeries do
 
   @doc """
   Cancels every session of `series` still to come, with one email to each
-  side and, for a host cancelling a paid series, one refund. Options
+  side and, for a host cancelling a paid series, one refund job scheduled
+  with the cancellation (`refund: {:scheduled, cents}`), or the reason the
+  default refund could not be made (`{:not_refunded, reason}`). Options
   `:caller` (required), `:acting_user` and `:refund`; see
   `Tymeslot.BookingSeries.Cancel.cancel_remaining/2`.
   """

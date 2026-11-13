@@ -40,6 +40,10 @@ defmodule Tymeslot.Bookings.Cancel do
       announcement depends on something it has yet to do (a refund the
       cancellation email reports on). That caller owes an `announce/1` once it
       has settled. Defaults to `true`.
+    * `:close_series` - `false` leaves the meeting's series open (step 5),
+      for a caller that cancels several sessions of it in one transaction
+      and closes it once itself (`Tymeslot.BookingSeries.Cancel`). Defaults
+      to `true`.
 
   Returns {:ok, meeting} or {:error, reason}. `{:error, :already_cancelled}`
   means the meeting was cancelled already, whether `meeting` says so or a
@@ -66,7 +70,7 @@ defmodule Tymeslot.Bookings.Cancel do
       :ok ->
         meeting
         |> execute_permitted(Keyword.get(opts, :announce, true))
-        |> close_series()
+        |> close_series(Keyword.get(opts, :close_series, true))
 
       {:error, reason} ->
         policy_blocked(meeting, reason)
@@ -75,13 +79,13 @@ defmodule Tymeslot.Bookings.Cancel do
 
   # A series whose last session still to come was just cancelled is over:
   # it is closed with no email of its own, each session having had its own.
-  defp close_series({:ok, %Meeting{series_id: series_id}} = result)
+  defp close_series({:ok, %Meeting{series_id: series_id}} = result, true)
        when is_binary(series_id) do
     BookingSeries.maybe_close(series_id)
     result
   end
 
-  defp close_series(result), do: result
+  defp close_series(result, _close?), do: result
 
   @doc """
   Tells everyone a meeting was cancelled: the cancellation emails, the
@@ -168,14 +172,18 @@ defmodule Tymeslot.Bookings.Cancel do
   row lock, or a concurrent booker can join the slot in the window between the
   seat committing and the meeting being cancelled. `Tymeslot.Bookings.CancelSeat`
   therefore commits the flip itself and calls this to finish the job.
+
+  `emails: false` schedules no cancellation email job, for a meeting
+  emptied by a series giving up its seats, which tells both sides itself
+  (`Tymeslot.BookingSeries.Cancel`).
   """
-  @spec finalise_cancellation(Meeting.t()) :: :ok
-  def finalise_cancellation(%Meeting{} = meeting) do
+  @spec finalise_cancellation(Meeting.t(), keyword()) :: :ok
+  def finalise_cancellation(%Meeting{} = meeting, opts \\ []) do
     Availability.changed(meeting.organizer_user_id)
 
     with :ok <- Meetings.cancel_calendar_event(meeting),
          :ok <- delete_provider_video_room(meeting) do
-      send_cancellation_notifications(meeting)
+      send_cancellation_notifications(meeting, opts)
     else
       {:error, reason} ->
         Logger.error("Failed to finalise cancellation of emptied group meeting",
@@ -197,6 +205,9 @@ defmodule Tymeslot.Bookings.Cancel do
   pending reschedule request, legitimately has no event, so its absence
   must not trigger an auto-cancel.
 
+  Closes the meeting's series when nothing of it is left to come, as
+  `execute/2` does.
+
   Returns {:ok, meeting} or {:error, reason}, where `:already_cancelled`
   means the meeting was cancelled by some other path first, as for
   `execute/2`.
@@ -204,7 +215,9 @@ defmodule Tymeslot.Bookings.Cancel do
   @spec execute_external(Meeting.t()) :: {:ok, Meeting.t()} | {:error, term()}
   def execute_external(%Meeting{} = meeting) do
     if MeetingState.expects_calendar_event?(meeting) do
-      auto_cancel_external(meeting)
+      meeting
+      |> auto_cancel_external()
+      |> close_series(true)
     else
       Logger.info("Skipping auto-cancel for externally deleted meeting",
         meeting_id: meeting.id,
@@ -437,8 +450,8 @@ defmodule Tymeslot.Bookings.Cancel do
     end
   end
 
-  defp send_cancellation_notifications(meeting) do
-    case Events.meeting_cancelled(meeting) do
+  defp send_cancellation_notifications(meeting, opts \\ []) do
+    case Events.meeting_cancelled(meeting, opts) do
       {:ok, _result} ->
         Logger.info("Cancellation emails sent", meeting_id: meeting.id)
         :ok
