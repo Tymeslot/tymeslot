@@ -194,6 +194,35 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
       refute_enqueued(worker: CalendarEventWorker)
     end
 
+    test "a seat on a held slot whose meeting type was deleted is released, not confirmed",
+         ctx do
+      slot = slot(ctx, :awaiting_verification)
+      seat = held_seat(slot, "first@example.com")
+      :ok = EmailVerificationJobs.schedule_seat_expiry(seat)
+      Repo.delete!(ctx.type)
+
+      assert {:error, :expired} = EmailVerification.verify_seat(seat)
+
+      assert %{cancelled_at: %DateTime{}, email_verified_at: nil} = reload(seat)
+      assert %{status: :expired, email_verified_at: nil} = reload(slot)
+      refute_enqueued(worker: EmailVerificationExpiryWorker)
+      assert_nothing_started()
+    end
+
+    test "a seat on a live slot whose meeting type was deleted is released, not confirmed",
+         ctx do
+      slot = slot(ctx, :confirmed)
+      visible_seat(slot, "first@example.com")
+      seat = held_seat(slot, "second@example.com")
+      Repo.delete!(ctx.type)
+
+      assert {:error, :expired} = EmailVerification.verify_seat(reload(seat))
+
+      assert %{cancelled_at: %DateTime{}, email_verified_at: nil} = reload(seat)
+      assert reload(slot).status == :confirmed
+      assert_nothing_started()
+    end
+
     test "a seat verified after its slot was cancelled reads expired", ctx do
       slot = slot(ctx, :confirmed)
       first = visible_seat(slot, "first@example.com")
@@ -349,6 +378,13 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
 
       assert Repo.get(MeetingSchema, slot.id)
     end
+  end
+
+  defp assert_nothing_started do
+    refute_enqueued(worker: CalendarEventWorker)
+    refute_enqueued(worker: VideoRoomWorker)
+    assert all_enqueued(worker: EmailWorker) == []
+    refute_enqueued(worker: WebhookWorker)
   end
 
   # A group slot for the context's type at its start time, with no seats. A
