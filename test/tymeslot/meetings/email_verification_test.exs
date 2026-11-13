@@ -27,6 +27,8 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.EmailVerificationJobs
+  alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Workers.ApprovalExpiryWorker
   alias Tymeslot.Meetings.Workers.EmailVerificationExpiryWorker
@@ -373,6 +375,63 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
     end
   end
 
+  describe "prune_unverified/1" do
+    setup do
+      %{user: insert(:user)}
+    end
+
+    test "a never-verified booking is deleted a day after its deadline", %{user: user} do
+      expired = lapsed(user, :expired, 25)
+      released = lapsed(user, :cancelled, 25)
+
+      {:ok, guest} =
+        GuestQueries.insert_guest(%{meeting_id: expired.id, email: "guest@example.com"})
+
+      assert {2, _rows} = EmailVerification.prune_unverified()
+
+      refute Repo.get(MeetingSchema, expired.id)
+      refute Repo.get(MeetingSchema, released.id)
+      refute Repo.get(GuestSchema, guest.id)
+    end
+
+    test "a recent or verified booking is kept", %{user: user} do
+      now = DateTime.utc_now(:second)
+
+      recent = lapsed(user, :expired, 23)
+      recent_released = lapsed(user, :cancelled, 23)
+
+      verified_expired =
+        lapsed(user, :expired, 25, email_verified_at: DateTime.add(now, -26, :hour))
+
+      verified_cancelled =
+        lapsed(user, :cancelled, 25, email_verified_at: DateTime.add(now, -26, :hour))
+
+      held = held(user, verification_deadline_at: DateTime.add(now, -25, :hour))
+      ungated = insert(:meeting, organizer_user_id: user.id, status: :expired)
+
+      assert {0, _rows} = EmailVerification.prune_unverified()
+
+      for meeting <- [
+            recent,
+            recent_released,
+            verified_expired,
+            verified_cancelled,
+            held,
+            ungated
+          ] do
+        assert Repo.get(MeetingSchema, meeting.id), "#{meeting.id} should have been kept"
+      end
+    end
+
+    test "the retention window can be given in hours", %{user: user} do
+      meeting = lapsed(user, :expired, 3)
+
+      assert {0, _rows} = EmailVerification.prune_unverified(4)
+      assert {1, _rows} = EmailVerification.prune_unverified(2)
+      refute Repo.get(MeetingSchema, meeting.id)
+    end
+  end
+
   describe "resend/1" do
     setup do
       user = insert(:user)
@@ -439,6 +498,21 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
       :awaiting_verification_meeting,
       Keyword.merge(
         [organizer_user_id: user.id, organizer_email: user.email, video_integration_id: nil],
+        attrs
+      )
+    )
+  end
+
+  # A booking that left the gate without being confirmed (`status` is
+  # `:expired` or `:cancelled`), whose deadline passed `hours_ago` hours ago.
+  defp lapsed(user, status, hours_ago, attrs \\ []) do
+    held(
+      user,
+      Keyword.merge(
+        [
+          status: status,
+          verification_deadline_at: DateTime.add(DateTime.utc_now(:second), -hours_ago, :hour)
+        ],
         attrs
       )
     )

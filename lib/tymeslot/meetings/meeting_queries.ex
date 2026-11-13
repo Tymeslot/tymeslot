@@ -420,6 +420,27 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     |> Repo.all()
   end
 
+  @doc """
+  Deletes meetings that left the verification gate without being verified
+  (released statuses, a verification deadline, no `email_verified_at`) whose
+  deadline is before `cutoff`. Guests cascade.
+
+  A booking verified and expired or cancelled later has `email_verified_at`
+  set and is never touched: those are the organiser's history.
+  """
+  @spec delete_unverified_lapsed_before(DateTime.t()) :: {non_neg_integer(), nil}
+  def delete_unverified_lapsed_before(%DateTime{} = cutoff) do
+    released = MeetingState.released()
+
+    Meeting
+    |> where(
+      [m],
+      m.status in ^released and not is_nil(m.verification_deadline_at) and
+        is_nil(m.email_verified_at) and m.verification_deadline_at < ^cutoff
+    )
+    |> Repo.delete_all()
+  end
+
   @doc "Updates a meeting."
   @spec update_meeting(Meeting.t(), map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
   def update_meeting(%Meeting{} = meeting, attrs) when is_map(attrs) do

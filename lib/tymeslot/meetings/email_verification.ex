@@ -62,6 +62,13 @@ defmodule Tymeslot.Meetings.EmailVerification do
   # Resends after the email sent with the booking; see the moduledoc.
   @max_resends 3
 
+  # How long after its deadline a booking that never left the gate is kept
+  # before it is deleted. Long enough for a late click on the email link to
+  # read "expired" (the token lives two days, so after this it reads
+  # "invalid"); short because the organiser never saw the data and the
+  # address may not be the attendee's.
+  @unverified_retention_hours 24
+
   @type verify_result ::
           {:ok, :verified, Meeting.t()}
           | {:ok, :already_verified, Meeting.t()}
@@ -259,6 +266,24 @@ defmodule Tymeslot.Meetings.EmailVerification do
 
       {:ok, released}
     end
+  end
+
+  @doc """
+  Deletes bookings that never left the gate, `hours` after their deadline.
+
+  Covers both ways out without verifying: expired (`expire/1`) and released
+  (`release/1`). The organiser never saw them, so unlike a booking that was
+  once confirmed they are deleted, not anonymised; guests go with them.
+  Returns the `{count, nil}` of the delete.
+  """
+  @spec prune_unverified(non_neg_integer()) :: {non_neg_integer(), nil}
+  def prune_unverified(hours \\ @unverified_retention_hours) do
+    cutoff = DateTime.add(Clock.utc_now(), -hours, :hour)
+    {count, _rows} = result = MeetingQueries.delete_unverified_lapsed_before(cutoff)
+
+    if count > 0, do: Logger.info("Pruned unverified bookings", deleted_count: count)
+
+    result
   end
 
   @doc """
