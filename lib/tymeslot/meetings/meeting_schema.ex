@@ -8,12 +8,11 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Ecto.UUID
-
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
   alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.ChangesetValidators.TrackingParams
   alias Tymeslot.Locales
+  alias Tymeslot.Meetings.DerivedFields
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.UniqueInvitation
   alias Tymeslot.Meetings.UniqueSlot
@@ -554,8 +553,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> UniqueInvitation.cast_on_insert(attrs)
-    |> ensure_calendar_uid()
-    |> ensure_seen_calendar_end()
+    |> DerivedFields.put()
     |> validate_required([:calendar_uid | required_fields])
     # Every writer copies `organizer_email` from the host's stored account (or
     # the operator's configured fallback), never from a form, so it is held
@@ -581,7 +579,6 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # Google Calendar's documented maximum event id length.
     |> validate_length(:provider_event_id, max: 1024)
     |> TrackingParams.validate_tracking_params(:tracking_params)
-    |> calculate_duration()
     |> unique_constraint(:uid)
     |> unique_constraint(:calendar_uid)
     |> UniqueSlot.constrain()
@@ -589,42 +586,6 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> foreign_key_constraint(:venue_id)
     |> foreign_key_constraint(:booking_page_id)
     |> UniqueInvitation.constrain()
-  end
-
-  # A new meeting gets its own calendar identity, generated independently of
-  # `uid` so that nothing readable in a calendar leads back to the capability.
-  # A UUID, like `uid`, because callers tell a Tymeslot-minted identifier from
-  # one a provider assigned by that shape (`CalendarEventSync`'s legacy
-  # mapping check, the Exchange busy-interval namespace). An existing meeting
-  # already has one and keeps it: its event is keyed by it, and a new value
-  # would orphan that event.
-  defp ensure_calendar_uid(changeset) do
-    case get_field(changeset, :calendar_uid) do
-      nil -> put_change(changeset, :calendar_uid, UUID.generate())
-      _present -> changeset
-    end
-  end
-
-  defp ensure_seen_calendar_end(%Ecto.Changeset{data: %{__meta__: %{state: :built}}} = cs),
-    do: put_change(cs, :seen_calendar_end_time, get_field(cs, :end_time))
-
-  defp ensure_seen_calendar_end(changeset), do: changeset
-
-  defp calculate_duration(changeset) do
-    # Only calculate duration if not provided
-    if get_change(changeset, :duration) do
-      changeset
-    else
-      start_time = get_field(changeset, :start_time)
-      end_time = get_field(changeset, :end_time)
-
-      if start_time && end_time do
-        duration = DateTime.diff(end_time, start_time, :minute)
-        put_change(changeset, :duration, duration)
-      else
-        changeset
-      end
-    end
   end
 
   @doc "Whether a write lost the race for its slot; see `Tymeslot.Meetings.UniqueSlot`."
