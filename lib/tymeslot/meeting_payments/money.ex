@@ -9,10 +9,14 @@ defmodule Tymeslot.MeetingPayments.Money do
   Currency codes are lower-case ISO 4217, as Stripe sends them; any case is
   accepted.
 
-  Formatting is deliberately not locale-aware: one symbol table, the sign
-  before the symbol (`-€10.00`), a dot as the decimal separator and no
-  thousands separator, in every language.
+  Formatting follows the reader's locale, which defaults to the current
+  Gettext locale, so an amount interpolated into a translated sentence reads
+  the way the sentence's language writes money: `€1,234.50` in English,
+  `1.234,50 €` in German, `1 234,50 €` in Polish. The sign always leads
+  (`-€10.00`, `-10,00 €`).
   """
+
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   @zero_decimal ~w(bif clp djf gnf jpy kmf krw mga pyg rwf ugx vnd vuv xaf xof xpf)
   @three_decimal ~w(bhd jod kwd omr tnd)
@@ -27,6 +31,11 @@ defmodule Tymeslot.MeetingPayments.Money do
     "aud" => "A$",
     "nzd" => "NZ$"
   }
+
+  # The locales that write the symbol after the amount ("45,00 €"). Spanish
+  # follows the RAE here, though Latin American shops often put "$" first;
+  # Brazilian Portuguese leads with the symbol, as English does.
+  @symbol_after_locales ~w(de fr it cs pl uk es)
 
   @type currency :: String.t()
 
@@ -92,34 +101,51 @@ defmodule Tymeslot.MeetingPayments.Money do
   end
 
   @doc """
-  `cents` formatted for people: the currency's symbol, or its upper-case
-  code and a space where it has none, then the amount, with any minus sign
-  in front of both.
+  `cents` formatted for people reading `:locale`: the currency's symbol, or
+  its upper-case code where it has none, and the amount, grouped and
+  separated by the locale's conventions, with any minus sign in front of both.
+
+  The symbol leads in English and Brazilian Portuguese, flush against a sign
+  (`€10.50`) and a space from a code (`CHF 10.00`). It trails, after a
+  non-breaking space so the two never wrap apart, in the locales that write it
+  after the amount (`10,50 €`, `10,00 CHF`).
 
   Options:
 
+    * `:locale` - the locale to format for. Defaults to the current
+      `TymeslotWeb.Gettext` locale; an unknown locale is formatted as English.
     * `:trim_zero_minor` - drop the decimals of a whole amount (`€10`
       rather than `€10.00`). Defaults to `false`.
 
   ## Examples
 
-      iex> Money.format(1050, "eur")
+      iex> Money.format(1050, "eur", locale: "en")
       "€10.50"
-      iex> Money.format(-1000, "gbp")
-      "-£10.00"
-      iex> Money.format(1000, "chf", trim_zero_minor: true)
+      iex> Money.format(-123_450, "eur", locale: "de")
+      "-1.234,50\u00A0€"
+      iex> Money.format(1000, "chf", locale: "en", trim_zero_minor: true)
       "CHF 10"
   """
   @spec format(integer(), currency(), keyword()) :: String.t()
   def format(cents, currency, opts \\ []) when is_integer(cents) and is_binary(currency) do
     code = String.downcase(currency)
+    locale = Keyword.get_lazy(opts, :locale, fn -> Gettext.get_locale(TymeslotWeb.Gettext) end)
     sign = if cents < 0, do: "-", else: ""
 
-    digits =
-      major_digits(abs(cents), minor_units(code), Keyword.get(opts, :trim_zero_minor, false))
+    number =
+      abs(cents)
+      |> major_digits(minor_units(code), Keyword.get(opts, :trim_zero_minor, false))
+      |> localise_number(locale)
 
-    sign <> symbol(code) <> digits
+    sign <> place_symbol(number, String.trim(symbol(code)), locale)
   end
+
+  @doc """
+  Whether `locale` writes the currency symbol after the amount, so a currency
+  tag beside a price input can sit on the same side as the formatted amount.
+  """
+  @spec symbol_after?(String.t()) :: boolean()
+  def symbol_after?(locale), do: locale in @symbol_after_locales
 
   @doc """
   The prefix `format/3` puts before an amount: the currency's symbol, or its
@@ -135,6 +161,26 @@ defmodule Tymeslot.MeetingPayments.Money do
   def symbol(currency) when is_binary(currency) do
     code = String.downcase(currency)
     Map.get_lazy(@symbols, code, fn -> String.upcase(code) <> " " end)
+  end
+
+  defp localise_number(digits, locale) do
+    case String.split(digits, ".") do
+      [major] -> group(major, locale)
+      [major, minor] -> group(major, locale) <> LocaleFormat.decimal_separator(locale) <> minor
+    end
+  end
+
+  defp group(major, locale),
+    do: major |> String.to_integer() |> LocaleFormat.format_integer(locale)
+
+  defp place_symbol(number, symbol, locale) do
+    cond do
+      symbol_after?(locale) -> number <> "\u00A0" <> symbol
+      # A letter code such as "CHF" needs a space before the digits, where a
+      # sign such as "€" sits flush against them.
+      String.match?(symbol, ~r/^\p{L}+$/u) -> symbol <> " " <> number
+      true -> symbol <> number
+    end
   end
 
   defp major_digits(cents, 0, _trim?), do: Integer.to_string(cents)

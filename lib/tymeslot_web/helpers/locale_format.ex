@@ -533,13 +533,17 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   defp thousand_separator("es"), do: @group_space
   defp thousand_separator(_other_locale), do: ","
 
-  defp decimal_separator("de"), do: ","
-  defp decimal_separator("it"), do: ","
-  defp decimal_separator("pt"), do: ","
-  defp decimal_separator("uk"), do: ","
-  defp decimal_separator("fr"), do: ","
-  defp decimal_separator("cs"), do: ","
-  defp decimal_separator("pl"), do: ","
-  defp decimal_separator("es"), do: ","
-  defp decimal_separator(_other_locale), do: "."
+  @doc """
+  The decimal separator for a locale: a comma everywhere but English.
+  """
+  @spec decimal_separator(String.t()) :: String.t()
+  def decimal_separator("de"), do: ","
+  def decimal_separator("it"), do: ","
+  def decimal_separator("pt"), do: ","
+  def decimal_separator("uk"), do: ","
+  def decimal_separator("fr"), do: ","
+  def decimal_separator("cs"), do: ","
+  def decimal_separator("pl"), do: ","
+  def decimal_separator("es"), do: ","
+  def decimal_separator(_other_locale), do: "."
 end

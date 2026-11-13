@@ -365,8 +365,8 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
 
     test "formats zero-decimal currencies without division" do
-      assert Formatting.format_currency(1500, "jpy") == "¥1500"
-      assert Formatting.format_currency(1000, "krw") == "₩1000"
+      assert Formatting.format_currency(1500, "jpy") == "¥1,500"
+      assert Formatting.format_currency(1000, "krw") == "₩1,000"
     end
 
     test "defaults to EUR when currency is nil" do
@@ -404,7 +404,7 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
 
     test "9_999_999 cents formats without floating-point rounding errors" do
-      assert Formatting.format_currency(9_999_999, "eur") == "€99999.99"
+      assert Formatting.format_currency(9_999_999, "eur") == "€99,999.99"
     end
 
     test "-50 cents (partial refund display) formats with leading sign" do

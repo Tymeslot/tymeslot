@@ -8,14 +8,10 @@ defmodule TymeslotWeb.Components.PaymentHelpers do
   """
 
   alias Tymeslot.MeetingPayments.Money
-  alias TymeslotWeb.Helpers.LocaleFormat
-
-  # The locales that write the symbol after the amount ("45,00 €"). Spanish
-  # follows the RAE here, though Latin American shops often put "$" first.
-  @symbol_after_locales ~w(de fr it cs pl uk es)
 
   @doc """
-  Formats an integer cent amount with `Tymeslot.MeetingPayments.Money.format/3`.
+  Formats an integer cent amount with `Tymeslot.MeetingPayments.Money.format/3`
+  in the current locale.
 
   Returns an empty string when `cents` is not an integer or there is no
   currency, so a template can render a price that is not set yet without a
@@ -28,29 +24,16 @@ defmodule TymeslotWeb.Components.PaymentHelpers do
   def format_amount(_cents, _currency), do: ""
 
   @doc """
-  Formats an integer cent amount for a guest reading `locale`: the number
-  grouped and separated as `LocaleFormat.format_number/3` does, in the
-  currency's minor units (`Money.minor_units/1`), with the symbol before it
-  and no space in English ("€1,234.50") and after it, set off by a
-  non-breaking space, in the other locales ("1.234,50 €").
+  Formats an integer cent amount for a reader of `locale`, as
+  `Tymeslot.MeetingPayments.Money.format/3` does ("€1,234.50" in English,
+  "1.234,50 €" in German).
 
-  An unknown locale is formatted as English. Returns an empty string when
-  `cents` is not an integer or there is no currency.
+  Returns an empty string when `cents` is not an integer or there is no
+  currency.
   """
   @spec format_amount(integer() | term(), String.t() | term(), String.t()) :: String.t()
-  def format_amount(cents, currency, locale) when is_integer(cents) and is_binary(currency) do
-    units = Money.minor_units(currency)
-    number = LocaleFormat.format_number(cents / Integer.pow(10, units), locale, units)
-    symbol = currency |> Money.symbol() |> String.trim()
-
-    cond do
-      locale in @symbol_after_locales -> number <> " " <> symbol
-      # A letter code such as "CHF" needs a space before the digits, where a
-      # sign such as "€" sits flush against them.
-      String.match?(symbol, ~r/^\p{L}+$/u) -> symbol <> " " <> number
-      true -> symbol <> number
-    end
-  end
+  def format_amount(cents, currency, locale) when is_integer(cents) and is_binary(currency),
+    do: Money.format(cents, currency, locale: locale)
 
   def format_amount(_cents, _currency, _locale), do: ""
 end

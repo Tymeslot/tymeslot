@@ -166,7 +166,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
       email = render_paid_organizer_email(%{organizer_locale: "de"})
 
       assert email.text_body =~
-               "Sie haben erhalten: €49.75 (vor Abzug der Stripe-Bearbeitungsgebühren)"
+               "Sie haben erhalten: 49,75\u00A0€ (vor Abzug der Stripe-Bearbeitungsgebühren)"
 
       assert email.html_body =~ "(vor Abzug der Stripe-Bearbeitungsgebühren)"
       refute email.text_body =~ "abzüglich"
