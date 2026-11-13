@@ -1,0 +1,39 @@
+defmodule Tymeslot.BookingSeries do
+  @moduledoc """
+  Booking a series: several sessions of one meeting type in a single flow,
+  each becoming an ordinary booking.
+
+  `preview/3` answers, before anything is written, which of the sessions a
+  booker asks for can be booked (`Tymeslot.BookingSeries.Check`). The series
+  is all-or-nothing: it is booked only when every occurrence is available.
+  """
+
+  alias Tymeslot.BookingSeries.{Check, Occurrence, Plan}
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
+
+  @doc """
+  Plans the series and judges each occurrence.
+
+  Given a `DateTime`, the series is recurring from that first start and
+  `opts[:count]` sets how many sessions it has; given a list of starts, it is
+  the flexible series of those sessions.
+
+  Options: `:count` (recurring only), `:booker_tz` and `:duration_minutes`
+  (see `Plan.recurring/4`), and `:now`, `:booker_email` and `:guests` (see
+  `Check.check/2`).
+  """
+  @spec preview(MeetingTypeSchema.t(), DateTime.t() | [DateTime.t()], keyword()) ::
+          {:ok, [Occurrence.t()]}
+          | {:error, :invalid_count | :duplicate_start | :availability_unverifiable}
+  def preview(meeting_type, first_or_starts, opts \\ []) do
+    with {:ok, plan} <- plan(meeting_type, first_or_starts, opts) do
+      Check.check(plan, opts)
+    end
+  end
+
+  defp plan(meeting_type, %DateTime{} = first_start, opts),
+    do: Plan.recurring(meeting_type, first_start, Keyword.get(opts, :count), opts)
+
+  defp plan(meeting_type, starts, opts) when is_list(starts),
+    do: Plan.flexible(meeting_type, starts, opts)
+end

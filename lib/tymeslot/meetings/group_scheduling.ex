@@ -137,11 +137,33 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   @spec join_target(integer() | nil, DateTime.t(), pos_integer()) :: Meeting.t() | nil
   def join_target(meeting_type_id, %DateTime{} = start_time, seats_requested)
       when is_integer(seats_requested) do
+    case session_at(meeting_type_id, start_time, seats_requested) do
+      {:join, meeting} -> meeting
+      _full_or_none -> nil
+    end
+  end
+
+  @doc """
+  What a booking of `seats_requested` seats at `(meeting_type_id, start_time)`
+  would meet: `{:join, meeting}` for a live group meeting it would join,
+  `{:full, meeting}` for a live meeting it would be refused by as full, and
+  `:none` when it would create a new slot.
+
+  The same unlocked read and joinability rule as `join_target/3`, for a
+  caller that has to tell a full slot from an empty one.
+  """
+  @spec session_at(integer() | nil, DateTime.t(), pos_integer()) ::
+          {:join, Meeting.t()} | {:full, Meeting.t()} | :none
+  def session_at(meeting_type_id, %DateTime{} = start_time, seats_requested)
+      when is_integer(seats_requested) do
     start_utc = start_time |> DateTime.shift_zone!("Etc/UTC") |> DateTime.truncate(:second)
 
     case GroupMeetingQueries.get_live_at(meeting_type_id, start_utc) do
-      %Meeting{} = meeting -> if joinable?(meeting, seats_requested), do: meeting
-      nil -> nil
+      %Meeting{} = meeting ->
+        if joinable?(meeting, seats_requested), do: {:join, meeting}, else: {:full, meeting}
+
+      nil ->
+        :none
     end
   end
 

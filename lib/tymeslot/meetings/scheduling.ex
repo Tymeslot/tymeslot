@@ -271,6 +271,39 @@ defmodule Tymeslot.Meetings.Scheduling do
 
   def reinstate_with_conflict_check(%Meeting{}, _write_fn), do: {:error, :organizer_required}
 
+  @doc """
+  The starts among `slots` that clash with one of the organiser's live
+  meetings, weighed exactly as the conflict-checked writes weigh a booking of
+  `meeting_type_id`: its own buffers, and each existing meeting's.
+
+  An unlocked read for pre-checks, such as the sessions of a series, that
+  answers every slot from one read of the meetings around them. It promises
+  nothing a write may rely on: each write counts again under the schedule
+  lock.
+  """
+  @spec clashing_starts(pos_integer(), integer() | nil, [
+          %{start_time: DateTime.t(), end_time: DateTime.t()}
+        ]) :: MapSet.t(DateTime.t())
+  def clashing_starts(_organizer_user_id, _meeting_type_id, []), do: MapSet.new()
+
+  def clashing_starts(organizer_user_id, meeting_type_id, slots)
+      when is_integer(organizer_user_id) do
+    buffers = buffers(organizer_user_id, meeting_type_id)
+
+    earliest = Enum.min_by(slots, & &1.start_time, DateTime)
+    latest = Enum.max_by(slots, & &1.end_time, DateTime)
+    {from, to} = reach(earliest.start_time, latest.end_time)
+
+    busy =
+      organizer_user_id
+      |> MeetingConflictQueries.list_live_in_window(from, to, nil)
+      |> BusyPeriods.buffered(organizer_user_id)
+
+    for slot <- slots, conflict_count(slot, busy, buffers) > 0, into: MapSet.new() do
+      slot.start_time
+    end
+  end
+
   # Private functions
 
   # The schedule lock comes first, before the limit counts, the conflict
@@ -302,18 +335,22 @@ defmodule Tymeslot.Meetings.Scheduling do
   # booking page weighed it). Either reaches at most the longest buffer, so
   # that is as far as the read looks.
   defp count_conflicts(slot, buffers) do
-    {from, to} =
-      TimeRange.add_buffer(
-        slot.start_time,
-        slot.end_time,
-        @max_buffer_minutes,
-        @max_buffer_minutes
-      )
+    {from, to} = reach(slot.start_time, slot.end_time)
 
-    slot.organizer_user_id
-    |> MeetingConflictQueries.list_live_in_window(from, to, slot.exclude_uid)
-    |> busy_periods(slot)
-    |> Enum.count(
+    busy =
+      slot.organizer_user_id
+      |> MeetingConflictQueries.list_live_in_window(from, to, slot.exclude_uid)
+      |> busy_periods(slot)
+
+    conflict_count(slot, busy, buffers)
+  end
+
+  defp reach(start_time, end_time),
+    do: TimeRange.add_buffer(start_time, end_time, @max_buffer_minutes, @max_buffer_minutes)
+
+  defp conflict_count(slot, busy, buffers) do
+    Enum.count(
+      busy,
       &TimeRange.has_conflict_with_events?(slot.start_time, slot.end_time, [&1], buffers)
     )
   end
