@@ -906,3 +906,13 @@ msgstr "¿Quieres cancelar «%{title}», programada para el %{when}? Se avisará
 #, elixir-autogen, elixir-format
 msgid "Managed by you"
 msgstr "Gestionada por ti"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "In person"
+msgstr "En persona"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Llamada telefónica"

@@ -54,9 +54,30 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocation do
   # pending.
   def type(%Meeting{video_integration_id: id}) when is_integer(id), do: :video
   # Meetings booked before `location_kind` existed. Their location strings
-  # were written by this application, never by a host, so matching the two
+  # were written by this application, never by a host, so matching the
   # literals it used is sound for exactly those rows and nothing else.
-  def type(%Meeting{location: "Phone Call"}), do: :phone
-  def type(%Meeting{location: "In Person"}), do: :in_person
+  def type(%Meeting{location: location}) do
+    case legacy_placeholder(location) do
+      kind when kind in [:phone, :in_person] -> kind
+      _other -> :custom
+    end
+  end
+
   def type(_meeting), do: :custom
+
+  @doc """
+  What a location string stood for when an older release wrote an English
+  placeholder in place of a place: `:to_be_determined` for "To be
+  determined", or the kind a bare "In Person" or "Phone Call" named. nil for
+  any other string, a real place included.
+
+  Only meetings booked before `location_kind` existed carry these, so a
+  caller reads it for a meeting whose `location_kind` is nil; a host can
+  write the same words as a custom location since.
+  """
+  @spec legacy_placeholder(String.t() | nil) :: :to_be_determined | :in_person | :phone | nil
+  def legacy_placeholder("To be determined"), do: :to_be_determined
+  def legacy_placeholder("In Person"), do: :in_person
+  def legacy_placeholder("Phone Call"), do: :phone
+  def legacy_placeholder(_location), do: nil
 end

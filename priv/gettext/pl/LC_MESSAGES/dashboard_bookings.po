@@ -912,3 +912,13 @@ msgstr "Na pewno chcesz odwołać „%{title}” zaplanowane na %{when}? Wszyscy
 #, elixir-autogen, elixir-format
 msgid "Managed by you"
 msgstr "Zarządzasz ty"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "In person"
+msgstr "Spotkanie osobiste"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Rozmowa telefoniczna"

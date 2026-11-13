@@ -72,6 +72,48 @@ defmodule TymeslotWeb.Dashboard.MeetingCardLiveTest do
              |> Floki.find(~s([data-testid="meeting-location"]))
   end
 
+  # Meetings booked before `location_kind` existed carry English placeholders
+  # older releases wrote, or the video link, in their location.
+  test "shows a legacy meeting's placeholder location translated, or not at all", %{conn: conn} do
+    host = insert(:user, onboarding_completed_at: DateTime.utc_now(), locale: "de")
+    insert(:profile, user: host, timezone: "Etc/UTC")
+    conn = conn |> Test.init_test_session(%{}) |> fetch_session() |> log_in_user(host)
+
+    for {location, days, extra} <- [
+          {"In Person", 1, []},
+          {"Phone Call", 2, []},
+          {"To be determined", 3, []},
+          {"https://meet.example.com/abc", 4, [meeting_url: "https://meet.example.com/abc"]}
+        ] do
+      start = DateTime.add(DateTime.utc_now(), days, :day)
+
+      insert(
+        :meeting,
+        [
+          organizer_user: host,
+          organizer_email: host.email,
+          location: location,
+          location_kind: nil,
+          start_time: start,
+          end_time: DateTime.add(start, 30, :minute)
+        ] ++ extra
+      )
+    end
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+    tiles =
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.find(~s([data-testid="meeting-location"]))
+      |> Enum.map(&(&1 |> Floki.text() |> String.replace(~r/\s+/, " ") |> String.trim()))
+
+    assert length(tiles) == 2
+    assert Enum.any?(tiles, &String.ends_with?(&1, "Vor Ort"))
+    assert Enum.any?(tiles, &String.ends_with?(&1, "Telefonanruf"))
+  end
+
   test "keeps each end of the booking's time range on one line", %{conn: conn, user: user} do
     start = DateTime.new!(Date.add(Date.utc_today(), 3), ~T[11:00:00], "Etc/UTC")
 
