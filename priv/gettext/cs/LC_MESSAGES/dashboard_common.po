@@ -428,3 +428,13 @@ msgstr "Jazyky"
 #, elixir-autogen, elixir-format
 msgid "Times shown in %{timezone}"
 msgstr "Časy jsou uvedeny v časovém pásmu %{timezone}"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Collapse menu"
+msgstr "Sbalit menu"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Expand menu"
+msgstr "Rozbalit menu"

@@ -427,3 +427,13 @@ msgstr "Lingue"
 #, elixir-autogen, elixir-format
 msgid "Times shown in %{timezone}"
 msgstr "Orari mostrati in %{timezone}"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Collapse menu"
+msgstr "Comprimi menu"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Expand menu"
+msgstr "Espandi menu"

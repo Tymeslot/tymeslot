@@ -202,3 +202,13 @@ msgstr "Tymeslot ora parla spagnolo"
 #, elixir-autogen, elixir-format
 msgid "Your dashboard, booking pages and every email are now available in Spanish. Tymeslot follows your browser's language, or you can choose one yourself in Account Settings. People who book you see booking pages and confirmations in their own language too."
 msgstr "La tua dashboard, le pagine di prenotazione e tutte le email sono ora disponibili in spagnolo. Tymeslot segue la lingua del tuo browser, oppure puoi sceglierne una tu nelle Impostazioni dell'account. Anche chi prenota con te vede le pagine di prenotazione e le conferme nella propria lingua."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Your dashboard calendar, redesigned"
+msgstr "Il calendario della dashboard, ridisegnato"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a meeting type and press B to see the times your booking page offers, hatched across your calendar. Press Ctrl K (Cmd K on a Mac) to search and run commands, and 1 to 9 to switch calendar sets. On the calendar page the menu folds into a narrow column of icons, and on a wide screen focus mode hides it altogether so the calendar gets the whole page."
+msgstr "Scegli un tipo di riunione e premi B per vedere, tratteggiati nel calendario, gli orari offerti dalla tua pagina di prenotazione. Premi Ctrl K (Cmd K su Mac) per cercare ed eseguire comandi e da 1 a 9 per cambiare gruppo di calendari. Nella pagina del calendario il menu si riduce a una stretta colonna di icone e, su schermo largo, la modalità focus lo nasconde del tutto e lascia al calendario tutta la pagina."

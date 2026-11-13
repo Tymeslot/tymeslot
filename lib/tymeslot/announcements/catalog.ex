@@ -41,11 +41,15 @@ defmodule Tymeslot.Announcements.Catalog do
   @spanish_published_at ~U[2026-11-02 00:00:00Z]
   @spanish_expires_at ~U[2026-12-02 00:00:00Z]
 
+  @calendar_redesign_published_at ~U[2026-11-13 00:00:00Z]
+  @calendar_redesign_expires_at ~U[2026-12-13 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
     # entry's translatable copy readable in isolation.
     [
+      calendar_redesign(),
       spanish(),
       new_themes(),
       meeting_polls(),
@@ -54,6 +58,27 @@ defmodule Tymeslot.Announcements.Catalog do
       video_providers(),
       time_off()
     ]
+  end
+
+  defp calendar_redesign do
+    %Announcement{
+      key: "calendar_redesign",
+      title: dgettext("onboarding", "Your dashboard calendar, redesigned"),
+      body:
+        dgettext(
+          "onboarding",
+          "Choose a meeting type and press B to see the times your booking page offers, " <>
+            "hatched across your calendar. Press Ctrl K (Cmd K on a Mac) to search and run " <>
+            "commands, and 1 to 9 to switch calendar sets. On the calendar page the menu folds " <>
+            "into a narrow column of icons, and on a wide screen focus mode hides it altogether " <>
+            "so the calendar gets the whole page."
+        ),
+      image_path: "/images/announcements/calendar-redesign.svg",
+      cta_label: dgettext("onboarding", "Read the docs"),
+      cta_docs_slug: "dashboard-calendar",
+      published_at: @calendar_redesign_published_at,
+      expires_at: @calendar_redesign_expires_at
+    }
   end
 
   defp spanish do

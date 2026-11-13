@@ -428,3 +428,13 @@ msgstr "Мови"
 #, elixir-autogen, elixir-format
 msgid "Times shown in %{timezone}"
 msgstr "Час показано в %{timezone}"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Collapse menu"
+msgstr "Згорнути меню"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Expand menu"
+msgstr "Розгорнути меню"
