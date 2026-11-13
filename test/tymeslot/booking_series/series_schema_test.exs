@@ -2,6 +2,7 @@ defmodule Tymeslot.BookingSeries.SeriesSchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :bookings
+  @moduletag :payments
 
   import Ecto.Changeset, only: [change: 2, check_constraint: 3]
 
@@ -44,6 +45,64 @@ defmodule Tymeslot.BookingSeries.SeriesSchemaTest do
 
     assert {:error, changeset} = SeriesQueries.insert(attrs(%{interval: 5}))
     assert changeset.errors[:frequency]
+  end
+
+  test "a recurring series needs an interval" do
+    assert {:error, changeset} = SeriesQueries.insert(attrs(%{interval: nil}))
+    assert changeset.errors[:frequency]
+
+    assert {:error, changeset} = insert_raw(%{interval: nil})
+    assert changeset.errors[:frequency]
+  end
+
+  describe "meeting type series settings" do
+    defp set_type_series!(type, sets) do
+      {sql, params} =
+        sets
+        |> Enum.with_index(2)
+        |> Enum.map_reduce([], fn {{col, val}, i}, acc -> {"#{col} = $#{i}", acc ++ [val]} end)
+
+      Repo.query!("UPDATE meeting_types SET #{Enum.join(sql, ", ")} WHERE id = $1", [
+        type.id | params
+      ])
+    end
+
+    test "a recurring type needs a frequency" do
+      type = insert(:meeting_type)
+
+      assert_raise Postgrex.Error, ~r/meeting_types_series_check/, fn ->
+        set_type_series!(type,
+          series_mode: "recurring",
+          series_min_occurrences: 2,
+          series_max_occurrences: 6
+        )
+      end
+
+      set_type_series!(type,
+        series_mode: "recurring",
+        series_frequency: "weekly",
+        series_min_occurrences: 2,
+        series_max_occurrences: 6
+      )
+    end
+
+    test "the minimum may not exceed the maximum" do
+      type = insert(:meeting_type)
+
+      assert_raise Postgrex.Error, ~r/meeting_types_series_check/, fn ->
+        set_type_series!(type,
+          series_mode: "flexible",
+          series_min_occurrences: 6,
+          series_max_occurrences: 3
+        )
+      end
+
+      set_type_series!(type,
+        series_mode: "flexible",
+        series_min_occurrences: 3,
+        series_max_occurrences: 6
+      )
+    end
   end
 
   test "a flexible series needs no rule" do

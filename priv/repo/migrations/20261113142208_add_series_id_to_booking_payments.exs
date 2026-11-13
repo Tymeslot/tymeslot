@@ -8,7 +8,10 @@ defmodule Tymeslot.Repo.Migrations.AddSeriesIdToBookingPayments do
   one payment per series; the existing `meeting_id` unique index is
   untouched. `booking_payments_single_owner_check` forbids a row owned by both
   a meeting and a series. Every existing row has a NULL `series_id`, so the
-  check holds without a backfill; it is added `NOT VALID` and then validated.
+  check holds without a backfill; it is added `NOT VALID` and then validated, a pattern kept
+  for its habit: the migration runs in one DDL transaction, so the lock is held
+  throughout, but `booking_payments` is small and the new column is empty, so
+  the scan is trivial.
   """
 
   use Ecto.Migration
@@ -19,9 +22,8 @@ defmodule Tymeslot.Repo.Migrations.AddSeriesIdToBookingPayments do
   # excellent_migrations:safety-assured-for-this-file raw_sql_executed
   #
   # The reference column is new and empty, so its foreign key validates no
-  # row, and the index covers only that empty column. Migrations run offline
-  # (`start.sh` runs them before Phoenix starts), so the brief locks block no
-  # live traffic. The raw statement is the VALIDATE step after the NOT VALID
+  # row. `booking_payments` is small, so a plain (non-concurrent) index is
+  # acceptable. The raw statement is the VALIDATE step after the NOT VALID
   # constraint.
 
   def up do

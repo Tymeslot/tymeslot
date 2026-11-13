@@ -5,9 +5,10 @@ defmodule Tymeslot.Repo.Migrations.AddSeriesSettingsToMeetingTypes do
 
   Existing rows get `series_mode` NULL (not a series type), `series_interval`
   1 and `series_required` true, so the check holds for them without a
-  backfill. It is added `NOT VALID` and then validated, so the validation
-  scan does not hold the exclusive lock a plain `ADD CONSTRAINT` would. The
-  tests are wrapped in `COALESCE(..., false)` because a CHECK passes on NULL,
+  backfill. It is added `NOT VALID` and then validated, a
+  pattern kept for its habit rather than its lock behaviour: the migration
+  runs in one DDL transaction, so the lock is held throughout. `meeting_types`
+  is small and the new columns are empty, so the scan is trivial. The tests are wrapped in `COALESCE(..., false)` because a CHECK passes on NULL,
   which would let a series type with no limits or no frequency through.
   """
 
