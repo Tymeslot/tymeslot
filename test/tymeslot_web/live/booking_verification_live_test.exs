@@ -117,6 +117,10 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
       {:ok, view, _html} = live(conn, path(meeting))
 
       assert render(view) =~ "This booking has expired"
+      # The hold may have been shorter than 30 minutes, or ended for another
+      # reason, so the card promises no length.
+      assert render(view) =~ "This booking is no longer available, so the time was released."
+      refute render(view) =~ "30 minutes"
       assert has_element?(view, "[data-testid='rebook-link'][href='/verify-host/intro']")
       refute has_element?(view, "[data-testid='confirm-booking']")
     end

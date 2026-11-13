@@ -176,7 +176,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   defp outcome_body(:expired, _meeting) do
     dgettext(
       "booking_manage",
-      "It was not confirmed within 30 minutes, so the time was released."
+      "This booking is no longer available, so the time was released."
     )
   end
 

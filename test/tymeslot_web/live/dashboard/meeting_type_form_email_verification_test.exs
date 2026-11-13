@@ -55,6 +55,14 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormEmailVerificationTest do
     assert saved(meeting_type).requires_email_verification == true
   end
 
+  # The hold is capped at the meeting's start, so the hint promises no more
+  # than its longest.
+  test "the hint says the time is held for up to 30 minutes", %{conn: conn, user: user} do
+    view = open_form(conn, insert(:meeting_type, user: user))
+
+    assert render(view) =~ "Until then the time is held for up to 30 minutes"
+  end
+
   test "the toggle is disabled while payments are required", %{conn: conn, user: user} do
     meeting_type = insert(:meeting_type, user: user, payment_required: true, price_cents: 2500)
     view = open_form(conn, meeting_type)

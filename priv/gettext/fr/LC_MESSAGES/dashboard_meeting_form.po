@@ -911,11 +911,6 @@ msgstr "Demander aux invités de confirmer leur adresse e-mail"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
-msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for 30 minutes, and you are not notified."
-msgstr "La réservation n’est prise en compte qu’une fois que l’invité a cliqué sur le lien que nous lui envoyons par e-mail. D’ici là, le créneau est réservé pendant 30 minutes et vous ne recevez aucune notification."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
-#, elixir-autogen, elixir-format
 msgid "Email confirmation"
 msgstr "Confirmation de l’adresse e-mail"
 
@@ -938,3 +933,8 @@ msgstr "Désactivez les réservations de groupe pour demander aux invités de co
 #, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
 msgstr "Désactivez les paiements pour demander aux invités de confirmer leur adresse e-mail. Le paiement confirme déjà leur identité."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to 30 minutes, and you are not notified."
+msgstr ""

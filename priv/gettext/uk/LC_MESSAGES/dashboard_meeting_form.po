@@ -916,11 +916,6 @@ msgstr "Просити запрошених підтвердити електр�
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
-msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for 30 minutes, and you are not notified."
-msgstr "Бронювання зараховується лише після того, як запрошений перейде за посиланням, яке ми надішлемо йому листом. Доти слот утримується 30 хвилин, а сповіщення вам не надходить."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
-#, elixir-autogen, elixir-format
 msgid "Email confirmation"
 msgstr "Підтвердження електронної пошти"
 
@@ -943,3 +938,8 @@ msgstr "Вимкніть групові бронювання, щоб проси�
 #, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
 msgstr "Вимкніть оплату, щоб просити запрошених підтвердити електронну пошту. Оплата вже підтверджує, хто вони."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to 30 minutes, and you are not notified."
+msgstr ""

@@ -916,11 +916,6 @@ msgstr "Žádat pozvané o potvrzení e-mailu"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
-msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for 30 minutes, and you are not notified."
-msgstr "Rezervace platí, teprve až pozvaná osoba klikne na odkaz, který jí pošleme e-mailem. Do té doby je termín 30 minut rezervován a vám nepřijde žádné oznámení."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
-#, elixir-autogen, elixir-format
 msgid "Email confirmation"
 msgstr "Potvrzení e-mailu"
 
@@ -943,3 +938,8 @@ msgstr "Vypněte skupinové rezervace, chcete-li žádat pozvané o potvrzení e
 #, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
 msgstr "Vypněte platby, chcete-li žádat pozvané o potvrzení e-mailu. Platba už sama potvrzuje, kdo jsou."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to 30 minutes, and you are not notified."
+msgstr ""

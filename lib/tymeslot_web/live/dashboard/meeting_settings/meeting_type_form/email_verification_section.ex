@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.EmailVerificatio
         description={
           dgettext(
             "dashboard_meeting_form",
-            "Bookings count only once the invitee clicks the link we email them. Until then the time is held for 30 minutes, and you are not notified."
+            "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to 30 minutes, and you are not notified."
           )
         }
         checked={@requires_email_verification}

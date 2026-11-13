@@ -913,11 +913,6 @@ msgstr "Proś zaproszonych o potwierdzenie adresu e-mail"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
-msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for 30 minutes, and you are not notified."
-msgstr "Rezerwacja liczy się dopiero wtedy, gdy zaproszona osoba kliknie link, który wyślemy jej e-mailem. Do tego czasu termin jest zablokowany przez 30 minut, a ty nie dostajesz powiadomienia."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
-#, elixir-autogen, elixir-format
 msgid "Email confirmation"
 msgstr "Potwierdzenie adresu e-mail"
 
@@ -940,3 +935,8 @@ msgstr "Wyłącz rezerwacje grupowe, aby prosić zaproszonych o potwierdzenie ad
 #, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
 msgstr "Wyłącz płatności, aby prosić zaproszonych o potwierdzenie adresu e-mail. Płatność i tak potwierdza, kim są."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to 30 minutes, and you are not notified."
+msgstr ""

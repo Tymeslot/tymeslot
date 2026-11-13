@@ -686,11 +686,6 @@ msgstr "Möglicherweise ist er unvollständig oder veraltet."
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
-msgid "It was not confirmed within 30 minutes, so the time was released."
-msgstr "Sie wurde nicht innerhalb von 30 Minuten bestätigt, daher wurde die Zeit freigegeben."
-
-#: lib/tymeslot_web/live/booking_verification_live/view.ex
-#, elixir-autogen, elixir-format
 msgid "The booking was cancelled and the time released."
 msgstr "Die Buchung wurde storniert und die Zeit freigegeben."
 
@@ -748,3 +743,8 @@ msgstr "Ihr Link wird geprüft…"
 #, elixir-autogen, elixir-format
 msgid "This only takes a moment."
 msgstr "Das dauert nur einen Moment."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer available, so the time was released."
+msgstr ""
