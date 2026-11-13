@@ -340,6 +340,21 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
                "Attendee: Alice <alice@example.com>\n\nQuarterly review"
     end
 
+    # A meeting the host manages names its first guest by their address.
+    test "names an attendee whose name is only their address once" do
+      meeting = %{
+        @base_meeting
+        | attendee_name: "guest@example.com",
+          attendee_email: "guest@example.com"
+      }
+
+      assert CalendarEventBuilder.build_event_description(meeting) ==
+               "Attendee: guest@example.com\n\nQuarterly review"
+
+      assert %{attendee_name: nil, attendee_email: "guest@example.com"} =
+               CalendarEventBuilder.build_event_data(meeting)
+    end
+
     test "appends attendee message with section header when present" do
       meeting = %{@base_meeting | attendee_message: "Please bring slides.", meeting_url: nil}
 

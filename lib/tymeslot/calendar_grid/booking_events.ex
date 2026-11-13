@@ -55,7 +55,7 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
       start_at: meeting.start_time,
       end_at: meeting.end_time,
       attendee_name: attendee_name(meeting),
-      attendee_email: presence(meeting.attendee_email),
+      attendee_email: attendee_email(meeting),
       join_url: Meetings.organizer_join_url(meeting),
       provider_event_id: meeting.provider_event_id,
       participants: participants(meeting),
@@ -67,12 +67,16 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
     }
   end
 
-  # The person the grid names under a booking. A meeting the host manages
-  # (`HostManaged.managed?/1`) has no such person: the one in its attendee
-  # fields is only the first of its guests, so naming them would read as if
-  # they had booked it.
+  # The person the grid names under a booking, and their address. A meeting
+  # the host manages (`HostManaged.managed?/1`) has no such person: the one
+  # in its attendee fields is only the first of its guests, so naming them
+  # would read as if they had booked it.
   defp attendee_name(meeting) do
     if HostManaged.managed?(meeting), do: nil, else: presence(meeting.attendee_name)
+  end
+
+  defp attendee_email(meeting) do
+    if HostManaged.managed?(meeting), do: nil, else: presence(meeting.attendee_email)
   end
 
   # Counted like the meetings list and the booking page count them: a

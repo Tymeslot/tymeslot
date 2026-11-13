@@ -9,6 +9,8 @@ defmodule Tymeslot.Polls.PollLocationTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
+  alias Ecto.UUID
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{Confirm, PollLocation, PollSchema}
   alias Tymeslot.TestMocks
@@ -34,6 +36,13 @@ defmodule Tymeslot.Polls.PollLocationTest do
         slots: [%{start_time: start}]
       },
       extra
+    )
+  end
+
+  defp location(kind, label, details, attrs \\ []) do
+    struct!(
+      %LocationOption{id: UUID.generate(), kind: kind, label: label, details: details},
+      attrs
     )
   end
 
@@ -162,6 +171,27 @@ defmodule Tymeslot.Polls.PollLocationTest do
       assert %{kind: :video} = Polls.location(poll)
     end
 
+    test "is none for a phone location asking the booker for their number", %{user: user} do
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          locations: [location(:phone, "Phone call", nil, collect_from_guest: true)]
+        )
+
+      assert Polls.location(insert(:poll, user: user, meeting_type_id: meeting_type.id)) == nil
+    end
+
+    test "is a phone location's number when the host gives one", %{user: user} do
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          locations: [location(:phone, "Call me", "+44 20 7946 0000")]
+        )
+
+      assert %{kind: :phone, place: "Call me (+44 20 7946 0000)"} =
+               Polls.location(insert(:poll, user: user, meeting_type_id: meeting_type.id))
+    end
+
     test "is none without a location or a meeting type", %{user: user} do
       assert Polls.location(insert(:poll, user: user)) == nil
     end
@@ -243,6 +273,51 @@ defmodule Tymeslot.Polls.PollLocationTest do
 
       assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
       assert meeting.video_integration_id == video.id
+    end
+
+    test "takes the meeting type's custom place whole, past the length a host may type",
+         %{user: user, poll: poll, slot: slot} do
+      label = String.duplicate("L", 120)
+      details = String.duplicate("d", 500)
+
+      meeting_type =
+        insert(:meeting_type, user: user, locations: [location(:custom, label, details)])
+
+      located(poll, meeting_type_id: meeting_type.id)
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.location == "#{label} (#{details})"
+      assert meeting.location_kind == :custom
+    end
+
+    test "keeps a meeting type's phone location a phone call",
+         %{user: user, poll: poll, slot: slot} do
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          locations: [location(:phone, "Call", "+44 20 7946 0000")]
+        )
+
+      located(poll, meeting_type_id: meeting_type.id)
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.location == "Call (+44 20 7946 0000)"
+      assert meeting.location_kind == :phone
+    end
+
+    test "holds no location for a phone location asking the booker for their number",
+         %{user: user, poll: poll, slot: slot} do
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          locations: [location(:phone, "Phone call", nil, collect_from_guest: true)]
+        )
+
+      located(poll, meeting_type_id: meeting_type.id)
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting.location == nil
+      assert meeting.location_kind == nil
     end
 
     test "the poll's own location wins over the meeting type's",

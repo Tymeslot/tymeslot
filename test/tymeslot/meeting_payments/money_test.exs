@@ -114,9 +114,12 @@ defmodule Tymeslot.MeetingPayments.MoneyTest do
       {123_450, "eur", "de", [], "1.234,50#{@nbsp}€"},
       {-123_450, "eur", "fr", [], "-1#{@nbsp}234,50#{@nbsp}€"},
       {1000, "chf", "cs", [], "10,00#{@nbsp}CHF"},
-      {1500, "usd", "es", [], "15,00#{@nbsp}$"},
+      {1500, "usd", "es", [], "15,00#{@nbsp}US$"},
+      {1500, "usd", "pl", [], "15,00#{@nbsp}USD"},
       {123_450, "eur", "pt", [], "€#{@nbsp}1.234,50"},
       {1000, "chf", "pt", [], "CHF#{@nbsp}10,00"},
+      {1000, "usd", "pt", [trim_zero_minor: true], "US$#{@nbsp}10"},
+      {1000, "usd", "de", [], "10,00#{@nbsp}$"},
       {1050, "eur", "xx", [], "€10.50"}
     ]
 
@@ -134,6 +137,21 @@ defmodule Tymeslot.MeetingPayments.MoneyTest do
 
       Gettext.with_locale(TymeslotWeb.Gettext, "en", fn ->
         assert Money.format(900, "eur", trim_zero_minor: true) == "€9"
+      end)
+    end
+  end
+
+  describe "symbol/2" do
+    test "writes the US dollar as US$ in Portuguese and as $ elsewhere" do
+      assert Money.symbol("usd", locale: "pt") == "US$"
+      assert Money.symbol("USD", locale: "pt") == "US$"
+      assert Money.symbol("usd", locale: "en") == "$"
+      assert Money.symbol("eur", locale: "pt") == "€"
+    end
+
+    test "defaults to the current Gettext locale" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "pt", fn ->
+        assert Money.symbol("usd") == "US$"
       end)
     end
   end

@@ -14,8 +14,9 @@ defmodule CredoChecks.GettextDomainBoundary do
   ## Known domains
 
   Catalogues are split small and per app area, so that a change to one area means
-  reading one small `.po`. The `:domains` param below is the enforced list, and
-  the `tymeslot-translations` skill describes what belongs in each domain.
+  reading one small `.po`. The `:domains` param below is the enforced list and
+  the one source of truth for it; a string belongs in the domain the code
+  around it already uses.
   `CredoChecks.GettextDomainBoundaryTest` fails if this list and the `.pot`
   templates in `priv/gettext` disagree, so adding a domain means extracting it
   and listing it here in the same change.

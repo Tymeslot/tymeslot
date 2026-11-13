@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Emails.RecipientLocale
+  alias Tymeslot.Meetings.AttendeeName
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Reminders
@@ -71,7 +72,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       attachments: build_attachments(meeting),
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
-      attendee_name: meeting.attendee_name,
+      # No name where it would only repeat the address (a meeting the host
+      # manages names its first guest by their address), so the attendee
+      # shows once, under the address.
+      attendee_name: AttendeeName.display_name(meeting),
       attendee_email: meeting.attendee_email,
       reminders: build_reminders(meeting)
     })
@@ -243,9 +247,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   defp attendee_identity_line(%{attendee_email: email} = meeting, _attendees)
        when is_binary(email) and email != "" do
     identity =
-      case Map.get(meeting, :attendee_name) do
-        name when is_binary(name) and name != "" -> "#{name} <#{email}>"
-        _missing -> email
+      case AttendeeName.display_name(meeting) do
+        nil -> email
+        name -> "#{name} <#{email}>"
       end
 
     dgettext("emails", "Attendee: %{attendee}", attendee: identity) <> "\n\n"

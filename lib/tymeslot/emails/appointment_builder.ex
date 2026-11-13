@@ -547,7 +547,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     cond do
       place = BookingRequestLocation.place(meeting) -> place
       meeting.meeting_url -> "Video Call"
-      meeting.location in [nil, "", "To be determined"] -> nil
+      meeting.location in [nil, ""] -> nil
+      BookingRequestLocation.legacy_placeholder(meeting.location) == :to_be_determined -> nil
       true -> meeting.location
     end
   end

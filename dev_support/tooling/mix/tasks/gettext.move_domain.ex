@@ -24,8 +24,7 @@ defmodule Mix.Tasks.Gettext.MoveDomain do
        under `lib/`: a domain stored in a map or attribute and looked up later,
        which must be checked by hand.
 
-  It does not touch the Credo domain allowlists or the translation skill's
-  domain table; the closing report says so.
+  It does not touch the Credo domain allowlists; the closing report says so.
   """
 
   use Mix.Task
@@ -109,10 +108,7 @@ defmodule Mix.Tasks.Gettext.MoveDomain do
       Enum.each(references, &shell.info/1)
     end
 
-    shell.info(
-      "Next: add #{inspect(to)} to both Credo domain allowlists if it is new, " <>
-        "and update the domain table in the tymeslot-translations skill."
-    )
+    shell.info("Next: add #{inspect(to)} to both Credo domain allowlists if it is new.")
   end
 
   defp count(priv, domain) do

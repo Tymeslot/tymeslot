@@ -468,12 +468,20 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     )
   end
 
+  # Entries the domain validator used to accept and no longer does. One
+  # already saved is dropped when the host next changes the list, rather than
+  # failing a list they did not type it into; typed afresh it is still refused.
+  # `::1` never worked: a CSP host source cannot express an IPv6 literal.
+  @retired_embed_domains ["::1"]
+
   defp validate_embed_domains(changeset) do
     case get_change(changeset, :allowed_embed_domains) do
       nil ->
         changeset
 
       domains when is_list(domains) ->
+        stored = changeset.data.allowed_embed_domains || []
+        domains = Enum.reject(domains, &(&1 in @retired_embed_domains and &1 in stored))
         max_domains = 20
 
         if length(domains) > max_domains do
