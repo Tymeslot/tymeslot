@@ -126,6 +126,28 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormPaymentsTest do
     end
   end
 
+  describe "Email verification" do
+    setup %{user: user} do
+      Application.put_env(:tymeslot, :meeting_payments_enabled, true)
+      insert(:connect_account, user: user, charges_enabled: true, default_currency: "usd")
+      :ok
+    end
+
+    test "payments are disabled while email verification is on", %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user, requires_email_verification: true)
+      view = open_editor(conn, meeting_type)
+
+      assert has_element?(view, "input[phx-click='toggle_payment_required'][disabled]")
+      assert render(view) =~ "Turn off email verification to require payment."
+
+      view
+      |> with_target("#meeting-type-form-wrapper-meeting-type-form-edit-#{meeting_type.id}")
+      |> render_click("toggle_payment_required", %{})
+
+      refute MeetingTypes.get_meeting_type(meeting_type.id, user.id).payment_required
+    end
+  end
+
   describe "Turning payment on before entering a price" do
     setup %{user: user} do
       Application.put_env(:tymeslot, :meeting_payments_enabled, true)

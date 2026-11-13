@@ -102,6 +102,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        allow_guests: false,
        guest_limit: nil,
        requires_approval: false,
+       requires_email_verification: false,
        approval_window_hours: nil,
        show_as_free: false,
        group_bookings_enabled: false,
@@ -282,7 +283,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     # if a stale/forged event arrives — the control renders disabled. The
     # same applies while group bookings is enabled (mutual exclusion).
     if socket.assigns.payments_charges_enabled and
-         not socket.assigns.group_bookings_enabled do
+         not socket.assigns.group_bookings_enabled and
+         (socket.assigns.payment_required or not socket.assigns.requires_email_verification) do
       {:noreply,
        socket
        |> assign(:payment_required, !socket.assigns.payment_required)
@@ -305,6 +307,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        socket
        |> assign(:requires_approval, !socket.assigns.requires_approval)
        |> Validation.clear_error(:max_participants)
+       |> Autosave.maybe_run()}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_requires_email_verification", _params, socket) do
+    # Guard: verification excludes group bookings and payments. The control
+    # renders disabled while either is on, so a stale or forged event must
+    # not turn it on; turning it off is always allowed.
+    %{requires_email_verification: on?} = socket.assigns
+
+    if not on? and (socket.assigns.group_bookings_enabled or socket.assigns.payment_required) do
+      {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> assign(:requires_email_verification, not on?)
+       |> Validation.clear_error(:requires_email_verification)
        |> Autosave.maybe_run()}
     end
   end

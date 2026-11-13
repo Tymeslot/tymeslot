@@ -905,3 +905,38 @@ msgstr "Linki z zaproszeniem działają tylko dla indywidualnych typów spotkań
 #, elixir-autogen, elixir-format
 msgid "Only people with an invitation link can book"
 msgstr "Rezerwować mogą tylko osoby z linkiem z zaproszeniem"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Ask invitees to confirm their email"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for 30 minutes, and you are not notified."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Email confirmation"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off email verification to enable group bookings."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off email verification to require payment."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off group bookings to ask invitees to confirm their email."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
+msgstr ""
