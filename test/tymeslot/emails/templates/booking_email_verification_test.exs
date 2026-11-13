@@ -56,9 +56,11 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerificationTest do
   test "the email is in the attendee's language" do
     email = BookingEmailVerification.render(meeting(%{attendee_locale: "de"}), @verify_url)
 
-    assert email.text_body =~ "September"
-    assert email.html_body =~ "September"
-    refute email.html_body =~ "Sep 1"
+    # German puts the day first ("1. September 2026"), English the month
+    # ("September 1, 2026"), so the date proves the locale was applied.
+    assert email.text_body =~ "1. September 2026"
+    assert email.html_body =~ "1. September 2026"
+    refute email.html_body =~ "September 1, 2026"
   end
 
   test "the email carries no uid, no manage links and no attachment" do
