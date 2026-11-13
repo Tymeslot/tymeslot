@@ -40,7 +40,14 @@ defmodule Tymeslot.Bookings.Policy do
   layer renders a refusal (`TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage`).
   """
   @type meeting_state ::
-          :cancelled | :completed | :expired | :awaiting_approval | :started | :past | :planned
+          :cancelled
+          | :completed
+          | :expired
+          | :awaiting_approval
+          | :awaiting_verification
+          | :started
+          | :past
+          | :planned
   @type cancel_refusal :: :already_cancelled | {:not_cancellable, meeting_state()}
   @type reschedule_refusal :: {:not_reschedulable, meeting_state()}
   @type booker_move_refusal :: :managed_by_host
@@ -70,6 +77,12 @@ defmodule Tymeslot.Bookings.Policy do
       # deadline, so this is a reachable click, not a theoretical one.
       meeting.status == :expired ->
         {:error, {:not_cancellable, :expired}}
+
+      # Cancelling would run the cancellation pipeline, which emails and
+      # notifies the organiser about a booking they must never hear of;
+      # letting the hold lapse releases it silently.
+      meeting.status == :awaiting_verification ->
+        {:error, {:not_cancellable, :awaiting_verification}}
 
       meeting_is_current?(meeting) ->
         Logger.info("Blocked cancellation: meeting has already started",
@@ -110,6 +123,11 @@ defmodule Tymeslot.Bookings.Policy do
       # the attendee would be told about a booking anyone else can still take.
       meeting.status == :expired ->
         {:error, {:not_reschedulable, :expired}}
+
+      # As for cancelling: the organiser must never hear of a held booking,
+      # and the host cannot see it to ask for a new time either.
+      meeting.status == :awaiting_verification ->
+        {:error, {:not_reschedulable, :awaiting_verification}}
 
       meeting_is_current?(meeting) ->
         Logger.info("Blocked reschedule: meeting has already started",
