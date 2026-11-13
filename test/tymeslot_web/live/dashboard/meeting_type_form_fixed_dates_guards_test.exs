@@ -144,6 +144,30 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesGuardsTest do
     assert render(view) =~ "1 person is booked and will be told"
   end
 
+  # A booking still awaiting its attendee's email verification holds its
+  # slot but is hidden from the host, so the refusal must not speak of a
+  # booking they cannot see.
+  test "a time held by a hidden booking is refused without naming a booking", ctx do
+    ctx.profile |> Changeset.change(timezone: "Etc/UTC") |> Repo.update!()
+    starts_at = at(10, ~T[18:00:00])
+
+    insert(:awaiting_verification_meeting,
+      organizer_user_id: ctx.user.id,
+      start_time: starts_at,
+      end_time: DateTime.add(starts_at, 30, :minute)
+    )
+
+    view = edit(ctx.conn, ctx.meeting_type)
+    fields = %{"date" => Date.to_iso8601(DateTime.to_date(starts_at)), "time" => "18:00"}
+    forge(view, "update_session_input", %{"session" => fields})
+    view |> element("[data-testid='add-session']") |> render_click()
+
+    error = view |> element("[data-testid='session-error']") |> render()
+    assert error =~ "This time is no longer available. Please choose another time."
+    refute error =~ "You already have a booking"
+    assert PlannedSessions.list(ctx.meeting_type) == []
+  end
+
   describe "a local time the clock change" do
     setup %{profile: profile} do
       profile |> Changeset.change(timezone: "Europe/Berlin") |> Repo.update!()
