@@ -96,6 +96,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateHostManagedMeetingTest do
     refute has_element?(lv, ~s(button[phx-value-email="#{String.downcase(user.email)}"]))
   end
 
+  # Carried over unchecked, the host's own address only failed at save, as a
+  # flash, after the save had spent its rate limit.
+  test "turning it off does not invite the host's own address typed in as main guest", %{
+    lv: lv,
+    user: user
+  } do
+    lv
+    |> element("#create-meeting-guest-email")
+    |> render_blur(%{"value" => String.upcase(user.email)})
+
+    add_guest(lv, "bob@example.com")
+    html = switch_off_main_participant(lv)
+
+    assert html =~ "You cannot add yourself as a guest"
+    refute has_element?(lv, ~s(button[phx-value-email="#{String.downcase(user.email)}"]))
+    assert has_element?(lv, ~s(button[phx-value-email="bob@example.com"]))
+  end
+
   test "saving without a guest says one is needed", %{lv: lv} do
     switch_off_main_participant(lv)
     put_title(lv, "Quarterly planning")
