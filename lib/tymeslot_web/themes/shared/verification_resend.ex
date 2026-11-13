@@ -20,7 +20,9 @@ defmodule TymeslotWeb.Themes.Shared.VerificationResend do
   sent. The cooldown belongs to the booking it was started for: its timer is
   kept in `:verification_resend_cooldown` and carries a token of its own, so a
   leftover timer from an earlier booking on the same page never ends a later
-  booking's cooldown, and forgetting the booking cancels it.
+  booking's cooldown, and forgetting the booking cancels it. A resend that
+  used up the booking's last one still shows that it was sent, and its
+  cooldown ends in `:limit_reached` rather than offering the button again.
   """
 
   import Phoenix.Component, only: [assign: 2]
@@ -56,7 +58,7 @@ defmodule TymeslotWeb.Themes.Shared.VerificationResend do
   @spec forget(Socket.t()) :: Socket.t()
   def forget(socket) do
     case socket.assigns[:verification_resend_cooldown] do
-      {timer, _token} -> Process.cancel_timer(timer)
+      {timer, _token, _then} -> Process.cancel_timer(timer)
       nil -> :ok
     end
 
@@ -84,15 +86,17 @@ defmodule TymeslotWeb.Themes.Shared.VerificationResend do
   end
 
   @doc """
-  Ends the cooldown started with `token`: the button may be pressed again. A
-  token from any other cooldown (an earlier booking's) changes nothing.
+  Ends the cooldown started with `token`: the button may be pressed again,
+  unless that resend was the booking's last, when the state becomes
+  `:limit_reached`. A token from any other cooldown (an earlier booking's)
+  changes nothing.
   """
   @spec ready(Socket.t(), reference()) :: {:noreply, Socket.t()}
-  def ready(%{assigns: %{verification_resend_cooldown: {_timer, token}}} = socket, token) do
+  def ready(%{assigns: %{verification_resend_cooldown: {_timer, token, then}}} = socket, token) do
     {:noreply,
      socket
      |> assign(verification_resend_cooldown: nil)
-     |> show(nil)}
+     |> show(then)}
   end
 
   def ready(socket, _stale_token), do: {:noreply, socket}
@@ -105,12 +109,13 @@ defmodule TymeslotWeb.Themes.Shared.VerificationResend do
     end
   end
 
-  defp outcome(socket, {:ok, _meeting}) do
+  defp outcome(socket, {:ok, meeting}) do
     token = make_ref()
     timer = Process.send_after(self(), {:verification_resend_ready, token}, @cooldown_ms)
+    then = if EmailVerification.resends_left(meeting) == 0, do: :limit_reached
 
     socket
-    |> assign(verification_resend_cooldown: {timer, token})
+    |> assign(verification_resend_cooldown: {timer, token, then})
     |> show(:sent)
   end
 

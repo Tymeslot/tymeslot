@@ -127,10 +127,16 @@ defmodule Tymeslot.Meetings.EmailVerification do
   booking instead, as does one no longer wanted, released silently
   (`{:error, :expired}`) rather than confirmed: one whose meeting type has
   since been deleted, since without the type nobody can say whether the host
-  must approve it, and one made through an invitation link the host has since
-  revoked. An archived type is still read and its settings apply. `{:error, :not_scheduled}` means
+  must approve it; one whose type has since become paid or a group type,
+  since those bookings are confirmed by other means than this gate; and one
+  made through an invitation link the host has since revoked. An archived
+  type is still read and its settings apply. `{:error, :not_scheduled}` means
   that work could not be queued; the booking is still held and the attendee
   may try again.
+
+  The deadline and the still-wanted checks run inside the transaction, with
+  the booking's row locked, so a revocation or a type change that commits
+  first is always seen.
 
   A booking no longer held is answered for as it is stored, not as the
   caller's copy says: `{:ok, :already_verified, meeting}` while it stands,
@@ -141,49 +147,24 @@ defmodule Tymeslot.Meetings.EmailVerification do
   def verify(%Meeting{email_verified_at: %DateTime{}} = meeting), do: answer_as_stored(meeting)
 
   def verify(%Meeting{} = meeting) do
-    now = Clock.utc_now()
-
-    cond do
-      not MeetingState.awaiting_verification?(meeting) -> {:error, :expired}
-      deadline_reached?(meeting, now) -> expire_instead(meeting)
-      true -> verify_held(meeting, now)
-    end
+    if MeetingState.awaiting_verification?(meeting),
+      do: meeting |> complete(Clock.utc_now()) |> verify_outcome(meeting),
+      else: {:error, :expired}
   end
 
-  defp verify_held(meeting, now) do
-    case still_wanted(meeting) do
-      {:ok, meeting_type} -> meeting |> complete(meeting_type, now) |> verify_outcome(meeting)
-      :no_longer_wanted -> expire_instead(meeting)
-    end
-  end
-
-  # Whether the booking may still go ahead, with the meeting type whose
-  # settings decide how. A deleted type nilifies the column, and without its
-  # settings nobody can say whether the host must approve, so the hold is
-  # released rather than confirmed past an approval it may have needed. An
-  # archived type is still read and its settings apply. The host never sees a
-  # held booking, so may revoke the invitation link it came through
-  # meanwhile; the revocation stands and the hold is released.
-  defp still_wanted(meeting) do
-    with %MeetingType{} = meeting_type <- meeting_type(meeting),
-         false <- invitation_revoked?(meeting) do
-      {:ok, meeting_type}
-    else
-      _type_gone_or_invitation_revoked -> :no_longer_wanted
-    end
-  end
-
-  defp invitation_revoked?(%{invitation_id: nil}), do: false
-  defp invitation_revoked?(%{invitation_id: id}), do: Invitations.revoked?(id)
-
-  defp complete(meeting, meeting_type, now) do
-    changes =
-      [email_verified_at: DateTime.truncate(now, :second)] ++
-        Map.to_list(Approval.request_attributes(meeting_type, now, meeting.start_time))
-
+  # The row lock comes first: a deleted type nilifies `meeting_type_id` on this
+  # row, so a deletion either committed before the lock and is read here, or
+  # waits for this transaction to finish.
+  defp complete(meeting, now) do
     Repo.transaction(fn ->
-      with {:ok, verified} <-
-             MeetingQueries.transition_from_awaiting_verification(meeting.id, changes),
+      with {:ok, held} <- MeetingQueries.get_meeting_for_update(meeting.id),
+           {:ok, meeting_type} <- still_wanted(held),
+           {:ok, verified} <-
+             MeetingQueries.transition_from_awaiting_verification(
+               held.id,
+               verified_changes(held, meeting_type, now),
+               deadline_after: now
+             ),
            {:ok, _scheduled} <- schedule_calendar_event(verified),
            {:ok, pending} <- Activation.activate_in_transaction(verified, with_video_room: true) do
         {verified, pending}
@@ -192,6 +173,37 @@ defmodule Tymeslot.Meetings.EmailVerification do
       end
     end)
   end
+
+  defp verified_changes(meeting, meeting_type, now) do
+    [email_verified_at: DateTime.truncate(now, :second)] ++
+      Map.to_list(Approval.request_attributes(meeting_type, now, meeting.start_time))
+  end
+
+  # Whether the booking may still go ahead, with the meeting type whose
+  # settings decide how. A deleted type nilifies the column, and without its
+  # settings nobody can say whether the host must approve, so the hold is
+  # released rather than confirmed past an approval it may have needed. An
+  # archived type is still read and its settings apply. A type that has since
+  # become paid or a group type cannot carry the gate (the type's rules refuse
+  # both alongside it), and confirming here would skip the payment or the
+  # seats, so the hold is released. The host never sees a held booking, so
+  # may revoke the invitation link it came through meanwhile; the revocation
+  # stands and the hold is released.
+  defp still_wanted(meeting) do
+    with %MeetingType{} = meeting_type <- meeting_type(meeting),
+         false <- confirmed_by_other_means?(meeting_type),
+         false <- invitation_revoked?(meeting) do
+      {:ok, meeting_type}
+    else
+      _type_gone_changed_or_invitation_revoked -> {:error, :no_longer_wanted}
+    end
+  end
+
+  defp confirmed_by_other_means?(%MeetingType{payment_required: true}), do: true
+  defp confirmed_by_other_means?(meeting_type), do: MeetingType.group?(meeting_type)
+
+  defp invitation_revoked?(%{invitation_id: nil}), do: false
+  defp invitation_revoked?(%{invitation_id: id}), do: Invitations.revoked?(id)
 
   defp meeting_type(%{meeting_type_id: type_id, organizer_user_id: user_id})
        when is_integer(type_id) and is_integer(user_id),
@@ -217,18 +229,13 @@ defmodule Tymeslot.Meetings.EmailVerification do
     {:ok, :verified, verified}
   end
 
-  # Lost a race with another exit (a second click, the expiry job).
-  defp verify_outcome({:error, :not_awaiting_verification}, meeting),
-    do: answer_as_stored(meeting)
-
-  defp verify_outcome({:error, :slot_taken}, meeting) do
-    Logger.warning("Booking verification refused: the slot was taken",
-      meeting_id: meeting.id,
-      start_time: meeting.start_time
-    )
-
-    expire_instead(meeting)
-  end
+  # The guarded transition refused (another exit won the race, or the
+  # deadline has passed), the booking is no longer wanted, or it is gone.
+  # Releasing it settles all of these: a booking still held is expired, and
+  # one that already left the gate is answered for as stored.
+  defp verify_outcome({:error, reason}, meeting)
+       when reason in [:not_awaiting_verification, :no_longer_wanted, :not_found],
+       do: expire_instead(meeting)
 
   defp verify_outcome({:error, reason}, meeting) do
     Logger.error("Booking verification rolled back: its effects could not be scheduled",
@@ -315,6 +322,17 @@ defmodule Tymeslot.Meetings.EmailVerification do
 
     result
   end
+
+  @doc """
+  How many more times the verification email may be resent for this booking,
+  by its stored count alone (the deadline and status are `resend/1`'s to
+  judge). Zero once the #{@max_resends} resends are used up.
+  """
+  @spec resends_left(Meeting.t()) :: non_neg_integer()
+  def resends_left(%Meeting{verification_emails_sent: sent}) when is_integer(sent),
+    do: max(@max_resends + 1 - sent, 0)
+
+  def resends_left(%Meeting{verification_emails_sent: nil}), do: @max_resends
 
   @doc """
   Sends the verification email again, with the same link deadline.

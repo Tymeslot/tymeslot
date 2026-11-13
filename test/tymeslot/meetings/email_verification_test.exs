@@ -33,6 +33,7 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Workers.ApprovalExpiryWorker
   alias Tymeslot.Meetings.Workers.EmailVerificationExpiryWorker
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
@@ -235,6 +236,46 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
       assert {:ok, :verified, %{status: :awaiting_approval}} = EmailVerification.verify(meeting)
     end
 
+    # The deadline is read from the row inside the transaction, not from the
+    # caller's copy, which may have been read before the hold was shortened.
+    test "the deadline is read from the stored booking, not the caller's copy", %{user: user} do
+      meeting = held(user)
+
+      Repo.update_all(where(MeetingSchema, id: ^meeting.id),
+        set: [verification_deadline_at: DateTime.add(DateTime.utc_now(:second), -60)]
+      )
+
+      assert {:error, :expired} = EmailVerification.verify(meeting)
+      assert %{status: :expired, email_verified_at: nil} = reload(meeting)
+      refute_enqueued(worker: CalendarEventWorker)
+    end
+
+    # The type's rules refuse verification alongside payment or seats, so a
+    # host who wants either turns verification off in the same save;
+    # confirming the held booking then would skip the payment or the seat.
+    for {became, changes} <- [
+          {"paid", [payment_required: true]},
+          {"a group type", [max_participants: 5]}
+        ] do
+      test "a held booking whose meeting type became #{became} is released", %{user: user} do
+        type = insert(:meeting_type, user: user)
+        meeting = held(user, meeting_type_id: type.id)
+        :ok = EmailVerificationJobs.schedule_expiry(meeting)
+
+        Repo.update_all(where(MeetingTypeSchema, id: ^type.id),
+          set: [requires_email_verification: false] ++ unquote(changes)
+        )
+
+        assert {:error, :expired} = EmailVerification.verify(meeting)
+
+        assert %{status: :expired, email_verified_at: nil} = reload(meeting)
+        refute_enqueued(worker: EmailVerificationExpiryWorker)
+        refute_enqueued(worker: CalendarEventWorker)
+        refute_enqueued(worker: EmailWorker)
+        refute_enqueued(worker: WebhookWorker)
+      end
+    end
+
     # The organiser never saw the held booking, so they may revoke the link it
     # came through; the booking must not then appear on their calendar.
     test "a booking through an invitation revoked during the hold is released", %{user: user} do
@@ -303,30 +344,6 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
       Repo.update_all(where(MeetingSchema, id: ^meeting.id), set: [status: :cancelled])
 
       assert {:error, :expired} = EmailVerification.verify(verified)
-    end
-
-    # The unique slot index holds unverified bookings too, so a confirmed row
-    # cannot share a held one's slot; this narrows it to confirmed rows only,
-    # inside the test's transaction, to reach the collision at verification.
-    test "a verification that collides with another booking releases the hold", %{user: user} do
-      meeting = held(user)
-
-      Repo.query!("DROP INDEX unique_confirmed_meeting_per_organizer_at_time")
-
-      insert(:meeting,
-        organizer_user_id: user.id,
-        start_time: meeting.start_time,
-        end_time: meeting.end_time
-      )
-
-      Repo.query!("""
-      CREATE UNIQUE INDEX unique_confirmed_meeting_per_organizer_at_time
-      ON meetings (organizer_user_id, start_time) WHERE status = 'confirmed'
-      """)
-
-      assert {:error, :expired} = quietly(fn -> EmailVerification.verify(meeting) end)
-      assert %{status: :expired, email_verified_at: nil} = reload(meeting)
-      refute_enqueued(worker: CalendarEventWorker)
     end
 
     test "an enqueue failure rolls back and keeps the hold", %{user: user} do
@@ -514,6 +531,18 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
           "send" => 2
         }
       )
+    end
+
+    test "counts down the resends left, to zero at the cap", %{meeting: meeting} do
+      assert EmailVerification.resends_left(meeting) == 3
+
+      lefts =
+        for _resend <- 1..3 do
+          {:ok, counted} = EmailVerification.resend(meeting)
+          EmailVerification.resends_left(counted)
+        end
+
+      assert lefts == [2, 1, 0]
     end
 
     test "allows three resends and refuses the fourth", %{meeting: meeting} do
