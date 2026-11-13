@@ -34,17 +34,18 @@ defmodule Tymeslot.Meetings.EmailVerification do
   ## Group seats
 
   A seat on a group meeting goes through the same gate, one seat at a time:
-  `verify_seat/1` and `expire_seat/1`, implemented in
-  `Tymeslot.Meetings.EmailVerification.Seats`. The first seat to be verified
+  `verify_seat/1`, `expire_seat/1` and `release_seat/1`, implemented in
+  `Tymeslot.Meetings.EmailVerification.Seats`, and `resend_seat/1`. The first seat to be verified
   on a slot held for verification brings the slot to life; the last held seat
   to expire on one voids it. A held slot's own `verification_deadline_at` only
-  hides it from the organiser: `expire/1` and `release/1` refuse a group slot,
-  and the sweep never lists one.
+  hides it from the organiser: `expire/1`, `release/1` and `resend/1` refuse a
+  group slot, and the sweep never lists one.
 
   `resend/1` sends the same verification email again while the booking is
-  held. It never moves the deadline. At most three resends per booking, so at
-  most four emails including the one sent with the booking; the count lives
-  in `verification_emails_sent`, where `nil` means that first email only.
+  held, `resend_seat/1` while the seat is. Neither moves the deadline. At
+  most three resends per booking or seat, so at most four emails including
+  the one sent with it; the count lives in `verification_emails_sent`, where
+  `nil` means that first email only.
   """
 
   require Logger
@@ -54,16 +55,17 @@ defmodule Tymeslot.Meetings.EmailVerification do
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Bookings.Telemetry
   alias Tymeslot.Clock
-  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Invitations
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.EmailVerification.Resend
   alias Tymeslot.Meetings.EmailVerification.Seats
   alias Tymeslot.Meetings.EmailVerificationJobs
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
   alias Tymeslot.Repo
@@ -71,9 +73,6 @@ defmodule Tymeslot.Meetings.EmailVerification do
   # Fixed rather than per meeting type: the verification email promises this
   # window, and the slot is held from everyone else for as long as it runs.
   @hold_minutes 30
-
-  # Resends after the email sent with the booking; see the moduledoc.
-  @max_resends 3
 
   # How long after its deadline a booking that never left the gate is kept
   # before it is deleted. Long enough for a late click on the email link to
@@ -287,6 +286,13 @@ defmodule Tymeslot.Meetings.EmailVerification do
   @doc "Releases a held group seat; see `Tymeslot.Meetings.EmailVerification.Seats.expire_seat/1`."
   defdelegate expire_seat(seat), to: Seats
 
+  @doc "Releases a held group seat its booker disowns; see `Tymeslot.Meetings.EmailVerification.Seats.release_seat/1`."
+  defdelegate release_seat(seat), to: Seats
+
+  @doc "Fetches a seat by id, for the booking page's resend; `{:error, :not_found}` once it was pruned."
+  @spec fetch_seat(binary()) :: {:ok, Participant.t()} | {:error, :not_found}
+  def fetch_seat(id) when is_binary(id), do: ParticipantQueries.get(id)
+
   @doc """
   Releases a held booking whose deadline has passed.
 
@@ -350,73 +356,21 @@ defmodule Tymeslot.Meetings.EmailVerification do
   end
 
   @doc """
-  Sends the verification email again, with the same link deadline.
-
-  Allowed while the booking is held and its deadline ahead, at most
-  #{@max_resends} times per booking. The count and the email job commit
-  together, so a resend that could not be queued (`:not_scheduled`) costs the
-  attendee nothing. A resend at or after the deadline releases the booking.
+  Sends the verification email again, with the same link deadline; see
+  `Tymeslot.Meetings.EmailVerification.Resend`. A group slot is refused
+  (`:not_awaiting_verification`): its emails belong to its seats
+  (`resend_seat/1`).
   """
   @spec resend(Meeting.t()) :: {:ok, Meeting.t()} | {:error, resend_error()}
-  def resend(%Meeting{} = meeting) do
-    now = Clock.utc_now()
+  def resend(%Meeting{} = meeting) when meeting.capacity > 1,
+    do: {:error, :not_awaiting_verification}
 
-    counted =
-      Repo.transaction(fn ->
-        with {:ok, counted} <-
-               MeetingQueries.count_verification_email(meeting.id, now, @max_resends + 1),
-             :ok <-
-               EmailScheduler.schedule_verification_email(
-                 counted.id,
-                 counted.verification_emails_sent
-               ) do
-          counted
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
+  def resend(%Meeting{} = meeting), do: Resend.resend(meeting)
 
-    resend_outcome(counted, meeting, now)
-  end
-
-  defp resend_outcome({:ok, counted}, _meeting, _now) do
-    Logger.info("Booking verification email resent",
-      meeting_id: counted.id,
-      send: counted.verification_emails_sent
-    )
-
-    {:ok, counted}
-  end
-
-  defp resend_outcome({:error, :refused}, meeting, now) do
-    case MeetingQueries.get_meeting(meeting.id) do
-      {:ok, current} -> resend_refusal(current, now)
-      {:error, :not_found} -> {:error, :not_awaiting_verification}
-    end
-  end
-
-  defp resend_outcome({:error, reason}, meeting, _now) do
-    Logger.error("Booking verification email could not be resent",
-      meeting_id: meeting.id,
-      reason: LogFormat.reason(reason)
-    )
-
-    {:error, :not_scheduled}
-  end
-
-  defp resend_refusal(meeting, now) do
-    cond do
-      not MeetingState.awaiting_verification?(meeting) -> {:error, :not_awaiting_verification}
-      deadline_reached?(meeting, now) -> expire_for_resend(meeting)
-      true -> {:error, :limit_reached}
-    end
-  end
-
-  # As `expire_instead/1`: a verification may have won in between.
-  defp expire_for_resend(meeting) do
-    case expire(meeting) do
-      {:ok, _expired} -> {:error, :expired}
-      {:error, :not_awaiting_verification} = refused -> refused
-    end
-  end
+  @doc """
+  Sends a held seat's verification email again, as `resend/1` does for a
+  booking; see `Tymeslot.Meetings.EmailVerification.Resend`.
+  """
+  @spec resend_seat(Participant.t()) :: {:ok, Participant.t()} | {:error, resend_error()}
+  def resend_seat(%Participant{} = seat), do: Resend.resend(seat)
 end

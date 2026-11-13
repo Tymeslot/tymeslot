@@ -303,6 +303,39 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     |> run_guarded()
   end
 
+  @doc """
+  Counts one more verification email for a held seat, atomically, while it
+  is live, unverified, its deadline is ahead of `now` and fewer than
+  `max_sends` emails have gone out (`nil` counts as the one sent with the
+  booking). The seat analogue of
+  `Tymeslot.Meetings.MeetingQueries.count_verification_email/3`.
+  """
+  @spec count_verification_email(binary(), DateTime.t(), pos_integer()) ::
+          {:ok, Participant.t()} | {:error, :refused}
+  def count_verification_email(participant_id, %DateTime{} = now, max_sends)
+      when is_integer(max_sends) do
+    query =
+      participant_id
+      |> unverified_by_id()
+      |> where(
+        [p],
+        p.verification_deadline_at > ^now and
+          coalesce(p.verification_emails_sent, 1) < ^max_sends
+      )
+      |> select([p], p)
+      |> update([p],
+        set: [
+          verification_emails_sent: fragment("COALESCE(?, 1) + 1", p.verification_emails_sent),
+          updated_at: ^DateTime.truncate(now, :second)
+        ]
+      )
+
+    case Repo.update_all(query, []) do
+      {1, [participant]} -> {:ok, participant}
+      {0, _none} -> {:error, :refused}
+    end
+  end
+
   @doc "Cancels every live unverified seat on a meeting."
   @spec cancel_unverified_for_meeting(binary(), DateTime.t()) :: {non_neg_integer(), nil}
   def cancel_unverified_for_meeting(meeting_id, %DateTime{} = now) do

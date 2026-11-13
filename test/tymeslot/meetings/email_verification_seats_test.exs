@@ -344,6 +344,122 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
     end
   end
 
+  describe "release_seat/1" do
+    setup ctx do
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatBroadcast.topic(ctx.type.id))
+      :ok
+    end
+
+    test "releasing the only held seat voids the slot silently", ctx do
+      slot = slot(ctx, :awaiting_verification)
+      seat = held_seat(slot, "first@example.com")
+      :ok = EmailVerificationJobs.schedule_seat_expiry(seat)
+
+      assert {:ok, %ParticipantSchema{cancelled_at: %DateTime{}}} =
+               EmailVerification.release_seat(seat)
+
+      assert %{status: :expired, cancelled_at: %DateTime{}} = reload(slot)
+      assert_receive {:seat_update, _type_id}
+      refute_enqueued(worker: EmailVerificationExpiryWorker)
+      assert_nothing_started()
+    end
+
+    test "releasing one of two held seats keeps the slot held", ctx do
+      slot = slot(ctx, :awaiting_verification)
+      first = held_seat(slot, "first@example.com")
+      second = held_seat(slot, "second@example.com")
+
+      assert {:ok, _released} = EmailVerification.release_seat(first)
+
+      assert reload(slot).status == :awaiting_verification
+      assert %{cancelled_at: %DateTime{}} = reload(first)
+      assert reload(second).cancelled_at == nil
+      assert_receive {:seat_update, _type_id}
+      assert_nothing_started()
+    end
+
+    test "releasing a held seat on a live slot leaves the slot alone", ctx do
+      slot = slot(ctx, :confirmed)
+      visible_seat(slot, "first@example.com")
+      held = held_seat(slot, "second@example.com")
+
+      assert {:ok, _released} = EmailVerification.release_seat(held)
+
+      assert %{status: :confirmed, cancelled_at: nil} = reload(slot)
+      assert %{cancelled_at: %DateTime{}} = reload(held)
+      assert_nothing_started()
+
+      assert {:error, :not_awaiting_verification} = EmailVerification.release_seat(held)
+    end
+  end
+
+  describe "resend_seat/1" do
+    test "resending a seat's email sends the seat email and keeps the deadline", ctx do
+      slot = slot(ctx, :awaiting_verification)
+      seat = held_seat(slot, "first@example.com")
+
+      assert {:ok, %ParticipantSchema{verification_emails_sent: 2}} =
+               EmailVerification.resend_seat(seat)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_seat_email_verification",
+          "meeting_id" => slot.id,
+          "participant_id" => seat.id,
+          "send" => 2
+        }
+      )
+
+      refute_enqueued(worker: EmailWorker, args: %{"action" => "send_booking_email_verification"})
+
+      assert %{verification_deadline_at: deadline, verification_emails_sent: 2} = reload(seat)
+      assert deadline == seat.verification_deadline_at
+      assert reload(slot).verification_emails_sent == nil
+    end
+
+    test "seat resends stop at the cap", ctx do
+      seat = ctx |> slot(:awaiting_verification) |> held_seat("first@example.com")
+
+      for send <- 2..4 do
+        assert {:ok, %{verification_emails_sent: ^send}} = EmailVerification.resend_seat(seat)
+      end
+
+      assert {:error, :limit_reached} = EmailVerification.resend_seat(seat)
+      assert reload(seat).verification_emails_sent == 4
+      assert length(all_enqueued(worker: EmailWorker)) == 3
+    end
+
+    test "a seat cannot be resent once verified, released or lapsed", ctx do
+      slot = slot(ctx, :confirmed)
+
+      verified =
+        held_seat(slot, "verified@example.com", nil, email_verified_at: DateTime.utc_now(:second))
+
+      released = held_seat(slot, "released@example.com")
+      {:ok, _released} = EmailVerification.release_seat(released)
+
+      lapsed =
+        held_seat(slot, "lapsed@example.com", DateTime.add(DateTime.utc_now(:second), -60))
+
+      assert {:error, :not_awaiting_verification} = EmailVerification.resend_seat(verified)
+      assert {:error, :not_awaiting_verification} = EmailVerification.resend_seat(released)
+      assert {:error, :expired} = EmailVerification.resend_seat(lapsed)
+      assert %{cancelled_at: %DateTime{}} = reload(lapsed)
+
+      assert all_enqueued(worker: EmailWorker) == []
+    end
+
+    test "a group slot's own email is never resent", ctx do
+      slot = slot(ctx, :awaiting_verification)
+      held_seat(slot, "first@example.com")
+
+      assert {:error, :not_awaiting_verification} = EmailVerification.resend(slot)
+      assert reload(slot).verification_emails_sent == nil
+      assert all_enqueued(worker: EmailWorker) == []
+    end
+  end
+
   describe "prune_unverified/1" do
     test "a seat released without verifying is deleted a day after its deadline", ctx do
       slot = slot(ctx, :confirmed)

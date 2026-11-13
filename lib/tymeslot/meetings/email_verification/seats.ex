@@ -157,7 +157,22 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   """
   @spec expire_seat(Participant.t()) ::
           {:ok, Participant.t()} | {:error, :not_awaiting_verification}
-  def expire_seat(%Participant{} = seat) do
+  def expire_seat(%Participant{} = seat), do: release_held(seat, "Unverified seat released")
+
+  @doc """
+  Releases a held seat its booker says they never made ("This wasn't me").
+
+  Exactly `expire_seat/1`, silent, freeing its capacity and voiding a held
+  slot left with no held seat; only the log records that the address's owner
+  disowned it. A seat has no status of its own, so unlike `release/1` there
+  is no `:cancelled` to tell it apart from a lapse.
+  """
+  @spec release_seat(Participant.t()) ::
+          {:ok, Participant.t()} | {:error, :not_awaiting_verification}
+  def release_seat(%Participant{} = seat),
+    do: release_held(seat, "Unverified seat disowned by its booker")
+
+  defp release_held(seat, message) do
     now = DateTime.truncate(Clock.utc_now(), :second)
 
     released =
@@ -173,7 +188,7 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
     with {:ok, {expired, slot}} <- released do
       SeatEffects.broadcast_and_invalidate(slot)
       EmailVerificationJobs.cancel_seat(expired)
-      Logger.info("Unverified seat released", meeting_id: slot.id, participant_id: expired.id)
+      Logger.info(message, meeting_id: slot.id, participant_id: expired.id)
 
       {:ok, expired}
     end

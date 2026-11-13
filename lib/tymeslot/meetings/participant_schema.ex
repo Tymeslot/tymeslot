@@ -39,6 +39,7 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
           cancelled_at: DateTime.t() | nil,
           verification_deadline_at: DateTime.t() | nil,
           email_verified_at: DateTime.t() | nil,
+          verification_emails_sent: pos_integer() | nil,
           meeting: MeetingSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           guests: [Tymeslot.Meetings.GuestSchema.t()] | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
@@ -76,6 +77,9 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     # seat held until its booker confirms their address.
     field(:verification_deadline_at, :utc_datetime)
     field(:email_verified_at, :utc_datetime)
+    # Verification emails sent to a held seat, `nil` meaning only the one
+    # sent with the booking. Written only by `ParticipantQueries.count_verification_email/3`.
+    field(:verification_emails_sent, :integer)
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
 
