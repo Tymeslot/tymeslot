@@ -12,6 +12,7 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocation do
   """
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.MeetingTypes
 
   @doc """
   The place a meeting is held at, as written, for one held somewhere named:
@@ -64,6 +65,22 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocation do
   end
 
   def type(_meeting), do: :custom
+
+  @doc """
+  `location`, of the kind `type/1` classed it as, as the reader sees it in
+  the current locale: a default location label ("In person") in their
+  language, a venue or the host's own text as written
+  (`Tymeslot.MeetingTypes.display_location/2`).
+  """
+  @spec display(String.t(), atom() | nil) :: String.t()
+  @spec display(nil, atom() | nil) :: nil
+  def display(location, :in_person_to_arrange),
+    do: MeetingTypes.display_location(location, :in_person)
+
+  def display(location, type) when type in [:in_person, :custom, :phone, :video],
+    do: MeetingTypes.display_location(location, type)
+
+  def display(location, _type), do: location
 
   @doc """
   What a location string stood for when an older release wrote an English

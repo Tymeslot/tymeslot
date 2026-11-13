@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
   use Phoenix.Component
 
   alias Tymeslot.Demo
+  alias Tymeslot.Locales
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Tokens
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
@@ -37,11 +38,17 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
   `@show_language_switcher` is the wrapper's own choice when it passes one,
   else true on the journey's first moment (the classic overview) and on every
   moment and outcome of a `Continuous` or `Transcript` page but the payment
-  wait.
+  wait. Either way it is false when the organiser offers a single language.
+
+  `@language_locales` is what the switcher lists: the supported locales the
+  organiser offers (`@offered_locales`, codes; every supported locale when
+  the page has none).
   """
   @spec prepare_wrapper_assigns(map()) :: map()
   def prepare_wrapper_assigns(assigns) do
     background = background(assigns[:theme_tokens])
+
+    language_locales = language_locales(assigns[:offered_locales])
 
     show_language_switcher =
       if is_boolean(assigns[:show_language_switcher]),
@@ -51,8 +58,14 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
     assigns
     |> assign(:background, background)
     |> assign(:has_video_background, match?(%{kind: :video}, background))
-    |> assign(:show_language_switcher, show_language_switcher)
+    |> assign(:language_locales, language_locales)
+    |> assign(:show_language_switcher, show_language_switcher and length(language_locales) > 1)
   end
+
+  defp language_locales(offered) when is_list(offered),
+    do: Enum.filter(Locales.supported(), &(&1.code in offered))
+
+  defp language_locales(_every_locale), do: Locales.supported()
 
   # A page that opens its moments by itself is one page, so the switcher is
   # on it throughout, bar the payment wait: a locale change remounts the page

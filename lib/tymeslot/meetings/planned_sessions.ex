@@ -237,7 +237,9 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   # The attributes a first booking would give the slot (organiser, location,
   # video integration, reminders, calendar destination), built by the same
   # `MeetingAttributes.build/1`, then cut back to the slot by
-  # `SeatEffects.slot_attrs/2` as a seat's slot is: a session has no booker.
+  # `SeatEffects.slot_attrs/2` as a seat's slot is: a session has no booker,
+  # so it holds no attendee copies of its texts until participants book in
+  # a translated language (`Tymeslot.Meetings.GroupScheduling`).
   defp session_attrs(meeting_type, starts_at, closes_at) do
     duration = meeting_type.duration_minutes
 
@@ -256,7 +258,8 @@ defmodule Tymeslot.Meetings.PlannedSessions do
     |> Map.merge(%{
       capacity: meeting_type.max_participants,
       planned: true,
-      registration_closes_at: closes_at
+      registration_closes_at: closes_at,
+      attendee_texts: nil
     })
   end
 

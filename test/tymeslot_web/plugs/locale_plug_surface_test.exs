@@ -115,4 +115,67 @@ defmodule TymeslotWeb.Plugs.LocalePlugSurfaceTest do
       assert conn.assigns.locale == "it"
     end
   end
+
+  describe "each surface remembers its own choice" do
+    defp call(session, opts, params \\ %{}) do
+      build_conn()
+      |> init_test_session(session)
+      |> Map.put(:params, params)
+      |> fetch_session()
+      |> put_req_header("accept-language", "en")
+      |> LocalePlug.call(opts)
+    end
+
+    @app [surface: :admin, prefer_user_locale: true]
+
+    test "a booking page's pick does not change the app's language" do
+      booking = call(%{}, [surface: :booking], %{"locale" => "de"})
+      assert booking.assigns.locale == "de"
+
+      app =
+        build_conn()
+        |> init_test_session(get_session(booking))
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> assign(:current_user, %{locale: nil})
+        |> put_req_header("accept-language", "en")
+        |> LocalePlug.call(@app)
+
+      # The browser's en, not the booking page's de.
+      assert app.assigns.locale == "en"
+      assert app.assigns.ambient_locale == "en"
+      assert app.assigns.locale_choice == nil
+    end
+
+    test "a booking page remembers its own pick on the next visit" do
+      first = call(%{}, [surface: :booking], %{"locale" => "de"})
+
+      assert call(get_session(first), surface: :booking).assigns.locale == "de"
+    end
+
+    test "the app remembers its own pick" do
+      first = call(%{}, @app, %{"locale" => "it"})
+
+      assert call(get_session(first), @app).assigns.locale == "it"
+    end
+
+    test "a pick made in the app still reaches booking pages" do
+      first = call(%{}, @app, %{"locale" => "it"})
+
+      assert call(get_session(first), surface: :booking).assigns.locale == "it"
+    end
+
+    test "a booking page's own pick wins over the app's" do
+      session = %{chosen_locale: "it", booking_chosen_locale: "de"}
+
+      assert call(session, surface: :booking).assigns.locale == "de"
+      assert call(session, @app).assigns.locale == "it"
+    end
+
+    test "an unsupported booking pick falls through to the app's" do
+      session = %{chosen_locale: "it", booking_chosen_locale: "xx"}
+
+      assert call(session, surface: :booking).assigns.locale == "it"
+    end
+  end
 end

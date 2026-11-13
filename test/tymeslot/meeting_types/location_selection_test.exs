@@ -100,6 +100,55 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     end
   end
 
+  describe "stored_label/2" do
+    test "stores a kind's default as rendered in any supported language as the English default" do
+      assert LocationSelection.stored_label(:in_person, "Vor Ort") == "In person"
+      assert LocationSelection.stored_label(:phone, "Telefonanruf") == "Phone call"
+      assert LocationSelection.stored_label(:video, "Appel vidéo") == "Video call"
+      assert LocationSelection.stored_label(:custom, "Inne miejsce") == "Somewhere else"
+    end
+
+    test "keeps a label that is not its own kind's default, or that the host wrote" do
+      assert LocationSelection.stored_label(:phone, "Vor Ort") == "Vor Ort"
+      assert LocationSelection.stored_label(:in_person, "Büro") == "Büro"
+      assert LocationSelection.stored_label(:in_person, nil) == nil
+    end
+  end
+
+  describe "display_location/2" do
+    test "reads a default label, with the details it adds, in the current language" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert LocationSelection.display_location("In person", :in_person) == "Vor Ort"
+
+        assert LocationSelection.display_location("Phone call (+44 20)", :phone) ==
+                 "Telefonanruf (+44 20)"
+      end)
+    end
+
+    test "leaves a venue, the host's own text, or another kind's default as written" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert LocationSelection.display_location("Berlin office (Street 1)", :in_person) ==
+                 "Berlin office (Street 1)"
+
+        assert LocationSelection.display_location("In person", :custom) == "In person"
+        assert LocationSelection.display_location("In personal", :in_person) == "In personal"
+        assert LocationSelection.display_location(nil, :in_person) == nil
+      end)
+    end
+  end
+
+  describe "resolve/3 with a default label" do
+    test "resolves it as stored, in English, whatever the current language" do
+      meeting_type = %{locations: [option(id: "loc-1", kind: :in_person, label: "In person")]}
+      fallback = %{locations: [], allow_video: false, video_integration_id: nil}
+
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert %{location: "In person"} = LocationSelection.resolve(meeting_type, "loc-1")
+        assert %{location: "In person"} = LocationSelection.resolve(fallback, nil)
+      end)
+    end
+  end
+
   describe "resolve/3" do
     test "resolves the chosen option into the meeting's location fields" do
       type = %{locations: [office(), zoom()]}

@@ -189,11 +189,6 @@ msgstr "Se muestra a la persona que reserva y se incluye en la invitación del c
 msgid "Something else"
 msgstr "Otra cosa"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Somewhere else"
-msgstr "En otro lugar"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "The booker picks: %{providers}"

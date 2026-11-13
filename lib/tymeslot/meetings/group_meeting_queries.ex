@@ -132,6 +132,19 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   end
 
   @doc """
+  Sets a shared slot's `attendee_texts`
+  (`Tymeslot.ContentTranslations.AttendeeTexts`). A plain change, as
+  `set_registration_closes_at/2` is.
+  """
+  @spec set_attendee_texts(Meeting.t(), map() | nil) ::
+          {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def set_attendee_texts(%Meeting{} = meeting, texts) do
+    meeting
+    |> Changeset.change(attendee_texts: texts)
+    |> Repo.update()
+  end
+
+  @doc """
   Sets `capacity` on a meeting type's future, live group meetings
   (`capacity > 1`, start time after `now`), returning how many were updated.
 

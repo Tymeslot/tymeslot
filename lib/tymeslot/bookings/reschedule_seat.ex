@@ -440,6 +440,10 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       organizer_user_id: old_meeting.organizer_user_id,
       meeting_type_id: old_meeting.meeting_type_id,
       attendee_locale: participant.locale,
+      # The questions the participant's answers belong to: the slot they
+      # leave, as the booking keeps them, so a slot this move creates shows
+      # them and the participant's copy of them names the same questions.
+      custom_fields_snapshot: old_meeting.custom_fields_snapshot,
       custom_field_answers: participant.custom_field_answers
     }
     |> MeetingAttributes.build()

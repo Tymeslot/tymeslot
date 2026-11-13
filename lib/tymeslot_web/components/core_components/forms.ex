@@ -105,6 +105,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   slot :trailing_icon
   slot :description, doc: "Optional helper text rendered between the label and the input."
 
+  slot :label_suffix,
+    doc: "Marks shown after the label, outside it, such as a field's translation status"
+
   @spec input(map()) :: Phoenix.LiveView.Rendered.t()
   def input(%{type: "select"}) do
     raise ArgumentError, ~s|<.input type="select"> is gone: use <.select> instead|
@@ -190,7 +193,14 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
     ~H"""
     <div class={["form-field-wrapper", @class]}>
       <%= if @label do %>
-        <.label for={@id}>
+        <div :if={@label_suffix != []} class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
+          <.label for={@id} class="mb-0">
+            {@label}
+            <span :if={@required} class="text-red-500 ml-0.5">*</span>
+          </.label>
+          {render_slot(@label_suffix)}
+        </div>
+        <.label :if={@label_suffix == []} for={@id}>
           {@label}
           <%= if @required do %>
             <span class="text-red-500 ml-0.5">*</span>
@@ -425,12 +435,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   """
   attr :id, :any, default: nil
   attr :for, :any, default: nil
+  attr :class, :any, default: nil, doc: "Layout classes only"
   slot :inner_block, required: true
 
   @spec label(map()) :: Phoenix.LiveView.Rendered.t()
   def label(assigns) do
     ~H"""
-    <label id={@id} for={@for} class="label">
+    <label id={@id} for={@for} class={["label", @class]}>
       {render_slot(@inner_block)}
     </label>
     """

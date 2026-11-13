@@ -18,6 +18,7 @@ defmodule Tymeslot.Agenda do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.HostManaged
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Utils.DateTimeUtils
 
   # How far ahead to look for the hero when nothing is scheduled today/tomorrow.
@@ -198,7 +199,8 @@ defmodule Tymeslot.Agenda do
       start_at: meeting.start_time,
       end_at: meeting.end_time,
       all_day?: false,
-      location: presence(meeting.location),
+      # A default location label ("In person") reads in the dashboard's language.
+      location: presence(MeetingTypes.display_location(meeting.location, meeting.location_kind)),
       join_url: Meetings.organizer_join_url(meeting),
       who: who(meeting),
       who_email: who_email(meeting),

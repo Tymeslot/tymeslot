@@ -72,6 +72,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
   attr :show_language_switcher, :boolean, default: false
   attr :owner_preview, :boolean, default: false
 
+  attr :locales, :list,
+    default: nil,
+    doc: "the locales the switcher lists (`%{code:, name:}`), every supported one when nil"
+
   attr :refused_calendars, :list,
     default: [],
     doc: "names of the organiser's refused calendars, given only when the organiser is viewing"
@@ -95,7 +99,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.ThemeShell do
       ]}>
         <.language_switcher
           locale={@locale}
-          locales={Locales.supported()}
+          locales={@locales || Locales.supported()}
           dropdown_open={@language_dropdown_open}
         />
       </div>
