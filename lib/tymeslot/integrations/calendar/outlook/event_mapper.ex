@@ -12,6 +12,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Timezones.WindowsZones
 
+  # Graph's `showAs` states that block time, besides plain `busy`.
+  @blocking_show_as ~w(tentative oof workingElsewhere)
+
   @doc """
   Converts Tymeslot event data into the Microsoft Graph event format.
 
@@ -223,12 +226,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
     end
   end
 
+  # Free is the one state that leaves the organiser bookable. Graph's other
+  # blocking states are kept as `:show_as`, the state the sync last read
+  # (`Tymeslot.CalendarGrid.ProviderPayload.put_show_as/3`), so an edit that
+  # leaves free/busy alone does not turn an out-of-office into plain busy.
   defp map_show_as(event_data) do
     transparency = extract_field(event_data, :transparency, "transparency")
     status = extract_field(event_data, :status, "status")
+    show_as = extract_field(event_data, :show_as, "show_as")
 
     cond do
       transparency in [:transparent, "transparent"] -> "free"
+      show_as in @blocking_show_as -> show_as
       status in [:tentative, "tentative"] -> "tentative"
       true -> "busy"
     end

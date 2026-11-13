@@ -272,6 +272,7 @@ msgid "This meeting's event was deleted from your external calendar."
 msgstr "L’événement de cette réunion a été supprimé de votre calendrier externe."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "L’événement de cette réunion a été reporté dans votre calendrier externe."
@@ -344,6 +345,7 @@ msgid "Awaiting your approval"
 msgstr "En attente de votre accord"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Booking confirmed. The invitee has been told."
 msgstr "Réservation confirmée. L'invité a été prévenu."
@@ -389,6 +391,7 @@ msgid "Reason (optional)"
 msgstr "Motif (facultatif)"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Request declined. The slot is free again."
 msgstr "Demande refusée. Le créneau est de nouveau libre."
@@ -409,11 +412,13 @@ msgid "That meeting's start time has already passed."
 msgstr "L'heure de début de cette réunion est déjà passée."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be approved."
 msgstr "Cette demande n'a pas pu être acceptée."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be declined."
 msgstr "Cette demande n'a pas pu être refusée."
@@ -813,6 +818,7 @@ msgid "Move booking"
 msgstr "Déplacer la réservation"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Move booking to %{time}"
 msgstr "Déplacer la réservation vers %{time}"

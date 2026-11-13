@@ -363,6 +363,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   attr :id, :string, required: true
   attr :value, :any, required: true, doc: "the chosen option's value"
   attr :on_change, :any, required: true, doc: "event pushed when an option is chosen"
+  # LiveView sends a clicked button's own `value` under "value", over any
+  # phx-value-value, so each button carries its option's value as well.
   attr :param, :string, default: "value", doc: "the parameter the chosen value is sent under"
 
   attr :values, :map,
@@ -414,6 +416,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
         :for={option <- @option}
         type="button"
         id={"#{@id}-#{option.value}"}
+        value={option.value}
         aria-pressed={to_string(chosen?(option, @value))}
         disabled={@disabled || option[:disabled]}
         data-testid={option[:testid]}

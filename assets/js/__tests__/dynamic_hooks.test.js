@@ -271,8 +271,13 @@ describe('lazyHook', () => {
     lazy.handleEvent = vi.fn();
     lazy.upload = vi.fn();
     lazy.uploadTo = vi.fn();
+    const liveSocket = { execJS: vi.fn() };
+    lazy.liveSocket = liveSocket;
 
     await lazy.mounted();
+
+    // The hook runs JS commands (execJS) through the socket.
+    expect(lazy.__actualHook.liveSocket).toBe(liveSocket);
 
     // The context lands on this element's own copy, never on the cached
     // module export, which every element carrying the hook shares.

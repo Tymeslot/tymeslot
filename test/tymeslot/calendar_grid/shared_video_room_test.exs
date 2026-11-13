@@ -19,7 +19,7 @@ defmodule Tymeslot.CalendarGrid.SharedVideoRoomTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Workers.VideoSyncWorker
@@ -98,7 +98,7 @@ defmodule Tymeslot.CalendarGrid.SharedVideoRoomTest do
       row.("series-1", "20261012T090000Z", description: "Agenda")
       expect_provider_update()
 
-      assert {:ok, nil} = CalendarGrid.change_event_video(user.id, occurrence, nil)
+      assert {:ok, nil} = Changes.change_event_video(user.id, occurrence, nil)
 
       refute_enqueued(worker: VideoSyncWorker, args: %{"event_room_id" => room.id})
       assert Repo.reload(room)
@@ -113,7 +113,7 @@ defmodule Tymeslot.CalendarGrid.SharedVideoRoomTest do
       row.("series-1", "20261012T090000Z", description: "Agenda", video_link: nil)
       expect_provider_update()
 
-      assert {:ok, nil} = CalendarGrid.change_event_video(user.id, occurrence, nil)
+      assert {:ok, nil} = Changes.change_event_video(user.id, occurrence, nil)
 
       assert_enqueued(
         worker: VideoSyncWorker,

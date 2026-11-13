@@ -272,6 +272,7 @@ msgid "This meeting's event was deleted from your external calendar."
 msgstr "Událost této schůzky byla smazána z vašeho externího kalendáře."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "Událost této schůzky byla přesunuta ve vašem externím kalendáři."
@@ -345,6 +346,7 @@ msgid "Awaiting your approval"
 msgstr "Čeká na vaše schválení"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Booking confirmed. The invitee has been told."
 msgstr "Rezervace potvrzena. Host byl informován."
@@ -390,6 +392,7 @@ msgid "Reason (optional)"
 msgstr "Důvod (nepovinné)"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Request declined. The slot is free again."
 msgstr "Žádost zamítnuta. Termín je opět volný."
@@ -410,11 +413,13 @@ msgid "That meeting's start time has already passed."
 msgstr "Čas začátku této schůzky už uplynul."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be approved."
 msgstr "Tuto žádost se nepodařilo přijmout."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be declined."
 msgstr "Tuto žádost se nepodařilo zamítnout."
@@ -823,6 +828,7 @@ msgid "Move booking"
 msgstr "Přesunout rezervaci"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Move booking to %{time}"
 msgstr "Přesunout rezervaci na %{time}"

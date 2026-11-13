@@ -46,7 +46,6 @@ msgstr ""
 #: lib/tymeslot/integrations/calendar/display_helpers.ex
 #: lib/tymeslot_web/components/dashboard/appointments/appointment_details.ex
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr ""
@@ -431,4 +430,19 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/autosave.ex
 #, elixir-autogen, elixir-format
 msgid "Saved"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/zone_link.ex
+#, elixir-autogen, elixir-format
+msgid "Times shown in %{timezone}"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Collapse menu"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#, elixir-autogen, elixir-format
+msgid "Expand menu"
 msgstr ""

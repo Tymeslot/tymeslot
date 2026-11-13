@@ -124,6 +124,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliserTest do
       assert event.transparency == :transparent
     end
 
+    test "an out-of-office event is busy, with Graph's own state kept in its metadata" do
+      raw = build_raw_event(%{"showAs" => "oof"})
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events([raw], @context)
+      assert event.transparency == :opaque
+      assert event.provider_metadata["showAs"] == "oof"
+    end
+
     test "cancelled event has status: :cancelled and is NOT filtered out" do
       raw = build_raw_event(%{"isCancelled" => true})
 

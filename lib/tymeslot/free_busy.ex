@@ -8,6 +8,10 @@ defmodule Tymeslot.FreeBusy do
   calendar events the availability engine treats as blocking, plus the
   profile's time off, so a holiday entered in Tymeslot rather than in a
   calendar is published as busy too.
+
+  The feed deliberately keeps the plain blocking rule for now: the booking
+  page's rule for all-day events on read-only calendars, and the organiser's
+  "Treat as" choices (`Tymeslot.Availability.Bookability`), do not reach it.
   """
 
   alias Tymeslot.Availability.{Events, TimeOff}

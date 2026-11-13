@@ -1,0 +1,90 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hidden"
+msgid_plural "%{count} hidden"
+msgstr[0] "%{count} skrytý"
+msgstr[1] "%{count} skryté"
+msgstr[2] "%{count} skrytých"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "%{date}, show this day's events"
+msgstr "%{date}, zobrazit události tohoto dne"
+
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#, elixir-autogen, elixir-format
+msgid "%{first} to %{last}"
+msgstr "%{first} až %{last}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Days of this week"
+msgstr "Dny tohoto týdne"
+
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#, elixir-autogen, elixir-format
+msgid "Earlier"
+msgstr "Dříve"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Events: %{count}"
+msgstr "Události: %{count}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#, elixir-autogen, elixir-format
+msgid "From %{date}"
+msgstr "Od %{date}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "From %{time}"
+msgstr "Od %{time}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#, elixir-autogen, elixir-format
+msgid "Later"
+msgstr "Později"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Loading more"
+msgstr "Načítají se další"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing planned in these weeks."
+msgstr "V těchto týdnech není nic naplánováno."
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Show later"
+msgstr "Zobrazit pozdější"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Until %{time}"
+msgstr "Do %{time}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "includes something that needs your attention"
+msgstr "obsahuje něco, co vyžaduje vaši pozornost"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "More on %{date}: %{count}"
+msgstr "Další dne %{date}: %{count}"

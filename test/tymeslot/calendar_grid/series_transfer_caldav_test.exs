@@ -1,7 +1,7 @@
 defmodule Tymeslot.CalendarGrid.SeriesTransferCalDAVTest do
   @moduledoc """
   Moving a CalDAV recurring series to a calendar on another CalDAV server
-  through `CalendarGrid.move_event/3`, down to the HTTP client: the series'
+  through `Changes.move_event/3`, down to the HTTP client: the series'
   resource copied under a new UID into the destination collection, on the
   destination's server with its own credentials, and only then deleted on
   the source's, under the ETag the copy was made from.
@@ -18,7 +18,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferCalDAVTest do
   import Mox
 
   alias Ecto.Changeset
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.ProviderBreakers
@@ -173,7 +173,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferCalDAVTest do
   defp ok(status), do: {:ok, %Req.Response{status: status, body: "", headers: %{}}}
 
   defp move(user, event, integration, calendar_id) do
-    CalendarGrid.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
+    Changes.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
   end
 
   defp uids(document) do

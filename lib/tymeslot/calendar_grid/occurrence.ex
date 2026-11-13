@@ -62,11 +62,20 @@ defmodule Tymeslot.CalendarGrid.Occurrence do
 
     cond do
       not Series.member?(event) -> :single
-      ProviderConfig.caldav_based?(provider) -> :caldav
+      ProviderConfig.resource_series?(provider) -> :caldav
       ProviderConfig.oauth_provider?(provider) -> :provider_ids
       true -> :unsupported
     end
   end
+
+  @doc """
+  Whether every occurrence of `event`'s series is cached under the same uid
+  (the CalDAV family, which holds a series in one resource), so anything
+  keyed by uid applies to all of them. Google and Outlook give each
+  occurrence a uid of its own.
+  """
+  @spec uid_shared_by_series?(map()) :: boolean()
+  def uid_shared_by_series?(event), do: series_family(event) == :caldav
 
   @doc """
   How the provider of `stored`, a member of a series, addresses the whole

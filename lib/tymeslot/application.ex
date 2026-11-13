@@ -161,18 +161,10 @@ defmodule Tymeslot.Application do
         &(test? and &1 in @not_started_in_test)
       )
 
-    # Interactive dev calendar rule store. Started only when opted in via
-    # config/dev.exs (DEV_CALENDAR / DEV_EMPTY_CALENDAR); the module is compiled
-    # solely under dev/support, so this never runs in test or release builds.
-    dev_children =
-      if Application.get_env(:tymeslot, :dev_calendar_enabled, false),
-        do: [Tymeslot.Integrations.Calendar.DebugStore],
-        else: []
-
     children =
       base_children ++
         service_children ++
-        dev_children ++
+        dev_children() ++
         [
           # Guardians that finish the calendar grid's queued writes when the
           # grid's LiveView is gone. Children stop in reverse order, so placed
@@ -308,6 +300,19 @@ defmodule Tymeslot.Application do
     # The integration health alert thresholds are read by an hourly job; a
     # value it cannot run on is refused here rather than at every run.
     Alerting.validate_config!()
+  end
+
+  # The debug calendar's in-memory store. Started on every dev server, not
+  # only with the interactive stub (DEV_CALENDAR / DEV_EMPTY_CALENDAR):
+  # the debug provider reads and writes it whichever calendar module runs,
+  # including on a dev server run from a project that depends on this one,
+  # where the stub is not compiled in. Never started in test or release
+  # builds; tests that need it start it themselves.
+  @spec dev_children() :: [module()]
+  defp dev_children do
+    if Application.get_env(:tymeslot, :environment) == :dev,
+      do: [Tymeslot.Integrations.Calendar.DebugStore],
+      else: []
   end
 
   # The startup checks that only work once the rest of the tree is up: the

@@ -260,4 +260,16 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.WritesTest do
       assert {:error, :not_found} = Writes.delete_item(config(), @item_id)
     end
   end
+
+  describe "from_event_data/1" do
+    test "a calendar edit's free, a string, frees the time as a booking's atom does" do
+      assert Writes.from_event_data(%{transparency: "transparent"}).transparency == :transparent
+      assert Writes.from_event_data(%{transparency: :transparent}).transparency == :transparent
+    end
+
+    test "busy, or nothing said, is busy" do
+      assert Writes.from_event_data(%{transparency: "opaque"}).transparency == :opaque
+      assert Writes.from_event_data(%{}).transparency == :opaque
+    end
+  end
 end

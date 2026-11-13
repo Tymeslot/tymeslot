@@ -78,6 +78,20 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
   end
 
   @doc """
+  As `get_override_by_schedule_and_date/2`, locking the row (`FOR UPDATE`)
+  until the caller's transaction ends.
+  """
+  @spec lock_override_by_schedule_and_date(integer(), Date.t()) ::
+          AvailabilityOverrideSchema.t() | nil
+  def lock_override_by_schedule_and_date(schedule_id, date) do
+    AvailabilityOverrideSchema
+    |> where([o], o.schedule_id == ^schedule_id and o.date == ^date)
+    |> where([o], o.override_type != :extra_hours)
+    |> lock("FOR UPDATE")
+    |> Repo.one()
+  end
+
+  @doc """
   Gets overrides for a schedule within a date range.
   """
   @spec get_overrides_by_schedule_and_date_range(integer(), Date.t(), Date.t()) ::
@@ -109,5 +123,57 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
     %AvailabilityOverrideSchema{}
     |> AvailabilityOverrideSchema.changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc """
+  Writes the schedule's override on `attrs.date` in one statement: inserts
+  it, or, when the date already has one (even one another transaction has
+  just inserted), replaces its type, hours and reason. Concurrent writes for
+  one date therefore never fail on the unique index; the last to commit
+  stands.
+
+  Extra available times (`extra_hours`) are not written here: a date may
+  hold several, so the unique index, and the conflict target with it, covers
+  every other type only.
+  """
+  @spec upsert_override(map()) ::
+          {:ok, AvailabilityOverrideSchema.t()} | {:error, Ecto.Changeset.t()}
+  def upsert_override(attrs) when is_map(attrs) do
+    %AvailabilityOverrideSchema{}
+    |> AvailabilityOverrideSchema.changeset(attrs)
+    |> Repo.insert(
+      on_conflict:
+        {:replace, [:override_type, :start_time, :end_time, :ends_next_day, :reason, :updated_at]},
+      conflict_target:
+        {:unsafe_fragment, "(schedule_id, date) WHERE override_type <> 'extra_hours'"},
+      returning: true
+    )
+  end
+
+  @doc """
+  Updates an availability override.
+  """
+  @spec update_override(AvailabilityOverrideSchema.t(), map()) ::
+          {:ok, AvailabilityOverrideSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_override(%AvailabilityOverrideSchema{} = override, attrs) when is_map(attrs) do
+    override
+    |> AvailabilityOverrideSchema.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes a schedule's override on `date`, if it has one. Returns how many
+  rows went (0 or 1). The date's extra times (`list_extra_on/2`) are not
+  its override, and stay.
+  """
+  @spec delete_by_schedule_and_date(integer(), Date.t()) :: non_neg_integer()
+  def delete_by_schedule_and_date(schedule_id, date) do
+    {count, _rows} =
+      AvailabilityOverrideSchema
+      |> where([o], o.schedule_id == ^schedule_id and o.date == ^date)
+      |> where([o], o.override_type != :extra_hours)
+      |> Repo.delete_all()
+
+    count
   end
 end

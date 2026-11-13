@@ -19,7 +19,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionAlreadyGoneTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -77,7 +77,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionAlreadyGoneTest do
 
       expect_not_found(unquote(provider), unquote(event_id))
 
-      assert {:ok, %{linked_meeting: :cancelled}} = CalendarGrid.delete_event(user.id, event)
+      assert {:ok, %{linked_meeting: :cancelled}} = Changes.delete_event(user.id, event)
 
       {:ok, cancelled} = MeetingQueries.get_meeting(meeting.id)
 
@@ -140,7 +140,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionAlreadyGoneTest do
     end)
 
     assert {:error, %{reason: :not_found, retry: :not_queued}} =
-             CalendarGrid.delete_event(user.id, event)
+             Changes.delete_event(user.id, event)
 
     assert_received {:deleted_at, "primary"}
 

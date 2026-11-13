@@ -16,11 +16,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.FeedCalendarTest do
   import Tymeslot.Factory
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync
   alias Tymeslot.Integrations.Calendar.Outlook.FeedCalendar
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
 
@@ -75,7 +77,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.FeedCalendarTest do
 
   defp searched(user, integration) do
     {:ok, fresh} = CalendarIntegrationQueries.get(integration.id)
-    user.id |> CalendarGrid.search_events("Team", [fresh]) |> Enum.map(& &1.uid) |> Enum.sort()
+
+    %{upcoming: upcoming, past: past} =
+      ProviderCalendarEventSearchQueries.search_around(user.id, "Team",
+        from: DateTime.utc_now(),
+        visibility_rules: Calendar.visibility_rules([fresh])
+      )
+
+    (upcoming ++ past) |> Enum.map(& &1.uid) |> Enum.sort()
   end
 
   # A delta that returns the bootstrap's mislabelled row as changed, and
@@ -123,7 +132,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.FeedCalendarTest do
     assert searched(user, integration) == ["review@x", "standup@x"]
 
     colours =
-      CalendarGrid.calendar_colour_classes([
+      CalendarGrid.calendar_colour_classes([], [
         %CalendarAppearanceSchema{
           calendar_integration_id: integration.id,
           provider_calendar_id: @default,

@@ -193,3 +193,13 @@ msgstr "Tymeslot mówi teraz po hiszpańsku"
 #, elixir-autogen, elixir-format
 msgid "Your dashboard, booking pages and every email are now available in Spanish. Tymeslot follows your browser's language, or you can choose one yourself in Account Settings. People who book you see booking pages and confirmations in their own language too."
 msgstr "Twój panel, strony rezerwacji i wszystkie e-maile są teraz dostępne po hiszpańsku. Tymeslot korzysta z języka Twojej przeglądarki, ale możesz też wybrać język samodzielnie w Ustawieniach konta. Osoby, które u Ciebie rezerwują, również widzą strony rezerwacji i potwierdzenia we własnym języku."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Your dashboard calendar, redesigned"
+msgstr "Kalendarz w panelu w nowej odsłonie"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "We've redesigned the calendar from the ground up: a fresh look, a clearer layout with more room for your week, and quicker ways to plan, create and change your meetings. Have a look around, or read the docs for a tour of everything that's new."
+msgstr "Zaprojektowaliśmy kalendarz od nowa: nowy wygląd, czytelniejszy układ z większą ilością miejsca na Twój tydzień i szybsze sposoby planowania, tworzenia i zmieniania spotkań. Rozejrzyj się albo przeczytaj dokumentację, aby poznać wszystkie nowości."

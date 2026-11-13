@@ -22,7 +22,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
   import Mox
   import Tymeslot.WorkerTestHelpers, only: [running_job: 2]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
@@ -109,7 +109,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
         {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
       end)
 
-      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
       assert updated.summary == "Renamed"
 
       assert_received {:put, url, body, headers}
@@ -136,7 +136,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
         {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
       end)
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
       assert row.raw_ical == @synced_ical
@@ -145,10 +145,10 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
     end
   end
 
-  # The grid removes a guest by writing the shortened list
-  # (`AttendeeManagement.apply_remove_attendee/3`). The guest has already been
-  # emailed a cancellation by then, so a document that kept her line would put
-  # her back in the grid on the next sync.
+  # The side panel removes a guest by writing the shortened list
+  # (`Dashboard.Calendar.PanelGuests.confirm_remove/1`). The guest is emailed a
+  # cancellation once it is accepted, so a document that kept her line would
+  # put her back on the calendar on the next sync.
   describe "changing the guests of a synced CalDAV event from the grid" do
     defp expect_put do
       test_pid = self()
@@ -172,7 +172,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
 
       # The list the grid sends once Bob is removed from a cache that held both.
       remaining = [%{"email" => "ada@example.com", "name" => "Ada", "status" => "accepted"}]
-      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, %{attendees: remaining})
+      assert {:ok, updated} = Changes.update_event(user.id, event, %{attendees: remaining})
       assert updated.attendees == remaining
 
       # Ada's reply travels with her, verbatim, rather than being rebuilt from
@@ -192,7 +192,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
         %{"email" => "cleo@example.com", "name" => nil, "status" => "needs_action"}
       ]
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{attendees: attendees})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{attendees: attendees})
 
       # SCHEDULE-AGENT=CLIENT: stored, but not mailed by the server, because
       # Tymeslot has already sent the invitation itself.
@@ -287,7 +287,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
 
       # 11:00 in Berlin (UTC+2) on 15 September.
       assert {:ok, updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{
+               Changes.update_event(user.id, occurrence, %{
                  start_at: ~U[2026-09-15 09:00:00.000000Z],
                  end_at: ~U[2026-09-15 09:15:00.000000Z]
                })
@@ -316,7 +316,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
       expect_series_put()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup, moved"})
+               Changes.update_event(user.id, occurrence, %{summary: "Standup, moved"})
 
       assert_received {:put, _url, body, _headers}
       [_master, override] = vevent_blocks(body)
@@ -416,7 +416,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
 
         # 12:00 in Berlin (UTC+2) on 15 September.
         assert {:ok, _updated} =
-                 CalendarGrid.update_event(user.id, occurrence, %{
+                 Changes.update_event(user.id, occurrence, %{
                    start_at: ~U[2026-09-15 10:00:00.000000Z],
                    end_at: ~U[2026-09-15 10:15:00.000000Z]
                  })
@@ -441,7 +441,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
       end)
 
       assert {:error, %{retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup, moved"})
+               Changes.update_event(user.id, occurrence, %{summary: "Standup, moved"})
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
 
@@ -461,7 +461,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
       end)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{
+               Changes.update_event(user.id, event, %{
                  start_at: ~U[2026-09-10 11:00:00.000000Z],
                  end_at: ~U[2026-09-10 12:00:00.000000Z]
                })
@@ -488,7 +488,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
 
       # 11:00 in Berlin (UTC+2) on 15 September: two hours later.
       assert {:ok, updated} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  occurrence,
                  %{
@@ -519,7 +519,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
       expect_series_put()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :all
                )
 
@@ -552,7 +552,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
       expect_series_put()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :all
                )
 
@@ -573,7 +573,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
       end)
 
       assert {:error, %{retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :all
                )
 
@@ -595,7 +595,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
 
       # Wednesday 16 September, still 09:00 in Berlin (UTC+2).
       assert {:ok, _updated} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  occurrence,
                  %{

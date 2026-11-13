@@ -309,6 +309,25 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   end
 
   @doc """
+  Like `preload_live_participants/1`, with the guests whose invitation still
+  stands loaded into `:guests` too (oldest first), in one preload.
+  """
+  @spec preload_live_people(Meeting.t() | [Meeting.t()]) :: Meeting.t() | [Meeting.t()]
+  def preload_live_people(meeting_or_meetings) do
+    preloaded =
+      Repo.preload(
+        meeting_or_meetings,
+        [participants: live_participants_preload(), guests: live_guests_preload()],
+        force: true
+      )
+
+    # Matched to rule out the `nil` that `Repo.preload/3` returns for a `nil`.
+    case preloaded do
+      loaded when is_list(loaded) or is_struct(loaded, Meeting) -> loaded
+    end
+  end
+
+  @doc """
   Returns the organiser's live bookings overlapping the `[from_utc, to_utc)`
   window, ordered by start time.
 
@@ -326,6 +345,84 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> order_by_start_asc()
     |> Repo.all()
   end
+
+  @doc """
+  Returns the organiser's booking requests that expired unanswered and
+  overlap the `[from_utc, to_utc)` window, ordered by start time.
+  """
+  @spec list_expired_requests_for_organizer_in_range(pos_integer(), DateTime.t(), DateTime.t()) ::
+          [Meeting.t()]
+  def list_expired_requests_for_organizer_in_range(
+        organizer_user_id,
+        %DateTime{} = from_utc,
+        %DateTime{} = to_utc
+      ) do
+    Meeting
+    |> MeetingState.where_expired_request()
+    |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> where([m], m.start_time < ^to_utc and m.end_time > ^from_utc)
+    |> order_by_start_asc()
+    |> Repo.all()
+  end
+
+  @default_booking_search_limit 10
+
+  @doc """
+  Searches the organiser's bookings the calendar draws (live ones, and
+  requests that expired unanswered) by title, guest name, guest email and
+  meeting type, case-insensitively and with the term matched literally.
+  Returns those starting on or after `:from` in ascending order
+  (`upcoming`) and those before it, latest first (`past`), each capped at
+  `:limit` (default #{@default_booking_search_limit}). A blank term returns
+  empty sides without a query.
+  """
+  @spec search_for_organizer(pos_integer(), String.t(), keyword()) :: %{
+          upcoming: [Meeting.t()],
+          past: [Meeting.t()]
+        }
+  def search_for_organizer(organizer_user_id, term, opts) do
+    case String.trim(to_string(term)) do
+      "" ->
+        %{upcoming: [], past: []}
+
+      trimmed ->
+        from_utc = Keyword.fetch!(opts, :from)
+        limit = Keyword.get(opts, :limit, @default_booking_search_limit)
+        drawn = drawn_matching(organizer_user_id, "%" <> escape_like(trimmed) <> "%")
+
+        %{
+          upcoming:
+            drawn
+            |> where([m], m.start_time >= ^from_utc)
+            |> order_by([m], asc: m.start_time, asc: m.id)
+            |> limit(^limit)
+            |> Repo.all(),
+          past:
+            drawn
+            |> where([m], m.start_time < ^from_utc)
+            |> order_by([m], desc: m.start_time, desc: m.id)
+            |> limit(^limit)
+            |> Repo.all()
+        }
+    end
+  end
+
+  # The organiser's matching bookings in either state the calendar draws
+  # (`MeetingState.where_drawn/1` owns the rule).
+  defp drawn_matching(organizer_user_id, pattern) do
+    Meeting
+    |> for_organizer(organizer_user_id)
+    |> where(
+      [m],
+      ilike(m.title, ^pattern) or ilike(m.attendee_name, ^pattern) or
+        ilike(m.attendee_email, ^pattern) or ilike(m.meeting_type, ^pattern)
+    )
+    |> MeetingState.where_drawn()
+  end
+
+  # Escapes LIKE/ILIKE wildcard metacharacters so a typed term is matched
+  # literally rather than as a pattern.
+  defp escape_like(term), do: String.replace(term, ~r/[\\%_]/, "\\\\\\0")
 
   @doc """
   Get every upcoming meeting the organiser holds, whatever its status, soonest

@@ -105,6 +105,13 @@ defmodule Tymeslot.Integrations.HealthCheck do
   end
 
   @doc """
+  The consecutive failed sync cycles of a user's integrations of `kind`, by
+  integration id (see `record_sync_failure/2`). One with none is absent.
+  """
+  @spec sync_failure_counts(IntegrationTypes.kind(), integer()) :: %{integer() => pos_integer()}
+  defdelegate sync_failure_counts(kind, user_id), to: IntegrationHealthStateQueries
+
+  @doc """
   Canonical attention classification for an integration given its current
   health state, following the single precedence ladder used across the
   dashboard: paused → needs_reauth → unhealthy → healthy.

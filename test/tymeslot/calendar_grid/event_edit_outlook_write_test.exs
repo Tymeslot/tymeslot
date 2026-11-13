@@ -20,7 +20,7 @@ defmodule Tymeslot.CalendarGrid.EventEditOutlookWriteTest do
   import Mox
 
   alias Ecto.Changeset
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
@@ -124,7 +124,7 @@ defmodule Tymeslot.CalendarGrid.EventEditOutlookWriteTest do
       event = stored_as(event, created_by_tymeslot: false, provider_metadata: @foreign_metadata)
       patch_and_capture()
 
-      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
       assert updated.summary == "Renamed"
 
       assert_received {:patch, url, body}
@@ -150,7 +150,7 @@ defmodule Tymeslot.CalendarGrid.EventEditOutlookWriteTest do
       event = stored_as(event, created_by_tymeslot: true)
       patch_and_capture()
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       assert_received {:patch, _url, body}
       assert body |> Jason.decode!() |> fingerprinted?()

@@ -91,13 +91,13 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
 
     @routes [
-      {"/dashboard", "calendar-grid"},
+      {"/dashboard", "calendar-surface"},
       {"/dashboard/overview", "Welcome back"},
       {"/dashboard/settings", "Basic Information"},
       {"/dashboard/availability", "Availability"},
       {"/dashboard/meeting-settings", "Meeting Types"},
       {"/dashboard/locations", "Locations"},
-      {"/dashboard/calendar", "calendar-grid"},
+      {"/dashboard/calendar", "calendar-surface"},
       {"/dashboard/integrations", "Integrations"},
       {"/dashboard/pages", "Booking Page Text"},
       {"/dashboard/meetings", "Meetings"},
@@ -366,7 +366,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     test "the mode tab bar is gone", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard")
       refute html =~ "mode-tab-bar"
-      refute html =~ "calendar-rail"
+      refute html =~ ~s(data-testid="calendar-rail")
     end
   end
 
@@ -556,7 +556,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       send(view.pid, {:completely_unknown_message, "some data"})
 
       # Should not crash, should still render the dashboard
-      assert render(view) =~ "calendar-grid"
+      assert render(view) =~ "calendar-surface"
     end
   end
 

@@ -31,7 +31,7 @@ defmodule TymeslotWeb.AccountLive do
   @impl Phoenix.LiveView
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen">
+    <div class="min-h-screen pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       <%!-- Simple header with back button --%>
       <nav class="brand-nav mb-6 relative" style="z-index: 50;">
         <div class="container mx-auto px-4">

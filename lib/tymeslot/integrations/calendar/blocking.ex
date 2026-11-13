@@ -171,7 +171,8 @@ defmodule Tymeslot.Integrations.Calendar.Blocking do
   shown or not, and through the whole mailbox when it lists none (see
   `AvailabilityView`); any other calendar when it is used and set to block.
   """
-  @spec blocks?(%{provider: String.t() | atom()}, CalendarEntry.t()) :: boolean()
+  @spec blocks?(%{:provider => String.t() | atom(), optional(atom()) => any()}, CalendarEntry.t()) ::
+          boolean()
   def blocks?(%{provider: provider} = integration, %CalendarEntry{} = entry) do
     cond do
       not ProviderConfig.ews?(provider) -> Selection.blocking?(entry)

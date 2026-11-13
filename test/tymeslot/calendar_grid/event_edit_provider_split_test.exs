@@ -21,7 +21,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
   import Mox
 
   alias Ecto.Changeset
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
@@ -177,7 +177,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
       serve(google())
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  occurrence,
                  Map.put(an_hour_later(), :summary, "Standup"),
@@ -249,7 +249,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
       serve(google())
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -296,7 +296,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
       serve(google(500))
 
       assert {:error, %{retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -318,7 +318,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
       serve(google(200, 500))
 
       assert {:error, %{retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -343,7 +343,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
       end)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -364,7 +364,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
       serve(google())
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, first, %{summary: "Standup"},
+               Changes.update_event(user.id, first, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -445,7 +445,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
       serve(outlook(200))
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -504,7 +504,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
       end)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -525,7 +525,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
       serve(outlook(500))
 
       assert {:error, %{retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -548,7 +548,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
         serve(outlook(200, calendar))
 
         assert {:error, %{retry: :not_queued}} =
-                 CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                    recurrence_scope: :following
                  )
 

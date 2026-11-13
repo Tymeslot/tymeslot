@@ -34,6 +34,10 @@ defmodule TymeslotWeb.Dashboard.Availability.Helpers do
   @doc """
   Renders a timezone display with country flag and formatted timezone name.
   """
+  attr :timezone_display, :string, required: true
+  attr :country_code, :string, default: nil
+  attr :title, :boolean, default: true, doc: "false when a wrapping link carries the tooltip"
+
   @spec timezone_display(map()) :: Phoenix.LiveView.Rendered.t()
   def timezone_display(assigns) do
     ~H"""
@@ -45,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.Availability.Helpers do
         show_fallback={true}
       />
       <%!-- native-title: repeats the timezone, which can truncate. --%>
-      <span data-testid="timezone-display" class="truncate" title={@timezone_display}>{@timezone_display}</span>
+      <span data-testid="timezone-display" class="truncate" title={if @title, do: @timezone_display}>{@timezone_display}</span>
     </div>
     """
   end

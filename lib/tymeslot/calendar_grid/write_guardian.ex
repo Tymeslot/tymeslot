@@ -26,7 +26,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   write before it left it, so it is started only once that write has
   answered, exactly as the grid would have done; an edit the provider could
   not take is saved for offline retry by
-  `Tymeslot.CalendarGrid.update_event/4` as usual.
+  `Tymeslot.CalendarGrid.Changes.update_event/4` as usual.
 
   A grid mounted again in the same LiveView takes the queue back
   (`adopt/2`), so that its new edits wait behind the ones still being

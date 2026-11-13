@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventVideoBookingTest do
   @moduledoc """
-  `CalendarGrid.change_event_video/3` refuses an event that is the calendar
+  `Changes.change_event_video/3` refuses an event that is the calendar
   copy of a Tymeslot booking: the booking's room is the meeting's, and a room
   made from the grid would leave its emails pointing at the old one.
 
@@ -15,7 +15,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoBookingTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
   setup :verify_on_exit!
@@ -51,7 +51,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoBookingTest do
         other = insert(:video_integration, user: user, provider: "mirotalk")
 
         assert {:error, :linked_to_booking} =
-                 CalendarGrid.change_event_video(user.id, event, other.id)
+                 Changes.change_event_video(user.id, event, other.id)
 
         assert_untouched(event)
       end
@@ -64,7 +64,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoBookingTest do
     } do
       link_meeting(integration, %{uid: event.uid})
 
-      assert {:error, :linked_to_booking} = CalendarGrid.change_event_video(user.id, event, nil)
+      assert {:error, :linked_to_booking} = Changes.change_event_video(user.id, event, nil)
       assert_untouched(event)
     end
 
@@ -77,13 +77,13 @@ defmodule Tymeslot.CalendarGrid.EventVideoBookingTest do
       link_meeting(integration, %{uid: event.uid})
 
       assert {:ok, :unchanged} =
-               CalendarGrid.change_event_video(user.id, event, video_integration.id)
+               Changes.change_event_video(user.id, event, video_integration.id)
     end
   end
 
   describe "ensure_video_changeable/1" do
     test "allows an event no booking mirrors", %{event: event} do
-      assert :ok = CalendarGrid.ensure_video_changeable(event)
+      assert :ok = Changes.ensure_video_changeable(event)
     end
   end
 

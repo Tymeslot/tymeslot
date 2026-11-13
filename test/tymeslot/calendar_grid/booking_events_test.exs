@@ -1,8 +1,8 @@
 defmodule Tymeslot.CalendarGrid.BookingEventsTest do
   @moduledoc """
   Covers the booking-to-grid-event projection: which bookings load for a
-  window, how they are shaped for the grid, and deduplication against
-  provider-synced copies.
+  window and how they are shaped for the grid. A booking's calendar copy is
+  dropped in its favour by `EventWindow` (see `EventWindowTest`).
   """
 
   use Tymeslot.DataCase, async: true
@@ -18,10 +18,6 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
   defp window do
     start_dt = DateTime.new!(Date.utc_today(), ~T[00:00:00], "Etc/UTC")
     {start_dt, DateTime.add(start_dt, 7 * 86_400, :second)}
-  end
-
-  defp cached_event(attrs) do
-    Enum.into(attrs, %{provider_event_id: nil, uid: nil})
   end
 
   defp insert_meeting(user, attrs) do
@@ -125,57 +121,6 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
     assert event.meeting_id == past.id
   end
 
-  test "drops bookings whose synced provider copy is present" do
-    user = insert(:user)
-    synced = insert_meeting(user, %{provider_event_id: "prov-event-1"})
-    unsynced = insert_meeting(user, %{title: "Unsynced"})
-
-    {start_dt, end_dt} = window()
-    cached = [cached_event(provider_event_id: "prov-event-1", uid: "prov-event-1@google.com")]
-
-    events = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, cached)
-
-    assert Enum.map(events, & &1.meeting_id) == [unsynced.id]
-    refute Enum.any?(events, &(&1.meeting_id == synced.id))
-  end
-
-  test "drops a CalDAV booking whose synced copy is keyed by href, not provider event id" do
-    user = insert(:user)
-
-    # The CalDAV write path persists its caller-supplied UID (the meeting's
-    # calendar_uid) and never sets
-    # provider_event_id, while the synced copy carries the server's href
-    # there. The only identifier the two sides share is the UID.
-    synced = insert_meeting(user, %{calendar_uid: "abc123@tymeslot.com", provider_event_id: nil})
-    unsynced = insert_meeting(user, %{title: "Unsynced", calendar_uid: "def456@tymeslot.com"})
-
-    {start_dt, end_dt} = window()
-
-    cached = [
-      cached_event(
-        provider_event_id: "/calendars/sander/default/abc123@tymeslot.com.ics",
-        uid: "abc123@tymeslot.com"
-      )
-    ]
-
-    events = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, cached)
-
-    assert Enum.map(events, & &1.meeting_id) == [unsynced.id]
-    refute Enum.any?(events, &(&1.meeting_id == synced.id))
-  end
-
-  test "keeps a booking whose UID merely resembles an unrelated cached event" do
-    user = insert(:user)
-    booking = insert_meeting(user, %{calendar_uid: "abc123@tymeslot.com", provider_event_id: nil})
-
-    {start_dt, end_dt} = window()
-    cached = [cached_event(provider_event_id: "/calendars/x/other.ics", uid: "other@example.com")]
-
-    events = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt, cached)
-
-    assert Enum.map(events, & &1.meeting_id) == [booking.id]
-  end
-
   test "does not return other organisers' bookings" do
     user = insert(:user)
     other = insert(:user)
@@ -194,5 +139,137 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
 
     assert [%{summary: "Meeting"}] =
              CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt)
+  end
+
+  describe "requests and meeting types" do
+    test "carries the meeting type, whether it is a request, and its deadline" do
+      user = insert(:user)
+      deadline = DateTime.add(DateTime.utc_now(:second), 3600, :second)
+
+      insert_meeting(user, %{
+        status: "awaiting_approval",
+        meeting_type: "Intro call",
+        approval_requested_at: DateTime.utc_now(:second),
+        approval_deadline_at: deadline
+      })
+
+      {start_dt, end_dt} = window()
+
+      assert [event] = CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt)
+      assert event.meeting_type == "Intro call"
+      assert event.request == true
+      assert event.expired == false
+      assert event.approval_deadline_at == deadline
+    end
+
+    test "a request held past its deadline is expired, though the sweep has not reached it" do
+      user = insert(:user)
+
+      insert_meeting(user, %{
+        status: "awaiting_approval",
+        approval_requested_at: DateTime.add(DateTime.utc_now(:second), -7200, :second),
+        approval_deadline_at: DateTime.add(DateTime.utc_now(:second), -60, :second)
+      })
+
+      {start_dt, end_dt} = window()
+
+      assert [%BookingEvent{request: true, expired: true}] =
+               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt)
+    end
+
+    test "a request whose start has passed is expired though its deadline is ahead" do
+      user = insert(:user)
+      now = DateTime.utc_now(:second)
+      start_time = DateTime.add(now, -600, :second)
+
+      insert_meeting(user, %{
+        status: "awaiting_approval",
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 1800, :second),
+        approval_requested_at: DateTime.add(now, -7200, :second),
+        approval_deadline_at: DateTime.add(now, 3600, :second)
+      })
+
+      from = DateTime.add(now, -86_400, :second)
+      to = DateTime.add(now, 86_400, :second)
+
+      assert [%BookingEvent{request: true, expired: true}] =
+               CalendarGrid.list_booking_events_for_range(user.id, from, to)
+    end
+
+    test "expired requests of another organiser or outside the window are not loaded" do
+      user = insert(:user)
+      other = insert(:user)
+      now = DateTime.utc_now(:second)
+
+      expired = fn organiser, offset_days ->
+        start_time =
+          DateTime.add(
+            DateTime.new!(Date.utc_today(), ~T[12:00:00], "Etc/UTC"),
+            offset_days * 86_400,
+            :second
+          )
+
+        insert_meeting(organiser, %{
+          status: "expired",
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 1800, :second),
+          approval_requested_at: DateTime.add(now, -7200, :second),
+          approval_resolved_at: DateTime.add(now, -30, :second),
+          cancelled_at: DateTime.add(now, -30, :second)
+        })
+      end
+
+      mine = expired.(user, 1)
+      expired.(other, 1)
+      expired.(user, 30)
+
+      {start_dt, end_dt} = window()
+
+      assert [%BookingEvent{meeting_id: id}] =
+               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt,
+                 include_expired: true
+               )
+
+      assert id == mine.id
+    end
+
+    test "a confirmed booking is neither a request nor expired" do
+      user = insert(:user)
+      insert_meeting(user, %{meeting_type: "  "})
+
+      {start_dt, end_dt} = window()
+
+      assert [%BookingEvent{request: false, expired: false, meeting_type: nil, copy: nil}] =
+               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt)
+    end
+
+    test "requests that expired unanswered load only when asked for, abandoned checkouts never" do
+      user = insert(:user)
+      now = DateTime.utc_now(:second)
+
+      lapsed =
+        insert_meeting(user, %{
+          status: "expired",
+          title: "Lapsed request",
+          approval_requested_at: DateTime.add(now, -7200, :second),
+          approval_deadline_at: DateTime.add(now, -60, :second),
+          approval_resolved_at: DateTime.add(now, -30, :second),
+          cancelled_at: DateTime.add(now, -30, :second)
+        })
+
+      insert_meeting(user, %{status: "expired", title: "Abandoned checkout"})
+
+      {start_dt, end_dt} = window()
+
+      assert CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt) == []
+
+      assert [%BookingEvent{request: false, expired: true} = event] =
+               CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt,
+                 include_expired: true
+               )
+
+      assert event.meeting_id == lapsed.id
+    end
   end
 end

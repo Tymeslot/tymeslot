@@ -75,11 +75,6 @@ defmodule Tymeslot.Meetings do
   @doc "Aggregates RSVP counts for a list of guests."
   defdelegate guest_rsvp_summary(guests), to: Guests, as: :summarize
 
-  @doc "Returns a `meeting_uid => RSVP summary` map for a user's guest meetings."
-  defdelegate guest_rsvp_summaries_for_user(user_id),
-    to: Tymeslot.Meetings.GuestQueries,
-    as: :rsvp_summaries_for_user
-
   @doc """
   The calendar identities (`calendar_uid`s) of the organiser's group meetings
   with live seats overlapping the UTC window `[from_utc, to_utc)`.
@@ -109,6 +104,11 @@ defmodule Tymeslot.Meetings do
   defdelegate with_live_participants(meeting),
     to: MeetingListQueries,
     as: :preload_live_participants
+
+  @doc "`with_live_participants/1` and the guests whose invitation still stands, in one preload."
+  @spec with_live_people(MeetingSchema.t()) :: MeetingSchema.t()
+  @spec with_live_people([MeetingSchema.t()]) :: [MeetingSchema.t()]
+  defdelegate with_live_people(meeting), to: MeetingListQueries, as: :preload_live_people
 
   @doc """
   Sets `capacity` on a meeting type's future, live group meetings so they
@@ -229,8 +229,6 @@ defmodule Tymeslot.Meetings do
   @doc """
   Reschedules an existing meeting.
 
-  Delegates to Bookings.Reschedule module.
-
   The `organizer_user_id` is required. The meeting lookup is scoped to that
   owner, preventing IDOR attacks from the public booking flow.
   """
@@ -243,25 +241,14 @@ defmodule Tymeslot.Meetings do
   @doc "Moves a meeting the host manages to `new_start`; see `Tymeslot.Bookings.HostMove.move/3`."
   defdelegate move_by_host(meeting_uid, new_start, organizer_user_id), to: HostMove, as: :move
 
-  @doc """
-  Cancels the calendar event associated with a meeting asynchronously.
-
-  Schedules calendar event deletion through an Oban worker. Does not fail the
-  broader cancellation workflow if scheduling fails.
-  """
+  @doc "Deletes a meeting's calendar event through an Oban worker; scheduling failures are not fatal."
   defdelegate cancel_calendar_event(meeting), to: CalendarEvents
 
   # =====================================
   # Video Room Integration Functions
   # =====================================
 
-  @doc """
-  Adds a secure video room to an existing meeting.
-
-  This is a high-level operation that ensures the meeting exists and the video
-  room is successfully attached. It handles logging and error translation
-  for the web layer.
-  """
+  @doc "Adds a secure video room to an existing meeting, logging and translating errors for the web."
   @spec add_video_room_to_meeting(String.t()) :: {:ok, MeetingSchema.t()} | {:error, term()}
   def add_video_room_to_meeting(meeting_id) do
     Logger.info("Request to add video room to meeting", meeting_id: meeting_id)
@@ -346,6 +333,18 @@ defmodule Tymeslot.Meetings do
     to: MeetingListQueries,
     as: :list_for_organizer_in_range
 
+  @doc "The organiser's expired, unanswered booking requests overlapping `[from, to)`, by start."
+  @spec list_expired_requests_in_range_for_organizer(pos_integer(), DateTime.t(), DateTime.t()) ::
+          [MeetingSchema.t()]
+  defdelegate list_expired_requests_in_range_for_organizer(organizer_user_id, from, to),
+    to: MeetingListQueries,
+    as: :list_expired_requests_for_organizer_in_range
+
+  @doc "Searches the organiser's drawn bookings around `:from`. See `MeetingListQueries.search_for_organizer/3`."
+  @spec search_for_organizer(pos_integer(), String.t(), keyword()) ::
+          %{upcoming: [MeetingSchema.t()], past: [MeetingSchema.t()]}
+  defdelegate search_for_organizer(organizer_user_id, term, opts), to: MeetingListQueries
+
   @doc "Every meeting id `user_id` organises, past and future."
   @spec list_meeting_ids_for_organizer(pos_integer()) :: [Ecto.UUID.t()]
   defdelegate list_meeting_ids_for_organizer(user_id),
@@ -424,15 +423,8 @@ defmodule Tymeslot.Meetings do
   end
 
   @doc """
-  Fetches a meeting by UID only if the given `organizer_user_id` owns it.
-
-  Returns `{:ok, meeting}` when a matching meeting is found.
-  Returns `{:error, :not_found}` when no meeting exists with that UID, or when
-  the meeting exists but belongs to a different organizer.
-
-  Use this instead of `Tymeslot.Meetings.MeetingQueries.get_meeting_by_uid/1` on
-  any user-facing route that accepts a meeting UID from the URL, to prevent
-  IDOR attacks.
+  Fetches a meeting by UID only if `organizer_user_id` owns it, else `{:error, :not_found}`.
+  Use it on any route that takes a meeting UID from the URL, to prevent IDOR attacks.
   """
   @spec get_meeting_by_uid_for_organizer(String.t(), integer()) ::
           {:ok, MeetingSchema.t()} | {:error, :not_found}
@@ -538,12 +530,8 @@ defmodule Tymeslot.Meetings do
   defdelegate record_seen_calendar_end(meeting, end_time), to: ExternalCalendarChanges
 
   @doc """
-  Clears an `"externally_modified"` flag on a meeting whose provider event
-  agrees with it again.
-
-  The counterpart of `apply_external_calendar_change/4` with a `:modified`
-  signal: detection is stateless, so a sync pass that finds the two sides in
-  agreement is the only thing that can retire a flag an earlier pass raised.
+  Clears an `"externally_modified"` flag once a sync pass finds the provider event agreeing
+  again; detection is stateless, so only such a pass can retire the flag.
   """
   defdelegate resolve_external_calendar_change(meeting),
     to: ExternalCalendarChanges,
@@ -560,12 +548,24 @@ defmodule Tymeslot.Meetings do
     as: :find_linked_meeting
 
   @doc """
-  Returns the meetings linked to the given integration that share any of
-  `identifiers`, keyed by every identifier each matched meeting carries.
+  Returns the meetings linked to the given integration that share any of `identifiers`,
+  keyed by every identifier each carries (`drawn_for: user_id`: that organiser's drawn ones).
   """
-  defdelegate list_meetings_by_calendar_identifiers(calendar_integration_id, identifiers),
-    to: MeetingCalendarQueries,
-    as: :list_by_calendar_identifiers
+  defdelegate list_meetings_by_calendar_identifiers(
+                calendar_integration_id,
+                identifiers,
+                opts \\ []
+              ),
+              to: MeetingCalendarQueries,
+              as: :list_by_calendar_identifiers
+
+  @doc """
+  `find_meeting_by_calendar_event/3` for many events in one query: the
+  `{calendar_integration_id, provider_event_id, calendar_uid}` of every
+  meeting on `integration_ids` matching one of the provider event ids or uids.
+  """
+  defdelegate list_calendar_links(integration_ids, provider_event_ids, uids),
+    to: MeetingCalendarQueries
 
   @doc """
   Returns the subset of `identifiers` carried by any meeting the organiser

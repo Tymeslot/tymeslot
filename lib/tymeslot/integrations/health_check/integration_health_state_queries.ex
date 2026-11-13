@@ -110,6 +110,21 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   end
 
   @doc """
+  The consecutive failed sync cycles of a user's integrations of `kind`, by
+  integration id. Integrations with none are left out.
+  """
+  @spec sync_failure_counts(IntegrationTypes.kind(), integer()) :: %{integer() => pos_integer()}
+  def sync_failure_counts(kind, user_id) do
+    from(s in IntegrationHealthStateSchema,
+      where: s.integration_type == ^kind and s.user_id == ^user_id,
+      where: s.consecutive_sync_failures > 0,
+      select: {s.integration_id, s.consecutive_sync_failures}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
   Retrieves or initialises the health state record for an integration.
 
   If no record exists, inserts a default healthy state using `on_conflict: :nothing`

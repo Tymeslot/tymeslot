@@ -272,6 +272,7 @@ msgid "This meeting's event was deleted from your external calendar."
 msgstr "Цю подію було видалено з вашого зовнішнього календаря."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "Цю подію було перенесено у вашому зовнішньому календарі."
@@ -345,6 +346,7 @@ msgid "Awaiting your approval"
 msgstr "Очікує вашого підтвердження"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Booking confirmed. The invitee has been told."
 msgstr "Бронювання підтверджено. Гостя повідомлено."
@@ -390,6 +392,7 @@ msgid "Reason (optional)"
 msgstr "Причина (необов'язково)"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Request declined. The slot is free again."
 msgstr "Запит відхилено. Час знову вільний."
@@ -410,11 +413,13 @@ msgid "That meeting's start time has already passed."
 msgstr "Час початку цієї зустрічі вже минув."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be approved."
 msgstr "Не вдалося прийняти цей запит."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be declined."
 msgstr "Не вдалося відхилити цей запит."
@@ -823,6 +828,7 @@ msgid "Move booking"
 msgstr "Перенести бронювання"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Move booking to %{time}"
 msgstr "Перенести бронювання на %{time}"

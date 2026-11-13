@@ -1,0 +1,456 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pt\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "%{date}: %{times}"
+msgstr "%{date}: %{times}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "%{date}: bookable times for %{meeting_type}. Show what this means"
+msgstr "%{date}: horários agendáveis para %{meeting_type}. Mostrar o que isso significa"
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "%{opened}, and on %{date}, %{start} to %{finish}"
+msgstr "%{opened}, e também em %{date}, das %{start} às %{finish}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "%{start} to %{finish}"
+msgstr "%{start}–%{finish}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "%{time} the next day"
+msgstr "%{time} do dia seguinte"
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "A break that day would fall outside its hours. Change it on the Availability page."
+msgstr "Uma pausa desse dia ficaria fora do horário do dia. Altere-a na página Disponibilidade."
+
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Accept"
+msgstr "Aprovar"
+
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Accepting…"
+msgstr "Aprovando…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail_layers.ex
+#, elixir-autogen, elixir-format
+msgid "Add a meeting type"
+msgstr "Adicionar um tipo de reunião"
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Affects Tymeslot bookings only. Your calendar doesn't change."
+msgstr "Afeta apenas os agendamentos do Tymeslot. Seu calendário não muda."
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Block this time"
+msgstr "Bloquear este horário"
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked"
+msgstr "Bloqueado"
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked %{when} to %{finish}. Guests can't book this time."
+msgstr "Bloqueado de %{when} até %{finish}. Os convidados não podem agendar esse horário."
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked. It may take a moment to show on your calendar."
+msgstr "Horário bloqueado. Pode levar alguns instantes para aparecer no seu calendário."
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Blocking…"
+msgstr "Bloqueando…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Bookable"
+msgstr "Agendável"
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/rail_layers.ex
+#, elixir-autogen, elixir-format
+msgid "Bookable times"
+msgstr "Horários agendáveis"
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "Bookable times for %{name} put back."
+msgstr "Horários agendáveis de %{name} restaurados."
+
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel booking"
+msgstr "Cancelar agendamento"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar"
+msgstr "Conectar um calendário"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar to add events here."
+msgstr "Conecte um calendário para adicionar eventos aqui."
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Copy free times"
+msgstr "Copiar horários livres"
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't block that time. Please try again."
+msgstr "Não foi possível bloquear esse horário. Tente novamente."
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't change that. Please try again."
+msgstr "Não foi possível fazer essa alteração. Tente novamente."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't confirm the change. Check your bookable times."
+msgstr "Não foi possível confirmar a alteração. Confira seus horários agendáveis."
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't copy. Your browser blocked the clipboard."
+msgstr "Não foi possível copiar. Seu navegador bloqueou a área de transferência."
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't load your bookable times."
+msgstr "Não foi possível carregar seus horários agendáveis."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't open that time. Please try again."
+msgstr "Não foi possível abrir esse horário. Tente novamente."
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't put the bookable times back. Change them on the Availability page."
+msgstr "Não foi possível restaurar os horários agendáveis. Altere-os na página Disponibilidade."
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't put the bookable times back. They have changed since. Change them on the Availability page."
+msgstr "Não foi possível restaurar os horários agendáveis. Eles mudaram desde então. Altere-os na página Disponibilidade."
+
+#: lib/tymeslot_web/live/dashboard/calendar/layer_choices.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save that change. Please try again."
+msgstr "Não foi possível salvar a alteração. Tente novamente."
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't undo the block. Please try again."
+msgstr "Não foi possível desfazer o bloqueio. Tente novamente."
+
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Decline"
+msgstr "Recusar"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Event"
+msgstr "Evento"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Every week"
+msgstr "Toda semana"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Expired"
+msgstr "Expirado"
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Free times for these days copied."
+msgstr "Horários livres destes dias copiados."
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can book %{meeting_type} in the hatched times. Busy events, buffers and your notice period are already taken out, so this is exactly what your booking page offers."
+msgstr "Os convidados podem agendar %{meeting_type} nos horários hachurados. Eventos ocupados, folgas e sua antecedência mínima já foram descontados, então isto é exatamente o que sua página de agendamento oferece."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can book this time on your booking page. The day's hours widen to include it."
+msgstr "Os convidados podem agendar este horário na sua página de agendamento. O horário do dia é ampliado para incluí-lo."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Just this once"
+msgstr "Só desta vez"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail_layers.ex
+#, elixir-autogen, elixir-format
+msgid "Layers"
+msgstr "Camadas"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/rail_layers.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type"
+msgstr "Tipo de reunião"
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Next bookable time: %{when}"
+msgstr "Próximo horário agendável: %{when}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail_layers.ex
+#, elixir-autogen, elixir-format
+msgid "No active meeting types, so there are no bookable times to show."
+msgstr "Nenhum tipo de reunião ativo, então não há horários agendáveis para mostrar."
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "No bookable times on these days."
+msgstr "Nenhum horário agendável nesses dias."
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "No calendar connected. Your bookings and bookable times still show here."
+msgstr "Nenhum calendário conectado. Seus agendamentos e horários agendáveis continuam aparecendo aqui."
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "Open at most 24 hours at a time."
+msgstr "Abra no máximo 24 horas por vez."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Open for %{name}"
+msgstr "Aberto para %{name}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "Open for %{name} every %{weekday}, %{start} to %{finish}"
+msgstr "Aberto para %{name} toda semana (%{weekday}), das %{start} às %{finish}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "Open for %{name} on %{date}, %{start} to %{finish}"
+msgstr "Aberto para %{name} em %{date}, das %{start} às %{finish}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Open for booking"
+msgstr "Abrir para agendamento"
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Press B to hide bookable times."
+msgstr "Pressione B para ocultar os horários agendáveis."
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Press B to show or hide your bookable times."
+msgstr "Pressione B para mostrar ou ocultar seus horários agendáveis."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Repeat"
+msgstr "Repetir"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Request"
+msgstr "Pedido"
+
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule"
+msgstr "Remarcar"
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "Saved. It will block this time once your calendar is reachable again."
+msgstr "Salvo. O horário vai ser bloqueado quando seu calendário estiver acessível de novo."
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "Saved. The time will free up once your calendar is reachable again."
+msgstr "Salvo. O horário vai ser liberado quando seu calendário estiver acessível de novo."
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Show"
+msgstr "Mostrar"
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "That date or time can't be read."
+msgstr "Não foi possível ler essa data ou horário."
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "That meeting type can't be opened. Choose another one."
+msgstr "Esse tipo de reunião não pode ser aberto para agendamento. Escolha outro."
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "That time can't be blocked."
+msgstr "Não é possível bloquear esse horário."
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "That time has already passed."
+msgstr "Esse horário já passou."
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "That time has passed. Choose a later one."
+msgstr "Esse horário já passou. Escolha um mais tarde."
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "That would make the day's hours longer than 24 hours. Change them on the Availability page."
+msgstr "Assim o horário do dia passaria de 24 horas. Altere-o na página Disponibilidade."
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "That's too far ahead to block."
+msgstr "Esse horário está longe demais no futuro para ser bloqueado."
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail_layers.ex
+#, elixir-autogen, elixir-format
+msgid "The hatched times are when guests can book this meeting type. Press B to hide them."
+msgstr "Nos horários hachurados, os convidados podem agendar este tipo de reunião. Pressione B para ocultá-los."
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "The time must end after it starts."
+msgstr "O horário precisa terminar depois de começar."
+
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting has ended"
+msgstr "Esta reunião já terminou"
+
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
+#, elixir-autogen, elixir-format
+msgid "This request expired without an answer"
+msgstr "Este pedido expirou sem resposta"
+
+#: lib/tymeslot_web/live/dashboard/calendar/open_booking.ex
+#, elixir-autogen, elixir-format
+msgid "Those hours can't be saved. Check that day on the Availability page."
+msgstr "Não é possível salvar esse horário. Confira esse dia na página Disponibilidade."
+
+#: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Times in %{zone}"
+msgstr "Horários no fuso %{zone}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treat as"
+msgstr "Considerar como"
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treated as busy for bookings. Guests can't book this time."
+msgstr "Considerado ocupado para agendamentos. Os convidados não podem agendar esse horário."
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treated as free for bookings. Guests can book this time."
+msgstr "Considerado livre para agendamentos. Os convidados podem agendar esse horário."
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot booking · %{calendar}"
+msgstr "Agendamento do Tymeslot · %{calendar}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "Unblocked. Guests can book this time again."
+msgstr "Desbloqueado. Os convidados podem agendar esse horário de novo."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "What to add"
+msgstr "O que adicionar"
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "You have too many time-off periods to block more time. Remove some first."
+msgstr "Você já tem muitas ausências para bloquear mais horários. Remova algumas primeiro."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Your connected calendars are read-only, so events can't be added here."
+msgstr "Seus calendários conectados são somente leitura, então não é possível adicionar eventos aqui."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "a request waiting for your answer"
+msgstr "um pedido aguardando sua resposta"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "request expired without an answer"
+msgstr "pedido expirado sem resposta"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "request waiting for your answer"
+msgstr "pedido aguardando sua resposta"
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't undo the block. It has been moved or renamed since."
+msgstr "Não foi possível desfazer o bloqueio. Ele foi movido ou renomeado desde então."
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treated as busy for bookings every time this repeats. Guests can't book those times."
+msgstr "Tratado como ocupado para agendamentos sempre que se repete. Os convidados não podem agendar esses horários."
+
+#: lib/tymeslot_web/live/dashboard/calendar/treat_as.ex
+#, elixir-autogen, elixir-format
+msgid "Treated as free for bookings every time this repeats. Guests can book those times."
+msgstr "Tratado como livre para agendamentos sempre que se repete. Os convidados podem agendar esses horários."
+
+#: lib/tymeslot_web/live/dashboard/calendar/block_time.ex
+#, elixir-autogen, elixir-format
+msgid "You can block at most a week at a time."
+msgstr "Você pode bloquear no máximo uma semana por vez."
+
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Moving…"
+msgstr "Movendo…"
