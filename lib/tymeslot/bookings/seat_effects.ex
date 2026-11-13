@@ -33,8 +33,11 @@ defmodule Tymeslot.Bookings.SeatEffects do
   require Logger
 
   # Booker-scoped fields that live on the `meeting_participants` row for a
-  # group booking, not on the shared meeting slot.
+  # group booking, not on the shared meeting slot. A series is the booker's
+  # too: the slot is a session other bookers share.
   @booker_scoped_attrs [
+    :series_id,
+    :series_position,
     :attendee_name,
     :attendee_email,
     :attendee_message,

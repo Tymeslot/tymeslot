@@ -242,21 +242,30 @@ defmodule Tymeslot.Notifications.Events do
     * `:defer_emails?` — the caller has scheduled video-room creation and the
       room worker will release this seat's confirmation once the join link
       exists, so scheduling it here would only send a linkless duplicate.
+    * `:emails` — `false` sends no confirmation for the seat, to the booker
+      or the host: a seat of a booking series, whose booker and host are
+      told about the whole series in one email instead. The integration
+      fan-out is returned as for any seat.
   """
   @spec seat_booked_deferred(term(), term(), keyword()) ::
           {{:ok, term()} | {:error, term()}, pending()}
   def seat_booked_deferred(meeting, participant, opts \\ []) do
     result =
-      if Keyword.get(opts, :defer_emails?, false) do
-        {:ok, :deferred_to_video_room}
-      else
-        # As for a solo booking: only a storage failure rolls the seat back;
-        # a fault composing its emails would refuse the seat on every retry.
-        :seat_booked
-        |> send_notifications(meeting, fn ->
-          Orchestrator.schedule_seat_confirmation(meeting, participant)
-        end)
-        |> retryable_only(:seat_booked, meeting)
+      cond do
+        not Keyword.get(opts, :emails, true) ->
+          {:ok, :confirmed_with_series}
+
+        Keyword.get(opts, :defer_emails?, false) ->
+          {:ok, :deferred_to_video_room}
+
+        true ->
+          # As for a solo booking: only a storage failure rolls the seat back;
+          # a fault composing its emails would refuse the seat on every retry.
+          :seat_booked
+          |> send_notifications(meeting, fn ->
+            Orchestrator.schedule_seat_confirmation(meeting, participant)
+          end)
+          |> retryable_only(:seat_booked, meeting)
       end
 
     {result, [{:meeting_created, meeting, {:seat, participant}}]}
@@ -333,9 +342,13 @@ defmodule Tymeslot.Notifications.Events do
   # confirmations left to release: the participants were told it is off.
   defp release_seat_confirmations(%{status: :cancelled}), do: :ok
 
+  # A series' seat is confirmed by its series (`seat_booked_deferred/3`'s
+  # `emails: false`), even on a session whose first booker's room job is
+  # still holding the other seats' confirmations when the series joins it.
   defp release_seat_confirmations(meeting) do
     meeting.id
     |> ParticipantQueries.list_live_for_meeting()
+    |> Enum.filter(&is_nil(&1.series_id))
     |> Enum.each(&Orchestrator.schedule_seat_confirmation(meeting, &1))
   end
 

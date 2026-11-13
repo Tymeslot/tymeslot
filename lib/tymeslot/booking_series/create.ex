@@ -19,8 +19,16 @@ defmodule Tymeslot.BookingSeries.Create do
   (`Tymeslot.BookingSeries.Notifications`), so the sessions are announced
   with `announce: :series` (`Tymeslot.Bookings.Activation`).
 
-  Group, paid and approval types are not booked as a series yet, and are
-  refused with `:series_not_offered`.
+  On a group type the series takes one seat in each session instead
+  (`Tymeslot.Bookings.CreateGroup.book_seat/3`), finding or creating the
+  session as a single seat booking does: a fixed-date type's planned
+  sessions are only joined. The seats are the series' (each participant
+  row carries it); the sessions are shared with other bookers and do not.
+  A full session, or one the booker already has a seat in, refuses the
+  whole series. No seat sends a confirmation of its own.
+
+  Paid and approval types are not booked as a series yet, and are refused
+  with `:series_not_offered`.
   """
 
   alias Tymeslot.Availability
@@ -29,8 +37,10 @@ defmodule Tymeslot.BookingSeries.Create do
   alias Tymeslot.Bookings.{
     Activation,
     BuildParams,
+    CreateGroup,
     Errors,
     MeetingAttributes,
+    SeatEffects,
     Telemetry
   }
 
@@ -40,6 +50,7 @@ defmodule Tymeslot.BookingSeries.Create do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Repo
@@ -51,20 +62,32 @@ defmodule Tymeslot.BookingSeries.Create do
           | %{mode: :flexible, starts: [DateTime.t()]}
 
   @type result ::
-          {:ok, %{series: SeriesSchema.t(), meetings: [MeetingSchema.t()]}}
+          {:ok,
+           %{
+             series: SeriesSchema.t(),
+             meetings: [MeetingSchema.t()],
+             participants: [ParticipantSchema.t()]
+           }}
           | {:error, Errors.classified_error()}
 
   # A session the transaction found taken, as the check would have judged it.
-  @lost_in_lock %{time_conflict: :booked, booking_limit_reached: :limit_reached}
+  @lost_in_lock %{
+    time_conflict: :booked,
+    booking_limit_reached: :limit_reached,
+    slot_full: :session_full,
+    already_booked: :already_booked
+  }
 
   @doc """
   Books the series `meeting_params.series` asks for (`t:series_request/0`),
   with the rest of `meeting_params` and `form_data` as a single booking
   takes them.
 
-  Returns the series and its meetings in position order, or
-  `{:error, {:occurrences_unavailable, occurrences}}` with only the sessions
-  that cannot be booked, or any other `Tymeslot.Bookings.Errors` reason.
+  Returns the series, its meetings in position order and, on a group type,
+  the booker's seats in them (`participants`, in the same order; empty
+  otherwise), or `{:error, {:occurrences_unavailable, occurrences}}` with
+  only the sessions that cannot be booked, or any other
+  `Tymeslot.Bookings.Errors` reason.
 
   Options: `:with_video_room`, as `Tymeslot.Bookings.Create.execute/3`.
   """
@@ -100,11 +123,11 @@ defmodule Tymeslot.BookingSeries.Create do
     end
   end
 
-  # Not booked as a series yet: a group type's sessions are seats, a paid
-  # type's take one payment for all of them, and an approval type's are
-  # requested as one.
+  # Not booked as a series yet: a paid type's sessions take one payment for
+  # all of them, and an approval type's are requested as one. (A paused
+  # group type is refused by the admission check.)
   defp not_yet_bookable_as_series?(type, booking_data) do
-    MeetingTypeSchema.group?(type) or Prepare.paid?(booking_data) or Approval.required?(type)
+    Prepare.paid?(booking_data) or Approval.required?(type)
   end
 
   # Plan
@@ -145,11 +168,12 @@ defmodule Tymeslot.BookingSeries.Create do
   # A request in the other mode than the type's, or a malformed one.
   defp plan_for(_mode, _request, _type, _opts), do: {:error, :series_not_offered}
 
-  # Every session is judged; the host's calendars are read strictly.
+  # Every session is judged; the host's calendars are read strictly. The
+  # guests counted are the ones a seat would take.
   defp check(plan, booking_data) do
     Check.check(plan,
       booker_email: booking_data.form_data["email"],
-      guests: length(booking_data.guest_emails),
+      guests: length(CreateGroup.guest_emails(booking_data)),
       strict_calendar: true
     )
   end
@@ -186,29 +210,39 @@ defmodule Tymeslot.BookingSeries.Create do
   end
 
   defp run_transaction(plan, attrs, booking_data, opts) do
-    activation_opts = [
-      announce: :series,
-      with_video_room: Keyword.get(opts, :with_video_room, false)
-    ]
+    book_one = occurrence_booker(plan.meeting_type, booking_data, opts)
 
     Repo.transaction(fn ->
       :ok = MeetingConflictQueries.lock_organizer_schedule(plan.organizer_user_id)
       series = insert_series(plan, booking_data)
 
-      {meetings, pending} =
-        Enum.reduce(attrs, {[], []}, fn meeting_attrs, {meetings, pending} ->
-          meeting_attrs = %{meeting_attrs | series_id: series.id}
-
-          {meeting, owed} = book_occurrence(meeting_attrs, booking_data, activation_opts)
-          {[meeting | meetings], [owed | pending]}
+      {booked, pending} =
+        Enum.map_reduce(attrs, [], fn meeting_attrs, pending ->
+          {one, owed} = book_one.(%{meeting_attrs | series_id: series.id})
+          {one, [owed | pending]}
         end)
 
       # The confirmation commits with the series. The placeholder cannot fail
       # yet; the real one rolls the series back when it does.
       {:ok, _scheduled} = Notifications.schedule_series_confirmation(series)
 
-      {series, Enum.reverse(meetings), pending |> Enum.reverse() |> Enum.concat()}
+      {series, booked, pending |> Enum.reverse() |> Enum.concat()}
     end)
+  end
+
+  # Books one session inside the series' transaction, returning
+  # `{{meeting, seat}, owed}`: the seat is nil for a one-to-one session, and
+  # `owed` is the integration fan-out run once the series commits.
+  defp occurrence_booker(type, booking_data, opts) do
+    with_video_room = Keyword.get(opts, :with_video_room, false)
+
+    if MeetingTypeSchema.group?(type) do
+      seat_opts = [emails: false, in_outer_transaction: true, with_video_room: with_video_room]
+      &book_seat(&1, booking_data, seat_opts)
+    else
+      activation_opts = [announce: :series, with_video_room: with_video_room]
+      &book_meeting(&1, booking_data, activation_opts)
+    end
   end
 
   defp insert_series(%Plan{} = plan, booking_data) do
@@ -237,21 +271,44 @@ defmodule Tymeslot.BookingSeries.Create do
   # Each step joins the series' transaction, and a step that fails has
   # already poisoned it, so the first failure rolls back at once, naming the
   # session it happened to.
-  defp book_occurrence(meeting_attrs, booking_data, activation_opts) do
+  defp book_meeting(meeting_attrs, booking_data, activation_opts) do
     case Persist.persist_and_activate(meeting_attrs, booking_data, activation_opts) do
-      {:ok, meeting_and_pending} ->
-        meeting_and_pending
-
-      {:error, reason} ->
-        Repo.rollback({:occurrence_failed, meeting_attrs.series_position, reason})
+      {:ok, {meeting, pending}} -> {{meeting, nil}, pending}
+      {:error, reason} -> occurrence_failed(meeting_attrs, reason)
     end
   end
 
-  defp map_result({:ok, {series, meetings, pending}}, _occurrences, _booking_data) do
+  # The seat joins the series' transaction (`in_outer_transaction`), with
+  # the organiser lock it takes being the one already held.
+  defp book_seat(meeting_attrs, booking_data, seat_opts) do
+    case CreateGroup.book_seat(meeting_attrs, booking_data, seat_opts) do
+      {:ok, %{meeting: meeting, participant: seat, on_booked_result: pending}} ->
+        {{meeting, seat}, pending}
+
+      {:error, reason} ->
+        occurrence_failed(meeting_attrs, seat_refusal(reason))
+    end
+  end
+
+  # The booker's own seat already in the session, caught by the unique
+  # index. Postgres has aborted the transaction with it, so this reads the
+  # insert's changeset and asks the database nothing more.
+  defp seat_refusal(%Ecto.Changeset{} = changeset) do
+    if ParticipantSchema.duplicate_seat?(changeset), do: :already_booked, else: changeset
+  end
+
+  defp seat_refusal(reason), do: reason
+
+  defp occurrence_failed(meeting_attrs, reason),
+    do: Repo.rollback({:occurrence_failed, meeting_attrs.series_position, reason})
+
+  defp map_result({:ok, {series, booked, pending}}, _occurrences, _booking_data) do
     :ok = Activation.after_commit(pending)
-    Availability.changed(series.organizer_user_id)
-    Enum.each(meetings, fn _meeting -> Telemetry.booking_created() end)
-    {:ok, %{series: series, meetings: meetings}}
+    {meetings, seats} = Enum.unzip(booked)
+    seats = Enum.reject(seats, &is_nil/1)
+    announce_change(series, meetings, seats)
+    Enum.each(booked, fn _booked -> Telemetry.booking_created() end)
+    {:ok, %{series: series, meetings: meetings, participants: seats}}
   end
 
   # A session taken between the check and the lock is reported as the check
@@ -268,4 +325,11 @@ defmodule Tymeslot.BookingSeries.Create do
 
   defp map_result({:error, reason}, _occurrences, booking_data),
     do: {:error, Errors.classify_creation_error(reason, booking_data)}
+
+  # Every session of a series shares its host and type, so one broadcast
+  # tells the type's booking pages about every seat taken.
+  defp announce_change(series, _meetings, []), do: Availability.changed(series.organizer_user_id)
+
+  defp announce_change(_series, [session | _sessions], _seats),
+    do: SeatEffects.broadcast_and_invalidate(session)
 end

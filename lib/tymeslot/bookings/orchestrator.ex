@@ -33,7 +33,8 @@ defmodule Tymeslot.Bookings.Orchestrator do
   (`Tymeslot.BookingSeries.book/3`) unless the submission is a reschedule.
 
   Returns:
-    * `{:ok, %{series: series, meetings: meetings}}` for a series
+    * `{:ok, %{series: series, meetings: meetings, participants: seats}}` for
+      a series, `seats` being the booker's seats on a group type's sessions
     * `{:error, {:occurrences_unavailable, occurrences}}` when sessions of a
       series cannot be booked, with only those sessions
     * `{:ok, meeting}` for free bookings (confirmed); for a seat on a group

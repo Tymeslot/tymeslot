@@ -90,14 +90,29 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       a meeting the same transaction cancels (a seat move vacating its old
       meeting, see `Tymeslot.Bookings.RescheduleSeat`), whose time is free
       the moment this seat commits.
+    * `:in_outer_transaction`: when true, the caller runs this inside a
+      transaction of its own (a booking series taking a seat in each of its
+      sessions, see `Tymeslot.BookingSeries.Create`). The seat then joins
+      that transaction, so a first-booker index collision has already
+      aborted it and cannot be retried here: it is refused as `:slot_taken`
+      instead. A caller that holds the organiser's schedule lock for its
+      whole transaction never meets one, as the lock taken here is the one
+      it holds (`pg_advisory_xact_lock` is re-entrant). The participant
+      attrs may carry `:series_id` and `:series_position` for such a seat.
 
-  Returns `{:ok, booking}` or `{:error, :slot_full | :time_conflict |
-  :organizer_required | Ecto.Changeset.t() | term}`; a slot without an
-  organiser is refused with `:organizer_required`.
+  Returns `{:ok, booking}` or `{:error, :slot_full | :slot_taken |
+  :time_conflict | :organizer_required | Ecto.Changeset.t() | term}`; a slot
+  without an organiser is refused with `:organizer_required`.
   """
   @spec book_seat(map(), seat_request(), keyword()) ::
           {:ok, booking()}
-          | {:error, :slot_full | :time_conflict | :organizer_required | Changeset.t() | term()}
+          | {:error,
+             :slot_full
+             | :slot_taken
+             | :time_conflict
+             | :organizer_required
+             | Changeset.t()
+             | term()}
   def book_seat(meeting_attrs, seat_request, opts \\ []) do
     seats_requested = 1 + length(seat_request.guest_emails)
 
@@ -105,7 +120,8 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       on_booked: Keyword.get(opts, :on_booked, fn _booking -> {:ok, :noop} end),
       also_lock: Keyword.get(opts, :also_lock),
       join_only: Keyword.get(opts, :join_only, false),
-      exclude_from_conflicts: Keyword.get(opts, :exclude_from_conflicts, fn -> nil end)
+      exclude_from_conflicts: Keyword.get(opts, :exclude_from_conflicts, fn -> nil end),
+      in_outer_transaction: Keyword.get(opts, :in_outer_transaction, false)
     }
 
     cond do
@@ -120,7 +136,8 @@ defmodule Tymeslot.Meetings.GroupScheduling do
         {:error, :slot_full}
 
       true ->
-        attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, _retries_left = 1)
+        retries = if hooks.in_outer_transaction, do: 0, else: 1
+        attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, retries)
     end
   end
 
@@ -242,9 +259,13 @@ defmodule Tymeslot.Meetings.GroupScheduling do
         {:ok, booking}
 
       {:error, {:validation_error, %Changeset{} = changeset}} ->
-        if Meeting.unique_slot_violation?(changeset) and retries_left > 0,
-          do: retry.(),
-          else: {:error, changeset}
+        cond do
+          not Meeting.unique_slot_violation?(changeset) -> {:error, changeset}
+          retries_left > 0 -> retry.()
+          # The caller's transaction, which the collision has aborted.
+          hooks.in_outer_transaction -> {:error, :slot_taken}
+          true -> {:error, changeset}
+        end
 
       {:error, reason} ->
         {:error, reason}

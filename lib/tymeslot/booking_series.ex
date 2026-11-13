@@ -41,7 +41,9 @@ defmodule Tymeslot.BookingSeries do
 
   @doc """
   Books the series `meeting_params.series` asks for, every session an
-  ordinary meeting, all or none. See `Tymeslot.BookingSeries.Create.execute/3`.
+  ordinary meeting (or, on a group type, a seat in one), all or none.
+  Returns the series, its meetings and the booker's seats in them; see
+  `Tymeslot.BookingSeries.Create.execute/3`.
   """
   @spec book(map(), map(), keyword()) :: Create.result()
   defdelegate book(meeting_params, form_data, opts \\ []), to: Create, as: :execute
