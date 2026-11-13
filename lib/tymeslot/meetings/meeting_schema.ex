@@ -509,8 +509,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   so `attendee_name`/`attendee_email` are not required. Status is always
   forced to `:confirmed`, regardless of what the caller passes: group
   meetings never wait on payment, and the single-live-row invariant (backed
-  by `unique_confirmed_meeting_per_organizer_at_time`, which only indexes
-  confirmed rows) depends on every group meeting landing in that status.
+  by `unique_confirmed_meeting_per_organizer_at_time`, which indexes the
+  slot-holding statuses) depends on every group meeting landing in that status.
   """
   @spec group_changeset(t(), map()) :: Ecto.Changeset.t()
   def group_changeset(meeting, attrs) do
