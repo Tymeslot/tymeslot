@@ -245,6 +245,80 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
       assert has_element?(view, "#{editor} [data-path='custom_fields/q1/label']")
     end
 
+    test "Save confirms an outdated translation left as it was", %{
+      conn: conn,
+      user: user,
+      meeting_type: meeting_type
+    } do
+      {:ok, _entity} =
+        Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{"name" => "Gespräch"})
+
+      meeting_type |> Changeset.change(name: "First call") |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+      editor = "#translation-meeting_types-meeting_type-#{meeting_type.id}"
+      assert has_element?(view, "#{editor} [data-path='name'][data-status='outdated']")
+
+      view
+      |> form("#{editor}-form", %{
+        "translation" => %{"name" => "Gespräch", "custom_fields/q1/label" => ""}
+      })
+      |> render_submit()
+
+      html = render(view)
+      assert html =~ "Translations saved"
+      refute html =~ "Nothing to save"
+      assert has_element?(view, "#{editor} [data-path='name'][data-status='translated']")
+
+      stored = MeetingTypes.get_meeting_type(meeting_type.id, user.id)
+      assert ContentTranslations.status(stored, "name", "de") == :translated
+      assert ContentTranslations.translation(stored, "de", "name") == "Gespräch"
+    end
+
+    test "Save confirms an outdated translation in the same save as a changed one", %{
+      conn: conn,
+      user: user,
+      meeting_type: meeting_type
+    } do
+      {:ok, _entity} =
+        Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{"name" => "Gespräch"})
+
+      meeting_type |> Changeset.change(name: "First call") |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+      editor = "#translation-meeting_types-meeting_type-#{meeting_type.id}"
+
+      view
+      |> form("#{editor}-form", %{
+        "translation" => %{"name" => "Gespräch", "custom_fields/q1/label" => "Firma"}
+      })
+      |> render_submit()
+
+      stored = MeetingTypes.get_meeting_type(meeting_type.id, user.id)
+      assert ContentTranslations.status(stored, "name", "de") == :translated
+      assert ContentTranslations.translation(stored, "de", "custom_fields/q1/label") == "Firma"
+    end
+
+    test "Save with nothing changed and nothing outdated says there is nothing to save", %{
+      conn: conn,
+      user: user,
+      meeting_type: meeting_type
+    } do
+      {:ok, _entity} =
+        Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{"name" => "Gespräch"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+      editor = "#translation-meeting_types-meeting_type-#{meeting_type.id}"
+
+      view
+      |> form("#{editor}-form", %{
+        "translation" => %{"name" => "Gespräch", "custom_fields/q1/label" => ""}
+      })
+      |> render_submit()
+
+      assert render(view) =~ "Nothing to save: no translation changed."
+    end
+
     test "a language that is not a translation language goes back to the settings", %{
       conn: conn
     } do

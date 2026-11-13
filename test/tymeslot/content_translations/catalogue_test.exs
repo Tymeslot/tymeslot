@@ -284,6 +284,25 @@ defmodule Tymeslot.ContentTranslations.CatalogueTest do
       assert %{"de" => %{outdated: 0, translated: 1}} = progress.()
     end
 
+    test "save/5 confirms the paths it is given in the same write as its texts", %{
+      user: user,
+      meeting_type: meeting_type
+    } do
+      assert {:ok, _entity} =
+               Catalogue.save(
+                 user.id,
+                 {:meeting_type, meeting_type.id},
+                 "de",
+                 %{"custom_fields/q1/label" => "Firma"},
+                 confirm: ["name"]
+               )
+
+      reloaded = Repo.get!(MeetingTypeSchema, meeting_type.id)
+      assert ContentTranslations.status(reloaded, "name", "de") == :translated
+      assert ContentTranslations.translation(reloaded, "de", "name") == "Erstgespräch"
+      assert ContentTranslations.translation(reloaded, "de", "custom_fields/q1/label") == "Firma"
+    end
+
     test "is not found for another user's entity", %{meeting_type: meeting_type} do
       other = insert(:user)
       insert(:profile, user: other, translation_locales: ["de"])

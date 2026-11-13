@@ -21,9 +21,10 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
       `translation_saved: entity` after each save, so it can refresh what it
       shows from the saved record.
 
-  Only the texts the organiser changed are sent on save, so a translation
-  left as it was keeps its Outdated mark rather than being restamped as
-  current. What is typed survives the parent re-rendering; it is dropped
+  Only the texts the organiser changed are sent as texts on save; an
+  outdated one left as it was is confirmed rather than rewritten (below).
+  Leaving the editor saves the changed texts alone, so a translation left
+  as it was keeps its Outdated mark there. What is typed survives the parent re-rendering; it is dropped
   only when it is saved, or when the record or the language changes.
 
   Anything that takes the editor away (another language from the language
@@ -35,7 +36,9 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
 
   An outdated translation is hidden from invitees, who see the original
   instead, until it is updated or confirmed as still correct (`Catalogue.confirm/4`),
-  which each outdated text offers beside its input.
+  which each outdated text offers beside its input. Save confirms it too
+  when its input still holds the stored translation: saving says what the
+  form shows is correct.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -158,17 +161,28 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
     %{draft: draft, record: record, locale: locale} = socket.assigns
     typed = Map.merge(draft, only_strings(Map.get(params, "translation", %{})))
     changed = changed_texts(typed, record, locale, socket.assigns.fields)
+    kept = kept_outdated(%{socket.assigns | draft: typed}, changed)
 
-    if changed == %{} do
+    if changed == %{} and kept == [] do
       Flash.info(dgettext("dashboard_languages", "Nothing to save: no translation changed."))
       {:noreply, assign(socket, :draft, typed)}
     else
-      save(socket, changed, typed)
+      save(socket, changed, typed, kept)
     end
   end
 
-  defp save(socket, changed, typed) do
-    case persist(socket, changed, typed) do
+  # Saving says the form is right as it stands, so an outdated text whose
+  # input still holds its stored translation is confirmed along with the
+  # texts that changed (`Catalogue.save/5`'s `confirm:`).
+  defp kept_outdated(assigns, changed) do
+    for {field, :outdated} <- assigns.fields,
+        not Map.has_key?(changed, field.path),
+        confirmable?(assigns, field.path),
+        do: field.path
+  end
+
+  defp save(socket, changed, typed, kept) do
+    case persist(socket, changed, typed, kept) do
       {:ok, socket} ->
         Flash.info(dgettext("dashboard_languages", "Translations saved"))
         {:noreply, socket}
@@ -214,10 +228,10 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
       is_binary(stored) and normalise(Map.get(draft, path, stored)) == normalise(stored)
   end
 
-  defp persist(socket, changed, typed) do
+  defp persist(socket, changed, typed, kept \\ []) do
     %{user_id: user_id, kind: kind, record: record, locale: locale} = socket.assigns
 
-    case Catalogue.save(user_id, {kind, record.id}, locale, changed) do
+    case Catalogue.save(user_id, {kind, record.id}, locale, changed, confirm: kept) do
       {:ok, entity} ->
         notify(socket.assigns.notify, entity)
 
@@ -225,7 +239,7 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
          socket
          |> assign(
            record: entity.record,
-           draft: Map.drop(typed, Map.keys(changed)),
+           draft: Map.drop(typed, Map.keys(changed) ++ kept),
            errors: %{},
            leave_unsaved: false
          )

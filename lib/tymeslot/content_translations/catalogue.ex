@@ -146,17 +146,29 @@ defmodule Tymeslot.ContentTranslations.Catalogue do
   ignored, and translations of paths it no longer has (a deleted question)
   are dropped. `locale` must be one of the user's translation languages.
 
+  `confirm:` lists paths whose translations are confirmed as still correct
+  in the same write, as `confirm/4` does: an outdated text the organiser
+  saved as it stood.
+
   Returns `{:error, :not_found}` for an entity the user does not own, and
   `{:error, changeset}` for a language that is not a translation language or
   a text over its cap (the error on `:translations` names the `:path`).
   """
-  @spec save(integer(), {kind(), integer() | String.t()}, String.t(), %{String.t() => String.t()}) ::
+  @spec save(
+          integer(),
+          {kind(), integer() | String.t()},
+          String.t(),
+          %{String.t() => String.t()},
+          [{:confirm, [ContentTranslations.path()]}]
+        ) ::
           {:ok, entity()} | {:error, Ecto.Changeset.t() | :not_found}
-  def save(user_id, {kind, id}, locale, texts)
-      when is_integer(user_id) and is_binary(locale) and is_map(texts) do
+  def save(user_id, {kind, id}, locale, texts, opts \\ [])
+      when is_integer(user_id) and is_binary(locale) and is_map(texts) and is_list(opts) do
+    confirmed = Keyword.get(opts, :confirm, [])
+
     with {:ok, profile} <- fetch_profile(user_id),
          {:ok, record} <- fetch(kind, id, user_id, profile) do
-      Repo.transaction(fn -> save_locked(record, kind, locale, texts, profile) end)
+      Repo.transaction(fn -> save_locked(record, kind, locale, {texts, confirmed}, profile) end)
     end
   end
 
@@ -167,27 +179,15 @@ defmodule Tymeslot.ContentTranslations.Catalogue do
   shown to invitees again (`ContentTranslations.confirm/3`). A path with no
   translation is left alone. Returns the entity with all of its fields.
 
-  Scoped and locked as `save/4` is, with the same errors.
+  Scoped and locked as `save/5` is, with the same errors.
   """
   @spec confirm(integer(), {kind(), integer() | String.t()}, String.t(), [
           ContentTranslations.path()
         ]) ::
           {:ok, entity()} | {:error, Ecto.Changeset.t() | :not_found}
   def confirm(user_id, {kind, id}, locale, paths)
-      when is_integer(user_id) and is_binary(locale) and is_list(paths) do
-    with {:ok, profile} <- fetch_profile(user_id),
-         {:ok, record} <- fetch(kind, id, user_id, profile) do
-      Repo.transaction(fn ->
-        write_locked(
-          record,
-          kind,
-          locale,
-          profile,
-          &ContentTranslations.confirm(&1, locale, paths)
-        )
-      end)
-    end
-  end
+      when is_integer(user_id) and is_binary(locale) and is_list(paths),
+      do: save(user_id, {kind, id}, locale, %{}, confirm: paths)
 
   # The whole map is written back, so it is read under the row's lock: two
   # saves at once (two languages, or two tabs) would otherwise each write
@@ -195,8 +195,11 @@ defmodule Tymeslot.ContentTranslations.Catalogue do
   # texts. The originals the texts are stamped against are the locked row's
   # too, so an edit committed meanwhile cannot leave a translation stamped
   # against a text the record no longer holds.
-  defp save_locked(record, kind, locale, texts, profile) do
-    write_locked(record, kind, locale, profile, &put_texts(&1, locale, texts))
+  defp save_locked(record, kind, locale, {texts, confirmed}, profile) do
+    write_locked(record, kind, locale, profile, fn locked ->
+      translations = put_texts(locked, locale, texts)
+      ContentTranslations.confirm(%{locked | translations: translations}, locale, confirmed)
+    end)
   end
 
   defp write_locked(record, kind, locale, profile, translate) do
