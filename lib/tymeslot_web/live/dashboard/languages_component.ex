@@ -8,7 +8,13 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   and whether the booking page is offered in every language. At
   `/dashboard/languages/:language` it lists every translatable record
   (`Tymeslot.ContentTranslations.Catalogue.items/1`) with a
-  `TranslationEditor` each, for reviewing that language in one place.
+  `TranslationEditor` each: the one place translations are written. The
+  forms that edit the originals link here (`TranslationStatus`), with
+  `?item=` naming the record's card, which is highlighted, and the same as a
+  fragment, which the browser scrolls to.
+
+  Under "Booking page languages" the page names the languages invitees can
+  choose, as the switch and the translation languages leave them.
 
   Removing a translation language asks first (`RemoveLanguageModal`); its
   texts are kept, so adding the language again brings them back.
@@ -16,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   Leaving the review page for all languages, or turning "Only missing or
   outdated" on or off (which takes away the editors of what is then hidden),
   first has every editor on the page save what was typed in it
-  (`TranslationEditor.leave/3`); the page moves on once each has, and stays
+  (`TranslationEditor.leave/2`); the page moves on once each has, and stays
   where it is if one could not.
   """
   use TymeslotWeb, :live_component
@@ -31,6 +37,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   alias TymeslotWeb.Dashboard.Languages.Labels
   alias TymeslotWeb.Dashboard.Languages.RemoveLanguageModal
   alias TymeslotWeb.Dashboard.Languages.TranslationEditor
+  alias TymeslotWeb.Dashboard.Languages.TranslationStatus
 
   @groups [:booking_texts, :intro, :meeting_types, :venues]
 
@@ -185,7 +192,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
         myself = socket.assigns.myself
 
         for id <- ids do
-          TranslationEditor.leave(id, :review, fn ->
+          TranslationEditor.leave(id, fn ->
             send_update(myself, drafts_saved: {action, id})
           end)
         end
@@ -245,7 +252,10 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
       assign(assigns,
         original: Languages.original(assigns.profile),
         locales: Languages.translation_locales(assigns.profile),
-        offer_all: not Languages.restricted?(assigns.profile)
+        offer_all: not Languages.restricted?(assigns.profile),
+        # The original first, then the rest in their usual order.
+        offered:
+          Enum.uniq([Languages.original(assigns.profile) | Languages.offered(assigns.profile)])
       )
 
     ~H"""
@@ -258,6 +268,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
             items={@items}
             only_open={@only_open}
             user_id={@current_user.id}
+            item={(@params || %{})["item"]}
             myself={@myself}
           />
         <% else %>
@@ -265,6 +276,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
             original={@original}
             locales={@locales}
             offer_all={@offer_all}
+            offered={@offered}
             progress={@progress}
             myself={@myself}
           />
@@ -285,6 +297,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   attr :original, :string, required: true
   attr :locales, :list, required: true
   attr :offer_all, :boolean, required: true
+  attr :offered, :list, required: true, doc: "the languages invitees can choose"
   attr :progress, :map, required: true
   attr :myself, :any, required: true
 
@@ -416,17 +429,15 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
           on_change="toggle_offer_all"
           target={@myself}
         />
+        <p class="text-token-sm text-tymeslot-700" data-testid="offered-languages">
+          {dgettext("dashboard_languages", "Invitees can choose: %{languages}.",
+            languages: Enum.map_join(@offered, ", ", &TranslationStatus.language_label(&1, @original))
+          )}
+        </p>
         <.info_box :if={not @offer_all and @locales == []} variant={:info}>
           {dgettext(
             "dashboard_languages",
             "Your booking page is offered only in %{language}, so visitors see no language switcher. Add a translation to offer another language.",
-            language: Labels.language_name(@original)
-          )}
-        </.info_box>
-        <.info_box :if={not @offer_all and @locales != []} variant={:info}>
-          {dgettext(
-            "dashboard_languages",
-            "Your booking page is offered only in %{language} and your translation languages.",
             language: Labels.language_name(@original)
           )}
         </.info_box>
@@ -463,6 +474,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   attr :items, :map, default: nil
   attr :only_open, :boolean, required: true
   attr :user_id, :integer, required: true
+  attr :item, :string, default: nil, doc: "the card a form linked to, highlighted"
   attr :myself, :any, required: true
 
   defp review(assigns) do
@@ -526,7 +538,17 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
 
     <section :for={{group, entities} <- @sections} class="space-y-4" data-group={group}>
       <.subsection_header level={2} title={group_title(group)} />
-      <.card :for={entity <- entities} title={entity_title(group, entity)}>
+      <.card
+        :for={entity <- entities}
+        id={TranslationStatus.anchor(group, entity.kind, entity.id)}
+        title={entity_title(group, entity)}
+        class={[
+          "scroll-mt-24",
+          @item == TranslationStatus.anchor(group, entity.kind, entity.id) &&
+            "ring-2 ring-turquoise-400"
+        ]}
+        data-highlighted={@item == TranslationStatus.anchor(group, entity.kind, entity.id)}
+      >
         <.live_component
           module={TranslationEditor}
           id={editor_id(group, entity)}

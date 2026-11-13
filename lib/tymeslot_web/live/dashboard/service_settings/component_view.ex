@@ -139,7 +139,6 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               page_memberships={@page_memberships}
               pages_editable={@pages_editable}
               profile={@profile}
-              editing_locale={@editing_locale}
             />
 
             <BookingLinkModal.booking_link_modal

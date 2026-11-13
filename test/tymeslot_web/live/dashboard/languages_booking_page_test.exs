@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Dashboard.LanguagesBookingPageTest do
   @moduledoc """
-  From the dashboard to the visitor: a meeting type name translated on the
-  Languages review page, and a heading translated from the booking text
-  card's language bar, show on the public booking page in that language, for
+  From the dashboard to the visitor: a meeting type name and a booking page
+  heading translated on the Languages review page show on the public
+  booking page in that language, for
   an organiser who offers only English and German. An outdated name shows in
   the original until it is kept as still correct.
   """
@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesBookingPageTest do
     refute html =~ "First call"
   end
 
-  test "a heading translated from the booking text card shows on the German booking page", %{
+  test "a heading translated on the review page shows on the German booking page", %{
     conn: conn,
     user: user,
     profile: profile
@@ -119,13 +119,12 @@ defmodule TymeslotWeb.Dashboard.LanguagesBookingPageTest do
     |> Repo.update!()
 
     dashboard = conn |> init_test_session(%{}) |> fetch_session() |> log_in_user(user)
-    {:ok, view, _html} = live(dashboard, ~p"/dashboard/pages")
-    card = "#booking-text-form-translations"
-
-    view |> element("#{card}-bar-de") |> render_click()
+    {:ok, view, _html} = live(dashboard, ~p"/dashboard/languages/de")
 
     view
-    |> form("#{card}-editor-form", %{"translation" => %{"booking_heading" => "Bereit zu reden?"}})
+    |> form("#translation-booking_texts-profile-#{profile.id}-form", %{
+      "translation" => %{"booking_heading" => "Bereit zu reden?"}
+    })
     |> render_submit()
 
     {:ok, page, _html} = live(build_conn(), "/#{profile.username}?locale=de")

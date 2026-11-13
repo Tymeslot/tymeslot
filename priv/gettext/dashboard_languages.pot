@@ -98,16 +98,6 @@ msgstr ""
 msgid "Description"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/languages/language_bar.ex
-#, elixir-autogen, elixir-format
-msgid "Editing in:"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/languages/language_bar.ex
-#, elixir-autogen, elixir-format
-msgid "Editing language"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Everything here is translated."
@@ -315,30 +305,13 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/languages_component.ex
 #, elixir-autogen, elixir-format
-msgid "Your booking page is offered only in %{language} and your translation languages."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/languages_component.ex
-#, elixir-autogen, elixir-format
 msgid "Your booking page is offered only in %{language}, so visitors see no language switcher. Add a translation to offer another language."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
-#, elixir-autogen, elixir-format
-msgid "Couldn't save these translations. Choose the language again to leave without saving them."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/languages/language_bar.ex
+#: lib/tymeslot_web/live/dashboard/languages/translation_status.ex
 #, elixir-autogen, elixir-format
 msgid "%{language} (original)"
 msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/languages/language_bar.ex
-#, elixir-autogen, elixir-format
-msgid "(%{count} text missing or outdated)"
-msgid_plural "(%{count} texts missing or outdated)"
-msgstr[0] ""
-msgstr[1] ""
 
 #: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
 #, elixir-autogen, elixir-format
@@ -388,4 +361,56 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/languages/remove_language_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking page will no longer be offered in %{language}: invitees can choose only the languages you keep."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_status.ex
+#, elixir-autogen, elixir-format
+msgid "%{language}: missing"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_status.ex
+#, elixir-autogen, elixir-format
+msgid "%{language}: outdated"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_status.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page in %{languages}."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_status.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page in every language; your texts are translated into %{languages}."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invitees can choose: %{languages}."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_status.ex
+#, elixir-autogen, elixir-format
+msgid "Texts marked %{globe} are translatable."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_status.ex
+#, elixir-autogen, elixir-format
+msgid "Texts marked %{globe} are translatable: %{done} of %{count} done."
+msgid_plural "Texts marked %{globe} are translatable: %{done} of %{count} done."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_status.ex
+#, elixir-autogen, elixir-format
+msgid "Translatable"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_status.ex
+#, elixir-autogen, elixir-format
+msgid "Translate on the Languages page"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_status.ex
+#, elixir-autogen, elixir-format
+msgid "globe"
 msgstr ""

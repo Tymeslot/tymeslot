@@ -1,9 +1,8 @@
 defmodule TymeslotWeb.Dashboard.LanguagesTest do
   @moduledoc """
-  The Languages page and the language bar: choosing the booking languages,
-  removing one through its confirmation, translating on the review page, and
-  translating a meeting type from its own editor, with the editing language
-  carried between dashboard pages.
+  The Languages page: choosing the booking languages and seeing which ones
+  invitees can choose, removing one through its confirmation, and
+  translating on the review page, the one place translations are written.
   """
   use TymeslotWeb.LiveCase, async: true
 
@@ -18,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
   alias Tymeslot.ContentTranslations.Catalogue
   alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.CustomFields.FieldOption
+  alias Tymeslot.Locales
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
 
@@ -59,7 +59,30 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
       reloaded = Repo.reload!(profile)
       assert reloaded.offer_all_locales == false
       assert reloaded.translation_locales == ["de"]
-      assert render(view) =~ "offered only in English and your translation languages"
+    end
+
+    test "names the languages invitees can choose, as the switch and translations change", %{
+      conn: conn,
+      profile: profile
+    } do
+      with_languages(profile, offer_all_locales: false)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
+
+      assert offered(view) == "Invitees can choose: English (original)."
+
+      view |> element("#add-language-form") |> render_change(%{"locale" => "de"})
+      assert offered(view) == "Invitees can choose: English (original), Deutsch."
+
+      view |> element("#offer-all-locales") |> render_click()
+      all = offered(view)
+      assert all =~ "Invitees can choose: English (original), "
+
+      for %{name: name} <- Locales.supported(), do: assert(all =~ name)
+
+      view |> element("#offer-all-locales") |> render_click()
+      view |> element("[data-testid='remove-locale-de']") |> render_click()
+      view |> element("[data-testid='confirm-remove-language']") |> render_click()
+      assert offered(view) == "Invitees can choose: English (original)."
     end
 
     test "with all languages off and no translations, says only the original is offered", %{
@@ -328,7 +351,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
     end
   end
 
-  describe "the language bar on the meeting type editor" do
+  describe "the meeting type editor" do
     setup %{conn: conn, user: user, profile: profile} do
       with_languages(profile, translation_locales: ["de"])
       meeting_type = meeting_type_with_question(user)
@@ -339,51 +362,7 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
       |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
       |> render_click()
 
-      %{
-        view: view,
-        meeting_type: meeting_type,
-        bar: "#meeting-type-translations-#{meeting_type.id}"
-      }
-    end
-
-    test "swaps the form for the translation editor, which saves", %{
-      view: view,
-      user: user,
-      meeting_type: meeting_type,
-      bar: bar
-    } do
-      refute has_element?(view, "#{bar}-editor")
-
-      view |> element("#{bar}-bar-de") |> render_click()
-
-      assert has_element?(view, "#{bar}-editor")
-      assert has_element?(view, "form[id^='meeting-type-form-'].hidden")
-
-      view
-      |> form("#{bar}-editor-form", %{"translation" => %{"name" => "Erstgespräch"}})
-      |> render_submit()
-
-      assert stored_translation(meeting_type, user, "name") == "Erstgespräch"
-      assert has_element?(view, "#{bar}-editor [data-path='name'][data-status='translated']")
-
-      view |> element("#{bar}-bar-en") |> render_click()
-
-      refute has_element?(view, "#{bar}-editor")
-      refute has_element?(view, "form[id^='meeting-type-form-'].hidden")
-    end
-
-    test "keeps the editing language on another dashboard page", %{
-      conn: _conn,
-      view: view,
-      profile: profile,
-      bar: bar
-    } do
-      view |> element("#{bar}-bar-de") |> render_click()
-
-      render_patch(view, ~p"/dashboard/settings")
-
-      assert has_element?(view, "#intro-translations-#{profile.id}-editor")
-      refute has_element?(view, "#intro-form")
+      %{view: view, meeting_type: meeting_type}
     end
 
     test "an original edit's autosave keeps the stored translation", %{
@@ -407,15 +386,32 @@ defmodule TymeslotWeb.Dashboard.LanguagesTest do
     end
   end
 
-  test "without a translation language there is no language bar", %{conn: conn, user: user} do
+  test "the review page highlights the card a form linked to", %{
+    conn: conn,
+    user: user,
+    profile: profile
+  } do
+    with_languages(profile, translation_locales: ["de"])
     meeting_type = meeting_type_with_question(user)
-    {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+    other = insert(:meeting_type, user: user, name: "Workshop")
+    anchor = "translate-meeting_types-meeting_type-#{meeting_type.id}"
 
+    {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de?#{[item: anchor]}")
+
+    assert has_element?(view, "##{anchor}[data-highlighted]")
+
+    refute has_element?(
+             view,
+             "#translate-meeting_types-meeting_type-#{other.id}[data-highlighted]"
+           )
+  end
+
+  defp offered(view) do
     view
-    |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
-    |> render_click()
-
-    refute has_element?(view, "[data-testid='language-bar']")
-    assert has_element?(view, ~s|input[name="meeting_type[name]"]|)
+    |> element("[data-testid='offered-languages']")
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.text()
+    |> String.trim()
   end
 end

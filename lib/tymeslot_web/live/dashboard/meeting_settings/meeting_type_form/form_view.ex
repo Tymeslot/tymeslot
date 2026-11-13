@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Validation.Constraints
-  alias TymeslotWeb.Dashboard.Languages.TranslatableForm
+  alias TymeslotWeb.Dashboard.Languages.TranslationStatus
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.PageVisibility
 
@@ -94,43 +94,30 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     assigns =
       assign(assigns,
         tabs_id: @tabs_id,
-        create_hint_id: "meeting-type-form-#{assigns.id}-create-hint"
+        create_hint_id: "meeting-type-form-#{assigns.id}-create-hint",
+        translation_status:
+          if(assigns.is_edit,
+            do:
+              TranslationStatus.build(
+                assigns.profile,
+                :meeting_types,
+                :meeting_type,
+                assigns.type
+              )
+          )
       )
 
     ~H"""
     <div id={"meeting-type-form-wrapper-#{@id}"}>
-      <%!-- A translation language swaps the form for the translation editor.
-           The form is hidden rather than removed, so its sections keep their
-           state for the way back to the original. --%>
-      <.live_component
-        :if={@is_edit && @profile}
-        module={TranslatableForm}
-        id={"meeting-type-translations-#{@type.id}"}
-        profile={@profile}
-        editing_locale={@editing_locale}
-        user_id={@current_user.id}
-        kind={:meeting_type}
-        record={@type}
-        class="mb-6"
-      >
-        <:actions>
-          <div class="flex justify-end">
-            <.action_button phx-click="close_edit_overlay" phx-target={@parent_myself}>
-              {dgettext("dashboard_meeting_form", "Done")}
-            </.action_button>
-          </div>
-        </:actions>
-      </.live_component>
       <form
         id={"meeting-type-form-#{@id}"}
         phx-submit={if @is_edit, do: "flush_autosave", else: "create_meeting_type"}
         phx-target={@myself}
-        class={[
-          "space-y-6",
-          @is_edit && TranslatableForm.translating?(@profile, @editing_locale) && "hidden"
-        ]}
+        class="space-y-6"
         novalidate
       >
+        <TranslationStatus.strip status={@translation_status} />
+
         <div class="space-y-2">
           <.tab_bar
             id={@tabs_id}
@@ -173,7 +160,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
                 |> Enum.map(&Helpers.format_errors/1)
               }
               icon="hero-tag"
-            />
+            >
+              <:label_suffix>
+                <TranslationStatus.mark status={@translation_status} path="name" />
+              </:label_suffix>
+            </.input>
 
             <.lengths_field
               form_data={@form_data}
@@ -262,7 +253,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               |> Enum.map(&Helpers.format_errors/1)
             }
             icon="hero-document-text"
-          />
+          >
+            <:label_suffix>
+              <TranslationStatus.mark status={@translation_status} path="description" />
+            </:label_suffix>
+          </.input>
 
           <.icon_picker
             selected_icon={@selected_icon}
@@ -288,6 +283,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             venues={@venues}
             form_id={@id}
             group_bookings_enabled={@group_bookings_enabled}
+            translation_status={@translation_status}
             errors={
               @form_errors
               |> FormValidationHelpers.field_errors(:locations)
@@ -452,6 +448,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             form_id={@id}
             allowed={@custom_questions_allowed}
             current_user={@current_user}
+            translation_status={@translation_status}
           />
         </.card>
 

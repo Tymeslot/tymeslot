@@ -5,9 +5,10 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
   translation and how it stands (Missing, Outdated or Translated). Saved per
   record with one button, through `Tymeslot.ContentTranslations.Catalogue`.
 
-  Used for every record on the Languages review page, and in context by
-  `TymeslotWeb.Dashboard.Languages.TranslatableForm`, which swaps a form's
-  body for it while the organiser edits in a translation language.
+  Used for every record on the Languages review page, the one place
+  translations are written; the forms that edit the originals only show how
+  each text stands (`TymeslotWeb.Dashboard.Languages.TranslationStatus`, from
+  `visible_fields/3`).
 
   ## Assigns
 
@@ -27,9 +28,8 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
   as it was keeps its Outdated mark there. What is typed survives the parent re-rendering; it is dropped
   only when it is saved, or when the record or the language changes.
 
-  Anything that takes the editor away (another language from the language
-  bar, closing the form it sits in, leaving or filtering the Languages
-  review page) goes through `leave/3`, so what was typed is not lost: the
+  Anything that takes the editor away (leaving or filtering the Languages
+  review page) goes through `leave/2`, so what was typed is not lost: the
   changed texts are saved first, as the autosaving forms save theirs, and
   only then does the caller carry on. When that save fails the editor stays,
   showing why; asking to leave again leaves without saving.
@@ -63,18 +63,14 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
 
   @doc """
   Asks the editor `id` to save what was typed in it, then to run `continue`
-  (in the LiveView process): `reason` is `:switch` for another language from
-  the language bar, `:close` for closing the form the editor sits in, and
-  `:review` for leaving or filtering the Languages review page, and only
-  words the message shown when the save fails. Nothing typed, `continue`
-  runs at once.
+  (in the LiveView process). Nothing typed, `continue` runs at once.
   """
-  @spec leave(String.t(), :switch | :close | :review, (-> any())) :: :ok
-  def leave(id, reason, continue) when is_function(continue, 0),
-    do: send_update(__MODULE__, id: id, leave: {reason, continue})
+  @spec leave(String.t(), (-> any())) :: :ok
+  def leave(id, continue) when is_function(continue, 0),
+    do: send_update(__MODULE__, id: id, leave: continue)
 
   @impl Phoenix.LiveComponent
-  def update(%{leave: {reason, continue}}, socket) do
+  def update(%{leave: continue}, socket) do
     %{draft: draft, record: record, locale: locale, fields: fields} = socket.assigns
     changed = changed_texts(draft, record, locale, fields)
 
@@ -89,7 +85,13 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
           {:ok, socket}
 
         {:error, socket} ->
-          Flash.error(leave_failed_message(reason))
+          Flash.error(
+            dgettext(
+              "dashboard_languages",
+              "Couldn't save these translations. Try again to leave without saving them."
+            )
+          )
+
           {:ok, assign(socket, :leave_unsaved, true)}
       end
     end
@@ -254,20 +256,6 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
   end
 
   defp not_found_message, do: dgettext("dashboard_languages", "This item no longer exists.")
-
-  defp leave_failed_message(:switch),
-    do:
-      dgettext(
-        "dashboard_languages",
-        "Couldn't save these translations. Choose the language again to leave without saving them."
-      )
-
-  defp leave_failed_message(_reason),
-    do:
-      dgettext(
-        "dashboard_languages",
-        "Couldn't save these translations. Try again to leave without saving them."
-      )
 
   defp notify({module, id}, entity), do: send_update(module, id: id, translation_saved: entity)
   defp notify(nil, _entity), do: :ok

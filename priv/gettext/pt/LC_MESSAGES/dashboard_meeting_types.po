@@ -641,8 +641,3 @@ msgstr "Mostrando os 100 convites mais recentes."
 #, elixir-autogen, elixir-format
 msgid "This link has expired, so it can't be reopened. Create a new one instead."
 msgstr "Este link expirou, por isso não pode ser reaberto. Crie um novo em vez disso."
-
-#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Close"
-msgstr "Fechar"

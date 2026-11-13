@@ -646,8 +646,3 @@ msgstr "Показано 100 найновіших запрошень."
 #, elixir-autogen, elixir-format
 msgid "This link has expired, so it can't be reopened. Create a new one instead."
 msgstr "Термін дії цього посилання минув, тому його неможливо відкрити знову. Натомість створіть нове."
-
-#: lib/tymeslot_web/live/dashboard/locations/venue_form_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Close"
-msgstr "Закрити"

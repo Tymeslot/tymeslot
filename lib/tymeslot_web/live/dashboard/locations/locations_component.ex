@@ -27,51 +27,25 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Venues
   alias Tymeslot.Venues.VenueSchema
-  alias TymeslotWeb.Dashboard.Languages.{EditingLocale, TranslatableForm}
   alias TymeslotWeb.Dashboard.Locations.{DeleteVenueModal, VenueCard, VenueFormModal}
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.RateLimit
 
   require Logger
 
-  # From the venue modal's language bar, leaving the original: what was typed
-  # is saved first, and the modal stays open on the saved venue, so the
-  # translator sees the current original. Refused, the form shows why.
   @impl Phoenix.LiveComponent
-  def update(%{save_original: locale}, socket) do
-    %{venue_form: form, editing_venue: venue} = socket.assigns
-
-    if form && venue && form.source.changes != %{} do
-      {:ok, save_then_switch(socket, form.params, locale)}
-    else
-      send(self(), {:editing_locale, locale})
-      {:ok, socket}
-    end
-  end
-
-  # Closing the modal once its translation editor has saved (`close_venue_form`).
-  def update(%{close_venue_form: true}, socket), do: {:ok, close_form(socket)}
-
-  def update(%{editing_locale: locale} = assigns, socket) do
-    if EditingLocale.only_change?(assigns, socket),
-      do: {:ok, assign(socket, :editing_locale, locale)},
-      else: {:ok, full_update(assigns, socket)}
-  end
-
-  def update(assigns, socket), do: {:ok, full_update(assigns, socket)}
-
-  defp full_update(assigns, socket) do
-    socket
-    |> assign(assigns)
-    |> assign_new(:venue_form, fn -> nil end)
-    |> assign_new(:editing_locale, fn -> nil end)
-    |> assign_new(:editing_venue, fn -> nil end)
-    |> assign_new(:deleting_venue, fn -> nil end)
-    |> assign_new(:deleting_in_use, fn -> [] end)
-    |> assign_new(:deleting_left_without, fn -> [] end)
-    |> assign_new(:deleting_blocked_by, fn -> [] end)
-    |> assign_new(:list_epoch, fn -> 0 end)
-    |> load_venues()
+  def update(assigns, socket) do
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign_new(:venue_form, fn -> nil end)
+     |> assign_new(:editing_venue, fn -> nil end)
+     |> assign_new(:deleting_venue, fn -> nil end)
+     |> assign_new(:deleting_in_use, fn -> [] end)
+     |> assign_new(:deleting_left_without, fn -> [] end)
+     |> assign_new(:deleting_blocked_by, fn -> [] end)
+     |> assign_new(:list_epoch, fn -> 0 end)
+     |> load_venues()}
   end
 
   @impl Phoenix.LiveComponent
@@ -118,22 +92,7 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
     end)
   end
 
-  # A translation typed in the modal's editor is saved before it closes; the
-  # original's form is not autosaved, and Cancel is how it is discarded.
-  def handle_event("close_venue_form", _params, socket) do
-    %{editing_venue: venue, profile: profile, editing_locale: locale, myself: myself} =
-      socket.assigns
-
-    if venue && venue.id && TranslatableForm.translating?(profile, locale) do
-      TranslatableForm.leave("venue-translations-#{venue.id}", fn ->
-        send_update(myself, close_venue_form: true)
-      end)
-
-      {:noreply, socket}
-    else
-      {:noreply, close_form(socket)}
-    end
-  end
+  def handle_event("close_venue_form", _params, socket), do: {:noreply, close_form(socket)}
 
   def handle_event("delete_venue", %{"id" => id}, socket) do
     case Venues.get_venue(socket.assigns.current_user.id, id) do
@@ -302,8 +261,6 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
           myself={@myself}
           venue={@editing_venue}
           profile={@profile}
-          user_id={@current_user.id}
-          editing_locale={@editing_locale}
         />
 
         <DeleteVenueModal.delete_venue_modal
@@ -342,31 +299,6 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
   end
 
   defp reset_list(socket), do: update(socket, :list_epoch, &(&1 + 1))
-
-  defp save_then_switch(socket, params, locale) do
-    check = RateLimiter.check(:meeting_type_write, socket.assigns.current_user.id)
-
-    RateLimit.with_rate_limit(
-      check,
-      socket,
-      fn ->
-        case save(socket.assigns.editing_venue, socket.assigns.current_user.id, params) do
-          {:ok, venue} ->
-            Flash.info(dgettext("dashboard_meeting_types", "Location saved"))
-            send(self(), {:editing_locale, locale})
-            socket |> open_form(venue) |> load_venues()
-
-          {:error, %Changeset{} = changeset} ->
-            assign(socket, :venue_form, to_form(changeset, as: :venue))
-
-          {:error, :not_found} ->
-            Flash.error(dgettext("dashboard_meeting_types", "This location no longer exists"))
-            socket |> close_form() |> load_venues()
-        end
-      end,
-      reply: :socket
-    )
-  end
 
   defp open_form(socket, venue) do
     assign(socket,

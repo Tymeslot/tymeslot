@@ -303,7 +303,6 @@ defmodule TymeslotWeb.DashboardLive do
               payments_allowed={@payments_allowed}
               automations_allowed={@automations_allowed}
               feature_placeholder_components={@feature_placeholder_components}
-              editing_locale={@editing_locale}
             />
           <% else %>
             <ComponentDispatch.feature_placeholder
