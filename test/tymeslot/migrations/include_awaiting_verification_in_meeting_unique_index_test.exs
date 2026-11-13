@@ -93,6 +93,17 @@ defmodule Tymeslot.Migrations.IncludeAwaitingVerificationInMeetingUniqueIndexTes
       assert Enum.map([@slot_index, @invitation_index, @sweep_index], &index_oid/1) == before
     end
 
+    test "an invalid sweep index is dropped and built again" do
+      mark_invalid!(@sweep_index)
+      invalid_oid = index_oid(@sweep_index)
+
+      MigrationRunner.replay!(@version)
+
+      assert valid?(@sweep_index)
+      refute index_oid(@sweep_index) == invalid_oid
+      assert definition(@sweep_index) =~ "awaiting_verification"
+    end
+
     test "duplicates leave the index as it was and warn", %{organizer_id: organizer_id} do
       Repo.query!("DROP INDEX #{@slot_index}")
       insert_meeting!(organizer_id, "confirmed")
@@ -177,6 +188,19 @@ defmodule Tymeslot.Migrations.IncludeAwaitingVerificationInMeetingUniqueIndexTes
   defp index_oid(index) do
     %{rows: [[oid]]} = Repo.query!("SELECT to_regclass($1)::oid", [index])
     oid
+  end
+
+  defp mark_invalid!(index) do
+    Repo.query!("UPDATE pg_index SET indisvalid = false WHERE indexrelid = to_regclass($1)", [
+      index
+    ])
+  end
+
+  defp valid?(index) do
+    %{rows: [[valid]]} =
+      Repo.query!("SELECT indisvalid FROM pg_index WHERE indexrelid = to_regclass($1)", [index])
+
+    valid
   end
 
   defp check_out! do

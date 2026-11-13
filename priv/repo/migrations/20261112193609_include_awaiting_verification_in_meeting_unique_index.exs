@@ -15,7 +15,10 @@ defmodule Tymeslot.Repo.Migrations.IncludeAwaitingVerificationInMeetingUniqueInd
       it to `occupying/0`).
 
   The sweep that expires stale holds filters on the deadline of exactly these
-  rows, so a small partial index serves it.
+  rows, so a small partial index serves it. It is built `IF NOT EXISTS`, which
+  alone would skip an index an interrupted build left invalid and record the
+  version anyway, so the planner would ignore it for ever; an invalid one is
+  dropped first and built again, as the unique indexes are.
 
   ## Existing data
 
@@ -69,22 +72,35 @@ defmodule Tymeslot.Repo.Migrations.IncludeAwaitingVerificationInMeetingUniqueInd
     swap(slot_spec(), widen(@slot_status) <> @slot_tail)
     swap(invitation_spec(), widen(@invitation_status) <> @invitation_tail)
 
-    create_if_not_exists(
-      index(:meetings, [:verification_deadline_at],
-        where: "status = 'awaiting_verification'",
-        name: @sweep_index,
-        concurrently: true
-      )
-    )
+    sweep_index = sweep_index()
+
+    if invalid?(@sweep_index), do: drop(sweep_index)
+    create_if_not_exists(sweep_index)
   end
 
   def down do
-    drop_if_exists(
-      index(:meetings, [:verification_deadline_at], name: @sweep_index, concurrently: true)
-    )
+    drop_if_exists(sweep_index())
 
     swap(slot_spec(), @slot_status <> @slot_tail)
     swap(invitation_spec(), @invitation_status <> @invitation_tail)
+  end
+
+  defp sweep_index do
+    index(:meetings, [:verification_deadline_at],
+      where: "status = 'awaiting_verification'",
+      name: @sweep_index,
+      concurrently: true
+    )
+  end
+
+  defp invalid?(name) do
+    %{rows: rows} =
+      repo().query!(
+        "SELECT indisvalid FROM pg_index WHERE indexrelid = to_regclass($1)",
+        [Atom.to_string(name)]
+      )
+
+    rows == [[false]]
   end
 
   defp widen(status_clause),
@@ -160,7 +176,7 @@ defmodule Tymeslot.Repo.Migrations.IncludeAwaitingVerificationInMeetingUniqueInd
       [[true, current]] when is_binary(current) ->
         String.contains?(current, @term) == String.contains?(predicate, @term)
 
-      _ ->
+      _missing_or_invalid ->
         false
     end
   end
