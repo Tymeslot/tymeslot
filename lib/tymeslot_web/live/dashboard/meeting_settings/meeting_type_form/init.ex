@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Profiles
   alias Tymeslot.Validation.Constraints
@@ -353,7 +354,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     %LocationOption{
       id: UUID.generate(),
       kind: :in_person,
-      label: dgettext("dashboard_meeting_form", "In person"),
+      label: LocationSelection.default_label(:in_person),
       position: 0
     }
   end

@@ -8,6 +8,7 @@ defmodule Tymeslot.MeetingTypes.LocationChoices do
   """
 
   alias Tymeslot.ContentTranslations
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.Venues
@@ -23,7 +24,8 @@ defmodule Tymeslot.MeetingTypes.LocationChoices do
     * `:current_venue_id`, on a reschedule the meeting's own venue, kept
       when `:venue_id` is not one the option offers
     * `:content_locale`, the language the venues are written out in
-      (`Tymeslot.ContentTranslations`), nil for the original
+      (`Tymeslot.ContentTranslations`) and a default label is read in
+      (`LocationSelection.options/1`), nil for the organiser's copy
   """
   @type location_choice :: %{
           optional(:option_id) => String.t() | nil,
@@ -51,9 +53,28 @@ defmodule Tymeslot.MeetingTypes.LocationChoices do
   meeting lands on the one the booker picked while it is offered, otherwise
   on the location's first remaining venue, or on none, as a booking whose
   address is arranged afterwards.
+
+  The location is written out for one reader. Without a `:content_locale`
+  it is the organiser's copy, the meeting's own `location` column, so a
+  location still carrying its default label reads in the organiser's
+  language whoever booked; with one it is the attendee's copy in that
+  language (`Tymeslot.ContentTranslations.AttendeeTexts`).
   """
   @spec resolve_location(map() | nil, location_choice()) :: LocationSelection.resolution()
   def resolve_location(meeting_type, choice) when is_map(choice) do
+    Gettext.with_locale(TymeslotWeb.Gettext, label_locale(meeting_type, choice), fn ->
+      resolve_for_reader(meeting_type, choice)
+    end)
+  end
+
+  defp label_locale(_meeting_type, %{content_locale: locale}) when is_binary(locale), do: locale
+
+  defp label_locale(%{user_id: user_id}, _choice) when is_integer(user_id),
+    do: RecipientLocale.locale_for_user_id(user_id)
+
+  defp label_locale(_meeting_type, _choice), do: Gettext.get_locale(TymeslotWeb.Gettext)
+
+  defp resolve_for_reader(meeting_type, choice) do
     meeting_type = without_removed_video_integrations(meeting_type)
 
     resolution =

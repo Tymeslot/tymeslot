@@ -43,6 +43,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Locales
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Venues
 
@@ -276,14 +277,46 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   def default_label?(%{kind: kind, label: label}), do: Map.get(@default_labels, kind) == label
   def default_label?(_location), do: false
 
+  @doc """
+  `label` as a location of `kind` stores it: its kind's English default when
+  it reads as that default in any supported language, otherwise unchanged.
+
+  The editor shows a stored default in the host's own language
+  (`options/1`), so a form saved untouched posts it back localised; stored
+  as such it would read as text the host wrote, shown untranslated to every
+  visitor and offered for translation. Stored as the English default, it
+  stays the name nobody chose, shown in each reader's language.
+  """
+  @spec stored_label(LocationOption.kind() | nil, String.t() | nil) :: String.t() | nil
+  def stored_label(kind, label) when is_binary(label) do
+    case Map.fetch(@default_labels, kind) do
+      {:ok, english} -> if label in localised_defaults(kind), do: english, else: label
+      :error -> label
+    end
+  end
+
+  def stored_label(_kind, label), do: label
+
+  defp localised_defaults(kind) do
+    for locale <- Locales.supported_codes() do
+      Gettext.with_locale(TymeslotWeb.Gettext, locale, fn -> default_label(kind) end)
+    end
+  end
+
   defp localise_default_label(%LocationOption{} = option) do
     if default_label?(option),
       do: %{option | label: default_label(option.kind)},
       else: option
   end
 
-  defp default_label(:video), do: dgettext("booking", "Video call")
-  defp default_label(:in_person), do: dgettext("booking", "In person")
-  defp default_label(:phone), do: dgettext("booking", "Phone call")
-  defp default_label(:custom), do: dgettext("booking", "Somewhere else")
+  @doc """
+  The default label of `kind` in the current locale: what a location still
+  carrying its English default reads as (`options/1`), and the name an
+  editor gives a location the host has not named.
+  """
+  @spec default_label(LocationOption.kind()) :: String.t()
+  def default_label(:video), do: dgettext("booking", "Video call")
+  def default_label(:in_person), do: dgettext("booking", "In person")
+  def default_label(:phone), do: dgettext("booking", "Phone call")
+  def default_label(:custom), do: dgettext("booking", "Somewhere else")
 end

@@ -158,6 +158,42 @@ defmodule Tymeslot.Bookings.AttendeeTextsLifecycleTest do
     refute only(emails, @organizer).html_body =~ "Büro Berlin"
   end
 
+  # The booking page runs in the booker's language, so the default label it
+  # resolves reads in German there; the meeting's own column is the
+  # organiser's copy all the same.
+  test "a default location label is the organiser's in the meeting, the attendee's in their copy",
+       ctx do
+    arranged = in_person_location([], id: "loc-arranged")
+    meeting_type = meeting_type(ctx, locations: [arranged])
+
+    meeting =
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert {:ok, meeting} =
+                 Create.execute(
+                   %{
+                     date: Date.add(Date.utc_today(), 1),
+                     time: "14:00",
+                     duration: "30min",
+                     user_timezone: "America/New_York",
+                     organizer_user_id: ctx.user.id,
+                     meeting_type_id: meeting_type.id,
+                     attendee_locale: "de",
+                     location_option_id: "loc-arranged"
+                   },
+                   %{"name" => "Jana Gast", "email" => @attendee, "message" => ""}
+                 )
+
+        meeting
+      end)
+
+    assert meeting.location == "In person"
+    assert meeting.attendee_texts["de"]["location"] == "Vor Ort"
+
+    emails = delivered()
+    assert only(emails, @attendee).html_body =~ "Vor Ort"
+    refute only(emails, @organizer).html_body =~ "Vor Ort"
+  end
+
   test "a reschedule to another venue moves the attendee's copy of the location", ctx do
     meeting = book(ctx, meeting_type(ctx), ctx.berlin)
     _confirmations = delivered()

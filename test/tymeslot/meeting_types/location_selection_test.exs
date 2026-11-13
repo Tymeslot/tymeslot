@@ -100,6 +100,21 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     end
   end
 
+  describe "stored_label/2" do
+    test "stores a kind's default as rendered in any supported language as the English default" do
+      assert LocationSelection.stored_label(:in_person, "Vor Ort") == "In person"
+      assert LocationSelection.stored_label(:phone, "Telefonanruf") == "Phone call"
+      assert LocationSelection.stored_label(:video, "Appel vidéo") == "Video call"
+      assert LocationSelection.stored_label(:custom, "Inne miejsce") == "Somewhere else"
+    end
+
+    test "keeps a label that is not its own kind's default, or that the host wrote" do
+      assert LocationSelection.stored_label(:phone, "Vor Ort") == "Vor Ort"
+      assert LocationSelection.stored_label(:in_person, "Büro") == "Büro"
+      assert LocationSelection.stored_label(:in_person, nil) == nil
+    end
+  end
+
   describe "resolve/3" do
     test "resolves the chosen option into the meeting's location fields" do
       type = %{locations: [office(), zoom()]}
