@@ -9,6 +9,7 @@ defmodule Tymeslot.Bookings.Orchestrator do
   @behaviour Tymeslot.Bookings.Submitter
 
   alias Tymeslot.Bookings.{Create, Errors, Policy, Refusal, RescheduleSeat, Submitter}
+  alias Tymeslot.BookingSeries
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -28,7 +29,13 @@ defmodule Tymeslot.Bookings.Orchestrator do
   - Rate limiting (if client IP provided)
   - Meeting creation or rescheduling
 
+  `meeting_params` with a `:series` books a series of sessions
+  (`Tymeslot.BookingSeries.book/3`) unless the submission is a reschedule.
+
   Returns:
+    * `{:ok, %{series: series, meetings: meetings}}` for a series
+    * `{:error, {:occurrences_unavailable, occurrences}}` when sessions of a
+      series cannot be booked, with only those sessions
     * `{:ok, meeting}` for free bookings (confirmed); for a seat on a group
       meeting, booked or moved, the meeting as that seat
       (`Tymeslot.Meetings.SeatView`)
@@ -74,6 +81,9 @@ defmodule Tymeslot.Bookings.Orchestrator do
 
       {:error, reason} when is_atom(reason) or Refusal.is_refusal(reason) ->
         {:error, reason}
+
+      {:error, {:occurrences_unavailable, _occurrences}} = unavailable ->
+        unavailable
 
       {:error, _reason} ->
         {:error, :booking_failed}
@@ -133,6 +143,15 @@ defmodule Tymeslot.Bookings.Orchestrator do
 
   defp submit_action(_seat_token, true, uid, meeting_params, _form_data, org_id),
     do: reschedule_meeting(uid, meeting_params, org_id)
+
+  # A series is booked as a whole; a reschedule moves one of its sessions
+  # like any other meeting.
+  defp submit_action(_seat_token, false, _uid, %{series: series} = meeting_params, form_data, _id)
+       when is_map(series),
+       do:
+         BookingSeries.book(meeting_params, form_data,
+           with_video_room: meeting_params[:with_video_room] == true
+         )
 
   defp submit_action(_seat_token, false, _uid, meeting_params, form_data, _org_id),
     do: create_meeting(meeting_params, form_data)

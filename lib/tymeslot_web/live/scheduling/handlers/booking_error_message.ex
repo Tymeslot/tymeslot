@@ -102,6 +102,37 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     )
   end
 
+  def message(:series_not_offered) do
+    dgettext(
+      "booking_errors",
+      "This meeting type can't be booked as a series at the moment. You can book a single session."
+    )
+  end
+
+  def message(:series_required) do
+    dgettext(
+      "booking_errors",
+      "This meeting type is booked as a series. Please choose your sessions."
+    )
+  end
+
+  def message(:overlapping_starts) do
+    dgettext("booking_errors", "Two of your sessions overlap. Please choose different times.")
+  end
+
+  def message(:invalid_count) do
+    dgettext("booking_errors", "Please choose a number of sessions this meeting type offers.")
+  end
+
+  # The booking page shows which sessions are taken; this is the fallback for
+  # a surface that can only flash a message.
+  def message({:occurrences_unavailable, _occurrences}) do
+    dgettext(
+      "booking_errors",
+      "Some of your sessions are no longer available. Please review them."
+    )
+  end
+
   def message(:failed_to_update_meeting) do
     dgettext("booking_errors", "Failed to process booking. Please try again.")
   end

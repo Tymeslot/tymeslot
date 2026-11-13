@@ -6,10 +6,11 @@ defmodule Tymeslot.BookingSeries do
   `preview/3` answers, before anything is written, which of the sessions a
   booker asks for can be booked (`Tymeslot.BookingSeries.Check`). The series
   is all-or-nothing: it is booked only when every occurrence is available.
+  `book/3` books it (`Tymeslot.BookingSeries.Create`).
   """
 
   alias Tymeslot.Availability.Schedules
-  alias Tymeslot.BookingSeries.{Check, Occurrence, Plan}
+  alias Tymeslot.BookingSeries.{Check, Create, Occurrence, Plan}
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   @doc """
@@ -37,6 +38,13 @@ defmodule Tymeslot.BookingSeries do
       Check.check(plan, opts)
     end
   end
+
+  @doc """
+  Books the series `meeting_params.series` asks for, every session an
+  ordinary meeting, all or none. See `Tymeslot.BookingSeries.Create.execute/3`.
+  """
+  @spec book(map(), map(), keyword()) :: Create.result()
+  defdelegate book(meeting_params, form_data, opts \\ []), to: Create, as: :execute
 
   defp plan(meeting_type, %DateTime{} = first_start, opts),
     do: Plan.recurring(meeting_type, first_start, Keyword.get(opts, :count), opts)

@@ -553,6 +553,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> UniqueInvitation.cast_on_insert(attrs)
+    |> cast_series_on_insert(attrs)
     |> DerivedFields.put()
     |> validate_required([:calendar_uid | required_fields])
     # Every writer copies `organizer_email` from the host's stored account (or
@@ -587,6 +588,16 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> foreign_key_constraint(:booking_page_id)
     |> UniqueInvitation.constrain()
   end
+
+  # A booking joins its series when it is made, and nothing later moves it to
+  # another series or another place in one.
+  defp cast_series_on_insert(%Ecto.Changeset{data: %{__meta__: %{state: :built}}} = cs, attrs) do
+    cs
+    |> cast(attrs, [:series_id, :series_position])
+    |> foreign_key_constraint(:series_id)
+  end
+
+  defp cast_series_on_insert(changeset, _attrs), do: changeset
 
   @doc "Whether a write lost the race for its slot; see `Tymeslot.Meetings.UniqueSlot`."
   defdelegate unique_slot_violation?(changeset), to: UniqueSlot, as: :violation?

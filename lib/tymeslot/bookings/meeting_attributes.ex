@@ -79,7 +79,9 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
           required(:tracking_params) => map(),
           required(:visitor_hash) => String.t() | nil,
           required(:booking_page_id) => integer() | nil,
-          required(:invitation_id) => integer() | nil
+          required(:invitation_id) => integer() | nil,
+          required(:series_id) => Ecto.UUID.t() | nil,
+          required(:series_position) => pos_integer() | nil
         }
 
   @doc """
@@ -140,16 +142,27 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
       status: status,
       approval_requested_at: requested_at,
       approval_deadline_at: deadline_at,
-      reminders: reminders,
-      custom_fields_snapshot: params.custom_fields_snapshot,
-      custom_field_answers: params.custom_field_answers
+      reminders: reminders
     }
     |> Map.merge(meeting_type_attributes(meeting_type_record))
     |> Map.merge(title_attributes(params, meeting_type_name))
     |> Map.merge(attendee_attributes(params, user_timezone))
     |> Map.merge(location_attributes(meeting_type_record, params, video_integration_id))
     |> Map.merge(source_attribution(params))
+    |> Map.merge(booking_record_attributes(params))
     |> Map.merge(build_meeting_action_urls(meeting_uid, org_username))
+  end
+
+  # What the booker answered, and the series the booking is one session of
+  # (`Tymeslot.BookingSeries`) and which; the series is nil for a booking of
+  # its own.
+  defp booking_record_attributes(%BuildParams{} = params) do
+    %{
+      custom_fields_snapshot: params.custom_fields_snapshot,
+      custom_field_answers: params.custom_field_answers,
+      series_id: params.series_id,
+      series_position: params.series_position
+    }
   end
 
   # What the booking copies from its meeting type, with the defaults for a

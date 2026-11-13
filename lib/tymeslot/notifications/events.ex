@@ -82,12 +82,23 @@ defmodule Tymeslot.Notifications.Events do
   whose emails were never queued. The integrations are kept out of the
   transaction because a database error inside a dispatcher, rescued here as
   best-effort, would still leave the caller's transaction unable to commit.
+
+  Options:
+
+    * `:emails` - `false` claims the announcement and schedules the
+      reminders, but sends no confirmation emails: an occurrence of a
+      booking series, whose booker and host are told about the whole series
+      in one email instead. The claim still matters, so that a later
+      reschedule of the occurrence is announced as a reschedule.
   """
-  @spec meeting_created_deferred(term()) :: {{:ok, term()} | {:error, term()}, pending()}
-  def meeting_created_deferred(meeting) do
+  @spec meeting_created_deferred(term(), keyword()) ::
+          {{:ok, term()} | {:error, term()}, pending()}
+  def meeting_created_deferred(meeting, opts \\ []) do
+    emails? = Keyword.get(opts, :emails, true)
+
     case MeetingDeliveryQueries.claim_announcement(Map.get(meeting, :id)) do
-      {:ok, :first_announcement} -> announce_meeting_created(meeting, :meeting_created)
-      {:ok, :re_announcement} -> announce_meeting_created(meeting, :meeting_rescheduled)
+      {:ok, :first_announcement} -> announce_meeting_created(meeting, :meeting_created, emails?)
+      {:ok, :re_announcement} -> announce_meeting_created(meeting, :meeting_rescheduled, emails?)
       :already_announced -> {already_announced(meeting), []}
     end
   end
@@ -145,17 +156,25 @@ defmodule Tymeslot.Notifications.Events do
 
   # `channel_event` is what webhooks, Telegram and Slack are told; the email
   # and reminder fan-out is the same for both announcements.
-  defp announce_meeting_created(meeting, channel_event) do
+  defp announce_meeting_created(meeting, channel_event, emails?) do
     result =
       :meeting_created
-      |> send_notifications(meeting, fn ->
-        Orchestrator.schedule_meeting_notifications(meeting)
-      end)
+      |> send_notifications(meeting, fn -> schedule_created_notifications(meeting, emails?) end)
       |> retryable_only(:meeting_created, meeting)
 
     case result do
       {:error, _reason} = error -> {error, []}
       result -> {result, [{channel_event, meeting, :per_seat}]}
+    end
+  end
+
+  defp schedule_created_notifications(meeting, true),
+    do: Orchestrator.schedule_meeting_notifications(meeting)
+
+  defp schedule_created_notifications(meeting, false) do
+    case Orchestrator.schedule_reminder_notifications(meeting) do
+      {:error, _reason} = error -> error
+      _scheduled -> {:ok, :reminders_scheduled}
     end
   end
 

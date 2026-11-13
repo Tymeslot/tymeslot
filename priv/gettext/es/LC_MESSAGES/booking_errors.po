@@ -275,3 +275,28 @@ msgstr "Este enlace de invitación ha caducado. Pide al anfitrión uno nuevo."
 #, elixir-autogen, elixir-format
 msgid "This invitation link is no longer valid. Please contact the host for a new one."
 msgstr "Este enlace de invitación ya no es válido. Pide al anfitrión uno nuevo."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Please choose a number of sessions this meeting type offers."
+msgstr "Elige un número de sesiones que ofrezca este tipo de reunión."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Some of your sessions are no longer available. Please review them."
+msgstr "Algunas de tus sesiones ya no están disponibles. Revísalas."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type can't be booked as a series at the moment. You can book a single session."
+msgstr "Este tipo de reunión no se puede reservar como serie en este momento. Puedes reservar una sola sesión."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type is booked as a series. Please choose your sessions."
+msgstr "Este tipo de reunión se reserva como serie. Elige tus sesiones."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Two of your sessions overlap. Please choose different times."
+msgstr "Dos de tus sesiones se superponen. Elige otros horarios."

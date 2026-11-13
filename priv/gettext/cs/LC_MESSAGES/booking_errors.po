@@ -275,3 +275,28 @@ msgstr "Platnost tohoto odkazu na pozvání vypršela. Požádejte prosím hosti
 #, elixir-autogen, elixir-format
 msgid "This invitation link is no longer valid. Please contact the host for a new one."
 msgstr "Tento odkaz na pozvání už není platný. Požádejte prosím hostitele o nový."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Please choose a number of sessions this meeting type offers."
+msgstr "Vyberte prosím počet termínů, který tento typ schůzky nabízí."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Some of your sessions are no longer available. Please review them."
+msgstr "Některé z vašich termínů už nejsou k dispozici. Zkontrolujte je prosím."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type can't be booked as a series at the moment. You can book a single session."
+msgstr "Tento typ schůzky teď nelze rezervovat jako sérii. Můžete si rezervovat jeden termín."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type is booked as a series. Please choose your sessions."
+msgstr "Tento typ schůzky se rezervuje jako série. Vyberte prosím své termíny."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Two of your sessions overlap. Please choose different times."
+msgstr "Dva z vašich termínů se překrývají. Vyberte prosím jiné časy."

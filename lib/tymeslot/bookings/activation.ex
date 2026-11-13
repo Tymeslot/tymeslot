@@ -67,6 +67,13 @@ defmodule Tymeslot.Bookings.Activation do
   A meeting still awaiting the host's approval takes the request fan-out; any
   other status takes the confirmation one.
 
+  With `announce: :series` the meeting is one occurrence of a booking
+  series (`Tymeslot.BookingSeries`): its reminders are scheduled and its
+  announcement claimed as usual, but no confirmation emails are sent, since
+  the series is confirmed in one email of its own. A video room is created
+  without holding anything back. The default, `announce: :meeting`, is a
+  booking of its own. The integration fan-out is returned either way.
+
   With `with_video_room: true` the caller asserts the booking flow wants a
   room whenever the meeting has an integration; without it, the provider is
   auto-detected and only the API-backed ones defer the emails.
@@ -106,10 +113,12 @@ defmodule Tymeslot.Bookings.Activation do
   end
 
   def activate_in_transaction(%Meeting{} = meeting, opts) do
+    announce = Keyword.get(opts, :announce, :meeting)
+
     if wants_video_room?(meeting, opts) do
-      schedule_video_room_with_announcement(meeting)
+      schedule_video_room(meeting, announce)
     else
-      notify(meeting)
+      notify(meeting, announce)
     end
   end
 
@@ -151,16 +160,25 @@ defmodule Tymeslot.Bookings.Activation do
 
   # The room job announces the booking itself once it runs, after commit, so
   # nothing is owed from here.
-  defp schedule_video_room_with_announcement(meeting) do
+  defp schedule_video_room(meeting, :meeting) do
     case VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id) do
       :ok -> {:ok, []}
-      {:error, _reason} -> notify(meeting)
+      {:error, _reason} -> notify(meeting, :meeting)
     end
   end
 
-  defp notify(meeting) do
+  # A series sends no confirmation per occurrence, so there is nothing for
+  # the room to wait for: the room is created on its own, and the occurrence
+  # is announced now, without emails. Its reminders, composed when they are
+  # sent, carry the room's link by then.
+  defp schedule_video_room(meeting, :series) do
+    _scheduled_or_failed = VideoRoomWorker.schedule_video_room_creation(meeting.id)
+    notify(meeting, :series)
+  end
+
+  defp notify(meeting, announce) do
     meeting
-    |> Events.meeting_created_deferred()
+    |> Events.meeting_created_deferred(emails: announce == :meeting)
     |> settle(meeting, "Failed to schedule confirmation emails for meeting")
   end
 

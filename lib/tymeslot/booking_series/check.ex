@@ -81,6 +81,11 @@ defmodule Tymeslot.BookingSeries.Check do
       skipped.
     * `:guests` - how many guests the booker brings to each session
       (default 0); each takes a seat.
+    * `:strict_calendar` - `true` refuses the series with
+      `:availability_unverifiable` when the host's calendars could not be
+      reached at all, rather than reading them as free
+      (`CalendarCheck.enforce_many/3`). Booking a series sets it; a preview
+      does not.
   """
   @spec check(Plan.t(), keyword()) ::
           {:ok, [Occurrence.t()]} | {:error, :availability_unverifiable}
@@ -116,7 +121,8 @@ defmodule Tymeslot.BookingSeries.Check do
       sessions_only?: FixedDates.sessions?(type),
       sessions: sessions,
       seated: seated(sessions, Keyword.get(opts, :booker_email)),
-      first_start: hd(plan.starts)
+      first_start: hd(plan.starts),
+      strict_calendar: Keyword.get(opts, :strict_calendar, false)
     }
   end
 
@@ -277,7 +283,10 @@ defmodule Tymeslot.BookingSeries.Check do
           {:join, meeting, _left} <- [session(occurrence, ctx)],
           do: meeting
 
-    case CalendarCheck.enforce_many(slots, config, exclude: joined) do
+    case CalendarCheck.enforce_many(slots, config,
+           exclude: joined,
+           strict_calendar: ctx.strict_calendar
+         ) do
       {:ok, %{busy: busy}} -> {:ok, busy}
       {:error, _unverifiable} -> {:error, :availability_unverifiable}
     end

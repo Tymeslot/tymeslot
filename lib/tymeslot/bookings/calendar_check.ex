@@ -189,6 +189,12 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   `probe_many/3` with `enforce/3`'s refusal policy: an unreadable busy set
   refuses the whole set with `:availability_unverifiable`, and a transport
   failure is logged and reads as nothing busy.
+
+  Takes the same options as `probe/3`, plus `strict_calendar: true`, which
+  refuses a transport failure or a timeout with `:availability_unverifiable`
+  too. Booking a series writes many sessions at once, often months of them,
+  so it must not book them over clashes nobody could read; a single booking
+  and a preview keep the lenient default.
   """
   @spec enforce_many([slot()], map(), keyword()) ::
           {:ok, %{busy: MapSet.t(DateTime.t())}}
@@ -205,8 +211,19 @@ defmodule Tymeslot.Bookings.CalendarCheck do
         ok
 
       {:error, reason} ->
-        with :proceed <- police(reason, organizer_user_id), do: {:ok, %{busy: MapSet.new()}}
+        with :proceed <- police(reason, organizer_user_id),
+             do: proceed_many(Keyword.get(opts, :strict_calendar, false), organizer_user_id)
     end
+  end
+
+  defp proceed_many(false, _organizer_user_id), do: {:ok, %{busy: MapSet.new()}}
+
+  defp proceed_many(true, organizer_user_id) do
+    Logger.warning("Calendar unreachable for a strict check, refusing booking",
+      organizer_user_id: organizer_user_id
+    )
+
+    {:error, :availability_unverifiable}
   end
 
   # The refusal policy `enforce/3` and `enforce_many/3` share: the error a

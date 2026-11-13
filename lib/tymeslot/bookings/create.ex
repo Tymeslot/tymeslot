@@ -4,11 +4,8 @@ defmodule Tymeslot.Bookings.Create do
   Combines validation, policy enforcement, and side effects.
   """
 
-  alias Tymeslot.Auth
   alias Tymeslot.Availability
-  alias Tymeslot.Availability.Offer
   alias Tymeslot.Availability.Schedules
-  alias Tymeslot.BookingPages
 
   alias Tymeslot.Bookings.{
     Activation,
@@ -24,23 +21,19 @@ defmodule Tymeslot.Bookings.Create do
   }
 
   alias Tymeslot.Bookings.Create.PaidBooking
+  alias Tymeslot.Bookings.Create.Prepare
   alias Tymeslot.Bookings.Telemetry
-  alias Tymeslot.CustomFields
-  alias Tymeslot.Invitations
-  alias Tymeslot.Locales
-  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Meetings.UniqueInvitation
-  alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
-  alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
-  alias UUID
 
   @type meeting_params :: %{
           required(:date) => Date.t() | String.t(),
@@ -87,8 +80,8 @@ defmodule Tymeslot.Bookings.Create do
   """
   @spec execute(meeting_params(), form_data(), keyword()) :: execute_result()
   def execute(meeting_params, form_data, opts \\ []) do
-    with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
-         :ok <- validate_custom_field_answers(booking_data),
+    with {:ok, booking_data} <- Prepare.booking_data(meeting_params, form_data),
+         :ok <- Prepare.validate_custom_field_answers(booking_data),
          {:ok, :validated} <- validate_booking(booking_data) do
       create_meeting_and_all_side_effects_atomically(booking_data, opts)
     else
@@ -98,144 +91,22 @@ defmodule Tymeslot.Bookings.Create do
 
   # Private functions
 
-  defp validate_custom_field_answers(%{
-         custom_fields_snapshot: snapshot,
-         custom_field_answers: answers
-       }) do
-    case CustomFields.validate_answers(snapshot, answers) do
-      {:ok, _normalised} -> :ok
-      {:error, errors} -> {:error, {:custom_field_errors, errors}}
-    end
-  end
-
-  defp prepare_booking_data(meeting_params, form_data) do
-    # The duration used to compute the slot and to gate ScheduleCheck's
-    # granularity comes from the resolved meeting type, never the request,
-    # whenever a type is known (the request only picks among the lengths the
-    # type offers, see `Offer.duration_minutes/3`) — mirroring Reschedule, which pins duration to
-    # the persisted meeting rather than trusting `params.duration`. Only an
-    # unresolvable type (ad-hoc booking, or one that fails
-    # `validate_meeting_type_active/1` a few steps later) falls back to the
-    # client-supplied value, bounded exactly as the booking page bounds it.
-    # Resolving here also stashes the record on `booking_data` for everything
-    # downstream: the group join lookup needs it to know whether this is a
-    # group booking (see `CreateGroup.join_target/1`), and the active/limits validations
-    # and the paid?/guests-allowed? predicates then read it from memory instead
-    # of each issuing the same query again.
-    meeting_type = resolve_meeting_type_for_duration(meeting_params)
-
-    duration_minutes =
-      Offer.duration_minutes(
-        meeting_type,
-        meeting_params.duration,
-        Lengths.parse(meeting_params.duration)
-      )
-
-    with {:ok, date_string} <- normalize_date_input(meeting_params.date),
-         {:ok, {start_datetime, end_datetime}} <-
-           Validation.parse_meeting_times(
-             date_string,
-             meeting_params.time,
-             duration_minutes,
-             meeting_params.user_timezone
-           ),
-         {:ok, date} <- Date.from_iso8601(date_string) do
-      meeting_uid = UUID.uuid4()
-
-      booking_data = %{
-        meeting_uid: meeting_uid,
-        start_datetime: start_datetime,
-        end_datetime: end_datetime,
-        duration_minutes: duration_minutes,
-        meeting_type: meeting_type,
-        user_timezone: meeting_params.user_timezone,
-        form_data: form_data,
-        date: date,
-        organizer_user_id: Map.get(meeting_params, :organizer_user_id),
-        meeting_type_id: Map.get(meeting_params, :meeting_type_id),
-        video_integration_id: Map.get(meeting_params, :video_integration_id),
-        location_option_id: Map.get(meeting_params, :location_option_id),
-        location_phone: Map.get(meeting_params, :location_phone),
-        location_video_integration_id: Map.get(meeting_params, :location_video_integration_id),
-        location_venue_id: Map.get(meeting_params, :location_venue_id),
-        attendee_locale: Map.get(meeting_params, :attendee_locale) || default_locale(),
-        custom_fields_snapshot: Map.get(meeting_params, :custom_fields_snapshot, []),
-        custom_field_answers: Map.get(meeting_params, :custom_field_answers, %{}),
-        guest_emails: Map.get(meeting_params, :guest_emails, []),
-        utm_source: Map.get(meeting_params, :utm_source),
-        utm_medium: Map.get(meeting_params, :utm_medium),
-        utm_campaign: Map.get(meeting_params, :utm_campaign),
-        utm_content: Map.get(meeting_params, :utm_content),
-        utm_term: Map.get(meeting_params, :utm_term),
-        referrer_host: Map.get(meeting_params, :referrer_host),
-        tracking_params: Map.get(meeting_params, :tracking_params, %{}),
-        visitor_hash: Map.get(meeting_params, :visitor_hash),
-        booking_page_id:
-          BookingPages.existing_id(
-            Map.get(meeting_params, :booking_page_id),
-            Map.get(meeting_params, :organizer_user_id)
-          ),
-        invitation_id: invitation_id(meeting_type, meeting_params)
-      }
-
-      # Read once, here, so the booking-limit pre-check and the calendar
-      # check agree on whether this booking joins a live group slot.
-      {:ok, Map.put(booking_data, :join_target, CreateGroup.join_target(booking_data))}
-    else
-      {:error, :invalid_date_input} -> {:error, :invalid_datetime}
-      {:error, :invalid_format} -> {:error, :invalid_datetime}
-      error -> error
-    end
-  end
-
-  defp default_locale, do: Locales.booking_default_locale()
-
-  # An invitation is recorded only on the type that asks for one: an id sent
-  # with a booking on an open type is ignored, so the meeting never counts
-  # against an invitation it did not need.
-  defp invitation_id(%{invitation_only: true}, meeting_params),
-    do: Map.get(meeting_params, :invitation_id)
-
-  defp invitation_id(_meeting_type, _meeting_params), do: nil
-
-  defp resolve_meeting_type_for_duration(meeting_params) do
-    type_id = Map.get(meeting_params, :meeting_type_id)
-    user_id = Map.get(meeting_params, :organizer_user_id)
-
-    if is_integer(type_id) and is_integer(user_id) do
-      MeetingTypes.get_meeting_type(type_id, user_id)
-    end
-  end
-
-  defp normalize_date_input(%Date{} = date), do: {:ok, Date.to_iso8601(date)}
-  defp normalize_date_input(date) when is_binary(date), do: {:ok, date}
-  defp normalize_date_input(_arg), do: {:error, :invalid_date_input}
-
-  # A host whose account waits to be deleted takes no new bookings, even from
-  # a booking page that was already open when the deletion was requested.
-  defp validate_host_accepting(user_id) do
-    if Auth.deletion_pending?(user_id), do: {:error, :host_not_found}, else: :ok
-  end
-
   defp validate_booking(booking_data) do
-    # Get organizer user_id from booking data - now required
-    organizer_user_id = Map.get(booking_data, :organizer_user_id)
-
-    case organizer_user_id do
-      nil ->
-        {:error, :organizer_required}
-
-      user_id ->
-        # Meeting type active check
-        with :ok <- validate_host_accepting(user_id),
-             :ok <- validate_meeting_type_active(booking_data),
-             :ok <- validate_invitation(booking_data),
-             :ok <- CreateGroup.ensure_taking_seats(booking_data),
-             :ok <- validate_payments_available(booking_data, user_id) do
-          validate_time(booking_data, user_id)
-        end
+    with :ok <- Prepare.validate_admission(booking_data),
+         :ok <- validate_single_allowed(booking_data) do
+      validate_time(booking_data, booking_data.organizer_user_id)
     end
   end
+
+  # A type booked as a series takes no single sessions unless the host lets
+  # it (`series_required: false`); a series is booked through
+  # `Tymeslot.BookingSeries`. A reschedule moves one existing session and
+  # never comes here.
+  defp validate_single_allowed(%{meeting_type: %MeetingTypeSchema{} = type}) do
+    if SeriesSettings.single_allowed?(type), do: :ok, else: {:error, :series_required}
+  end
+
+  defp validate_single_allowed(_booking_data), do: :ok
 
   # A fixed-date type offers only the sessions its host planned, so the time
   # booked must be one of them, still open for registration
@@ -276,35 +147,6 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  # Reads the record resolved by resolve_meeting_type_for_duration/1 (called
-  # from prepare_booking_data/2) — a nil record with a meeting_type_id set
-  # means the type doesn't exist (or belongs to another host).
-  defp validate_meeting_type_active(%{meeting_type_id: nil}), do: :ok
-  defp validate_meeting_type_active(%{meeting_type: %{is_active: true}}), do: :ok
-
-  defp validate_meeting_type_active(%{meeting_type: %{is_active: false}}),
-    do: {:error, :meeting_type_inactive}
-
-  defp validate_meeting_type_active(%{meeting_type: nil}), do: {:error, :meeting_type_not_found}
-
-  # An invitation-only type is booked only through one of its own invitations,
-  # still available. This is the friendly pre-check; the invitation index
-  # (`Tymeslot.Meetings.UniqueInvitation`) is what keeps two bookings racing
-  # on one invitation from both landing, see `create_meeting/1`.
-  defp validate_invitation(%{meeting_type: %{invitation_only: true} = type, invitation_id: id})
-       when is_integer(id) do
-    # `CreateGroup` would book a group type without recording the invitation,
-    # leaving it unspent, so such a type is never claimable.
-    if MeetingTypeSchema.group?(type),
-      do: {:error, :invitation_unavailable},
-      else: Invitations.check_claimable(id, type.id)
-  end
-
-  defp validate_invitation(%{meeting_type: %{invitation_only: true}}),
-    do: {:error, :invitation_required}
-
-  defp validate_invitation(_booking_data), do: :ok
-
   # A direct load of `/:username/:slug/book` performs no step transition, so
   # none of the booking page's own guards on the offered slots ever run for
   # it. The schedule's windows and breaks are therefore re-derived here rather
@@ -319,22 +161,6 @@ defmodule Tymeslot.Bookings.Create do
       config,
       booking_data.organizer_user_id
     )
-  end
-
-  # A paid meeting type outlives its host's Stripe connection: the price is
-  # kept so it resumes when they reconnect, rather than being cleared behind
-  # their back. Refusing here is what stops the booking being taken anyway:
-  # without it the meeting was created in `awaiting_payment`, `CheckoutSessions`
-  # then refused for want of a charges-enabled account, and the booker was left
-  # with the same message on top of a half-made booking that had to expire.
-  # The same holds when the host's plan no longer grants payments.
-  defp validate_payments_available(booking_data, user_id) do
-    if paid_meeting_type?(booking_data) and
-         not MeetingPayments.accepting_payments?(user_id) do
-      {:error, :payments_unavailable}
-    else
-      :ok
-    end
   end
 
   # Fast pre-check with a friendly error before any side-effect setup. The
@@ -389,7 +215,7 @@ defmodule Tymeslot.Bookings.Create do
       CreateGroup.applicable?(booking_data) ->
         CreateGroup.create(meeting_attrs, booking_data, opts)
 
-      paid_meeting_type?(booking_data) ->
+      Prepare.paid?(booking_data) ->
         PaidBooking.create(meeting_attrs, booking_data,
           create_meeting: &create_meeting/1,
           create_guests: &create_guests/2,
@@ -416,9 +242,6 @@ defmodule Tymeslot.Bookings.Create do
     )
   end
 
-  defp paid_meeting_type?(%{meeting_type: %{payment_required: true}}), do: true
-  defp paid_meeting_type?(_other), do: false
-
   defp run_meeting_transaction(meeting_attrs, booking_data, opts) do
     Repo.transaction(fn ->
       # The emails, reminders and room job commit with the meeting, so a
@@ -441,7 +264,9 @@ defmodule Tymeslot.Bookings.Create do
   # guests. Sanitisation (format, de-dup, self-exclusion, cap) is re-applied
   # here server-side — the client list is never trusted. Runs inside the
   # booking transaction so a guest failure rolls the whole booking back.
-  defp create_guests(meeting, booking_data) do
+  @doc false
+  @spec create_guests(MeetingSchema.t(), map()) :: {:ok, list()} | {:error, term()}
+  def create_guests(meeting, booking_data) do
     if Policy.guests_allowed?(booking_data) do
       booking_data
       |> Map.get(:guest_emails, [])
@@ -459,7 +284,9 @@ defmodule Tymeslot.Bookings.Create do
   # passed `validate_invitation/1`, serialised on the organiser's schedule
   # lock), or whose invitation was deleted since, is refused by the database
   # at insert, not by the pre-check.
-  defp create_meeting(meeting_attrs) do
+  @doc false
+  @spec create_meeting(map()) :: {:ok, MeetingSchema.t()} | {:error, term()}
+  def create_meeting(meeting_attrs) do
     case Scheduling.create_meeting_with_conflict_check(meeting_attrs) do
       {:ok, meeting} ->
         {:ok, meeting}
