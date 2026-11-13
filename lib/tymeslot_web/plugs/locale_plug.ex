@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   ## What the session remembers
 
   Only an explicit choice. An acceptable `?locale=` parameter is written to
-  the session (under `:chosen_locale`), and nothing else ever is: the user
+  the session, and nothing else ever is: the user
   preference, the header and the fallback are derived afresh on every
   request. Persisting a derived locale would let one surface's fallback leak
   into another in the same session (the admin default rendering a public
@@ -28,6 +28,15 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   request, so remembering it adds nothing for that URL, and it would silently
   re-language every unprefixed page a visitor reaches after landing on a
   single localised link.
+
+  Each surface remembers its own choice. The app (`surface: :admin`: the
+  dashboard, sign-in and marketing pages) keeps it under `:chosen_locale`, a
+  booking page under `:booking_chosen_locale`, so a language an organiser
+  picks while looking at their own booking page never re-languages their
+  dashboard: that follows their saved language, then a choice made in the
+  app itself, then the browser. A booking page reads its own key first, then
+  `:chosen_locale`, so a language picked in the app, or on a booking page
+  before the keys were split, still carries over to booking pages.
 
   The session key used to be `:locale`, which held derived values as well.
   That key is no longer read, so a derived locale stored before this change
@@ -86,7 +95,8 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   import Plug.Conn
   require Logger
 
-  @session_key :chosen_locale
+  @app_session_key :chosen_locale
+  @booking_session_key :booking_chosen_locale
 
   # Generous for any real language tag (BCP 47 tags in the wild stay well
   # under this); anything longer is rejected before it is normalised.
@@ -100,15 +110,20 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   @spec call(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
   def call(conn, opts) do
     session? = Keyword.get(opts, :session, true)
+    surface = Keyword.get(opts, :surface, :booking)
     choice = conn.params["locale"] |> normalize_locale() |> Locales.acceptable()
-    conn = if session? and choice, do: put_session(conn, @session_key, choice), else: conn
+
+    conn =
+      if session? and choice,
+        do: put_session(conn, session_key(surface), choice),
+        else: conn
 
     path_locale = normalize_locale(conn.assigns[:path_locale])
     tags = header_tags(conn)
-    picked = Locales.acceptable(choice || remembered_choice(conn, session?))
+    picked = choice || remembered_choice(conn, surface, session?)
     browser = tags |> Enum.map(&normalize_locale/1) |> Enum.filter(&Locales.acceptable?/1)
     detected = [picked | browser]
-    fallback = surface_default(opts)
+    fallback = surface_default(surface)
 
     locale = Locales.resolve([path_locale, user_locale(conn, opts) | detected], fallback)
     ambient_locale = Locales.resolve([path_locale | detected], fallback)
@@ -162,12 +177,11 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   # The end of the chain: the admin-editable fallback for the surface this
   # pipeline serves. Reached only when no source above yielded a supported
   # locale, so setting it never overrides a visitor's actual preference.
-  defp surface_default(opts) do
-    case Keyword.get(opts, :surface, :booking) do
-      :admin -> Locales.admin_default_locale()
-      _booking -> Locales.booking_default_locale()
-    end
-  end
+  defp surface_default(:admin), do: Locales.admin_default_locale()
+  defp surface_default(_booking), do: Locales.booking_default_locale()
+
+  defp session_key(:admin), do: @app_session_key
+  defp session_key(_booking), do: @booking_session_key
 
   # Only consulted on pipelines that pass `prefer_user_locale: true` (the
   # authenticated app), never on public booking pages. Requires
@@ -181,8 +195,17 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     end
   end
 
-  defp remembered_choice(conn, true), do: get_session(conn, @session_key)
-  defp remembered_choice(_conn, false), do: nil
+  # The surface's own remembered choice; a booking page falls back to the
+  # app's (see "What the session remembers"). The first acceptable one wins.
+  defp remembered_choice(_conn, _surface, false), do: nil
+
+  defp remembered_choice(conn, :admin, true),
+    do: Locales.acceptable(get_session(conn, @app_session_key))
+
+  defp remembered_choice(conn, _booking, true) do
+    Locales.acceptable(get_session(conn, @booking_session_key)) ||
+      Locales.acceptable(get_session(conn, @app_session_key))
+  end
 
   # The header's language tags as sent (`en-US`), highest weight first. Ties
   # keep header order. Over-long tags are dropped here, before anyone reads
