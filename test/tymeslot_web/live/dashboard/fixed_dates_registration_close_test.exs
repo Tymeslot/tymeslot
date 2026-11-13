@@ -186,7 +186,12 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
         "time" => "09:30"
       })
 
-      assert has_element?(view, "[data-testid='edit-session']", "This time is no longer available")
+      assert has_element?(
+               view,
+               "[data-testid='edit-session']",
+               "This time is no longer available"
+             )
+
       assert Repo.reload!(session).start_time == at(10, ~T[18:00:00])
     end
   end
