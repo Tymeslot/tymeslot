@@ -572,11 +572,11 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
   defp duplicate_error_message(reason)
        when reason in [
-         :insufficient_plan,
-         :group_bookings_not_allowed,
-         :recurring_bookings_not_allowed,
-         :feature_disabled
-       ],
+              :insufficient_plan,
+              :group_bookings_not_allowed,
+              :recurring_bookings_not_allowed,
+              :feature_disabled
+            ],
        do:
          dgettext(
            "dashboard_integrations",

@@ -27,7 +27,14 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Ecto.Changeset,
-    only: [add_error: 3, add_error: 4, fetch_change: 2, get_field: 2, put_change: 3, validate_required: 2]
+    only: [
+      add_error: 3,
+      add_error: 4,
+      fetch_change: 2,
+      get_field: 2,
+      put_change: 3,
+      validate_required: 2
+    ]
 
   alias Ecto.Changeset
   alias Tymeslot.Features

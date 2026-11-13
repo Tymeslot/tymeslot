@@ -142,7 +142,10 @@ defmodule TymeslotWeb.Helpers.ContextErrors do
   """
   @spec recurring_bookings_not_allowed_message() :: String.t()
   def recurring_bookings_not_allowed_message do
-    dgettext("dashboard_meeting_form", "Recurring bookings are not included in your current plan.")
+    dgettext(
+      "dashboard_meeting_form",
+      "Recurring bookings are not included in your current plan."
+    )
   end
 
   defp format_generic_error(error) when is_atom(error) do
