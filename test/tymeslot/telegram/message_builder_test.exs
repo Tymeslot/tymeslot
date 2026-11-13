@@ -4,10 +4,11 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
   @moduletag :telegram
   @moduletag :unit
 
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Telegram.MessageBuilder
 
-  @meeting %{
+  @meeting %MeetingSchema{
     attendee_name: "John Smith",
     attendee_email: "john@example.com",
     attendee_timezone: "America/New_York",
@@ -15,9 +16,7 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
     end_time: ~U[2026-03-10 14:30:00Z],
     title: "30-minute intro call",
     id: "6f1d2c3b-0a4e-4b8f-9c7d-1e2f3a4b5c6d",
-    uid: "abc123",
-    video_room_url: nil,
-    cancellation_reason: nil
+    uid: "abc123"
   }
 
   # The organiser's timezone, deliberately different from the attendee's: these
@@ -142,11 +141,30 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
       assert msg =~ "&lt;script&gt;"
     end
 
-    test "includes video link when present" do
-      meeting = Map.put(@meeting, :video_room_url, "https://meet.example.com/room")
+    for event <- ["meeting.created", "meeting.rescheduled"] do
+      test "#{event} links the organiser's own video room, not the attendee's" do
+        meeting = %{
+          @meeting
+          | organizer_video_url: "https://meet.example.com/host",
+            attendee_video_url: "https://meet.example.com/guest",
+            meeting_url: "https://meet.example.com/room"
+        }
+
+        msg = MessageBuilder.build_message(unquote(event), meeting, @timezone)
+        assert msg =~ ~s(<a href="https://meet.example.com/host">Join video call</a>)
+        refute msg =~ "meet.example.com/guest"
+      end
+    end
+
+    test "falls back to the meeting URL when there is no organiser link" do
+      meeting = %{@meeting | meeting_url: "https://meet.example.com/room"}
       msg = MessageBuilder.build_message("meeting.created", meeting, @timezone)
-      assert msg =~ "Join video call"
-      assert msg =~ "https://meet.example.com/room"
+      assert msg =~ ~s(<a href="https://meet.example.com/room">Join video call</a>)
+    end
+
+    test "omits the video line when the meeting has no link" do
+      msg = MessageBuilder.build_message("meeting.created", @meeting, @timezone)
+      refute msg =~ "Join video call"
     end
 
     test "names the meeting by its title" do

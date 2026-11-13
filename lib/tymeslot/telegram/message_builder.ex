@@ -175,10 +175,12 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     end
   end
 
+  # The organiser's own join link: on providers that issue separate host and
+  # guest URLs, `attendee_video_url` would let them in without host controls.
   defp video_line(meeting) do
-    video_url = Map.get(meeting, :video_room_url) || Map.get(meeting, :video_link)
+    video_url = meeting.organizer_video_url || meeting.meeting_url
 
-    if video_url && safe_url?(video_url) do
+    if safe_url?(video_url) do
       "\n#{emoji(:video)} <a href=\"#{esc(video_url)}\">Join video call</a>"
     else
       ""
