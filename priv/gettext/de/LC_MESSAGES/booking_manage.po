@@ -752,4 +752,4 @@ msgstr "Diese Buchung ist nicht mehr verfügbar, daher wurde die Zeit freigegebe
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "The booking was cancelled and your place released."
-msgstr ""
+msgstr "Die Buchung wurde storniert und Ihr Platz freigegeben."

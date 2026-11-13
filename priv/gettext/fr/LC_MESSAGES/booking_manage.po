@@ -752,4 +752,4 @@ msgstr "Cette réservation n’est plus disponible ; le créneau a donc été li
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "The booking was cancelled and your place released."
-msgstr ""
+msgstr "La réservation a été annulée et votre place libérée."

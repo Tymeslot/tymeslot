@@ -752,4 +752,4 @@ msgstr "Questa prenotazione non è più disponibile, quindi l'orario è stato li
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "The booking was cancelled and your place released."
-msgstr ""
+msgstr "La prenotazione è stata annullata e il tuo posto liberato."

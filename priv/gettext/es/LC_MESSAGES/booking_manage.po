@@ -752,4 +752,4 @@ msgstr "Esta reserva ya no está disponible, así que el horario quedó libre."
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "The booking was cancelled and your place released."
-msgstr ""
+msgstr "La reserva se canceló y tu plaza quedó libre."
