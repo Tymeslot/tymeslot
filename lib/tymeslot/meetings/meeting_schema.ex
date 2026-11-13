@@ -326,9 +326,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:custom_fields_snapshot, {:array, :map}, default: [])
     field(:custom_field_answers, :map, default: %{})
 
-    # Attendees' copies of the snapshot strings above, per locale, nil when
-    # none; the plain columns keep the organiser's original
-    # (`Tymeslot.ContentTranslations.AttendeeTexts`).
+    # Attendees' per-locale copies of the snapshot strings above; the plain
+    # columns keep the organiser's original (`ContentTranslations.AttendeeTexts`).
     field(:attendee_texts, :map)
 
     # Confirmed from a poll: only its host manages it (`Tymeslot.Meetings.HostManaged`).
