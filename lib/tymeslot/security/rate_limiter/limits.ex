@@ -262,6 +262,16 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
               window_ms: 10 * @minute,
               operation: "booking request answer"
             ],
+            # Confirming or disowning a held booking from the verification
+            # email, keyed on the client for the same reason as
+            # `:meeting_approval`.
+            booking_email_verification: [
+              prefix: "booking_email_verification",
+              scope: :source,
+              limit: 20,
+              window_ms: 10 * @minute,
+              operation: "booking email verification"
+            ],
             # Counts both the landing page and the response, keyed on the client for
             # the same reason as `:meeting_approval`.
             guest_rsvp: [

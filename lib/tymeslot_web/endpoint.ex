@@ -222,6 +222,7 @@ defmodule TymeslotWeb.Endpoint do
     {["seat", :_], false},
     {["free-busy", :_], false},
     {["meeting-request", :_], false},
+    {["verify-booking", :_], false},
     {["invite", :_], false},
     # Stripe's return pages for a paid booking: the meeting id in the path
     # leads to the meeting, and the cancelled page's retry link can carry the
