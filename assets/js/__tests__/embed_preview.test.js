@@ -57,6 +57,25 @@ describe('EmbedPreview', () => {
     expect(url.searchParams.get('preview_token')).toBe(TOKEN);
   });
 
+  test('Inline rebuilds the preview when a re-render empties the container', () => {
+    // LiveView patches the server-rendered (empty) children back in when the
+    // surrounding component re-renders, e.g. on switching to the preview tab,
+    // with every data attribute unchanged.
+    const hook = mountHook('inline');
+    hook.el.innerHTML = '\n    ';
+    hook.updated();
+
+    expect(hook.el.querySelector('iframe')).not.toBeNull();
+  });
+
+  test('Inline keeps its iframe when an update changes nothing', () => {
+    const hook = mountHook('inline');
+    const iframe = hook.el.querySelector('iframe');
+    hook.updated();
+
+    expect(hook.el.querySelector('iframe')).toBe(iframe);
+  });
+
   test('Popup hands the preview token to the embed script', () => {
     const hook = mountHook('popup');
     hook.el.querySelector('button').click();

@@ -469,11 +469,10 @@ defmodule Tymeslot.Emails.Shared.Formatting do
 
   @doc """
   Formats an amount in minor units for an email, defaulting a missing currency
-  to euros. See `Tymeslot.MeetingPayments.Money.format/3` for the symbols and
-  the unrecognised-currency fallback (e.g. "HUF 175.00").
-
-  Locale-specific thousands and decimal separators are not implemented; that
-  needs a locale threaded through every call site.
+  to euros. The amount follows the current Gettext locale, which email
+  rendering sets to the recipient's. See `Tymeslot.MeetingPayments.Money.format/3`
+  for the symbols, the per-locale conventions and the unrecognised-currency
+  fallback (e.g. "HUF 175.00").
   """
   @spec format_currency(integer(), String.t() | nil) :: String.t()
   def format_currency(cents, currency),

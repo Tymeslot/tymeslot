@@ -6,14 +6,16 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
 
   use TymeslotWeb.OAuthIntegrationCase, async: false
 
-  @moduletag :oauth_integration
-  @moduletag :auth
-  @moduletag :integrations
-
   import Tymeslot.Factory
   alias Phoenix.Flash
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.SuiteConfig
+
+  @moduletag :oauth_integration
+  @moduletag skip: SuiteConfig.unless_included(:oauth_integration)
+  @moduletag :auth
+  @moduletag :integrations
 
   # The `:oauth_initiation` rate limit allows this many initiations per IP
   # per 600s window; the next one is refused.

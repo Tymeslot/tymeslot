@@ -348,7 +348,7 @@ is **puntuación** (section 2), not `score`.
   space reads as neither. The RAE leaves four-digit numbers ungrouped; the code groups
   them (`1 500`), as it does for French, Czech and Polish.
 - The currency symbol follows the amount after a non-breaking space: `45,00 €`,
-  `1 234,50 $` (RAE).
+  `1 234,50 US$` (RAE; CLDR's symbol for the US dollar in Spanish).
 - **24-hour clock**: `15:00`, not `3:00 p. m.` Spanish uses both, but the 12-hour
   path in the code prints English `AM`/`PM`.
 - Dates are day-first: `25/11` in compact form, `25 de noviembre de 2026` in prose,

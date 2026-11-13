@@ -240,6 +240,25 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
     end
   end
 
+  describe "build_payload/3 managed_by_host" do
+    # A consumer must be able to tell a meeting only the host manages (Quick
+    # Add without a main participant, a confirmed poll), whose attendee is
+    # its first guest, from a booking someone made.
+    test "is true for a meeting the host manages" do
+      meeting = build(:meeting, managed_by_host: true)
+
+      assert PayloadBuilder.build_payload("meeting.created", meeting, "1").data.meeting.managed_by_host ==
+               true
+    end
+
+    test "is false for an ordinary booking" do
+      meeting = build(:meeting)
+
+      assert PayloadBuilder.build_payload("meeting.created", meeting, "1").data.meeting.managed_by_host ==
+               false
+    end
+  end
+
   describe "build_payload/3 guests" do
     test "describes each guest the meeting was booked with" do
       meeting =

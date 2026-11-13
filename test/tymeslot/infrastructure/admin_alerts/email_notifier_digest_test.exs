@@ -139,5 +139,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierDigestTest do
              })
 
     assert all_enqueued(worker: EmailWorker) == []
+    assert Repo.all(DigestEntrySchema) == []
   end
 end

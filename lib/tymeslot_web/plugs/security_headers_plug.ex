@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   alias TymeslotWeb.Helpers.PathUtils
   alias TymeslotWeb.Plugs.SecurityHeaders.Hsts
 
-  @local_hosts ~w(localhost 127.0.0.1 ::1)
+  @local_hosts ~w(localhost 127.0.0.1)
 
   # Built once at compile time because this plug runs on every response. See
   # `Hsts` for why the two reaching directives default off.
@@ -147,14 +147,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
       # need to whitelist both example.com and www.example.com.
       expanded_domains = Enum.flat_map(allowed_domains, &expand_www_variant/1)
 
-      domains =
-        Enum.map_join(expanded_domains, " ", fn domain ->
-          if domain in @local_hosts and is_dev_env do
-            "http://#{domain}:*"
-          else
-            "https://#{domain}"
-          end
-        end)
+      domains = Enum.map_join(expanded_domains, " ", &frame_ancestor_source/1)
 
       frame_ancestors = "'self' #{domains}#{dev_localhost_suffix(allowed_domains, is_dev_env)}"
 
@@ -164,6 +157,15 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
       {frame_ancestors, nil}
     end
   end
+
+  # A local host the user allowed is how they test an embed on their own
+  # machine before publishing it, so it matches any port over plain HTTP, the
+  # way local development servers run, in every environment. Only the user's
+  # own machine can frame the page through it.
+  defp frame_ancestor_source(domain) when domain in @local_hosts,
+    do: "http://#{domain}:* https://#{domain}:*"
+
+  defp frame_ancestor_source(domain), do: "https://#{domain}"
 
   # In dev/test, allow localhost embedding without requiring it in allowed_embed_domains.
   # In production this always returns {"'none'", "DENY"}.

@@ -906,3 +906,13 @@ msgstr "Vuoi davvero annullare «%{title}» programmata per %{when}? Tutti gli o
 #, elixir-autogen, elixir-format
 msgid "Managed by you"
 msgstr "Gestita da te"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "In person"
+msgstr "Di persona"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Telefonata"

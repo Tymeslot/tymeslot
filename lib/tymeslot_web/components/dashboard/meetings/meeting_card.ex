@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
 
   alias Tymeslot.Clock
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.PlannedSessions
@@ -466,9 +467,28 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   defp from_poll?(%{confirming_poll: %{id: _id}}), do: true
   defp from_poll?(_meeting), do: false
 
+  # A video meeting has its own pill. One booked before `location_kind`
+  # existed may hold an English placeholder an older release wrote in place
+  # of a place, or its video link: "To be determined" and the link say
+  # nothing the card does not, and the bare kind names read in the host's
+  # language.
   defp place(%{location_kind: :video}), do: nil
-  defp place(%{location: location}) when is_binary(location) and location != "", do: location
-  defp place(_meeting), do: nil
+
+  defp place(%{location_kind: nil} = meeting) do
+    case {BookingRequestLocation.type(meeting),
+          BookingRequestLocation.legacy_placeholder(meeting.location)} do
+      {:video, _placeholder} -> nil
+      {_type, :to_be_determined} -> nil
+      {_type, :in_person} -> dgettext("dashboard_bookings", "In person")
+      {_type, :phone} -> dgettext("dashboard_bookings", "Phone call")
+      {_type, nil} -> written_place(meeting.location)
+    end
+  end
+
+  defp place(%{location: location}), do: written_place(location)
+
+  defp written_place(location) when is_binary(location) and location != "", do: location
+  defp written_place(_location), do: nil
 
   # Read only when loaded: a meeting refreshed on its own arrives without it,
   # and shows no tag rather than crashing.

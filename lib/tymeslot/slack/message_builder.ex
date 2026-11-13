@@ -14,6 +14,8 @@ defmodule Tymeslot.Slack.MessageBuilder do
   """
 
   alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.Meetings.AttendeeName
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -32,7 +34,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
   @spec build_blocks(String.t(), map(), String.t()) :: [map()]
   def build_blocks(@created, meeting, timezone) do
     base = [
-      header("New booking"),
+      header(created_header(meeting)),
       section_summary(meeting),
       divider(),
       section_details(meeting, timezone)
@@ -131,11 +133,26 @@ defmodule Tymeslot.Slack.MessageBuilder do
   end
 
   defp section_summary(meeting) do
-    text =
-      "*#{escape(meeting_title(meeting))}*\n" <>
-        "With #{escape(attendee_name(meeting))} (#{escape(meeting.attendee_email || "no email")})"
+    text = "*#{escape(meeting_title(meeting))}*\n" <> with_line(meeting)
 
     section_text(text)
+  end
+
+  # A meeting the host manages was arranged by the host, not booked by the
+  # guest in its attendee fields.
+  defp created_header(meeting) do
+    if HostManaged.managed?(meeting), do: "New meeting", else: "New booking"
+  end
+
+  # The address alone where there is no name beside it, rather than twice.
+  defp with_line(meeting) do
+    case {AttendeeName.display_name(meeting), meeting.attendee_email} do
+      {nil, email} when is_binary(email) and email != "" ->
+        "With #{escape(email)}"
+
+      {name, email} ->
+        "With #{escape(name || "guest")} (#{escape(email || "no email")})"
+    end
   end
 
   defp section_details(meeting, timezone) do
@@ -238,10 +255,6 @@ defmodule Tymeslot.Slack.MessageBuilder do
   # Formatters — kept consistent with Tymeslot.Telegram.MessageBuilder so the
   # date/time wording matches across channels.
   # ============================================================================
-
-  defp attendee_name(meeting) do
-    meeting.attendee_name || meeting.attendee_email || "guest"
-  end
 
   defp meeting_title(meeting) do
     cond do
