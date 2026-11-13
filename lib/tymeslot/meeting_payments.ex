@@ -295,7 +295,8 @@ defmodule Tymeslot.MeetingPayments do
   # ---------------------------------------------------------------------------
 
   @doc """
-  Lists recent booking payments for a host, newest first.
+  Lists recent booking payments for a host, newest first, leaving out
+  checkouts that never captured anything (`BookingPaymentQueries.for_host/2`).
   """
   @spec list_payments_for_host(integer(), keyword()) :: [booking_payment()]
   def list_payments_for_host(host_user_id, opts \\ []),

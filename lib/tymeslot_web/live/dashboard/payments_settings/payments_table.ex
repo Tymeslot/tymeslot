@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
         {dgettext("dashboard_payments", "No payments yet.")}
       </p>
       <div :if={@payments != []} class="overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full" data-testid="payments-table">
           <thead class="text-left text-token-sm text-tymeslot-500 border-b border-tymeslot-100">
             <tr>
               <th class="p-2">{dgettext("dashboard_payments", "Date")}</th>
