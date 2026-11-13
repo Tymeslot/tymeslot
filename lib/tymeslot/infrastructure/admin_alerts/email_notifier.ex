@@ -99,7 +99,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   # A rejected recipient alert about the admin-alert email itself (e.g. the
   # configured `:admin_alert_email` bounces) would otherwise be queued for
   # the digest, which goes to that same dead address and bounces again,
-  # raising another alert: the feedback loop this function exists to break. `TransactionalEmailDelivery`/`EmailWorker` tag every
+  # raising another alert: the feedback loop this function exists to break.
+  # `TransactionalEmailDelivery`/`EmailWorker` tag every
   # `:recipient_email_rejected` report with the job's `action`, and
   # `AdminAlertScheduler.actions/0` are used by admin alert emails alone.
   defp self_referential?(:recipient_email_rejected, %{action: action}),
