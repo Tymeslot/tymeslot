@@ -937,4 +937,4 @@ msgstr "Désactivez les paiements pour demander aux invités de confirmer leur a
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to 30 minutes, and you are not notified."
-msgstr ""
+msgstr "La réservation n’est prise en compte qu’une fois que l’invité a cliqué sur le lien que nous lui envoyons par e-mail. D’ici là, le créneau est réservé pendant 30 minutes au maximum et vous ne recevez aucune notification."

@@ -869,4 +869,4 @@ msgstr "Gruppenbuchungen können keine E-Mail-Bestätigung erfordern"
 #: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Diese Zeit ist nicht mehr verfügbar. Bitte wählen Sie eine andere."

@@ -540,4 +540,4 @@ msgstr "Veuillez confirmer votre réservation"
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Your booking is not confirmed yet. Click the button below by %{time} to confirm it, and we will hold the time for you until then."
-msgstr ""
+msgstr "Votre réservation n’est pas encore confirmée. Cliquez sur le bouton ci-dessous avant %{time} pour la confirmer. D’ici là, nous vous gardons le créneau."

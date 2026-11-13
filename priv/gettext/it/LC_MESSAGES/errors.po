@@ -871,4 +871,4 @@ msgstr "le prenotazioni di gruppo non possono richiedere la conferma dell'email"
 #: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Questo orario non è più disponibile. Scegline un altro."

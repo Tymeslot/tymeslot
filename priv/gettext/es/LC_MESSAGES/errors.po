@@ -876,4 +876,4 @@ msgstr "las reservas de grupo no pueden requerir confirmación del correo"
 #: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Este horario ya no está disponible. Elige otro."

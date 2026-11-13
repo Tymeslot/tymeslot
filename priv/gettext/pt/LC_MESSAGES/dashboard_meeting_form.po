@@ -937,4 +937,4 @@ msgstr "Desative os pagamentos para pedir que quem agenda confirme o e-mail. O p
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to 30 minutes, and you are not notified."
-msgstr ""
+msgstr "O agendamento só vale depois que a pessoa clica no link que enviamos por e-mail. Até lá, o horário fica reservado por até 30 minutos, e você não recebe nenhum aviso."

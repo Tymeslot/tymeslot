@@ -905,4 +905,4 @@ msgstr "Gerenciada por você"
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Este horário não está mais disponível. Escolha outro."

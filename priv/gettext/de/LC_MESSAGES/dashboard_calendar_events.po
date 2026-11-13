@@ -560,4 +560,4 @@ msgstr "Laden Sie mindestens einen Gast ein."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Diese Zeit ist nicht mehr verfügbar. Bitte wählen Sie eine andere."

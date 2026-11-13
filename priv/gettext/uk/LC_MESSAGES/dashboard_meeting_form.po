@@ -942,4 +942,4 @@ msgstr "Вимкніть оплату, щоб просити запрошени�
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to 30 minutes, and you are not notified."
-msgstr ""
+msgstr "Бронювання зараховується лише після того, як запрошений перейде за посиланням, яке ми надішлемо йому листом. Доти слот утримується до 30 хвилин, а сповіщення вам не надходить."

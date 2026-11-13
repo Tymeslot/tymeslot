@@ -747,4 +747,4 @@ msgstr "Zabere to jen chvilku."
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "This booking is no longer available, so the time was released."
-msgstr ""
+msgstr "Tato rezervace už není k dispozici, takže termín byl uvolněn."

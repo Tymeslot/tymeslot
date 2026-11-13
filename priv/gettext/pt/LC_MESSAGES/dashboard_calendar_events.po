@@ -559,4 +559,4 @@ msgstr "Convide pelo menos uma pessoa."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Este horário não está mais disponível. Escolha outro."

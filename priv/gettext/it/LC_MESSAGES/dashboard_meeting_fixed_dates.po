@@ -235,4 +235,4 @@ msgstr "L'orario %{time} si ripete il %{date} perché le lancette tornano indiet
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Questo orario non è più disponibile. Scegline un altro."

@@ -894,4 +894,4 @@ msgstr "skupinové rezervace nemohou vyžadovat potvrzení e-mailu"
 #: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Tento čas už není k dispozici. Vyberte prosím jiný."

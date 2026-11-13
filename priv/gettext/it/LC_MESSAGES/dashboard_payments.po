@@ -533,10 +533,10 @@ msgstr "Il tuo account Stripe non è ancora collegato. Collegalo per iniziare ad
 #, elixir-autogen, elixir-format
 msgid "%{count} checkout still in progress will be cancelled when you disconnect."
 msgid_plural "%{count} checkouts still in progress will be cancelled when you disconnect."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{count} pagamento in corso verrà annullato quando scolleghi l'account."
+msgstr[1] "%{count} pagamenti in corso verranno annullati quando scolleghi l'account."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "A checkout is in progress in your current currency. Try again in a few minutes."
-msgstr ""
+msgstr "C'è un pagamento in corso nella tua valuta attuale. Riprova tra qualche minuto."

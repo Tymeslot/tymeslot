@@ -124,4 +124,4 @@ msgstr "Verbinden Sie zuerst einen Kalender: Die Veranstaltung wird auf Ihrer Bu
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Diese Zeit ist nicht mehr verfügbar. Bitte wählen Sie eine andere."

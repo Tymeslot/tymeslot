@@ -562,4 +562,4 @@ msgstr "Pozvěte alespoň jednoho hosta."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/write_outcome_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Tento čas už není k dispozici. Vyberte prosím jiný."

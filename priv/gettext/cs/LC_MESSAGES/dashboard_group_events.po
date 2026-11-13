@@ -124,4 +124,4 @@ msgstr "Nejprve připojte kalendář: akci si lidé rezervují na vaší rezerva
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/group_event_creation.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Tento čas už není k dispozici. Vyberte prosím jiný."

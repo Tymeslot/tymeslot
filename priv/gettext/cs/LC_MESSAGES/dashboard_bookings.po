@@ -915,4 +915,4 @@ msgstr "Spravujete vy"
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Tento čas už není k dispozici. Vyberte prosím jiný."

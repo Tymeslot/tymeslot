@@ -887,4 +887,4 @@ msgstr "групові бронювання не можуть вимагати �
 #: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Цей час більше недоступний. Виберіть інший."

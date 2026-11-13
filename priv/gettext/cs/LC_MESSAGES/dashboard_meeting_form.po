@@ -942,4 +942,4 @@ msgstr "Vypněte platby, chcete-li žádat pozvané o potvrzení e-mailu. Platba
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to 30 minutes, and you are not notified."
-msgstr ""
+msgstr "Rezervace platí, teprve až pozvaná osoba klikne na odkaz, který jí pošleme e-mailem. Do té doby je termín rezervován až 30 minut a vám nepřijde žádné oznámení."

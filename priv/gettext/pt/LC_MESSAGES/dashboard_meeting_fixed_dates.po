@@ -235,4 +235,4 @@ msgstr "O horário %{time} ocorre duas vezes em %{date} porque os relógios são
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Este horário não está mais disponível. Escolha outro."

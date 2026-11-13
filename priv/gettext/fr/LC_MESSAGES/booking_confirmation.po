@@ -250,4 +250,4 @@ msgstr "Nous ne pouvons pas renvoyer l’e-mail. S’il n’est pas arrivé, vé
 #: lib/tymeslot_web/themes/shared/confirmation_text.ex
 #, elixir-autogen, elixir-format
 msgid "We have sent a link to %{email}. Click it by %{time} to confirm your booking. Until then the time is held for you."
-msgstr ""
+msgstr "Nous avons envoyé un lien à %{email}. Cliquez dessus avant %{time} pour confirmer votre réservation. D’ici là, le créneau vous est réservé."

@@ -238,4 +238,4 @@ msgstr "Godzina %{time} występuje w dniu %{date} dwa razy, bo tego dnia przesta
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Ten termin nie jest już dostępny. Wybierz inny."

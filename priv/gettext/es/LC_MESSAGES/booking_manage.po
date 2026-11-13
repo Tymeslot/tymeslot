@@ -747,4 +747,4 @@ msgstr "Solo tardará un momento."
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "This booking is no longer available, so the time was released."
-msgstr ""
+msgstr "Esta reserva ya no está disponible, así que el horario quedó libre."

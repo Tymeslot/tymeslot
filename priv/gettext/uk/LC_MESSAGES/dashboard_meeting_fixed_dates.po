@@ -238,4 +238,4 @@ msgstr "Час %{time} %{date} настає двічі, бо годинники 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
-msgstr ""
+msgstr "Цей час більше недоступний. Виберіть інший."

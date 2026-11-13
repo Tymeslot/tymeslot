@@ -536,11 +536,11 @@ msgstr "Váš účet Stripe ještě není připojený. Připojte jej a začnět
 #, elixir-autogen, elixir-format
 msgid "%{count} checkout still in progress will be cancelled when you disconnect."
 msgid_plural "%{count} checkouts still in progress will be cancelled when you disconnect."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Po odpojení bude zrušena %{count} nedokončená platba."
+msgstr[1] "Po odpojení budou zrušeny %{count} nedokončené platby."
+msgstr[2] "Po odpojení bude zrušeno %{count} nedokončených plateb."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "A checkout is in progress in your current currency. Try again in a few minutes."
-msgstr ""
+msgstr "V aktuální měně právě probíhá platba. Zkuste to znovu za několik minut."
