@@ -192,9 +192,9 @@ defmodule Tymeslot.Bookings.CreateGroup do
   defp schedule_seat_jobs(
          %{meeting: %MeetingSchema{status: :awaiting_verification} = meeting} = booking,
          nil,
-         _opts
+         opts
        ),
-       do: SlotActivation.activate_seat_in_transaction(meeting, booking.participant)
+       do: SlotActivation.activate_seat_in_transaction(meeting, booking.participant, opts)
 
   defp schedule_seat_jobs(booking, nil, opts) do
     %{meeting: meeting, participant: participant, created_meeting?: created?} = booking

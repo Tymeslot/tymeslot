@@ -41,26 +41,33 @@ defmodule Tymeslot.Bookings.SlotActivation do
   slot `:awaiting_verification` is confirmed (`email_verified_at` stamped) and
   the seat owes the first-seat effects; any other slot, a planned session
   included, is already live and the seat owes only its own.
+
+  `opts` are as for `schedule_seat_effects/4`, defaulting to the booking
+  page's (a first seat makes the slot's video room).
   """
-  @spec activate_seat_in_transaction(Meeting.t(), Participant.t()) ::
+  @spec activate_seat_in_transaction(Meeting.t(), Participant.t(), keyword()) ::
           {:ok, Events.pending()} | {:error, term()}
-  def activate_seat_in_transaction(%Meeting{id: slot_id}, %Participant{} = participant) do
+  def activate_seat_in_transaction(
+        %Meeting{id: slot_id},
+        %Participant{} = participant,
+        opts \\ @booking_opts
+      ) do
     with {:ok, slot} <- MeetingQueries.get_meeting_for_update(slot_id) do
-      activate_locked(slot, participant)
+      activate_locked(slot, participant, opts)
     end
   end
 
-  defp activate_locked(%Meeting{status: :awaiting_verification} = slot, participant) do
+  defp activate_locked(%Meeting{status: :awaiting_verification} = slot, participant, opts) do
     changes = [status: :confirmed, email_verified_at: DateTime.truncate(Clock.utc_now(), :second)]
 
     with {:ok, confirmed} <-
            MeetingQueries.transition_from_awaiting_verification(slot.id, changes) do
-      schedule_seat_effects(confirmed, participant, true, @booking_opts)
+      schedule_seat_effects(confirmed, participant, true, opts)
     end
   end
 
-  defp activate_locked(slot, participant),
-    do: schedule_seat_effects(slot, participant, false, @booking_opts)
+  defp activate_locked(slot, participant, opts),
+    do: schedule_seat_effects(slot, participant, false, opts)
 
   @doc """
   Schedules a counting seat's jobs inside the caller's transaction: the
