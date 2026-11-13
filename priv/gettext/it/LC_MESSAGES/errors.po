@@ -883,10 +883,6 @@ msgstr "I tipi di riunione singoli non possono essere prenotati come serie."
 msgid "must be between %{min} and %{max}"
 msgstr "deve essere compreso tra %{min} e %{max}"
 
-#: lib/tymeslot/meeting_types/series_settings.ex
-#, elixir-autogen, elixir-format
-msgid "must be between 1 and 4"
-msgstr "deve essere compreso tra 1 e 4"
 
 #: lib/tymeslot/meeting_types/series_settings.ex
 #, elixir-autogen, elixir-format

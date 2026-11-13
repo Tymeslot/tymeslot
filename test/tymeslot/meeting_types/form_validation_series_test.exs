@@ -14,6 +14,13 @@ defmodule Tymeslot.MeetingTypes.FormValidationSeriesTest do
     def check_access(_user_id, _feature), do: :ok
   end
 
+  defmodule FailingChecker do
+    @behaviour Tymeslot.Features.CheckerBehaviour
+    @impl Tymeslot.Features.CheckerBehaviour
+    def check_access(_user_id, :recurring_bookings_allowed), do: raise("down")
+    def check_access(_user_id, _feature), do: :ok
+  end
+
   setup do
     setup_config(:tymeslot, feature_access_checker: DenyChecker)
     %{user: insert(:user)}
@@ -40,14 +47,7 @@ defmodule Tymeslot.MeetingTypes.FormValidationSeriesTest do
   end
 
   test "a checker failure passes through", %{user: user} do
-    defmodule Failing do
-      @behaviour Tymeslot.Features.CheckerBehaviour
-      @impl Tymeslot.Features.CheckerBehaviour
-      def check_access(_user_id, :recurring_bookings_allowed), do: raise("down")
-      def check_access(_user_id, _feature), do: :ok
-    end
-
-    setup_config(:tymeslot, feature_access_checker: Failing)
+    setup_config(:tymeslot, feature_access_checker: FailingChecker)
 
     assert {:error, :feature_access_checker_failed} =
              FormValidation.check(user.id, %{series_mode: :flexible})

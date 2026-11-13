@@ -35,6 +35,7 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.UriUtils
   alias Tymeslot.Venues
@@ -245,7 +246,7 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   # is already on, or switching it off, never does, so a host who lost Pro
   # keeps what they set up.
   defp gate_series(user_id, %{series_mode: mode}, nil) when mode != nil do
-    case Features.check_access(user_id, :recurring_bookings_allowed) do
+    case Features.check_access(user_id, SeriesSettings.feature()) do
       :ok -> :ok
       {:error, :feature_access_checker_failed} = error -> error
       {:error, _denied} -> {:error, :recurring_bookings_not_allowed}

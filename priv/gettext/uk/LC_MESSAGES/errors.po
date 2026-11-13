@@ -899,10 +899,6 @@ msgstr "Одноразові типи зустрічей не можна бро�
 msgid "must be between %{min} and %{max}"
 msgstr "має бути від %{min} до %{max}"
 
-#: lib/tymeslot/meeting_types/series_settings.ex
-#, elixir-autogen, elixir-format
-msgid "must be between 1 and 4"
-msgstr "має бути від 1 до 4"
 
 #: lib/tymeslot/meeting_types/series_settings.ex
 #, elixir-autogen, elixir-format

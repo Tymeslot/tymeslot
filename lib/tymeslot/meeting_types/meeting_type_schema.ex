@@ -361,14 +361,15 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   @doc """
   Focused changeset for changing a meeting type's visibility (`is_private`
   and `invitation_only`), without re-validating unrelated fields (e.g. video
-  integration). An invitation-only type must stay one-to-one, which is the one
-  rule checked here.
+  integration). An invitation-only type must stay one-to-one and cannot be a
+  series; those are the rules checked here.
   """
   @spec visibility_changeset(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
   def visibility_changeset(meeting_type, attrs) do
     meeting_type
     |> cast(attrs, [:is_private, :invitation_only])
     |> GroupValidation.validate_invitation_only_not_group()
+    |> SeriesSettings.validate_conflicts()
   end
 
   @doc """

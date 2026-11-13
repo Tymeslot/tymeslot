@@ -80,9 +80,18 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
     not offered?(meeting_type) or meeting_type.series_required == false
   end
 
-  @doc "The session counts a booker may choose."
+  @doc """
+  The session counts a booker may choose. Only for a type with a series mode;
+  a type without one raises `FunctionClauseError`.
+  """
   @spec count_range(MeetingTypeSchema.t()) :: Range.t()
-  def count_range(%{series_min_occurrences: min, series_max_occurrences: max}), do: min..max
+  def count_range(%{
+        series_mode: mode,
+        series_min_occurrences: min,
+        series_max_occurrences: max
+      })
+      when mode != nil,
+      do: min..max
 
   @doc """
   The settings of a type (a map with `:series_mode`, `:one_off`,
@@ -113,23 +122,20 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
   @spec validate_changeset(Changeset.t()) :: Changeset.t()
   def validate_changeset(changeset) do
     case get_field(changeset, :series_mode) do
-      nil -> reset_unless_series(changeset)
+      nil -> reset_series(changeset)
       mode -> changeset |> validate_counts() |> validate_rhythm(mode) |> validate_conflicts()
     end
   end
 
-  # Switching the series off puts every other series field back to its default.
-  defp reset_unless_series(changeset) do
-    if fetch_change(changeset, :series_mode) == :error and changeset.data.series_mode == nil do
-      changeset
-    else
-      changeset
-      |> put_change(:series_frequency, nil)
-      |> put_change(:series_interval, 1)
-      |> put_change(:series_min_occurrences, nil)
-      |> put_change(:series_max_occurrences, nil)
-      |> put_change(:series_required, true)
-    end
+  # With no series mode every other series field sits at its default, whether
+  # the series was just switched off or never on.
+  defp reset_series(changeset) do
+    changeset
+    |> put_change(:series_frequency, nil)
+    |> put_change(:series_interval, 1)
+    |> put_change(:series_min_occurrences, nil)
+    |> put_change(:series_max_occurrences, nil)
+    |> put_change(:series_required, true)
   end
 
   defp validate_counts(changeset) do
@@ -170,7 +176,13 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
     if is_integer(interval) and interval in @intervals do
       changeset
     else
-      add_error(changeset, :series_interval, dgettext_noop("errors", "must be between 1 and 4"))
+      add_error(
+        changeset,
+        :series_interval,
+        dgettext_noop("errors", "must be between %{min} and %{max}"),
+        min: @intervals.first,
+        max: @intervals.last
+      )
     end
   end
 
@@ -180,7 +192,13 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
     |> put_change(:series_interval, 1)
   end
 
-  defp validate_conflicts(changeset) do
+  @doc """
+  Adds an error for every setting that cannot go with the series mode, read
+  with `get_field/2`. For the narrow changesets that can set `one_off`,
+  `invitation_only` or `fixed_dates` without running `validate_changeset/1`.
+  """
+  @spec validate_conflicts(Changeset.t()) :: Changeset.t()
+  def validate_conflicts(changeset) do
     settings = %{
       series_mode: get_field(changeset, :series_mode),
       one_off: get_field(changeset, :one_off),

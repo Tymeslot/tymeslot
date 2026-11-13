@@ -906,10 +906,6 @@ msgstr "Jednorázové typy schůzek nelze rezervovat jako sérii."
 msgid "must be between %{min} and %{max}"
 msgstr "musí být mezi %{min} a %{max}"
 
-#: lib/tymeslot/meeting_types/series_settings.ex
-#, elixir-autogen, elixir-format
-msgid "must be between 1 and 4"
-msgstr "musí být mezi 1 a 4"
 
 #: lib/tymeslot/meeting_types/series_settings.ex
 #, elixir-autogen, elixir-format
