@@ -418,7 +418,7 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
 
       html = view |> element("[data-testid='release-booking']") |> render_click()
 
-      assert html =~ "The booking was cancelled and the time released."
+      assert html =~ "The booking was cancelled and your place released."
       assert %{email_verified_at: nil, cancelled_at: %DateTime{}} = reload(seat)
       # It was the slot's only held seat, so the held slot goes with it.
       assert reload(slot).status == :expired

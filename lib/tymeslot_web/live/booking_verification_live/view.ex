@@ -35,6 +35,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
               :if={@state not in [:awaiting, :failed]}
               state={@state}
               meeting={@meeting}
+              seat={@seat}
               rebook_path={@rebook_path}
             />
           </div>
@@ -111,6 +112,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
 
   attr :state, :atom, required: true
   attr :meeting, :map, default: nil
+  attr :seat, :map, default: nil
   attr :rebook_path, :string, default: nil
 
   defp outcome(assigns) do
@@ -121,7 +123,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
       <h1 class="display-md mt-6">{outcome_title(@state)}</h1>
 
       <p class="mt-3 text-token-base text-tymeslot-600">
-        {outcome_body(@state, @meeting)}
+        {outcome_body(@state, @meeting, @seat)}
       </p>
 
       <div :if={@state == :expired and @rebook_path} class="mt-8 flex justify-center">
@@ -159,6 +161,14 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   defp outcome_title(:expired), do: dgettext("booking_manage", "This booking has expired")
   defp outcome_title(:loading), do: dgettext("booking_manage", "Checking your link…")
   defp outcome_title(_state), do: dgettext("booking_manage", "This link is not valid")
+
+  # A released seat frees a place on its slot, not the slot's time, which
+  # other attendees may still hold.
+  defp outcome_body(:released, _meeting, %{}) do
+    dgettext("booking_manage", "The booking was cancelled and your place released.")
+  end
+
+  defp outcome_body(state, meeting, _seat), do: outcome_body(state, meeting)
 
   defp outcome_body(:verified, _meeting) do
     dgettext("booking_manage", "We have emailed you the details and a calendar invitation.")

@@ -748,3 +748,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This booking is no longer available, so the time was released."
 msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "The booking was cancelled and your place released."
+msgstr ""
