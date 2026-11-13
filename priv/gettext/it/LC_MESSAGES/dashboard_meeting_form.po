@@ -914,20 +914,10 @@ msgstr "Chiedi agli invitati di confermare la loro email"
 msgid "Email confirmation"
 msgstr "Conferma dell'email"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off email verification to enable group bookings."
-msgstr "Disattiva la conferma dell'email per attivare le prenotazioni di gruppo."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off email verification to require payment."
 msgstr "Disattiva la conferma dell'email per richiedere il pagamento."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off group bookings to ask invitees to confirm their email."
-msgstr "Disattiva le prenotazioni di gruppo per chiedere agli invitati di confermare la loro email."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format

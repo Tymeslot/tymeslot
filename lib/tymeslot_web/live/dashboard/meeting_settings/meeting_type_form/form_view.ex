@@ -386,7 +386,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           <.email_verification_section
             requires_email_verification={@requires_email_verification}
             payment_required={@payment_required}
-            group_bookings_enabled={@group_bookings_enabled}
             errors={
               @form_errors
               |> FormValidationHelpers.field_errors(:requires_email_verification)

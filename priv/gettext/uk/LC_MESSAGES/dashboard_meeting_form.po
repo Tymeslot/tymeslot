@@ -919,20 +919,10 @@ msgstr "Просити запрошених підтвердити електр�
 msgid "Email confirmation"
 msgstr "Підтвердження електронної пошти"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off email verification to enable group bookings."
-msgstr "Вимкніть підтвердження електронної пошти, щоб увімкнути групові бронювання."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off email verification to require payment."
 msgstr "Вимкніть підтвердження електронної пошти, щоб вимагати оплату."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off group bookings to ask invitees to confirm their email."
-msgstr "Вимкніть групові бронювання, щоб просити запрошених підтвердити електронну пошту."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format

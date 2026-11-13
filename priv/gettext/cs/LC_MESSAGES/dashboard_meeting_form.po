@@ -919,20 +919,10 @@ msgstr "Žádat pozvané o potvrzení e-mailu"
 msgid "Email confirmation"
 msgstr "Potvrzení e-mailu"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off email verification to enable group bookings."
-msgstr "Vypněte potvrzení e-mailu, chcete-li povolit skupinové rezervace."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off email verification to require payment."
 msgstr "Vypněte potvrzení e-mailu, chcete-li vyžadovat platbu."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off group bookings to ask invitees to confirm their email."
-msgstr "Vypněte skupinové rezervace, chcete-li žádat pozvané o potvrzení e-mailu."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format

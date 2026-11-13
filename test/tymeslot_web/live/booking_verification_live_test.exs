@@ -13,6 +13,7 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   import ExUnit.CaptureLog
+  import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
   import Tymeslot.Test.ClockHelpers
@@ -24,6 +25,7 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
   alias Tymeslot.Invitations
   alias Tymeslot.Meetings.EmailVerificationToken
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
@@ -31,6 +33,7 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.WebhookWorker
   alias TymeslotWeb.Endpoint
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   setup do
     # Every mount here resolves the same loopback client_ip, so a test that
@@ -64,7 +67,54 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
 
   defp path(meeting), do: "/verify-booking/" <> EmailVerificationToken.sign(meeting)
 
+  defp reload(%ParticipantSchema{id: id}), do: Repo.get!(ParticipantSchema, id)
   defp reload(meeting), do: Repo.get!(MeetingSchema, meeting.id)
+
+  defp in_minutes(minutes), do: DateTime.add(DateTime.utc_now(:second), minutes, :minute)
+
+  # A group slot held for verification, with one held seat booked from
+  # Tokyo. The slot's own deadline is only a hiding marker; the seat's is the
+  # one the page must read.
+  defp held_seat(user, seat_deadline, slot_attrs \\ []) do
+    type =
+      insert(:meeting_type,
+        user: user,
+        slug: "workshop",
+        max_participants: 3,
+        requires_email_verification: true
+      )
+
+    slot =
+      insert(
+        :group_meeting,
+        Keyword.merge(
+          [
+            status: :awaiting_verification,
+            verification_deadline_at: in_minutes(30),
+            organizer_user_id: user.id,
+            organizer_email: user.email,
+            organizer_name: "Robin Host",
+            meeting_type_id: type.id,
+            title: "Workshop",
+            capacity: 3,
+            video_integration_id: nil
+          ],
+          slot_attrs
+        )
+      )
+
+    seat =
+      insert(:participant,
+        meeting: slot,
+        email: "seat@example.com",
+        timezone: "Asia/Tokyo",
+        verification_deadline_at: seat_deadline
+      )
+
+    {slot, seat}
+  end
+
+  defp seat_path(seat), do: "/verify-booking/" <> EmailVerificationToken.sign_seat(seat)
 
   defp confirm(view), do: view |> element("[data-testid='confirm-booking']") |> render_click()
 
@@ -280,6 +330,101 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
 
       assert render(reloaded) =~ "The booking was cancelled and the time released."
       refute has_element?(reloaded, "[data-testid='confirm-booking']")
+    end
+  end
+
+  describe "a seat on a group meeting" do
+    setup do
+      stub(Tymeslot.CalendarMock, :get_booking_integration_info, fn _context ->
+        {:error, :no_integration}
+      end)
+
+      :ok
+    end
+
+    test "loading a seat link does not confirm it", %{conn: conn, user: user} do
+      # The slot's marker has passed while the seat's own hold has not, so a
+      # page reading the slot's deadline would call the link expired.
+      {slot, seat} = held_seat(user, in_minutes(20), verification_deadline_at: in_minutes(-5))
+
+      static = conn |> get(seat_path(seat)) |> html_response(200)
+      refute static =~ "confirm-booking"
+
+      {:ok, view, _html} = live(conn, seat_path(seat))
+
+      assert has_element?(view, "[data-testid='confirm-booking']")
+      html = render(view)
+      assert html =~ "Workshop"
+      assert html =~ "JST"
+
+      assert html =~
+               LocalizationHelpers.format_meeting_datetime(
+                 seat.verification_deadline_at,
+                 "Asia/Tokyo"
+               )
+
+      assert %{email_verified_at: nil, cancelled_at: nil} = reload(seat)
+      assert reload(slot).status == :awaiting_verification
+      refute_enqueued(worker: CalendarEventWorker)
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "a seat link confirms the seat", %{conn: conn, user: user} do
+      {slot, seat} = held_seat(user, in_minutes(30))
+      {:ok, view, _html} = live(conn, seat_path(seat))
+
+      assert confirm(view) =~ "Your booking is confirmed"
+      assert %{email_verified_at: %DateTime{}, cancelled_at: nil} = reload(seat)
+      assert reload(slot).status == :confirmed
+
+      {:ok, reloaded, _html} = live(conn, seat_path(seat))
+      assert render(reloaded) =~ "This booking is already confirmed"
+    end
+
+    test "a seat link after expiry reads expired", %{conn: conn, user: user} do
+      # The slot's marker is still in the future; the seat's hold is not.
+      {slot, seat} = held_seat(user, in_minutes(-1))
+
+      {:ok, view, _html} = live(conn, seat_path(seat))
+
+      assert render(view) =~ "This booking has expired"
+      assert has_element?(view, "[data-testid='rebook-link'][href='/verify-host/workshop']")
+      refute has_element?(view, "[data-testid='confirm-booking']")
+      assert %{email_verified_at: nil, cancelled_at: nil} = reload(seat)
+      assert reload(slot).status == :awaiting_verification
+    end
+
+    test "a seat link confirmed after its deadline releases the seat", %{
+      conn: conn,
+      user: user
+    } do
+      {slot, seat} = held_seat(user, in_minutes(10))
+      {:ok, view, _html} = live(conn, seat_path(seat))
+
+      freeze_clock(DateTime.add(seat.verification_deadline_at, 1, :minute))
+
+      assert confirm(view) =~ "This booking has expired"
+      assert %{email_verified_at: nil, cancelled_at: %DateTime{}} = reload(seat)
+      assert reload(slot).status == :expired
+    end
+
+    test "a seat link's 'this wasn't me' releases the seat silently", %{
+      conn: conn,
+      user: user
+    } do
+      insert(:webhook, user: user, events: ["meeting.created", "meeting.cancelled"])
+      {slot, seat} = held_seat(user, in_minutes(30))
+      {:ok, view, _html} = live(conn, seat_path(seat))
+
+      html = view |> element("[data-testid='release-booking']") |> render_click()
+
+      assert html =~ "The booking was cancelled and the time released."
+      assert %{email_verified_at: nil, cancelled_at: %DateTime{}} = reload(seat)
+      # It was the slot's only held seat, so the held slot goes with it.
+      assert reload(slot).status == :expired
+      refute_enqueued(worker: EmailWorker)
+      refute_enqueued(worker: WebhookWorker)
+      refute_enqueued(worker: CalendarEventWorker)
     end
   end
 

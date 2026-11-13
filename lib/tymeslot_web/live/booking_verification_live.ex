@@ -8,6 +8,12 @@ defmodule TymeslotWeb.BookingVerificationLive do
   shows no uid and offers no cancel or reschedule link, since the booking does
   not exist for anybody else until it is verified.
 
+  A seat on a group meeting has its own token (`{:seat, seat, slot}` from the
+  token), and the page reads its state from the seat and whether its slot
+  still occupies its time, never from the slot's own deadline, which is only
+  the first held seat's. A seat cannot await approval, since group types
+  cannot require it.
+
   ## Nothing happens on load
 
   Mail security products and link-preview crawlers fetch every URL in an
@@ -27,6 +33,7 @@ defmodule TymeslotWeb.BookingVerificationLive do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.EmailVerificationToken
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
@@ -45,6 +52,7 @@ defmodule TymeslotWeb.BookingVerificationLive do
        page_title: dgettext("booking_manage", "Confirm your booking"),
        state: :loading,
        meeting: nil,
+       seat: nil,
        token: nil,
        rebook_path: nil
      )}
@@ -69,8 +77,8 @@ defmodule TymeslotWeb.BookingVerificationLive do
 
   defp load(socket) do
     case EmailVerificationToken.verify(socket.assigns.token) do
-      {:ok, meeting} ->
-        show(socket, meeting, state_for(meeting))
+      {:ok, held} ->
+        show(socket, held, state_for(held))
 
       {:error, reason} ->
         Logger.info("Rejected booking verification link", reason: LogFormat.reason(reason))
@@ -78,12 +86,30 @@ defmodule TymeslotWeb.BookingVerificationLive do
     end
   end
 
-  defp show(socket, meeting, :expired) do
-    assign(socket, meeting: meeting, state: :expired, rebook_path: rebook_path(meeting))
+  # `held` is what the token was issued for: a meeting, `{:seat, seat, slot}`,
+  # or nil once the link reads as invalid.
+  defp show(socket, held, state) do
+    {meeting, seat} = split(held)
+    rebook_path = if state == :expired, do: rebook_path(meeting)
+
+    assign(socket, meeting: meeting, seat: seat, state: state, rebook_path: rebook_path)
   end
 
-  defp show(socket, meeting, state) do
-    assign(socket, meeting: meeting, state: state, rebook_path: nil)
+  defp split({:seat, seat, slot}), do: {slot, seat}
+  defp split(meeting), do: {meeting, nil}
+
+  # A seat verified and later cancelled, or whose slot was, reads as a link
+  # out of date, as a one-to-one booking does. A held seat released by its
+  # deadline or by its booker has no status to tell the two apart, so both
+  # read as expired.
+  defp state_for({:seat, %{email_verified_at: %DateTime{}} = seat, slot}) do
+    if seat.cancelled_at == nil and occupying?(slot), do: :already_verified, else: :invalid
+  end
+
+  defp state_for({:seat, %{cancelled_at: %DateTime{}}, _slot}), do: :expired
+
+  defp state_for({:seat, seat, slot}) do
+    if occupying?(slot) and not deadline_passed?(seat), do: :awaiting, else: :expired
   end
 
   # A verified booking that was later cancelled has nothing true to show here:
@@ -105,11 +131,10 @@ defmodule TymeslotWeb.BookingVerificationLive do
     end
   end
 
-  # The deadline itself counts as passed, as it does in the domain.
-  defp deadline_passed?(%{verification_deadline_at: %DateTime{} = deadline}),
-    do: DateTime.compare(Clock.utc_now(), deadline) != :lt
+  defp deadline_passed?(held), do: EmailVerification.deadline_reached?(held, Clock.utc_now())
 
-  defp deadline_passed?(_meeting), do: false
+  defp occupying?(slot),
+    do: slot.status in MeetingState.occupying() and not MeetingState.slot_void?(slot)
 
   defp act(socket, action) do
     RateLimit.with_rate_limit(
@@ -124,21 +149,21 @@ defmodule TymeslotWeb.BookingVerificationLive do
 
   defp act_on_current(socket, action) do
     case EmailVerificationToken.verify(socket.assigns.token) do
-      {:ok, meeting} -> action.(socket, meeting)
+      {:ok, held} -> action.(socket, held)
       {:error, _reason} -> show(socket, nil, :invalid)
     end
   end
 
-  defp confirm(socket, meeting) do
-    case EmailVerification.verify(meeting) do
+  defp confirm(socket, held) do
+    case verify_held(held) do
       {:ok, :verified, verified} ->
         state =
           if MeetingState.awaiting_approval?(verified), do: :verified_request, else: :verified
 
-        show(socket, verified, state)
+        show(socket, with_meeting(held, verified), state)
 
       {:ok, :already_verified, current} ->
-        show(socket, current, :already_verified)
+        show(socket, with_meeting(held, current), :already_verified)
 
       # Released, by the deadline or by an exit that won a race: the stored
       # row says which.
@@ -147,7 +172,7 @@ defmodule TymeslotWeb.BookingVerificationLive do
 
       {:error, :not_scheduled} ->
         socket
-        |> show(meeting, :failed)
+        |> show(held, :failed)
         |> put_flash(
           :error,
           dgettext(
@@ -160,12 +185,26 @@ defmodule TymeslotWeb.BookingVerificationLive do
 
   # Somebody got there first (a confirmation in another tab, the expiry
   # job): show what the booking actually became.
-  defp release(socket, meeting) do
-    case EmailVerification.release(meeting) do
-      {:ok, released} -> show(socket, released, :released)
+  defp release(socket, held) do
+    case release_held(held) do
+      {:ok, released} -> show(socket, with_meeting(held, released), :released)
       {:error, :not_awaiting_verification} -> load(socket)
     end
   end
+
+  defp verify_held({:seat, seat, _slot}), do: EmailVerification.verify_seat(seat)
+  defp verify_held(meeting), do: EmailVerification.verify(meeting)
+
+  defp release_held({:seat, seat, _slot}), do: EmailVerification.release_seat(seat)
+  defp release_held(meeting), do: EmailVerification.release(meeting)
+
+  # What the page shows after an action: a seat's outcome is read against
+  # its slot as the domain returned it, a meeting's is the meeting returned.
+  defp with_meeting({:seat, seat, _slot}, %MeetingSchema{} = slot),
+    do: {:seat, seat, slot}
+
+  defp with_meeting({:seat, _seat, _slot} = held, _released_seat), do: held
+  defp with_meeting(_meeting, current), do: current
 
   # The token proves the visitor is the guest, so an invitation the booking
   # used is offered back with the link. Past its deadline but before the

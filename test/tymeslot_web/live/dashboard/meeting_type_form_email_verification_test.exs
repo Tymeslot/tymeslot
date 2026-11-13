@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Dashboard.MeetingTypeFormEmailVerificationTest do
   @moduledoc """
-  The toggle that asks invitees to confirm their email. It excludes payments
-  and group bookings: the control renders disabled with the reason, and a
-  forged event must not get past the server-side guard either.
+  The toggle that asks invitees to confirm their email. It excludes payments:
+  the control renders disabled with the reason, and a forged event must not
+  get past the server-side guard either. Group types may use it.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -75,28 +75,33 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormEmailVerificationTest do
     refute saved(meeting_type).requires_email_verification
   end
 
-  test "the toggle is disabled for group types", %{conn: conn, user: user} do
-    meeting_type = insert(:meeting_type, user: user, max_participants: 3)
-    view = open_form(conn, meeting_type)
-
-    assert has_element?(view, "[data-testid='requires-email-verification-toggle'][disabled]")
-    assert render(view) =~ "Turn off group bookings to ask invitees to confirm their email."
-
-    forge_toggle(view, meeting_type)
-
-    refute saved(meeting_type).requires_email_verification
-  end
-
-  test "turning verification off is always allowed", %{conn: conn, user: user} do
-    # Both settings at once: a factory insert skips the changeset rule.
+  test "the verification toggle is available on a group type", %{conn: conn, user: user} do
     venue = insert(:venue, user: user, name: "Main Hall")
 
     meeting_type =
       insert(:meeting_type,
         user: user,
         max_participants: 3,
-        requires_email_verification: true,
         locations: [in_person_location([venue])]
+      )
+
+    view = open_form(conn, meeting_type)
+
+    refute has_element?(view, "[data-testid='requires-email-verification-toggle'][disabled]")
+
+    view |> element("[data-testid='requires-email-verification-toggle']") |> render_click()
+
+    assert %{requires_email_verification: true, max_participants: 3} = saved(meeting_type)
+  end
+
+  test "turning verification off is always allowed", %{conn: conn, user: user} do
+    # Both settings at once: a factory insert skips the changeset rule.
+    meeting_type =
+      insert(:meeting_type,
+        user: user,
+        payment_required: true,
+        price_cents: 2500,
+        requires_email_verification: true
       )
 
     view = open_form(conn, meeting_type)

@@ -8,7 +8,8 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   reports where it ended up: confirmed, sent to the host for approval,
   already confirmed, released by the attendee, expired, or a link we cannot
   read. Times are shown in the attendee's own timezone, since the attendee is
-  the one reading.
+  the one reading. For a seat on a group meeting, `meeting` is its slot and
+  the timezone and hold are the seat's own.
   """
 
   use TymeslotWeb, :html
@@ -19,6 +20,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
 
   attr :state, :atom, required: true
   attr :meeting, :map, default: nil
+  attr :seat, :map, default: nil
   attr :rebook_path, :string, default: nil
 
   @spec page(map()) :: Phoenix.LiveView.Rendered.t()
@@ -28,7 +30,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
       <div class="mx-auto w-full max-w-2xl">
         <.glass_morphism_card>
           <div class="p-6 sm:p-8">
-            <.held_booking :if={@state in [:awaiting, :failed]} meeting={@meeting} />
+            <.held_booking :if={@state in [:awaiting, :failed]} meeting={@meeting} seat={@seat} />
             <.outcome
               :if={@state not in [:awaiting, :failed]}
               state={@state}
@@ -43,8 +45,17 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   end
 
   attr :meeting, :map, required: true
+  attr :seat, :map, default: nil
 
   defp held_booking(assigns) do
+    held = assigns.seat || assigns.meeting
+
+    assigns =
+      assign(assigns,
+        timezone: timezone(assigns.meeting, assigns.seat),
+        held_until: held.verification_deadline_at
+      )
+
     ~H"""
     <div>
       <.section_header
@@ -58,10 +69,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
           {title(@meeting)}
         </.detail_line>
         <.detail_line icon="hero-calendar" label={dgettext("booking_manage", "When")}>
-          {LocalizationHelpers.format_meeting_datetime(
-            @meeting.start_time,
-            @meeting.attendee_timezone
-          )}
+          {LocalizationHelpers.format_meeting_datetime(@meeting.start_time, @timezone)}
         </.detail_line>
         <.detail_line
           :if={@meeting.organizer_name not in [nil, ""]}
@@ -72,13 +80,9 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
         </.detail_line>
       </div>
 
-      <.info_box :if={@meeting.verification_deadline_at} variant={:info} class="mt-6">
+      <.info_box :if={@held_until} variant={:info} class="mt-6">
         {dgettext("booking_manage", "Your booking is held until %{time}.",
-          time:
-            LocalizationHelpers.format_meeting_datetime(
-              @meeting.verification_deadline_at,
-              @meeting.attendee_timezone
-            )
+          time: LocalizationHelpers.format_meeting_datetime(@held_until, @timezone)
         )}
       </.info_box>
 
@@ -128,6 +132,9 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
     </div>
     """
   end
+
+  defp timezone(_meeting, %{timezone: timezone}), do: timezone
+  defp timezone(meeting, nil), do: meeting.attendee_timezone
 
   defp title(%{title: title}) when is_binary(title) and title != "", do: title
   defp title(%{meeting_type: type}) when is_binary(type) and type != "", do: type

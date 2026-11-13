@@ -863,11 +863,6 @@ msgstr "link di invito"
 msgid "email verification cannot be combined with payment"
 msgstr "la conferma dell'email non può essere combinata con il pagamento"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email verification"
-msgstr "le prenotazioni di gruppo non possono richiedere la conferma dell'email"
-
 #: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
