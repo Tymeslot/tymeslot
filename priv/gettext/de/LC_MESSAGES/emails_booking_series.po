@@ -267,6 +267,5 @@ msgstr[1] "Ihre Anfrage für %{count} Termine wurde abgelehnt"
 #, elixir-autogen, elixir-format
 msgid "Your request for %{count} session was sent"
 msgid_plural "Your request for %{count} sessions was sent"
-
 msgstr[0] "Ihre Anfrage für %{count} Termin wurde gesendet"
 msgstr[1] "Ihre Anfrage für %{count} Termine wurde gesendet"

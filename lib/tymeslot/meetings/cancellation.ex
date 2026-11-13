@@ -112,6 +112,13 @@ defmodule Tymeslot.Meetings.Cancellation do
           | {:error, :not_found}
           | {:error, {:refund_failed, term()}}
           | {:error, term()}
+  # A session of a series held for approval is answered with its series
+  # (decline, from the request), never cancelled on its own: the dashboard
+  # offers no cancel for it, and a crafted event is refused here.
+  def cancel(%{status: :awaiting_approval, series_id: series_id}, _acting_user_id, _refund_action)
+      when is_binary(series_id),
+      do: {:error, {:not_cancellable, :held_for_series_approval}}
+
   def cancel(%{organizer_user_id: owner_id} = meeting, acting_user_id, refund_action)
       when is_integer(owner_id) and owner_id == acting_user_id,
       do: cancel_as_organizer(meeting, acting_user_id, refund_action)

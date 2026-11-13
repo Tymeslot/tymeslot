@@ -65,11 +65,13 @@ defmodule Tymeslot.Meetings.Approval do
 
   ## A series is one request
 
-  A session of a booking series held for approval (`series_id` set) is not
-  answered on its own: `approve/1`, `decline/2`, `expire/1` and `withdraw/2`
-  on any session act on the whole series through
-  `Tymeslot.BookingSeries.Approval`, and return the session they were given,
-  as it now is. So the dashboard's request card, the host's email links and
+  A session of a booking series held for approval is not answered on its
+  own: while the series request is open
+  (`Tymeslot.BookingSeries.Approval.series_request?/1`), `approve/1`,
+  `decline/2`, `expire/1` and `withdraw/2` on any of its sessions act on the
+  whole series, and return the session they were given, as it now is. A
+  confirmed session the booker moved back into the gate is a request of its
+  own, answered here like any other. So the dashboard's request card, the host's email links and
   the expiry jobs need not know about series. That includes an external
   calendar delete of one session's tentative event (`Bookings.Cancel`,
   `withdrawn_by: :calendar`): it withdraws the whole series, since a series

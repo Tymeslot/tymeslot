@@ -240,6 +240,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     do:
       dgettext("booking_errors", "Cannot request a reschedule while the booking awaits approval")
 
+  def message({:not_reschedulable, :held_for_series_approval}),
+    do:
+      dgettext(
+        "booking_errors",
+        "This session is part of a request that is waiting for the host's answer, so it can't be moved yet."
+      )
+
   def message({:not_reschedulable, :planned}),
     do:
       dgettext(

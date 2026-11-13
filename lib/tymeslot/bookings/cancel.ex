@@ -8,6 +8,7 @@ defmodule Tymeslot.Bookings.Cancel do
 
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
@@ -89,12 +90,6 @@ defmodule Tymeslot.Bookings.Cancel do
     end
   end
 
-  # A session of a series held for approval is withdrawn with its whole
-  # series (`Approval.withdraw/2`), which tells both sides once for all of
-  # it; an email for this one session would contradict that.
-  defp maybe_announce(%Meeting{series_id: series_id}, _announce?) when is_binary(series_id),
-    do: :ok
-
   defp maybe_announce(meeting, true), do: send_cancellation_notifications(meeting)
   defp maybe_announce(_meeting, false), do: :ok
 
@@ -102,6 +97,8 @@ defmodule Tymeslot.Bookings.Cancel do
     Logger.info("Withdrawing held booking request",
       meeting_id: meeting.id
     )
+
+    announce? = announce? and announces_withdrawal?(meeting)
 
     with {:ok, released} <- withdraw(meeting, []),
          :ok <- maybe_announce(released, announce?) do
@@ -278,12 +275,14 @@ defmodule Tymeslot.Bookings.Cancel do
       meeting_id: meeting.id
     )
 
+    announce? = announces_withdrawal?(meeting)
+
     with {:ok, released} <-
            withdraw(meeting,
              cancellation_reason: @external_cancellation_reason,
              withdrawn_by: :calendar
            ),
-         :ok <- maybe_announce(released, true) do
+         :ok <- maybe_announce(released, announce?) do
       {:ok, released}
     else
       {:error, :already_cancelled} = error ->
@@ -311,6 +310,13 @@ defmodule Tymeslot.Bookings.Cancel do
       {:ok, updated_meeting}
     end
   end
+
+  # A session of a series request is withdrawn with its whole series
+  # (`Approval.withdraw/2`), which tells both sides once for all of it; an
+  # email for this one session would contradict that. Asked before the
+  # withdrawal, which ends the request. Every other withdrawal, and every
+  # cancellation of a confirmed session, is announced as usual.
+  defp announces_withdrawal?(meeting), do: not SeriesApproval.series_request?(meeting)
 
   # A withdrawal loses its race when the host declined the request or the
   # expiry sweep released it after `meeting` was read. That is the same

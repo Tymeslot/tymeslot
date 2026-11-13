@@ -276,7 +276,6 @@ msgstr[2] "Vaše žádost o %{count} termínů byla zamítnuta"
 #, elixir-autogen, elixir-format
 msgid "Your request for %{count} session was sent"
 msgid_plural "Your request for %{count} sessions was sent"
-
 msgstr[0] "Vaše žádost o %{count} termín byla odeslána"
 msgstr[1] "Vaše žádost o %{count} termíny byla odeslána"
 msgstr[2] "Vaše žádost o %{count} termínů byla odeslána"

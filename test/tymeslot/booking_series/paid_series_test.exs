@@ -300,6 +300,12 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
 
       assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
       assert statuses() == [:cancelled, :confirmed, :confirmed]
+
+      # Announced for that one session, as any cancellation is.
+      assert [%{args: %{"meeting_id" => cancelled_id}}] =
+               all_enqueued(worker: EmailWorker, args: %{"action" => "send_cancellation_emails"})
+
+      assert cancelled_id == first.id
     end
   end
 end

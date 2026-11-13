@@ -48,6 +48,7 @@ defmodule Tymeslot.Bookings.Policy do
           | :past
           | :planned
           | :held_for_series_payment
+          | :held_for_series_approval
   @type cancel_refusal :: :already_cancelled | {:not_cancellable, meeting_state()}
   @type reschedule_refusal :: {:not_reschedulable, meeting_state()}
   @type booker_move_refusal :: :managed_by_host
@@ -110,6 +111,12 @@ defmodule Tymeslot.Bookings.Policy do
 
   defp held_for_series_payment?(_meeting), do: false
 
+  defp held_for_series_approval?(%{status: :awaiting_approval, series_id: series_id})
+       when is_binary(series_id),
+       do: true
+
+  defp held_for_series_approval?(_meeting), do: false
+
   @doc """
   Determines if a meeting can be rescheduled.
   Checks both status and time constraints.
@@ -130,6 +137,13 @@ defmodule Tymeslot.Bookings.Policy do
       # the attendee would be told about a booking anyone else can still take.
       meeting.status == :expired ->
         {:error, {:not_reschedulable, :expired}}
+
+      # A session of a series held for approval is one part of a request the
+      # host answers whole (`Tymeslot.BookingSeries.Approval`). Moving it
+      # alone would leave that request asking for a time the booker no
+      # longer wants, so it stays put until the host has answered.
+      held_for_series_approval?(meeting) ->
+        {:error, {:not_reschedulable, :held_for_series_approval}}
 
       meeting_is_current?(meeting) ->
         Logger.info("Blocked reschedule: meeting has already started",

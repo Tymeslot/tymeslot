@@ -26,9 +26,14 @@ defmodule Tymeslot.BookingSeries.Approval do
   step best-effort, in the order `Tymeslot.Meetings.Approval` uses for a
   single request.
 
+  Only an open series request is answered here (`series_request?/1`): a
+  confirmed session moved back into the gate on its own is a single
+  request, answered by `Tymeslot.Meetings.Approval` with its own emails,
+  and the rest of its series stays booked.
+
   The single-request entry points (`Tymeslot.Meetings.Approval.approve/1`,
-  `decline/2`, `expire/1`, `withdraw/2`) hand any session of a series here
-  through `for_session/2`, so the dashboard's request card, the host's email
+  `decline/2`, `expire/1`, `withdraw/2`) hand a session of an open series
+  request here through `for_session/2`, so the dashboard's request card, the host's email
   links, the expiry job and the sweep all answer the whole series. That
   includes the host deleting one session's tentative event from their own
   calendar (`Tymeslot.Bookings.Cancel`): it withdraws the whole series, as a
@@ -154,12 +159,44 @@ defmodule Tymeslot.BookingSeries.Approval do
   """
   @spec for_session(Meeting.t(), session_action()) ::
           {:ok, Meeting.t()} | {:error, term()} | :not_in_series
-  def for_session(%Meeting{series_id: nil}, _action), do: :not_in_series
+  def for_session(%Meeting{} = meeting, action) do
+    with true <- series_request?(meeting),
+         {:ok, series} <- SeriesQueries.get(meeting.series_id) do
+      series |> answer(action) |> as_session(meeting)
+    else
+      _single_or_gone -> :not_in_series
+    end
+  end
 
-  def for_session(%Meeting{series_id: series_id} = meeting, action) do
-    case SeriesQueries.get(series_id) do
-      {:ok, series} -> series |> answer(action) |> as_session(meeting)
-      {:error, :not_found} -> :not_in_series
+  @doc """
+  Whether `meeting` is one session of a series request still open: it is
+  held for approval, and so is every session of its series not yet over,
+  all on the series' one request (the same `approval_requested_at`) and
+  none of them a booking confirmed before. A confirmed session the booker
+  moved back into the gate is not: it is a request of its own, answered
+  as any rescheduled booking is, and the rest of its series stays booked.
+  """
+  @spec series_request?(Meeting.t()) :: boolean()
+  def series_request?(%Meeting{status: :awaiting_approval, series_id: series_id, id: id})
+      when is_binary(series_id) do
+    sessions = SeriesQueries.list_meetings(series_id)
+
+    Enum.any?(sessions, &(&1.id == id and MeetingState.awaiting_approval?(&1))) and
+      open_request?(sessions)
+  end
+
+  def series_request?(_meeting), do: false
+
+  defp open_request?(sessions) do
+    case Enum.reject(sessions, &MeetingState.terminal?/1) do
+      [] ->
+        false
+
+      [first | _rest] = live ->
+        Enum.all?(live, fn session ->
+          MeetingState.awaiting_approval?(session) and is_nil(session.first_announced_at) and
+            session.approval_requested_at == first.approval_requested_at
+        end)
     end
   end
 
@@ -175,8 +212,12 @@ defmodule Tymeslot.BookingSeries.Approval do
     end
   end
 
-  defp as_session({:ok, sessions}, meeting),
-    do: {:ok, Enum.find(sessions, hd(sessions), &(&1.id == meeting.id))}
+  defp as_session({:ok, sessions}, meeting) do
+    case Enum.find(sessions, &(&1.id == meeting.id)) do
+      nil -> {:error, :not_awaiting_approval}
+      session -> {:ok, session}
+    end
+  end
 
   defp as_session({:error, :past_deadline}, _meeting), do: {:error, :not_awaiting_approval}
   defp as_session({:error, _reason} = error, _meeting), do: error
@@ -320,16 +361,16 @@ defmodule Tymeslot.BookingSeries.Approval do
 
   # The organiser's schedule, the series, then its sessions in series order:
   # the order every writer of a series takes them in. Rolls back with
-  # `:not_awaiting_approval` when no session is held any more.
+  # `:not_awaiting_approval` when the series request is no longer open (see
+  # `series_request?/1`): answered, withdrawn, or only a session moved back
+  # into the gate on its own, which is no series request at all.
   defp lock_held(series) do
     :ok = MeetingConflictQueries.lock_organizer_schedule(series.organizer_user_id)
 
     with %SeriesSchema{} <- SeriesQueries.lock(series),
-         [_first | _rest] = held <-
-           series
-           |> SeriesQueries.lock_meetings()
-           |> Enum.filter(&MeetingState.awaiting_approval?/1) do
-      held
+         sessions = SeriesQueries.lock_meetings(series),
+         true <- open_request?(sessions) do
+      Enum.filter(sessions, &MeetingState.awaiting_approval?/1)
     else
       _gone_or_answered -> Repo.rollback(:not_awaiting_approval)
     end

@@ -305,3 +305,8 @@ msgstr "Al momento questo tipo di riunione non può essere prenotato come serie.
 #, elixir-autogen, elixir-format
 msgid "This session is waiting for its series to be paid for. Until then the series can only be released as a whole."
 msgstr "Questa sessione è in attesa del pagamento della sua serie. Fino ad allora la serie può essere liberata solo per intero."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This session is part of a request that is waiting for the host's answer, so it can't be moved yet."
+msgstr "Questa sessione fa parte di una richiesta in attesa della risposta dell'organizzatore, quindi non può ancora essere spostata."

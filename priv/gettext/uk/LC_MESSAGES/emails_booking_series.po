@@ -276,7 +276,6 @@ msgstr[2] "Ваш запит на %{count} сесій відхилено"
 #, elixir-autogen, elixir-format
 msgid "Your request for %{count} session was sent"
 msgid_plural "Your request for %{count} sessions was sent"
-
 msgstr[0] "Ваш запит на %{count} сесію надіслано"
 msgstr[1] "Ваш запит на %{count} сесії надіслано"
 msgstr[2] "Ваш запит на %{count} сесій надіслано"

@@ -21,6 +21,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Cancel
+  alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.CalendarMock
@@ -31,11 +32,13 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Workers.ApprovalExpiryWorker
+  alias Tymeslot.Meetings.Workers.ApprovalSweepWorker
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SeriesAnnouncementWorker
+  alias Tymeslot.Workers.WebhookWorker
 
   setup :verify_on_exit!
 
@@ -393,6 +396,154 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       assert reloaded.id == payment.id
       assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 3 * Paid.price_cents()
+    end
+
+    test "a withdrawal refunds a paid series once", %{series: series} do
+      pay(series)
+      expect_one_full_refund()
+
+      assert {:ok, _withdrawn} = Meetings.cancel_meeting(List.last(meetings()))
+
+      assert statuses() == [:cancelled, :cancelled, :cancelled]
+      assert MeetingPayments.payment_for_series(series.id).status == :refunded
+    end
+
+    test "an expiry refunds a paid series once", %{series: series} do
+      pay(series)
+      expect_one_full_refund()
+      past_deadline!()
+
+      assert :ok = perform_job(ApprovalExpiryWorker, %{"meeting_id" => hd(meetings()).id})
+
+      assert statuses() == [:expired, :expired, :expired]
+      assert MeetingPayments.payment_for_series(series.id).status == :refunded
+    end
+
+    test "the host cannot cancel a held session on its own", %{host: host, series: series} do
+      pay(series)
+      [_first, second, _third] = meetings()
+
+      assert {:error, {:not_cancellable, :held_for_series_approval}} =
+               Meetings.cancel_meeting_with_refund(second, host.user.id, {:refund, 5_000})
+
+      assert {:error, {:not_cancellable, :held_for_series_approval}} =
+               Meetings.cancel_meeting_with_refund(second, host.user.id, :none)
+
+      assert statuses() == [:awaiting_approval, :awaiting_approval, :awaiting_approval]
+    end
+
+    defp expect_one_full_refund do
+      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
+        assert params.amount == 3 * Paid.price_cents()
+        {:ok, %{id: "re_SERIES"}}
+      end)
+    end
+  end
+
+  test "the sweep releases a series once, counting its other sessions as answered" do
+    book_three()
+    past_deadline!()
+
+    assert {:ok, %{expired: 1, skipped: 2, failed: 0}} = perform_job(ApprovalSweepWorker, %{})
+    assert statuses() == [:expired, :expired, :expired]
+    assert [_outcome] = email_jobs("send_series_request_outcome")
+    assert email_jobs("send_booking_request_outcome") == []
+  end
+
+  test "a held session cannot be moved on its own" do
+    %{host: host} = book_three()
+    [_first, second, _third] = meetings()
+
+    assert {:error, {:not_reschedulable, :held_for_series_approval}} =
+             Reschedule.execute(second.uid, move_to(8), host.user.id)
+
+    assert Enum.map(meetings(), & &1.start_time) == [Paid.at(7), Paid.at(14), Paid.at(21)]
+  end
+
+  # The params moving a session to 10:00 UTC, `days` from today.
+  defp move_to(days) do
+    %{
+      date: days |> Paid.at() |> DateTime.to_date() |> Date.to_string(),
+      time: "10:00 AM",
+      duration: "30min",
+      user_timezone: "Etc/UTC"
+    }
+  end
+
+  describe "a confirmed session moved back into the gate" do
+    # The series is approved, then the booker moves its second session, which
+    # sends that one session back for approval on its own.
+    setup do
+      %{host: host, series: series} = book_three()
+      assert {:ok, _approved} = SeriesApproval.approve(series, host.user)
+      [_first, second, _third] = meetings()
+
+      assert {:ok, %{status: :awaiting_approval}} =
+               Reschedule.execute(second.uid, move_to(15), host.user.id)
+
+      refute SeriesApproval.series_request?(Repo.reload!(second))
+      %{second: Repo.reload!(second)}
+    end
+
+    test "is approved on its own, the rest untouched", %{second: second} do
+      assert [_request] = email_jobs("send_booking_request_emails")
+
+      assert {:ok, %MeetingSchema{id: id, status: :confirmed}} = Approval.approve(second)
+      assert id == second.id
+      assert statuses() == [:confirmed, :confirmed, :confirmed]
+      assert [_series_confirmation] = all_enqueued(worker: SeriesAnnouncementWorker)
+    end
+
+    test "is declined on its own, the rest still booked", %{second: second} do
+      assert {:ok, %MeetingSchema{status: :cancelled}} = Approval.decline(second, "Not that day")
+
+      assert statuses() == [:confirmed, :cancelled, :confirmed]
+      assert [%{args: %{"meeting_id" => id}}] = email_jobs("send_booking_request_outcome")
+      assert id == second.id
+      assert email_jobs("send_series_request_outcome") == []
+    end
+  end
+
+  describe "cancelling one confirmed session of a series" do
+    setup do
+      setup_config(:tymeslot, feature_access_checker: Tymeslot.Features.DefaultAccessChecker)
+      host = host()
+
+      type =
+        insert(:meeting_type,
+          user: host.user,
+          name: "Mentoring",
+          duration_minutes: 30,
+          series_mode: :recurring,
+          series_frequency: :weekly,
+          series_interval: 1,
+          series_min_occurrences: 2,
+          series_max_occurrences: 12
+        )
+
+      insert(:webhook, user: host.user, events: ["meeting.cancelled"])
+      assert {:ok, %{meetings: [_first, second, _third]}} = book(host, type, 3)
+      %{host: host, second: second}
+    end
+
+    test "by the booker is announced for that session", %{second: second} do
+      assert {:ok, _cancelled} = Meetings.cancel_meeting(second)
+      assert_cancellation_announced(second)
+    end
+
+    test "by the host is announced for that session", %{host: host, second: second} do
+      assert {:ok, _cancelled} = Meetings.cancel_meeting_with_refund(second, host.user.id, :none)
+      assert_cancellation_announced(second)
+    end
+
+    defp assert_cancellation_announced(session) do
+      assert statuses() == [:confirmed, :cancelled, :confirmed]
+      assert [%{args: %{"meeting_id" => id}}] = email_jobs("send_cancellation_emails")
+      assert id == session.id
+      assert email_jobs("send_series_cancellation") == []
+
+      assert [%{args: %{"event_type" => "meeting.cancelled", "meeting_id" => ^id}}] =
+               all_enqueued(worker: WebhookWorker)
     end
   end
 end

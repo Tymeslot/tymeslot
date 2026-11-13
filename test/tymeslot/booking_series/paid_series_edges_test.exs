@@ -34,6 +34,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventWorker
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SeriesAnnouncementWorker
 
   setup :verify_on_exit!
@@ -90,6 +91,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
                Meetings.cancel_meeting_with_refund(second, host.user.id, :none)
 
       assert statuses() == [:awaiting_payment, :awaiting_payment, :awaiting_payment]
+      refute_enqueued(worker: EmailWorker, args: %{"action" => "send_cancellation_emails"})
     end
 
     test "cannot be cancelled alone by the attendee" do
@@ -99,6 +101,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
                Meetings.cancel_meeting(first)
 
       assert statuses() == [:awaiting_payment, :awaiting_payment, :awaiting_payment]
+      refute_enqueued(worker: EmailWorker, args: %{"action" => "send_cancellation_emails"})
     end
   end
 
