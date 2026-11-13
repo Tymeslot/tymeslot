@@ -179,6 +179,17 @@ defmodule Tymeslot.Bookings.MeetingLinks do
   end
 
   @doc """
+  Where an attendee confirms their email address for a held booking.
+
+  Opening the page never confirms anything: the attendee presses the button
+  there, so a mail scanner that fetches the link cannot verify for them.
+  """
+  @spec verification_url(String.t()) :: String.t()
+  def verification_url(token) when is_binary(token) do
+    UrlBuilder.base_url() <> "/verify-booking/" <> token
+  end
+
+  @doc """
   Where a host answers a booking request from their email.
 
   Both actions point at the same review page. The `intent` parameter only
