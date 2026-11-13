@@ -539,5 +539,5 @@ msgstr "Будь ласка, підтвердьте бронювання"
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
-msgid "Your booking is not confirmed yet. Click the button below within %{minutes} minutes to confirm it, and we will hold the time for you until then."
-msgstr "Ваше бронювання ще не підтверджено. Натисніть кнопку нижче протягом %{minutes} хвилин, щоб підтвердити його. Доти слот залишається за вами."
+msgid "Your booking is not confirmed yet. Click the button below by %{time} to confirm it, and we will hold the time for you until then."
+msgstr ""

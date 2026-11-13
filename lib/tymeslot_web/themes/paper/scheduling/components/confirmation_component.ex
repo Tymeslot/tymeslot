@@ -181,7 +181,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   defp message(assigns) do
     case ConfirmationText.status(assigns) do
       :check_inbox ->
-        ConfirmationText.check_inbox_message(assigns[:email], :paper)
+        ConfirmationText.check_inbox_message(assigns, :paper)
 
       :held ->
         ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :paper)

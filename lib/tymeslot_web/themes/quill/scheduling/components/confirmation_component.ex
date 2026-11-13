@@ -357,7 +357,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   defp subtitle(assigns) do
     case ConfirmationText.status(assigns) do
       :check_inbox ->
-        ConfirmationText.check_inbox_message(assigns[:email], :quill)
+        ConfirmationText.check_inbox_message(assigns, :quill)
 
       :held ->
         ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :quill)

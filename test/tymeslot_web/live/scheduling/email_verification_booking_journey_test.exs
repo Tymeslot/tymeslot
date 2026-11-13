@@ -231,15 +231,30 @@ defmodule TymeslotWeb.Live.Scheduling.EmailVerificationBookingJourneyTest do
     BookingDriver.book(view, date: tomorrow(), attendee: @attendee)
     held = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
 
+    # The page and the email name the deadline itself, in the attendee's
+    # timezone, rather than a fixed length of time.
+    deadline =
+      held.verification_deadline_at
+      |> DateTime.shift_zone!(held.attendee_timezone)
+      |> Calendar.strftime("%I:%M %p")
+
+    assert has_element?(view, "[data-testid='check-inbox']", "by #{deadline}")
+
     drain()
     assert [first] = drain_mailbox()
 
+    # Five minutes on, the attendee asks again: the email still names the
+    # deadline set at booking, not five minutes later.
+    freeze_clock(DateTime.add(DateTime.utc_now(:second), 5, :minute))
     view |> element("[data-testid='resend-verification']") |> render_click()
 
     drain()
     assert [second] = drain_mailbox()
     assert [{_name, "ana@example.com"}] = second.to
     assert second.subject == first.subject
+
+    assert first.text_body =~ "by #{deadline}"
+    assert second.text_body =~ "by #{deadline}"
 
     # Resending never extends the hold.
     resent = Repo.reload!(held)

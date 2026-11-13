@@ -277,7 +277,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   defp confirmation_message(assigns) do
     case ConfirmationText.status(assigns) do
       :check_inbox ->
-        ConfirmationText.check_inbox_message(assigns[:email], :rhythm)
+        ConfirmationText.check_inbox_message(assigns, :rhythm)
 
       :held ->
         ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :rhythm)

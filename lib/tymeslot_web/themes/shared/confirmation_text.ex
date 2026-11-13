@@ -17,11 +17,11 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Profiles
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.Voice
 
   @type status :: :check_inbox | :held | :rescheduled | :confirmed
@@ -58,21 +58,34 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
 
   @doc """
   The sentence under the check-your-inbox headline: where the link went and
-  how long the time is held, in the voice of the theme with key `theme_key`
-  where it has one.
-  """
-  @spec check_inbox_message(String.t() | nil, Catalog.theme_key() | nil) :: String.t()
-  def check_inbox_message(email, theme_key \\ nil) do
-    minutes = EmailVerification.hold_minutes()
+  until when the time is held, in the voice of the theme with key
+  `theme_key` where it has one.
 
-    Voice.line(Voice.of(theme_key), :check_inbox_message, %{email: email, minutes: minutes}, fn ->
+  Names the booking's own `verification_deadline_at` as a time on the
+  attendee's clock (`user_timezone`), not the length of the hold: the hold
+  is capped at the meeting's start, so a booking made close to it is held
+  for less.
+  """
+  @spec check_inbox_message(map(), Catalog.theme_key() | nil) :: String.t()
+  def check_inbox_message(assigns, theme_key \\ nil) do
+    email = assigns[:email]
+    time = deadline_time(assigns[:verification_deadline_at], assigns[:user_timezone])
+
+    Voice.line(Voice.of(theme_key), :check_inbox_message, %{email: email, time: time}, fn ->
       dgettext(
         "booking_confirmation",
-        "We have sent a link to %{email}. Click it within %{minutes} minutes to confirm your booking. Until then the time is held for you.",
+        "We have sent a link to %{email}. Click it by %{time} to confirm your booking. Until then the time is held for you.",
         email: email,
-        minutes: minutes
+        time: time
       )
     end)
+  end
+
+  # A booking awaiting verification always carries its deadline
+  # (`EmailVerification.gate_attributes/2`), so there is no fallback.
+  defp deadline_time(%DateTime{} = deadline, timezone) do
+    {:ok, local} = LocalizationHelpers.to_attendee_datetime(deadline, timezone)
+    "#{LocalizationHelpers.format_time_by_locale(local)} #{local.zone_abbr}"
   end
 
   @doc """

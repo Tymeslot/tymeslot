@@ -20,6 +20,7 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
 
   alias Tymeslot.Emails.Shared.{
     Buttons,
+    Formatting,
     MeetingComponents,
     MjmlEmail,
     Sanitise,
@@ -29,8 +30,8 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
     TimezoneHelper
   }
 
-  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Utils.DateTimeUtils
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -45,11 +46,13 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
       attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)
       details = meeting_details(meeting, attendee_time)
 
+      intro = intro(meeting, locale)
+
       mjml_content = """
       #{MeetingComponents.meeting_details_table(details, locale)}
 
       <mj-text font-size="16px" color="#{Styles.ink_soft()}" line-height="24px" padding="16px 0 0 0">
-        #{Sanitise.sanitize_for_email(intro())}
+        #{Sanitise.sanitize_for_email(intro)}
       </mj-text>
 
       #{Buttons.action_button(@intent, dgettext("emails_booking_requests", "Confirm booking"), verify_url, size: :large)}
@@ -89,17 +92,21 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
         )
       )
       |> html_body(html_body)
-      |> text_body(text_body_for(meeting, details, verify_url, locale))
+      |> text_body(text_body_for(meeting, details, intro, verify_url, locale))
     end)
   end
 
   defp heading, do: dgettext("emails_booking_requests", "Please confirm your booking")
 
-  defp intro do
+  # The deadline itself, on the attendee's clock, not the length of the hold:
+  # the hold is capped at the meeting's start, and a resend never moves it.
+  defp intro(%Meeting{verification_deadline_at: %DateTime{} = deadline} = meeting, locale) do
+    {local, _zone} = DateTimeUtils.shift_or_utc(deadline, meeting.attendee_timezone)
+
     dgettext(
       "emails_booking_requests",
-      "Your booking is not confirmed yet. Click the button below within %{minutes} minutes to confirm it, and we will hold the time for you until then.",
-      minutes: EmailVerification.hold_minutes()
+      "Your booking is not confirmed yet. Click the button below by %{time} to confirm it, and we will hold the time for you until then.",
+      time: Formatting.format_time(local, locale)
     )
   end
 
@@ -122,13 +129,13 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
     }
   end
 
-  defp text_body_for(meeting, details, verify_url, locale) do
+  defp text_body_for(meeting, details, intro, verify_url, locale) do
     """
     #{heading()}
 
     #{dgettext("emails_booking_requests", "Hi %{name},", name: meeting.attendee_name)}
 
-    #{intro()}
+    #{intro}
 
     #{TextBodyHelper.format_meeting_details(details, locale)}
 

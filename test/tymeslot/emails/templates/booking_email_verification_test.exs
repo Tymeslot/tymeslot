@@ -10,6 +10,7 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerificationTest do
 
   alias Ecto.UUID
   alias Tymeslot.Emails.Templates.BookingEmailVerification
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   @verify_url "https://tymeslot.test/verify-booking/signed-token"
@@ -40,17 +41,37 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerificationTest do
     )
   end
 
-  test "the email asks the attendee to confirm within 30 minutes" do
+  test "the email asks the attendee to confirm by the deadline, in their timezone" do
     email = BookingEmailVerification.render(meeting(), @verify_url)
 
+    # 10:30 UTC is 12:30 in Ljubljana in summer.
     for body <- [email.html_body, email.text_body] do
       assert body =~ @verify_url
-      assert body =~ "30"
+      assert body =~ "by 12:30 PM CEST"
+      refute body =~ "within"
       assert body =~ "Confirm booking"
     end
 
     assert email.subject == "Confirm your booking with Sam Host"
     assert email.to == [{"Alex Guest", "alex@example.com"}]
+  end
+
+  # The hold is capped at the meeting's start, so a booking made ten minutes
+  # before it must not promise thirty.
+  test "a booking made 10 minutes before its start names the start as the deadline" do
+    start_time = ~U[2026-09-01 13:00:00Z]
+
+    %{verification_deadline_at: deadline} =
+      EmailVerification.gate_attributes(~U[2026-09-01 12:50:00Z], start_time)
+
+    email =
+      BookingEmailVerification.render(
+        meeting(%{start_time: start_time, verification_deadline_at: deadline}),
+        @verify_url
+      )
+
+    assert email.text_body =~ "by 03:00 PM CEST"
+    refute email.text_body =~ "03:20 PM"
   end
 
   test "the email is in the attendee's language" do

@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.ThemeCustomizations.Tokens
   alias TymeslotWeb.Themes.Core.ThemeInfo
   alias TymeslotWeb.Themes.Shared.Components.VerificationNotice
@@ -49,6 +50,39 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
     end
   end
 
+  describe "ConfirmationText.check_inbox_message/2" do
+    test "states the deadline as a time in the attendee's timezone" do
+      message =
+        ConfirmationText.check_inbox_message(%{
+          email: "ana@example.com",
+          verification_deadline_at: ~U[2026-09-10 09:30:00Z],
+          user_timezone: "Europe/Ljubljana"
+        })
+
+      assert message =~ "Click it by 11:30 AM CEST"
+      refute message =~ "minutes"
+    end
+
+    # The hold is capped at the meeting's start, so a booking made ten minutes
+    # before it is held for ten minutes, not thirty.
+    test "a booking made 10 minutes before its start shows the start-capped time" do
+      start_time = ~U[2026-09-10 10:00:00Z]
+
+      %{verification_deadline_at: deadline} =
+        EmailVerification.gate_attributes(~U[2026-09-10 09:50:00Z], start_time)
+
+      message =
+        ConfirmationText.check_inbox_message(%{
+          email: "ana@example.com",
+          verification_deadline_at: deadline,
+          user_timezone: "UTC"
+        })
+
+      assert message =~ "Click it by 10:00 AM UTC"
+      refute message =~ "10:20"
+    end
+  end
+
   for theme <- ThemeTestMatrix.all() do
     describe "#{theme.name}" do
       test "every theme shows check your inbox for a booking awaiting verification" do
@@ -56,7 +90,7 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
 
         assert [message] = find(html, "[data-testid='check-inbox']")
         assert Floki.text(message) =~ "ana@example.com"
-        assert Floki.text(message) =~ "30 minutes"
+        assert Floki.text(message) =~ "Click it by 09:30 AM UTC"
 
         assert Floki.text(find(html, "[data-testid='confirmation-heading']")) =~
                  "Check your inbox"
@@ -177,6 +211,7 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
       selected_time: "10:00",
       user_timezone: "UTC",
       email: "ana@example.com",
+      verification_deadline_at: ~U[2026-09-10 09:30:00Z],
       guest_emails: [],
       name: "Ana",
       organizer_profile: build(:profile, full_name: "Jane Organizer"),
