@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   alias Phoenix.LiveView
   alias Tymeslot.BookingPages
   alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.Demo
   alias Tymeslot.Polls
   alias Tymeslot.Scheduling.LinkAccessPolicy
@@ -122,6 +123,8 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
 
     case MeetingManagement.validate_and_load_meeting(meeting_uid, action, profile.user_id) do
       {:ok, meeting} ->
+        {socket, profile} = follow_attendee_language(socket, profile, meeting)
+
         # A booking made through a booking page is managed in that page's look.
         profile = BookingPages.for_meeting(profile, meeting)
 
@@ -163,6 +166,15 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
          |> LiveView.put_flash(:error, refusal_message(reason))
          |> LiveView.redirect(to: ~p"/")}
     end
+  end
+
+  # A meeting's pages speak the language the attendee booked in, unless the
+  # visitor picked another (`?locale=`, the language switcher's): the emailed
+  # links carry no locale, and the attendee may open them anywhere
+  # (`OrganizerHelpers.follow_booked_language/2`).
+  defp follow_attendee_language(socket, profile, meeting) do
+    socket = OrganizerHelpers.follow_booked_language(socket, meeting.attendee_locale)
+    {socket, socket.assigns[:organizer_profile] || profile}
   end
 
   # A cancel or reschedule refusal. A reason `BookingErrorMessage` does not
@@ -295,7 +307,10 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
        ) do
     socket =
       socket
-      |> assign(:organizer_profile, profile)
+      |> assign(
+        :organizer_profile,
+        ContentTranslations.localise(profile, socket.assigns[:content_locale])
+      )
       |> assign(:booking_window_days, OrganizerHelpers.booking_window_days(profile))
       |> assign(:meeting, meeting)
       |> assign(:meeting_uid, meeting_uid)

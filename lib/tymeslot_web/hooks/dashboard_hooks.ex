@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Hooks.DashboardHooks do
   alias TymeslotWeb.Hooks.AuthLiveSessionHook
   alias TymeslotWeb.Hooks.ClientInfoHook
   alias TymeslotWeb.Hooks.DashboardInitHook
+  alias TymeslotWeb.Hooks.EditingLocaleHook
   alias TymeslotWeb.Hooks.FeatureAssignsHook
   alias TymeslotWeb.Hooks.RouteBundleHook
 
@@ -23,6 +24,7 @@ defmodule TymeslotWeb.Hooks.DashboardHooks do
     AppLocaleHook,
     ClientInfoHook,
     DashboardInitHook,
+    EditingLocaleHook,
     {FeatureAssignsHook, :set_feature_assigns},
     RouteBundleHook
   ]

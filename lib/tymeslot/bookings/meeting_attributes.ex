@@ -13,6 +13,8 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
   alias Tymeslot.Bookings.BuildParams
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Clock
+  alias Tymeslot.ContentTranslations.AttendeeTexts
+  alias Tymeslot.CustomFields.Snapshot
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
@@ -70,6 +72,7 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
           required(:meeting_url) => String.t() | nil,
           required(:custom_fields_snapshot) => [map()],
           required(:custom_field_answers) => map(),
+          required(:attendee_texts) => AttendeeTexts.t() | nil,
           required(:utm_source) => String.t() | nil,
           required(:utm_medium) => String.t() | nil,
           required(:utm_campaign) => String.t() | nil,
@@ -92,13 +95,12 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
   def build(%BuildParams{} = params) do
     meeting_uid = params.meeting_uid
     organizer_user_id = params.organizer_user_id
-    meeting_type_id = params.meeting_type_id
 
     # Resolve meeting type if ID provided
-    meeting_type_record = resolve_meeting_type_record(meeting_type_id, organizer_user_id)
+    meeting_type_record = resolve_meeting_type_record(params.meeting_type_id, organizer_user_id)
 
     # Get organizer details from profile if available
-    {org_name, org_email, org_username} = get_organizer_details(organizer_user_id)
+    {org_name, org_email, org_username, profile} = get_organizer_details(organizer_user_id)
 
     # Resolve attendee timezone
     config = Schedules.booking_config(organizer_user_id, meeting_type_record)
@@ -115,14 +117,6 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
     # Get reminder configuration
     reminders = get_meeting_reminders(meeting_type_record)
 
-    # A meeting type requiring manual approval holds its bookings instead of
-    # confirming them. The deadline is stamped here, at request time, rather
-    # than derived later: the meeting type's window can be edited — or the type
-    # archived — while a request is outstanding, and the deadline promised to
-    # the invitee must not move underneath them.
-    %{status: status, approval_requested_at: requested_at, approval_deadline_at: deadline_at} =
-      approval_attributes(meeting_type_record, params.start_datetime)
-
     # Build complete meeting attributes map
     %{
       uid: meeting_uid,
@@ -137,20 +131,46 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
       organizer_user_id: organizer_user_id,
       calendar_integration_id: calendar_integration_id,
       calendar_path: calendar_path,
-      status: status,
-      approval_requested_at: requested_at,
-      approval_deadline_at: deadline_at,
-      reminders: reminders,
-      custom_fields_snapshot: params.custom_fields_snapshot,
-      custom_field_answers: params.custom_field_answers
+      reminders: reminders
     }
+    # A meeting type requiring manual approval holds its bookings instead of
+    # confirming them. The deadline is stamped here, at request time, rather
+    # than derived later: the meeting type's window can be edited — or the type
+    # archived — while a request is outstanding, and the deadline promised to
+    # the invitee must not move underneath them.
+    |> Map.merge(approval_attributes(meeting_type_record, params.start_datetime))
     |> Map.merge(meeting_type_attributes(meeting_type_record))
     |> Map.merge(title_attributes(params, meeting_type_name))
     |> Map.merge(attendee_attributes(params, user_timezone))
     |> Map.merge(location_attributes(meeting_type_record, params, video_integration_id))
     |> Map.merge(source_attribution(params))
     |> Map.merge(build_meeting_action_urls(meeting_uid, org_username))
+    |> put_booker_texts(meeting_type_record, profile, params)
   end
+
+  # The booker saw the questions in their own language; the booking keeps
+  # them in the organiser's, as its other snapshot strings are, and the
+  # attendee's copies of those strings go to `attendee_texts`. Last, as the
+  # copies are made from the finished originals.
+  defp put_booker_texts(attrs, meeting_type_record, profile, %BuildParams{} = params) do
+    attrs =
+      Map.merge(attrs, %{
+        custom_fields_snapshot:
+          original_snapshot(params.custom_fields_snapshot, meeting_type_record),
+        custom_field_answers: params.custom_field_answers
+      })
+
+    Map.put(
+      attrs,
+      :attendee_texts,
+      AttendeeTexts.build(meeting_type_record, profile, attrs, location_choice(params))
+    )
+  end
+
+  defp original_snapshot(snapshot, nil), do: snapshot
+
+  defp original_snapshot(snapshot, meeting_type),
+    do: Snapshot.overlay_texts(snapshot, meeting_type)
 
   # What the booking copies from its meeting type, with the defaults for a
   # booking made without one.
@@ -202,13 +222,7 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
   # id can only ever select a location, a provider or a venue the host
   # already offers.
   defp location_attributes(meeting_type_record, %BuildParams{} = params, fallback_video_id) do
-    location =
-      MeetingTypes.resolve_location(meeting_type_record, %{
-        option_id: params.location_option_id,
-        phone: params.location_phone,
-        video_integration_id: params.location_video_integration_id,
-        venue_id: params.location_venue_id
-      })
+    location = MeetingTypes.resolve_location(meeting_type_record, location_choice(params))
 
     %{
       location: location.location,
@@ -218,6 +232,15 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
       video_integration_id: video_integration_for(location, fallback_video_id),
       venue_id: location.venue_id,
       address_to_arrange: location.address_to_arrange
+    }
+  end
+
+  defp location_choice(%BuildParams{} = params) do
+    %{
+      option_id: params.location_option_id,
+      phone: params.location_phone,
+      video_integration_id: params.location_video_integration_id,
+      venue_id: params.location_venue_id
     }
   end
 
@@ -328,10 +351,10 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
         profile = ProfileQueries.preload_user(profile)
         name = profile.full_name || profile.user.name || sender_name
         email = profile.user.email || sender_email
-        {name, email, profile.username}
+        {name, email, profile.username, profile}
 
       _no_profile ->
-        {sender_name, sender_email, nil}
+        {sender_name, sender_email, nil, nil}
     end
   end
 

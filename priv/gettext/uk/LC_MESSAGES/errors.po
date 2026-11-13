@@ -532,6 +532,7 @@ msgid "is not a palette colour"
 msgstr "не є кольором із палітри"
 
 #: lib/tymeslot/app_settings/app_settings_schema.ex
+#: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported language"
 msgstr "не є підтримуваною мовою"
@@ -878,3 +879,18 @@ msgstr "має бути в майбутньому"
 #, elixir-autogen, elixir-format
 msgid "invitation links"
 msgstr "посилань із запрошенням"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#, elixir-autogen, elixir-format
+msgid "cannot include the original language"
+msgstr "не може містити мову оригіналу"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#, elixir-autogen, elixir-format
+msgid "cannot list a language twice"
+msgstr "не може містити ту саму мову двічі"
+
+#: lib/tymeslot/content_translations/catalogue.ex
+#, elixir-autogen, elixir-format
+msgid "is not a translation language"
+msgstr "не є мовою перекладу"

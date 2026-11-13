@@ -282,6 +282,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
               module={BookingTextForm}
               id={"booking-text-form" <> page_suffix(@selected_page)}
               profile={@page_profile}
+              user_id={@current_user.id}
+              editing_locale={@editing_locale}
             />
           </fieldset>
         <% end %>

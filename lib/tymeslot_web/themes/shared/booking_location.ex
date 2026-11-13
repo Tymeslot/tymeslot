@@ -108,7 +108,10 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocation do
     socket
     |> assign(:location_options, options)
     |> assign(:location_video_choices, MeetingTypes.location_video_choices(meeting_type))
-    |> assign(:location_venue_choices, MeetingTypes.location_venue_choices(meeting_type))
+    |> assign(
+      :location_venue_choices,
+      MeetingTypes.location_venue_choices(meeting_type, socket.assigns[:content_locale])
+    )
     |> assign(:selected_location_id, selected)
     |> assign(:location_phone, seeded_phone(socket.assigns[:location_phone], current))
     |> assign(:location_error, nil)

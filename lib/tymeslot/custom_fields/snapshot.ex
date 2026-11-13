@@ -24,6 +24,59 @@ defmodule Tymeslot.CustomFields.Snapshot do
     |> Enum.map(&to_plain_map/1)
   end
 
+  @doc """
+  `snapshot` with the texts of each question it shares with `meeting_type`
+  (by id) taken from the meeting type: the label, help text, body and the
+  options' labels (by key). Everything else, and any question the meeting
+  type no longer has, is kept as it is.
+
+  Used to write a booking's snapshot in the organiser's original wording
+  whichever language the booker saw, and the attendee's copy in theirs
+  (`Tymeslot.ContentTranslations.AttendeeTexts`).
+  """
+  @spec overlay_texts([map()], map()) :: [map()]
+  def overlay_texts(snapshot, %{custom_fields: defs}) when is_list(snapshot) and is_list(defs) do
+    by_id = Map.new(defs, &{&1.id, &1})
+
+    Enum.map(snapshot, fn
+      %{"id" => id} = field when is_map_key(by_id, id) -> overlay(field, by_id[id])
+      field -> field
+    end)
+  end
+
+  def overlay_texts(snapshot, _meeting_type), do: snapshot
+
+  defp overlay(field, %FieldDefinition{} = definition) do
+    labels = Map.new(definition.options || [], &{&1.key, &1.label})
+
+    field
+    |> Map.merge(
+      drop_nils(%{
+        "label" => definition.label,
+        "help_text" => definition.help_text,
+        "body" => definition.body
+      })
+    )
+    |> overlay_options(labels)
+  end
+
+  defp overlay(field, _not_a_definition), do: field
+
+  defp overlay_options(%{"options" => options} = field, labels) when is_list(options) do
+    options =
+      Enum.map(options, fn
+        %{"key" => key} = option when is_map_key(labels, key) ->
+          Map.put(option, "label", labels[key])
+
+        option ->
+          option
+      end)
+
+    Map.put(field, "options", options)
+  end
+
+  defp overlay_options(field, _labels), do: field
+
   defp position(%FieldDefinition{position: p}), do: p || 0
   defp position(%{"position" => p}), do: p || 0
   defp position(%{position: p}), do: p || 0

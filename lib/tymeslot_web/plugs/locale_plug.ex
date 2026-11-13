@@ -39,6 +39,15 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     * `:ambient_locale` - the same resolution without the user's saved
       preference (source 2): what the page resolves to once that preference
       is cleared. Equal to `:locale` unless `prefer_user_locale` is set.
+    * `:locale_choice` - the language the visitor picked themselves, if
+      any: the `?locale=` choice, else the remembered one (sources 3 and 4),
+      when acceptable.
+    * `:browser_locales` - the acceptable, normalised `Accept-Language`
+      tags (source 5), highest weight first and without duplicates.
+
+  A booking page that offers only some languages ranks those two apart
+  (`Tymeslot.ContentTranslations.Languages.visitor_locale/2`): a pick it does
+  not offer gives the organiser's original, not the browser's next language.
     * `:visitor_week_start` - `:monday` or `:sunday` when the header's
       language tags settle it (`Tymeslot.Locales.WeekStart`), else `nil`.
       Read from the header alone: the region it carries is where the
@@ -96,7 +105,9 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
 
     path_locale = normalize_locale(conn.assigns[:path_locale])
     tags = header_tags(conn)
-    detected = [choice, remembered_choice(conn, session?) | Enum.map(tags, &normalize_locale/1)]
+    picked = Locales.acceptable(choice || remembered_choice(conn, session?))
+    browser = tags |> Enum.map(&normalize_locale/1) |> Enum.filter(&Locales.acceptable?/1)
+    detected = [picked | browser]
     fallback = surface_default(opts)
 
     locale = Locales.resolve([path_locale, user_locale(conn, opts) | detected], fallback)
@@ -108,6 +119,8 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     merge_assigns(conn,
       locale: locale,
       ambient_locale: ambient_locale,
+      locale_choice: picked,
+      browser_locales: Enum.uniq(browser),
       visitor_week_start: WeekStart.from_language_tags(tags)
     )
   end
@@ -121,20 +134,22 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
 
       live_session :name, session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []}
 
-  `TymeslotWeb.Hooks.LocaleHook` reads `"resolved_locale"` and
-  `"visitor_week_start"`;
+  `TymeslotWeb.Hooks.LocaleHook` reads `"resolved_locale"`,
+  `"locale_choice"`, `"browser_locales"` and `"visitor_week_start"`;
   `TymeslotWeb.Hooks.AppLocaleHook` reads `"path_locale"` and
   `"ambient_locale"` and re-applies the user's saved preference itself, so a
   preference changed after the page loaded still takes effect on a live
   remount. Absent assigns are left out.
   """
-  @spec live_session_data(Plug.Conn.t()) :: %{optional(String.t()) => String.t()}
+  @spec live_session_data(Plug.Conn.t()) :: %{optional(String.t()) => String.t() | [String.t()]}
   def live_session_data(conn) do
     Map.reject(
       %{
         "resolved_locale" => conn.assigns[:locale],
         "ambient_locale" => conn.assigns[:ambient_locale],
         "path_locale" => conn.assigns[:path_locale],
+        "locale_choice" => conn.assigns[:locale_choice],
+        "browser_locales" => conn.assigns[:browser_locales],
         "visitor_week_start" => week_start_string(conn.assigns[:visitor_week_start])
       },
       fn {_key, value} -> is_nil(value) end

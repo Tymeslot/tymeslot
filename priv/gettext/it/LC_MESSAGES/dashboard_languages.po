@@ -1,0 +1,392 @@
+#  "msgid"s in this file come from POT (.pot) files.
+# #
+# # Do not add, change, or remove "msgid"s manually here as
+# # they're tied to the ones in the corresponding POT file
+# # (with the same domain).
+# #
+# # Use "mix gettext.extract --merge" or "mix gettext.merge"
+# # to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: it\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} outdated"
+msgid_plural "%{count} outdated"
+msgstr[0] "%{count} da aggiornare"
+msgstr[1] "%{count} da aggiornare"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "%{label} (%{context})"
+msgstr "%{label} (%{context})"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{language} translations"
+msgstr "Traduzioni: %{language}"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{translated}/%{total} translated"
+msgstr "%{translated}/%{total} tradotti"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "About you"
+msgstr "Su di te"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add a translation…"
+msgstr "Aggiungi una traduzione…"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Add translation"
+msgstr "Aggiungi traduzione"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "All languages"
+msgstr "Tutte le lingue"
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Answer option"
+msgstr "Opzione di risposta"
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Bio"
+msgstr "Biografia"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page languages"
+msgstr "Lingue della pagina di prenotazione"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Booking page texts"
+msgstr "Testi della pagina di prenotazione"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Choose the language you write your booking pages in, and translate your texts into other languages. These settings apply to every booking page."
+msgstr "Scegli la lingua in cui scrivi le tue pagine di prenotazione e traduci i tuoi testi in altre lingue. Queste impostazioni valgono per tutte le pagine di prenotazione."
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save these translations."
+msgstr "Impossibile salvare queste traduzioni."
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save your languages."
+msgstr "Impossibile salvare le lingue."
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save your languages: %{reason}"
+msgstr "Impossibile salvare le lingue: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Description"
+msgstr "Descrizione"
+
+#: lib/tymeslot_web/live/dashboard/languages/language_bar.ex
+#, elixir-autogen, elixir-format
+msgid "Editing in:"
+msgstr "Stai modificando in:"
+
+#: lib/tymeslot_web/live/dashboard/languages/language_bar.ex
+#, elixir-autogen, elixir-format
+msgid "Editing language"
+msgstr "Lingua di modifica"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Everything here is translated."
+msgstr "Qui è tutto tradotto."
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Everything is translated"
+msgstr "È tutto tradotto"
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Greeting"
+msgstr "Saluto"
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Heading"
+msgstr "Titolo"
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Headline"
+msgstr "Titolo"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Headline and bio"
+msgstr "Titolo e biografia"
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Help text"
+msgstr "Testo di aiuto"
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Instruction"
+msgstr "Istruzione"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Languages"
+msgstr "Lingue"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Languages saved"
+msgstr "Lingue salvate"
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Location details"
+msgstr "Dettagli del luogo"
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Location name"
+msgstr "Nome del luogo"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Locations"
+msgstr "Sedi"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types"
+msgstr "Tipi di riunione"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Missing"
+msgstr "Mancante"
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Nome"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "No text is missing or outdated in this language."
+msgstr "In questa lingua non manca nessun testo e nessuno è da aggiornare."
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "No translations yet."
+msgstr "Ancora nessuna traduzione."
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Note text"
+msgstr "Testo della nota"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing here to translate yet."
+msgstr "Qui non c'è ancora niente da tradurre."
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing to save: no translation changed."
+msgstr "Niente da salvare: nessuna traduzione è cambiata."
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing to translate yet"
+msgstr "Ancora niente da tradurre"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Only missing or outdated"
+msgstr "Solo mancanti o da aggiornare"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Original language"
+msgstr "Lingua originale"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Original: %{text}"
+msgstr "Originale: %{text}"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Outdated: the original changed"
+msgstr "Da aggiornare: l'originale è cambiato"
+
+#: lib/tymeslot_web/live/dashboard/languages/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Question"
+msgstr "Domanda"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{language}"
+msgstr "Rimuovi %{language}"
+
+#: lib/tymeslot_web/live/dashboard/languages/remove_language_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{language}?"
+msgstr "Rimuovere %{language}?"
+
+#: lib/tymeslot_web/live/dashboard/languages/remove_language_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Remove language"
+msgstr "Rimuovi lingua"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Review"
+msgstr "Controlla"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Save translations"
+msgstr "Salva traduzioni"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Saving…"
+msgstr "Salvataggio…"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "The language your texts are written in."
+msgstr "La lingua in cui sono scritti i tuoi testi."
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "This item no longer exists."
+msgstr "Questo elemento non esiste più."
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Translated"
+msgstr "Tradotto"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Translations"
+msgstr "Traduzioni"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Translations saved"
+msgstr "Traduzioni salvate"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Write your booking page texts and meeting types first; they appear here to translate."
+msgstr "Scrivi prima i testi della pagina di prenotazione e i tipi di riunione: compariranno qui da tradurre."
+
+#: lib/tymeslot_web/live/dashboard/languages/remove_language_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your %{language} translations are kept: add the language again and they come back."
+msgstr "Le tue traduzioni (%{language}) restano salvate: se aggiungi di nuovo la lingua, le ritrovi."
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page"
+msgstr "La tua pagina di prenotazione"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page is offered only in %{language} and your translation languages."
+msgstr "La tua pagina di prenotazione è disponibile solo nella lingua originale (%{language}) e nelle tue lingue di traduzione."
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page is offered only in %{language}, so visitors see no language switcher. Add a translation to offer another language."
+msgstr "La tua pagina di prenotazione è disponibile solo nella lingua originale (%{language}), quindi i visitatori non vedono il selettore della lingua. Aggiungi una traduzione per offrire un'altra lingua."
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save these translations. Choose the language again to leave without saving them."
+msgstr "Impossibile salvare queste traduzioni. Scegli di nuovo la lingua per uscire senza salvarle."
+
+#: lib/tymeslot_web/live/dashboard/languages/language_bar.ex
+#, elixir-autogen, elixir-format
+msgid "%{language} (original)"
+msgstr "%{language} (originale)"
+
+#: lib/tymeslot_web/live/dashboard/languages/language_bar.ex
+#, elixir-autogen, elixir-format
+msgid "(%{count} text missing or outdated)"
+msgid_plural "(%{count} texts missing or outdated)"
+msgstr[0] "(%{count} testo mancante o da aggiornare)"
+msgstr[1] "(%{count} testi mancanti o da aggiornare)"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't keep this translation."
+msgstr "Impossibile mantenere questa traduzione."
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save these translations. Try again to leave without saving them."
+msgstr "Impossibile salvare queste traduzioni. Riprova per uscire senza salvarle."
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Invitees see the original until you update this translation or confirm it is still correct."
+msgstr "Gli invitati vedono l'originale finché non aggiorni questa traduzione o non confermi che è ancora corretta."
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invitees who choose one of these languages see your texts translated. A text you leave untranslated, or whose translation is outdated, shows in the original."
+msgstr "Gli invitati che scelgono una di queste lingue vedono i tuoi testi tradotti. Un testo che non traduci, o la cui traduzione è da aggiornare, viene mostrato nella versione originale."
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "Offer the booking page in every language"
+msgstr "Offri la pagina di prenotazione in tutte le lingue"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Still correct"
+msgstr "Ancora corretta"
+
+#: lib/tymeslot_web/live/dashboard/languages/translation_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Translation kept"
+msgstr "Traduzione mantenuta"
+
+#: lib/tymeslot_web/live/dashboard/languages_component.ex
+#, elixir-autogen, elixir-format
+msgid "You decide which languages invitees can choose. On: every language Tymeslot supports, with your texts in %{language} wherever you have no translation (buttons, dates and emails are always translated). Off: only %{language} and your translation languages."
+msgstr "Sei tu a decidere quali lingue possono scegliere gli invitati. Attivato: tutte le lingue supportate da Tymeslot, con i tuoi testi nella lingua originale (%{language}) dove non hai una traduzione (pulsanti, date ed email vengono sempre tradotti). Disattivato: solo la lingua originale (%{language}) e le tue lingue di traduzione."
+
+#: lib/tymeslot_web/live/dashboard/languages/remove_language_modal.ex
+#, elixir-autogen, elixir-format
+msgid "You offer your booking page in every language, so invitees can still choose %{language}, but they will see your texts in %{original}."
+msgstr "Offri la tua pagina di prenotazione in tutte le lingue, quindi gli invitati possono ancora scegliere questa lingua (%{language}), ma vedranno i tuoi testi nella lingua originale (%{original})."
+
+#: lib/tymeslot_web/live/dashboard/languages/remove_language_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking page will no longer be offered in %{language}: invitees can choose only the languages you keep."
+
+msgstr "La tua pagina di prenotazione non sarà più disponibile in questa lingua (%{language}): gli invitati potranno scegliere solo le lingue che mantieni."

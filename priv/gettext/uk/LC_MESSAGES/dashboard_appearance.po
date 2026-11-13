@@ -217,11 +217,6 @@ msgstr "Ваш заголовок замінює:"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
-msgid "Your own wording is shown to everyone, in whatever language they pick. Only the built-in text is translated."
-msgstr "Ваш власний текст бачать усі, незалежно від обраної мови. Перекладається лише вбудований текст."
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
-#, elixir-autogen, elixir-format
 msgid "All changes saved"
 msgstr "Усі зміни збережено"
 
@@ -799,3 +794,8 @@ msgstr "Ви редагуєте %{address}"
 #, elixir-autogen, elixir-format
 msgid "Theme for %{page} updated to %{theme_name}"
 msgstr "Тему для %{page} змінено на %{theme_name}"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Your own wording is shown in every language unless you translate it under Languages. The built-in text is always translated."
+msgstr "Ваш власний текст показується всіма мовами, якщо ви не перекладете його в розділі «Мови». Вбудований текст завжди перекладається."

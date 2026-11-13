@@ -21,6 +21,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           id: integer() | nil,
           name: String.t() | nil,
           description: String.t() | nil,
+          translations: map(),
           duration_minutes: integer() | nil,
           extra_lengths_minutes: [integer()] | nil,
           slot_interval_minutes: integer() | nil,
@@ -132,6 +133,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     # (see `project_video_fields/1`), so the many readers that only ask
     # "does this type do video, and on which integration" keep working.
     embeds_many(:locations, LocationOption, on_replace: :delete)
+
+    # Translations of the name, description, questions and locations, keyed
+    # by path (`Tymeslot.ContentTranslations`): the embeds carry none of their
+    # own. No changeset here casts it, so the form, its autosave and the
+    # question and location editors can never wipe it.
+    field(:translations, :map, default: %{})
 
     timestamps(type: :utc_datetime)
   end

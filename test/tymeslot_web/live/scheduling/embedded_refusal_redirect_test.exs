@@ -74,6 +74,15 @@ defmodule TymeslotWeb.Live.Scheduling.EmbeddedRefusalRedirectTest do
   end
 
   @tag :capture_log
+  test "an unknown slug keeps the language the guest picked", %{conn: conn} do
+    assert {:error, {:redirect, %{to: to}}} =
+             conn |> embedded() |> live("/#{@username}/no-such-type?locale=de&#{@embed_query}")
+
+    assert_stays_embedded(to)
+    assert URI.decode_query(URI.parse(to).query)["locale"] == "de"
+  end
+
+  @tag :capture_log
   test "a type with no times open keeps the embed", %{conn: conn, user: user} do
     insert(:meeting_type,
       user: user,

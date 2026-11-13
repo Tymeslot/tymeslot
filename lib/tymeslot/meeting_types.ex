@@ -65,8 +65,10 @@ defmodule Tymeslot.MeetingTypes do
   The venues the booker can pick between, per in-person location; see
   `Tymeslot.MeetingTypes.LocationChoices.location_venue_choices/1`.
   """
-  @spec location_venue_choices(map() | nil) :: %{String.t() => [Venues.choice()]}
-  defdelegate location_venue_choices(meeting_type), to: LocationChoices
+  @spec location_venue_choices(map() | nil, String.t() | nil) :: %{
+          String.t() => [Venues.choice()]
+        }
+  defdelegate location_venue_choices(meeting_type, content_locale \\ nil), to: LocationChoices
 
   @doc """
   Gets all active meeting types for a user. A pure read: a host may have
@@ -145,7 +147,9 @@ defmodule Tymeslot.MeetingTypes do
   @doc """
   Creates a new meeting type.
 
-  `opts` are forwarded to the changeset for payment-validation context.
+  `opts` are forwarded to the changeset for payment-validation context, bar
+  `:translations`, a copy's translations
+  (`MeetingTypeQueries.create_meeting_type/2`).
   """
   @spec create_meeting_type(map(), keyword()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t() | :not_found}
@@ -184,7 +188,10 @@ defmodule Tymeslot.MeetingTypes do
     attrs = Duplication.copy_attrs(source)
 
     with :ok <- FormValidation.check(user_id, attrs) do
-      create_meeting_type(attrs, FormMapper.payment_opts(user_id))
+      create_meeting_type(
+        attrs,
+        [translations: Duplication.translations(source)] ++ FormMapper.payment_opts(user_id)
+      )
     end
   end
 

@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.ContentTranslations.AttendeeTexts
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper
   alias TymeslotWeb.Themes.Shared.PathHandlers
 
@@ -15,6 +16,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
   attr :theme_tokens, :any, required: true
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
+  attr :offered_locales, :list, default: nil
   attr :legal_links, :map, required: true
   attr :meeting, :map, required: true
   attr :organizer_profile, :map, default: nil
@@ -29,6 +31,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
       theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      offered_locales={assigns[:offered_locales]}
       legal_links={@legal_links}
       show_language_switcher={true}
     >
@@ -69,7 +72,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                     organizer_profile={@organizer_profile}
                     locale={@locale}
                     organizer_name={@meeting.organizer_name}
-                    meeting_type={@meeting.meeting_type}
+                    meeting_type={AttendeeTexts.text(@meeting, :meeting_type, assigns[:locale])}
                   />
                 </div>
               </div>

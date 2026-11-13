@@ -123,6 +123,15 @@ Genitive singular and genitive plural are given wherever a translator will need 
 | ad trackers | **reklamní sledovací prvky** (*bez reklamních sledovacích prvků*); avoid *trackery* |
 | managed cloud / self-hosted version | **spravovaný cloud** / **verze pro vlastní server** |
 | `+%{count} more` | **`+%{count} dalších`** in all three plural forms: the elided noun differs per surface (událost f., účastník m., kalendář m.), so no agreeing form is right everywhere; the invariant genitive plural is the convention |
+| translation (noun; booking-page languages) | **překlad** (m.i., pl. **překlady**); *%{language} translations* → **Překlady: %{language}**, *Your %{language} translations* → **Vaše překlady (%{language})**: `%{language}` is filled with the language's own name and can't be declined |
+| translate | **přeložit** (pf.) / **překládat** (impf.); *%{translated}/%{total} translated* → **Přeloženo %{translated}/%{total}** |
+| original language (the language the host writes their texts in) | **původní jazyk** (m.i.); *in %{language}* → **v původním jazyce (%{language})**; the original text is **originál** (*v originále*); the badge beside that language is **původní**, agreeing with *jazyk* |
+| translation language (a language the host translates into) | **jazyk překladu** (pl. **jazyky překladu**) |
+| language switcher (the visitor-facing control on the booking page) | **přepínač jazyka** (m.i.) |
+| Outdated (a translation whose original changed) | **Neaktuální**, never *zastaralý*; counted **%{count} neaktuální text / neaktuální texty / neaktuálních textů** |
+| Missing (a text not translated yet) | **Chybí** as the status pill; attributive **chybějící** (*Jen chybějící nebo neaktuální*) |
+| Translated (status) | **Přeloženo** (impersonal neuter, safe for any text) |
+| Review (the link to a language's review page) | **Zkontrolovat** |
 
 ### Booking pages (a host's extra pages)
 

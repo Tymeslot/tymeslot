@@ -417,3 +417,9 @@ msgstr "Ihre Buchungsseite nimmt keine Buchungen mehr an"
 #, elixir-autogen, elixir-format
 msgid "Your booking page isn't taking bookings yet"
 msgstr "Ihre Buchungsseite nimmt noch keine Buchungen an"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#, elixir-autogen, elixir-format
+msgid "Languages"
+msgstr "Sprachen"

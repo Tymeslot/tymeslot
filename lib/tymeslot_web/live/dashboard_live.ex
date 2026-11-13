@@ -303,6 +303,7 @@ defmodule TymeslotWeb.DashboardLive do
               payments_allowed={@payments_allowed}
               automations_allowed={@automations_allowed}
               feature_placeholder_components={@feature_placeholder_components}
+              editing_locale={@editing_locale}
             />
           <% else %>
             <ComponentDispatch.feature_placeholder
@@ -583,8 +584,6 @@ defmodule TymeslotWeb.DashboardLive do
 
   def handle_event("onboarding:dismiss", _params, socket),
     do: keep_user(Onboarding.dismiss_dashboard_setup(socket.assigns.current_user), socket)
-
-  # Private functions
 
   defp keep_user({:ok, user}, socket), do: {:noreply, assign(socket, :current_user, user)}
   defp keep_user({:error, _reason}, socket), do: {:noreply, socket}

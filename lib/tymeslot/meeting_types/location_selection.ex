@@ -267,9 +267,18 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
     custom: "Somewhere else"
   }
 
-  defp localise_default_label(%LocationOption{kind: kind, label: label} = option) do
-    if Map.get(@default_labels, kind) == label,
-      do: %{option | label: default_label(kind)},
+  @doc """
+  Whether a location's label still reads as its kind's English default. Such
+  a label is shown in the visitor's language already, so it is not the host's
+  own text to translate.
+  """
+  @spec default_label?(map()) :: boolean()
+  def default_label?(%{kind: kind, label: label}), do: Map.get(@default_labels, kind) == label
+  def default_label?(_location), do: false
+
+  defp localise_default_label(%LocationOption{} = option) do
+    if default_label?(option),
+      do: %{option | label: default_label(option.kind)},
       else: option
   end
 
