@@ -21,8 +21,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
   Series are a Pro feature on the managed plan (`recurring_bookings_allowed`).
   Without it a type with no series shows the upgrade placeholder registered
   under `:feature_placeholder_components[:recurring_bookings]`; a type that
-  already has one keeps its settings, read-only, and books single sessions
-  until the host upgrades. Events are ignored either way, and
+  already has one keeps its settings, read-only and without the notes, and
+  books single sessions until the host upgrades. The switch stays usable
+  there, to turn the series off; every other event is ignored, and
   `Tymeslot.MeetingTypes.FormValidation` refuses a forged one on save.
 
   The notes here are informational and never block a save: the booking
@@ -94,11 +95,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
         flexible_conflict: conflicts.flexible,
         limit_notes: SeriesHandlers.limit_notes(series, assigns.booking_limits),
         price: price(assigns.payment_price, assigns.payment_currency),
-        errors:
-          Enum.flat_map(
-            SeriesHandlers.fields(),
-            &FormValidationHelpers.field_errors(assigns.form_errors, &1)
-          )
+        rhythm_errors: errors(assigns.form_errors, [:series_frequency, :series_interval]),
+        min_errors:
+          errors(
+            assigns.form_errors,
+            if(series.fixed,
+              do: [:series_min_occurrences, :series_max_occurrences],
+              else: [:series_min_occurrences]
+            )
+          ),
+        max_errors: errors(assigns.form_errors, [:series_max_occurrences]),
+        other_errors: errors(assigns.form_errors, [:series_mode, :series_required])
       )
 
     assigns =
@@ -115,12 +122,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
         title={dgettext("dashboard_booking_series", "Series")}
       />
 
-      <.series_note :if={@read_only} testid="series-paused">
+      <.note :if={@read_only} variant={:warning} testid="series-paused">
         {dgettext(
           "dashboard_booking_series",
           "Series booking is paused: this meeting type books single sessions until you upgrade."
         )}
-      </.series_note>
+      </.note>
 
       <.setting_row
         id={"series-toggle-#{@form_id}"}
@@ -132,7 +139,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
           )
         }
         checked={@on}
-        disabled={@read_only or @toggle_blocked}
+        disabled={(@read_only and not @on) or @toggle_blocked}
         on_change="update_series"
         target={@myself}
         phx-value-series_action="toggle"
@@ -181,23 +188,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
         </div>
 
         <div :if={@series.series_mode == :recurring} class="space-y-2" data-testid="series-rhythm">
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="max-w-xs">
             <.select
-              id={"series-frequency-#{@form_id}"}
-              name="series[frequency]"
+              id={"series-rhythm-#{@form_id}"}
+              name="series[rhythm]"
               label={dgettext("dashboard_booking_series", "Repeats")}
-              value={@series.series_frequency}
-              options={frequency_options()}
-              disabled={@read_only}
-              phx-change="update_series"
-              phx-target={@myself}
-            />
-            <.select
-              id={"series-interval-#{@form_id}"}
-              name="series[interval]"
-              label={dgettext("dashboard_booking_series", "How often")}
-              value={@series.series_interval}
-              options={interval_options(@series.series_frequency)}
+              value={"#{@series.series_frequency}:#{@series.series_interval}"}
+              options={rhythm_options()}
+              errors={@rhythm_errors}
               disabled={@read_only}
               phx-change="update_series"
               phx-target={@myself}
@@ -223,6 +221,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
                   else: dgettext("dashboard_booking_series", "From")
               }
               value={@series.series_min_occurrences}
+              errors={@min_errors}
               min={first_count()}
               max={last_count()}
               step="1"
@@ -238,6 +237,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
               name="series[max]"
               label={dgettext("dashboard_booking_series", "To")}
               value={@series.series_max_occurrences}
+              errors={@max_errors}
               min={first_count()}
               max={last_count()}
               step="1"
@@ -277,31 +277,33 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
           phx-value-series_action="single"
         />
 
-        <div class="space-y-2">
-          <.series_note testid="series-booking-window">
+        <%!-- How the series meets the type's other settings; nothing here
+              applies while the series is paused. --%>
+        <div :if={not @read_only} class="space-y-3">
+          <.note variant={:info} testid="series-booking-window">
             {dgettext(
               "dashboard_booking_series",
               "Your booking window (%{days} days) applies to the first session only. Later sessions can be booked up to 12 months ahead.",
               days: @booking_window_days
             )}
-          </.series_note>
-          <.series_note :for={note <- @limit_notes} testid="series-limit-conflict">
+          </.note>
+          <.note :for={note <- @limit_notes} variant={:warning} testid="series-limit-conflict">
             {note}
-          </.series_note>
-          <.series_note :if={@group} testid="series-group">
+          </.note>
+          <.note :if={@group} variant={:info} testid="series-group">
             {dgettext("dashboard_booking_series", "Each session in a series takes one seat.")}
-          </.series_note>
-          <.series_note :if={@payment_required} testid="series-paid">
+          </.note>
+          <.note :if={@payment_required} variant={:info} testid="series-paid">
             {dgettext(
               "dashboard_booking_series",
               "Bookers pay %{price} × the number of sessions upfront.",
               price: @price
             )}
-          </.series_note>
+          </.note>
         </div>
       </div>
 
-      <p :for={error <- @errors} class="form-error">{Helpers.format_errors(error)}</p>
+      <p :for={error <- @other_errors} class="form-error">{error}</p>
     </section>
     """
   end
@@ -360,39 +362,46 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
   end
 
   attr :testid, :string, required: true
+  attr :variant, :atom, required: true, values: [:info, :warning]
   slot :inner_block, required: true
 
-  defp series_note(assigns) do
+  @doc """
+  One of the section's notes: an `info_box` at the size of a form hint. The
+  limits section shows its booking-limit conflicts with it too.
+  """
+  @spec note(map()) :: Phoenix.LiveView.Rendered.t()
+  def note(assigns) do
     ~H"""
-    <p
-      class="flex items-start gap-1.5 text-token-sm font-medium text-amber-700"
-      data-testid={@testid}
-    >
-      <.icon name="hero-information-circle" class="mt-0.5 h-4 w-4 shrink-0" />
-      <span>{render_slot(@inner_block)}</span>
-    </p>
+    <div data-testid={@testid}>
+      <.info_box variant={@variant} class="mb-0! p-4! text-token-sm">
+        {render_slot(@inner_block)}
+      </.info_box>
+    </div>
     """
   end
 
-  defp frequency_options do
-    [
-      {dpgettext("dashboard_booking_series", "frequency", "Every day"), "daily"},
-      {dpgettext("dashboard_booking_series", "frequency", "Every week"), "weekly"},
-      {dpgettext("dashboard_booking_series", "frequency", "Every month"), "monthly"}
-    ]
+  defp errors(form_errors, fields) do
+    fields
+    |> Enum.flat_map(&FormValidationHelpers.field_errors(form_errors, &1))
+    |> Enum.map(&Helpers.format_errors/1)
   end
 
-  defp interval_options(frequency),
-    do: Enum.map(SeriesSettings.intervals(), &{interval_label(frequency, &1), &1})
+  # Every rhythm a recurring series can take, as one choice:
+  # `"<frequency>:<interval>"`.
+  defp rhythm_options do
+    for frequency <- [:daily, :weekly, :monthly], interval <- SeriesSettings.intervals() do
+      {rhythm_label(frequency, interval), "#{frequency}:#{interval}"}
+    end
+  end
 
-  defp interval_label(:daily, n),
+  defp rhythm_label(:daily, n),
     do: dngettext("dashboard_booking_series", "Every day", "Every %{count} days", n)
 
-  defp interval_label(:monthly, n),
-    do: dngettext("dashboard_booking_series", "Every month", "Every %{count} months", n)
-
-  defp interval_label(_weekly, n),
+  defp rhythm_label(:weekly, n),
     do: dngettext("dashboard_booking_series", "Every week", "Every %{count} weeks", n)
+
+  defp rhythm_label(:monthly, n),
+    do: dngettext("dashboard_booking_series", "Every month", "Every %{count} months", n)
 
   defp count_summary(%{fixed: true, series_min_occurrences: count}),
     do:

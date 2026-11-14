@@ -33,7 +33,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SchedulingRulesS
   attr :schedules, :list, required: true
   attr :selected_availability_schedule_id, :any, default: nil
   attr :form_errors, :map, default: %{}
-  attr :series, :boolean, default: false, doc: "Whether the type offers a series"
+
+  attr :series, :boolean,
+    default: false,
+    doc: "Whether the type offers a series (one paused by the plan does not)"
+
   attr :myself, :any, required: true
 
   @spec scheduling_rules_section(map()) :: Phoenix.LiveView.Rendered.t()
@@ -103,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SchedulingRulesS
             </p>
             <p
               :if={f.series_note?}
-              class="text-token-xs font-medium text-amber-700"
+              class="text-token-xs text-tymeslot-600"
               data-testid="booking-window-series-note"
             >
               {dgettext(

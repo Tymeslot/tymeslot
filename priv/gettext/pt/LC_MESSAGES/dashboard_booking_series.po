@@ -91,11 +91,6 @@ msgstr "De %{min} a %{max} sessões, conforme quem agenda escolher."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
 #, elixir-autogen, elixir-format
-msgid "How often"
-msgstr "Com que frequência"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
-#, elixir-autogen, elixir-format
 msgid "How the sessions are timed"
 msgstr "Como as sessões são programadas"
 
@@ -163,21 +158,3 @@ msgstr "Seu limite de %{limit} agendamentos por mês é menor que as %{needed} s
 #, elixir-autogen, elixir-format
 msgid "Your limit of %{limit} bookings per week is lower than the %{needed} sessions a series can book in one week, so some series won't fit."
 msgstr "Seu limite de %{limit} agendamentos por semana é menor que as %{needed} sessões que uma série pode agendar em uma semana, então algumas séries não vão caber."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
-#, elixir-autogen, elixir-format
-msgctxt "frequency"
-msgid "Every day"
-msgstr "Todos os dias"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
-#, elixir-autogen, elixir-format
-msgctxt "frequency"
-msgid "Every month"
-msgstr "Todo mês"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
-#, elixir-autogen, elixir-format
-msgctxt "frequency"
-msgid "Every week"
-msgstr "Toda semana"

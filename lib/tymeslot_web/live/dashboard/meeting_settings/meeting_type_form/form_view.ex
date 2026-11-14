@@ -77,7 +77,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
       :price_cents,
       :max_participants,
       :last_spots_threshold,
-      :approval_window_hours
+      :approval_window_hours,
+      :series_mode,
+      :series_frequency,
+      :series_interval,
+      :series_min_occurrences,
+      :series_max_occurrences,
+      :series_required
     ],
     "reminders" => [:reminder_config]
   }
@@ -417,14 +423,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             schedules={@schedules}
             selected_availability_schedule_id={@selected_availability_schedule_id}
             form_errors={@form_errors}
-            series={@series.series_mode != nil}
+            series={@recurring_bookings_allowed and @series.series_mode != nil}
             myself={@myself}
           />
 
           <.limits_section
             booking_limits={@booking_limits}
             week_start={@week_start}
-            series_notes={SeriesHandlers.limit_notes(@series, @booking_limits)}
+            series_notes={
+              if @recurring_bookings_allowed,
+                do: SeriesHandlers.limit_notes(@series, @booking_limits),
+                else: []
+            }
             myself={@myself}
           />
 

@@ -52,23 +52,35 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesHandlers d
 
   @doc """
   Applies one `update_series` event to the form state and auto-saves. Ignored
-  without access, and for a change the type's other settings rule out.
+  for a change the type's other settings rule out. Without access the only
+  change taken is switching a paused series off: the domain allows it, and a
+  series left on would rule out making the type invitation-only or giving it
+  fixed dates.
   """
   @spec apply_event(map(), Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def apply_event(
+        %{"series_action" => "toggle"},
+        %{assigns: %{recurring_bookings_allowed: false, series: %{series_mode: mode} = series}} =
+          socket
+      )
+      when mode != nil,
+      do: save(socket, %{series | series_mode: nil})
+
   def apply_event(_params, %{assigns: %{recurring_bookings_allowed: false}} = socket),
     do: socket
 
   def apply_event(params, %{assigns: assigns} = socket) do
     case change(assigns.series, params, settings(assigns)) do
-      series when series == assigns.series ->
-        socket
-
-      series ->
-        socket
-        |> assign(:series, series)
-        |> assign(:form_errors, Map.drop(assigns.form_errors, @series_fields))
-        |> Autosave.maybe_run()
+      series when series == assigns.series -> socket
+      series -> save(socket, series)
     end
+  end
+
+  defp save(socket, series) do
+    socket
+    |> assign(:series, series)
+    |> assign(:form_errors, Map.drop(socket.assigns.form_errors, @series_fields))
+    |> Autosave.maybe_run()
   end
 
   defp change(series, %{"series_action" => "toggle"}, settings) do
@@ -88,10 +100,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesHandlers d
     if offerable?(settings, mode), do: %{series | series_mode: mode}, else: series
   end
 
-  defp change(series, %{"series_action" => "fixed"}, _settings) do
-    fixed = not series.fixed
-    max = if fixed, do: series.series_min_occurrences, else: series.series_max_occurrences
-    %{series | fixed: fixed, series_max_occurrences: max}
+  # Unticking "Fixed number" opens a range, so the maximum moves one above
+  # the minimum: left equal, the next load would read it as fixed again.
+  defp change(%{fixed: false} = series, %{"series_action" => "fixed"}, _settings),
+    do: %{series | fixed: true, series_max_occurrences: series.series_min_occurrences}
+
+  defp change(%{fixed: true} = series, %{"series_action" => "fixed"}, _settings) do
+    max = min(series.series_min_occurrences + 1, SeriesSettings.count_bounds().last)
+    %{series | fixed: false, series_max_occurrences: max}
   end
 
   defp change(series, %{"series_action" => "single"}, _settings),
@@ -107,38 +123,34 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesHandlers d
 
   defp change(series, _params, _settings), do: series
 
-  defp put_input({"frequency", value}, series) when value in ~w(daily weekly monthly),
-    do: %{series | series_frequency: String.to_existing_atom(value)}
-
-  defp put_input({"interval", value}, series) do
-    interval = parse(value)
-
-    if is_integer(interval) and interval in SeriesSettings.intervals(),
-      do: %{series | series_interval: interval},
-      else: series
+  # The rhythm posts as one value, `"<frequency>:<interval>"` (`"weekly:2"`).
+  defp put_input({"rhythm", value}, series) when is_binary(value) do
+    with [frequency, interval] when frequency in ~w(daily weekly monthly) <-
+           String.split(value, ":"),
+         interval when is_integer(interval) <- SeriesSettings.parse_count(interval),
+         true <- interval in SeriesSettings.intervals() do
+      %{
+        series
+        | series_frequency: String.to_existing_atom(frequency),
+          series_interval: interval
+      }
+    else
+      _invalid -> series
+    end
   end
 
   # Counts outside the range are kept, so the changeset's error shows beside
   # what was typed; only text that is no number at all is dropped.
   defp put_input({"min", value}, series),
-    do: put_count(series, :series_min_occurrences, parse(value))
+    do: put_count(series, :series_min_occurrences, SeriesSettings.parse_count(value))
 
   defp put_input({"max", value}, series),
-    do: put_count(series, :series_max_occurrences, parse(value))
+    do: put_count(series, :series_max_occurrences, SeriesSettings.parse_count(value))
 
   defp put_input(_other, series), do: series
 
   defp put_count(series, field, count) when is_integer(count), do: Map.put(series, field, count)
   defp put_count(series, _field, _count), do: series
-
-  defp parse(value) when is_binary(value) do
-    case Integer.parse(String.trim(value)) do
-      {number, ""} -> number
-      _invalid -> nil
-    end
-  end
-
-  defp parse(_value), do: nil
 
   # What `SeriesSettings.conflicts/1` reads, from the form's current state.
   defp settings(assigns) do

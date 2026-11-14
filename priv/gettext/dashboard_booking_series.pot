@@ -91,11 +91,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
 #, elixir-autogen, elixir-format
-msgid "How often"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
-#, elixir-autogen, elixir-format
 msgid "How the sessions are timed"
 msgstr ""
 
@@ -162,22 +157,4 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Your limit of %{limit} bookings per week is lower than the %{needed} sessions a series can book in one week, so some series won't fit."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
-#, elixir-autogen, elixir-format
-msgctxt "frequency"
-msgid "Every day"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
-#, elixir-autogen, elixir-format
-msgctxt "frequency"
-msgid "Every month"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
-#, elixir-autogen, elixir-format
-msgctxt "frequency"
-msgid "Every week"
 msgstr ""

@@ -10,14 +10,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LimitsSection do
   `MeetingTypeForm` (`@myself`), which owns the socket state and auto-save.
 
   A cap lower than what one series of this type can book in its period is
-  pointed out (`series_notes`, from `SeriesSection.limit_notes/2`), never
-  refused: the series section says the same.
+  pointed out (`series_notes`, from `SeriesHandlers.limit_notes/2`, empty
+  while the series is paused), never refused: the series section says the
+  same.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection
 
   attr :booking_limits, :map, required: true
   attr :week_start, :atom, required: true, values: [:monday, :sunday]
@@ -55,14 +57,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LimitsSection do
         />
       </.card>
 
-      <p
+      <SeriesSection.note
         :for={note <- @series_notes}
-        class="flex items-start gap-1.5 text-token-sm font-medium text-amber-700"
-        data-testid="limits-series-conflict"
+        variant={:warning}
+        testid="limits-series-conflict"
       >
-        <.icon name="hero-information-circle" class="mt-0.5 h-4 w-4 shrink-0" />
-        <span>{note}</span>
-      </p>
+        {note}
+      </SeriesSection.note>
     </section>
     """
   end

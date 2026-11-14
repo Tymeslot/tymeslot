@@ -212,15 +212,17 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
 
   def form_attrs(_params), do: %{}
 
-  defp parse_count(value) when is_binary(value) do
+  @doc "A whole number posted by the series form, or nil when it is none."
+  @spec parse_count(term()) :: integer() | nil
+  def parse_count(value) when is_binary(value) do
     case Integer.parse(String.trim(value)) do
       {count, ""} -> count
       _invalid -> nil
     end
   end
 
-  defp parse_count(value) when is_integer(value), do: value
-  defp parse_count(_value), do: nil
+  def parse_count(value) when is_integer(value), do: value
+  def parse_count(_value), do: nil
 
   @doc "Validates a meeting type changeset against every series rule."
   @spec validate_changeset(Changeset.t()) :: Changeset.t()

@@ -66,19 +66,57 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SeriesSectionTest do
     refute has_element?(view, "[data-testid='series-mode-recurring']")
 
     toggle(view)
-    change_series(view, "frequency", "weekly")
+    change_series(view, "rhythm", "weekly:1")
     change_series(view, "min", "4")
     change_series(view, "max", "4")
 
-    assert %{
-             series_mode: :recurring,
-             series_frequency: :weekly,
-             series_min_occurrences: 4,
-             series_max_occurrences: 4,
-             series_required: true
-           } = reload(meeting_type)
+    saved = %{
+      series_mode: :recurring,
+      series_frequency: :weekly,
+      series_interval: 1,
+      series_min_occurrences: 4,
+      series_max_occurrences: 4,
+      series_required: true
+    }
 
+    assert Map.take(reload(meeting_type), Map.keys(saved)) == saved
     assert has_element?(view, "[data-testid='series-mode-recurring'][aria-pressed='true']")
+
+    # An unrelated change saves the whole form, and keeps the series as it is.
+    view
+    |> element("input[name='meeting_type[name]']")
+    |> render_change(%{"meeting_type" => %{"name" => "Six-week course"}})
+
+    reloaded = reload(meeting_type)
+    assert reloaded.name == "Six-week course"
+    assert Map.take(reloaded, Map.keys(saved)) == saved
+  end
+
+  test "unticking the fixed number opens a range above the minimum",
+       %{conn: conn, user: user} do
+    meeting_type =
+      insert(:meeting_type, [user: user] ++ weekly_series(series_min_occurrences: 4))
+
+    view = edit(conn, meeting_type)
+
+    assert has_element?(view, "input[phx-value-series_action='fixed'][checked]")
+    view |> element("input[phx-value-series_action='fixed']") |> render_click()
+
+    assert %{series_min_occurrences: 4, series_max_occurrences: 5} = reload(meeting_type)
+    assert has_element?(view, "input[name='series[max]'][value='5']")
+  end
+
+  test "a count out of range shows its error on the field", %{conn: conn, user: user} do
+    meeting_type = insert(:meeting_type, user: user)
+    view = edit(conn, meeting_type)
+
+    toggle(view)
+    change_series(view, "max", "30")
+
+    assert has_element?(view, "[id^='series-max-'][id$='-error']", "must be between 2 and 26")
+    refute has_element?(view, "[id^='series-min-'][id$='-error']")
+
+    assert reload(meeting_type).series_max_occurrences == 8
   end
 
   test "the fixed number ties the maximum to the minimum, and a single session can be allowed",
@@ -108,7 +146,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SeriesSectionTest do
     view |> element("[data-testid='series-mode-flexible']") |> render_click()
 
     refute has_element?(view, "[data-testid='series-rhythm']")
-    refute has_element?(view, "input[name='series[frequency]']")
+    refute has_element?(view, "input[name='series[rhythm]']")
     assert %{series_mode: :flexible, series_frequency: nil} = reload(meeting_type)
   end
 
@@ -117,8 +155,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SeriesSectionTest do
     view = edit(conn, meeting_type)
 
     toggle(view)
-    change_series(view, "frequency", "monthly")
-    change_series(view, "interval", "2")
+    change_series(view, "rhythm", "monthly:2")
 
     assert render(view) =~ "On the same weekday of the month, for example the second Thursday."
     assert %{series_frequency: :monthly, series_interval: 2} = reload(meeting_type)
@@ -250,7 +287,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SeriesSectionTest do
     end
 
     test "read-only when access is gone", %{conn: conn, user: user} do
-      meeting_type = insert(:meeting_type, [user: user] ++ weekly_series())
+      meeting_type =
+        insert(:meeting_type, [user: user, max_bookings_per_month: 2] ++ weekly_series())
+
       view = edit(conn, meeting_type)
 
       refute has_element?(view, "[data-testid='series-locked']")
@@ -261,20 +300,47 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SeriesSectionTest do
                "Series booking is paused: this meeting type books single sessions until you upgrade."
              )
 
-      assert has_element?(view, "input[phx-value-series_action='toggle'][checked][disabled]")
       assert has_element?(view, "input[name='series[min]'][disabled]")
+      assert has_element?(view, "input[phx-value-series_action='single'][disabled]")
+      assert has_element?(view, "[data-testid='series-mode-flexible'][disabled]")
+
+      # The notes describe a series that books; this one does not.
+      refute has_element?(view, "[data-testid='series-booking-window']")
+      refute has_element?(view, "[data-testid='series-limit-conflict']")
+      refute has_element?(view, "[data-testid='limits-series-conflict']")
+      refute has_element?(view, "[data-testid='booking-window-series-note']")
 
       view
       |> with_target(form_wrapper(meeting_type))
-      |> render_click("update_series", %{"series_action" => "toggle"})
+      |> render_click("update_series", %{"series_action" => "single"})
 
       # Other changes still save, and keep the series as it was.
       view
       |> element("input[name='meeting_type[name]']")
       |> render_change(%{"meeting_type" => %{"name" => "Renamed course"}})
 
-      assert %{name: "Renamed course", series_mode: :recurring, series_max_occurrences: 4} =
-               reload(meeting_type)
+      assert %{
+               name: "Renamed course",
+               series_mode: :recurring,
+               series_max_occurrences: 4,
+               series_required: true
+             } = reload(meeting_type)
+    end
+
+    test "a paused series can be switched off, which frees the type to be invitation-only",
+         %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, [user: user] ++ weekly_series())
+      view = edit(conn, meeting_type)
+
+      refute has_element?(view, "input[phx-value-series_action='toggle'][disabled]")
+      toggle(view)
+
+      assert reload(meeting_type).series_mode == nil
+      assert has_element?(view, "[data-testid='series-locked']")
+
+      view |> element("#meeting-type-invitation-only-toggle-#{meeting_type.id}") |> render_click()
+
+      assert %{series_mode: nil, invitation_only: true} = reload(meeting_type)
     end
   end
 end
