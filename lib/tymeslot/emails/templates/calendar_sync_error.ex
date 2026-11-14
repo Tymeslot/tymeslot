@@ -9,6 +9,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
 
   alias Swoosh.Email
   alias Tymeslot.Emails.RecipientLocale
+  alias Tymeslot.MeetingTypes
 
   alias Tymeslot.Emails.Shared.{
     Callouts,
@@ -85,7 +86,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     title: dgettext("emails_integrations", "Calendar Sync Error"))}
 
     #{Text.title_section(dgettext("emails_integrations", "Meeting Details"))}
-    #{MeetingComponents.meeting_details_table(%{date: owner_start_time, start_time: owner_start_time, duration: meeting.duration, location: meeting.location, time_format: clock.time_format}, locale)}
+    #{MeetingComponents.meeting_details_table(%{date: owner_start_time, start_time: owner_start_time, duration: meeting.duration, location: place(meeting), time_format: clock.time_format}, locale)}
 
     #{Text.divider()}
 
@@ -129,7 +130,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     #{dgettext("emails_integrations", "Date:")} #{Formatting.format_date(owner_start_time, locale)}
     #{dgettext("emails_integrations", "Time:")} #{Formatting.format_time(owner_start_time, locale, clock.time_format)}
     #{dgettext("emails_integrations", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
-    #{dgettext("emails_integrations", "Location:")} #{meeting.location || dgettext("emails_integrations", "Not specified")}
+    #{dgettext("emails_integrations", "Location:")} #{place(meeting) || dgettext("emails_integrations", "Not specified")}
 
     #{dgettext("emails_integrations", "ERROR DETAILS:")}
     #{error_details}
@@ -192,4 +193,9 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     causes = Enum.map_join(common_causes(), "\n- ", & &1)
     "#{dgettext("emails_integrations", "Common causes:")}\n- #{causes}"
   end
+
+  # A default location label ("In person") in the organiser's language; a
+  # venue or the host's own text as written.
+  defp place(meeting),
+    do: MeetingTypes.display_location(meeting.location, Map.get(meeting, :location_kind))
 end

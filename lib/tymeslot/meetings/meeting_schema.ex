@@ -9,7 +9,6 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   import Ecto.Changeset
 
   alias Ecto.UUID
-
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
   alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.ChangesetValidators.TrackingParams
@@ -101,6 +100,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           seen_calendar_end_time: DateTime.t() | nil,
           custom_fields_snapshot: [map()],
           custom_field_answers: map(),
+          attendee_texts: map() | nil,
           show_as_free: boolean(),
           attachments_snapshot: [map()],
           utm_source: String.t() | nil,
@@ -115,6 +115,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           booking_page_id: integer() | nil,
           invitation_id: integer() | nil,
           booking_page: any() | Ecto.Association.NotLoaded.t() | nil,
+          confirming_poll: any() | Ecto.Association.NotLoaded.t() | nil,
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -172,8 +173,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # about it fired, and the seat a move replaced. Integrations read it to
     # address that seat.
     field(:seat, :map, virtual: true)
-    # Notification-only identity snapshot. It holds no credentials and is never
-    # cast or persisted; a handler shares it across all recipient views.
+    # Credential-free notification identity, never cast or stored; shared across recipient views.
     field(:email_sender, :any, virtual: true)
 
     # Organizer details
@@ -328,6 +328,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:custom_fields_snapshot, {:array, :map}, default: [])
     field(:custom_field_answers, :map, default: %{})
 
+    # Attendees' per-locale copies of the snapshot strings above; the plain
+    # columns keep the organiser's original (`ContentTranslations.AttendeeTexts`).
+    field(:attendee_texts, :map)
+
     # Confirmed from a poll: only its host manages it (`Tymeslot.Meetings.HostManaged`).
     field(:managed_by_host, :boolean, default: false)
 
@@ -361,6 +365,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # direct link under it, or a booking that came through no page at all.
     # Deleting the page nils it (`on_delete: :nilify_all`).
     belongs_to(:booking_page, Tymeslot.BookingPages.BookingPageSchema, type: :id)
+    # The poll this meeting was confirmed from, if any.
+    has_one(:confirming_poll, Tymeslot.Polls.PollSchema, foreign_key: :confirmed_meeting_id)
 
     # The single-use invitation link booked through, if any; at most one live
     # meeting carries it (`Tymeslot.Meetings.UniqueInvitation`).
@@ -448,6 +454,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :last_notified_state,
     :custom_fields_snapshot,
     :custom_field_answers,
+    :attendee_texts,
     :show_as_free,
     :attachments_snapshot,
     :utm_source,
@@ -559,7 +566,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> EmailChangeset.validate_email(:organizer_email, existing: true)
     |> EmailChangeset.validate_email(:attendee_email)
     |> validate_required([:attendee_locale])
-    |> validate_inclusion(:attendee_locale, supported_locale_codes(),
+    |> validate_inclusion(:attendee_locale, Locales.supported_codes(),
       message: dgettext_noop("errors", "is not a supported locale")
     )
     |> validate_number(:capacity, greater_than: 0)
@@ -639,6 +646,4 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   @doc "Whether only the host manages the meeting; see `Tymeslot.Meetings.HostManaged`."
   defdelegate managed_by_host?(meeting), to: Tymeslot.Meetings.HostManaged, as: :managed?
-
-  defp supported_locale_codes, do: Locales.supported_codes()
 end

@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
   defp rate_limited_connect(conn, code, state, return_to, config) do
     failure_path = return_to || integrations_path(config)
 
-    case RateLimiter.check(:oauth_callback, ClientIP.get(conn)) do
+    case RateLimiter.check(:integration_oauth_callback, ClientIP.get(conn)) do
       :ok ->
         connect(conn, code, state, {return_to, failure_path}, config)
 

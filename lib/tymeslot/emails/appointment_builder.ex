@@ -7,8 +7,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   require Logger
   alias Tymeslot.BookingPages
   alias Tymeslot.BookingPages.BookedThrough
-  alias Tymeslot.Bookings.BookingTitle
   alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.ContentTranslations.AttendeeTexts
   alias Tymeslot.Emails.HostClock
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.BookingRequestLocation
@@ -102,6 +102,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   def for_organizer_of_seat(%MeetingSchema{} = meeting, %Recipient{kind: :participant} = seat) do
     meeting
     |> from_meeting(seat, nil)
+    |> with_original_texts()
     |> Map.merge(organizer_group_links())
     |> Map.merge(%{seats_taken: Seats.seats_taken(meeting.id), capacity: meeting.capacity})
   end
@@ -116,7 +117,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   @spec for_organizer_of_group(MeetingSchema.t(), non_neg_integer(), map() | nil) ::
           Tymeslot.Emails.EmailService.appointment_details()
   def for_organizer_of_group(%MeetingSchema{} = meeting, participant_count, reminder \\ nil) do
-    details = from_meeting(meeting, reminder)
+    details = meeting |> from_meeting(reminder) |> with_original_texts()
 
     label =
       Gettext.with_locale(TymeslotWeb.Gettext, details.organizer_locale, fn ->
@@ -144,6 +145,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   """
   @spec organizer_copy(map(), MeetingSchema.t()) :: map()
   def organizer_copy(details, %MeetingSchema{} = meeting) do
+    details = with_original_texts(details)
+
     if HostManaged.managed?(meeting) do
       details
       |> Map.merge(organizer_group_links())
@@ -164,6 +167,12 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     end
   end
 
+  # The payload is built for the attendee, in their language, and so carries
+  # the attendee's copies of the meeting type, description, location and
+  # questions (`AttendeeTexts`). The organiser reads their own wording.
+  defp with_original_texts(details),
+    do: Map.merge(details, Map.get(details, :original_texts, %{}))
+
   defp organizer_group_links do
     %{
       cancel_url: nil,
@@ -183,7 +192,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       organizer_profile = organizer_profile(meeting)
       organizer_locale = RecipientLocale.locale_for_user_id(Map.get(meeting, :organizer_user_id))
 
-      base_details = base_details(meeting)
+      base_details = base_details(meeting, attendee_locale)
       timezone_details = timezone_details(meeting, owner_timezone, attendee_timezone)
       participant_details = participant_details(meeting, organizer_profile)
       preparation_details = preparation_details()
@@ -265,32 +274,57 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   # The title is the attendee's: this payload is built in their locale, and
   # the attendee and guest copies carry it into the `.ics` they import. The
   # organiser's copies do not render it.
-  defp base_details(meeting) do
-    title = BookingTitle.localise(meeting)
+  #
+  # The meeting type, description, location and questions are the attendee's
+  # copies when the booking carries them in this locale (`AttendeeTexts`);
+  # `:original_texts` keeps the organiser's for their copies.
+  defp base_details(meeting, attendee_locale) do
+    attendee_meeting = AttendeeTexts.attendee_view(meeting, attendee_locale)
+    title = attendee_meeting.title
 
-    details = %{
+    %{
       uid: meeting.calendar_uid,
       title: title,
       organizer_user_id: Map.get(meeting, :organizer_user_id),
       summary: if(meeting.summary in [nil, meeting.title], do: title, else: meeting.summary),
-      description: meeting.description || "",
       start_time: meeting.start_time,
       end_time: meeting.end_time,
       date: DateTime.to_date(meeting.start_time),
       duration: meeting.duration,
-      location: format_location(meeting),
       location_type: determine_location_type(meeting),
-      location_details: format_location_details(meeting),
-      meeting_type: meeting.meeting_type,
       # Above 1 for a group meeting, whose participants' emails say they hold
       # one of these spots (`Tymeslot.Emails.Shared.GroupSession`).
       capacity: Map.get(meeting, :capacity),
       ical_sequence: Map.get(meeting, :ical_sequence) || 0,
-      custom_fields_snapshot: Map.get(meeting, :custom_fields_snapshot) || [],
       custom_field_answers: Map.get(meeting, :custom_field_answers) || %{}
     }
+    |> Map.merge(snapshot_texts(attendee_meeting))
+    |> put_original_texts(meeting, attendee_meeting)
+    # Runtime identity comes from the source meeting, outside translated content.
+    |> Sender.copy_from(meeting)
+  end
 
-    Sender.copy_from(details, meeting)
+  defp snapshot_texts(meeting) do
+    %{
+      description: meeting.description || "",
+      location: format_location(meeting),
+      location_details: format_location_details(meeting),
+      meeting_type: meeting.meeting_type,
+      custom_fields_snapshot: Map.get(meeting, :custom_fields_snapshot) || []
+    }
+  end
+
+  defp put_original_texts(details, meeting, meeting), do: details
+
+  # The organiser's copies also take back the stored title, which names the
+  # meeting type in the organiser's own wording.
+  defp put_original_texts(details, meeting, _attendee_meeting) do
+    original =
+      meeting
+      |> snapshot_texts()
+      |> Map.merge(%{title: meeting.title, summary: meeting.summary || meeting.title})
+
+    Map.put(details, :original_texts, original)
   end
 
   defp determine_location_type(meeting), do: BookingRequestLocation.type(meeting)
@@ -383,8 +417,28 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
         meeting
         |> Map.get(:reminders)
         |> Reminders.normalize_reminders()
-        |> handle_normalized_reminders(meeting)
+        |> upcoming_reminders(meeting)
     end
+  end
+
+  # Describe only the reminders that will still be sent: one whose send time
+  # has already passed (a booking made two days ahead of a meeting with a
+  # three-day reminder) is never scheduled, so counting it would promise the
+  # attendee an email they will not get.
+  defp upcoming_reminders([], meeting), do: handle_normalized_reminders([], meeting)
+
+  defp upcoming_reminders(reminders, meeting) do
+    now = DateTime.utc_now()
+
+    case Enum.filter(reminders, &reminder_ahead?(&1, meeting.start_time, now)) do
+      [] -> legacy_reminder_details(nil)
+      upcoming -> handle_normalized_reminders(upcoming, meeting)
+    end
+  end
+
+  defp reminder_ahead?(%{value: value, unit: unit}, start_time, now) do
+    send_at = DateTime.add(start_time, -Reminders.reminder_interval_seconds(value, unit), :second)
+    DateTime.after?(send_at, now)
   end
 
   defp build_reminder_details_from_interval(%{value: value, unit: unit}) do
@@ -496,7 +550,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     cond do
       place = BookingRequestLocation.place(meeting) -> place
       meeting.meeting_url -> "Video Call"
-      meeting.location in [nil, "", "To be determined"] -> nil
+      meeting.location in [nil, ""] -> nil
+      BookingRequestLocation.legacy_placeholder(meeting.location) == :to_be_determined -> nil
       true -> meeting.location
     end
   end

@@ -18,6 +18,7 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   take a locale, gettext-backed helpers read the ambient one.**
   """
 
+  alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Utils.DateTimeUtils.Duration
@@ -406,12 +407,22 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   # releases wrote, or no string at all, falls back to the translated label.
   def format_location(%{location_type: :phone} = details) do
     case details[:location] do
-      location when is_binary(location) and location not in ["", "Phone Call"] -> location
-      _other -> dgettext("emails", "Phone Call")
+      location when is_binary(location) and location not in ["", "Phone Call"] ->
+        BookingRequestLocation.display(location, :phone)
+
+      _other ->
+        dgettext("emails", "Phone Call")
     end
   end
 
-  def format_location(details), do: details[:location] || dgettext("emails", "TBD")
+  # A location still carrying its default label ("In person") is read in the
+  # recipient's language; a venue or the host's own text as written.
+  def format_location(details) do
+    case details[:location] do
+      nil -> dgettext("emails", "TBD")
+      location -> BookingRequestLocation.display(location, details[:location_type])
+    end
+  end
 
   @doc """
   The line shown under the location of an in-person meeting whose address is
@@ -469,11 +480,10 @@ defmodule Tymeslot.Emails.Shared.Formatting do
 
   @doc """
   Formats an amount in minor units for an email, defaulting a missing currency
-  to euros. See `Tymeslot.MeetingPayments.Money.format/3` for the symbols and
-  the unrecognised-currency fallback (e.g. "HUF 175.00").
-
-  Locale-specific thousands and decimal separators are not implemented; that
-  needs a locale threaded through every call site.
+  to euros. The amount follows the current Gettext locale, which email
+  rendering sets to the recipient's. See `Tymeslot.MeetingPayments.Money.format/3`
+  for the symbols, the per-locale conventions and the unrecognised-currency
+  fallback (e.g. "HUF 175.00").
   """
   @spec format_currency(integer(), String.t() | nil) :: String.t()
   def format_currency(cents, currency),

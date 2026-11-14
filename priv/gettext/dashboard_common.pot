@@ -417,3 +417,9 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your booking page isn't taking bookings yet"
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex
+#: lib/tymeslot_web/helpers/page_titles.ex
+#, elixir-autogen, elixir-format
+msgid "Languages"
+msgstr ""

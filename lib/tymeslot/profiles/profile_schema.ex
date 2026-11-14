@@ -3,7 +3,8 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   Schema for user profiles containing calendar and appointment settings.
 
   Besides `changeset/2`, focused changesets cover single concerns:
-  `booking_text_changeset/2`, `intro_changeset/2` and `legal_links_changeset/2`.
+  `booking_text_changeset/2`, `intro_changeset/2`, `legal_links_changeset/2`
+  and `booking_languages_changeset/2`.
   """
   use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
@@ -11,6 +12,8 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   import Tymeslot.ChangesetValidators.BookingLimits, only: [validate_booking_limits: 2]
 
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
+  alias Tymeslot.ContentTranslations.Languages
+  alias Tymeslot.Locales
   alias Tymeslot.Profiles.ReservedPaths
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.FieldValidators.UsernameValidator
@@ -46,6 +49,10 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           bio: String.t() | nil,
           legal_notice_url: String.t() | nil,
           privacy_policy_url: String.t() | nil,
+          content_locale: String.t() | nil,
+          translation_locales: [String.t()],
+          offer_all_locales: boolean(),
+          translations: map(),
           freebusy_token: String.t() | nil,
           freebusy_token_hash: String.t() | nil,
           primary_calendar_integration_id: integer() | nil,
@@ -84,6 +91,18 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:bio, :string)
     field(:legal_notice_url, :string)
     field(:privacy_policy_url, :string)
+
+    # The booking languages (`Tymeslot.ContentTranslations.Languages`): the
+    # language the organiser writes in (nil means the booking pages'
+    # fallback), the languages they translate into, and whether the booking
+    # page is offered in every interface language or only in those.
+    field(:content_locale, :string)
+    field(:translation_locales, {:array, :string}, default: [])
+    field(:offer_all_locales, :boolean, default: true)
+    # Translations of the booking texts and the intro
+    # (`Tymeslot.ContentTranslations`). No changeset here casts it, so a form
+    # save can never wipe it.
+    field(:translations, :map, default: %{})
 
     # Grants read access to the host's busy times, and the host copies the
     # feed URL from the dashboard again whenever they like, so it is
@@ -338,6 +357,63 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     end)
   end
 
+  @doc """
+  Focused changeset for the booking languages: `content_locale` (the
+  language the organiser's texts are written in; left unset, the one they
+  read as until now, `Languages.original/1`, is saved), `translation_locales`
+  and `offer_all_locales`.
+
+  Every code must be a supported locale, and none may be listed twice. The
+  list may hold the original, which is then not translated into
+  (`Languages.translation_locales/1`). Removing a translation language
+  leaves its stored texts in `translations`, so adding it again restores them.
+  """
+  @spec booking_languages_changeset(t(), map()) :: Ecto.Changeset.t()
+  def booking_languages_changeset(profile, attrs) do
+    supported = Locales.supported_codes()
+
+    profile
+    |> cast(attrs, [:content_locale, :translation_locales, :offer_all_locales])
+    |> pin_original(profile)
+    |> validate_inclusion(:content_locale, supported,
+      message: dgettext_noop("errors", "is not a supported language")
+    )
+    |> validate_required([:content_locale, :offer_all_locales])
+    |> validate_translation_locales(supported)
+  end
+
+  # An unset original is the booking pages' fallback, which an admin can
+  # move onto one of the translation languages. Saved, it is the language the
+  # texts have been read as until now, and no longer follows the fallback.
+  defp pin_original(changeset, profile) do
+    if get_field(changeset, :content_locale),
+      do: changeset,
+      else: put_change(changeset, :content_locale, Languages.original(profile))
+  end
+
+  defp validate_translation_locales(changeset, supported) do
+    codes = get_field(changeset, :translation_locales) || []
+
+    cond do
+      Enum.any?(codes, &(&1 not in supported)) ->
+        add_error(
+          changeset,
+          :translation_locales,
+          dgettext_noop("errors", "is not a supported language")
+        )
+
+      Enum.uniq(codes) != codes ->
+        add_error(
+          changeset,
+          :translation_locales,
+          dgettext_noop("errors", "cannot list a language twice")
+        )
+
+      true ->
+        changeset
+    end
+  end
+
   defp validate_username(changeset) do
     changeset
     |> validate_change(:username, fn :username, username ->
@@ -385,12 +461,20 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     )
   end
 
+  # Entries the domain validator used to accept and no longer does. One
+  # already saved is dropped when the host next changes the list, rather than
+  # failing a list they did not type it into; typed afresh it is still refused.
+  # `::1` never worked: a CSP host source cannot express an IPv6 literal.
+  @retired_embed_domains ["::1"]
+
   defp validate_embed_domains(changeset) do
     case get_change(changeset, :allowed_embed_domains) do
       nil ->
         changeset
 
       domains when is_list(domains) ->
+        stored = changeset.data.allowed_embed_domains || []
+        domains = Enum.reject(domains, &(&1 in @retired_embed_domains and &1 in stored))
         max_domains = 20
 
         if length(domains) > max_domains do

@@ -896,3 +896,23 @@ msgstr "via %{page}"
 #, elixir-autogen, elixir-format
 msgid "Location"
 msgstr "Local"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to cancel “%{title}” scheduled for %{when}? Every guest is told."
+msgstr "Tem certeza de que quer cancelar “%{title}”, marcada para %{when}? Todos os convidados serão avisados."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Managed by you"
+msgstr "Gerenciada por você"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "In person"
+msgstr "Presencial"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Ligação telefônica"

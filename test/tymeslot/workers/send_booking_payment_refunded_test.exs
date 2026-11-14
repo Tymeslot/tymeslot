@@ -112,7 +112,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
                })
 
       assert_email_sent(fn email ->
-        assert email.subject == "Rückerstattung veranlasst – €50.00"
+        assert email.subject == "Rückerstattung veranlasst – 50,00\u00A0€"
       end)
     end
 

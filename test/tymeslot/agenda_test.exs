@@ -134,6 +134,13 @@ defmodule Tymeslot.AgendaTest do
 
       assert [%{who: "Solo Sam"}] = entries(Agenda.day_agenda(user, "Etc/UTC"))
     end
+
+    test "names no one for a meeting the host manages", %{user: user, tomorrow: tomorrow} do
+      booking(user, at(tomorrow, ~T[12:00:00]), title: "Planning", managed_by_host: true)
+
+      assert [%{title: "Planning", who: nil, who_email: nil}] =
+               entries(Agenda.day_agenda(user, "Etc/UTC"))
+    end
   end
 
   describe "day_agenda/2 deduplication and filtering" do

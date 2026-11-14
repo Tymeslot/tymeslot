@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Themes.Shared.EmbedLocaleSwitchTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
@@ -125,6 +126,75 @@ defmodule TymeslotWeb.Themes.Shared.EmbedLocaleSwitchTest do
     # Still embedded after the switch: the page kept its verified embed, so the
     # next switch (here from the confirmation step) rebuilds it again.
     assert switch_language(view, "en") =~ "embed=1"
+  end
+
+  # The iframe gets no session (the browser withholds the cookie cross-site),
+  # so only the URL can carry the language: on the switcher's redirect and on
+  # every step's own patch, which a reconnect remounts from.
+  test "a language switch inside an embed offering some languages keeps the translated texts through the steps",
+       %{conn: conn, user: user, profile: profile, timezone: timezone} do
+    profile
+    |> Changeset.change(
+      content_locale: "en",
+      translation_locales: ["de"],
+      offer_all_locales: false
+    )
+    |> Repo.update!()
+
+    MeetingTypeSchema
+    |> Repo.get_by!(user_id: user.id)
+    |> Changeset.change(
+      translations: %{
+        "de" => %{
+          "name" => %{"text" => "Kurzes Gespräch", "source" => :erlang.phash2("Quick Chat")}
+        }
+      }
+    )
+    |> Repo.update!()
+
+    query =
+      URI.encode_query(%{
+        "embed" => "1",
+        "parent-origin" => @parent_origin,
+        "timezone" => timezone
+      })
+
+    {:ok, view, _html} = live(conn, "/#{profile.username}?#{query}")
+    assert render(view) =~ "Quick Chat"
+
+    path = switch_language(view, "de")
+    assert URI.decode_query(URI.parse(path).query)["locale"] == "de"
+
+    {:ok, view, _html} = live(build_conn(), path)
+    html = render(view)
+    assert html =~ ~s(data-locale="de")
+    assert html =~ "Kurzes Gespräch"
+    refute html =~ "Quick Chat"
+
+    BookingDriver.book(view, until: :attendee)
+    assert has_element?(view, "form[data-fact='attendee']")
+    html = render(view)
+    assert html =~ ~s(data-locale="de")
+    assert html =~ "Kurzes Gespräch"
+
+    step_url = last_patch(view)
+    step_query = URI.decode_query(URI.parse(step_url).query)
+    assert step_query["locale"] == "de"
+    assert step_query["embed"] == "1"
+
+    {:ok, remounted, _html} = live(build_conn(), step_url)
+    html = render(remounted)
+    assert html =~ ~s(data-locale="de")
+    assert html =~ "Kurzes Gespräch"
+    refute html =~ "Quick Chat"
+  end
+
+  # The URL the page's own patches left it on.
+  defp last_patch(view, last \\ nil) do
+    last_patch(view, assert_patch(view, 100))
+  rescue
+    _no_more_patches in [ArgumentError, ExUnit.AssertionError] ->
+      last || flunk("the page never patched its URL")
   end
 
   # Drives the real language switcher and returns the path of the full

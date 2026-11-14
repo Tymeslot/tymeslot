@@ -200,6 +200,15 @@ comment, so the ambiguity is visible rather than silently resolved.
 | transactional email | **correo automático** |
 | approve (a booking request) | **aprobar** (never `aceptar`, which is the guest's own yes) |
 | reCAPTCHA score | **puntuación** **[DECIDED]**, as in Google's own Spanish reCAPTCHA documentation (`developers.google.com/recaptcha/docs/v3?hl=es-419`, «Interpreta la puntuación») |
+| translation (noun; booking-page languages) | **traducción** (f., pl. **traducciones**); *%{language} translations* → **Traducciones: %{language}**, *Your %{language} translations* → **Tus traducciones (%{language})**: `%{language}` is filled with the language's own name, so it goes after a colon or in brackets, never after *al* or *en* |
+| translate | **traducir**; the participle agrees with *textos* (*%{translated}/%{total} traducidos*) |
+| original language (the language the host writes their texts in) | **idioma original**; *in %{language}* → **en el idioma original (%{language})**; the original text is **el original**, and the badge beside that language reads **original** |
+| translation language (a language the host translates into) | **idioma de traducción** (pl. **idiomas de traducción**) |
+| language switcher (the visitor-facing control on the booking page) | **selector de idioma** |
+| Outdated (a translation whose original changed) | **Desactualizado** (pl. **desactualizados**) |
+| Missing (a text not translated yet) | **Sin traducir** as the status pill and in the filter (*Solo sin traducir o desactualizados*); in running text the verb **faltar** (*faltan textos*) |
+| Translated (status) | **Traducido** |
+| Review (the link to a language's review page) | **Revisar** |
 
 **Month names (lowercase):** enero · febrero · marzo · abril · mayo · junio · julio ·
 agosto · septiembre · octubre · noviembre · diciembre
@@ -348,7 +357,7 @@ is **puntuación** (section 2), not `score`.
   space reads as neither. The RAE leaves four-digit numbers ungrouped; the code groups
   them (`1 500`), as it does for French, Czech and Polish.
 - The currency symbol follows the amount after a non-breaking space: `45,00 €`,
-  `1 234,50 $` (RAE).
+  `1 234,50 US$` (RAE; CLDR's symbol for the US dollar in Spanish).
 - **24-hour clock**: `15:00`, not `3:00 p. m.` Spanish uses both, but the 12-hour
   path in the code prints English `AM`/`PM`.
 - Dates are day-first: `25/11` in compact form, `25 de noviembre de 2026` in prose,

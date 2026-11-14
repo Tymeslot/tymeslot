@@ -188,19 +188,8 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   """
   @spec format_custom_answers(map(), String.t()) :: String.t()
   def format_custom_answers(appointment_details, locale) do
-    snapshot = Map.get(appointment_details, :custom_fields_snapshot) || []
-    answers = Map.get(appointment_details, :custom_field_answers) || %{}
-
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      rendered =
-        snapshot
-        |> Enum.map(fn field ->
-          value = AnswerRenderer.render(field, answers[field["id"]])
-          {field["label"] || "", value}
-        end)
-        |> Enum.reject(fn {_label, value} -> value == "" end)
-
-      case rendered do
+      case AnswerRenderer.labelled_answers(appointment_details) do
         [] ->
           ""
 

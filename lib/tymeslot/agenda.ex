@@ -17,6 +17,8 @@ defmodule Tymeslot.Agenda do
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.HostManaged
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Utils.DateTimeUtils
 
   # How far ahead to look for the hero when nothing is scheduled today/tomorrow.
@@ -197,7 +199,8 @@ defmodule Tymeslot.Agenda do
       start_at: meeting.start_time,
       end_at: meeting.end_time,
       all_day?: false,
-      location: presence(meeting.location),
+      # A default location label ("In person") reads in the dashboard's language.
+      location: presence(MeetingTypes.display_location(meeting.location, meeting.location_kind)),
       join_url: Meetings.organizer_join_url(meeting),
       who: who(meeting),
       who_email: who_email(meeting),
@@ -251,19 +254,25 @@ defmodule Tymeslot.Agenda do
 
   # Who a booking is with. A group meeting has no attendee: one live
   # participant is named, several are counted (the list query loads only the
-  # live ones).
+  # live ones). A meeting the host manages (`HostManaged.managed?/1`) names no
+  # one, as on the calendar grid: its attendee is only the first of its
+  # guests, so naming them would read as if they had booked it.
   defp who(meeting) do
-    if Meetings.group?(meeting),
-      do: participants_label(meeting.participants),
-      else: presence(meeting.attendee_name)
+    cond do
+      HostManaged.managed?(meeting) -> nil
+      Meetings.group?(meeting) -> participants_label(meeting.participants)
+      true -> presence(meeting.attendee_name)
+    end
   end
 
   # The address beside `who`: a group meeting has one only while a single
   # participant is named, since a count of several has no one address.
   defp who_email(meeting) do
-    if Meetings.group?(meeting),
-      do: participants_email(meeting.participants),
-      else: presence(meeting.attendee_email)
+    cond do
+      HostManaged.managed?(meeting) -> nil
+      Meetings.group?(meeting) -> participants_email(meeting.participants)
+      true -> presence(meeting.attendee_email)
+    end
   end
 
   defp participants_email([participant]), do: presence(participant.email)

@@ -10,6 +10,9 @@ defmodule Tymeslot.Telegram.MessageBuilder do
 
   alias Phoenix.HTML
   alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.Meetings.AttendeeName
+  alias Tymeslot.Meetings.HostManaged
+  alias Tymeslot.Notifications.BookingDetails
   alias Tymeslot.Notifications.EventTypes
 
   # Matched by name rather than wire literal; any other name (a job queued
@@ -26,10 +29,11 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     String.trim("""
     #{emoji(:calendar)} <b>New Meeting</b>
 
-    <b>#{esc(attendee_name(meeting))}</b> booked <i>#{esc(meeting_title(meeting))}</i>
+    #{summary_line(meeting, "booked", "You arranged")}
     #{emoji(:clock)} #{format_time(meeting, timezone)}
-    #{emoji(:email)} #{esc(meeting.attendee_email)}
+    #{email_line(meeting)}\
     #{video_line(meeting)}\
+    #{details_block(meeting)}\
     #{link_line(meeting)}\
     """)
   end
@@ -38,7 +42,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     String.trim("""
     #{emoji(:cancel)} <b>Meeting Cancelled</b>
 
-    <b>#{esc(attendee_name(meeting))}</b> cancelled <i>#{esc(meeting_title(meeting))}</i>
+    #{summary_line(meeting, "cancelled", "Cancelled")}
     #{emoji(:clock)} #{format_time(meeting, timezone)}
     #{cancellation_reason(meeting)}\
     #{link_line(meeting)}\
@@ -49,10 +53,11 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     String.trim("""
     #{emoji(:reschedule)} <b>Meeting Rescheduled</b>
 
-    <b>#{esc(attendee_name(meeting))}</b> rescheduled <i>#{esc(meeting_title(meeting))}</i>
+    #{summary_line(meeting, "rescheduled", "Moved")}
     #{emoji(:clock)} #{format_time(meeting, timezone)}
-    #{emoji(:email)} #{esc(meeting.attendee_email)}
+    #{email_line(meeting)}\
     #{video_line(meeting)}\
+    #{details_block(meeting)}\
     #{link_line(meeting)}\
     """)
   end
@@ -63,8 +68,9 @@ defmodule Tymeslot.Telegram.MessageBuilder do
 
     <b>#{esc(attendee_name(meeting))}</b> asked for <i>#{esc(meeting_title(meeting))}</i>
     #{emoji(:clock)} #{format_time(meeting, timezone)}
-    #{emoji(:email)} #{esc(meeting.attendee_email)}
+    #{email_line(meeting)}\
     #{deadline_line(meeting, timezone)}\
+    #{details_block(meeting)}\
     #{link_line(meeting)}\
     """)
   end
@@ -97,7 +103,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
 
     <b>#{esc(attendee_name(meeting))}</b> — <i>#{esc(meeting_title(meeting))}</i>
     #{emoji(:clock)} #{format_time(meeting, timezone)}
-    #{emoji(:email)} #{esc(meeting.attendee_email)}
+    #{email_line(meeting)}\
     Event: #{esc(event_type)}\
     #{link_line(meeting)}\
     """)
@@ -118,24 +124,33 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     |> HTML.safe_to_string()
   end
 
+  # The attendee's name, or their address where they have no name of their
+  # own (a meeting the host manages names its first guest by their address).
   defp attendee_name(meeting) do
-    meeting.attendee_name || meeting.attendee_email
+    AttendeeName.display_name(meeting) || meeting.attendee_email
   end
 
-  defp meeting_title(meeting) do
-    cond do
-      Map.has_key?(meeting, :event_type) and
-        is_struct(meeting.event_type) and
-          not is_struct(meeting.event_type, Ecto.Association.NotLoaded) ->
-        Map.get(meeting.event_type, :name, "Meeting")
+  # Who did what. A meeting the host manages is arranged, moved and cancelled
+  # by the host alone, so the guest in its attendee fields is never the one
+  # who acted: `host_verb` leads instead, and the guest is who it is with.
+  defp summary_line(meeting, attendee_verb, host_verb) do
+    who = esc(attendee_name(meeting))
+    title = esc(meeting_title(meeting))
 
-      Map.has_key?(meeting, :event_type_name) ->
-        meeting.event_type_name || "Meeting"
+    if HostManaged.managed?(meeting),
+      do: "#{host_verb} <i>#{title}</i> with <b>#{who}</b>",
+      else: "<b>#{who}</b> #{attendee_verb} <i>#{title}</i>"
+  end
 
-      true ->
-        "Meeting"
+  # The address on a line of its own, unless the name line already shows it.
+  defp email_line(meeting) do
+    case {AttendeeName.display_name(meeting), meeting.attendee_email} do
+      {nil, _email} -> ""
+      {_name, email} -> "#{emoji(:email)} #{esc(email)}\n"
     end
   end
+
+  defp meeting_title(%{title: title}), do: title || "Meeting"
 
   defp format_time(meeting, timezone) do
     start_time =
@@ -160,10 +175,12 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     end
   end
 
+  # The organiser's own join link: on providers that issue separate host and
+  # guest URLs, `attendee_video_url` would let them in without host controls.
   defp video_line(meeting) do
-    video_url = Map.get(meeting, :video_room_url) || Map.get(meeting, :video_link)
+    video_url = meeting.organizer_video_url || meeting.meeting_url
 
-    if video_url && safe_url?(video_url) do
+    if safe_url?(video_url) do
       "\n#{emoji(:video)} <a href=\"#{esc(video_url)}\">Join video call</a>"
     else
       ""
@@ -209,6 +226,35 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     end
   end
 
+  # What the booker told the organiser: contact details, where to meet, their
+  # notes and their answers, each block led by a blank line.
+  defp details_block(meeting) do
+    details = BookingDetails.from_meeting(meeting)
+
+    [contact_lines(details), note_lines(details), answer_lines(details)]
+    |> Enum.reject(&(&1 == []))
+    |> Enum.map_join(fn lines -> "\n\n" <> Enum.join(lines, "\n") end)
+  end
+
+  defp contact_lines(details) do
+    for {key, icon} <- [location: :location, phone: :phone, company: :company],
+        value = details[key],
+        do: "#{emoji(icon)} #{esc(value)}"
+  end
+
+  defp note_lines(%{note: nil}), do: []
+  defp note_lines(%{note: note}), do: ["#{emoji(:note)} #{esc(note)}"]
+
+  defp answer_lines(%{answers: answers, more_answers: more}) do
+    lines = Enum.map(answers, fn {label, value} -> "<b>#{esc(label)}</b>: #{esc(value)}" end)
+
+    case more do
+      0 -> lines
+      1 -> lines ++ ["<i>1 more answer in the dashboard</i>"]
+      n -> lines ++ ["<i>#{n} more answers in the dashboard</i>"]
+    end
+  end
+
   defp link_line(meeting) do
     case Map.get(meeting, :id) do
       id when is_binary(id) ->
@@ -227,4 +273,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
   defp emoji(:video), do: "\u{1F4F9}"
   defp emoji(:note), do: "\u{1F4DD}"
   defp emoji(:check), do: "\u2705"
+  defp emoji(:location), do: "\u{1F4CD}"
+  defp emoji(:phone), do: "\u{1F4DE}"
+  defp emoji(:company), do: "\u{1F3E2}"
 end

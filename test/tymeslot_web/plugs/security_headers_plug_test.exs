@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
         insert(:profile,
           user: user,
           username: "devuser",
-          allowed_embed_domains: ["localhost", "127.0.0.1", "::1"]
+          allowed_embed_domains: ["localhost", "127.0.0.1"]
         )
 
       conn =
@@ -146,7 +146,9 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
         |> SecurityHeadersPlug.call(allow_embedding: true)
 
       assert [csp] = get_resp_header(conn, "content-security-policy")
-      assert csp =~ "frame-ancestors 'self' http://localhost:* http://127.0.0.1:* http://::1:*"
+
+      assert csp =~
+               "frame-ancestors 'self' http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*"
 
       assert get_resp_header(conn, "x-frame-options") == []
     end

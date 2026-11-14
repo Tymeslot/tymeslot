@@ -259,6 +259,8 @@ defmodule TymeslotWeb.Dashboard.Locations.LocationsComponent do
           form={@venue_form}
           mode={if @editing_venue.id, do: :edit, else: :new}
           myself={@myself}
+          venue={@editing_venue}
+          profile={@profile}
         />
 
         <DeleteVenueModal.delete_venue_modal

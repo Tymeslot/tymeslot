@@ -1,5 +1,8 @@
 defmodule Tymeslot.Emails.Templates.BookingSenderTest do
-  @moduledoc "Verifies booking From identities without changing reply or calendar identities."
+  @moduledoc """
+  Verifies booking From identities while preserving translated content,
+  reply addresses and calendar identities.
+  """
 
   use Tymeslot.DataCase, async: true
 
@@ -8,6 +11,7 @@ defmodule Tymeslot.Emails.Templates.BookingSenderTest do
 
   import Tymeslot.EmailTestHelpers
 
+  alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.Shared.MjmlEmail
   alias Tymeslot.Emails.Templates.AppointmentCancellation
   alias Tymeslot.Emails.Templates.AppointmentConfirmation
@@ -84,6 +88,76 @@ defmodule Tymeslot.Emails.Templates.BookingSenderTest do
       assert email.from == {"Customer bookings", "bookings@customer.example"}
       assert email.reply_to == {meeting.organizer_name, meeting.organizer_email}
     end
+  end
+
+  test "translated attendee and original organizer copies keep the same SMTP identity" do
+    owner = insert(:user)
+    insert(:profile, user: owner)
+    sender = %{sender() | owner_id: owner.id}
+    question = %{"id" => "company", "type" => "short_text", "label" => "Company", "position" => 0}
+    translated_question = Map.put(question, "label", "Firma")
+
+    meeting =
+      build(:meeting,
+        organizer_user_id: owner.id,
+        organizer_email: owner.email,
+        email_sender: sender,
+        title: "Intro call with Test Attendee",
+        summary: nil,
+        meeting_type: "Intro call",
+        description: "Discuss your plans",
+        location_kind: :custom,
+        location: "Garden pavilion",
+        attendee_locale: "de",
+        ical_sequence: 4,
+        custom_fields_snapshot: [question],
+        custom_field_answers: %{"company" => "Acme"},
+        attendee_texts: %{
+          "de" => %{
+            "meeting_type" => "Erstgespräch",
+            "description" => "Ihre Ziele besprechen",
+            "location" => "Gartenpavillon",
+            "custom_fields_snapshot" => [translated_question]
+          }
+        }
+      )
+
+    attendee_details = AppointmentBuilder.from_meeting(meeting)
+    organizer_details = AppointmentBuilder.organizer_copy(attendee_details, meeting)
+
+    assert attendee_details.title =~ "Erstgespräch"
+    assert attendee_details.uid == meeting.calendar_uid
+    assert attendee_details.meeting_type == "Erstgespräch"
+    assert attendee_details.description == "Ihre Ziele besprechen"
+    assert organizer_details.title == meeting.title
+    assert organizer_details.uid == meeting.calendar_uid
+    assert organizer_details.meeting_type == meeting.meeting_type
+    assert organizer_details.description == meeting.description
+
+    attendee = AppointmentConfirmation.render(:attendee, meeting.attendee_email, attendee_details)
+    organizer = AppointmentConfirmation.render(:organizer, owner.email, organizer_details)
+
+    for {email, details, place, label} <- [
+          {attendee, attendee_details, "Gartenpavillon", "Firma"},
+          {organizer, organizer_details, "Garden pavilion", "Company"}
+        ] do
+      assert details.email_sender == sender
+      assert email.from == {sender.from_name, sender.from_address}
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ place
+        assert body =~ label
+      end
+    end
+
+    ics = Enum.find(attendee.attachments, &String.starts_with?(&1.content_type, "text/calendar"))
+    identity = ics_identity(ics.data)
+    domain = Application.fetch_env!(:tymeslot, :email)[:domain]
+    assert "UID:#{meeting.calendar_uid}@#{domain}" in identity
+    assert "SEQUENCE:4" in identity
+    assert Enum.any?(identity, &String.contains?(&1, "mailto:#{owner.email}"))
+    assert ics.data =~ ~r/^LOCATION(?:;[^:]*)?:Gartenpavillon\r?$/m
+    refute ics.data =~ sender.from_address
   end
 
   test "an explicit platform snapshot preserves its address and the traditional organizer display name" do

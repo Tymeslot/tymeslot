@@ -14,9 +14,12 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   alias Phoenix.Component
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.BookingPages
+  alias Tymeslot.ContentTranslations
+  alias Tymeslot.ContentTranslations.Languages
   alias Tymeslot.Demo
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.OrganizerContext
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
@@ -72,16 +75,111 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
 
       {:ok, context} ->
         socket
+        |> assign(:organizer_source, Map.take(context, [:profile, :meeting_types, :page_title]))
+        |> assign_localised_organizer(nil)
         |> assign(:username_context, context.username)
-        |> assign(:organizer_profile, context.profile)
         |> assign(:legal_links, Profiles.public_legal_links(context.profile))
         |> assign(:booking_window_days, booking_window_days(context.profile))
         |> assign(:organizer_user_id, context.user_id)
-        |> assign(:meeting_types, context.meeting_types)
         |> assign(:host_currency, host_currency(context))
-        |> assign(:page_title, context.page_title)
     end
   end
+
+  @doc """
+  Follows the language a meeting was booked in (`booked`, its
+  `attendee_locale`) on that meeting's own pages, where it ranks below the
+  visitor's own pick and above their browser
+  (`Languages.visitor_locale/2`).
+
+  The organiser was set up before the meeting was known; when the booked
+  language changes the page's language, their texts are put into the new one
+  again from the profile and meeting types `handle_username_resolution/2`
+  kept as loaded, without looking the organiser up a second time.
+  """
+  @spec follow_booked_language(Phoenix.LiveView.Socket.t(), String.t() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def follow_booked_language(socket, booked) do
+    case socket.assigns[:organizer_source] do
+      %{profile: profile} ->
+        if Languages.visitor_locale(profile, language_preferences(socket, booked)) ==
+             socket.assigns[:locale],
+           do: socket,
+           else: assign_localised_organizer(socket, booked)
+
+      _no_organizer ->
+        socket
+    end
+  end
+
+  # The organiser's profile, meeting types and page title in the page's
+  # language, from the organiser as loaded.
+  defp assign_localised_organizer(socket, booked) do
+    %{profile: raw_profile} = source = socket.assigns.organizer_source
+    socket = assign_page_language(socket, raw_profile, booked)
+    content_locale = socket.assigns.content_locale
+    profile = ContentTranslations.localise(raw_profile, content_locale)
+
+    socket
+    |> assign(:organizer_profile, profile)
+    |> assign(:meeting_types, ContentTranslations.localise(source.meeting_types, content_locale))
+    |> assign(:page_title, page_title(profile, source))
+  end
+
+  @doc """
+  Assigns a public page's language among the ones the organiser offers
+  (`Languages.visitor_locale/2`): the visitor's own pick (`:locale_choice`),
+  else the language the meeting was `booked` in, else the first of the
+  browser's languages (`:browser_locales`) offered, else the organiser's
+  original; a pick the organiser does not offer gives the original.
+
+  Also assigns `:offered_locales`, which the language switcher lists,
+  `:content_locale`, the language the organiser's texts are shown in (nil
+  for the original), and `:stale_locale_param`, whether the pick set aside
+  was the URL's own `?locale=` (`:locale_param`), which
+  `TymeslotWeb.Themes.Shared.LocaleHandler` replaces by reloading. A
+  remembered pick set aside is left as it is: the session's choice is shared
+  by every organiser's pages, and another organiser may offer it.
+  """
+  @spec assign_page_language(Phoenix.LiveView.Socket.t(), map(), String.t() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def assign_page_language(socket, profile, booked \\ nil) do
+    preferences = language_preferences(socket, booked)
+    locale = Languages.visitor_locale(profile, preferences)
+
+    # Global: reaches every Gettext backend in this process, not just Core's.
+    Gettext.put_locale(locale)
+
+    socket
+    |> assign(:locale, locale)
+    |> assign(:offered_locales, Languages.offered(profile))
+    |> assign(:content_locale, Languages.content_locale(profile, locale))
+    |> assign(:stale_locale_param, stale_param?(socket, profile, preferences[:picked]))
+  end
+
+  defp stale_param?(socket, profile, picked) do
+    picked != nil and picked == socket.assigns[:locale_param] and
+      Languages.stale_pick?(profile, picked)
+  end
+
+  # A socket mounted without `TymeslotWeb.Hooks.LocaleHook` has only its
+  # locale to go on.
+  defp language_preferences(socket, booked) do
+    [
+      picked: socket.assigns[:locale_choice],
+      booked: booked,
+      browser: socket.assigns[:browser_locales] || List.wrap(socket.assigns[:locale])
+    ]
+  end
+
+  # Built again in the page's language, with the page's translated name. A
+  # demo persona's context brings its own.
+  defp page_title(%ProfileSchema{} = profile, context) do
+    if Demo.demo_profile?(profile),
+      do: context.page_title,
+      else: OrganizerContext.page_title(profile)
+  end
+
+  defp page_title(_demo_profile, context), do: context.page_title
 
   # The currency the organiser's paid meeting types are priced in, for the
   # steps that show a price (`BookingText.price_label/3`): the currency

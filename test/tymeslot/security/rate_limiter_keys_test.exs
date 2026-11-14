@@ -54,7 +54,8 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
     invitation_accept: {@ip, ["invitation_accept:203.0.113.9"]},
     verification_link: {@ip, ["verification_link:203.0.113.9"]},
     oauth_initiation: {@ip, ["oauth_initiation:203.0.113.9"]},
-    oauth_callback: {@ip, ["oauth_callback:203.0.113.9"]},
+    oauth_signin_callback: {@ip, ["oauth_signin_callback:203.0.113.9"]},
+    integration_oauth_callback: {@ip, ["integration_oauth_callback:203.0.113.9"]},
     oauth_completion: {@ip, ["oauth_completion:203.0.113.9"]},
     booking_submit: {@ipv6, ["booking_submit:2001:db8:1:2::/64"]},
     booking_recipient:
@@ -74,7 +75,8 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
     poll_link_request:
       {"6f1c2b9e-0000-4000-8000-000000000001",
        ["poll_link_request:6f1c2b9e-0000-4000-8000-000000000001"]},
-    webhook: {@ip, ["webhook:203.0.113.9"]},
+    telegram_webhook: {@ip, ["telegram_webhook:203.0.113.9"]},
+    zoom_deauth: {@ip, ["zoom_deauth:203.0.113.9"]},
     stripe_webhook: {@ip, ["stripe_webhook:203.0.113.9"]},
     calendar_push: {@ip, ["calendar_push:203.0.113.9"]},
     calendar_webhook: {42, ["calendar_webhook:42"]},
@@ -114,6 +116,7 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
     embed_domain_update: {42, ["embed_domain_update:42"]},
     dashboard_cancel: {42, ["dashboard_cancel:42"]},
     dashboard_reschedule: {42, ["dashboard_reschedule:42"]},
+    dashboard_meeting_approval: {42, ["dashboard_meeting_approval:42"]},
     dashboard_add_guests: {42, ["dashboard_add_guests:42"]},
     dashboard_quick_add_meeting: {42, ["dashboard_quick_add_meeting:42"]},
     payment_initiation: {42, ["payment_initiation:user:42"]},

@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   alias Tymeslot.BookingPages
   alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Bookings.SubmissionToken
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.CustomFields
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
@@ -291,7 +292,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # an embed the redirect stays an embed (`PathHandlers.put_embed_params/2`,
   # from verified assigns only), or the guest would see the full profile page
   # in the host's iframe, and carries `reason`, which the embed's lost flash
-  # cannot (`EntryRefusal.put_param/3`).
+  # cannot (`EntryRefusal.put_param/3`). The language the visitor picked, when
+  # it is the page's, goes along too: an embed's iframe gets no session to
+  # remember it.
   defp invalid_meeting_type_redirect_path(socket, reason) do
     query =
       case socket.assigns[:reschedule_meeting_uid] do
@@ -301,6 +304,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
     query =
       query
+      |> Map.merge(picked_locale_param(socket.assigns))
       |> Map.merge(PathHandlers.demo_theme_param(socket.assigns))
       |> PathHandlers.put_embed_params(socket)
       |> EntryRefusal.put_param(socket, reason)
@@ -308,9 +312,19 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     PathHandlers.with_query("/" <> socket.assigns[:username_context], query)
   end
 
+  defp picked_locale_param(%{locale_choice: locale, locale: locale}) when is_binary(locale),
+    do: %{"locale" => locale}
+
+  defp picked_locale_param(_assigns), do: %{}
+
   @doc "Makes `meeting_type` the one this booking is for, with its questions, locations and booking window."
   @spec assign_meeting_type(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_meeting_type(socket, meeting_type) do
+    # Looked up afresh, not taken from the page's (already translated) list,
+    # so its texts are put into the page's content language here, before the
+    # questions and locations are read from it.
+    meeting_type = ContentTranslations.localise(meeting_type, socket.assigns[:content_locale])
+
     socket
     |> ChosenLength.keep_if_offered(meeting_type)
     |> assign(:meeting_type, meeting_type)

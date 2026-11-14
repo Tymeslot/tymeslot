@@ -217,11 +217,6 @@ msgstr "Votre titre remplace :"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
-msgid "Your own wording is shown to everyone, in whatever language they pick. Only the built-in text is translated."
-msgstr "Votre propre texte est affiché à tous, quelle que soit la langue choisie. Seul le texte intégré est traduit."
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
-#, elixir-autogen, elixir-format
 msgid "All changes saved"
 msgstr "Toutes les modifications ont été enregistrées"
 
@@ -799,3 +794,8 @@ msgstr "Vous modifiez %{address}"
 #, elixir-autogen, elixir-format
 msgid "Theme for %{page} updated to %{theme_name}"
 msgstr "Le thème de %{page} est maintenant %{theme_name}"
+
+#: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
+#, elixir-autogen, elixir-format
+msgid "Your own wording is shown in every language unless you translate it under Languages. The built-in text is always translated."
+msgstr "Votre propre texte s’affiche dans toutes les langues, sauf si vous le traduisez dans « Langues ». Le texte intégré est toujours traduit."

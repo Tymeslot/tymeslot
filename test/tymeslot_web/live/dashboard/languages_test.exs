@@ -1,0 +1,425 @@
+defmodule TymeslotWeb.Dashboard.LanguagesTest do
+  @moduledoc """
+  The Languages page: choosing the booking languages and seeing which ones
+  invitees can choose, removing one through its confirmation, and
+  translating on the review page, the one place translations are written.
+  """
+  use TymeslotWeb.LiveCase, async: true
+
+  @moduletag :i18n
+  @moduletag :live
+
+  import Tymeslot.DashboardTestHelpers
+  import Tymeslot.Factory
+
+  alias Ecto.Changeset
+  alias Tymeslot.ContentTranslations
+  alias Tymeslot.ContentTranslations.Catalogue
+  alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.CustomFields.FieldOption
+  alias Tymeslot.Locales
+  alias Tymeslot.MeetingTypes
+  alias Tymeslot.Repo
+
+  setup :setup_dashboard_user
+
+  defp with_languages(profile, attrs), do: Repo.update!(Changeset.change(profile, attrs))
+
+  defp meeting_type_with_question(user) do
+    insert(:meeting_type,
+      user: user,
+      name: "Intro call",
+      description: nil,
+      custom_fields: [
+        %FieldDefinition{id: "q1", type: "short_text", label: "Company", position: 0}
+      ]
+    )
+  end
+
+  defp stored_translation(meeting_type, user, path) do
+    meeting_type.id
+    |> MeetingTypes.get_meeting_type(user.id)
+    |> ContentTranslations.translation("de", path)
+  end
+
+  describe "the settings" do
+    test "turning the switch off and ticking a language persist", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
+
+      view |> element("#offer-all-locales") |> render_click()
+      assert Repo.reload!(profile).offer_all_locales == false
+
+      view |> element("#language-de") |> render_click()
+
+      reloaded = Repo.reload!(profile)
+      assert reloaded.offer_all_locales == false
+      assert reloaded.translation_locales == ["de"]
+      assert has_element?(view, "#language-de[checked]")
+    end
+
+    test "with the switch on every language is ticked and locked; off, only the chosen ones", %{
+      conn: conn,
+      profile: profile
+    } do
+      with_languages(profile, content_locale: "en", translation_locales: ["de"])
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
+
+      for code <- Locales.supported_codes(),
+          do: assert(has_element?(view, "#language-#{code}[checked][disabled]"))
+
+      view |> element("#offer-all-locales") |> render_click()
+
+      assert has_element?(view, "#language-en[checked][disabled]")
+      assert has_element?(view, "#language-de[checked]")
+      refute has_element?(view, "#language-de[disabled]")
+      refute has_element?(view, "#language-fr[checked]")
+      refute has_element?(view, "#language-fr[disabled]")
+    end
+
+    test "making a ticked language the original and back leaves it ticked", %{
+      conn: conn,
+      profile: profile
+    } do
+      with_languages(profile,
+        content_locale: "en",
+        translation_locales: ["de"],
+        offer_all_locales: false
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
+
+      view |> element("[data-testid='make-original-de']") |> render_click()
+
+      reloaded = Repo.reload!(profile)
+      assert reloaded.content_locale == "de"
+      assert reloaded.translation_locales == ["de"]
+      assert has_element?(view, "#language-de[checked][disabled]")
+      refute has_element?(view, "#language-en[checked]")
+
+      view |> element("[data-testid='make-original-en']") |> render_click()
+
+      assert Repo.reload!(profile).content_locale == "en"
+      assert has_element?(view, "#language-de[checked]")
+      refute has_element?(view, "#language-de[disabled]")
+    end
+
+    test "removing a language asks first, and keeps its translations", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      with_languages(profile, translation_locales: ["de", "fr"], offer_all_locales: false)
+      meeting_type = meeting_type_with_question(user)
+
+      {:ok, _entity} =
+        Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{
+          "name" => "Erstgespräch"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
+
+      view |> element("#language-de") |> render_click()
+
+      assert has_element?(view, "#remove-language-modal")
+      assert Repo.reload!(profile).translation_locales == ["de", "fr"]
+
+      view |> element("[data-testid='confirm-remove-language']") |> render_click()
+
+      assert Repo.reload!(profile).translation_locales == ["fr"]
+      refute has_element?(view, "#remove-language-modal")
+
+      refute has_element?(
+               view,
+               "[data-testid='booking-languages'] li[data-locale='de'][data-ticked='true']"
+             )
+
+      assert stored_translation(meeting_type, user, "name") == "Erstgespräch"
+    end
+
+    test "cancelling the removal keeps the language", %{conn: conn, profile: profile} do
+      with_languages(profile, translation_locales: ["de"], offer_all_locales: false)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
+
+      view |> element("#language-de") |> render_click()
+      view |> element("#remove-language-modal button", "Cancel") |> render_click()
+
+      refute has_element?(view, "#remove-language-modal")
+      assert Repo.reload!(profile).translation_locales == ["de"]
+    end
+
+    test "shows each language's progress", %{conn: conn, user: user, profile: profile} do
+      with_languages(profile, translation_locales: ["de"])
+      meeting_type = meeting_type_with_question(user)
+
+      {:ok, _entity} =
+        Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{
+          "name" => "Erstgespräch"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages")
+
+      assert view
+             |> element("li[data-locale='de'] [data-testid='translation-progress']")
+             |> render() =~
+               "1/2 translated"
+    end
+  end
+
+  describe "the review page" do
+    setup %{user: user, profile: profile} do
+      with_languages(profile, translation_locales: ["de"])
+      %{meeting_type: meeting_type_with_question(user)}
+    end
+
+    test "saves a meeting type's name and question label, which then show as Translated", %{
+      conn: conn,
+      user: user,
+      meeting_type: meeting_type
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+      editor = "#translation-meeting_types-meeting_type-#{meeting_type.id}"
+
+      assert has_element?(view, "#{editor} [data-path='name'][data-status='missing']")
+
+      assert has_element?(
+               view,
+               "#{editor} [data-path='custom_fields/q1/label'][data-status='missing']"
+             )
+
+      view
+      |> form("#{editor}-form", %{
+        "translation" => %{"name" => "Erstgespräch", "custom_fields/q1/label" => "Firma"}
+      })
+      |> render_submit()
+
+      assert stored_translation(meeting_type, user, "name") == "Erstgespräch"
+      assert stored_translation(meeting_type, user, "custom_fields/q1/label") == "Firma"
+      assert has_element?(view, "#{editor} [data-path='name'][data-status='translated']")
+
+      assert has_element?(
+               view,
+               "#{editor} [data-path='custom_fields/q1/label'][data-status='translated']"
+             )
+    end
+
+    test "names the question an option belongs to", %{conn: conn, user: user} do
+      choice =
+        insert(:meeting_type,
+          user: user,
+          name: "Workshop",
+          custom_fields: [
+            %FieldDefinition{
+              id: "q2",
+              type: "single_choice",
+              label: "Team size",
+              position: 0,
+              options: [
+                %FieldOption{key: "small", label: "Small"},
+                %FieldOption{key: "large", label: "Large"}
+              ]
+            }
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+
+      assert view
+             |> element(
+               "#translation-meeting_types-meeting_type-#{choice.id} [data-path='custom_fields/q2/options/small/label']"
+             )
+             |> render() =~ "Answer option (Team size)"
+    end
+
+    test "shows a text over its cap inline and saves nothing", %{
+      conn: conn,
+      user: user,
+      meeting_type: meeting_type
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+      editor = "#translation-meeting_types-meeting_type-#{meeting_type.id}"
+
+      view
+      |> element("#{editor}-form")
+      |> render_submit(%{
+        "translation" => %{"custom_fields/q1/label" => String.duplicate("a", 121)}
+      })
+
+      assert has_element?(
+               view,
+               "#{editor} [data-path='custom_fields/q1/label'] .form-field-error"
+             )
+
+      refute has_element?(view, "#{editor} [data-path='name'] .form-field-error")
+
+      # The review page's language is what is being translated, not the
+      # dashboard's: the message stays in the organiser's own language.
+      assert view |> element("#{editor} [data-path='custom_fields/q1/label']") |> render() =~
+               "at most"
+
+      assert stored_translation(meeting_type, user, "custom_fields/q1/label") == nil
+    end
+
+    test "only missing or outdated hides what is translated", %{
+      conn: conn,
+      user: user,
+      meeting_type: meeting_type
+    } do
+      {:ok, _entity} =
+        Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{
+          "name" => "Erstgespräch"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+      editor = "#translation-meeting_types-meeting_type-#{meeting_type.id}"
+      assert has_element?(view, "#{editor} [data-path='name']")
+
+      view |> element("#only-open-translations") |> render_click()
+
+      refute has_element?(view, "#{editor} [data-path='name']")
+      assert has_element?(view, "#{editor} [data-path='custom_fields/q1/label']")
+    end
+
+    test "Save confirms an outdated translation left as it was", %{
+      conn: conn,
+      user: user,
+      meeting_type: meeting_type
+    } do
+      {:ok, _entity} =
+        Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{"name" => "Gespräch"})
+
+      meeting_type |> Changeset.change(name: "First call") |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+      editor = "#translation-meeting_types-meeting_type-#{meeting_type.id}"
+      assert has_element?(view, "#{editor} [data-path='name'][data-status='outdated']")
+
+      view
+      |> form("#{editor}-form", %{
+        "translation" => %{"name" => "Gespräch", "custom_fields/q1/label" => ""}
+      })
+      |> render_submit()
+
+      html = render(view)
+      assert html =~ "Translations saved"
+      refute html =~ "Nothing to save"
+      assert has_element?(view, "#{editor} [data-path='name'][data-status='translated']")
+
+      stored = MeetingTypes.get_meeting_type(meeting_type.id, user.id)
+      assert ContentTranslations.status(stored, "name", "de") == :translated
+      assert ContentTranslations.translation(stored, "de", "name") == "Gespräch"
+    end
+
+    test "Save confirms an outdated translation in the same save as a changed one", %{
+      conn: conn,
+      user: user,
+      meeting_type: meeting_type
+    } do
+      {:ok, _entity} =
+        Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{"name" => "Gespräch"})
+
+      meeting_type |> Changeset.change(name: "First call") |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+      editor = "#translation-meeting_types-meeting_type-#{meeting_type.id}"
+
+      view
+      |> form("#{editor}-form", %{
+        "translation" => %{"name" => "Gespräch", "custom_fields/q1/label" => "Firma"}
+      })
+      |> render_submit()
+
+      stored = MeetingTypes.get_meeting_type(meeting_type.id, user.id)
+      assert ContentTranslations.status(stored, "name", "de") == :translated
+      assert ContentTranslations.translation(stored, "de", "custom_fields/q1/label") == "Firma"
+    end
+
+    test "Save with nothing changed and nothing outdated says there is nothing to save", %{
+      conn: conn,
+      user: user,
+      meeting_type: meeting_type
+    } do
+      {:ok, _entity} =
+        Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{"name" => "Gespräch"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+      editor = "#translation-meeting_types-meeting_type-#{meeting_type.id}"
+
+      view
+      |> form("#{editor}-form", %{
+        "translation" => %{"name" => "Gespräch", "custom_fields/q1/label" => ""}
+      })
+      |> render_submit()
+
+      assert render(view) =~ "Nothing to save: no translation changed."
+    end
+
+    test "a language the booking page is not offered in goes back to the settings", %{
+      conn: conn,
+      profile: profile
+    } do
+      with_languages(profile, offer_all_locales: false)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/fr")
+
+      assert_patch(view, ~p"/dashboard/languages")
+    end
+  end
+
+  describe "the meeting type editor" do
+    setup %{conn: conn, user: user, profile: profile} do
+      with_languages(profile, translation_locales: ["de"])
+      meeting_type = meeting_type_with_question(user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      %{view: view, meeting_type: meeting_type}
+    end
+
+    test "an original edit's autosave keeps the stored translation", %{
+      view: view,
+      user: user,
+      meeting_type: meeting_type
+    } do
+      {:ok, _entity} =
+        Catalogue.save(user.id, {:meeting_type, meeting_type.id}, "de", %{
+          "name" => "Erstgespräch"
+        })
+
+      view
+      |> element(~s|input[name="meeting_type[name]"]|)
+      |> render_change(%{"meeting_type" => %{"name" => "First call"}})
+
+      reloaded = MeetingTypes.get_meeting_type(meeting_type.id, user.id)
+      assert reloaded.name == "First call"
+      assert ContentTranslations.translation(reloaded, "de", "name") == "Erstgespräch"
+      assert ContentTranslations.status(reloaded, "name", "de") == :outdated
+    end
+  end
+
+  test "the review page highlights the card a form linked to", %{
+    conn: conn,
+    user: user,
+    profile: profile
+  } do
+    with_languages(profile, translation_locales: ["de"])
+    meeting_type = meeting_type_with_question(user)
+    other = insert(:meeting_type, user: user, name: "Workshop")
+    anchor = "translate-meeting_types-meeting_type-#{meeting_type.id}"
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de?#{[item: anchor]}")
+
+    assert has_element?(view, "##{anchor}[data-highlighted]")
+
+    refute has_element?(
+             view,
+             "#translate-meeting_types-meeting_type-#{other.id}[data-highlighted]"
+           )
+  end
+end

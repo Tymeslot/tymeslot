@@ -21,20 +21,14 @@ defmodule Tymeslot.Emails.Shared.Meeting.CustomAnswers do
   """
   @spec custom_answers_section(map()) :: String.t()
   def custom_answers_section(appointment_details) do
-    snapshot = Map.get(appointment_details, :custom_fields_snapshot) || []
-    answers = Map.get(appointment_details, :custom_field_answers) || %{}
-
-    rows =
-      snapshot
-      |> Enum.map(&{&1, AnswerRenderer.render(&1, answers[&1["id"]])})
-      |> Enum.reject(fn {_field, rendered} -> rendered == "" end)
+    rows = AnswerRenderer.labelled_answers(appointment_details)
 
     if rows == [] do
       ""
     else
       row_html =
-        Enum.map_join(rows, "\n", fn {field, rendered} ->
-          label = Sanitise.sanitize_for_email(field["label"] || "")
+        Enum.map_join(rows, "\n", fn {label, rendered} ->
+          label = Sanitise.sanitize_for_email(label)
           value = Sanitise.sanitize_for_email(rendered)
 
           """

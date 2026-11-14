@@ -12,8 +12,11 @@ defmodule Tymeslot.Timezones.IanaFreshnessTest do
 
   use ExUnit.Case, async: true
 
+  alias Tymeslot.Test.SuiteConfig
+
   @moduletag :utils
   @moduletag :tz_freshness
+  @moduletag skip: SuiteConfig.unless_included(:tz_freshness)
 
   @version_url "https://data.iana.org/time-zones/tzdb/version"
 

@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
   alias Phoenix.LiveView
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Venues
+  alias TymeslotWeb.Dashboard.Languages.TranslationStatus
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Helpers.LocationIcons
 
@@ -35,7 +36,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
      socket
      |> assign(assigns)
      |> assign_new(:group_bookings_enabled, fn -> false end)
-     |> assign_new(:errors, fn -> [] end)}
+     |> assign_new(:errors, fn -> [] end)
+     |> assign_new(:translation_status, fn -> nil end)}
   end
 
   @impl Phoenix.LiveComponent
@@ -47,6 +49,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
         title={dgettext("dashboard_meeting_locations", "Location")}
         description={location_hint(@locations, @group_bookings_enabled)}
       >
+        <:title_suffix>
+          <TranslationStatus.mark status={@translation_status} prefix="locations/" />
+        </:title_suffix>
         <:actions>
           <.action_button
             :if={can_add?(@locations, @group_bookings_enabled)}

@@ -10,6 +10,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.MeetingTypes
 
   alias Tymeslot.Emails.Shared.{
     Buttons,
@@ -114,7 +115,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
       #{Text.centered_text(Sanitise.sanitize_for_email(told), padding: "8px 0 16px 0")}
 
-      #{MeetingComponents.meeting_details_table(%{date: owner_time, start_time: owner_time, duration: meeting.duration, location: meeting.location, location_type: if(meeting.meeting_url, do: :video, else: :custom), meeting_type: meeting.meeting_type, time_format: time_format}, locale)}
+      #{MeetingComponents.meeting_details_table(%{date: owner_time, start_time: owner_time, duration: meeting.duration, location: place(meeting), location_type: if(meeting.meeting_url, do: :video, else: :custom), meeting_type: meeting.meeting_type, time_format: time_format}, locale)}
 
       #{Buttons.action_button(:confirmed, dgettext("emails_booking_changes", "View Meeting Details"), view_url, full_width: true)}
 
@@ -239,7 +240,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
     #{Text.section_title(safe_title, padding: "24px 0 16px 0")}
 
-    #{MeetingComponents.meeting_details_table(%{date: owner_time, start_time: owner_time, duration: meeting.duration, location: meeting.location, location_type: if(meeting.meeting_url, do: :video, else: :custom), meeting_type: meeting.meeting_type, time_format: time_format},
+    #{MeetingComponents.meeting_details_table(%{date: owner_time, start_time: owner_time, duration: meeting.duration, location: place(meeting), location_type: if(meeting.meeting_url, do: :video, else: :custom), meeting_type: meeting.meeting_type, time_format: time_format},
     locale)}
 
     #{MeetingComponents.custom_answers_section(meeting)}
@@ -373,7 +374,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     #{dgettext("emails_booking_changes", "Date:")} #{Formatting.format_date(owner_time, locale)}
     #{dgettext("emails_booking_changes", "Time:")} #{Formatting.format_time(owner_time, locale, time_format)}
     #{dgettext("emails_booking_changes", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
-    #{dgettext("emails_booking_changes", "Location:")} #{meeting.location || dgettext("emails_booking_changes", "Not specified")}
+    #{dgettext("emails_booking_changes", "Location:")} #{place(meeting) || dgettext("emails_booking_changes", "Not specified")}
     #{custom_answers}
     #{dgettext("emails_booking_changes", "If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up.")}
 
@@ -398,7 +399,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     #{dgettext("emails_booking_changes", "Date:")} #{Formatting.format_date(owner_time, locale)}
     #{dgettext("emails_booking_changes", "Time:")} #{Formatting.format_time(owner_time, locale, time_format)}
     #{dgettext("emails_booking_changes", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
-    #{dgettext("emails_booking_changes", "Location:")} #{meeting.location || dgettext("emails_booking_changes", "Not specified")}
+    #{dgettext("emails_booking_changes", "Location:")} #{place(meeting) || dgettext("emails_booking_changes", "Not specified")}
     #{custom_answers}
     #{modified_next_steps_text(meeting)}
 
@@ -451,4 +452,9 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     do: MeetingLinks.host_view_url(id)
 
   defp view_url(_meeting, dashboard_url), do: dashboard_url
+
+  # A default location label ("In person") in the organiser's language; a
+  # venue or the host's own text as written.
+  defp place(meeting),
+    do: MeetingTypes.display_location(meeting.location, Map.get(meeting, :location_kind))
 end

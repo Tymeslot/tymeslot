@@ -4,20 +4,19 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
   @moduletag :telegram
   @moduletag :unit
 
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Telegram.MessageBuilder
 
-  @meeting %{
+  @meeting %MeetingSchema{
     attendee_name: "John Smith",
     attendee_email: "john@example.com",
     attendee_timezone: "America/New_York",
     start_time: ~U[2026-03-10 14:00:00Z],
     end_time: ~U[2026-03-10 14:30:00Z],
-    event_type: %{name: "30-minute intro call"},
+    title: "30-minute intro call",
     id: "6f1d2c3b-0a4e-4b8f-9c7d-1e2f3a4b5c6d",
-    uid: "abc123",
-    video_room_url: nil,
-    cancellation_reason: nil
+    uid: "abc123"
   }
 
   # The organiser's timezone, deliberately different from the attendee's: these
@@ -41,6 +40,52 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
     test "an unknown event name still builds the generic message" do
       assert MessageBuilder.build_message("meeting.renamed", @meeting, @timezone) =~
                "<b>Meeting Update</b>"
+    end
+  end
+
+  describe "build_message/3 for a meeting the host manages" do
+    # Without a main participant, its first guest fills the attendee fields
+    # under their address for a name. The host arranged, moved and cancelled
+    # it; the guest did none of that.
+    @managed Map.merge(@meeting, %{
+               managed_by_host: true,
+               attendee_name: "guest@example.com",
+               attendee_email: "guest@example.com"
+             })
+
+    test "says the host arranged it, naming the guest's address once" do
+      msg = MessageBuilder.build_message("meeting.created", @managed, @timezone)
+
+      assert msg =~ "You arranged <i>30-minute intro call</i> with <b>guest@example.com</b>"
+      refute msg =~ "booked"
+      assert length(String.split(msg, "guest@example.com")) == 2
+    end
+
+    test "does not say the guest moved or cancelled it" do
+      moved = MessageBuilder.build_message("meeting.rescheduled", @managed, @timezone)
+      cancelled = MessageBuilder.build_message("meeting.cancelled", @managed, @timezone)
+
+      assert moved =~ "Moved <i>30-minute intro call</i> with <b>guest@example.com</b>"
+      assert cancelled =~ "Cancelled <i>30-minute intro call</i> with <b>guest@example.com</b>"
+    end
+
+    test "an ordinary booking still says who booked it" do
+      msg = MessageBuilder.build_message("meeting.created", @meeting, @timezone)
+
+      assert msg =~ "<b>John Smith</b> booked <i>30-minute intro call</i>"
+      assert msg =~ "john@example.com"
+    end
+
+    test "a poll-confirmed one names its guest, with the address beneath" do
+      msg =
+        MessageBuilder.build_message(
+          "meeting.created",
+          Map.put(@managed, :attendee_name, "Ada Lovelace"),
+          @timezone
+        )
+
+      assert msg =~ "with <b>Ada Lovelace</b>"
+      assert msg =~ "guest@example.com"
     end
   end
 
@@ -96,11 +141,35 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
       assert msg =~ "&lt;script&gt;"
     end
 
-    test "includes video link when present" do
-      meeting = Map.put(@meeting, :video_room_url, "https://meet.example.com/room")
+    for event <- ["meeting.created", "meeting.rescheduled"] do
+      test "#{event} links the organiser's own video room, not the attendee's" do
+        meeting = %{
+          @meeting
+          | organizer_video_url: "https://meet.example.com/host",
+            attendee_video_url: "https://meet.example.com/guest",
+            meeting_url: "https://meet.example.com/room"
+        }
+
+        msg = MessageBuilder.build_message(unquote(event), meeting, @timezone)
+        assert msg =~ ~s(<a href="https://meet.example.com/host">Join video call</a>)
+        refute msg =~ "meet.example.com/guest"
+      end
+    end
+
+    test "falls back to the meeting URL when there is no organiser link" do
+      meeting = %{@meeting | meeting_url: "https://meet.example.com/room"}
       msg = MessageBuilder.build_message("meeting.created", meeting, @timezone)
-      assert msg =~ "Join video call"
-      assert msg =~ "https://meet.example.com/room"
+      assert msg =~ ~s(<a href="https://meet.example.com/room">Join video call</a>)
+    end
+
+    test "omits the video line when the meeting has no link" do
+      msg = MessageBuilder.build_message("meeting.created", @meeting, @timezone)
+      refute msg =~ "Join video call"
+    end
+
+    test "names the meeting by its title" do
+      msg = MessageBuilder.build_message("meeting.created", @meeting, @timezone)
+      assert msg =~ "<i>30-minute intro call</i>"
     end
 
     test "uses attendee_email as fallback name" do
@@ -126,6 +195,69 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
 
       assert out =~ "/dashboard/meetings?meeting=#{@meeting.id}"
       refute out =~ @meeting.uid
+    end
+  end
+
+  describe "build_message/3: what the booker told the organiser" do
+    @details %{
+      attendee_message: "Bring the <Q3> figures & slides",
+      attendee_phone: "+44 20 7946 0000",
+      attendee_company: "Acme Ltd",
+      location: "1 High Street, Oxford",
+      location_kind: :in_person,
+      custom_fields_snapshot: [%{"id" => "q1", "type" => "text", "label" => "Topic"}],
+      custom_field_answers: %{"q1" => "Pricing <b>now</b>"},
+      approval_deadline_at: nil
+    }
+
+    for event <- [:meeting_created, :meeting_rescheduled, :meeting_requested] do
+      test "#{event} shows the notes, contact details, location and answers, escaped" do
+        message =
+          MessageBuilder.build_message(
+            EventTypes.to_event_type(unquote(event)),
+            Map.merge(@meeting, @details),
+            @timezone
+          )
+
+        assert message =~ "Bring the &lt;Q3&gt; figures &amp; slides"
+        assert message =~ "+44 20 7946 0000"
+        assert message =~ "Acme Ltd"
+        assert message =~ "1 High Street, Oxford"
+        assert message =~ "<b>Topic</b>: Pricing &lt;b&gt;now&lt;/b&gt;"
+      end
+    end
+
+    test "a cancellation leaves them out" do
+      message =
+        MessageBuilder.build_message(
+          EventTypes.to_event_type(:meeting_cancelled),
+          Map.merge(@meeting, @details),
+          @timezone
+        )
+
+      refute message =~ "figures"
+      refute message =~ "Topic"
+    end
+
+    test "counts the answers past the cap rather than listing them" do
+      snapshot = for n <- 1..11, do: %{"id" => "q#{n}", "type" => "text", "label" => "Q#{n}"}
+
+      meeting =
+        Map.merge(@meeting, %{
+          custom_fields_snapshot: snapshot,
+          custom_field_answers: Map.new(1..11, &{"q#{&1}", "answer"})
+        })
+
+      message =
+        MessageBuilder.build_message(
+          EventTypes.to_event_type(:meeting_created),
+          meeting,
+          @timezone
+        )
+
+      assert message =~ "<b>Q10</b>: answer"
+      refute message =~ "<b>Q11</b>"
+      assert message =~ "1 more answer in the dashboard"
     end
   end
 

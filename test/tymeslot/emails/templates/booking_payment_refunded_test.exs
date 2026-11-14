@@ -104,7 +104,7 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefundedTest do
       ctx = build_context(%{locale: "de"})
       email = BookingPaymentRefunded.render(ctx)
 
-      assert email.subject == "Rückerstattung veranlasst – €50.00"
+      assert email.subject == "Rückerstattung veranlasst – 50,00\u00A0€"
       assert email.html_body =~ "Rückerstattung"
       assert email.text_body =~ "Rückerstattung"
       assert String.length(email.html_body) > 100

@@ -182,6 +182,43 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeEmailsTest do
     end
   end
 
+  describe "a meeting the host manages lengthened in Google" do
+    # The first guest of a host-managed meeting (Quick Add without a main
+    # participant, a confirmed poll) also fills its attendee fields. They are
+    # a guest, so they hear it once, as one, and no booker notice goes out.
+    test "emails its guests once each and not as a booker", ctx do
+      meeting =
+        ctx.meeting
+        |> Changeset.change(
+          managed_by_host: true,
+          attendee_name: "first@example.com",
+          attendee_email: "first@example.com"
+        )
+        |> Repo.update!()
+
+      {:ok, _guests} =
+        Guests.create_for_meeting(meeting.id, ["first@example.com", "second@example.com"])
+
+      sync(ctx, ~T[11:30:00])
+      assert [job] = all_enqueued(worker: EmailWorker)
+      assert :ok = perform_job(EmailWorker, job.args)
+
+      first = received_for("first@example.com")
+      assert first.text_body =~ "now ends at 11:30 AM UTC instead of 10:30 AM UTC"
+      received_for("second@example.com")
+
+      host = received_for(meeting.organizer_email)
+      assert host.text_body =~ "We emailed 2 guests the new end time"
+
+      refute_received {:email, %Swoosh.Email{to: [{_name, "first@example.com"}]}}
+
+      # With no booker seat, the meeting's own record moves on with the
+      # host's notice, so the next change starts from the end just told.
+      assert Repo.reload!(meeting).notified_end_time ==
+               DateTime.new!(ctx.date, ~T[11:30:00], "Etc/UTC")
+    end
+  end
+
   describe "who is not told" do
     test "nobody, when the change lost its race with a cancellation", ctx do
       read = ctx.meeting

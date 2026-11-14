@@ -188,6 +188,15 @@ fragment: read how the code uses it.
 | live (a page that accepts bookings; the wizard's step name and badge) | online ("Strona jest online", "%{link} jest już online"); not "na żywo", which is for live previews |
 | free/busy (a person's busy time, not the feed) | zajętość; in running text "kiedy masz zajęte" |
 | Apple Account (Apple's own Polish UI) | Konto Apple; its sections "Logowanie i bezpieczeństwo", "Hasła dla aplikacji" |
+| translation (noun; booking-page languages) | tłumaczenie (pl. tłumaczenia); "%{language} translations" → "Tłumaczenia: %{language}", "Your %{language} translations" → "Tłumaczenia na ten język (%{language})": `%{language}` is filled with the language's own name and can't be declined |
+| translate | przetłumaczyć (pf.) / tłumaczyć (impf.); "%{translated}/%{total} translated" → "Przetłumaczono %{translated}/%{total}" |
+| original language (the language the host writes their texts in) | język oryginału; "in %{language}" → "w języku oryginału (%{language})"; the original text is oryginał ("w oryginale"), and the badge beside that language reads "oryginał" |
+| translation language (a language the host translates into) | język tłumaczenia (pl. "języki tłumaczeń": "w językach tłumaczeń") |
+| language switcher (the visitor-facing control on the booking page) | przełącznik języka |
+| outdated (a translation whose original changed) | nieaktualny; status "Nieaktualne"; counted "%{count} nieaktualny tekst / nieaktualne teksty / nieaktualnych tekstów" |
+| missing (a text not translated yet) | "Brak" as the status pill; attributive "brakujące" ("Tylko brakujące lub nieaktualne") |
+| translated (status) | Przetłumaczone |
+| review (the link to a language's review page) | Sprawdź |
 
 ### Booking pages (a host's extra pages)
 

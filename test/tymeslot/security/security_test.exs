@@ -17,7 +17,10 @@ defmodule Tymeslot.Security.SecurityTest do
     test "accepts local development hosts" do
       assert {:ok, "localhost"} = Security.validate_domain("localhost")
       assert {:ok, "127.0.0.1"} = Security.validate_domain("127.0.0.1")
-      assert {:ok, "::1"} = Security.validate_domain("::1")
+    end
+
+    test "rejects IPv6 loopback, which a CSP host source cannot express" do
+      assert {:error, _reason} = Security.validate_domain("::1")
     end
 
     test "accepts 'none'" do

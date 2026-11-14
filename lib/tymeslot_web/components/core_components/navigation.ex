@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
 
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.FlagHelpers
 
   # ========== NAVIGATION ==========
 
@@ -48,6 +49,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   Each entry is a map with `:id` and `:label`, and optionally:
 
     * `:icon`: an icon name for `<.icon>` (`hero-…` or a custom icon such as `brand-slack`)
+    * `:flag`: a language code whose flag leads the label, for tabs that
+      stand for languages; unlike an icon it stays on narrow screens, where
+      it tells the languages apart at a glance
     * `:count`: a number shown in a small pill after the label
     * `:badge`: a short word in a neutral pill, such as "Disabled"
     * `:status` and `:status_label`: a pill tone (`:warning`, `:danger`, …)
@@ -220,6 +224,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
 
     ~H"""
     <.strip_icon :if={@tab[:icon]} icon={@tab.icon} class="hidden sm:block w-5 h-5" />
+    <FlagHelpers.locale_flag :if={@tab[:flag]} locale={@tab.flag} class="w-5 h-4 shrink-0" />
     <span
       :if={@tab[:dot] && !@active}
       class={["w-2.5 h-2.5 shrink-0 rounded-token-full", @tab.dot]}

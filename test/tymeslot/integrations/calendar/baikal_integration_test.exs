@@ -9,14 +9,17 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
     mix test test/tymeslot/integrations/calendar/baikal_integration_test.exs
   """
   use ExUnit.Case, async: false
-  @moduletag :calendar_integration
-  @moduletag :calendar
-  @moduletag :integrations
 
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Discovery
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
+  alias Tymeslot.Test.SuiteConfig
+
+  @moduletag :calendar_integration
+  @moduletag skip: SuiteConfig.unless_included(:calendar_integration)
+  @moduletag :calendar
+  @moduletag :integrations
 
   @baikal_base_url "http://localhost:8800/dav.php"
   @baikal_username "testuser"
