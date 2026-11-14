@@ -632,3 +632,49 @@ msgstr "Po vašem odmítnutí bylo vaše místo přiděleno někomu jinému. Va�
 #, elixir-autogen, elixir-format
 msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
 msgstr "Tato schůzka byla naplánována anketou, proto ji může přesunout nebo zrušit jen hostitel. Pokud se nemůžete zúčastnit, použijte v pozvánce „Nemohu se zúčastnit“, nebo na ni odpovězte."
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session"
+msgid_plural "%{count} sessions"
+msgstr[0] "%{count} termín"
+msgstr[1] "%{count} termíny"
+msgstr[2] "%{count} termínů"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has been sent the confirmation for all %{count} session."
+msgid_plural "%{name} has been sent the confirmation for all %{count} sessions."
+msgstr[0] "%{name} obdržel(a) potvrzení %{count} termínu."
+msgstr[1] "%{name} obdržel(a) potvrzení všech %{count} termínů."
+msgstr[2] "%{name} obdržel(a) potvrzení všech %{count} termínů."
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "All %{count} session is free again and %{name} has been told."
+msgid_plural "All %{count} sessions are free again and %{name} has been told."
+msgstr[0] "%{count} termín je opět volný a %{name} byl(a) informován(a)."
+msgstr[1] "Všechny %{count} termíny jsou opět volné a %{name} byl(a) informován(a)."
+msgstr[2] "Všech %{count} termínů je opět volných a %{name} byl(a) informován(a)."
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Approve all %{count} session"
+msgid_plural "Approve all %{count} sessions"
+msgstr[0] "Schválit %{count} termín"
+msgstr[1] "Schválit všechny %{count} termíny"
+msgstr[2] "Schválit všech %{count} termínů"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Decline all %{count} session"
+msgid_plural "Decline all %{count} sessions"
+msgstr[0] "Zamítnout %{count} termín"
+msgstr[1] "Zamítnout všechny %{count} termíny"
+msgstr[2] "Zamítnout všech %{count} termínů"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
+
+msgstr "Pokud neodpovíte do %{deadline}, žádost propadne a všechny termíny se uvolní."

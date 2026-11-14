@@ -632,3 +632,44 @@ msgstr "Ihr Platz wurde nach Ihrer Absage an jemand anderen vergeben. Ihre Antwo
 #, elixir-autogen, elixir-format
 msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
 msgstr "Dieser Termin wurde per Umfrage festgelegt, daher kann nur der Gastgeber ihn verschieben oder absagen. Wenn Sie nicht können, nutzen Sie „Kann nicht teilnehmen“ in Ihrer Einladung oder antworten Sie darauf."
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session"
+msgid_plural "%{count} sessions"
+msgstr[0] "%{count} Termin"
+msgstr[1] "%{count} Termine"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has been sent the confirmation for all %{count} session."
+msgid_plural "%{name} has been sent the confirmation for all %{count} sessions."
+msgstr[0] "%{name} hat die Bestätigung für %{count} Termin erhalten."
+msgstr[1] "%{name} hat die Bestätigung für alle %{count} Termine erhalten."
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "All %{count} session is free again and %{name} has been told."
+msgid_plural "All %{count} sessions are free again and %{name} has been told."
+msgstr[0] "%{count} Termin ist wieder frei und %{name} wurde informiert."
+msgstr[1] "Alle %{count} Termine sind wieder frei und %{name} wurde informiert."
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Approve all %{count} session"
+msgid_plural "Approve all %{count} sessions"
+msgstr[0] "%{count} Termin bestätigen"
+msgstr[1] "Alle %{count} Termine bestätigen"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Decline all %{count} session"
+msgid_plural "Decline all %{count} sessions"
+msgstr[0] "%{count} Termin ablehnen"
+msgstr[1] "Alle %{count} Termine ablehnen"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
+
+msgstr "Wenn Sie bis %{deadline} nicht antworten, verfällt diese Anfrage und alle Termine werden wieder freigegeben."

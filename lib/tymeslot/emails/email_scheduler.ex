@@ -52,6 +52,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
 
   defdelegate schedule_series_confirmation_emails(series_id), to: SeriesScheduler
   defdelegate schedule_series_request_emails(series_id), to: SeriesScheduler
+  defdelegate schedule_series_request_nudge(series_id, send_at), to: SeriesScheduler
   defdelegate schedule_series_request_outcome(series_id, variant), to: SeriesScheduler
 
   defdelegate schedule_series_cancellation_emails(series_id, occurrence_ids, cancelled_by),

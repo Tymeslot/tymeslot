@@ -158,3 +158,223 @@ msgstr "Votre limite de %{limit} réservations par mois est inférieure aux %{ne
 #, elixir-autogen, elixir-format
 msgid "Your limit of %{limit} bookings per week is lower than the %{needed} sessions a series can book in one week, so some series won't fit."
 msgstr "Votre limite de %{limit} réservations par semaine est inférieure aux %{needed} séances qu’une série peut réserver en une semaine ; certaines séries n’y tiendront donc pas."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} paid"
+msgstr "%{amount} payés"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} refunded so far"
+msgstr "%{amount} remboursés à ce jour"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled without a refund: %{reason}"
+msgid_plural "%{count} sessions cancelled without a refund: %{reason}"
+msgstr[0] "%{count} séance annulée sans remboursement : %{reason}"
+msgstr[1] "%{count} séances annulées sans remboursement : %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. Refund of %{amount} issued."
+msgid_plural "%{count} sessions cancelled. Refund of %{amount} issued."
+msgstr[0] "%{count} séance annulée. Remboursement de %{amount} effectué."
+msgstr[1] "%{count} séances annulées. Remboursement de %{amount} effectué."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. Refund of %{amount} scheduled."
+msgid_plural "%{count} sessions cancelled. Refund of %{amount} scheduled."
+msgstr[0] "%{count} séance annulée. Remboursement de %{amount} programmé."
+msgstr[1] "%{count} séances annulées. Remboursement de %{amount} programmé."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. The attendee has been told."
+msgid_plural "%{count} sessions cancelled. The attendee has been told."
+msgstr[0] "%{count} séance annulée. Le participant a été informé."
+msgstr[1] "%{count} séances annulées. Le participant a été informé."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session confirmed. The invitee has been told."
+msgid_plural "All %{count} sessions confirmed. The invitee has been told."
+msgstr[0] "%{count} séance confirmée. L'invité a été prévenu."
+msgstr[1] "Les %{count} séances sont confirmées. L'invité a été prévenu."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Approve all %{count}"
+msgid_plural "Approve all %{count}"
+msgstr[0] "Tout accepter (%{count})"
+msgstr[1] "Tout accepter (%{count})"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Booked by"
+msgstr "Réservée par"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel %{count} upcoming session with %{attendee}?"
+msgid_plural "Cancel %{count} upcoming sessions with %{attendee}?"
+msgstr[0] "Annuler %{count} séance à venir avec %{attendee} ?"
+msgstr[1] "Annuler %{count} séances à venir avec %{attendee} ?"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel remaining sessions"
+msgstr "Annuler les séances restantes"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel sessions"
+msgstr "Annuler les séances"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling..."
+msgstr "Annulation..."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr "Fermer"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Decline all %{count}"
+msgid_plural "Decline all %{count}"
+msgstr[0] "Tout refuser (%{count})"
+msgstr[1] "Tout refuser (%{count})"
+
+#: lib/tymeslot_web/components/dashboard/meetings/decline_request_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Decline the request from %{name} for %{count} session?"
+msgid_plural "Decline the request from %{name} for all %{count} sessions?"
+msgstr[0] "Refuser la demande de %{name} pour %{count} séance ?"
+msgstr[1] "Refuser la demande de %{name} pour les %{count} séances ?"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a valid partial refund amount."
+msgstr "Saisissez un montant de remboursement partiel valide."
+
+#: lib/tymeslot_web/components/dashboard/meetings/decline_request_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Every session is released immediately and %{name} is told none was confirmed."
+msgstr "Toutes les séances sont aussitôt libérées et %{name} est informé qu'aucune n'a été confirmée."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep sessions"
+msgstr "Conserver les séances"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "No session of this series is left to cancel."
+msgstr "Il ne reste aucune séance à annuler dans cette série."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "One session's share of the series payment for each session cancelled."
+msgstr "Pour chaque séance annulée, la part d'une séance dans le paiement de la série."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Part of a request for %{count} session"
+msgid_plural "Part of a request for %{count} sessions"
+msgstr[0] "Fait partie d'une demande de %{count} séance"
+msgstr[1] "Fait partie d'une demande de %{count} séances"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Payment"
+msgstr "Paiement"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Refund amount exceeds the remaining refundable balance."
+msgstr "Le montant du remboursement dépasse le solde remboursable restant."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refund the remaining sessions (%{amount})."
+msgstr "Rembourser les séances restantes (%{amount})."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Request declined. Its %{count} session is free again."
+msgid_plural "Request declined. All %{count} sessions are free again."
+msgstr[0] "Demande refusée. %{count} séance est de nouveau libre."
+msgstr[1] "Demande refusée. Les %{count} séances sont de nouveau libres."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Rhythm"
+msgstr "Rythme"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Series with %{name}"
+msgstr "Série avec %{name}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Session %{position} of %{count}"
+msgstr "Séance %{position} sur %{count}"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "That series could not be found."
+msgstr "Cette série est introuvable."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "The sessions could not be cancelled. Please try again."
+msgstr "Impossible d'annuler les séances. Veuillez réessayer."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone. The attendee is sent one email listing every cancelled session. Sessions that already took place stay as they are."
+msgstr "Cette action est irréversible. Le participant reçoit un seul e-mail récapitulant toutes les séances annulées. Les séances déjà passées restent inchangées."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This series is waiting for your answer. Approve or decline it from its card."
+msgstr "Cette série attend votre réponse. Acceptez-la ou refusez-la depuis sa carte."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Tick the acknowledgement to cancel without refunding the attendee."
+msgstr "Cochez la case de confirmation pour annuler sans rembourser le participant."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Times chosen one by one"
+msgstr "Horaires choisis un par un"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "View series"
+msgstr "Voir la série"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "le paiement date de plus de 60 jours, au-delà du délai de remboursement. Vous pouvez le rembourser depuis Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "le paiement fait l'objet d'un litige. Réglez d'abord le litige dans Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "the series was not paid."
+
+msgstr "la série n'a pas été payée."

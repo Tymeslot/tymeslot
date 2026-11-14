@@ -279,3 +279,17 @@ msgid_plural "Your request for %{count} sessions was sent"
 msgstr[0] "Vaše žádost o %{count} termín byla odeslána"
 msgstr[1] "Vaše žádost o %{count} termíny byla odeslána"
 msgstr[2] "Vaše žádost o %{count} termínů byla odeslána"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder: %{attendee} requests %{count} session"
+msgid_plural "Reminder: %{attendee} requests %{count} sessions"
+msgstr[0] "Připomínka: účastník %{attendee} žádá o %{count} termín"
+msgstr[1] "Připomínka: účastník %{attendee} žádá o %{count} termíny"
+msgstr[2] "Připomínka: účastník %{attendee} žádá o %{count} termínů"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Still waiting"
+
+msgstr "Stále bez odpovědi"

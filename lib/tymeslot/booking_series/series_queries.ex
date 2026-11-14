@@ -118,6 +118,10 @@ defmodule Tymeslot.BookingSeries.SeriesQueries do
     |> Repo.all()
   end
 
+  @doc "A query for a series' meetings in `series_position` order, to preload them by."
+  @spec ordered_meetings() :: Ecto.Query.t()
+  def ordered_meetings, do: from(m in Meeting, order_by: [asc: m.series_position])
+
   @doc """
   Locks the meetings of a one-to-one series with `FOR UPDATE`, in
   `series_position` order, and returns them in that order. Every writer

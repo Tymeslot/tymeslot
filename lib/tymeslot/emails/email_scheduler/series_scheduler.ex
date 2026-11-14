@@ -2,7 +2,8 @@ defmodule Tymeslot.Emails.EmailScheduler.SeriesScheduler do
   @moduledoc """
   Schedules the emails a booking series sends as one: its confirmation, the
   cancellation of several of its sessions, and, for a series held for
-  approval, its request and the answer when it is declined or expires
+  approval, its request, the host's reminder of it, and the answer when it
+  is declined or expires
   (`Tymeslot.Notifications.Email.SeriesEmails`).
   """
 
@@ -59,6 +60,24 @@ defmodule Tymeslot.Emails.EmailScheduler.SeriesScheduler do
   def schedule_series_request_emails(series_id) do
     %{"action" => "send_series_request", "series_id" => series_id}
     |> EmailWorker.new(queue: :emails, priority: 0, unique: @once_per_series)
+    |> Helpers.insert(series_id: series_id)
+    |> Helpers.ok()
+  end
+
+  @doc """
+  Schedules the host's reminder of a series request they have not answered,
+  at `send_at`. One per series ever; the email itself is skipped when the
+  request was answered or withdrawn by then.
+  """
+  @spec schedule_series_request_nudge(binary(), DateTime.t()) :: :ok | {:error, term()}
+  def schedule_series_request_nudge(series_id, %DateTime{} = send_at) do
+    %{"action" => "send_series_request_nudge", "series_id" => series_id}
+    |> EmailWorker.new(
+      queue: :emails,
+      priority: 1,
+      scheduled_at: send_at,
+      unique: @once_per_series
+    )
     |> Helpers.insert(series_id: series_id)
     |> Helpers.ok()
   end

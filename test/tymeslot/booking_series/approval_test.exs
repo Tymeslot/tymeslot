@@ -24,6 +24,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
+  alias Tymeslot.BookingSeries.Notifications, as: SeriesNotifications
   alias Tymeslot.CalendarMock
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.StripeAdapterMock
@@ -169,6 +170,50 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
     assert organizer.text_body =~ "/meeting-request/"
     assert organizer.text_body =~ "Weekly please"
     assert organizer.text_body =~ "Session 3 of 3"
+  end
+
+  defp nudge_jobs, do: email_jobs("send_series_request_nudge")
+
+  defp drain_due_emails,
+    do: Oban.drain_queue(queue: :emails, with_recursion: true, with_scheduled: true)
+
+  test "a series request reminds its host once, halfway to the deadline" do
+    %{series: series} = book_three()
+    [first | _rest] = meetings()
+
+    assert [%{args: %{"series_id" => series_id}, scheduled_at: scheduled_at}] = nudge_jobs()
+    assert series_id == series.id
+    assert email_jobs("send_booking_approval_nudge") == []
+
+    halfway =
+      DateTime.add(
+        first.approval_requested_at,
+        div(DateTime.diff(first.approval_deadline_at, first.approval_requested_at), 2)
+      )
+
+    assert abs(DateTime.diff(scheduled_at, halfway)) <= 1
+
+    # Scheduled again, the series still has its one reminder.
+    assert {:ok, :scheduled} = SeriesNotifications.schedule_series_request(series)
+
+    assert [_one] = nudge_jobs()
+
+    drain_due_emails()
+    reminders = Enum.filter(sent_emails(), &(&1.subject =~ "Reminder: Ada"))
+
+    assert [%{subject: "Reminder: Ada Lovelace requests 3 sessions"} = reminder] = reminders
+    refute to_ada?(reminder)
+    assert reminder.text_body =~ "Session 3 of 3"
+    assert reminder.text_body =~ "/meeting-request/"
+  end
+
+  test "a series request answered before its reminder sends none" do
+    %{host: host, series: series} = book_three()
+    assert {:ok, _sessions} = SeriesApproval.approve(series, host.user)
+
+    drain_due_emails()
+
+    assert Enum.filter(sent_emails(), &(&1.subject =~ "Reminder: Ada")) == []
   end
 
   test "the deadline comes from the first session" do

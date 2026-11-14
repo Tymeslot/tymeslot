@@ -184,15 +184,30 @@ defmodule Tymeslot.BookingSeries.Approval do
   as any rescheduled booking is, and the rest of its series stays booked.
   """
   @spec series_request?(Meeting.t()) :: boolean()
-  def series_request?(%Meeting{status: :awaiting_approval, series_id: series_id, id: id})
-      when is_binary(series_id) do
-    sessions = SeriesQueries.list_meetings(series_id)
-
-    Enum.any?(sessions, &(&1.id == id and MeetingState.awaiting_approval?(&1))) and
-      open_request?(sessions)
-  end
+  def series_request?(%Meeting{status: :awaiting_approval, series_id: series_id} = meeting)
+      when is_binary(series_id),
+      do: request_sessions(meeting, SeriesQueries.list_meetings(series_id)) != nil
 
   def series_request?(_meeting), do: false
+
+  @doc """
+  The sessions an open series request holds, in series order, when
+  `meeting` is one of them (`series_request?/1`), read from `sessions`, the
+  meetings of its series already loaded; nil when it is not. For a caller
+  that lists many meetings and loads their series' sessions in one go.
+  """
+  @spec request_sessions(Meeting.t(), [Meeting.t()]) :: [Meeting.t()] | nil
+  def request_sessions(
+        %Meeting{status: :awaiting_approval, series_id: series_id, id: id},
+        sessions
+      )
+      when is_binary(series_id) do
+    if Enum.any?(sessions, &(&1.id == id and MeetingState.awaiting_approval?(&1))) and
+         open_request?(sessions),
+       do: Enum.reject(sessions, &MeetingState.terminal?/1)
+  end
+
+  def request_sessions(_meeting, _sessions), do: nil
 
   defp open_request?(sessions) do
     case Enum.reject(sessions, &MeetingState.terminal?/1) do

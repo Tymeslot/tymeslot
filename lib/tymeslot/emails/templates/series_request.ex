@@ -15,6 +15,9 @@ defmodule Tymeslot.Emails.Templates.SeriesRequest do
   booked until the host answers, and by when they will hear. Neither lists
   per-session links: a session of a held series is not managed on its own.
 
+  With `nudge: true` in the payload, the organiser's is the reminder sent
+  halfway to the deadline: the same request, under a reminder's subject.
+
   The payload is `Tymeslot.Emails.SeriesBuilder`'s for the held sessions,
   with `:approval_urls` (`MeetingLinks.approval_urls/1`),
   `:approval_deadline_at` and `:attendee_message`.
@@ -72,7 +75,7 @@ defmodule Tymeslot.Emails.Templates.SeriesRequest do
       organizer_details =
         TemplateHelper.build_organizer_details(details,
           intent: :alert,
-          eyebrow: dgettext("emails_booking_series", "Needs your answer"),
+          eyebrow: organizer_eyebrow(details),
           stage_title: organizer_subject(details),
           stage_subtitle: details.meeting_type
         )
@@ -120,6 +123,19 @@ defmodule Tymeslot.Emails.Templates.SeriesRequest do
       |> html_body(TemplateHelper.compile_template(mjml_content, organizer_details))
       |> text_body(attendee_text(details, rule, intro, locale))
     end)
+  end
+
+  defp organizer_eyebrow(%{nudge: true}), do: dgettext("emails_booking_series", "Still waiting")
+  defp organizer_eyebrow(_details), do: dgettext("emails_booking_series", "Needs your answer")
+
+  defp organizer_subject(%{nudge: true} = details) do
+    dngettext(
+      "emails_booking_series",
+      "Reminder: %{attendee} requests %{count} session",
+      "Reminder: %{attendee} requests %{count} sessions",
+      details.count,
+      attendee: details.attendee_name
+    )
   end
 
   defp organizer_subject(details) do

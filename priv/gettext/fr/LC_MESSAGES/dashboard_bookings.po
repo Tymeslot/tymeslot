@@ -47,6 +47,7 @@ msgid "Attendee Email"
 msgstr "E-mail du participant"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Annuler"
@@ -212,6 +213,7 @@ msgid "Refunds the remaining balance (%{amount})."
 msgstr "Rembourse le solde restant (%{amount})."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule"
 msgstr "Reporter"
@@ -343,7 +345,7 @@ msgstr "Accepter"
 msgid "Awaiting your approval"
 msgstr "En attente de votre accord"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Booking confirmed. The invitee has been told."
 msgstr "Réservation confirmée. L'invité a été prévenu."
@@ -388,7 +390,7 @@ msgstr "Rien en attente"
 msgid "Reason (optional)"
 msgstr "Motif (facultatif)"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Request declined. The slot is free again."
 msgstr "Demande refusée. Le créneau est de nouveau libre."
@@ -408,12 +410,12 @@ msgstr "Communiqué à %{name} dans l'e-mail qu'il ou elle reçoit."
 msgid "That meeting's start time has already passed."
 msgstr "L'heure de début de cette réunion est déjà passée."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be approved."
 msgstr "Cette demande n'a pas pu être acceptée."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be declined."
 msgstr "Cette demande n'a pas pu être refusée."

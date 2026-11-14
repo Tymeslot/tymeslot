@@ -269,3 +269,15 @@ msgid "Your request for %{count} session was sent"
 msgid_plural "Your request for %{count} sessions was sent"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder: %{attendee} requests %{count} session"
+msgid_plural "Reminder: %{attendee} requests %{count} sessions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Still waiting"
+msgstr ""

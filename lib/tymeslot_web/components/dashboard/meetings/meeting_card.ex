@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.BookingSeries
   alias Tymeslot.Clock
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
@@ -47,7 +48,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
         from_poll?: from_poll?(assigns.meeting),
         participants: Helpers.participants(assigns.meeting),
         answered_fields: answered_fields(assigns.meeting),
-        booking_page: booking_page(assigns.meeting)
+        booking_page: booking_page(assigns.meeting),
+        series_place: BookingSeries.place(assigns.meeting),
+        request_sessions: BookingSeries.request_sessions(assigns.meeting)
       )
 
     ~H"""
@@ -76,6 +79,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
               {@meeting.attendee_company}
             </span>
             <MeetingStatusBadge.status_badges meeting={@meeting} />
+            <.series_badge :if={@series_place} place={@series_place} />
             <%!-- The booking page it came through; nothing for the host's
                  own page, or for a page deleted since. --%>
             <Feedback.pill
@@ -189,6 +193,31 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
             </Containers.detail_line>
           </div>
 
+          <%!-- A series request is approved or declined whole, from any of
+               its cards, so each lists every session the answer covers. --%>
+          <.sub_panel
+            :if={@request_sessions}
+            icon="hero-arrow-path"
+            title={
+              dngettext(
+                "dashboard_booking_series",
+                "Part of a request for %{count} session",
+                "Part of a request for %{count} sessions",
+                length(@request_sessions)
+              )
+            }
+            data-testid="series-request-sessions"
+          >
+            <ol class="space-y-1.5">
+              <li
+                :for={session <- @request_sessions}
+                class="text-token-sm font-medium text-tymeslot-700"
+              >
+                {Helpers.format_move_time(session, @timezone, @time_format)}
+              </li>
+            </ol>
+          </.sub_panel>
+
           <%!-- Participants panel, group meetings only. The preload keeps to
                live participants, except on a cancelled meeting, where it also
                brings those who left the slot (released or moved their seat),
@@ -278,12 +307,31 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
 
         <MeetingActions.action_bar
           meeting={@meeting}
+          series?={@series_place != nil}
+          request_count={@request_sessions && length(@request_sessions)}
           target={@target}
           answering_request={@answering_request}
           cancelling_meeting={@cancelling_meeting}
         />
       </div>
     </Containers.card>
+    """
+  end
+
+  attr :place, :any, required: true
+
+  # Which session of its series a booking is. A group session has none: the
+  # series is one booker's seats, not the shared session.
+  defp series_badge(%{place: {position, count}} = assigns) do
+    assigns = assign(assigns, position: position, count: count)
+
+    ~H"""
+    <Feedback.pill tone={:brand} size={:sm} icon="hero-arrow-path" data-testid="series-badge">
+      {dgettext("dashboard_booking_series", "Session %{position} of %{count}",
+        position: @position,
+        count: @count
+      )}
+    </Feedback.pill>
     """
   end
 

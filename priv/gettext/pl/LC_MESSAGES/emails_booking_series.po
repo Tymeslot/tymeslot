@@ -279,3 +279,17 @@ msgid_plural "Your request for %{count} sessions was sent"
 msgstr[0] "Twoja prośba o %{count} sesję została wysłana"
 msgstr[1] "Twoja prośba o %{count} sesje została wysłana"
 msgstr[2] "Twoja prośba o %{count} sesji została wysłana"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder: %{attendee} requests %{count} session"
+msgid_plural "Reminder: %{attendee} requests %{count} sessions"
+msgstr[0] "Przypomnienie: %{attendee} prosi o %{count} sesję"
+msgstr[1] "Przypomnienie: %{attendee} prosi o %{count} sesje"
+msgstr[2] "Przypomnienie: %{attendee} prosi o %{count} sesji"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Still waiting"
+
+msgstr "Nadal bez odpowiedzi"

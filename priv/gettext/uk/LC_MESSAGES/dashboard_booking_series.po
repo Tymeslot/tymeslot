@@ -162,3 +162,234 @@ msgstr "Ваш ліміт у %{limit} бронювань на місяць ме�
 #, elixir-autogen, elixir-format
 msgid "Your limit of %{limit} bookings per week is lower than the %{needed} sessions a series can book in one week, so some series won't fit."
 msgstr "Ваш ліміт у %{limit} бронювань на тиждень менший за %{needed} сесій, які серія може забронювати за один тиждень, тому деякі серії не вмістяться."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} paid"
+msgstr "Сплачено %{amount}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} refunded so far"
+msgstr "Наразі повернено %{amount}"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled without a refund: %{reason}"
+msgid_plural "%{count} sessions cancelled without a refund: %{reason}"
+msgstr[0] "Скасовано %{count} сесію без повернення коштів: %{reason}"
+msgstr[1] "Скасовано %{count} сесії без повернення коштів: %{reason}"
+msgstr[2] "Скасовано %{count} сесій без повернення коштів: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. Refund of %{amount} issued."
+msgid_plural "%{count} sessions cancelled. Refund of %{amount} issued."
+msgstr[0] "Скасовано %{count} сесію. Повернено %{amount}."
+msgstr[1] "Скасовано %{count} сесії. Повернено %{amount}."
+msgstr[2] "Скасовано %{count} сесій. Повернено %{amount}."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. Refund of %{amount} scheduled."
+msgid_plural "%{count} sessions cancelled. Refund of %{amount} scheduled."
+msgstr[0] "Скасовано %{count} сесію. Повернення %{amount} заплановано."
+msgstr[1] "Скасовано %{count} сесії. Повернення %{amount} заплановано."
+msgstr[2] "Скасовано %{count} сесій. Повернення %{amount} заплановано."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. The attendee has been told."
+msgid_plural "%{count} sessions cancelled. The attendee has been told."
+msgstr[0] "Скасовано %{count} сесію. Учасника повідомлено."
+msgstr[1] "Скасовано %{count} сесії. Учасника повідомлено."
+msgstr[2] "Скасовано %{count} сесій. Учасника повідомлено."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session confirmed. The invitee has been told."
+msgid_plural "All %{count} sessions confirmed. The invitee has been told."
+msgstr[0] "Підтверджено %{count} сесію. Гостя повідомлено."
+msgstr[1] "Підтверджено всі %{count} сесії. Гостя повідомлено."
+msgstr[2] "Підтверджено всі %{count} сесій. Гостя повідомлено."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Approve all %{count}"
+msgid_plural "Approve all %{count}"
+msgstr[0] "Прийняти всі (%{count})"
+msgstr[1] "Прийняти всі (%{count})"
+msgstr[2] "Прийняти всі (%{count})"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Booked by"
+msgstr "Хто забронював"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel %{count} upcoming session with %{attendee}?"
+msgid_plural "Cancel %{count} upcoming sessions with %{attendee}?"
+msgstr[0] "Скасувати %{count} майбутню сесію з %{attendee}?"
+msgstr[1] "Скасувати %{count} майбутні сесії з %{attendee}?"
+msgstr[2] "Скасувати %{count} майбутніх сесій з %{attendee}?"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel remaining sessions"
+msgstr "Скасувати решту сесій"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel sessions"
+msgstr "Скасувати сесії"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling..."
+msgstr "Скасування..."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr "Закрити"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Decline all %{count}"
+msgid_plural "Decline all %{count}"
+msgstr[0] "Відхилити всі (%{count})"
+msgstr[1] "Відхилити всі (%{count})"
+msgstr[2] "Відхилити всі (%{count})"
+
+#: lib/tymeslot_web/components/dashboard/meetings/decline_request_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Decline the request from %{name} for %{count} session?"
+msgid_plural "Decline the request from %{name} for all %{count} sessions?"
+msgstr[0] "Відхилити запит від %{name} на %{count} сесію?"
+msgstr[1] "Відхилити запит від %{name} на всі %{count} сесії?"
+msgstr[2] "Відхилити запит від %{name} на всі %{count} сесій?"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a valid partial refund amount."
+msgstr "Вкажіть коректну суму часткового повернення."
+
+#: lib/tymeslot_web/components/dashboard/meetings/decline_request_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Every session is released immediately and %{name} is told none was confirmed."
+msgstr "Усі сесії одразу звільняються, а %{name} дізнається, що жодну з них не підтверджено."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep sessions"
+msgstr "Не скасовувати"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "No session of this series is left to cancel."
+msgstr "У цій серії не залишилося сесій, які можна скасувати."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "One session's share of the series payment for each session cancelled."
+msgstr "За кожну скасовану сесію: частка однієї сесії в оплаті серії."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Part of a request for %{count} session"
+msgid_plural "Part of a request for %{count} sessions"
+msgstr[0] "Частина запиту на %{count} сесію"
+msgstr[1] "Частина запиту на %{count} сесії"
+msgstr[2] "Частина запиту на %{count} сесій"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Payment"
+msgstr "Оплата"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Refund amount exceeds the remaining refundable balance."
+msgstr "Сума повернення перевищує залишок, доступний для повернення."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refund the remaining sessions (%{amount})."
+msgstr "Повернути кошти за решту сесій (%{amount})."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Request declined. Its %{count} session is free again."
+msgid_plural "Request declined. All %{count} sessions are free again."
+msgstr[0] "Запит відхилено. %{count} сесія знову вільна."
+msgstr[1] "Запит відхилено. Усі %{count} сесії знову вільні."
+msgstr[2] "Запит відхилено. Усі %{count} сесій знову вільні."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Rhythm"
+msgstr "Періодичність"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Series with %{name}"
+msgstr "Серія з %{name}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Session %{position} of %{count}"
+msgstr "Сесія %{position} з %{count}"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "That series could not be found."
+msgstr "Цю серію не знайдено."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "The sessions could not be cancelled. Please try again."
+msgstr "Не вдалося скасувати сесії. Спробуйте ще раз."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone. The attendee is sent one email listing every cancelled session. Sessions that already took place stay as they are."
+msgstr "Цю дію неможливо скасувати. Учасник отримає один лист із переліком усіх скасованих сесій. Сесії, що вже відбулися, залишаться без змін."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This series is waiting for your answer. Approve or decline it from its card."
+msgstr "Ця серія чекає на вашу відповідь. Прийміть або відхиліть її на її картці."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Tick the acknowledgement to cancel without refunding the attendee."
+msgstr "Поставте прапорець для підтвердження, щоб скасувати сесії без повернення коштів учаснику."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Times chosen one by one"
+msgstr "Час обрано окремо для кожної сесії"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "View series"
+msgstr "Переглянути серію"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "платіж старший за 60-денний строк повернення. Повернути кошти можна в Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "щодо платежу відкрито спір. Спершу врегулюйте його в Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "the series was not paid."
+
+msgstr "серію не оплачено."

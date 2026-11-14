@@ -99,6 +99,8 @@ defmodule Tymeslot.Emails.EmailActions do
        {SeriesEmails, :handle_series_cancellation, :with_job_id}},
     "send_series_request" =>
       {["series_id"], {SeriesEmails, :handle_series_request, :with_job_id}},
+    "send_series_request_nudge" =>
+      {["series_id"], {SeriesEmails, :handle_series_request_nudge, :with_job_id}},
     "send_series_request_outcome" =>
       {["series_id", "variant"], {SeriesEmails, :handle_series_request_outcome}},
     # Planned sessions

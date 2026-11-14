@@ -82,12 +82,31 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
           {confirm_question(@meeting, @timezone, @time_format)}
         </p>
 
-        <.paid_options
+        <.refund_choices
           :if={@paid?}
           booking_payment={@booking_payment}
           refund_error={@refund_error}
           refund_form={@refund_form}
-        />
+        >
+          <:full :if={is_binary(@booking_payment.series_id)}>
+            <strong>{dgettext("dashboard_bookings", "Refund this session.")}</strong>
+            {dgettext(
+              "dashboard_bookings",
+              "Refunds one session's share of the series payment (%{amount}).",
+              amount:
+                format_amount(
+                  MeetingPayments.default_cancellation_refund_cents(@booking_payment),
+                  @booking_payment.currency
+                )
+            )}
+          </:full>
+          <:full :if={!is_binary(@booking_payment.series_id)}>
+            <strong>{dgettext("dashboard_bookings", "Full refund.")}</strong>
+            {dgettext("dashboard_bookings", "Refunds the remaining balance (%{amount}).",
+              amount: format_amount(refundable_remaining(@booking_payment), @booking_payment.currency)
+            )}
+          </:full>
+        </.refund_choices>
         <p :if={not @paid?} class="text-tymeslot-500">
           {if Helpers.group_meeting?(@meeting),
             do:
@@ -147,14 +166,19 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   attr :booking_payment, :map, required: true
   attr :refund_error, :map, default: %{}
   attr :refund_form, :map, required: true
+  attr :id_prefix, :string, default: "cancel", doc: "prefixes the acknowledgement error's id"
+  slot :full, required: true, doc: "what the full refund option says it refunds"
 
-  defp paid_options(assigns) do
-    assigns =
-      assign(assigns,
-        remaining: refundable_remaining(assigns.booking_payment),
-        series?: is_binary(assigns.booking_payment.series_id),
-        default_refund: MeetingPayments.default_cancellation_refund_cents(assigns.booking_payment)
-      )
+  @doc """
+  The refund a host chooses when cancelling something paid for: the full
+  refund (worded by the `:full` slot), a partial amount, or none at all
+  behind an acknowledgement. Posts `cancel_refund_choice`,
+  `cancel_refund_amount` and `cancel_refund_no_refund_ack`. Shared by the
+  single cancel dialog and the cancel-remaining dialog of a series.
+  """
+  @spec refund_choices(map()) :: Phoenix.LiveView.Rendered.t()
+  def refund_choices(assigns) do
+    assigns = assign(assigns, :remaining, refundable_remaining(assigns.booking_payment))
 
     ~H"""
     <div class="rounded-token-md border border-tymeslot-200 bg-tymeslot-50 p-3 text-token-sm space-y-3">
@@ -173,20 +197,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             value="full"
             checked={@refund_form.choice == "full"}
           />
-          <span :if={@series?}>
-            <strong>{dgettext("dashboard_bookings", "Refund this session.")}</strong>
-            {dgettext(
-              "dashboard_bookings",
-              "Refunds one session's share of the series payment (%{amount}).",
-              amount: format_amount(@default_refund, @booking_payment.currency)
-            )}
-          </span>
-          <span :if={!@series?}>
-            <strong>{dgettext("dashboard_bookings", "Full refund.")}</strong>
-            {dgettext("dashboard_bookings", "Refunds the remaining balance (%{amount}).",
-              amount: format_amount(@remaining, @booking_payment.currency)
-            )}
-          </span>
+          <span>{render_slot(@full)}</span>
         </label>
 
         <label class="flex items-start gap-2">
@@ -249,7 +260,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </label>
         <p
           :if={@refund_error[:acknowledgement]}
-          id="cancel-refund-ack-error"
+          id={"#{@id_prefix}-refund-ack-error"}
           class="form-error ml-6"
           role="alert"
         >

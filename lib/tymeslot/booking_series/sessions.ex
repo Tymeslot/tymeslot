@@ -25,6 +25,10 @@ defmodule Tymeslot.BookingSeries.Sessions do
   (`Cancel.cancellable?/2`), so the page never promises a different
   number; `open_request` is `Cancel.open_request?/1`, the same test that
   decides whether the call withdraws the request instead.
+
+  `for_organizer/2` is the host's view of the same sessions on their
+  dashboard: each with its meeting and status but no booker's links, with
+  the series' payment and the refund cancelling the rest makes by default.
   """
 
   alias Tymeslot.Bookings.MeetingLinks
@@ -83,6 +87,73 @@ defmodule Tymeslot.BookingSeries.Sessions do
       paid: paid?(series)
     }
   end
+
+  @type organizer_session :: %{
+          position: pos_integer(),
+          meeting: Meeting.t(),
+          start_time: DateTime.t(),
+          status: status()
+        }
+
+  @type organizer_overview :: %{
+          series: SeriesSchema.t(),
+          sessions: [organizer_session()],
+          upcoming: non_neg_integer(),
+          open_request: boolean(),
+          payment: map() | nil,
+          remaining_refund_cents: non_neg_integer()
+        }
+
+  @doc """
+  The host's view of `series` on their dashboard, its meeting type
+  preloaded: every session in series order with its meeting and status, how
+  many "Cancel remaining sessions" would cancel (`upcoming`, by
+  `Cancel.cancellable?/2`, as for the booker), whether it is still an open
+  request, the payment taken for it (nil when none was taken), and the
+  refund cancelling the remaining sessions makes by default
+  (`Cancel.remaining_share_cents/3`, 0 without a payment).
+  """
+  @spec for_organizer(SeriesSchema.t(), DateTime.t()) :: organizer_overview()
+  def for_organizer(%SeriesSchema{} = series, now \\ Clock.utc_now()) do
+    occurrences = SeriesQueries.list_occurrences(series)
+    upcoming = Enum.count(occurrences, &Cancel.cancellable?(&1, now))
+    payment = taken_payment(series)
+
+    %{
+      series: Repo.preload(series, :meeting_type),
+      sessions: Enum.map(occurrences, &organizer_session(&1, now)),
+      upcoming: upcoming,
+      open_request: Cancel.open_request?(series),
+      payment: payment,
+      remaining_refund_cents: remaining_refund(series, payment, upcoming)
+    }
+  end
+
+  defp organizer_session(%Meeting{} = meeting, now),
+    do: organizer_session(meeting, meeting.series_position, status(meeting, true, now))
+
+  defp organizer_session(%Participant{meeting: %Meeting{} = meeting} = seat, now),
+    do:
+      organizer_session(
+        meeting,
+        seat.series_position,
+        status(meeting, Participant.live?(seat), now)
+      )
+
+  defp organizer_session(meeting, position, status),
+    do: %{position: position, meeting: meeting, start_time: meeting.start_time, status: status}
+
+  defp taken_payment(%SeriesSchema{id: id}) do
+    case MeetingPayments.payment_for_series(id) do
+      %{paid_at: %DateTime{}} = payment -> payment
+      _unpaid_or_none -> nil
+    end
+  end
+
+  defp remaining_refund(_series, nil, _count), do: 0
+
+  defp remaining_refund(series, payment, count),
+    do: Cancel.remaining_share_cents(series, payment, count)
 
   defp session(%Meeting{} = meeting, organizer_profile, open_request, now) do
     status = status(meeting, true, now)

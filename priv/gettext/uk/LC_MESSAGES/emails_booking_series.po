@@ -279,3 +279,17 @@ msgid_plural "Your request for %{count} sessions was sent"
 msgstr[0] "Ваш запит на %{count} сесію надіслано"
 msgstr[1] "Ваш запит на %{count} сесії надіслано"
 msgstr[2] "Ваш запит на %{count} сесій надіслано"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder: %{attendee} requests %{count} session"
+msgid_plural "Reminder: %{attendee} requests %{count} sessions"
+msgstr[0] "Нагадування: запит від %{attendee} на %{count} сесію"
+msgstr[1] "Нагадування: запит від %{attendee} на %{count} сесії"
+msgstr[2] "Нагадування: запит від %{attendee} на %{count} сесій"
+
+#: lib/tymeslot/emails/templates/series_request.ex
+#, elixir-autogen, elixir-format
+msgid "Still waiting"
+
+msgstr "Досі без відповіді"

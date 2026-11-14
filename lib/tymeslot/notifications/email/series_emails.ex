@@ -3,8 +3,8 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
   The email jobs of a booking series: its one confirmation, sent once every
   session's video room is ready (`Tymeslot.Workers.SeriesAnnouncementWorker`
   queues it), the cancellation of several of its sessions at once, and for a
-  series held for approval its one request and, when it is declined or
-  expires, the booker's answer.
+  series held for approval its one request, the host's one reminder of it,
+  and, when it is declined or expires, the booker's answer.
 
   Each job but the answer writes to the booker and the organiser, claiming
   each send on the job (`Tymeslot.Workers.DeliveryClaims`), so a retry sends
@@ -14,6 +14,7 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
   require Logger
 
   alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.BookingSeries.Notifications
   alias Tymeslot.BookingSeries.SeriesQueries
   alias Tymeslot.Emails.SeriesBuilder
@@ -122,19 +123,50 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
         [] ->
           {:discard, @nothing_held}
 
-        [first | _rest] = held ->
-          details =
-            series
-            |> SeriesBuilder.build(held)
-            |> Map.merge(%{
-              approval_urls: MeetingLinks.approval_urls(ApprovalToken.sign(first)),
-              approval_deadline_at: first.approval_deadline_at,
-              attendee_message: first.attendee_message
-            })
-
+        held ->
+          details = request_details(series, held)
           send_both("series_request", details, :send_series_request, job_id)
       end
     end)
+  end
+
+  @doc """
+  Reminds the organiser, once, of a series request they have not answered
+  halfway to its deadline: the request again, framed as a reminder. Sent
+  only while the series is still an open request
+  (`Tymeslot.BookingSeries.Approval.series_request?/1`); answered,
+  withdrawn, or no longer held as one, it is discarded.
+  """
+  @spec handle_series_request_nudge(%{String.t() => term()}, DeliveryClaims.job_id()) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_series_request_nudge(%{"series_id" => series_id}, job_id) do
+    with_series(series_id, fn series ->
+      held = Enum.filter(SeriesQueries.list_meetings(series), &MeetingState.awaiting_approval?/1)
+
+      if held != [] and SeriesApproval.series_request?(hd(held)) do
+        details = series |> request_details(held) |> Map.put(:nudge, true)
+        email_service = Config.email_service_module()
+
+        sent =
+          DeliveryClaims.once(job_id, "series_request_nudge:organizer", fn ->
+            email_service.send_series_request(:organizer, details.organizer_email, details)
+          end)
+
+        DeliveryOutcome.from_results("series_request_nudge", [series_id: series.id], [sent])
+      else
+        {:discard, @nothing_held}
+      end
+    end)
+  end
+
+  defp request_details(series, [first | _rest] = held) do
+    series
+    |> SeriesBuilder.build(held)
+    |> Map.merge(%{
+      approval_urls: MeetingLinks.approval_urls(ApprovalToken.sign(first)),
+      approval_deadline_at: first.approval_deadline_at,
+      attendee_message: first.attendee_message
+    })
   end
 
   @doc """

@@ -62,6 +62,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.Workers.SeriesHostRefund
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
@@ -370,11 +371,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
         {:ok, :none}
 
       current ->
-        share =
-          min(
-            (series.unit_price_cents || 0) * length(cancelled),
-            MeetingPayments.refundable_remaining_cents(current)
-          )
+        share = remaining_share_cents(series, current, length(cancelled))
 
         if share > 0 and MeetingPayments.refund_outstanding?(current),
           do: insert_refund(series, current, share),
@@ -384,6 +381,42 @@ defmodule Tymeslot.BookingSeries.Cancel do
 
   defp schedule_refund(series, _cancelled, {:amount, payment, cents}),
     do: insert_refund(series, MeetingPayments.get_payment(payment.id) || payment, cents)
+
+  @doc """
+  The host's default refund for cancelling `count` sessions of a paid
+  `series`: one session's price for each, never more than `payment` has
+  left to refund. What `cancel_remaining/2` refunds with `refund:
+  :remaining`, so the dashboard can say the amount before the host confirms.
+  """
+  @spec remaining_share_cents(SeriesSchema.t(), map(), non_neg_integer()) :: non_neg_integer()
+  def remaining_share_cents(%SeriesSchema{unit_price_cents: price}, payment, count)
+      when is_integer(price) and is_integer(count),
+      do: min(price * count, MeetingPayments.refundable_remaining_cents(payment))
+
+  def remaining_share_cents(%SeriesSchema{}, _payment, _count), do: 0
+
+  @doc """
+  The `:refund` option the host's choice in a cancellation form (the
+  `cancel_refund_choice` the single cancel dialog also posts) implies:
+  `"partial"` an explicit `{:amount, cents}` read from
+  `cancel_refund_amount`, `"none"` no refund once acknowledged
+  (`cancel_refund_no_refund_ack`), anything else the remaining sessions'
+  share. Refused as the single cancellation's choice is
+  (`:acknowledgement_required`, `:exceeds_remaining`, `:invalid_amount`).
+  """
+  @spec resolve_refund_choice(map() | nil, map()) ::
+          {:ok, refund_choice()}
+          | {:error, :acknowledgement_required | :exceeds_remaining | :invalid_amount}
+  def resolve_refund_choice(payment, %{"cancel_refund_choice" => choice} = params)
+      when choice in ["partial", "none"] do
+    case Meetings.resolve_cancellation_refund(payment, params) do
+      {:ok, {:refund, cents}} -> {:ok, {:amount, cents}}
+      {:ok, :none} -> {:ok, :none}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  def resolve_refund_choice(_payment, _params), do: {:ok, :remaining}
 
   defp insert_refund(series, payment, cents) do
     with {:ok, _job} <-

@@ -374,14 +374,28 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> order_by_start_and_id(order)
     |> cursor_after(after_start, after_id, order)
     |> apply_limit(limit)
-    |> preload([
-      :booking_page,
-      :confirming_poll,
-      guests: ^live_guests_preload(),
-      participants: ^card_participants_preload()
-    ])
+    |> preload(^card_preloads(Keyword.get(opts, :series_sessions, false)))
     |> Repo.all()
   end
+
+  # What a dashboard card shows besides the meeting. Its series is one query
+  # for the page whatever the page holds (the badge reads its session count);
+  # with `series_sessions`, so are the sessions of those series, which a
+  # request card lists.
+  defp card_preloads(series_sessions?) do
+    [
+      :booking_page,
+      :confirming_poll,
+      guests: live_guests_preload(),
+      participants: card_participants_preload(),
+      series: series_preload(series_sessions?)
+    ]
+  end
+
+  defp series_preload(false), do: []
+
+  defp series_preload(true),
+    do: [meetings: from(m in Meeting, order_by: [asc: m.series_position])]
 
   @doc """
   Every meeting id the user organises, past and future, in any status. Read

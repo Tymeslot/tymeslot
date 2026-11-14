@@ -26,6 +26,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
 
   require Logger
 
+  alias Tymeslot.BookingSeries
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.ApprovalToken
@@ -47,6 +48,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
      |> assign(:token, nil)
      |> assign(:choosing, :approve)
      |> assign(:meeting, nil)
+     |> assign(:series_sessions, nil)
      |> assign(:state, :invalid)}
   end
 
@@ -77,13 +79,23 @@ defmodule TymeslotWeb.MeetingRequestLive do
   defp load_request(socket, token) do
     case ApprovalToken.verify(token) do
       {:ok, meeting} ->
-        assign(socket, meeting: meeting, state: state_for(meeting))
+        assign(socket,
+          meeting: meeting,
+          state: state_for(meeting),
+          series_sessions: series_sessions(meeting)
+        )
 
       {:error, reason} ->
         Logger.info("Rejected booking request link", reason: LogFormat.reason(reason))
-        assign(socket, meeting: nil, state: :invalid)
+        assign(socket, meeting: nil, state: :invalid, series_sessions: nil)
     end
   end
+
+  # A session of an open series request is answered with every other session
+  # of it (`Tymeslot.BookingSeries.Approval`), so the page lists them all.
+  # Kept through the answer, so the outcome speaks of all of them too.
+  defp series_sessions(meeting),
+    do: meeting |> BookingSeries.with_request_sessions() |> BookingSeries.request_sessions()
 
   # `:declined` is the host's own refusal and nothing else. `Approval.declined?/1`
   # owns that question: `status == :cancelled` does not answer it, since the

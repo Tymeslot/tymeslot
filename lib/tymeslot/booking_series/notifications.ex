@@ -59,24 +59,28 @@ defmodule Tymeslot.BookingSeries.Notifications do
 
   @doc """
   Schedules the one request a series held for approval sends its host and
-  booker, and the one job that releases the series at its deadline
+  booker, the one reminder its host gets halfway to the deadline if the
+  request is still open then, and the one job that releases the series at
+  its deadline
   (`Tymeslot.Meetings.ApprovalJobs`, on the first session still held: every
   session shares its deadline, and expiring one expires the series). Called
   in the transaction that holds the series for approval, booking or payment,
   so it commits with it or not at all.
 
   No session schedules a request, nudge or expiry of its own
-  (`Tymeslot.Bookings.Activation`, `announce: :series`), and the request is
-  scheduled once per series ever.
+  (`Tymeslot.Bookings.Activation`, `announce: :series`), and the request and
+  its nudge are scheduled once per series ever.
   """
   @spec schedule_series_request(SeriesSchema.t()) :: {:ok, :scheduled} | {:error, term()}
   def schedule_series_request(%SeriesSchema{} = series) do
-    with :ok <- EmailScheduler.schedule_series_request_emails(series.id) do
+    first_held =
       series
       |> SeriesQueries.list_meetings()
       |> Enum.find(&MeetingState.awaiting_approval?/1)
-      |> schedule_series_expiry()
 
+    with :ok <- EmailScheduler.schedule_series_request_emails(series.id),
+         :ok <- schedule_series_nudge(series, first_held) do
+      schedule_series_expiry(first_held)
       {:ok, :scheduled}
     end
   end
@@ -86,6 +90,17 @@ defmodule Tymeslot.BookingSeries.Notifications do
 
   defp schedule_series_expiry(%Meeting{} = first_held),
     do: ApprovalJobs.schedule_expiry(first_held)
+
+  # Halfway through the shared window, as for a single request, once per
+  # series.
+  defp schedule_series_nudge(_series, nil), do: :ok
+
+  defp schedule_series_nudge(series, %Meeting{} = first_held) do
+    case ApprovalJobs.nudge_at(first_held) do
+      nil -> :ok
+      send_at -> EmailScheduler.schedule_series_request_nudge(series.id, send_at)
+    end
+  end
 
   @doc """
   Schedules the booker's one email saying their series request was

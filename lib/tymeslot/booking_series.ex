@@ -15,6 +15,7 @@ defmodule Tymeslot.BookingSeries do
   alias Tymeslot.Availability.Schedules
 
   alias Tymeslot.BookingSeries.{
+    Approval,
     Cancel,
     Check,
     Create,
@@ -29,6 +30,7 @@ defmodule Tymeslot.BookingSeries do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.Repo
 
   @doc """
   Plans the series and judges each occurrence.
@@ -100,6 +102,70 @@ defmodule Tymeslot.BookingSeries do
   @spec attendee_overview(SeriesSchema.t(), map() | nil) :: Sessions.overview()
   def attendee_overview(%SeriesSchema{} = series, organizer_profile),
     do: Sessions.for_attendee(series, organizer_profile)
+
+  @doc """
+  The host's dashboard view of a series they organise: every session with
+  its meeting and status, how many "Cancel remaining sessions" cancels,
+  whether it is an open request, its payment and the default refund for
+  cancelling the rest. See `Tymeslot.BookingSeries.Sessions.for_organizer/2`.
+  Take `series` from `get_for_organizer/2`, which checks the host owns it.
+  """
+  @spec organizer_overview(SeriesSchema.t()) :: Sessions.organizer_overview()
+  def organizer_overview(%SeriesSchema{} = series), do: Sessions.for_organizer(series)
+
+  @doc """
+  The `:refund` option for `cancel_remaining/2` that the host's choice in
+  the cancellation form implies. See `Cancel.resolve_refund_choice/2`.
+  """
+  @spec resolve_refund_choice(map() | nil, map()) ::
+          {:ok, Cancel.refund_choice()}
+          | {:error, :acknowledgement_required | :exceeds_remaining | :invalid_amount}
+  defdelegate resolve_refund_choice(payment, params), to: Cancel
+
+  @doc """
+  Where a listed meeting sits in its series, `{position, count}`, read from
+  its preloaded series; nil for a meeting outside any series, or whose
+  series was not loaded.
+  """
+  @spec place(MeetingSchema.t()) :: {pos_integer(), pos_integer()} | nil
+  def place(%MeetingSchema{
+        series_position: position,
+        series: %SeriesSchema{occurrences_count: count}
+      })
+      when is_integer(position),
+      do: {position, count}
+
+  def place(_meeting), do: nil
+
+  @doc """
+  `meeting` with its series and that series' meetings, in series order,
+  loaded, for `request_sessions/1`. A meeting outside any series is
+  returned as it is.
+  """
+  @spec with_request_sessions(MeetingSchema.t()) :: MeetingSchema.t()
+  def with_request_sessions(%MeetingSchema{series_id: nil} = meeting), do: meeting
+
+  def with_request_sessions(%MeetingSchema{} = meeting) do
+    %MeetingSchema{} =
+      loaded =
+      Repo.preload(meeting, [series: [meetings: SeriesQueries.ordered_meetings()]], force: true)
+
+    loaded
+  end
+
+  @doc """
+  The sessions of the open series request `meeting` belongs to, in series
+  order, read from the series sessions loaded on it (the meetings list
+  loads them for requests, `with_request_sessions/1` for one meeting); nil
+  when it is no part of one, or they are not loaded. Approving or declining
+  any of them answers them all (`Tymeslot.BookingSeries.Approval`).
+  """
+  @spec request_sessions(MeetingSchema.t()) :: [MeetingSchema.t()] | nil
+  def request_sessions(%MeetingSchema{series: %SeriesSchema{meetings: sessions}} = meeting)
+      when is_list(sessions),
+      do: Approval.request_sessions(meeting, sessions)
+
+  def request_sessions(_meeting), do: nil
 
   @doc """
   The series `series_id` when `user_id` is its organiser, else
