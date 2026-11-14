@@ -175,14 +175,6 @@ msgstr "Наразі повернено %{amount}"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} session cancelled without a refund: %{reason}"
-msgid_plural "%{count} sessions cancelled without a refund: %{reason}"
-msgstr[0] "Скасовано %{count} сесію без повернення коштів: %{reason}"
-msgstr[1] "Скасовано %{count} сесії без повернення коштів: %{reason}"
-msgstr[2] "Скасовано %{count} сесій без повернення коштів: %{reason}"
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
 msgid "%{count} session cancelled. Refund of %{amount} issued."
 msgid_plural "%{count} sessions cancelled. Refund of %{amount} issued."
 msgstr[0] "Скасовано %{count} сесію. Повернено %{amount}."
@@ -371,21 +363,6 @@ msgstr "Час обрано окремо для кожної сесії"
 msgid "View series"
 msgstr "Переглянути серію"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
-msgid "the payment is older than the 60-day refund window. You can refund it from Stripe."
-msgstr "платіж старший за 60-денний строк повернення. Повернути кошти можна в Stripe."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
-msgid "the payment is under dispute. Settle the dispute in Stripe first."
-msgstr "щодо платежу відкрито спір. Спершу врегулюйте його в Stripe."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
-msgid "the series was not paid."
-msgstr "серію не оплачено."
-
 #: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel %{session}"
@@ -418,3 +395,42 @@ msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processe
 msgstr[0] "Скасовано %{count} сесію. Повернення %{amount} обробляється. Якщо воно не вдасться, ми надішлемо вам лист."
 msgstr[1] "Скасовано %{count} сесії. Повернення %{amount} обробляється. Якщо воно не вдасться, ми надішлемо вам лист."
 msgstr[2] "Скасовано %{count} сесій. Повернення %{amount} обробляється. Якщо воно не вдасться, ми надішлемо вам лист."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgid_plural "%{count} sessions cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr[0] "Скасовано %{count} сесію без повернення коштів, оскільки платіж старший за 60-денний строк повернення. Повернути кошти можна в Stripe."
+msgstr[1] "Скасовано %{count} сесії без повернення коштів, оскільки платіж старший за 60-денний строк повернення. Повернути кошти можна в Stripe."
+msgstr[2] "Скасовано %{count} сесій без повернення коштів, оскільки платіж старший за 60-денний строк повернення. Повернути кошти можна в Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first."
+msgid_plural "%{count} sessions cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr[0] "Скасовано %{count} сесію без повернення коштів, оскільки щодо платежу відкрито спір. Спершу врегулюйте його в Stripe."
+msgstr[1] "Скасовано %{count} сесії без повернення коштів, оскільки щодо платежу відкрито спір. Спершу врегулюйте його в Stripe."
+msgstr[2] "Скасовано %{count} сесій без повернення коштів, оскільки щодо платежу відкрито спір. Спершу врегулюйте його в Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled without a refund: the series was not paid."
+msgid_plural "%{count} sessions cancelled without a refund: the series was not paid."
+msgstr[0] "Скасовано %{count} сесію без повернення коштів, оскільки серію не оплачено."
+msgstr[1] "Скасовано %{count} сесії без повернення коштів, оскільки серію не оплачено."
+msgstr[2] "Скасовано %{count} сесій без повернення коштів, оскільки серію не оплачено."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "Повернення коштів неможливе, оскільки платіж старший за 60-денний строк повернення. Повернути кошти можна в Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "Повернення коштів неможливе, оскільки щодо платежу відкрито спір. Спершу врегулюйте його в Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the series was not paid."
+msgstr "Повернення коштів неможливе, оскільки серію не оплачено."

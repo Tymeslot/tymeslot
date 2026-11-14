@@ -941,30 +941,45 @@ msgstr "Telefonát"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled without a refund: %{reason}"
-msgstr "Zrušeno bez vrácení platby: %{reason}"
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelling won't refund the attendee: %{reason}"
-msgstr "Zrušení účastníkovi platbu nevrátí: %{reason}"
+msgid "Cancelled without a refund: the booking was not paid."
+msgstr "Zrušeno bez vrácení platby, protože rezervace nebyla zaplacena."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "No refund can be made: %{reason}"
-msgstr "Platbu nelze vrátit: %{reason}"
+msgid "Cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "Zrušeno bez vrácení platby, protože platba je starší než 60denní lhůta pro vrácení. Vrátit ji můžete ve Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "Zrušeno bez vrácení platby, protože k platbě probíhá spor. Nejprve ho vyřešte ve Stripe."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
-msgid "the booking was not paid."
-msgstr "rezervace nebyla zaplacena."
+msgid "Cancelling won't refund the attendee: the booking was not paid."
+msgstr "Zrušením se účastníkovi nic nevrátí, protože rezervace nebyla zaplacena."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
-msgid "the payment is older than the 60-day refund window. You can refund it from Stripe."
-msgstr "platba je starší než 60denní lhůta pro vrácení. Vrátit ji můžete ve Stripe."
+msgid "Cancelling won't refund the attendee: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "Zrušením se účastníkovi platba nevrátí, protože je starší než 60denní lhůta pro vrácení. Vrátit ji můžete ve Stripe."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
-msgid "the payment is under dispute. Settle the dispute in Stripe first."
-msgstr "k platbě probíhá spor. Nejprve ho vyřešte ve Stripe."
+msgid "Cancelling won't refund the attendee: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "Zrušením se účastníkovi platba nevrátí, protože k ní probíhá spor. Nejprve ho vyřešte ve Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the booking was not paid."
+msgstr "Vrácení platby není možné, protože rezervace nebyla zaplacena."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "Platbu nelze vrátit, protože je starší než 60denní lhůta pro vrácení. Vrátit ji můžete ve Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "Platbu nelze vrátit, protože k ní probíhá spor. Nejprve ho vyřešte ve Stripe."

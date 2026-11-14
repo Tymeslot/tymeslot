@@ -201,7 +201,29 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.SeriesActions do
   defp form_error(:invalid_amount),
     do: %{amount: dgettext("dashboard_booking_series", "Enter a valid partial refund amount.")}
 
-  defp form_error(reason), do: %{amount: refusal_reason(reason)}
+  defp form_error(:outside_refund_window),
+    do: %{
+      amount:
+        dgettext(
+          "dashboard_booking_series",
+          "No refund can be made: the payment is older than the 60-day refund window. You can refund it from Stripe."
+        )
+    }
+
+  defp form_error(:under_dispute),
+    do: %{
+      amount:
+        dgettext(
+          "dashboard_booking_series",
+          "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
+        )
+    }
+
+  defp form_error(:not_paid),
+    do: %{
+      amount:
+        dgettext("dashboard_booking_series", "No refund can be made: the series was not paid.")
+    }
 
   defp cancelled_message(count, :none, _payment) do
     dngettext(
@@ -235,33 +257,33 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.SeriesActions do
     )
   end
 
-  defp cancelled_message(count, {:not_refunded, reason}, _payment) do
+  defp cancelled_message(count, {:not_refunded, :outside_refund_window}, _payment) do
     dngettext(
       "dashboard_booking_series",
-      "%{count} session cancelled without a refund: %{reason}",
-      "%{count} sessions cancelled without a refund: %{reason}",
-      count,
-      reason: refusal_reason(reason)
+      "%{count} session cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe.",
+      "%{count} sessions cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe.",
+      count
+    )
+  end
+
+  defp cancelled_message(count, {:not_refunded, :under_dispute}, _payment) do
+    dngettext(
+      "dashboard_booking_series",
+      "%{count} session cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first.",
+      "%{count} sessions cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first.",
+      count
+    )
+  end
+
+  defp cancelled_message(count, {:not_refunded, :not_paid}, _payment) do
+    dngettext(
+      "dashboard_booking_series",
+      "%{count} session cancelled without a refund: the series was not paid.",
+      "%{count} sessions cancelled without a refund: the series was not paid.",
+      count
     )
   end
 
   defp payment_currency(%{currency: currency}), do: currency
   defp payment_currency(_none), do: nil
-
-  defp refusal_reason(:not_paid),
-    do: dgettext("dashboard_booking_series", "the series was not paid.")
-
-  defp refusal_reason(:outside_refund_window),
-    do:
-      dgettext(
-        "dashboard_booking_series",
-        "the payment is older than the 60-day refund window. You can refund it from Stripe."
-      )
-
-  defp refusal_reason(:under_dispute),
-    do:
-      dgettext(
-        "dashboard_booking_series",
-        "the payment is under dispute. Settle the dispute in Stripe first."
-      )
 end

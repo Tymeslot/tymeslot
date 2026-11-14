@@ -931,30 +931,45 @@ msgstr "Appel téléphonique"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled without a refund: %{reason}"
-msgstr "Annulée sans remboursement : %{reason}"
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelling won't refund the attendee: %{reason}"
-msgstr "L'annulation ne remboursera pas le participant : %{reason}"
+msgid "Cancelled without a refund: the booking was not paid."
+msgstr "Annulée sans remboursement, car la réservation n'a pas été payée."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "No refund can be made: %{reason}"
-msgstr "Aucun remboursement n'est possible : %{reason}"
+msgid "Cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "Annulée sans remboursement, car le paiement date de plus de 60 jours et dépasse le délai de remboursement. Vous pouvez le rembourser depuis Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "Annulée sans remboursement, car le paiement fait l'objet d'un litige. Réglez d'abord le litige dans Stripe."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
-msgid "the booking was not paid."
-msgstr "la réservation n'a pas été payée."
+msgid "Cancelling won't refund the attendee: the booking was not paid."
+msgstr "L'annulation ne remboursera pas le participant, car la réservation n'a pas été payée."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
-msgid "the payment is older than the 60-day refund window. You can refund it from Stripe."
-msgstr "le paiement date de plus de 60 jours, au-delà du délai de remboursement. Vous pouvez le rembourser depuis Stripe."
+msgid "Cancelling won't refund the attendee: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "L'annulation ne remboursera pas le participant, car le paiement date de plus de 60 jours et dépasse le délai de remboursement. Vous pouvez le rembourser depuis Stripe."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
-msgid "the payment is under dispute. Settle the dispute in Stripe first."
-msgstr "le paiement fait l'objet d'un litige. Réglez d'abord le litige dans Stripe."
+msgid "Cancelling won't refund the attendee: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "L'annulation ne remboursera pas le participant, car le paiement fait l'objet d'un litige. Réglez d'abord le litige dans Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the booking was not paid."
+msgstr "Aucun remboursement n'est possible, car la réservation n'a pas été payée."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "Aucun remboursement n'est possible, car le paiement date de plus de 60 jours et dépasse le délai de remboursement. Vous pouvez le rembourser depuis Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "Aucun remboursement n'est possible, car le paiement fait l'objet d'un litige. Réglez d'abord le litige dans Stripe."

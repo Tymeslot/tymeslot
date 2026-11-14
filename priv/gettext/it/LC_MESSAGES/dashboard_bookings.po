@@ -931,30 +931,45 @@ msgstr "Telefonata"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled without a refund: %{reason}"
-msgstr "Annullata senza rimborso: %{reason}"
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelling won't refund the attendee: %{reason}"
-msgstr "L'annullamento non rimborserà il partecipante: %{reason}"
+msgid "Cancelled without a refund: the booking was not paid."
+msgstr "Annullata senza rimborso, perché la prenotazione non è stata pagata."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "No refund can be made: %{reason}"
-msgstr "Non è possibile alcun rimborso: %{reason}"
+msgid "Cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "Annullata senza rimborso, perché il pagamento risale a più di 60 giorni fa ed è oltre il periodo di rimborso. Puoi rimborsarlo da Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "Annullata senza rimborso, perché il pagamento è oggetto di una contestazione. Risolvi prima la contestazione in Stripe."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
-msgid "the booking was not paid."
-msgstr "la prenotazione non è stata pagata."
+msgid "Cancelling won't refund the attendee: the booking was not paid."
+msgstr "L'annullamento non rimborserà il partecipante, perché la prenotazione non è stata pagata."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
-msgid "the payment is older than the 60-day refund window. You can refund it from Stripe."
-msgstr "il pagamento risale a più di 60 giorni fa, oltre il periodo di rimborso. Puoi rimborsarlo da Stripe."
+msgid "Cancelling won't refund the attendee: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "L'annullamento non rimborserà il partecipante, perché il pagamento risale a più di 60 giorni fa ed è oltre il periodo di rimborso. Puoi rimborsarlo da Stripe."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
-msgid "the payment is under dispute. Settle the dispute in Stripe first."
-msgstr "il pagamento è oggetto di una contestazione. Risolvi prima la contestazione in Stripe."
+msgid "Cancelling won't refund the attendee: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "L'annullamento non rimborserà il partecipante, perché il pagamento è oggetto di una contestazione. Risolvi prima la contestazione in Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the booking was not paid."
+msgstr "Non è possibile alcun rimborso, perché la prenotazione non è stata pagata."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "Non è possibile alcun rimborso, perché il pagamento risale a più di 60 giorni fa ed è oltre il periodo di rimborso. Puoi rimborsarlo da Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "Non è possibile alcun rimborso, perché il pagamento è oggetto di una contestazione. Risolvi prima la contestazione in Stripe."

@@ -18,7 +18,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
-  alias TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal
   alias TymeslotWeb.Dashboard.BookingsManagement.ModalMeeting
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Shared.Flash
@@ -241,12 +240,22 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   defp refund_error_message(:exceeds_remaining),
     do: dgettext("dashboard_bookings", "Refund amount exceeds the remaining refundable balance.")
 
-  defp refund_error_message(reason)
-       when reason in [:not_paid, :outside_refund_window, :under_dispute],
-       do:
-         dgettext("dashboard_bookings", "No refund can be made: %{reason}",
-           reason: CancelMeetingModal.no_refund_reason(reason)
-         )
+  defp refund_error_message(:outside_refund_window),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "No refund can be made: the payment is older than the 60-day refund window. You can refund it from Stripe."
+      )
+
+  defp refund_error_message(:under_dispute),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
+      )
+
+  defp refund_error_message(:not_paid),
+    do: dgettext("dashboard_bookings", "No refund can be made: the booking was not paid.")
 
   defp refund_error_message(_reason),
     do: dgettext("dashboard_bookings", "Enter a valid partial refund amount.")
@@ -258,11 +267,22 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   defp success_message(:none),
     do: dgettext("dashboard_bookings", "Meeting cancelled successfully")
 
-  defp success_message({:not_refunded, reason}),
+  defp success_message({:not_refunded, :outside_refund_window}),
     do:
-      dgettext("dashboard_bookings", "Cancelled without a refund: %{reason}",
-        reason: CancelMeetingModal.no_refund_reason(reason)
+      dgettext(
+        "dashboard_bookings",
+        "Cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe."
       )
+
+  defp success_message({:not_refunded, :under_dispute}),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "Cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first."
+      )
+
+  defp success_message({:not_refunded, :not_paid}),
+    do: dgettext("dashboard_bookings", "Cancelled without a refund: the booking was not paid.")
 
   # The message shown when the meeting had been cancelled elsewhere before the
   # host confirmed. A refund the host chose was not issued, so it says so.

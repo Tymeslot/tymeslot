@@ -171,13 +171,6 @@ msgstr "%{amount} reembolsados hasta ahora"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} session cancelled without a refund: %{reason}"
-msgid_plural "%{count} sessions cancelled without a refund: %{reason}"
-msgstr[0] "%{count} sesión cancelada sin reembolso: %{reason}"
-msgstr[1] "%{count} sesiones canceladas sin reembolso: %{reason}"
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
 msgid "%{count} session cancelled. Refund of %{amount} issued."
 msgid_plural "%{count} sessions cancelled. Refund of %{amount} issued."
 msgstr[0] "%{count} sesión cancelada. Se emitió un reembolso de %{amount}."
@@ -357,21 +350,6 @@ msgstr "Horarios elegidos uno a uno"
 msgid "View series"
 msgstr "Ver serie"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
-msgid "the payment is older than the 60-day refund window. You can refund it from Stripe."
-msgstr "el pago tiene más de 60 días y ya no entra en el plazo de reembolso. Puedes reembolsarlo desde Stripe."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
-msgid "the payment is under dispute. Settle the dispute in Stripe first."
-msgstr "el pago está en disputa. Resuelve primero la disputa en Stripe."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
-msgid "the series was not paid."
-msgstr "la serie no se pagó."
-
 #: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel %{session}"
@@ -403,3 +381,39 @@ msgid "%{count} session cancelled. Refund of %{amount} is being processed. We'll
 msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processed. We'll email you if it fails."
 msgstr[0] "%{count} sesión cancelada. El reembolso de %{amount} está en proceso. Si falla, te avisaremos por correo."
 msgstr[1] "%{count} sesiones canceladas. El reembolso de %{amount} está en proceso. Si falla, te avisaremos por correo."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgid_plural "%{count} sessions cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr[0] "%{count} sesión cancelada sin reembolso, ya que el pago tiene más de 60 días y ya no entra en el plazo de reembolso. Puedes reembolsarlo desde Stripe."
+msgstr[1] "%{count} sesiones canceladas sin reembolso, ya que el pago tiene más de 60 días y ya no entra en el plazo de reembolso. Puedes reembolsarlo desde Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first."
+msgid_plural "%{count} sessions cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr[0] "%{count} sesión cancelada sin reembolso, ya que el pago está en disputa. Resuelve primero la disputa en Stripe."
+msgstr[1] "%{count} sesiones canceladas sin reembolso, ya que el pago está en disputa. Resuelve primero la disputa en Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled without a refund: the series was not paid."
+msgid_plural "%{count} sessions cancelled without a refund: the series was not paid."
+msgstr[0] "%{count} sesión cancelada sin reembolso, ya que la serie no se pagó."
+msgstr[1] "%{count} sesiones canceladas sin reembolso, ya que la serie no se pagó."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "No se puede hacer ningún reembolso, ya que el pago tiene más de 60 días y ya no entra en el plazo de reembolso. Puedes reembolsarlo desde Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "No se puede hacer ningún reembolso, ya que el pago está en disputa. Resuelve primero la disputa en Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the series was not paid."
+msgstr "No se puede hacer ningún reembolso, ya que la serie no se pagó."

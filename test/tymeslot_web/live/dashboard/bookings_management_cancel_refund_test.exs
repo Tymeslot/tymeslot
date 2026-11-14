@@ -177,4 +177,42 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
              "Cancelling won't refund the attendee: the payment is under dispute. Settle the dispute in Stripe first."
            )
   end
+
+  # Each refusal is one whole sentence to translate, never a fragment
+  # joined to a lead-in, so a language can build it its own way.
+  test "a host working in German reads the warning as one sentence", %{conn: conn} do
+    host = insert(:user, onboarding_completed_at: DateTime.utc_now(), locale: "de")
+    insert(:profile, user: host)
+    conn = log_in_user(conn, host)
+
+    meeting =
+      insert(:meeting,
+        organizer_user_id: host.id,
+        organizer_email: host.email,
+        attendee_name: "Paid Disputed"
+      )
+
+    insert(:booking_payment,
+      meeting_id: meeting.id,
+      host_user_id: host.id,
+      host_email: host.email,
+      stripe_account_id: "acct_DISPUTED_DE",
+      stripe_charge_id: "ch_DISPUTED_DE_#{System.unique_integer([:positive])}",
+      amount_cents: 5000,
+      application_fee_cents: 25,
+      currency: "eur",
+      status: :disputed,
+      paid_at: DateTime.utc_now(:second),
+      refunded_amount_cents: 0
+    )
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+    view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+    assert has_element?(
+             view,
+             "#cancel-meeting-form",
+             "Die Absage erstattet dem Teilnehmer nichts, da die Zahlung angefochten wird. Klären Sie die Anfechtung zuerst in Stripe."
+           )
+  end
 end
