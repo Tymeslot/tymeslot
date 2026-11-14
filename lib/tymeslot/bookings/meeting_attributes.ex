@@ -146,7 +146,6 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
     |> Map.merge(attendee_attributes(params, user_timezone))
     |> Map.merge(location_attributes(meeting_type_record, params, video_integration_id))
     |> Map.merge(source_attribution(params))
-    |> Map.merge(series_attributes(params))
     |> Map.merge(build_meeting_action_urls(meeting_uid, org_username))
     |> put_booker_texts(meeting_type_record, profile, params)
   end
@@ -170,12 +169,6 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
   end
 
   def share_series_approval_clock(attrs) when is_list(attrs), do: attrs
-
-  # The series the booking is one session of (`Tymeslot.BookingSeries`)
-  # and which; nil for a booking of its own.
-  defp series_attributes(%BuildParams{} = params) do
-    %{series_id: params.series_id, series_position: params.series_position}
-  end
 
   # The booker saw the questions in their own language; the booking keeps
   # them in the organiser's, as its other snapshot strings are, and the
@@ -276,7 +269,9 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
   # Where the booking came from: the UTM parameters and referrer captured on the
   # booking page, the cookieless key joining it to that page view in analytics,
   # the booking page itself, and the single-use invitation link it was made
-  # through. Grouped so the attributes map states the booking.
+  # through, and the series it was booked as one session of
+  # (`Tymeslot.BookingSeries`) and which, both nil for a booking of its own.
+  # Grouped so the attributes map states the booking.
   defp source_attribution(%BuildParams{} = params) do
     %{
       utm_source: params.utm_source,
@@ -288,7 +283,9 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
       tracking_params: params.tracking_params,
       visitor_hash: params.visitor_hash,
       booking_page_id: params.booking_page_id,
-      invitation_id: params.invitation_id
+      invitation_id: params.invitation_id,
+      series_id: params.series_id,
+      series_position: params.series_position
     }
   end
 
