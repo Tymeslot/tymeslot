@@ -139,6 +139,19 @@ defmodule Tymeslot.BookingSeries do
           String.t() | nil
   defdelegate describe_rule(series_or_type, locale, opts \\ []), to: Rule, as: :describe
 
+  @doc """
+  What a series of `count` sessions of `meeting_type` costs, in cents: the
+  type's price for each session, as its checkout bills it (one line at the
+  unit price, the session count as its quantity). Nil for a type that takes
+  no payment.
+  """
+  @spec total_cents(map(), pos_integer()) :: pos_integer() | nil
+  def total_cents(%{payment_required: true, price_cents: cents}, count)
+      when is_integer(cents) and cents > 0 and is_integer(count) and count > 0,
+      do: cents * count
+
+  def total_cents(_meeting_type, _count), do: nil
+
   defp plan(meeting_type, %DateTime{} = first_start, opts),
     do: Plan.recurring(meeting_type, first_start, Keyword.get(opts, :count), opts)
 

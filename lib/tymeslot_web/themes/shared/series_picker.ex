@@ -4,7 +4,9 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
   one week of the meeting type's offered times at a time, fetched with
   `Tymeslot.Availability.Offer.slots_for_range/4` in a `start_async/3` task
   under `{:series_week, week_start}`, and offered after the first session
-  and within a year of it, less the sessions already chosen.
+  and within a year of it, less the sessions already chosen. The host's
+  booking window binds the first session only, so the fetch reaches the
+  year past it (`Offer`'s `window_until:`).
 
   `:series_picker` is nil while the picker is closed, else `%{week_start,
   days, loading?, error, day}`: the week shown, its slots by ISO date (nil
@@ -123,7 +125,10 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
   @doc "Closes the picker, dropping a week still loading."
   @spec close(Socket.t()) :: Socket.t()
   def close(%{assigns: %{series_picker: %{week_start: week}}} = socket) do
-    socket |> cancel_async({:series_week, week}) |> assign(:series_picker, nil)
+    socket
+    |> cancel_async({:series_week, week})
+    |> assign(:series_picker, nil)
+    |> assign(:series_refocus, true)
   end
 
   def close(socket), do: socket
@@ -145,6 +150,13 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
 
   def move(socket, _dir), do: socket
 
+  @doc "Fetches the week on show again, after it could not be fetched."
+  @spec retry(Socket.t()) :: Socket.t()
+  def retry(%{assigns: %{series_picker: %{week_start: week, loading?: false}}} = socket),
+    do: fetch_week(socket, week)
+
+  def retry(socket), do: socket
+
   @doc "Shows the times of the day `iso`, when the picker offers it."
   @spec pick_day(Socket.t(), term()) :: Socket.t()
   def pick_day(%{assigns: %{series_picker: %{} = picker}} = socket, iso)
@@ -157,9 +169,14 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
   def pick_day(socket, _iso), do: socket
 
   # The request and the duration are built before the task, so it captures
-  # plain values and never the socket.
+  # plain values and never the socket. The booking window binds the first
+  # session only: the week may reach a year past it (`window_until:`).
   defp fetch_week(socket, week_start) do
-    request = AvailabilityHelpers.request(socket)
+    request =
+      socket
+      |> AvailabilityHelpers.request()
+      |> Map.put(:window_until, window_until(socket.assigns))
+
     duration = AvailabilityHelpers.duration_minutes(socket)
     week_end = Date.add(week_start, 6)
 
@@ -199,6 +216,13 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
       start
     else
       _unreadable -> nil
+    end
+  end
+
+  defp window_until(assigns) do
+    case Series.first_start(assigns) do
+      nil -> nil
+      first -> first |> DateTime.add(@series_span_days, :day) |> DateTime.to_date()
     end
   end
 

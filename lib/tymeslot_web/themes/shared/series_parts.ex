@@ -15,12 +15,17 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
 
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
+  alias Phoenix.LiveView.JS
+
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.BookingSeries
+  alias Tymeslot.Meetings.Approval
   alias TymeslotWeb.Components.PaymentHelpers
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+
+  @total_id "series-total-amount"
 
   @doc "\"5 sessions\", in the page's language."
   @spec count_label(pos_integer()) :: String.t()
@@ -66,9 +71,34 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
   @spec total_label(map() | nil, String.t() | nil, String.t(), pos_integer()) ::
           String.t() | nil
   def total_label(meeting_type, currency, locale, count) do
-    if BookingText.price_label(meeting_type, currency, locale),
-      do: PaymentHelpers.format_amount(meeting_type.price_cents * count, currency, locale)
+    with true <- BookingText.price_label(meeting_type, currency, locale) != nil,
+         cents when is_integer(cents) <- BookingSeries.total_cents(meeting_type, count) do
+      PaymentHelpers.format_amount(cents, currency, locale)
+    else
+      _free -> nil
+    end
   end
+
+  @doc """
+  The submit of a series booking: "Book 4 sessions", or "Request 4
+  sessions" on a type the host approves first.
+  """
+  @spec submit_label(map() | nil, pos_integer()) :: String.t()
+  def submit_label(meeting_type, count) do
+    if Approval.required?(meeting_type),
+      do:
+        dngettext(
+          "booking_series",
+          "Request %{count} session",
+          "Request %{count} sessions",
+          count
+        ),
+      else: dngettext("booking_series", "Book %{count} session", "Book %{count} sessions", count)
+  end
+
+  @doc "The id of the total's amount, for a submit's `aria-describedby`."
+  @spec total_id() :: String.t()
+  def total_id, do: @total_id
 
   attr :meeting_type, :any, required: true
   attr :first_start, :any, required: true, doc: "the first session, a `DateTime`"
@@ -104,6 +134,11 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
   attr :timezone, :string, required: true
   attr :checking, :boolean, default: false
   attr :removable, :boolean, default: false, doc: "a flexible series: every session but the first"
+
+  attr :refocus, :boolean,
+    default: false,
+    doc: "take the focus as the list mounts (a session added)"
+
   attr :target, :any, default: nil
 
   @doc """
@@ -113,7 +148,16 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
   @spec occurrence_list(map()) :: Phoenix.LiveView.Rendered.t()
   def occurrence_list(assigns) do
     ~H"""
-    <ol class="series-list" data-testid="series-occurrences" aria-busy={to_string(@checking)}>
+    <%!-- A new id per length remounts the list after a change of size, so
+          the focus can move to it once a session was added. --%>
+    <ol
+      id={"series-occurrences-#{length(@rows)}"}
+      class="series-list"
+      data-testid="series-occurrences"
+      aria-busy={to_string(@checking)}
+      tabindex={@refocus && "-1"}
+      phx-mounted={refocus(@refocus)}
+    >
       <li
         :for={row <- @rows}
         id={"series-occurrence-#{row.position}"}
@@ -166,6 +210,63 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
   defp status_class(:pending), do: "pending"
   defp status_class({:unavailable, _reason}), do: "unavailable"
 
+  attr :rows, :list, required: true, doc: "`Journey.Facts.Series.rows/1`"
+  attr :checking, :boolean, default: false
+
+  @doc """
+  The one polite live region of a series moment, rendered at all times: it
+  says how the last check came out, so a screen reader hears the result of
+  every change of the series without the list being read again.
+  """
+  @spec announcement(map()) :: Phoenix.LiveView.Rendered.t()
+  def announcement(assigns) do
+    assigns = assign(assigns, :text, announcement_text(assigns.rows, assigns.checking))
+
+    ~H"""
+    <p class="sr-only" role="status" aria-live="polite" data-testid="series-announcement">
+      {@text}
+    </p>
+    """
+  end
+
+  defp announcement_text(_rows, true), do: dgettext("booking_series", "Checking availability…")
+
+  defp announcement_text(rows, false) do
+    judged = Enum.reject(rows, &(&1.status == :pending))
+    lost = Enum.count(judged, &match?({:unavailable, _reason}, &1.status))
+
+    cond do
+      judged == [] ->
+        ""
+
+      lost > 0 ->
+        dngettext(
+          "booking_series",
+          "%{count} session not available",
+          "%{count} sessions not available",
+          lost
+        )
+
+      true ->
+        dngettext(
+          "booking_series",
+          "%{available} of %{count} session available",
+          "%{available} of %{count} sessions available",
+          length(judged),
+          available: length(judged)
+        )
+    end
+  end
+
+  @doc """
+  The binding that moves the focus to an element as it mounts, when the
+  moment asks for it (`:series_refocus`, after a session was added), and
+  nothing otherwise, so the page never takes the focus on load.
+  """
+  @spec refocus(boolean()) :: JS.t() | nil
+  def refocus(true), do: JS.focus()
+  def refocus(_no), do: nil
+
   attr :target, :any, default: nil
 
   @doc """
@@ -200,6 +301,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
 
   attr :reason, :atom, required: true
   attr :target, :any, default: nil
+  attr :retry_event, :string, default: "series_retry", doc: "what the retry sends"
 
   @doc """
   Why the series could not be checked: the host's calendar out of reach,
@@ -216,9 +318,9 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
           :if={@reason == :availability_unverifiable}
           type="button"
           class="series-notice-action"
-          phx-click="series_retry"
+          phx-click={@retry_event}
           phx-target={@target}
-          data-testid="series-retry"
+          data-testid={String.replace(@retry_event, "_", "-")}
         >
           {dgettext("booking_series", "Try again")}
         </button>
@@ -253,7 +355,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
       )
 
     ~H"""
-    <p :if={@amount} class={["series-total", @class]} data-testid="series-total">
+    <p :if={@amount} id={total_id()} class={["series-total", @class]} data-testid="series-total">
       {dgettext("booking_series", "Total: %{amount}", amount: @amount)}
     </p>
     """
@@ -330,31 +432,43 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
   """
   @spec booked_list(map()) :: Phoenix.LiveView.Rendered.t()
   def booked_list(assigns) do
+    rows =
+      assigns.meetings
+      |> Enum.with_index(1)
+      |> Enum.map(fn {meeting, position} ->
+        %{
+          position: position,
+          start: meeting.start_time,
+          links:
+            if(assigns.links and own_links?(meeting),
+              do: MeetingLinks.for_meeting(meeting, assigns.organizer_profile)
+            )
+        }
+      end)
+
+    assigns = assign(assigns, :rows, rows)
+
     ~H"""
     <ol class="series-list series-list--booked" data-testid="series-booked">
       <li
-        :for={{meeting, position} <- Enum.with_index(@meetings, 1)}
-        id={"series-booked-#{position}"}
+        :for={row <- @rows}
+        id={"series-booked-#{row.position}"}
         class="series-list__item"
         data-testid="series-booked-session"
       >
-        <span class="series-list__position" aria-hidden="true">{position}</span>
-        <span class="series-list__when">
-          {LocalizationHelpers.format_meeting_datetime_compact(meeting.start_time, @timezone)}
-        </span>
-        <span :if={@links and own_links?(meeting)} class="series-list__links">
-          <a
-            href={MeetingLinks.for_meeting(meeting, @organizer_profile).reschedule_url}
-            class="series-list__link"
-          >
-            {dgettext("booking_series", "Reschedule")}
-          </a>
-          <a
-            href={MeetingLinks.for_meeting(meeting, @organizer_profile).cancel_url}
-            class="series-list__link"
-          >
-            {dgettext("booking_series", "Cancel")}
-          </a>
+        <span class="series-list__position" aria-hidden="true">{row.position}</span>
+        <span class="series-list__body">
+          <span class="series-list__when">
+            {LocalizationHelpers.format_meeting_datetime_compact(row.start, @timezone)}
+          </span>
+          <span :if={row.links} class="series-list__links">
+            <a href={row.links.reschedule_url} class="series-list__link">
+              {dgettext("booking_series", "Reschedule")}
+            </a>
+            <a href={row.links.cancel_url} class="series-list__link">
+              {dgettext("booking_series", "Cancel")}
+            </a>
+          </span>
         </span>
       </li>
     </ol>

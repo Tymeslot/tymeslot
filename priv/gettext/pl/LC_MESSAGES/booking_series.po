@@ -361,6 +361,7 @@ msgid "Checking"
 msgstr "Sprawdzanie"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_parts.ex
 #, elixir-autogen, elixir-format
 msgid "Checking availability…"
 msgstr "Sprawdzanie dostępności…"
@@ -531,3 +532,36 @@ msgid_plural "Your request for %{count} sessions has been sent"
 msgstr[0] "Twoja prośba o %{count} sesję została wysłana"
 msgstr[1] "Twoja prośba o %{count} sesje została wysłana"
 msgstr[2] "Twoja prośba o %{count} sesji została wysłana"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "%{available} of %{count} session available"
+msgid_plural "%{available} of %{count} sessions available"
+msgstr[0] "%{available} z %{count} sesji jest dostępna"
+msgstr[1] "%{available} z %{count} sesji są dostępne"
+msgstr[2] "%{available} z %{count} sesji jest dostępnych"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session not available"
+msgid_plural "%{count} sessions not available"
+msgstr[0] "%{count} sesja niedostępna"
+msgstr[1] "%{count} sesje niedostępne"
+msgstr[2] "%{count} sesji niedostępnych"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Book %{count} session"
+msgid_plural "Book %{count} sessions"
+msgstr[0] "Zarezerwuj %{count} sesję"
+msgstr[1] "Zarezerwuj %{count} sesje"
+msgstr[2] "Zarezerwuj %{count} sesji"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Request %{count} session"
+msgid_plural "Request %{count} sessions"
+
+msgstr[0] "Poproś o %{count} sesję"
+msgstr[1] "Poproś o %{count} sesje"
+msgstr[2] "Poproś o %{count} sesji"

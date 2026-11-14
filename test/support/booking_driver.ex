@@ -315,7 +315,7 @@ defmodule TymeslotWeb.BookingDriver do
 
     case continue_move(render(view), last) do
       :click ->
-        click(view, @continue)
+        view |> tap(&click(&1, @continue)) |> remember()
 
       # The move is used up: a second `continue/1` with no action between
       # must see the page move on again, not this move once more.

@@ -401,18 +401,25 @@
   text-align: left;
 }
 
-.series-list--booked .series-list__item {
+/* The date on its own line, the session's links under it, so a narrow
+   card never squeezes the date into a column. */
+.series-list__body {
+  display: flex;
+  flex: 1;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3xs) var(--space-xs);
+  min-width: 0;
 }
 
 .series-list--booked .series-list__when {
-  min-width: 10rem;
+  flex: 0 1 auto;
 }
 
 .series-list__links {
   display: inline-flex;
   gap: var(--space-xs);
-  margin-left: auto;
 }
 
 .series-list__link {

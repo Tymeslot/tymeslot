@@ -28,8 +28,10 @@ defmodule TymeslotWeb.Live.Scheduling.BookingDeepLinkTest do
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -193,6 +195,42 @@ defmodule TymeslotWeb.Live.Scheduling.BookingDeepLinkTest do
     assert html =~ "Anything to prepare?"
     assert :sys.get_state(view.pid).socket.assigns.current_state == :questions
     refute has_element?(view, "[data-testid='booking-form']")
+  end
+
+  # The series is chosen before the details, as the questions are: a link
+  # straight to the booking step of a type booked as a series opens the
+  # series first, for the day and time it names (09:00, on the type's
+  # 45-minute grid).
+  @tag :capture_log
+  test "a link to the booking step of a series type opens the series first",
+       %{conn: conn, profile: profile, meeting_type: meeting_type, date: date} do
+    meeting_type
+    |> Changeset.change(
+      series_mode: :recurring,
+      series_frequency: :weekly,
+      series_interval: 1,
+      series_min_occurrences: 3,
+      series_max_occurrences: 3
+    )
+    |> Repo.update!()
+
+    {:ok, view, _html} =
+      live(
+        conn,
+        "/#{profile.username}/deep-dive/book?date=#{date}&time=9:00%20AM&timezone=Etc/UTC"
+      )
+
+    render_async(view)
+
+    assert :sys.get_state(view.pid).socket.assigns.current_state == :series
+    assert has_element?(view, "#series-step")
+    refute has_element?(view, "[data-testid='booking-form']")
+
+    assert view
+           |> render()
+           |> Floki.parse_document!()
+           |> Floki.find("[data-testid='series-occurrence'][data-status='available']")
+           |> length() == 3
   end
 
   describe "query parameters of an unexpected shape" do

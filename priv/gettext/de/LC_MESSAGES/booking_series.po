@@ -353,6 +353,7 @@ msgid "Checking"
 msgstr "Wird geprüft"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_parts.ex
 #, elixir-autogen, elixir-format
 msgid "Checking availability…"
 msgstr "Verfügbarkeit wird geprüft …"
@@ -521,3 +522,32 @@ msgid "Your request for %{count} session has been sent"
 msgid_plural "Your request for %{count} sessions has been sent"
 msgstr[0] "Ihre Anfrage für %{count} Termin wurde gesendet"
 msgstr[1] "Ihre Anfrage für %{count} Termine wurde gesendet"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "%{available} of %{count} session available"
+msgid_plural "%{available} of %{count} sessions available"
+msgstr[0] "%{available} von %{count} Termin verfügbar"
+msgstr[1] "%{available} von %{count} Terminen verfügbar"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session not available"
+msgid_plural "%{count} sessions not available"
+msgstr[0] "%{count} Termin nicht verfügbar"
+msgstr[1] "%{count} Termine nicht verfügbar"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Book %{count} session"
+msgid_plural "Book %{count} sessions"
+msgstr[0] "%{count} Termin buchen"
+msgstr[1] "%{count} Termine buchen"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Request %{count} session"
+msgid_plural "Request %{count} sessions"
+
+msgstr[0] "%{count} Termin anfragen"
+msgstr[1] "%{count} Termine anfragen"

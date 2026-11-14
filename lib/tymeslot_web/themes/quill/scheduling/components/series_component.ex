@@ -84,6 +84,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.SeriesComponent do
                   {@meeting_type && @meeting_type.name} · {BookingText.duration_label(assigns)}
                 </p>
 
+                <SeriesParts.announcement rows={@rows} checking={@series_checking?} />
+
                 <%= if @choice == :single do %>
                   <div class="series-single" data-testid="series-single">
                     <p class="series-single-text">
@@ -138,6 +140,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.SeriesComponent do
                     timezone={@user_timezone}
                     checking={@series_checking?}
                     removable={@mode == :flexible}
+                    refocus={
+                      @series_refocus and @mode == :flexible and is_map(@choice) and
+                        @choice.count >= @max
+                    }
                     target={@myself}
                   />
 
@@ -154,6 +160,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.SeriesComponent do
                     days={SeriesPicker.days(assigns)}
                     earlier?={SeriesPicker.earlier?(assigns)}
                     later?={SeriesPicker.later?(assigns)}
+                    refocus={@series_refocus}
                     timezone={@user_timezone}
                     target={@myself}
                   />
@@ -289,6 +296,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.SeriesComponent do
   attr :days, :list, required: true
   attr :earlier?, :boolean, required: true
   attr :later?, :boolean, required: true
+  attr :refocus, :boolean, default: false
   attr :timezone, :string, required: true
   attr :target, :any, required: true
 
@@ -298,7 +306,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.SeriesComponent do
       <button
         :if={is_nil(@picker) and @choice.count < @max}
         type="button"
+        id="series-add"
         class="series-add"
+        phx-mounted={SeriesParts.refocus(@refocus)}
         phx-click="series_picker_open"
         phx-target={@target}
         data-testid="series-add"
@@ -315,6 +325,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.SeriesComponent do
             phx-click="series_picker_week"
             phx-value-dir="prev"
             phx-target={@target}
+            data-testid="series-picker-earlier"
             disabled={not @earlier?}
             aria-label={dgettext("booking", "Previous week")}
           >
@@ -329,6 +340,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.SeriesComponent do
             phx-click="series_picker_week"
             phx-value-dir="next"
             phx-target={@target}
+            data-testid="series-picker-later"
             disabled={not @later?}
             aria-label={dgettext("booking", "Next week")}
           >
@@ -352,6 +364,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.SeriesComponent do
         <SeriesParts.check_error
           :if={@picker.error}
           reason={@picker.error}
+          retry_event="series_picker_retry"
           target={@target}
         />
         <SeriesParts.picker_slots

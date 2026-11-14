@@ -239,4 +239,98 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.SeriesTest do
     assert Series.request(booking(%{series_choice: :single, series_single_allowed?: true})) == nil
     assert Series.request(Map.put(checked(choice(4), []), :series_offered?, false)) == nil
   end
+
+  describe "handle_async/3" do
+    test "a check of a choice no longer on screen is dropped" do
+      socket = socket(booking(%{series_choice: choice(3), series_checking?: true}))
+      stale = {Series.key(choice(4)), {:ok, Enum.map(1..4, &occurrence/1)}}
+
+      assert {:noreply, ^socket} = Series.handle_async(:series_preview, {:ok, stale}, socket)
+    end
+
+    test "a check of the choice on screen is applied" do
+      socket = socket(booking(%{series_choice: choice(3), series_checking?: true}))
+      result = {Series.key(choice(3)), {:ok, Enum.map(1..3, &occurrence/1)}}
+
+      assert {:noreply, checked} = Series.handle_async(:series_preview, {:ok, result}, socket)
+      assert Series.known?(checked.assigns)
+      refute checked.assigns.series_checking?
+    end
+
+    test "a check that could not read the calendar says so and is not known" do
+      socket = socket(booking(%{series_choice: choice(3), series_checking?: true}))
+      result = {Series.key(choice(3)), {:error, :availability_unverifiable}}
+
+      assert {:noreply, failed} = Series.handle_async(:series_preview, {:ok, result}, socket)
+      assert failed.assigns.series_error == :availability_unverifiable
+      refute Series.known?(failed.assigns)
+    end
+
+    test "a crashed check is unverifiable; a cancelled one changes nothing" do
+      socket = socket(booking(%{series_choice: choice(3), series_checking?: true}))
+
+      assert {:noreply, ^socket} =
+               Series.handle_async(:series_preview, {:exit, {:shutdown, :cancel}}, socket)
+
+      assert {:noreply, crashed} = Series.handle_async(:series_preview, {:exit, :boom}, socket)
+      assert crashed.assigns.series_error == :availability_unverifiable
+      refute crashed.assigns.series_checking?
+    end
+  end
+
+  describe "a flexible series" do
+    defp flexible_booking(starts) do
+      booking(%{
+        meeting_type: %{@type_attrs | series_mode: :flexible},
+        series_choice: %{mode: :flexible, starts: starts, count: length(starts)},
+        series_checking?: false
+      })
+    end
+
+    test "removing a session keeps the rest, and the first session stays" do
+      second = DateTime.add(@first, 1, :day)
+      third = DateTime.add(@first, 2, :day)
+      socket = socket(flexible_booking([@first, second, third]))
+
+      assert {:noreply, removed} =
+               Series.handle(socket, :series_remove_start, DateTime.to_iso8601(second))
+
+      assert removed.assigns.series_choice.starts == [@first, third]
+
+      assert {:noreply, ^removed} =
+               Series.handle(removed, :series_remove_start, DateTime.to_iso8601(@first))
+    end
+  end
+
+  describe "merge_lost/2" do
+    test "names the lost sessions beside the rest, even before any check answered" do
+      socket = socket(booking(%{series_choice: choice(3), series_preview: nil}))
+      lost = occurrence(2, {:unavailable, :booked})
+
+      merged = Series.merge_lost(socket, [lost])
+
+      assert Enum.map(Series.rows(merged.assigns), & &1.status) ==
+               [:pending, {:unavailable, :booked}]
+
+      assert Series.unavailable(merged.assigns) == [lost]
+    end
+
+    test "lays the lost sessions over a check that answered" do
+      socket = socket(checked(choice(3), Enum.map(1..3, &occurrence/1)))
+      lost = occurrence(3, {:unavailable, :booked})
+
+      merged = Series.merge_lost(socket, [lost])
+
+      assert Enum.map(Series.rows(merged.assigns), & &1.status) ==
+               [:available, :available, {:unavailable, :booked}]
+    end
+  end
+
+  test "clear/1 forgets the series a booking made" do
+    socket = socket(Map.merge(booking(), %{series: %{uid: "s"}, series_meetings: [%{id: 1}]}))
+    cleared = Series.clear(socket)
+
+    assert cleared.assigns.series == nil
+    assert cleared.assigns.series_meetings == []
+  end
 end

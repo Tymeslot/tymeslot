@@ -288,7 +288,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
   defp process_booking_submission(socket, sanitized_params) do
     form = Component.to_form(sanitized_params)
-    socket = assign(socket, :form, form)
+
+    # A series an earlier submission booked is not this one's: a single
+    # booking after it must not confirm its sessions.
+    socket =
+      socket
+      |> assign(:form, form)
+      |> Series.forget_booked()
 
     # Prepare parameters for orchestrator
     params = %{

@@ -224,13 +224,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       data-testid="submit-booking"
                       aria-describedby={
                         submit_describedby(
-                          @series_count == nil &&
-                            SubmitPrice.describedby(
-                              @meeting_type,
-                              @host_currency,
-                              @locale,
-                              @is_rescheduling
-                            ),
+                          price_describedby(assigns),
                           @submitting,
                           @form
                         )
@@ -238,7 +232,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       data-intent="submit"
                       class="flex-1"
                     >
-                      {submit_label(@is_rescheduling, @meeting_type)}
+                      {submit_label(@is_rescheduling, @meeting_type, @series_count)}
                     </.loading_button>
                   </div>
                   <p
@@ -265,7 +259,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   # part of this whole feature and the one a visitor reads last — including
   # on a reschedule, which re-enters the approval gate on a gated type just
   # as a fresh submission does.
-  defp submit_label(is_rescheduling, meeting_type) do
+  defp submit_label(_is_rescheduling, meeting_type, count) when is_integer(count),
+    do: SeriesParts.submit_label(meeting_type, count)
+
+  defp submit_label(is_rescheduling, meeting_type, _single) do
     BookingLabels.submit_label(
       is_rescheduling,
       meeting_type,
@@ -273,6 +270,27 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
       :quill
     )
   end
+
+  # The amount the submit's description names: a series' total, or the
+  # single booking's price.
+  defp price_describedby(%{series_count: count} = assigns) when is_integer(count) do
+    if SeriesParts.total_label(
+         assigns.meeting_type,
+         assigns.host_currency,
+         assigns.locale,
+         count
+       ),
+       do: SeriesParts.total_id()
+  end
+
+  defp price_describedby(assigns),
+    do:
+      SubmitPrice.describedby(
+        assigns.meeting_type,
+        assigns.host_currency,
+        assigns.locale,
+        assigns.is_rescheduling
+      )
 
   defp guests_allowed?(assigns), do: GuestBooking.guests_allowed?(assigns)
 
@@ -287,7 +305,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   defp submit_describedby(price_id, submitting, form) do
     hint = if submit_incomplete?(submitting, form), do: "submit-booking-hint"
 
-    case Enum.reject([price_id, hint], &(&1 in [nil, false])) do
+    case Enum.reject([price_id, hint], &is_nil/1) do
       [] -> nil
       ids -> Enum.join(ids, " ")
     end

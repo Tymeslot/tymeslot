@@ -23,7 +23,8 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
   slot picked, then the way on, relayed as `series_single` and `next_step`),
   `series_as_series`, `series_add_start`, `series_remove_start`,
   `series_retry`, `series_picker_open`, `series_picker_close`,
-  `series_picker_week`, `series_picker_day`, `next_step`, `back_step`
+  `series_picker_week`, `series_picker_day`, `series_picker_retry`,
+  `next_step`, `back_step`
   (series); `validate`, `field_blur`, `submit`, `back_step`,
   `select_location`, `select_video_provider`, `select_venue`,
   `location_phone_change`, `toggle_guests`, `close_guests`, `guest_input_change`, `add_guest`,
@@ -182,5 +183,6 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
   defp message("series_picker_close", _params), do: {:series_picker_close, nil}
   defp message("series_picker_week", %{"dir" => dir}), do: {:series_picker_week, dir}
   defp message("series_picker_day", %{"date" => date}), do: {:series_picker_day, date}
+  defp message("series_picker_retry", _params), do: {:series_picker_retry, nil}
   defp message(_event, _params), do: :ignore
 end

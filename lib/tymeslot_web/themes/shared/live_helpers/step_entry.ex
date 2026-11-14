@@ -412,7 +412,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
         {:ok, socket} ->
           socket
-          |> maybe_route_to_questions()
+          |> route_to_series_or_questions()
           |> do_handle_booking_entry(params)
       end
     else
@@ -469,6 +469,21 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # enter the attendee's moment again, and again. That is read from the
   # journey, not from `current_state`, which a navigator may update only
   # after the moment has opened.
+  # A `/book` link on a meeting type booked as a series reaches the details
+  # before the series was chosen: the series' moment comes first, as the
+  # questions' does, and moving on from it lands back here.
+  defp route_to_series_or_questions(socket) do
+    journey = socket.assigns.journey
+    series_moment = Progress.moment_for(journey, :series)
+
+    if Series.required?(socket.assigns) and not Series.known?(socket.assigns) and
+         series_moment != Progress.moment_for(journey, :attendee) do
+      Runtime.transition_to(socket, series_moment, %{})
+    else
+      maybe_route_to_questions(socket)
+    end
+  end
+
   defp maybe_route_to_questions(socket) do
     journey = socket.assigns.journey
     answers_moment = Progress.moment_for(journey, :answers)

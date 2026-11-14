@@ -18,6 +18,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
     * `:series_preview`: the `Occurrence`s the last check judged, or nil;
       `:series_preview_key` names the choice they answer;
     * `:series_checking?`: whether a check is in flight;
+    * `:series_refocus`: whether the moment should take the focus back
+      to where the booker adds sessions, set once one was added;
     * `:series_error`: why the last check gave no answer
       (`:availability_unverifiable`, `:overlapping_starts`, `:invalid_count`),
       or nil;
@@ -27,7 +29,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
       offer, settled once per meeting type when the page assigns it
       (`assign_offer/2`), since each costs a subscription query on the
       managed plan; the fact reads them and never asks again;
-    * `:series` and `:series_meetings`: the series a submission booked.
+    * `:series` and `:series_meetings`: the series a submission booked,
+      forgotten by `clear/1` and by every new submission (`forget_booked/1`).
 
   Needed when the type's series is offered, the booking is not a reschedule
   (which moves one session) and the journey has a moment asking it; a
@@ -79,7 +82,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
     :series_picker_open,
     :series_picker_close,
     :series_picker_week,
-    :series_picker_day
+    :series_picker_day,
+    :series_picker_retry
   ]
 
   @impl Fact
@@ -126,6 +130,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
   def handle(socket, :series_picker_close, _data), do: {:noreply, SeriesPicker.close(socket)}
   def handle(socket, :series_picker_week, dir), do: {:noreply, SeriesPicker.move(socket, dir)}
   def handle(socket, :series_picker_day, iso), do: {:noreply, SeriesPicker.pick_day(socket, iso)}
+  def handle(socket, :series_picker_retry, _data), do: {:noreply, SeriesPicker.retry(socket)}
 
   # A choice for another first session (the booker went back and picked
   # another time) is made again from the new one.
@@ -148,6 +153,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
     end
   end
 
+  # The series a booking made goes too: a later booking is a booking of its
+  # own, single or series.
   @impl Fact
   def clear(socket) do
     socket
@@ -158,9 +165,19 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
       series_preview_key: nil,
       series_checking?: false,
       series_error: nil,
-      series_picker: nil
+      series_picker: nil,
+      series_refocus: false
     )
+    |> forget_booked()
   end
+
+  @doc """
+  Forgets the series a submission booked (`:series`, `:series_meetings`):
+  every submission starts without one, so its confirmation shows only what
+  it booked.
+  """
+  @spec forget_booked(Socket.t()) :: Socket.t()
+  def forget_booked(socket), do: assign(socket, series: nil, series_meetings: [])
 
   @doc "What a page holds before the moment opens."
   @spec assign_defaults(Socket.t()) :: Socket.t()
@@ -172,6 +189,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
       series_checking?: false,
       series_error: nil,
       series_picker: nil,
+      series_refocus: false,
       series: nil,
       series_meetings: [],
       series_offered?: false,
@@ -278,7 +296,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
   @spec unavailable(map()) :: [Occurrence.t()]
   def unavailable(%{series_choice: %{} = choice} = assigns) do
     if preview_answers?(assigns, choice),
-      do: Enum.reject(assigns.series_preview, &Occurrence.available?/1),
+      do: Enum.filter(assigns.series_preview, &match?({:unavailable, _reason}, &1.status)),
       else: []
   end
 
@@ -286,8 +304,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
 
   @doc """
   After a submission found sessions taken: `occurrences` (the ones it lost)
-  are laid over the sessions on screen, so the moment names them, and the
-  series is checked again.
+  are laid over the sessions on screen by position, so the moment names
+  them beside the rest, and the series is checked again. A session the
+  last check had not judged stays `:pending` until that check answers.
   """
   @spec merge_lost(Socket.t(), [Occurrence.t()]) :: Socket.t()
   def merge_lost(%{assigns: %{series_choice: %{} = choice}} = socket, occurrences) do
@@ -296,7 +315,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
     preview =
       if preview_answers?(socket.assigns, choice),
         do: Enum.map(socket.assigns.series_preview, &Map.get(lost, &1.position, &1)),
-        else: occurrences
+        else: lay_over_rows(rows(socket.assigns), lost)
 
     socket
     |> assign(series_preview: preview, series_preview_key: key(choice))
@@ -304,6 +323,21 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
   end
 
   def merge_lost(socket, _occurrences), do: socket
+
+  # The rows on screen with each lost session in its place, and a lost
+  # session the rows do not reach yet (a recurring series before its check
+  # planned the rest) added in order.
+  defp lay_over_rows(rows, lost) do
+    shown = Map.new(rows, &{&1.position, unjudged(&1)})
+
+    shown
+    |> Map.merge(lost)
+    |> Map.values()
+    |> Enum.sort_by(& &1.position)
+  end
+
+  defp unjudged(row),
+    do: %Occurrence{position: row.position, start: row.start, end: row.start, status: :pending}
 
   @doc """
   A `start_async/3` result: `:series_preview` (a check) or `{:series_week,
@@ -379,7 +413,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
 
       socket
       |> assign(:series_choice, %{choice | starts: starts, count: length(starts)})
-      |> assign(:series_picker, nil)
+      |> assign(series_picker: nil, series_refocus: true)
       |> check()
     else
       _not_offered -> socket
@@ -402,6 +436,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
 
       socket
       |> assign(:series_choice, %{choice | starts: starts, count: length(starts)})
+      |> assign(:series_refocus, false)
       |> check()
     else
       _not_chosen -> socket
@@ -423,10 +458,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
       meeting_type = socket.assigns.meeting_type
       first_or_starts = if choice.mode == :recurring, do: hd(choice.starts), else: choice.starts
 
+      # Strict, as the booking is: a calendar out of reach is said to be,
+      # rather than read as free and refused only on submit.
       opts = [
         count: choice.count,
         booker_tz: timezone(socket.assigns),
-        duration_minutes: AvailabilityHelpers.duration_minutes(socket)
+        duration_minutes: AvailabilityHelpers.duration_minutes(socket),
+        strict_calendar: true
       ]
 
       socket
@@ -486,7 +524,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
   defp checked_available?(assigns, choice) do
     not assigns[:series_checking?] and preview_answers?(assigns, choice) and
       checkable?(assigns, choice) and
-      Enum.all?(assigns.series_preview, &Occurrence.available?/1)
+      Enum.all?(assigns.series_preview, &(&1.status == :available))
   end
 
   # Before a check answers, a recurring series lists its first session only;

@@ -361,6 +361,7 @@ msgid "Checking"
 msgstr "Ověřování"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_parts.ex
 #, elixir-autogen, elixir-format
 msgid "Checking availability…"
 msgstr "Kontrolujeme dostupnost…"
@@ -531,3 +532,36 @@ msgid_plural "Your request for %{count} sessions has been sent"
 msgstr[0] "Vaše žádost o %{count} termín byla odeslána"
 msgstr[1] "Vaše žádost o %{count} termíny byla odeslána"
 msgstr[2] "Vaše žádost o %{count} termínů byla odeslána"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "%{available} of %{count} session available"
+msgid_plural "%{available} of %{count} sessions available"
+msgstr[0] "%{available} z %{count} termínu je volný"
+msgstr[1] "%{available} z %{count} termínů jsou volné"
+msgstr[2] "%{available} z %{count} termínů je volných"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session not available"
+msgid_plural "%{count} sessions not available"
+msgstr[0] "%{count} termín není volný"
+msgstr[1] "%{count} termíny nejsou volné"
+msgstr[2] "%{count} termínů není volných"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Book %{count} session"
+msgid_plural "Book %{count} sessions"
+msgstr[0] "Zarezervovat %{count} termín"
+msgstr[1] "Zarezervovat %{count} termíny"
+msgstr[2] "Zarezervovat %{count} termínů"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Request %{count} session"
+msgid_plural "Request %{count} sessions"
+
+msgstr[0] "Požádat o %{count} termín"
+msgstr[1] "Požádat o %{count} termíny"
+msgstr[2] "Požádat o %{count} termínů"

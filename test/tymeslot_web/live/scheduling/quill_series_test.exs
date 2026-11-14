@@ -46,6 +46,14 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
     series_max_occurrences: 4
   ]
 
+  @flexible [
+    name: "Flexible Pack",
+    duration_minutes: 30,
+    series_mode: :flexible,
+    series_min_occurrences: 2,
+    series_max_occurrences: 3
+  ]
+
   defmodule DenyChecker do
     @moduledoc false
     @behaviour Tymeslot.Features.CheckerBehaviour
@@ -97,14 +105,6 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
     view
   end
 
-  # The series moment's way on. The driver's `continue/1` would read the
-  # moment that opened after its last move as the page moving on by itself.
-  defp leave_series(view) do
-    view |> element("#series-step [data-intent='continue']:not([disabled])") |> render_click()
-    _sync = :sys.get_state(view.pid)
-    :ok
-  end
-
   defp at_nine(day, weeks_later),
     do: day |> Date.add(weeks_later * 7) |> DateTime.new!(~T[09:00:00], "Etc/UTC")
 
@@ -145,15 +145,19 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
     assert has_element?(view, "[data-testid='series-rule']", "Every week")
     assert has_element?(view, "[data-testid='series-count']", "4 sessions")
     assert length(occurrences(view, "available")) == 4
+    assert has_element?(view, "[data-testid='series-announcement']", "4 of 4 sessions available")
 
-    leave_series(view)
+    BookingDriver.continue(view)
+    assert has_element?(view, "#submit-booking-button", "Book 4 sessions")
+
     html = BookingDriver.submit(view, %{name: "Ada", email: "ada@example.com"})
 
     assert html =~ "4 sessions booked"
 
     assert length(
              Floki.find(Floki.parse_document!(html), "[data-testid='series-booked-session']")
-           ) == 4
+           ) ==
+             4
 
     assert has_element?(view, "[data-testid='series-manage']", "Manage all sessions")
 
@@ -163,6 +167,45 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
     assert [series_id] = booked |> Enum.map(& &1.series_id) |> Enum.uniq()
     assert %SeriesSchema{id: ^series_id} = Repo.get!(SeriesSchema, series_id)
     assert Enum.map(booked, & &1.series_position) == [1, 2, 3, 4]
+  end
+
+  @tag :capture_log
+  test "the whole walk books a series through the booking driver", %{conn: conn} do
+    %{user: user, profile: profile} = organiser("series-driver", @weekly)
+
+    {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=Etc/UTC")
+    html = BookingDriver.book(view, attendee: %{name: "Walk", email: "walk@example.com"})
+
+    assert html =~ "4 sessions booked"
+    assert length(meetings(user)) == 4
+  end
+
+  @tag :capture_log
+  test "a single booking after a series confirms only itself", %{conn: conn, day: day} do
+    %{user: user, profile: profile} =
+      organiser("series-then-single", Keyword.put(@weekly, :series_required, false))
+
+    view = to_series(conn, profile, day)
+    BookingDriver.continue(view)
+
+    assert BookingDriver.submit(view, %{name: "Twice", email: "twice@example.com"}) =~
+             "4 sessions booked"
+
+    BookingDriver.restart(view)
+    BookingDriver.choose_meeting_type(view, hd(BookingDriver.meeting_types(view)))
+    {_iso, _time} = BookingDriver.pick_first_slot(view, on: Date.to_iso8601(Date.add(day, 1)))
+    BookingDriver.continue(view)
+    render_async(view)
+
+    view |> element("[data-testid='series-book-single']") |> render_click()
+    _sync = :sys.get_state(view.pid)
+
+    html = BookingDriver.submit(view, %{name: "Twice", email: "twice@example.com"})
+
+    assert html =~ "Meeting Confirmed!"
+    refute html =~ "sessions booked"
+    refute has_element?(view, "[data-testid='series-booked']")
+    assert length(meetings(user)) == 5
   end
 
   @tag :capture_log
@@ -249,7 +292,7 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
     assert length(occurrences(view, "available")) == 3
     refute has_element?(view, "[data-testid='series-add']")
 
-    leave_series(view)
+    BookingDriver.continue(view)
     assert has_element?(view, "[data-testid='booking-series-summary']", "3 sessions, first on")
 
     html = BookingDriver.submit(view, %{name: "Flex", email: "flex@example.com"})
@@ -296,7 +339,7 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
     %{user: user, profile: profile} = organiser("series-race", @weekly)
 
     view = to_series(conn, profile, day)
-    leave_series(view)
+    BookingDriver.continue(view)
     assert has_element?(view, "form[data-fact='attendee']")
 
     clash(user, at_nine(day, 2))
@@ -338,7 +381,7 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
     view = to_series(conn, profile, day)
     assert has_element?(view, "[data-testid='series-total']", "200")
 
-    leave_series(view)
+    BookingDriver.continue(view)
 
     view
     |> form("form[data-fact='attendee']", %{
@@ -382,7 +425,7 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
       )
 
     view = to_series(conn, profile, day)
-    leave_series(view)
+    BookingDriver.continue(view)
     html = BookingDriver.submit(view, %{name: "Ask", email: "ask@example.com"})
 
     assert html =~ "Your request for 4 sessions has been sent"
@@ -393,5 +436,129 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
 
     assert user |> meetings() |> Enum.map(& &1.status) ==
              List.duplicate(:awaiting_approval, 4)
+  end
+
+  describe "with the host's calendar failing on cue" do
+    setup do
+      {:ok, calendar} = Agent.start_link(fn -> :up end)
+
+      stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        case Agent.get(calendar, & &1) do
+          :up -> {:ok, []}
+          :down -> {:error, :timeout}
+        end
+      end)
+
+      %{calendar: calendar}
+    end
+
+    @tag :capture_log
+    test "an unverifiable check says so and its retry checks again",
+         %{conn: conn, day: day, calendar: calendar} do
+      %{profile: profile} = organiser("series-unverifiable", @weekly)
+
+      {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=Etc/UTC")
+      BookingDriver.choose_meeting_type(view, hd(BookingDriver.meeting_types(view)))
+      {_iso, _time} = BookingDriver.pick_first_slot(view, on: Date.to_iso8601(day))
+
+      Agent.update(calendar, fn _state -> :down end)
+      AvailabilityCache.clear_all()
+      BookingDriver.continue(view)
+      render_async(view)
+
+      assert has_element?(view, "[data-testid='series-check-error']", "couldn't check")
+      assert has_element?(view, "#series-step [data-intent='continue'][disabled]")
+
+      Agent.update(calendar, fn _state -> :up end)
+      view |> element("[data-testid='series-retry']") |> render_click()
+      render_async(view)
+
+      refute has_element?(view, "[data-testid='series-check-error']")
+      assert length(occurrences(view, "available")) == 4
+      assert has_element?(view, "#series-step [data-intent='continue']:not([disabled])")
+    end
+
+    @tag :capture_log
+    test "a picker week that failed to load loads again on retry",
+         %{conn: conn, day: day, calendar: calendar} do
+      %{profile: profile} = organiser("series-picker-retry", @flexible)
+
+      view = to_series(conn, profile, day)
+
+      Agent.update(calendar, fn _state -> :down end)
+      view |> element("[data-testid='series-add']") |> render_click()
+      render_async(view)
+
+      assert has_element?(
+               view,
+               "[data-testid='series-picker'] [data-testid='series-check-error']"
+             )
+
+      refute has_element?(view, "[data-testid='series-picker-time']")
+
+      Agent.update(calendar, fn _state -> :up end)
+      view |> element("[data-testid='series-picker-retry']") |> render_click()
+      render_async(view)
+
+      refute has_element?(
+               view,
+               "[data-testid='series-picker'] [data-testid='series-check-error']"
+             )
+
+      assert has_element?(view, "[data-testid='series-picker-time']")
+    end
+  end
+
+  @tag :capture_log
+  test "the picker offers sessions past the booking window", %{conn: conn, day: day} do
+    %{profile: profile} = organiser("series-far", @flexible)
+
+    view = to_series(conn, profile, day)
+    view |> element("[data-testid='series-add']") |> render_click()
+    render_async(view)
+
+    for _week <- 1..6 do
+      view |> element("[data-testid='series-picker-later']") |> render_click()
+      render_async(view)
+    end
+
+    window_end = Date.add(Date.utc_today(), 30)
+
+    far_days =
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.find("[data-testid='series-picker-day']")
+      |> Enum.flat_map(&Floki.attribute(&1, "data-date"))
+      |> Enum.filter(&(Date.compare(Date.from_iso8601!(&1), window_end) == :gt))
+
+    assert far_days != []
+    assert has_element?(view, "[data-testid='series-picker-time']")
+  end
+
+  @tag :capture_log
+  test "a session added can be removed again, and the focus returns to adding",
+       %{conn: conn, day: day} do
+    %{profile: profile} = organiser("series-remove", @flexible)
+
+    view = to_series(conn, profile, day)
+    add_last_time_of_day(view, 0)
+
+    assert length(occurrences(view)) == 2
+    assert has_element?(view, "#series-add[phx-mounted]")
+
+    [added] =
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.find("[data-testid='series-remove']")
+
+    [start] = Floki.attribute(added, "phx-value-start")
+
+    view |> element("[data-testid='series-remove'][phx-value-start='#{start}']") |> render_click()
+    render_async(view)
+
+    assert length(occurrences(view)) == 1
+    refute has_element?(view, "[data-testid='series-remove']")
   end
 end

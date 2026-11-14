@@ -1168,10 +1168,11 @@ Choosing a meeting type is the way on; a theme that wants a separate Next sends 
 | `series_preview` | series | mount | the sessions the last check judged; render `Series.rows/1` (each row's `status`: `:available`, `{:unavailable, reason}` or `:pending`) and `SeriesParts.occurrence_list/1` rather than reading it |
 | `series_checking?` | series | mount | whether a check of the series is in flight |
 | `series_error` | series | mount | why the last check gave no answer (`:availability_unverifiable`, `:overlapping_starts`, `:invalid_count`), else nil; `SeriesParts.check_error/1` words it |
+| `series_refocus` | series | mount | whether the moment takes the focus back to where sessions are added, set once one was added; pass it to `SeriesParts.refocus/1` on the control that mounts there |
 | `series_picker` | series | mount | a flexible series' picker of further sessions, nil while closed; `SeriesPicker.days/1` lists what it offers |
 | `series_offered?` | series | mount | whether the meeting type's series is offered, settled once per type |
 | `series_single_allowed?` | series | mount | whether the booker may book just the time picked |
-| `series` | confirmation | mount | the series a submission booked, nil for a single booking |
+| `series` | confirmation | mount | the series a submission booked, nil for a single booking (every submission starts without one) |
 | `series_meetings` | confirmation | mount | the sessions a series booking made, in order; `[]` for a single booking |
 | `engine` | questions | mount | the custom-questions engine; `CustomQuestions.Events.assign_render_state/1` derives the question on screen from it |
 | `form` | booking | mount | the booking form |
