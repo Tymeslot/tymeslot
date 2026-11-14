@@ -57,7 +57,7 @@ defmodule Tymeslot.BookingSeries.CancelTest do
     )
   end
 
-  defp series_type(host, attrs \\ []) do
+  defp series_type(host, attrs) do
     insert(
       :meeting_type,
       Keyword.merge(
@@ -559,6 +559,19 @@ defmodule Tymeslot.BookingSeries.CancelTest do
       assert [_still_one] = refund_failed_jobs()
 
       assert Repo.reload!(payment).refunded_amount_cents == 0
+    end
+
+    test "a last attempt that exits still tells the host", %{host: host, series: series} do
+      pay(series, 4)
+      assert {:ok, %{refund: {:scheduled, 20_000}}} = cancel_as_host(series, host)
+
+      # A call that timed out exits rather than raising.
+      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
+        exit({:timeout, {GenServer, :call, []}})
+      end)
+
+      assert {:error, {:exit, {:timeout, _call}}} = run_refund_job(attempt: 10)
+      assert [%{args: %{"amount_cents" => 20_000}}] = refund_failed_jobs()
     end
   end
 

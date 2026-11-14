@@ -23,7 +23,8 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   (`ErrorTracking.ObanOutcomes`), and a new error raises its admin alert.
 
   When it gives up on a refund (discarded as one no retry can make, or
-  failed on its last attempt), the host is emailed
+  failed on its last attempt, by an error, a raise or an exit), the host is
+  emailed
   (`Tymeslot.Workers.SendSeriesRefundFailed`): the series payment appears
   on their outstanding-refunds list only once none of its sessions goes
   ahead, so the email is how they learn the money is still theirs to
@@ -124,7 +125,10 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   def backoff(%Oban.Job{attempt: attempt}),
     do: Backoff.exponential(attempt, @base_backoff_seconds, @max_backoff_seconds)
 
-  # A raise (a dropped connection, say) is an attempt failing like any other.
+  # A raise (a dropped connection, say) or an exit (a call that timed out)
+  # is an attempt failing like any other, so the last one still tells the
+  # host. The worker sets no Oban timeout, which would kill the attempt
+  # past any rescue.
   defp refund(%{
          "booking_payment_id" => id,
          "host_user_id" => host_user_id,
@@ -144,6 +148,8 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
     end
   rescue
     exception -> {:error, exception}
+  catch
+    kind, reason when kind in [:exit, :throw] -> {:error, {kind, reason}}
   end
 
   defp ensure_charge(%{stripe_charge_id: charge} = payment)
