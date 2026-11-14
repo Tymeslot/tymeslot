@@ -345,6 +345,7 @@ msgstr "Zamiast tego zarezerwuj serię"
 msgid "Book just this session"
 msgstr "Zarezerwuj tylko tę sesję"
 
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
 #: lib/tymeslot_web/themes/shared/series_parts.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -469,6 +470,7 @@ msgstr "Koliduje z inną twoją sesją"
 msgid "Remove the session on %{when}"
 msgstr "Usuń sesję: %{when}"
 
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
 #: lib/tymeslot_web/themes/shared/series_parts.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule"
@@ -479,6 +481,7 @@ msgstr "Zmień termin"
 msgid "Some sessions aren't available at this time. Pick another time for your first session, or book fewer sessions."
 msgstr "Niektóre sesje nie są dostępne o tej godzinie. Wybierz inną godzinę pierwszej sesji albo zarezerwuj mniej sesji."
 
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
 #: lib/tymeslot_web/themes/shared/series_chooser.ex
 #: lib/tymeslot_web/themes/shared/series_summary.ex
 #, elixir-autogen, elixir-format
@@ -564,3 +567,146 @@ msgid_plural "Request %{count} sessions"
 msgstr[0] "Poproś o %{count} sesję"
 msgstr[1] "Poproś o %{count} sesje"
 msgstr[2] "Poproś o %{count} sesji"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} hasn't answered your request yet."
+msgstr "Twoja prośba czeka, aż %{host} na nią odpowie."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "%{type}: %{count} session with %{host}"
+msgid_plural "%{type}: %{count} sessions with %{host}"
+msgstr[0] "%{type}: %{count} sesja, prowadzi %{host}"
+msgstr[1] "%{type}: %{count} sesje, prowadzi %{host}"
+msgstr[2] "%{type}: %{count} sesji, prowadzi %{host}"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Awaiting approval"
+msgstr "Oczekuje na akceptację"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Awaiting payment"
+msgstr "Oczekuje na płatność"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel %{count} upcoming session? This can't be undone."
+msgid_plural "Cancel %{count} upcoming sessions? This can't be undone."
+msgstr[0] "Odwołać %{count} nadchodzącą sesję? Tego nie można cofnąć."
+msgstr[1] "Odwołać %{count} nadchodzące sesje? Tego nie można cofnąć."
+msgstr[2] "Odwołać %{count} nadchodzących sesji? Tego nie można cofnąć."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel all remaining sessions"
+msgstr "Odwołaj wszystkie pozostałe sesje"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Odwołana"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling doesn't refund your payment automatically. Contact %{host} about a refund."
+msgstr "Odwołanie nie oznacza automatycznego zwrotu płatności. Zwrotem zajmuje się %{host}, więc skontaktuj się w tej sprawie bezpośrednio."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling…"
+msgstr "Odwoływanie…"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Keep my request"
+msgstr "Zachowaj prośbę"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Keep my sessions"
+msgstr "Zachowaj sesje"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "No session of this series is left to come."
+msgstr "W tej serii nie ma już nadchodzących sesji."
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was left to cancel. The list shows where each session stands."
+msgstr "Nie było już czego odwołać. Na liście widać, jaki jest stan każdej sesji."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Past"
+msgstr "Miniona"
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "The sessions could not be cancelled. Please try again."
+msgstr "Nie udało się odwołać sesji. Spróbuj ponownie."
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "This series could not be found. Check the link in your email."
+msgstr "Nie znaleziono tej serii. Sprawdź link w e-mailu."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Upcoming"
+msgstr "Nadchodząca"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Withdraw request"
+msgstr "Wycofaj prośbę"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Withdraw your request for %{count} session? This can't be undone."
+msgid_plural "Withdraw your request for %{count} sessions? This can't be undone."
+msgstr[0] "Wycofać prośbę o %{count} sesję? Tego nie można cofnąć."
+msgstr[1] "Wycofać prośbę o %{count} sesje? Tego nie można cofnąć."
+msgstr[2] "Wycofać prośbę o %{count} sesji? Tego nie można cofnąć."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Withdrawing…"
+msgstr "Wycofywanie…"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Yes, withdraw it"
+msgstr "Tak, wycofaj prośbę"
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "Your remaining sessions are cancelled. We've emailed you."
+msgstr "Pozostałe sesje zostały odwołane. Wysłaliśmy ci e-mail."
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "Your request is withdrawn. We've emailed you."
+msgstr "Prośba została wycofana. Wysłaliśmy ci e-mail."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Your sessions"
+msgstr "Twoje sesje"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "your host"
+msgstr "twój organizator"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Yes, cancel it"
+msgid_plural "Yes, cancel them"
+
+msgstr[0] "Tak, odwołaj sesję"
+msgstr[1] "Tak, odwołaj sesje"
+msgstr[2] "Tak, odwołaj sesje"

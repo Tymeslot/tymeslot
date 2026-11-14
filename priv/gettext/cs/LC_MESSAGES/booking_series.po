@@ -345,6 +345,7 @@ msgstr "Raději zarezervovat sérii"
 msgid "Book just this session"
 msgstr "Zarezervovat jen tento termín"
 
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
 #: lib/tymeslot_web/themes/shared/series_parts.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -469,6 +470,7 @@ msgstr "Překrývá se s jiným vaším termínem"
 msgid "Remove the session on %{when}"
 msgstr "Odebrat termín %{when}"
 
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
 #: lib/tymeslot_web/themes/shared/series_parts.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule"
@@ -479,6 +481,7 @@ msgstr "Přesunout"
 msgid "Some sessions aren't available at this time. Pick another time for your first session, or book fewer sessions."
 msgstr "Některé termíny v tento čas nejsou volné. Vyberte pro první termín jiný čas, nebo si zarezervujte méně termínů."
 
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
 #: lib/tymeslot_web/themes/shared/series_chooser.ex
 #: lib/tymeslot_web/themes/shared/series_summary.ex
 #, elixir-autogen, elixir-format
@@ -564,3 +567,146 @@ msgid_plural "Request %{count} sessions"
 msgstr[0] "Požádat o %{count} termín"
 msgstr[1] "Požádat o %{count} termíny"
 msgstr[2] "Požádat o %{count} termínů"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} hasn't answered your request yet."
+msgstr "Vaše žádost čeká, až na ni %{host} odpoví."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "%{type}: %{count} session with %{host}"
+msgid_plural "%{type}: %{count} sessions with %{host}"
+msgstr[0] "%{type}: %{count} termín, vede %{host}"
+msgstr[1] "%{type}: %{count} termíny, vede %{host}"
+msgstr[2] "%{type}: %{count} termínů, vede %{host}"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Awaiting approval"
+msgstr "Čeká na schválení"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Awaiting payment"
+msgstr "Čeká na platbu"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel %{count} upcoming session? This can't be undone."
+msgid_plural "Cancel %{count} upcoming sessions? This can't be undone."
+msgstr[0] "Zrušit %{count} nadcházející termín? Tuto akci nelze vrátit zpět."
+msgstr[1] "Zrušit %{count} nadcházející termíny? Tuto akci nelze vrátit zpět."
+msgstr[2] "Zrušit %{count} nadcházejících termínů? Tuto akci nelze vrátit zpět."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel all remaining sessions"
+msgstr "Zrušit všechny zbývající termíny"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Zrušeno"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling doesn't refund your payment automatically. Contact %{host} about a refund."
+msgstr "Zrušením se platba automaticky nevrací. Vrácení platby vyřizuje %{host}, ozvěte se kvůli němu přímo."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling…"
+msgstr "Rušení…"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Keep my request"
+msgstr "Ponechat žádost"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Keep my sessions"
+msgstr "Ponechat termíny"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "No session of this series is left to come."
+msgstr "V této sérii už nezbývá žádný nadcházející termín."
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was left to cancel. The list shows where each session stands."
+msgstr "Už nebylo co zrušit. V seznamu vidíte, jak jsou na tom jednotlivé termíny."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Past"
+msgstr "Proběhlo"
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "The sessions could not be cancelled. Please try again."
+msgstr "Termíny se nepodařilo zrušit. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "This series could not be found. Check the link in your email."
+msgstr "Tuto sérii se nepodařilo najít. Zkontrolujte odkaz v e-mailu."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Upcoming"
+msgstr "Nadcházející"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Withdraw request"
+msgstr "Stáhnout žádost"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Withdraw your request for %{count} session? This can't be undone."
+msgid_plural "Withdraw your request for %{count} sessions? This can't be undone."
+msgstr[0] "Stáhnout žádost o %{count} termín? Tuto akci nelze vrátit zpět."
+msgstr[1] "Stáhnout žádost o %{count} termíny? Tuto akci nelze vrátit zpět."
+msgstr[2] "Stáhnout žádost o %{count} termínů? Tuto akci nelze vrátit zpět."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Withdrawing…"
+msgstr "Stahování žádosti…"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Yes, withdraw it"
+msgstr "Ano, stáhnout žádost"
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "Your remaining sessions are cancelled. We've emailed you."
+msgstr "Zbývající termíny jsou zrušené. Poslali jsme vám e-mail."
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "Your request is withdrawn. We've emailed you."
+msgstr "Žádost je stažená. Poslali jsme vám e-mail."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Your sessions"
+msgstr "Vaše termíny"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "your host"
+msgstr "váš hostitel"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Yes, cancel it"
+msgid_plural "Yes, cancel them"
+
+msgstr[0] "Ano, zrušit termín"
+msgstr[1] "Ano, zrušit termíny"
+msgstr[2] "Ano, zrušit termíny"

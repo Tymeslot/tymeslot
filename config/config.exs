@@ -477,6 +477,10 @@ config :phoenix, :json_library, Jason
 # when Stripe sends them back would otherwise log the OAuth callback's code and
 # state inside it.
 #
+# "series_uid" is the bearer of a booking series' page
+# (`/:username/series/:series_uid`): whoever holds it may cancel every
+# session of the series.
+#
 # This lives in compile-time config rather than runtime.exs so it holds at every
 # log level and in every environment. Production pins the level to :info, where
 # the "Parameters:" line is not emitted at all, but dev runs at :debug and a
@@ -493,7 +497,8 @@ config :phoenix, :filter_parameters, [
   "value",
   "code",
   "state",
-  "redirect_to"
+  "redirect_to",
+  "series_uid"
 ]
 
 # Precompressed siblings written by `mix phx.digest`, replacing the stock

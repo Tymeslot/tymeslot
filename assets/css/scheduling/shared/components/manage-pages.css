@@ -5,7 +5,9 @@
    wrapper every default page body sits in, and the default payment pages'
    layout, heading and status icon (their card and inks are
    payment-pages.css's). Imported by a theme that takes the default pages
-   (a page_shell: in use TymeslotWeb.Themes.Core.Theme).
+   (a page_shell: in use TymeslotWeb.Themes.Core.Theme), and by every theme
+   for the series page (Shared.Components.SeriesPage), which a theme
+   without a page shell draws in its own card.
 
    Tokens: the contract's --ink-1/2, --surface-2/3, --line-1/2,
    --radius-card, --radius-control, the solid primary pair, the status

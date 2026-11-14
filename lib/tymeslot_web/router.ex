@@ -385,6 +385,10 @@ defmodule TymeslotWeb.Router do
            :cancel_confirmed
 
       live "/:username/meeting/:meeting_uid/reschedule", Themes.Core.Dispatcher, :reschedule
+
+      # Every session of a booking series, for its booker; the series uid
+      # is the page's bearer, as a meeting's uid is.
+      live "/:username/series/:series_uid", Themes.Core.Dispatcher, :series
     end
   end
 
@@ -397,6 +401,14 @@ defmodule TymeslotWeb.Router do
 
     get "/cancel", MeetingLinkController, :cancel
     get "/reschedule", MeetingLinkController, :reschedule
+  end
+
+  # A series page link without a username, resolved the same way: "series"
+  # is a reserved username too.
+  scope "/series/:series_uid", TymeslotWeb do
+    pipe_through :theme_browser
+
+    get "/", MeetingLinkController, :series
   end
 
   # Payment return pages (the Stripe Checkout success and cancel URLs). One

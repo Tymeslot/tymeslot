@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   `PaymentReturnComponents`) inside the theme's shell.
 
   The shell is a function component. It receives `page` (`:reschedule`,
-  `:cancel`, `:cancel_confirmed`, `:poll`, `:payment_processing`,
+  `:cancel`, `:cancel_confirmed`, `:series`, `:poll`, `:payment_processing`,
   `:payment_cancelled`), the page's `theme_tokens` (`nil` on a payment
   page's dead render, which reads no data), the organiser's
   `organizer_profile` (`nil` on that dead render too), the organiser's
@@ -29,11 +29,12 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
 
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Themes.Shared.Components.MeetingPageBodies
+  alias TymeslotWeb.Themes.Shared.Components.SeriesPage
   alias TymeslotWeb.Themes.Shared.{PaymentReturn, PaymentReturnComponents, PollVotingComponents}
 
   @type shell :: (map() -> Phoenix.LiveView.Rendered.t())
 
-  @meeting_actions [:reschedule, :cancel, :cancel_confirmed]
+  @meeting_actions [:reschedule, :cancel, :cancel_confirmed, :series]
 
   @doc "A meeting page (`render_meeting_action/2`); any other action raises."
   @spec meeting_action(map(), atom(), shell()) :: Phoenix.LiveView.Rendered.t()
@@ -100,6 +101,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   defp body(%{page: :reschedule} = assigns), do: MeetingPageBodies.reschedule(assigns)
   defp body(%{page: :cancel} = assigns), do: MeetingPageBodies.cancel(assigns)
   defp body(%{page: :cancel_confirmed} = assigns), do: MeetingPageBodies.cancel_confirmed(assigns)
+  defp body(%{page: :series} = assigns), do: SeriesPage.from_page(assigns)
 
   defp body(%{page: :poll} = assigns) do
     ~H"""

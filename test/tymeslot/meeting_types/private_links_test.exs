@@ -188,6 +188,13 @@ defmodule Tymeslot.MeetingTypes.PrivateLinksTest do
       assert "is reserved" in errors_on(cs).slug
     end
 
+    test "rejects the reserved 'series' slug that would shadow the series page" do
+      type = insert(:meeting_type)
+      cs = MeetingTypeSchema.slug_changeset(type, %{slug: "series"})
+      refute cs.valid?
+      assert "is reserved" in errors_on(cs).slug
+    end
+
     test "accepts lowercase alphanumerics and hyphens" do
       type = insert(:meeting_type)
       cs = MeetingTypeSchema.slug_changeset(type, %{slug: "vip-2026"})

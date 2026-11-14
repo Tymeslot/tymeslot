@@ -22,7 +22,8 @@ defmodule Tymeslot.BookingSeries do
     Plan,
     Rule,
     SeriesQueries,
-    SeriesSchema
+    SeriesSchema,
+    Sessions
   }
 
   alias Tymeslot.Meetings.MeetingSchema
@@ -90,6 +91,15 @@ defmodule Tymeslot.BookingSeries do
   @spec get_for_attendee(term()) :: {:ok, SeriesSchema.t()} | {:error, :not_found}
   def get_for_attendee(uid) when is_binary(uid), do: SeriesQueries.get_by_uid(uid)
   def get_for_attendee(_uid), do: {:error, :not_found}
+
+  @doc """
+  The attendee's series page: every session with its status and links,
+  how many "Cancel all remaining" would cancel, and whether the series is
+  an open request or was paid for. See `Tymeslot.BookingSeries.Sessions`.
+  """
+  @spec attendee_overview(SeriesSchema.t(), map() | nil) :: Sessions.overview()
+  def attendee_overview(%SeriesSchema{} = series, organizer_profile),
+    do: Sessions.for_attendee(series, organizer_profile)
 
   @doc """
   The series `series_id` when `user_id` is its organiser, else

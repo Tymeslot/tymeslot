@@ -38,9 +38,12 @@ defmodule TymeslotWeb.Themes.Core.Behaviour do
 
   @doc """
   Renders a meeting management page: `:reschedule`, `:cancel` or
-  `:cancel_confirmed`. Any other action raises. The generated default draws
-  either the theme's conventional module or, with `:page_shell`,
-  `Shared.DefaultPages`.
+  `:cancel_confirmed`, or the attendee's page for a whole booking series,
+  `:series`. Any other action raises. The generated default draws either
+  the theme's conventional module or, with `:page_shell`,
+  `Shared.DefaultPages`, which alone draws `:series`: a theme without a
+  page shell overrides the callback for it, drawing
+  `Shared.Components.SeriesPage` in its own card.
   """
   @callback render_meeting_action(assigns :: map(), action :: atom()) ::
               Phoenix.LiveView.Rendered.t()

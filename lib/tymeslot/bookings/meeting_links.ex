@@ -27,6 +27,7 @@ defmodule Tymeslot.Bookings.MeetingLinks do
   which the router resolves to the host's current page once they have one.
   """
 
+  alias Tymeslot.BookingSeries.SeriesQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Profiles.ProfileQueries
@@ -141,9 +142,9 @@ defmodule Tymeslot.Bookings.MeetingLinks do
   when they have none) and the application's base URL now, as the meeting
   links are. The series uid is the bearer of the page.
 
-  `nil` for an organiser without a username: there is no uid-only form of
-  the series page to fall back on, and an email leaves a link without a URL
-  out.
+  `nil` for an organiser without a username: the uid-only form
+  (`/series/:series_uid`, `current_series_path/1`) resolves only once they
+  have one, and an email leaves a link without a URL out.
   """
   @spec series_url(%{:uid => String.t(), optional(atom()) => term()}, map() | nil) ::
           String.t() | nil
@@ -152,6 +153,21 @@ defmodule Tymeslot.Bookings.MeetingLinks do
       do: UrlBuilder.base_url() <> "/#{username}/series/#{uid}"
 
   def series_url(_series, _organizer_profile), do: nil
+
+  @doc """
+  Where the series page for the series with bearer `uid` lives now, as a
+  path: the organiser's current username, however the link was addressed
+  (`/series/:series_uid`, or a username the host has since given up), as
+  `current_path/2` resolves a meeting's. `{:error, :not_found}` when no
+  series has that uid or its organiser has no username.
+  """
+  @spec current_series_path(String.t()) :: {:ok, String.t()} | {:error, :not_found}
+  def current_series_path(uid) when is_binary(uid) do
+    case SeriesQueries.organizer_username_by_uid(uid) do
+      {:ok, username} -> {:ok, "/#{username}/series/#{uid}"}
+      {:error, :not_found} -> {:error, :not_found}
+    end
+  end
 
   @doc """
   Where `page` for the booking with `uid` lives now, as a path.

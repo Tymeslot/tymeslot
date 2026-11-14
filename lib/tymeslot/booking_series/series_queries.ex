@@ -10,6 +10,7 @@ defmodule Tymeslot.BookingSeries.SeriesQueries do
   alias Tymeslot.BookingSeries.SeriesSchema, as: Series
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
 
   @doc "Inserts a series."
@@ -45,6 +46,30 @@ defmodule Tymeslot.BookingSeries.SeriesQueries do
       :error -> {:error, :not_found}
       nil -> {:error, :not_found}
     end
+  end
+
+  @doc """
+  The username the organiser of the series with bearer `uid` has now, if
+  any and not pending deletion.
+  """
+  @spec organizer_username_by_uid(String.t()) :: {:ok, String.t()} | {:error, :not_found}
+  def organizer_username_by_uid(uid) when is_binary(uid) do
+    with {:ok, uid} <- UUID.cast(uid),
+         username when is_binary(username) <- Repo.one(organizer_username_query(uid)) do
+      {:ok, username}
+    else
+      _unknown -> {:error, :not_found}
+    end
+  end
+
+  defp organizer_username_query(uid) do
+    from(s in Series,
+      join: p in ProfileSchema,
+      on: p.user_id == s.organizer_user_id,
+      join: u in assoc(p, :user),
+      where: s.uid == ^uid and p.username != "" and is_nil(u.deletion_scheduled_at),
+      select: p.username
+    )
   end
 
   @doc "Fetches a series by id, scoped to the organiser that owns it."

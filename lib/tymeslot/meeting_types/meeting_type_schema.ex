@@ -177,12 +177,13 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   @reserved_slug_format ~r/^\d+min$/
   # Reserved because a fixed route would shadow the type's address:
   # `/:username/poll/:token` (the public poll voting page) shadows
-  # `/:username/poll/book`, and `/:username/thank-you` (and a page's
+  # `/:username/poll/book`, `/:username/series/:series_uid` (a booking
+  # series' page) `/:username/series/book`, and `/:username/thank-you` (and a page's
   # `/:username/:page/thank-you`) the type's own page. "book" is free: a
   # name-derived slug can be "book" anyway, and
   # `TymeslotWeb.Live.Scheduling.PageAddress` reads a page's
   # `/:username/:page/book` as its type slugged "book".
-  @reserved_slugs ~w(poll thank-you)
+  @reserved_slugs ~w(poll series thank-you)
   @slug_max_length 80
 
   @doc """

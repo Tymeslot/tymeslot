@@ -43,7 +43,7 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
 
   # The literal second segments the router serves under `/:username/`
   # (`TymeslotWeb.Router`): a page there would never be reached.
-  @reserved_slugs ~w(book meeting poll thank-you)
+  @reserved_slugs ~w(book meeting poll series thank-you)
 
   schema "booking_pages" do
     field(:slug, :string)

@@ -242,6 +242,11 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     if meeting_uid, do: "/#{username}/meeting/#{meeting_uid}/reschedule", else: "/#{username}"
   end
 
+  defp base_path(:series, username, assigns) do
+    series_uid = assigns[:series_uid]
+    if series_uid, do: "/#{username}/series/#{series_uid}", else: "/#{username}"
+  end
+
   defp base_path(_action, username, _assigns), do: "/#{username}"
 
   defp build_query_params(socket, locale) do

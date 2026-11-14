@@ -459,6 +459,54 @@
   height: var(--icon-sm);
 }
 
+/* The series page (Shared.Components.SeriesPage): each session's status
+   beside its date, in the session list above. A session that will not take
+   place, or has, steps back. */
+.manage-page--series .series-confirmation__label {
+  margin-bottom: var(--space-xs);
+}
+
+.manage-page--series .series-list__body {
+  justify-content: flex-start;
+}
+
+/* The status at the row's end, the links after it. */
+.manage-page--series .series-status {
+  margin-left: auto;
+}
+
+.series-status--upcoming {
+  color: var(--theme-success);
+}
+
+.series-status--past,
+.series-status--cancelled {
+  color: var(--theme-text-secondary);
+}
+
+.series-status--awaiting_approval,
+.series-status--awaiting_payment {
+  color: var(--notice-warning);
+}
+
+.series-list__item--past,
+.series-list__item--cancelled {
+  background: transparent;
+}
+
+.series-list__item--cancelled .series-list__when {
+  text-decoration: line-through;
+}
+
+.series-page__confirm,
+.series-page__refund {
+  margin: 0;
+}
+
+.series-page__refund {
+  margin-top: var(--space-2xs);
+}
+
 /* Embeds are height-constrained: the list keeps its rows tight. */
 html.scheduling-app[data-embedded] .series-list__item {
   padding: var(--space-3xs) var(--space-xs);
