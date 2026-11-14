@@ -286,16 +286,21 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   defp refundable_remaining(_payment), do: 0
 
-  # Money the attendee is still owed that cannot be refunded from here: why,
-  # said before the host confirms. Nil when nothing is owed, or it can be.
+  # Money the attendee paid that cannot be refunded from here: why, said
+  # before the host confirms. Nil when nothing is owed, or it can be.
   defp no_refund_reason_for(payment) do
-    with true <- MeetingPayments.refund_outstanding?(payment),
+    with true <- unrefunded?(payment),
          {:error, reason} <- MeetingPayments.refund_refusal(payment) do
       no_refund_reason(reason)
     else
       _refundable_or_settled -> nil
     end
   end
+
+  # A disputed payment is not outstanding (Stripe holds the money), but
+  # cancelling still refunds none of it.
+  defp unrefunded?(%{status: :disputed}), do: true
+  defp unrefunded?(payment), do: MeetingPayments.refund_outstanding?(payment)
 
   @doc """
   Why a payment can no longer be refunded from Tymeslot

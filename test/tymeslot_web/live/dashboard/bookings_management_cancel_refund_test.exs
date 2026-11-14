@@ -3,8 +3,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
   The paid-booking cancel dialog when a submit is refused: the choice, amount
   and acknowledgement are the host's until submit, so a re-render without them
   would snap the choice back to a full refund. And a payment past the refund
-  window: the dialog says up front that cancelling will not refund it, and
-  the cancellation goes through without one, saying why.
+  window, or under dispute: the dialog says up front that cancelling will
+  not refund it, and the cancellation goes through without one, saying why.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -139,5 +139,42 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
       assert {:ok, {:not_refunded, :outside_refund_window}} =
                Meetings.resolve_cancellation_refund(payment, %{})
     end
+  end
+
+  # A disputed payment is not one the host still owes from here: Stripe
+  # holds the money. The dialog still says why cancelling refunds nothing.
+  test "a disputed payment's dialog says cancelling won't refund it",
+       %{conn: conn, user: user} do
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        organizer_email: user.email,
+        attendee_name: "Paid Disputed"
+      )
+
+    insert(:booking_payment,
+      meeting_id: meeting.id,
+      host_user_id: user.id,
+      host_email: user.email,
+      stripe_account_id: "acct_DISPUTED",
+      stripe_charge_id: "ch_DISPUTED_#{System.unique_integer([:positive])}",
+      amount_cents: 5000,
+      application_fee_cents: 25,
+      currency: "eur",
+      status: :disputed,
+      paid_at: DateTime.utc_now(:second),
+      refunded_amount_cents: 0
+    )
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+    view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+    refute has_element?(view, "input[name=cancel_refund_choice]")
+
+    assert has_element?(
+             view,
+             "#cancel-meeting-form",
+             "Cancelling won't refund the attendee: the payment is under dispute. Settle the dispute in Stripe first."
+           )
   end
 end
