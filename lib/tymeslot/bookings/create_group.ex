@@ -172,7 +172,9 @@ defmodule Tymeslot.Bookings.CreateGroup do
   # `organizer_notified_at` markers keep from sending twice.
   #
   # A seat sending no emails (`emails: false`) has no confirmation for a
-  # room to hold back, so a room it creates is scheduled without one.
+  # room to hold back, so a room it creates is scheduled without one. It is
+  # a seat of a booking series, so it owes no integration fan-out either:
+  # the series is announced whole (`Tymeslot.BookingSeries.Automation`).
   defp schedule_seat_jobs(booking, opts) do
     %{meeting: meeting, participant: participant, created_meeting?: created?} = booking
     emails? = Keyword.get(opts, :emails, true)
@@ -182,7 +184,8 @@ defmodule Tymeslot.Bookings.CreateGroup do
          {{:ok, _scheduled}, pending} <-
            Events.seat_booked_deferred(meeting, participant,
              defer_emails?: defer_emails?,
-             emails: emails?
+             emails: emails?,
+             integrations: emails?
            ) do
       {:ok, pending}
     else

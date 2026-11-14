@@ -109,21 +109,22 @@ defmodule Tymeslot.Bookings.CancelSeat do
   meeting's cancellation or the host event's refresh, and the seat's
   `meeting.cancelled` for integrations. `emails: false` schedules no email,
   for the seat or for a meeting it emptied, for a caller that tells both
-  sides itself.
+  sides itself, and `integrations: false` tells no integration, for a
+  caller that tells them itself (`Tymeslot.BookingSeries.Cancel`).
   """
   @spec finish(released(), keyword()) :: :ok
   def finish(%{meeting: meeting, participant: participant, outcome: outcome}, opts \\ []) do
     publish_seat_change(meeting)
-    emails? = Keyword.get(opts, :emails, true)
+    told = Keyword.take(opts, [:emails, :integrations])
 
     case outcome do
       {:cancelled, cancelled_meeting} ->
-        Cancel.finalise_cancellation(cancelled_meeting, emails: emails?)
-        Events.seat_cancelled(meeting, participant, slot_freed: true, emails: emails?)
+        Cancel.finalise_cancellation(cancelled_meeting, told)
+        Events.seat_cancelled(meeting, participant, [slot_freed: true] ++ told)
 
       :seats_remain ->
         CalendarJobs.schedule_job(meeting, "update")
-        Events.seat_cancelled(meeting, participant, emails: emails?)
+        Events.seat_cancelled(meeting, participant, told)
     end
 
     :ok

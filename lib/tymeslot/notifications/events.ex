@@ -90,18 +90,24 @@ defmodule Tymeslot.Notifications.Events do
       booking series, whose booker and host are told about the whole series
       in one email instead. The claim still matters, so that a later
       reschedule of the occurrence is announced as a reschedule.
+    * `:integrations` - `false` drops the `meeting.created` fan-out, for
+      a series occurrence announced whole by `meeting.series_created`
+      (`Tymeslot.BookingSeries.Automation`); a `meeting.rescheduled` stays.
   """
   @spec meeting_created_deferred(term(), keyword()) ::
           {{:ok, term()} | {:error, term()}, pending()}
   def meeting_created_deferred(meeting, opts \\ []) do
     emails? = Keyword.get(opts, :emails, true)
+    created = if integrations?(opts), do: :meeting_created
 
     case MeetingDeliveryQueries.claim_announcement(Map.get(meeting, :id)) do
-      {:ok, :first_announcement} -> announce_meeting_created(meeting, :meeting_created, emails?)
+      {:ok, :first_announcement} -> announce_meeting_created(meeting, created, emails?)
       {:ok, :re_announcement} -> announce_meeting_created(meeting, :meeting_rescheduled, emails?)
       :already_announced -> {already_announced(meeting), []}
     end
   end
+
+  defp integrations?(opts), do: Keyword.get(opts, :integrations, true)
 
   @doc """
   Runs the integration fan-out `meeting_created_deferred/1`,
@@ -154,8 +160,8 @@ defmodule Tymeslot.Notifications.Events do
     {:ok, :already_announced}
   end
 
-  # `channel_event` is what webhooks, Telegram and Slack are told; the email
-  # and reminder fan-out is the same for both announcements.
+  # `channel_event` is what webhooks, Telegram and Slack are told, nil for
+  # nothing; the email and reminder fan-out is the same for both.
   defp announce_meeting_created(meeting, channel_event, emails?) do
     result =
       :meeting_created
@@ -164,6 +170,7 @@ defmodule Tymeslot.Notifications.Events do
 
     case result do
       {:error, _reason} = error -> {error, []}
+      result when is_nil(channel_event) -> {result, []}
       result -> {result, [{channel_event, meeting, :per_seat}]}
     end
   end
@@ -244,8 +251,9 @@ defmodule Tymeslot.Notifications.Events do
       exists, so scheduling it here would only send a linkless duplicate.
     * `:emails` — `false` sends no confirmation for the seat, to the booker
       or the host: a seat of a booking series, whose booker and host are
-      told about the whole series in one email instead. The integration
-      fan-out is returned as for any seat.
+      told about the whole series in one email instead.
+    * `:integrations` — `false` returns no fan-out, as for
+      `meeting_created_deferred/2`.
   """
   @spec seat_booked_deferred(term(), term(), keyword()) ::
           {{:ok, term()} | {:error, term()}, pending()}
@@ -268,7 +276,9 @@ defmodule Tymeslot.Notifications.Events do
           |> retryable_only(:seat_booked, meeting)
       end
 
-    {result, [{:meeting_created, meeting, {:seat, participant}}]}
+    if integrations?(opts),
+      do: {result, [{:meeting_created, meeting, {:seat, participant}}]},
+      else: {result, []}
   end
 
   @doc """
@@ -378,6 +388,7 @@ defmodule Tymeslot.Notifications.Events do
 
   `emails: false` schedules no email: the seat was given up with the rest of
   its series, which tells both sides once (`Tymeslot.BookingSeries.Cancel`).
+  `integrations: false` tells no integration, as for `meeting_cancelled/2`.
   """
   @spec seat_cancelled(term(), term(), keyword()) :: {:ok, term()} | {:error, term()}
   def seat_cancelled(meeting, participant, opts \\ []) do
@@ -392,7 +403,7 @@ defmodule Tymeslot.Notifications.Events do
         {:ok, :announced_with_series}
       end
 
-    dispatch_seat(:meeting_cancelled, meeting, participant)
+    if integrations?(opts), do: dispatch_seat(:meeting_cancelled, meeting, participant)
 
     result
   end
@@ -482,6 +493,9 @@ defmodule Tymeslot.Notifications.Events do
   cancels every one of those bookings, and the participant rows are left
   live by it. An emptied slot cancelled by its last leaver has no live seat
   left, and `seat_cancelled/3` already announced that seat.
+
+  `integrations: false` tells no integration: a session cancelled with the
+  rest of its series, announced whole by `meeting.series_cancelled`.
   """
   @spec meeting_cancelled(term(), keyword()) :: {:ok, term()} | {:error, term()}
   def meeting_cancelled(meeting, opts \\ []) do
@@ -501,7 +515,7 @@ defmodule Tymeslot.Notifications.Events do
     cancel_reminders(meeting)
 
     # Webhooks, Telegram and Slack; none of them fails the cancellation.
-    dispatch_integrations(:meeting_cancelled, meeting)
+    if integrations?(opts), do: dispatch_integrations(:meeting_cancelled, meeting)
 
     result
   end

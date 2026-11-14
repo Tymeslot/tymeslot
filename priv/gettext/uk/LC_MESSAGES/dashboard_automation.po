@@ -710,3 +710,25 @@ msgstr "Призупинено"
 #, elixir-autogen, elixir-format
 msgid "Paused: your plan doesn't include automations. Upgrading resumes it."
 msgstr "Призупинено: ваш тариф не включає автоматизацію. Після переходу на вищий тариф вебхук відновиться автоматично."
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Booked"
+msgstr "Серію заброньовано"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Cancelled"
+msgstr "Серію скасовано"
+
+#: lib/tymeslot/notifications/event_options.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when someone books a series of sessions, instead of Meeting Created for each session"
+msgstr "Спрацьовує один раз, коли хтось бронює серію сесій, замість «Зустріч створено» для кожної сесії"
+
+#: lib/tymeslot/notifications/event_options.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when the remaining sessions of a series are cancelled together, instead of Meeting Cancelled for each session"
+msgstr "Спрацьовує один раз, коли решту сесій серії скасовують разом, замість «Зустріч скасовано» для кожної сесії"

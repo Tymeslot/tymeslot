@@ -83,7 +83,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
             <%= for {event, icon_name} <- [
               {"meeting.created", "hero-calendar"},
               {"meeting.cancelled", "hero-x-mark"},
-              {"meeting.rescheduled", "hero-arrow-path"}
+              {"meeting.rescheduled", "hero-arrow-path"},
+              {"meeting.series_created", "hero-calendar-days"},
+              {"meeting.series_cancelled", "hero-calendar-date-range"}
             ] do %>
               <div class="p-4 bg-white rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 hover:shadow-md transition-all">
                 <div class="flex items-center gap-2 mb-2">
@@ -106,6 +108,16 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
                       )}
                     <% "meeting.rescheduled" -> %>
                       {dgettext("dashboard_automation", "Triggers when a booking time is changed")}
+                    <% "meeting.series_created" -> %>
+                      {dgettext(
+                        "dashboard_automation",
+                        "Triggers once when someone books a series of sessions, instead of Meeting Created for each session"
+                      )}
+                    <% "meeting.series_cancelled" -> %>
+                      {dgettext(
+                        "dashboard_automation",
+                        "Triggers once when the remaining sessions of a series are cancelled together, instead of Meeting Cancelled for each session"
+                      )}
                   <% end %>
                 </p>
               </div>

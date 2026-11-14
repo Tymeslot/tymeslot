@@ -397,5 +397,4 @@ msgstr "Ver a série agendada por %{name}"
 #: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "session %{position}, %{when}"
-
 msgstr "sessão %{position}, %{when}"

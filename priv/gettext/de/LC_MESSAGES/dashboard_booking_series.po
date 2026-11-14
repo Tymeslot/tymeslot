@@ -397,5 +397,4 @@ msgstr "Serie von %{name} ansehen"
 #: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "session %{position}, %{when}"
-
 msgstr "Termin %{position}, %{when}"

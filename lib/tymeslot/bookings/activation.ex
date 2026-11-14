@@ -71,9 +71,11 @@ defmodule Tymeslot.Bookings.Activation do
   With `announce: :series` the meeting is one occurrence of a booking
   series (`Tymeslot.BookingSeries`): its reminders are scheduled and its
   announcement claimed as usual, but no confirmation emails are sent, since
-  the series is confirmed in one email of its own. A video room is created
+  the series is confirmed in one email of its own, and its `meeting.created`
+  is left out of the integration fan-out, since the host's automations hear
+  of the series in one `meeting.series_created`. A video room is created
   without holding anything back. The default, `announce: :meeting`, is a
-  booking of its own. The integration fan-out is returned either way.
+  booking of its own.
 
   With `with_video_room: true` the caller asserts the booking flow wants a
   room whenever the meeting has an integration; without it, the provider is
@@ -179,11 +181,10 @@ defmodule Tymeslot.Bookings.Activation do
   # is announced now, without emails. Its reminders, composed when they are
   # sent, carry the room's link by then.
   #
-  # The integration fan-out returned here (webhooks, Telegram, Slack, one
-  # event per session) runs after the series commits, before the room job
-  # has run, so its payloads carry no join link. That is accepted for now:
-  # the per-session events are to be replaced by one series event, raised
-  # once every session's room exists.
+  # No `meeting.created` is returned for the occurrence: the host's
+  # automations hear of the whole series in one `meeting.series_created`,
+  # raised once every session's room exists
+  # (`Tymeslot.BookingSeries.Automation`).
   #
   # Unlike a booking of its own, which falls back to announcing without a
   # room, a session whose room job cannot be enqueued fails: the series
@@ -197,7 +198,10 @@ defmodule Tymeslot.Bookings.Activation do
 
   defp notify(meeting, announce) do
     meeting
-    |> Events.meeting_created_deferred(emails: announce == :meeting)
+    |> Events.meeting_created_deferred(
+      emails: announce == :meeting,
+      integrations: announce == :meeting
+    )
     |> settle(meeting, "Failed to schedule confirmation emails for meeting")
   end
 

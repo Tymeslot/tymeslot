@@ -397,5 +397,4 @@ msgstr "Voir la série réservée par %{name}"
 #: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "session %{position}, %{when}"
-
 msgstr "séance %{position}, %{when}"

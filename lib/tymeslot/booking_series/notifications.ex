@@ -9,6 +9,9 @@ defmodule Tymeslot.BookingSeries.Notifications do
   (`Tymeslot.Workers.SeriesAnnouncementWorker`), then goes to the booker and
   the organiser (`Tymeslot.Notifications.Email.SeriesEmails`).
 
+  The host's automations hear of the series with its confirmation, in one
+  `meeting.series_created` (`Tymeslot.BookingSeries.Automation`).
+
   Several sessions cancelled at once are likewise told in one email to each
   (`schedule_series_cancellation/3`).
 
@@ -25,6 +28,7 @@ defmodule Tymeslot.BookingSeries.Notifications do
 
   require Logger
 
+  alias Tymeslot.BookingSeries.Automation
   alias Tymeslot.BookingSeries.SeriesQueries
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Emails.EmailScheduler
@@ -33,6 +37,7 @@ defmodule Tymeslot.BookingSeries.Notifications do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.SeriesAnnouncementWorker
   alias Tymeslot.Workers.VideoRoomWorker
 
@@ -162,8 +167,25 @@ defmodule Tymeslot.BookingSeries.Notifications do
 
   defp confirm_or_wait(_pending, _series, false), do: {:snooze, @room_wait_seconds}
 
-  defp queue_confirmation(series),
-    do: EmailScheduler.schedule_series_confirmation_emails(series.id)
+  # The automations hear of the series with its emails, in one step: both
+  # are queued once per series ever, so a confirmation run again announces
+  # nothing twice (`Tymeslot.BookingSeries.Automation`).
+  defp queue_confirmation(series) do
+    queued =
+      Repo.transaction(fn ->
+        with :ok <- EmailScheduler.schedule_series_confirmation_emails(series.id),
+             {:ok, _job} <- Oban.insert(Automation.created_job(series)) do
+          :ok
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+
+    case queued do
+      {:ok, :ok} -> :ok
+      {:error, _reason} = error -> error
+    end
+  end
 
   @doc """
   Schedules one email to the booker and one to the organiser listing the

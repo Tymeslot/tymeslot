@@ -709,3 +709,25 @@ msgstr "En pause"
 #, elixir-autogen, elixir-format
 msgid "Paused: your plan doesn't include automations. Upgrading resumes it."
 msgstr "En pause : votre forfait n’inclut pas les automatisations. Une mise à niveau le réactive automatiquement."
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Booked"
+msgstr "Série réservée"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Cancelled"
+msgstr "Série annulée"
+
+#: lib/tymeslot/notifications/event_options.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when someone books a series of sessions, instead of Meeting Created for each session"
+msgstr "Se déclenche une seule fois lorsqu’une personne réserve une série de séances, au lieu de « Réunion créée » pour chaque séance"
+
+#: lib/tymeslot/notifications/event_options.ex
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when the remaining sessions of a series are cancelled together, instead of Meeting Cancelled for each session"
+msgstr "Se déclenche une seule fois lorsque les séances restantes d’une série sont annulées ensemble, au lieu de « Réunion annulée » pour chaque séance"

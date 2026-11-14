@@ -3,7 +3,9 @@ defmodule Tymeslot.BookingSeries.Cancel do
   "Cancel all remaining": every session of a series still to come called off
   at once, by its booker (`caller: :attendee`) or its host
   (`caller: :organizer`), with one series cancellation email to each side
-  in place of one per session.
+  in place of one per session, and one `meeting.series_cancelled` to the
+  host's automations in place of a `meeting.cancelled` per session
+  (`Tymeslot.BookingSeries.Automation`).
 
   A session is remaining when it has not started and is still live: a
   meeting in no terminal status, or a seat not given up on a session not
@@ -55,6 +57,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   alias Tymeslot.Bookings.Cancel, as: CancelMeeting
   alias Tymeslot.Bookings.CancelSeat
   alias Tymeslot.BookingSeries.Approval
+  alias Tymeslot.BookingSeries.Automation
   alias Tymeslot.BookingSeries.Notifications
   alias Tymeslot.BookingSeries.SeriesQueries
   alias Tymeslot.BookingSeries.SeriesSchema
@@ -306,13 +309,24 @@ defmodule Tymeslot.BookingSeries.Cancel do
 
     :ok = close_in_transaction(locked.id)
 
+    cancelled_occurrences = occurrences(cancelled)
+
     with {:ok, _job} <-
-           Notifications.schedule_series_cancellation(locked, occurrences(cancelled), caller),
+           Notifications.schedule_series_cancellation(locked, cancelled_occurrences, caller),
+         {:ok, _job} <- schedule_automation(locked, cancelled_occurrences),
          {:ok, refund} <- schedule_refund(locked, cancelled, refund_plan) do
       {cancelled, refund}
     else
       {:error, reason} -> Repo.rollback(reason)
     end
+  end
+
+  # One `meeting.series_cancelled` for the host's automations, in place of
+  # a `meeting.cancelled` per session (`after_commit/1`).
+  defp schedule_automation(series, cancelled) do
+    series
+    |> Automation.cancelled_job(Enum.map(cancelled, & &1.id))
+    |> Oban.insert()
   end
 
   # A one-to-one series' sessions are locked in series order, after the
@@ -346,15 +360,18 @@ defmodule Tymeslot.BookingSeries.Cancel do
   defp occurrence(%{participant: %Participant{} = seat}), do: seat
   defp occurrence(%Meeting{} = meeting), do: meeting
 
-  # The series' own email tells both sides; everything else a cancellation
-  # does follows each session as usual.
+  # The series' own email tells both sides, and its own event the host's
+  # automations; everything else a cancellation does follows each session
+  # as usual.
+  @told_with_series [emails: false, integrations: false]
+
   defp after_commit([%Meeting{organizer_user_id: organizer_id} | _rest] = meetings) do
     Availability.changed(organizer_id)
-    Enum.each(meetings, &Events.meeting_cancelled(&1, emails: false))
+    Enum.each(meetings, &Events.meeting_cancelled(&1, @told_with_series))
   end
 
   defp after_commit(released_seats),
-    do: Enum.each(released_seats, &CancelSeat.finish(&1, emails: false))
+    do: Enum.each(released_seats, &CancelSeat.finish(&1, @told_with_series))
 
   # Refund
 

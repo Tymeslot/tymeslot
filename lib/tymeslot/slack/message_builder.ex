@@ -27,10 +27,46 @@ defmodule Tymeslot.Slack.MessageBuilder do
   @requested EventTypes.to_event_type(:meeting_requested)
   @declined EventTypes.to_event_type(:meeting_declined)
   @request_expired EventTypes.to_event_type(:meeting_request_expired)
+  @series_created EventTypes.to_event_type(:meeting_series_created)
+  @series_cancelled EventTypes.to_event_type(:meeting_series_cancelled)
 
-  @doc "Builds the blocks list for a given event and meeting."
-  @spec build_blocks(String.t(), map(), String.t()) :: [map()]
-  def build_blocks(@created, meeting, timezone) do
+  @doc """
+  Builds the blocks list for a given event and meeting.
+
+  `series` is the event's `series` object
+  (`Tymeslot.BookingSeries.Automation`); a series event counts its
+  sessions from it, and names the first of them, which `meeting` is.
+  """
+  @spec build_blocks(String.t(), map(), String.t(), map() | nil) :: [map()]
+  def build_blocks(event_type, meeting, timezone, series \\ nil)
+
+  def build_blocks(@series_created, meeting, timezone, series) do
+    base = [
+      header("New series booked"),
+      section_text(
+        "*#{escape(attendee_name(meeting))}* booked #{session_count(series)} sessions of " <>
+          "*#{escape(type_name(meeting))}*, starting #{format_single_time(meeting.start_time, timezone)}"
+      ),
+      divider(),
+      section_details(meeting, timezone)
+    ]
+
+    append_actions(base, meeting)
+  end
+
+  def build_blocks(@series_cancelled, meeting, _timezone, series) do
+    [
+      header("Series cancelled"),
+      section_text(
+        "*#{escape(attendee_name(meeting))}*'s #{session_count(series)} remaining sessions of " <>
+          "*#{escape(type_name(meeting))}* were cancelled"
+      ),
+      divider(),
+      section_cancellation(meeting)
+    ]
+  end
+
+  def build_blocks(@created, meeting, timezone, _series) do
     base = [
       header("New booking"),
       section_summary(meeting),
@@ -41,7 +77,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
     append_actions(base, meeting)
   end
 
-  def build_blocks(@cancelled, meeting, _timezone) do
+  def build_blocks(@cancelled, meeting, _timezone, _series) do
     [
       header("Booking cancelled"),
       section_summary(meeting),
@@ -50,7 +86,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
     ]
   end
 
-  def build_blocks(@rescheduled, meeting, timezone) do
+  def build_blocks(@rescheduled, meeting, timezone, _series) do
     base = [
       header("Booking rescheduled"),
       section_summary(meeting),
@@ -61,7 +97,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
     append_actions(base, meeting)
   end
 
-  def build_blocks(@requested, meeting, timezone) do
+  def build_blocks(@requested, meeting, timezone, _series) do
     base = [
       header("New booking request"),
       section_summary(meeting),
@@ -72,7 +108,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
     append_actions(base, meeting)
   end
 
-  def build_blocks(@declined, meeting, _timezone) do
+  def build_blocks(@declined, meeting, _timezone, _series) do
     [
       header("Booking request declined"),
       section_summary(meeting),
@@ -81,7 +117,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
     ]
   end
 
-  def build_blocks(@request_expired, meeting, _timezone) do
+  def build_blocks(@request_expired, meeting, _timezone, _series) do
     [
       header("Booking request expired"),
       section_summary(meeting),
@@ -90,7 +126,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
     ]
   end
 
-  def build_blocks(event_type, meeting, _timezone) do
+  def build_blocks(event_type, meeting, _timezone, _series) do
     base = [
       header("Meeting update"),
       section_summary(meeting),
@@ -238,6 +274,16 @@ defmodule Tymeslot.Slack.MessageBuilder do
   # Formatters — kept consistent with Tymeslot.Telegram.MessageBuilder so the
   # date/time wording matches across channels.
   # ============================================================================
+
+  # The sessions a series event is about: those it lists, else the count
+  # the series has.
+  defp session_count(%{"sessions" => [_first | _rest] = sessions}), do: length(sessions)
+  defp session_count(%{"count" => count}) when is_integer(count), do: count
+  defp session_count(_series), do: "several"
+
+  # A series is of a meeting type; the meeting's own title names the
+  # attendee as well.
+  defp type_name(meeting), do: Map.get(meeting, :meeting_type) || meeting_title(meeting)
 
   defp attendee_name(meeting) do
     meeting.attendee_name || meeting.attendee_email || "guest"

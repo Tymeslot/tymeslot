@@ -412,5 +412,4 @@ msgstr "Переглянути серію, яку забронював(-ла) %{
 #: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "session %{position}, %{when}"
-
 msgstr "сесія %{position}, %{when}"

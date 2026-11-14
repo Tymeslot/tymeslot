@@ -412,5 +412,4 @@ msgstr "Zobacz serię (osoba rezerwująca: %{name})"
 #: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "session %{position}, %{when}"
-
 msgstr "sesja %{position}, %{when}"

@@ -412,5 +412,4 @@ msgstr "Zobrazit sérii, kterou rezervoval(a) %{name}"
 #: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "session %{position}, %{when}"
-
 msgstr "termín %{position}, %{when}"

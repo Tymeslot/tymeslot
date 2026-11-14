@@ -175,7 +175,8 @@ defmodule Tymeslot.Bookings.Cancel do
 
   `emails: false` schedules no cancellation email job, for a meeting
   emptied by a series giving up its seats, which tells both sides itself
-  (`Tymeslot.BookingSeries.Cancel`).
+  (`Tymeslot.BookingSeries.Cancel`); `integrations: false` likewise tells
+  no integration.
   """
   @spec finalise_cancellation(Meeting.t(), keyword()) :: :ok
   def finalise_cancellation(%Meeting{} = meeting, opts \\ []) do

@@ -18,6 +18,15 @@ defmodule Tymeslot.Notifications.EventTypes do
     * `meeting.request_expired` — nobody answered in time; the slot is free
       again.
     * `meeting.cancelled`, `meeting.rescheduled` — unchanged.
+    * `meeting.series_created` — a booking series is confirmed: one event
+      for all its sessions, in place of a `meeting.created` for each
+      (`Tymeslot.BookingSeries.Automation`).
+    * `meeting.series_cancelled` — "Cancel all remaining" called off the
+      rest of a series: one event, in place of a `meeting.cancelled` for
+      each session.
+
+  Every event about one session of a series (a cancellation of that
+  session alone, a reschedule, a request) stays per session.
 
   Meeting types without approval never emit the three request events, so
   existing consumers see no change.
@@ -33,10 +42,12 @@ defmodule Tymeslot.Notifications.EventTypes do
   # map's enumeration order is an implementation detail, not a guarantee.
   @events [
     meeting_created: "meeting.created",
+    meeting_series_created: "meeting.series_created",
     meeting_requested: "meeting.requested",
     meeting_declined: "meeting.declined",
     meeting_request_expired: "meeting.request_expired",
     meeting_cancelled: "meeting.cancelled",
+    meeting_series_cancelled: "meeting.series_cancelled",
     meeting_rescheduled: "meeting.rescheduled"
   ]
 
