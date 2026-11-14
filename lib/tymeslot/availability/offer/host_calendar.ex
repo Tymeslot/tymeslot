@@ -27,12 +27,16 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   the folded maps, so a calendar sync cannot leave the two disagreeing about
   how fresh they are.
 
-  A range (`for_range/2`) is read fresh, as the booking page's week view
+  A range (`for_range/3`) is read fresh, as the booking page's week view
   needs, unless the request asks for the cached entry with
   `cached_calendar: true`, as the setup preview of the host's week does, so
-  that reloading it costs no provider round trip.
+  that reloading it costs no provider round trip. A request reaching past
+  the booking window (`window_until:`, a series' later sessions) is read
+  fresh over the range itself, padded as the busy set is, since the window
+  fetch stops short of it.
   """
 
+  alias Tymeslot.Availability.Reach
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
 
@@ -45,10 +49,30 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
     )
   end
 
-  @doc "The host's events for a range read: fresh, or cached when asked."
-  @spec for_range(map(), Date.t()) :: {:ok, list()} | {:error, any()}
-  def for_range(%{cached_calendar: true} = request, date), do: booking_window(request, date)
-  def for_range(request, date), do: fresh(request, date)
+  @doc """
+  The host's events for a read of `start_date..end_date`: across the range
+  for a request reaching past the window, else the window's, fresh or
+  cached when asked.
+  """
+  @spec for_range(map(), Date.t(), Date.t()) :: {:ok, list()} | {:error, any()}
+  def for_range(
+        %{window_until: %Date{}, profile: %{user_id: user_id}},
+        %Date{} = start_date,
+        %Date{} = end_date
+      ) do
+    padding = Reach.utc_padding_days()
+
+    CalendarEvents.get_events_for_range_fresh(
+      user_id,
+      Date.add(start_date, -padding),
+      Date.add(end_date, 1 + padding)
+    )
+  end
+
+  def for_range(%{cached_calendar: true} = request, date, _end_date),
+    do: booking_window(request, date)
+
+  def for_range(request, date, _end_date), do: fresh(request, date)
 
   @doc """
   The context map the calendar fetch reads. Its contract names this one key

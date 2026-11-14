@@ -40,6 +40,7 @@ defmodule Tymeslot.Availability.Offer do
 
   alias Tymeslot.Availability.Offer.HostCalendar
   alias Tymeslot.Bookings.{Orchestrator, RescheduleSeat}
+  alias Tymeslot.Clock
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings
@@ -101,6 +102,12 @@ defmodule Tymeslot.Availability.Offer do
     * `:demo_mode?` - whether the page is running as a demo.
     * `:cached_calendar` - read a range's calendar through the cache
       (`Offer.HostCalendar`), as a preview may; a booking page reads it fresh.
+    * `:window_until` - a `Date` the range's slots may reach past the
+      schedule's booking window (`slots_for_range/4` and
+      `slots_and_busy_for_range/4` only): a series' later sessions, which
+      the window does not bind once the first lies inside it
+      (`Tymeslot.BookingSeries.Check`). The notice still applies, and the
+      host's calendar is read over the range itself.
   """
   @type request :: %{
           required(:profile) => %{required(:user_id) => integer(), optional(atom()) => any()},
@@ -111,7 +118,8 @@ defmodule Tymeslot.Availability.Offer do
           optional(:reschedule_seat_token) => String.t() | nil,
           optional(:seat_move) => SeatMoveContext.t() | nil,
           optional(:demo_mode?) => boolean() | nil,
-          optional(:cached_calendar) => boolean()
+          optional(:cached_calendar) => boolean(),
+          optional(:window_until) => Date.t()
         }
 
   @doc """
@@ -351,7 +359,7 @@ defmodule Tymeslot.Availability.Offer do
        ) do
     moving = moving_meeting(request)
 
-    with {:ok, events} <- HostCalendar.for_range(request, start_date) do
+    with {:ok, events} <- HostCalendar.for_range(request, start_date, end_date) do
       duration_minutes = bounded_duration(duration)
       meeting_type = request[:meeting_type]
       limit_checker = limit_checker(request, moving_uid(moving), start_date, end_date)
@@ -360,6 +368,7 @@ defmodule Tymeslot.Availability.Offer do
         meeting_type
         |> Schedules.resolve_for(profile)
         |> config(meeting_type, limit_checker, duration_minutes)
+        |> reach_until(request[:window_until])
 
       config =
         Calculate.prefetch_schedule_data(
@@ -536,6 +545,16 @@ defmodule Tymeslot.Availability.Offer do
   end
 
   defp utc_day_start(date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
+
+  # A booking window just long enough to reach `until` from today, as
+  # `BookingSeries.Check` gives a series' later sessions; never shorter than
+  # the schedule's own.
+  defp reach_until(config, %Date{} = until) do
+    days = Date.diff(until, Clock.utc_today()) + 1
+    Map.update(config, :max_advance_booking_days, days, &max(&1, days))
+  end
+
+  defp reach_until(config, _no_reach), do: config
 
   # Nil when the host has no booking limits configured, keeping the common path
   # free of extra queries. The dates are the booker's, so the counts cover
