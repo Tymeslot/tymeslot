@@ -202,3 +202,13 @@ msgstr "Tymeslot ora parla spagnolo"
 #, elixir-autogen, elixir-format
 msgid "Your dashboard, booking pages and every email are now available in Spanish. Tymeslot follows your browser's language, or you can choose one yourself in Account Settings. People who book you see booking pages and confirmations in their own language too."
 msgstr "La tua dashboard, le pagine di prenotazione e tutte le email sono ora disponibili in spagnolo. Tymeslot segue la lingua del tuo browser, oppure puoi sceglierne una tu nelle Impostazioni dell'account. Anche chi prenota con te vede le pagine di prenotazione e le conferme nella propria lingua."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Book a whole course of sessions at once"
+msgstr "Prenota un intero ciclo di sessioni in una volta"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Clients can now book a series in one go: the same time every week or month, or a set of sessions at times they choose. Each session is a normal booking with its own reminders and links, and a series can be paid upfront. Turn it on for each meeting type, under Series."
+msgstr "I clienti possono ora prenotare una serie in un'unica volta: alla stessa ora ogni settimana o ogni mese, oppure più sessioni negli orari che scelgono loro. Ogni sessione è una normale prenotazione, con i suoi promemoria e i suoi link, e la serie può essere pagata in anticipo. Attivala per ogni tipo di riunione, in Serie."

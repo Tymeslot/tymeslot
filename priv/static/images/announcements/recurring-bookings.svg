@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" fill="none" role="img" aria-label="A calendar column with the same weekday marked again and again, and a confirmed session">
+  <defs>
+    <linearGradient id="rb-bg" x1="0" y1="0" x2="640" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ecfeff"/>
+      <stop offset="1" stop-color="#f0fdfa"/>
+    </linearGradient>
+    <filter id="rb-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d9488" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="640" height="240" fill="url(#rb-bg)"/>
+
+  <!-- the calendar: one weekday column, four weeks -->
+  <g filter="url(#rb-shadow)">
+    <rect x="48" y="28" width="300" height="184" rx="18" fill="#ffffff"/>
+  </g>
+  <rect x="48" y="28" width="300" height="34" rx="17" fill="#0d9488"/>
+  <rect x="48" y="46" width="300" height="16" fill="#0d9488"/>
+  <rect x="72" y="40" width="64" height="8" rx="4" fill="#ccfbf1"/>
+  <rect x="72" y="76" width="22" height="8" rx="4" fill="#cbd5e1"/>
+  <rect x="140" y="76" width="22" height="8" rx="4" fill="#cbd5e1"/>
+  <rect x="208" y="76" width="22" height="8" rx="4" fill="#0d9488"/>
+  <rect x="276" y="76" width="22" height="8" rx="4" fill="#cbd5e1"/>
+  <rect x="196" y="90" width="46" height="112" rx="12" fill="#f0fdfa" stroke="#99f6e4"/>
+  <rect x="204" y="98" width="30" height="22" rx="8" fill="#0d9488"/>
+  <rect x="204" y="124" width="30" height="22" rx="8" fill="#0d9488"/>
+  <rect x="204" y="150" width="30" height="22" rx="8" fill="#0d9488"/>
+  <rect x="204" y="176" width="30" height="22" rx="8" fill="#5eead4"/>
+  <rect x="72" y="104" width="94" height="8" rx="4" fill="#e2e8f0"/>
+  <rect x="72" y="130" width="76" height="8" rx="4" fill="#e2e8f0"/>
+  <rect x="72" y="156" width="86" height="8" rx="4" fill="#e2e8f0"/>
+  <rect x="274" y="104" width="52" height="8" rx="4" fill="#e2e8f0"/>
+  <rect x="274" y="130" width="40" height="8" rx="4" fill="#e2e8f0"/>
+  <rect x="274" y="156" width="48" height="8" rx="4" fill="#e2e8f0"/>
+
+  <!-- the repeat -->
+  <path d="M382 120 H430" stroke="#14b8a6" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 10"/>
+  <path d="M424 108 L438 120 L424 132" stroke="#14b8a6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- a session -->
+  <g filter="url(#rb-shadow)">
+    <rect x="466" y="60" width="126" height="120" rx="16" fill="#ffffff"/>
+  </g>
+  <rect x="466" y="60" width="126" height="26" rx="13" fill="#0d9488"/>
+  <rect x="466" y="74" width="126" height="12" fill="#0d9488"/>
+  <rect x="486" y="100" width="62" height="8" rx="4" fill="#cbd5e1"/>
+  <rect x="486" y="116" width="86" height="8" rx="4" fill="#e2e8f0"/>
+  <path d="M506 150 L518 162 L544 136" stroke="#0d9488" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
