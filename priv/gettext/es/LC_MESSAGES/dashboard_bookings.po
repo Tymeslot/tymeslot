@@ -928,3 +928,33 @@ msgstr "En persona"
 #, elixir-autogen, elixir-format
 msgid "Phone call"
 msgstr "Llamada telefónica"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: %{reason}"
+msgstr "Cancelada sin reembolso: %{reason}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling won't refund the attendee: %{reason}"
+msgstr "Cancelar no reembolsará al asistente: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: %{reason}"
+msgstr "No se puede hacer ningún reembolso: %{reason}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "the booking was not paid."
+msgstr "la reserva no se pagó."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "el pago tiene más de 60 días y ya no entra en el plazo de reembolso. Puedes reembolsarlo desde Stripe."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "el pago está en disputa. Resuelve primero la disputa en Stripe."

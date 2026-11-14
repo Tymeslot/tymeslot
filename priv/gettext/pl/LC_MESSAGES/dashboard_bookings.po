@@ -934,3 +934,33 @@ msgstr "Spotkanie osobiste"
 #, elixir-autogen, elixir-format
 msgid "Phone call"
 msgstr "Rozmowa telefoniczna"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: %{reason}"
+msgstr "Odwołano bez zwrotu: %{reason}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling won't refund the attendee: %{reason}"
+msgstr "Odwołanie nie zwróci uczestnikowi pieniędzy: %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: %{reason}"
+msgstr "Zwrot nie jest możliwy: %{reason}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "the booking was not paid."
+msgstr "rezerwacja nie została opłacona."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "płatność jest starsza niż 60-dniowy okres na zwrot. Możesz ją zwrócić w Stripe."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "płatność jest przedmiotem sporu. Najpierw rozstrzygnij spór w Stripe."

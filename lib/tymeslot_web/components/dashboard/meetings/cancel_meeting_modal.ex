@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
+  use TymeslotWeb.Components.CoreComponents, only: [info_box: 1]
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingPayments
@@ -52,7 +53,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   @spec cancel_meeting_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_meeting_modal(assigns) do
-    assigns = assign(assigns, :paid?, MeetingPayments.refundable?(assigns[:booking_payment]))
+    assigns =
+      assign(assigns,
+        paid?: MeetingPayments.refundable?(assigns[:booking_payment]),
+        no_refund_reason: no_refund_reason_for(assigns[:booking_payment])
+      )
 
     ~H"""
     <Modal.confirm_modal
@@ -107,6 +112,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             )}
           </:full>
         </.refund_choices>
+        <.info_box :if={@no_refund_reason} variant={:warning} class="mb-0!">
+          {dgettext("dashboard_bookings", "Cancelling won't refund the attendee: %{reason}",
+            reason: @no_refund_reason
+          )}
+        </.info_box>
         <p :if={not @paid?} class="text-tymeslot-500">
           {if Helpers.group_meeting?(@meeting),
             do:
@@ -275,4 +285,37 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     do: max(amount - refunded, 0)
 
   defp refundable_remaining(_payment), do: 0
+
+  # Money the attendee is still owed that cannot be refunded from here: why,
+  # said before the host confirms. Nil when nothing is owed, or it can be.
+  defp no_refund_reason_for(payment) do
+    with true <- MeetingPayments.refund_outstanding?(payment),
+         {:error, reason} <- MeetingPayments.refund_refusal(payment) do
+      no_refund_reason(reason)
+    else
+      _refundable_or_settled -> nil
+    end
+  end
+
+  @doc """
+  Why a payment can no longer be refunded from Tymeslot
+  (`MeetingPayments.refund_refusal/1`), as the end of a sentence its caller
+  starts.
+  """
+  @spec no_refund_reason(:not_paid | :outside_refund_window | :under_dispute) :: String.t()
+  def no_refund_reason(:outside_refund_window),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "the payment is older than the 60-day refund window. You can refund it from Stripe."
+      )
+
+  def no_refund_reason(:under_dispute),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "the payment is under dispute. Settle the dispute in Stripe first."
+      )
+
+  def no_refund_reason(:not_paid), do: dgettext("dashboard_bookings", "the booking was not paid.")
 end
