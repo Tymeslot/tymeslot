@@ -185,13 +185,6 @@ msgstr[1] "%{count} sessioni annullate. Rimborso di %{amount} emesso."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} session cancelled. Refund of %{amount} scheduled."
-msgid_plural "%{count} sessions cancelled. Refund of %{amount} scheduled."
-msgstr[0] "%{count} sessione annullata. Rimborso di %{amount} programmato."
-msgstr[1] "%{count} sessioni annullate. Rimborso di %{amount} programmato."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
 msgid "%{count} session cancelled. The attendee has been told."
 msgid_plural "%{count} sessions cancelled. The attendee has been told."
 msgstr[0] "%{count} sessione annullata. Il partecipante è stato avvisato."
@@ -403,3 +396,10 @@ msgstr "sessione %{position}, %{when}"
 #, elixir-autogen, elixir-format
 msgid "Guests can only be added to single bookings, not to a series."
 msgstr "Gli ospiti si possono aggiungere solo alle prenotazioni singole, non a una serie."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. Refund of %{amount} is being processed. We'll email you if it fails."
+msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processed. We'll email you if it fails."
+msgstr[0] "%{count} sessione annullata. Il rimborso di %{amount} è in corso. Se non va a buon fine, ti avviseremo via email."
+msgstr[1] "%{count} sessioni annullate. Il rimborso di %{amount} è in corso. Se non va a buon fine, ti avviseremo via email."

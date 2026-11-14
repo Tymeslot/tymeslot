@@ -223,11 +223,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.SeriesActions do
     )
   end
 
+  # The refund runs in the background; a failure is emailed to the host
+  # (`SeriesHostRefund`).
   defp cancelled_message(count, {:scheduled, cents}, payment) do
     dngettext(
       "dashboard_booking_series",
-      "%{count} session cancelled. Refund of %{amount} scheduled.",
-      "%{count} sessions cancelled. Refund of %{amount} scheduled.",
+      "%{count} session cancelled. Refund of %{amount} is being processed. We'll email you if it fails.",
+      "%{count} sessions cancelled. Refund of %{amount} is being processed. We'll email you if it fails.",
       count,
       amount: format_amount(cents, payment_currency(payment))
     )

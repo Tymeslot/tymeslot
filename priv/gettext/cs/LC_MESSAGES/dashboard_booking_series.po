@@ -191,14 +191,6 @@ msgstr[2] "Zrušeno %{count} termínů. Vráceno %{amount}."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} session cancelled. Refund of %{amount} scheduled."
-msgid_plural "%{count} sessions cancelled. Refund of %{amount} scheduled."
-msgstr[0] "Zrušen %{count} termín. Vrácení %{amount} je naplánováno."
-msgstr[1] "Zrušeny %{count} termíny. Vrácení %{amount} je naplánováno."
-msgstr[2] "Zrušeno %{count} termínů. Vrácení %{amount} je naplánováno."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
 msgid "%{count} session cancelled. The attendee has been told."
 msgid_plural "%{count} sessions cancelled. The attendee has been told."
 msgstr[0] "Zrušen %{count} termín. Účastník byl informován."
@@ -418,3 +410,11 @@ msgstr "termín %{position}, %{when}"
 #, elixir-autogen, elixir-format
 msgid "Guests can only be added to single bookings, not to a series."
 msgstr "Hosty lze přidat jen k jednotlivým rezervacím, ne k sérii."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. Refund of %{amount} is being processed. We'll email you if it fails."
+msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processed. We'll email you if it fails."
+msgstr[0] "Zrušen %{count} termín. Vrácení %{amount} se zpracovává. Pokud se nezdaří, pošleme vám e-mail."
+msgstr[1] "Zrušeny %{count} termíny. Vrácení %{amount} se zpracovává. Pokud se nezdaří, pošleme vám e-mail."
+msgstr[2] "Zrušeno %{count} termínů. Vrácení %{amount} se zpracovává. Pokud se nezdaří, pošleme vám e-mail."

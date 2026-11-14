@@ -37,6 +37,7 @@ defmodule Tymeslot.BookingSeries.CancelTest do
   alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.SendSeriesRefundFailed
   alias Tymeslot.Workers.VideoSyncWorker
 
   setup :verify_on_exit!
@@ -147,6 +148,7 @@ defmodule Tymeslot.BookingSeries.CancelTest do
       )
 
   defp refund_jobs, do: all_enqueued(worker: SeriesHostRefund)
+  defp refund_failed_jobs, do: all_enqueued(worker: SendSeriesRefundFailed)
 
   # Runs the one refund job the cancellation inserted.
   defp run_refund_job(opts \\ []) do
@@ -546,10 +548,15 @@ defmodule Tymeslot.BookingSeries.CancelTest do
 
       # A failed attempt is retried; a refusal no retry turns round is
       # discarded. Either way the money stays on the payment.
+      # The host is emailed once the job gives up: on its last attempt, or
+      # on a refusal.
       assert {:error, :api_error} = run_refund_job(attempt: 1)
+      refute_enqueued(worker: SendSeriesRefundFailed)
       assert {:error, :api_error} = run_refund_job(attempt: 10)
+      assert [%{args: %{"amount_cents" => 20_000}}] = refund_failed_jobs()
       paid_long_ago!(series)
       assert {:discard, :outside_refund_window} = run_refund_job(attempt: 2)
+      assert [_still_one] = refund_failed_jobs()
 
       assert Repo.reload!(payment).refunded_amount_cents == 0
     end

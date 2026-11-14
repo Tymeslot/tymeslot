@@ -278,7 +278,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       html = render(view)
 
       assert statuses() == [:cancelled, :cancelled, :cancelled, :cancelled]
-      assert html =~ "Refund of €200.00 scheduled."
+      assert html =~ "Refund of €200.00 is being processed. We&#39;ll email you if it fails."
 
       expect_refund(20_000)
       assert [%{args: args}] = all_enqueued(worker: SeriesHostRefund)

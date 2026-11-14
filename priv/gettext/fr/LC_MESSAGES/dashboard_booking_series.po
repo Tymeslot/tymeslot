@@ -185,13 +185,6 @@ msgstr[1] "%{count} séances annulées. Remboursement de %{amount} effectué."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} session cancelled. Refund of %{amount} scheduled."
-msgid_plural "%{count} sessions cancelled. Refund of %{amount} scheduled."
-msgstr[0] "%{count} séance annulée. Remboursement de %{amount} programmé."
-msgstr[1] "%{count} séances annulées. Remboursement de %{amount} programmé."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
 msgid "%{count} session cancelled. The attendee has been told."
 msgid_plural "%{count} sessions cancelled. The attendee has been told."
 msgstr[0] "%{count} séance annulée. Le participant a été informé."
@@ -403,3 +396,10 @@ msgstr "séance %{position}, %{when}"
 #, elixir-autogen, elixir-format
 msgid "Guests can only be added to single bookings, not to a series."
 msgstr "Les invités ne peuvent être ajoutés qu’aux réservations uniques, pas à une série."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. Refund of %{amount} is being processed. We'll email you if it fails."
+msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processed. We'll email you if it fails."
+msgstr[0] "%{count} séance annulée. Le remboursement de %{amount} est en cours. Nous vous préviendrons par e-mail en cas d’échec."
+msgstr[1] "%{count} séances annulées. Le remboursement de %{amount} est en cours. Nous vous préviendrons par e-mail en cas d’échec."

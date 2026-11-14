@@ -22,11 +22,13 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   outcome, so ErrorTracker records every failed attempt and the discard
   (`ErrorTracking.ObanOutcomes`), and a new error raises its admin alert.
 
-  The host is not told directly: no host-facing notice of a failed refund
-  exists yet, and the series payment appears on the host's
-  outstanding-refunds list only once none of its sessions goes ahead. The
-  amount still held shows on the payment in the host's payments settings,
-  where it can be refunded by hand.
+  When it gives up on a refund (discarded as one no retry can make, or
+  failed on its last attempt), the host is emailed
+  (`Tymeslot.Workers.SendSeriesRefundFailed`): the series payment appears
+  on their outstanding-refunds list only once none of its sessions goes
+  ahead, so the email is how they learn the money is still theirs to
+  return. No email goes out when the payment is gone or the money was
+  already refunded.
   """
 
   use Oban.Worker,
@@ -46,6 +48,7 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   alias Tymeslot.MeetingPayments.ChargeBackfill
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.Workers.Backoff
+  alias Tymeslot.Workers.SendSeriesRefundFailed
 
   @base_backoff_seconds 60
   @max_backoff_seconds 3_600
@@ -82,11 +85,38 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
 
       {:error, reason} when reason in @unretryable ->
         log_failure(job, args, reason)
+        tell_host(args, reason)
         {:discard, reason}
 
       {:error, reason} ->
         log_failure(job, args, reason)
+        if job.attempt >= job.max_attempts, do: tell_host(args, reason)
         {:error, reason}
+    end
+  end
+
+  # The refund will not be made: the host is told, unless there is no
+  # payment to tell them about or its money was already returned.
+  defp tell_host(_args, reason) when reason in [:not_found, :already_refunded], do: :ok
+
+  defp tell_host(args, reason) do
+    email =
+      SendSeriesRefundFailed.new_for(
+        args["booking_payment_id"],
+        args["amount_cents"],
+        args["refunded_before_cents"],
+        reason
+      )
+
+    case Oban.insert(email) do
+      {:ok, _job} ->
+        :ok
+
+      {:error, error} ->
+        Logger.error("Could not queue the series refund failure email",
+          booking_payment_id: args["booking_payment_id"],
+          reason: LogFormat.reason(error)
+        )
     end
   end
 
