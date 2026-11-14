@@ -928,3 +928,13 @@ msgstr "Vrátit platbu za tento termín."
 #, elixir-autogen, elixir-format
 msgid "Refunds one session's share of the series payment (%{amount})."
 msgstr "Vrátí podíl jednoho termínu na platbě za sérii (%{amount})."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "In person"
+msgstr "Osobně"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Telefonát"

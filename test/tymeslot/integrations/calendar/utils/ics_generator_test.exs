@@ -63,6 +63,25 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       assert ics_content =~ "Jane Doe"
     end
 
+    # A meeting the host manages names its first guest by their address; a
+    # CN repeating the address only shows it twice in the guest's calendar.
+    test "gives the attendee no name when the name is only their address" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com",
+        attendee_email: "guest@example.com",
+        attendee_name: "Guest@Example.com"
+      }
+
+      ics_content = IcsGenerator.generate_ics(meeting_details)
+
+      assert ics_content =~ "ATTENDEE;SCHEDULE-AGENT=CLIENT:mailto:guest@example.com"
+      refute ics_content =~ ~s(CN="Guest@Example.com")
+    end
+
     test "handles missing optional attendee information" do
       meeting_details = %{
         title: "Meeting",

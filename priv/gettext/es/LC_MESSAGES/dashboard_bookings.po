@@ -918,3 +918,13 @@ msgstr "Reembolsar esta sesión."
 #, elixir-autogen, elixir-format
 msgid "Refunds one session's share of the series payment (%{amount})."
 msgstr "Reembolsa la parte de una sesión en el pago de la serie (%{amount})."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "In person"
+msgstr "En persona"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Llamada telefónica"

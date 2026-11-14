@@ -548,6 +548,28 @@ defmodule Tymeslot.ProfilesContextTest do
       assert {:ok, updated} = Profiles.update_allowed_embed_domains(profile, "")
       assert updated.allowed_embed_domains == ["none"]
     end
+
+    # `::1` was accepted before CSP's lack of IPv6 literals ruled it out, so
+    # a list saved back then must stay editable.
+    test "drops a previously saved ::1 instead of refusing the edited list" do
+      profile = insert(:profile, allowed_embed_domains: ["::1", "example.com"])
+
+      assert {:ok, updated} =
+               Profiles.update_allowed_embed_domains(profile, [
+                 "::1",
+                 "example.com",
+                 "newsite.org"
+               ])
+
+      assert updated.allowed_embed_domains == ["example.com", "newsite.org"]
+    end
+
+    test "still refuses ::1 typed into a list that did not hold it", %{profile: profile} do
+      assert {:error, changeset} =
+               Profiles.update_allowed_embed_domains(profile, ["example.com", "::1"])
+
+      assert Keyword.has_key?(changeset.errors, :allowed_embed_domains)
+    end
   end
 
   # =====================================

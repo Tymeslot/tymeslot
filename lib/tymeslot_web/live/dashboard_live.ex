@@ -584,8 +584,6 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_event("onboarding:dismiss", _params, socket),
     do: keep_user(Onboarding.dismiss_dashboard_setup(socket.assigns.current_user), socket)
 
-  # Private functions
-
   defp keep_user({:ok, user}, socket), do: {:noreply, assign(socket, :current_user, user)}
   defp keep_user({:error, _reason}, socket), do: {:noreply, socket}
 

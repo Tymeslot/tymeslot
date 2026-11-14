@@ -918,3 +918,13 @@ msgstr "Diesen Termin erstatten."
 #, elixir-autogen, elixir-format
 msgid "Refunds one session's share of the series payment (%{amount})."
 msgstr "Erstattet den Anteil eines Termins an der Zahlung für die Serie (%{amount})."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "In person"
+msgstr "Vor Ort"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Telefonanruf"

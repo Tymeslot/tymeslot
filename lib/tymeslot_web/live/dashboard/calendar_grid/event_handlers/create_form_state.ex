@@ -186,29 +186,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   @doc """
   Turns the meeting's main participant on or off.
 
-  Turning it off keeps a main guest already typed in by inviting them first
-  among the guests, so switching does not lose an address the host means to
-  invite. Their name and address stay in the hidden fields, for switching
-  back.
+  Turning it off invites a main guest already typed in first among the
+  guests, if `check_extra_guest/3` takes them (the host's own address is
+  refused with its usual message). Name and address stay hidden, for switching back.
   """
   @spec handle_toggle_create_main_participant(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_toggle_create_main_participant(_params, socket),
-    do: update_creating(socket, &toggle_main_participant/1)
+    do: update_creating(socket, &toggle_main_participant(&1, socket.assigns.current_user.email))
 
-  defp toggle_main_participant(%{main_participant: false} = creating),
+  defp toggle_main_participant(%{main_participant: false} = creating, _organizer_email),
     do: %{creating | main_participant: true}
 
-  defp toggle_main_participant(creating) do
-    main_guest = creating.guest_email |> String.trim() |> String.downcase()
+  defp toggle_main_participant(creating, organizer_email) do
+    main_guest = normalise_address(creating.guest_email)
+    without_main = %{creating | main_participant: false}
 
-    guest_emails =
-      if Shared.valid_email?(main_guest) and main_guest not in creating.guest_emails and
-           length(creating.guest_emails) < Guests.max_guests(),
-         do: [main_guest | creating.guest_emails],
-         else: creating.guest_emails
+    case check_extra_guest(without_main, main_guest, organizer_email) do
+      :ok ->
+        %{without_main | guest_emails: [main_guest | creating.guest_emails]}
 
-    %{creating | main_participant: false, guest_emails: guest_emails}
+      {:error, message} ->
+        if same_address?(main_guest, organizer_email),
+          do: Map.put(without_main, :guest_email_error, message),
+          else: without_main
+    end
   end
 
   @doc """

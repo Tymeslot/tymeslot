@@ -928,3 +928,13 @@ msgstr "Повернути кошти за цю сесію."
 #, elixir-autogen, elixir-format
 msgid "Refunds one session's share of the series payment (%{amount})."
 msgstr "Повертає частку однієї сесії в оплаті серії (%{amount})."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "In person"
+msgstr "Особисто"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Телефонний дзвінок"

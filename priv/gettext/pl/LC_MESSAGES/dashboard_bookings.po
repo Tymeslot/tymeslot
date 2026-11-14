@@ -924,3 +924,13 @@ msgstr "Zwrot za tę sesję."
 #, elixir-autogen, elixir-format
 msgid "Refunds one session's share of the series payment (%{amount})."
 msgstr "Zwraca część płatności za serię przypadającą na jedną sesję (%{amount})."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "In person"
+msgstr "Spotkanie osobiste"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Rozmowa telefoniczna"

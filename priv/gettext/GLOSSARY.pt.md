@@ -162,6 +162,15 @@ flow and in the dashboard.
 | free/busy | livre/ocupado |
 | payout | repasse |
 | custom domain | domínio próprio |
+| translation (noun; booking-page languages) | tradução (pl. traduções); *"%{language} translations"* → *"Traduções: %{language}"*, *"Your %{language} translations"* → *"Suas traduções (%{language})"*: `%{language}` is filled with the language's own name, so it goes after a colon or in brackets, never after *em* or *para* |
+| translate | traduzir; the participle agrees with *textos* (*"%{translated}/%{total} traduzidos"*) |
+| original language (the language the host writes their texts in) | idioma original; *"in %{language}"* → *"no idioma original (%{language})"*; the original text is *o original*, and the badge beside that language reads *original* |
+| translation language (a language the host translates into) | idioma de tradução (pl. idiomas de tradução) |
+| language switcher (the visitor-facing control on the booking page) | seletor de idioma |
+| outdated (a translation whose original changed) | desatualizado (pl. desatualizados) |
+| missing (a text not translated yet) | **Sem tradução** as the status pill and in the filter (*"Só sem tradução ou desatualizados"*); in running text *faltando* (*"alguns textos estão faltando"*) |
+| translated (status) | traduzido |
+| review (the link to a language's review page) | Revisar |
 
 **Settings flash messages** put the name after a colon, *"Configuração ativada: %{name}."*
 (also *desativada*, *atualizada*), so the participle agrees with *configuração* and never

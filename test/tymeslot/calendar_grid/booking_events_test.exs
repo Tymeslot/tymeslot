@@ -56,7 +56,7 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
 
     {start_dt, end_dt} = window()
 
-    assert [%BookingEvent{summary: "Quarterly planning", attendee_name: nil}] =
+    assert [%BookingEvent{summary: "Quarterly planning", attendee_name: nil, attendee_email: nil}] =
              CalendarGrid.list_booking_events_for_range(user.id, start_dt, end_dt)
   end
 

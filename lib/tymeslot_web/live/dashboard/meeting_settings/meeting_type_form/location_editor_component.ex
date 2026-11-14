@@ -47,6 +47,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingTypes.GroupLocationRule
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.LocationSelection
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules
@@ -512,10 +513,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
     end
   end
 
-  defp default_label(:video), do: dgettext("dashboard_meeting_locations", "Video call")
-  defp default_label(:phone), do: dgettext("dashboard_meeting_locations", "Phone call")
-  defp default_label(:in_person), do: dgettext("dashboard_meeting_locations", "In person")
-  defp default_label(_kind), do: dgettext("dashboard_meeting_locations", "Somewhere else")
+  # The booking pages' own wording of each default, so the label the host
+  # sees is the one their visitors see, and one the domain stores as the
+  # English default (`LocationSelection.stored_label/2`).
+  defp default_label(kind) when kind in [:video, :phone, :in_person, :custom],
+    do: LocationSelection.default_label(kind)
+
+  defp default_label(_kind), do: LocationSelection.default_label(:custom)
 
   # A pill shows the integration's name, with the account in its tooltip. Two
   # integrations sharing a name (two Zoom accounts, say) would be two

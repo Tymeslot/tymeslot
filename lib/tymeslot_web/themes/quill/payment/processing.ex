@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Themes.Quill.Payment.Processing do
       theme_tokens={assigns[:theme_tokens]}
       locale={assigns[:locale]}
       language_dropdown_open={assigns[:language_dropdown_open]}
+      offered_locales={assigns[:offered_locales]}
       legal_links={assigns[:legal_links]}
       testid="quill-payment-processing"
       status={@status}

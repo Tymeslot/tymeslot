@@ -46,7 +46,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     account_deletion_stalled: %{category: "Account", severity: :error},
     account_deletion_held_last_admin: %{category: "Account", severity: :warning},
     analytics_tracking_anomaly: %{category: "Analytics", severity: :warning},
-    recipient_email_rejected: %{category: "Email", severity: :warning},
+    recipient_email_rejected: %{category: "Email", severity: :info},
     configured_email_exhausted: %{category: "Email", severity: :error},
     contact_recipient_rejected: %{category: "Email", severity: :error},
     user_registered_hook_failed: %{category: "System", severity: :error},

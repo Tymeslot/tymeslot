@@ -84,6 +84,15 @@ defmodule Tymeslot.Profiles.ProfileQueries do
     |> Repo.update()
   end
 
+  @doc "Updates the booking languages (`ProfileSchema.booking_languages_changeset/2`)."
+  @spec update_booking_languages(ProfileSchema.t(), map()) ::
+          {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_booking_languages(%ProfileSchema{} = profile, attrs) do
+    profile
+    |> ProfileSchema.booking_languages_changeset(attrs)
+    |> Repo.update()
+  end
+
   @doc "The currency recorded as the one the user's prices were set in."
   @spec last_charge_currency(integer()) :: String.t() | nil
   def last_charge_currency(user_id) do

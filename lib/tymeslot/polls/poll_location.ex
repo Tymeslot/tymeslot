@@ -19,8 +19,10 @@ defmodule Tymeslot.Polls.PollLocation do
   or `""` for none.
   """
 
+  alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.{LocationOption, LocationSelection}
   alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Venues
 
@@ -28,14 +30,16 @@ defmodule Tymeslot.Polls.PollLocation do
 
   @typedoc """
   The location in force: what kind of place it is, the line naming it (none
-  for a video call, whose link only exists once the meeting does), and the
-  venue or video integration behind it.
+  for a video call, whose link only exists once the meeting does), the
+  venue or video integration behind it, and whether it is the poll's own or
+  its meeting type's (`source`).
   """
   @type t :: %{
           kind: kind(),
           place: String.t() | nil,
           venue_id: integer() | nil,
-          video_integration_id: integer() | nil
+          video_integration_id: integer() | nil,
+          source: :poll | :meeting_type
         }
 
   @fields [:location_kind, :location_details, :venue_id, :video_integration_id]
@@ -183,13 +187,19 @@ defmodule Tymeslot.Polls.PollLocation do
   end
 
   defp own(%PollSchema{location_kind: :video, video_integration_id: id}) when is_integer(id),
-    do: %{kind: :video, place: nil, venue_id: nil, video_integration_id: id}
+    do: %{kind: :video, place: nil, venue_id: nil, video_integration_id: id, source: :poll}
 
   defp own(%PollSchema{location_kind: :in_person, venue_id: id, user_id: user_id})
        when is_integer(id) do
     case Venues.get_venue(user_id, id) do
       {:ok, venue} ->
-        %{kind: :in_person, place: Venues.display(venue), venue_id: id, video_integration_id: nil}
+        %{
+          kind: :in_person,
+          place: Venues.display(venue),
+          venue_id: id,
+          video_integration_id: nil,
+          source: :poll
+        }
 
       {:error, _not_found} ->
         nil
@@ -198,7 +208,7 @@ defmodule Tymeslot.Polls.PollLocation do
 
   defp own(%PollSchema{location_kind: :custom, location_details: place})
        when is_binary(place) and place != "",
-       do: %{kind: :custom, place: place, venue_id: nil, video_integration_id: nil}
+       do: %{kind: :custom, place: place, venue_id: nil, video_integration_id: nil, source: :poll}
 
   defp own(_poll), do: nil
 
@@ -211,13 +221,21 @@ defmodule Tymeslot.Polls.PollLocation do
   The location a poll on `meeting_type` takes while it has none of its own:
   the type's first location, with its first provider or venue, as a booking
   that changes nothing would get. Nil for no type, or a type whose first
-  location names no place (a video location left without a provider).
+  location names no place (a video location left without a provider, or a
+  phone location asking the booker for their number, which names nothing a
+  poll's participants could go by).
   """
   @spec of_meeting_type(map() | nil) :: t() | nil
   def of_meeting_type(nil), do: nil
 
-  def of_meeting_type(meeting_type),
-    do: meeting_type |> MeetingTypes.resolve_location(%{}) |> from_resolution()
+  def of_meeting_type(meeting_type) do
+    resolution = MeetingTypes.resolve_location(meeting_type, %{})
+
+    case LocationSelection.fetch(meeting_type, resolution.location_option_id) do
+      %LocationOption{kind: :phone, collect_from_guest: true} -> nil
+      _named_by_the_type -> from_resolution(resolution)
+    end
+  end
 
   defp from_resolution(%{location_kind: nil}), do: nil
 
@@ -227,12 +245,11 @@ defmodule Tymeslot.Polls.PollLocation do
         kind: :video,
         place: nil,
         venue_id: nil,
-        video_integration_id: resolution.video_integration_id
+        video_integration_id: resolution.video_integration_id,
+        source: :meeting_type
       }
   end
 
-  # A place only a booker would supply (a phone location asking for their
-  # number) names nothing a poll's participants could go by.
   defp from_resolution(%{location: place}) when place in [nil, ""], do: nil
 
   defp from_resolution(resolution) do
@@ -240,7 +257,8 @@ defmodule Tymeslot.Polls.PollLocation do
       kind: resolution.location_kind,
       place: resolution.location,
       venue_id: resolution.venue_id,
-      video_integration_id: nil
+      video_integration_id: nil,
+      source: :meeting_type
     }
   end
 
@@ -248,9 +266,13 @@ defmodule Tymeslot.Polls.PollLocation do
   What `Tymeslot.Bookings.CreateAdHoc` takes to hold the confirmed meeting
   at `location` (see `effective/1`): the place, as a venue or as the line
   naming it, and the video integration that creates its room.
+
+  A line the host typed for the poll is a custom place, held to the length
+  they may type. One the meeting type names keeps its kind and its whole
+  text (label and details), as a booking on that type stores it.
   """
   @spec meeting_params(t() | nil) :: %{
-          location: {:venue, integer()} | {:custom, String.t()} | nil,
+          location: CreateAdHoc.location() | nil,
           video_integration_id: integer() | nil
         }
   def meeting_params(%{kind: :video, video_integration_id: id}),
@@ -258,6 +280,10 @@ defmodule Tymeslot.Polls.PollLocation do
 
   def meeting_params(%{venue_id: id}) when is_integer(id),
     do: %{location: {:venue, id}, video_integration_id: nil}
+
+  def meeting_params(%{source: :meeting_type, kind: kind, place: place})
+      when is_binary(place) and place != "",
+      do: %{location: {:meeting_type, kind, place}, video_integration_id: nil}
 
   def meeting_params(%{place: place}) when is_binary(place) and place != "",
     do: %{location: {:custom, place}, video_integration_id: nil}

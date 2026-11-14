@@ -155,6 +155,15 @@ Settled while translating; reuse rather than re-coining.
 | **popup modal** | **Fenêtre modale** **[SETTLED]**, over marketing's *Modale popup*; in prose *en fenêtre modale* |
 | floating button | **Bouton flottant** |
 | Close modal | **Fermer la fenêtre modale** **[SETTLED]**, distinct from *Close dialogs* → **Fermer les boîtes de dialogue**; the English keeps modal and dialog apart, so French does too |
+| translation (noun; booking-page languages) | **traduction** (f., pl. **traductions**); *%{language} translations* → **Traductions : %{language}**, *Your %{language} translations* → **Vos traductions (%{language})**: `%{language}` is filled with the language’s own name, so it goes after a colon or in brackets, never after *en* or *de* |
+| translate | **traduire**; the participle agrees with *textes* (*%{translated}/%{total} traduits*) |
+| original language (the language the host writes their texts in) | **langue d’origine**; *in %{language}* → **dans la langue d’origine (%{language})**; the original text is **l’original** (*s’affiche dans sa version originale*); the badge beside that language is **originale**, agreeing with *langue* |
+| translation language (a language the host translates into) | **langue de traduction** (pl. **langues de traduction**) |
+| language switcher (the visitor-facing control on the booking page) | **sélecteur de langue** |
+| Outdated (a translation whose original changed) | **Obsolète** (pl. **obsolètes**) |
+| Missing (a text not translated yet) | **Manquant** as the status pill; in running text the verb **manquer** (*certains textes manquent*) |
+| Translated (status) | **Traduit** |
+| Review (the link to a language's review page) | **Vérifier** |
 
 **Weekday abbreviations:** `Lun.` · `Mar.` · `Mer.` · `Jeu.` · `Ven.` · `Sam.` · `Dim.`
 **[SETTLED]**, with the full stop. French abbreviation by truncation takes a point, and

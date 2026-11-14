@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
   alias Ecto.UUID
   alias Phoenix.LiveView
   alias Tymeslot.CustomFields.FieldDefinition
+  alias TymeslotWeb.Dashboard.Languages.TranslationStatus
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
 
   @impl Phoenix.LiveComponent
@@ -22,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
     assigns =
       assigns
       |> Map.put_new(:allowed, true)
+      |> Map.put_new(:translation_status, nil)
       |> Map.put(:placeholder_component, placeholder_component())
 
     {:ok, assign(socket, assigns)}
@@ -71,6 +73,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
           )
         }
       >
+        <:title_suffix>
+          <TranslationStatus.mark status={@translation_status} prefix="custom_fields/" />
+        </:title_suffix>
         <:actions>
           <.action_button
             type="button"

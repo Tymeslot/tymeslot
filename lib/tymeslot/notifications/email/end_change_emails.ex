@@ -47,6 +47,7 @@ defmodule Tymeslot.Notifications.Email.EndChangeEmails do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingCalendarQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
@@ -264,9 +265,10 @@ defmodule Tymeslot.Notifications.Email.EndChangeEmails do
 
   # The host hears the end the attendees knew: the meeting's own record of
   # it as the job's first run found it, which every change seeds, or failing
-  # that the end a reached seat knew. A group meeting has no booker seat, so
-  # its record is moved on here, once the host's notice has gone out or been
-  # refused for good: before that, a retry could find it already moved.
+  # that the end a reached seat knew. A group meeting, or one the host
+  # manages, has no booker seat, so its record is moved on here, once the
+  # host's notice has gone out or been refused for good: before that, a retry
+  # could find it already moved.
   defp notify_host(meeting, outcomes, host_from, job_id) do
     reached = for {:sent, who, _known_end} <- outcomes, do: who
 
@@ -290,7 +292,7 @@ defmodule Tymeslot.Notifications.Email.EndChangeEmails do
         {:error, "End change notice to the host failed"}
 
       _sent_or_rejected ->
-        if MeetingSchema.group?(meeting),
+        if MeetingSchema.group?(meeting) or HostManaged.managed?(meeting),
           do: MeetingCalendarQueries.put_notified_end(meeting.id, meeting.end_time)
 
         :ok

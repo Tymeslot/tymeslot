@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Themes.Folio.Pages do
   attr :organizer_profile, :map, default: nil
   attr :locale, :string, default: nil
   attr :language_dropdown_open, :boolean, default: nil
+  attr :offered_locales, :list, default: nil
   attr :legal_links, :map, default: nil
   slot :inner_block, required: true
 
@@ -36,6 +37,7 @@ defmodule TymeslotWeb.Themes.Folio.Pages do
       theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      offered_locales={@offered_locales}
       legal_links={@legal_links}
       show_language_switcher={@locale != nil}
       show_extensions={not @plain}

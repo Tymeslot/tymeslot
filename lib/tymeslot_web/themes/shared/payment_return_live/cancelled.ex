@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Cancelled do
   Anyone else holding only the meeting id sees the page without the token.
   The page carries the organiser's customisation
   (`PaymentReturn.assign_customization/2`), as their booking page does, and
-  their profile and legal links (`PaymentReturn.assign_organizer/2`).
+  their profile and legal links (`PaymentReturn.assign_organizer/3`).
   """
 
   use TymeslotWeb, :live_view
@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Cancelled do
         {:ok, %{meeting: meeting, profile: profile} = found} ->
           socket
           |> PaymentReturn.assign_customization(profile)
-          |> PaymentReturn.assign_organizer(profile)
+          |> PaymentReturn.assign_organizer(profile, meeting)
           |> assign(Map.take(found, [:rebook_path, :invitation_held, :invitation_withheld]))
           |> assign(loading: false, meeting: meeting)
 
@@ -92,6 +92,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Cancelled do
       end
     else
       socket
+      |> PaymentReturn.assign_dead_render_language(meeting_id, slug)
       |> PaymentReturn.no_customization()
       |> PaymentReturn.no_organizer()
       |> assign(

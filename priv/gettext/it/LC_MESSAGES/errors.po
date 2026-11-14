@@ -517,6 +517,7 @@ msgid "is not a palette colour"
 msgstr "non è un colore della palette"
 
 #: lib/tymeslot/app_settings/app_settings_schema.ex
+#: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported language"
 msgstr "non è una lingua supportata"
@@ -887,3 +888,13 @@ msgstr "deve essere compreso tra %{min} e %{max}"
 #, elixir-autogen, elixir-format
 msgid "must not be less than the minimum"
 msgstr "non può essere inferiore al minimo"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#, elixir-autogen, elixir-format
+msgid "cannot list a language twice"
+msgstr "non può contenere la stessa lingua due volte"
+
+#: lib/tymeslot/content_translations/catalogue.ex
+#, elixir-autogen, elixir-format
+msgid "is not a translation language"
+msgstr "non è una lingua di traduzione"
