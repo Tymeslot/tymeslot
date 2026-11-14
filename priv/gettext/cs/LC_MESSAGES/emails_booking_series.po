@@ -291,5 +291,4 @@ msgstr[2] "Připomínka: účastník %{attendee} žádá o %{count} termínů"
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
 msgid "Still waiting"
-
 msgstr "Stále bez odpovědi"

@@ -228,8 +228,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
             title={dgettext("dashboard_bookings", "Participants")}
           >
             <ul class="space-y-2.5">
-              <li :for={participant <- @participants} class="flex items-center justify-between gap-3">
-                <span class="flex items-center gap-2.5 min-w-0">
+              <li
+                :for={participant <- @participants}
+                class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2"
+              >
+                <span class="flex items-center gap-2.5 min-w-[10rem] flex-1">
                   <span class="flex h-7 w-7 flex-none items-center justify-center rounded-token-full bg-turquoise-100 text-token-xs font-bold uppercase text-turquoise-700">
                     {person_initial(participant)}
                   </span>
@@ -244,12 +247,34 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
                     {dgettext("dashboard_bookings", "Left this slot")}
                   </Feedback.pill>
                 </span>
-                <a
-                  href={"mailto:#{participant.email}"}
-                  class="truncate text-token-sm font-medium text-tymeslot-500 hover:text-turquoise-600 transition-colors"
-                >
-                  {participant.email}
-                </a>
+                <span class="flex flex-wrap items-center gap-x-3 gap-y-2 min-w-0">
+                  <a
+                    href={"mailto:#{participant.email}"}
+                    class="truncate text-token-sm font-medium text-tymeslot-500 hover:text-turquoise-600 transition-colors"
+                  >
+                    {participant.email}
+                  </a>
+                  <%!-- A booker who booked a series of sessions: the series is
+                       theirs, so it opens from their seat, not the session. --%>
+                  <Buttons.action_button
+                    :if={participant.series_id}
+                    id={"view-series-seat-#{participant.id}"}
+                    variant={:outline}
+                    size={:sm}
+                    icon="hero-queue-list"
+                    class="flex-none"
+                    phx-click="series:show"
+                    phx-value-series={participant.series_id}
+                    phx-target={@target}
+                    aria-label={
+                      dgettext("dashboard_booking_series", "View the series %{name} booked",
+                        name: participant.name
+                      )
+                    }
+                  >
+                    {dgettext("dashboard_booking_series", "View series")}
+                  </Buttons.action_button>
+                </span>
               </li>
             </ul>
           </.sub_panel>
@@ -321,7 +346,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   attr :place, :any, required: true
 
   # Which session of its series a booking is. A group session has none: the
-  # series is one booker's seats, not the shared session.
+  # series is one booker's seats, opened from their entry in the participants.
   defp series_badge(%{place: {position, count}} = assigns) do
     assigns = assign(assigns, position: position, count: count)
 

@@ -280,5 +280,4 @@ msgstr[1] "Rappel : %{attendee} demande %{count} séances"
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
 msgid "Still waiting"
-
 msgstr "Toujours en attente"

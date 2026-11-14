@@ -676,5 +676,4 @@ msgstr[2] "Zamítnout všech %{count} termínů"
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
-
 msgstr "Pokud neodpovíte do %{deadline}, žádost propadne a všechny termíny se uvolní."

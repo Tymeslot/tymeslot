@@ -676,5 +676,4 @@ msgstr[2] "Odrzuć wszystkie %{count} sesji"
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
-
 msgstr "Czas na odpowiedź mija: %{deadline}. Jeśli do tego czasu nie odpowiesz, prośba wygaśnie, a wszystkie sesje zostaną zwolnione."

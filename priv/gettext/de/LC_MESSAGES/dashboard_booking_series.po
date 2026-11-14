@@ -359,6 +359,7 @@ msgid "Times chosen one by one"
 msgstr "Zeiten einzeln gewählt"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "View series"
 msgstr "Serie ansehen"
@@ -376,5 +377,25 @@ msgstr "die Zahlung wird angefochten. Klären Sie die Anfechtung zuerst in Strip
 #: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
 #, elixir-autogen, elixir-format
 msgid "the series was not paid."
-
 msgstr "die Serie wurde nicht bezahlt."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel %{session}"
+msgstr "%{session} absagen"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule %{session}"
+msgstr "%{session} verschieben"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#, elixir-autogen, elixir-format
+msgid "View the series %{name} booked"
+msgstr "Serie von %{name} ansehen"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "session %{position}, %{when}"
+
+msgstr "Termin %{position}, %{when}"

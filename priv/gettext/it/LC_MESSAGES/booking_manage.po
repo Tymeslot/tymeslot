@@ -671,5 +671,4 @@ msgstr[1] "Rifiuta tutte le %{count} sessioni"
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
-
 msgstr "Se non rispondi entro %{deadline}, la richiesta decade e tutte le sessioni tornano disponibili."

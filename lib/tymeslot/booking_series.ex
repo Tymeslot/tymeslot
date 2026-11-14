@@ -168,6 +168,29 @@ defmodule Tymeslot.BookingSeries do
   def request_sessions(_meeting), do: nil
 
   @doc """
+  The sessions of the series request `meeting` was part of, whatever has
+  become of it since (open, approved, declined or expired), read from the
+  series sessions loaded on it (`with_request_sessions/1`): every session of
+  its series requested with it, at the same `approval_requested_at`, in
+  series order. Nil for a meeting requested on its own, outside any series,
+  or whose series sessions are not loaded.
+  """
+  @spec sessions_requested_with(MeetingSchema.t()) :: [MeetingSchema.t()] | nil
+  def sessions_requested_with(%MeetingSchema{
+        id: id,
+        approval_requested_at: %DateTime{} = requested_at,
+        series: %SeriesSchema{meetings: sessions}
+      })
+      when is_list(sessions) do
+    case Enum.filter(sessions, &(&1.approval_requested_at == requested_at)) do
+      [_alone] -> nil
+      together -> if Enum.any?(together, &(&1.id == id)), do: together
+    end
+  end
+
+  def sessions_requested_with(_meeting), do: nil
+
+  @doc """
   The series `series_id` when `user_id` is its organiser, else
   `{:error, :not_found}`, as for an unknown or malformed id.
   """

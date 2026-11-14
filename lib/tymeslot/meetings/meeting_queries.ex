@@ -476,13 +476,18 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   Drives the dashboard's count badge, and is backed by the partial index
   `meetings_pending_approval_by_organizer` so it stays a cheap query on a
   dashboard that renders it on every load.
+
+  The sessions of a booking series held for approval are one request, and
+  count once: requests are counted by series, a meeting outside any series
+  by itself.
   """
   @spec count_awaiting_approval_for_organizer(integer()) :: non_neg_integer()
   def count_awaiting_approval_for_organizer(organizer_user_id) do
     Meeting
     |> where([m], m.organizer_user_id == ^organizer_user_id)
     |> MeetingState.where_awaiting_approval()
-    |> Repo.aggregate(:count, :id)
+    |> select([m], count(coalesce(m.series_id, m.id), :distinct))
+    |> Repo.one()
   end
 
   @doc """

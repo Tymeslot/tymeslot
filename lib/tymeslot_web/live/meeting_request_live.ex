@@ -91,11 +91,14 @@ defmodule TymeslotWeb.MeetingRequestLive do
     end
   end
 
-  # A session of an open series request is answered with every other session
-  # of it (`Tymeslot.BookingSeries.Approval`), so the page lists them all.
-  # Kept through the answer, so the outcome speaks of all of them too.
-  defp series_sessions(meeting),
-    do: meeting |> BookingSeries.with_request_sessions() |> BookingSeries.request_sessions()
+  # A session of a series request is answered with every other session of
+  # it (`Tymeslot.BookingSeries.Approval`), so the page lists them all while
+  # it is open, and its outcome speaks of all of them once answered, also
+  # when the page is opened (or reconnects) after the answer.
+  defp series_sessions(meeting) do
+    loaded = BookingSeries.with_request_sessions(meeting)
+    BookingSeries.request_sessions(loaded) || BookingSeries.sessions_requested_with(loaded)
+  end
 
   # `:declined` is the host's own refusal and nothing else. `Approval.declined?/1`
   # owns that question: `status == :cancelled` does not answer it, since the

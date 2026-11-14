@@ -291,5 +291,4 @@ msgstr[2] "Нагадування: запит від %{attendee} на %{count} �
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
 msgid "Still waiting"
-
 msgstr "Досі без відповіді"

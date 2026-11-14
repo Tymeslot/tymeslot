@@ -210,9 +210,33 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
   test "a series request answered before its reminder sends none" do
     %{host: host, series: series} = book_three()
     assert {:ok, _sessions} = SeriesApproval.approve(series, host.user)
+    assert [_still_queued] = nudge_jobs()
 
     drain_due_emails()
 
+    assert Enum.filter(sent_emails(), &(&1.subject =~ "Reminder: Ada")) == []
+  end
+
+  test "a series request withdrawn before its reminder sends none" do
+    %{series: series} = book_three()
+    assert {:ok, _released} = SeriesApproval.withdraw(series, :attendee)
+    assert [_still_queued] = nudge_jobs()
+
+    drain_due_emails()
+
+    assert statuses() == [:cancelled, :cancelled, :cancelled]
+    assert Enum.filter(sent_emails(), &(&1.subject =~ "Reminder: Ada")) == []
+  end
+
+  test "a series request expired before its reminder sends none" do
+    %{series: series} = book_three()
+    past_deadline!()
+    assert {:ok, _released} = SeriesApproval.expire(series)
+    assert [_still_queued] = nudge_jobs()
+
+    drain_due_emails()
+
+    assert statuses() == [:expired, :expired, :expired]
     assert Enum.filter(sent_emails(), &(&1.subject =~ "Reminder: Ada")) == []
   end
 

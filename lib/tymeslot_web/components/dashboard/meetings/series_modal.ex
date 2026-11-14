@@ -10,9 +10,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.SeriesModal do
   sessions": two dialogs open at once would each close on a click in the
   other.
 
-  Shown for a one-to-one series only. On a group type every session is a
-  shared meeting and the series is one booker's seats in them, so a session's
-  card has no series of its own to show.
+  On a group type the series is one booker's seats in shared sessions,
+  opened from that booker's entry in a session's participants: its sessions
+  are listed with their status but no actions of their own, which on the
+  shared session would act on everyone in it.
   """
 
   use Phoenix.Component
@@ -120,10 +121,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.SeriesModal do
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-              <MeetingStatusBadge.status_badges meeting={session.meeting} />
+              <MeetingStatusBadge.status_badges meeting={badge_meeting(session)} />
               <.session_actions
-                :if={session.status == :upcoming}
+                :if={session.status == :upcoming and not session.seat}
                 meeting={session.meeting}
+                label={session_label(session, @timezone, @time_format)}
                 target={@target}
               />
             </div>
@@ -163,9 +165,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.SeriesModal do
   end
 
   attr :meeting, :map, required: true
+  attr :label, :string, required: true, doc: "names the session for assistive technology"
   attr :target, :any, required: true
 
-  # The session's card actions, each closing this modal to open its own.
+  # The session's card actions, each closing this modal to open its own. A
+  # seat of a group series has none: its session is shared with others, and
+  # its card acts on all of them.
   defp session_actions(assigns) do
     ~H"""
     <Buttons.action_button
@@ -173,6 +178,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.SeriesModal do
       variant={:secondary}
       size={:sm}
       icon="hero-arrows-right-left"
+      aria-label={dgettext("dashboard_booking_series", "Reschedule %{session}", session: @label)}
       phx-click={
         "series:hide"
         |> JS.push(target: @target)
@@ -187,6 +193,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.SeriesModal do
       size={:sm}
       icon="hero-x-mark"
       data-testid="series-session-cancel"
+      aria-label={dgettext("dashboard_booking_series", "Cancel %{session}", session: @label)}
       phx-click={
         "series:hide"
         |> JS.push(target: @target)
@@ -197,6 +204,19 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.SeriesModal do
     </Buttons.action_button>
     """
   end
+
+  defp session_label(session, timezone, time_format) do
+    dgettext("dashboard_booking_series", "session %{position}, %{when}",
+      position: session.position,
+      when: Helpers.format_move_time(session.meeting, timezone, time_format)
+    )
+  end
+
+  # A seat given up stands cancelled whatever became of its shared session.
+  defp badge_meeting(%{seat: true, status: :cancelled, meeting: meeting}),
+    do: %{meeting | status: :cancelled}
+
+  defp badge_meeting(%{meeting: meeting}), do: meeting
 
   defp type_name(%{meeting_type: %{name: name}}), do: name
   defp type_name(_series), do: nil

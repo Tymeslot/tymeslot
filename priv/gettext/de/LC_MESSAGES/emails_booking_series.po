@@ -280,5 +280,4 @@ msgstr[1] "Erinnerung: %{attendee} fragt %{count} Termine an"
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
 msgid "Still waiting"
-
 msgstr "Noch offen"

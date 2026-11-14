@@ -291,5 +291,4 @@ msgstr[2] "Przypomnienie: %{attendee} prosi o %{count} sesji"
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
 msgid "Still waiting"
-
 msgstr "Nadal bez odpowiedzi"

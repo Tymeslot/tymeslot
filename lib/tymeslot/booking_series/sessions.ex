@@ -92,7 +92,8 @@ defmodule Tymeslot.BookingSeries.Sessions do
           position: pos_integer(),
           meeting: Meeting.t(),
           start_time: DateTime.t(),
-          status: status()
+          status: status(),
+          seat: boolean()
         }
 
   @type organizer_overview :: %{
@@ -106,7 +107,8 @@ defmodule Tymeslot.BookingSeries.Sessions do
 
   @doc """
   The host's view of `series` on their dashboard, its meeting type
-  preloaded: every session in series order with its meeting and status, how
+  preloaded: every session in series order with its meeting, its status
+  and whether it is a seat in a shared group session (`seat`), how
   many "Cancel remaining sessions" would cancel (`upcoming`, by
   `Cancel.cancellable?/2`, as for the booker), whether it is still an open
   request, the payment taken for it (nil when none was taken), and the
@@ -130,18 +132,22 @@ defmodule Tymeslot.BookingSeries.Sessions do
   end
 
   defp organizer_session(%Meeting{} = meeting, now),
-    do: organizer_session(meeting, meeting.series_position, status(meeting, true, now))
+    do: organizer_session(meeting, meeting.series_position, status(meeting, true, now), false)
 
-  defp organizer_session(%Participant{meeting: %Meeting{} = meeting} = seat, now),
-    do:
-      organizer_session(
-        meeting,
-        seat.series_position,
-        status(meeting, Participant.live?(seat), now)
-      )
+  defp organizer_session(%Participant{meeting: %Meeting{} = meeting} = seat, now) do
+    status = status(meeting, Participant.live?(seat), now)
+    organizer_session(meeting, seat.series_position, status, true)
+  end
 
-  defp organizer_session(meeting, position, status),
-    do: %{position: position, meeting: meeting, start_time: meeting.start_time, status: status}
+  defp organizer_session(meeting, position, status, seat?) do
+    %{
+      position: position,
+      meeting: meeting,
+      start_time: meeting.start_time,
+      status: status,
+      seat: seat?
+    }
+  end
 
   defp taken_payment(%SeriesSchema{id: id}) do
     case MeetingPayments.payment_for_series(id) do

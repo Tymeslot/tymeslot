@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
   alias Ecto.Changeset
   alias Plug.Test
   alias Tymeslot.BookingSeries
+  alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.CalendarMock
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.StripeAdapterMock
@@ -34,6 +35,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
@@ -152,6 +154,18 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       end
 
       assert has_element?(view, "#series-session-#{first.id} [data-testid=series-session-cancel]")
+
+      # Each session's actions say which session they act on.
+      assert has_element?(
+               view,
+               "#series-session-#{first.id} button[aria-label^='Cancel session 1, ']"
+             )
+
+      assert has_element?(
+               view,
+               "#series-session-#{first.id} button[aria-label^='Reschedule session 1, ']"
+             )
+
       refute has_element?(view, "[data-testid=series-payment]")
       assert host.user.id == first.organizer_user_id
     end
@@ -291,6 +305,30 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       assert Repo.reload!(payment).refunded_amount_cents == 3_000
     end
 
+    test "past the refund window, cancel remaining says no refund was made", %{
+      view: view,
+      payment: payment
+    } do
+      payment
+      |> Changeset.change(paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day))
+      |> Repo.update!()
+
+      [first | _rest] = meetings()
+      open_series(view, first)
+      view |> element("[data-testid=cancel-remaining-sessions]") |> render_click()
+
+      # Nothing can be refunded, so there is nothing to choose.
+      refute has_element?(view, "#cancel-series-form input[name=cancel_refund_choice]")
+
+      view |> form("#cancel-series-form") |> render_submit()
+
+      assert statuses() == [:cancelled, :cancelled, :cancelled, :cancelled]
+      assert all_enqueued(worker: SeriesHostRefund) == []
+
+      assert render(view) =~
+               "4 sessions cancelled without a refund: the payment is older than the 60-day refund window."
+    end
+
     test "a refused amount keeps the dialog open with nothing cancelled", %{view: view} do
       [first | _rest] = meetings()
       open_series(view, first)
@@ -365,10 +403,12 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       [_first, second, _third] = meetings()
 
       view |> element("#approve-request-#{second.id}") |> render_click()
-      html = render_async(view)
+      render_async(view)
 
       assert statuses() == [:confirmed, :confirmed, :confirmed]
-      assert html =~ "All 3 sessions confirmed."
+      # The flash reaches the parent LiveView via `send/2`, a round trip of
+      # its own after the answer's result.
+      assert render(view) =~ "All 3 sessions confirmed."
     end
 
     test "declining from one card declines the whole series", %{conn: conn, host: host} do
@@ -387,6 +427,26 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       render_async(view)
 
       assert statuses() == [:cancelled, :cancelled, :cancelled]
+      assert render(view) =~ "Request declined. All 3 sessions are free again."
+    end
+
+    test "the Requests tab counts a series request once", %{conn: conn, host: host} do
+      start = DateTime.add(DateTime.utc_now(:second), 3, :day)
+
+      insert(:meeting,
+        organizer_user_id: host.user.id,
+        organizer_email: host.user.email,
+        status: :awaiting_approval,
+        start_time: start,
+        end_time: DateTime.add(start, 30, :minute),
+        approval_requested_at: DateTime.utc_now(:second),
+        approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 24, :hour)
+      )
+
+      assert Meetings.count_awaiting_approval_for_organizer(host.user.id) == 2
+
+      view = dashboard(conn, host)
+      assert view |> element("#meetings-filter button", "Requests") |> render() =~ ~r/>\s*2\s*</
     end
 
     test "the review page lists every session and answers all of them", %{conn: conn} do
@@ -403,6 +463,85 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
 
       assert statuses() == [:confirmed, :confirmed, :confirmed]
       assert html =~ "has been sent the confirmation for all 3 sessions."
+    end
+
+    test "the review page declines all of them", %{conn: conn} do
+      [first, _second, _third] = meetings()
+      {:ok, view, _html} = live(conn, "/meeting-request/" <> ApprovalToken.sign(first))
+
+      view |> element("button[phx-value-intent=decline]") |> render_click()
+      assert has_element?(view, "[data-testid=decline-request]", "Decline all 3 sessions")
+
+      html = view |> form("#decline-request-form", %{"reason" => ""}) |> render_submit()
+
+      assert statuses() == [:cancelled, :cancelled, :cancelled]
+      assert html =~ "All 3 sessions are free again and Ada Lovelace has been told."
+    end
+
+    test "the review page keeps speaking of every session once answered", %{
+      conn: conn,
+      host: host,
+      series: series
+    } do
+      [first, _second, _third] = meetings()
+      token = ApprovalToken.sign(first)
+      assert {:ok, _sessions} = SeriesApproval.approve(series, host.user)
+
+      {:ok, view, _html} = live(conn, "/meeting-request/" <> token)
+
+      assert render(view) =~ "has been sent the confirmation for all 3 sessions."
+    end
+  end
+
+  describe "a group series" do
+    setup %{conn: conn} do
+      host = host()
+      type = series_type(host, max_participants: 3)
+      assert {:ok, %{series: series}} = book(host, type, 3)
+      %{host: host, series: series, view: dashboard(conn, host)}
+    end
+
+    defp seats,
+      do:
+        Repo.all(
+          from(p in ParticipantSchema,
+            where: not is_nil(p.series_id),
+            order_by: p.series_position
+          )
+        )
+
+    test "the series opens from the booker's seat and cancels its remaining seats", %{
+      view: view,
+      series: series
+    } do
+      [first_seat | _rest] = seats = seats()
+
+      # The shared session's card is no session of the series itself.
+      refute has_element?(view, "[data-testid=series-badge]")
+
+      view |> element("#view-series-seat-#{first_seat.id}") |> render_click()
+      assert has_element?(view, "#series-modal", "Series with Ada Lovelace")
+
+      for seat <- seats do
+        assert has_element?(
+                 view,
+                 "#series-session-#{seat.meeting_id}",
+                 "Session #{seat.series_position} of 3"
+               )
+      end
+
+      # A seat's session is shared: its own actions would act on everyone.
+      refute has_element?(view, "[data-testid=series-session-cancel]")
+
+      confirm_cancel_remaining(view)
+
+      assert Enum.all?(seats(), &(not ParticipantSchema.live?(&1)))
+      assert Repo.reload!(series).cancelled_at
+
+      assert [%{args: %{"cancelled_by" => "organizer"}}] =
+               all_enqueued(worker: EmailWorker, args: %{"action" => "send_series_cancellation"})
+
+      assert render(view) =~ "3 sessions cancelled"
     end
   end
 
