@@ -256,6 +256,9 @@ defmodule Tymeslot.BookingSeries do
     to: Rule,
     as: :describe_sessions
 
+  @typedoc "A meeting or a seat, read for the series it belongs to."
+  @type occurrence :: %{:series_id => binary() | nil, optional(atom()) => any()}
+
   @doc """
   The last day a session of the series `occurrence` (a meeting or a seat)
   belongs to may be moved to: a year after the series' first session, the
@@ -263,7 +266,7 @@ defmodule Tymeslot.BookingSeries do
   session alone, so a later one can lie past it and still be moved. Nil
   outside a series.
   """
-  @spec window_until(%{series_id: binary() | nil}) :: Date.t() | nil
+  @spec window_until(occurrence()) :: Date.t() | nil
   def window_until(%{series_id: nil}), do: nil
 
   def window_until(%{series_id: series_id}) when is_binary(series_id) do
@@ -279,7 +282,7 @@ defmodule Tymeslot.BookingSeries do
   window already reaching further, and one outside a series, is kept.
   The notice is untouched.
   """
-  @spec widen_window(map(), %{series_id: binary() | nil}) :: map()
+  @spec widen_window(map(), occurrence()) :: map()
   def widen_window(config, occurrence) do
     case window_until(occurrence) do
       nil -> config

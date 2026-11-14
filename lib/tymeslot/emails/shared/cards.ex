@@ -141,4 +141,19 @@ defmodule Tymeslot.Emails.Shared.Cards do
   defp resolve_row_value(%{value: {:safe, html}}), do: html
   defp resolve_row_value(%{value: value, safe_html: true}), do: value
   defp resolve_row_value(%{value: value}), do: Sanitise.sanitize_for_email(value)
+
+  @doc """
+  The body of a `details_card/2` listing facts as label and value, one per
+  line, sanitised, with the first fact's value (an amount, say) in bold.
+  """
+  @spec facts_html([{String.t(), String.t()}, ...]) :: String.t()
+  def facts_html([{label, value} | rest]) do
+    first =
+      "#{Sanitise.sanitize_for_email(label)} <strong>#{Sanitise.sanitize_for_email(value)}</strong>"
+
+    Enum.join([first | Enum.map(rest, &fact_html/1)], "<br/>\n")
+  end
+
+  defp fact_html({label, value}),
+    do: "#{Sanitise.sanitize_for_email(label)} #{Sanitise.sanitize_for_email(value)}"
 end

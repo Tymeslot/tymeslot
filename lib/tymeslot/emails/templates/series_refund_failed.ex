@@ -91,7 +91,7 @@ defmodule Tymeslot.Emails.Templates.SeriesRefundFailed do
     #{Text.centered_text(intro(amount), padding: "0 0 8px 0")}
     #{Text.centered_text(why(reason), padding: "0 0 16px 0")}
 
-    #{Cards.details_card(Sanitise.sanitize_for_email(dgettext("emails_payments", "Refund details")), details_html(details))}
+    #{Cards.details_card(Sanitise.sanitize_for_email(dgettext("emails_payments", "Refund details")), Cards.facts_html(details))}
 
     #{Text.section_title(dgettext("emails_payments", "What to do"))}
     #{Text.centered_text(next_steps(), padding: "0 0 14px 0")}
@@ -174,15 +174,4 @@ defmodule Tymeslot.Emails.Templates.SeriesRefundFailed do
       fn {_label, value} -> is_nil(value) end
     )
   end
-
-  # The amount, first, is the one fact set in bold.
-  defp details_html([{label, amount} | rest]) do
-    first =
-      "#{Sanitise.sanitize_for_email(label)} <strong>#{Sanitise.sanitize_for_email(amount)}</strong>"
-
-    Enum.join([first | Enum.map(rest, &detail_html/1)], "<br/>\n")
-  end
-
-  defp detail_html({label, value}),
-    do: "#{Sanitise.sanitize_for_email(label)} #{Sanitise.sanitize_for_email(value)}"
 end
