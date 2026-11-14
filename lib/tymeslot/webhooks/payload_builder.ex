@@ -20,8 +20,10 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
 
   `series` is the event's `series` object
   (`Tymeslot.BookingSeries.Automation`), shipped as `data.series`: the whole
-  series on `meeting.series_created` and `meeting.series_cancelled` (whose
-  `data.meeting` is the series' first session), the session's place in its
+  series on the series events (`meeting.series_created`,
+  `meeting.series_cancelled`, `meeting.series_requested`,
+  `meeting.series_declined`, `meeting.series_request_expired`, whose
+  `data.meeting` is the first session they concern), the session's place in its
   series (`id`, `position`, `count`) on any other event about a session of
   one, and `null` for a booking outside any series.
   """

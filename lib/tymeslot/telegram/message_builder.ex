@@ -25,6 +25,9 @@ defmodule Tymeslot.Telegram.MessageBuilder do
   @request_expired EventTypes.to_event_type(:meeting_request_expired)
   @series_created EventTypes.to_event_type(:meeting_series_created)
   @series_cancelled EventTypes.to_event_type(:meeting_series_cancelled)
+  @series_requested EventTypes.to_event_type(:meeting_series_requested)
+  @series_declined EventTypes.to_event_type(:meeting_series_declined)
+  @series_request_expired EventTypes.to_event_type(:meeting_series_request_expired)
 
   @doc """
   Builds the message for a given event and meeting.
@@ -54,6 +57,38 @@ defmodule Tymeslot.Telegram.MessageBuilder do
 
     <b>#{esc(attendee_name(meeting))}</b>'s #{session_count(series)} remaining sessions of <i>#{esc(type_name(meeting))}</i> were cancelled
     #{cancellation_reason(meeting)}\
+    #{link_line(meeting)}\
+    """)
+  end
+
+  def build_message(@series_requested, meeting, timezone, series) do
+    String.trim("""
+    #{emoji(:calendar)} <b>New Series Request</b>
+
+    <b>#{esc(attendee_name(meeting))}</b> asked for #{session_count(series)} sessions of <i>#{esc(type_name(meeting))}</i>, starting #{format_time(meeting, timezone)}
+    #{email_line(meeting)}\
+    #{deadline_line(meeting, timezone)}\
+    #{details_block(meeting)}\
+    #{link_line(meeting)}\
+    """)
+  end
+
+  def build_message(@series_declined, meeting, _timezone, series) do
+    String.trim("""
+    #{emoji(:cancel)} <b>Series Request Declined</b>
+
+    <b>#{esc(attendee_name(meeting))}</b>'s request for #{session_count(series)} sessions of <i>#{esc(type_name(meeting))}</i> was declined
+    #{decline_line(meeting)}\
+    #{link_line(meeting)}\
+    """)
+  end
+
+  def build_message(@series_request_expired, meeting, _timezone, series) do
+    String.trim("""
+    #{emoji(:cancel)} <b>Series Request Expired</b>
+
+    <b>#{esc(attendee_name(meeting))}</b>'s request for #{session_count(series)} sessions of <i>#{esc(type_name(meeting))}</i> expired
+    Nobody responded before the deadline, so the slots were released.
     #{link_line(meeting)}\
     """)
   end

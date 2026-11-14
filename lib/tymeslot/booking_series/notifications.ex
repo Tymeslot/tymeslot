@@ -10,7 +10,8 @@ defmodule Tymeslot.BookingSeries.Notifications do
   the organiser (`Tymeslot.Notifications.Email.SeriesEmails`).
 
   The host's automations hear of the series with its confirmation, in one
-  `meeting.series_created` (`Tymeslot.BookingSeries.Automation`).
+  `meeting.series_created`, and of a series request, in one
+  `meeting.series_requested` (`Tymeslot.BookingSeries.Automation`).
 
   Several sessions cancelled at once are likewise told in one email to each
   (`schedule_series_cancellation/3`).
@@ -78,15 +79,29 @@ defmodule Tymeslot.BookingSeries.Notifications do
   """
   @spec schedule_series_request(SeriesSchema.t()) :: {:ok, :scheduled} | {:error, term()}
   def schedule_series_request(%SeriesSchema{} = series) do
-    first_held =
+    held =
       series
       |> SeriesQueries.list_meetings()
-      |> Enum.find(&MeetingState.awaiting_approval?/1)
+      |> Enum.filter(&MeetingState.awaiting_approval?/1)
+
+    first_held = List.first(held)
 
     with :ok <- EmailScheduler.schedule_series_request_emails(series.id),
-         :ok <- schedule_series_nudge(series, first_held) do
+         :ok <- schedule_series_nudge(series, first_held),
+         :ok <- announce_series_request(series, held) do
       schedule_series_expiry(first_held)
       {:ok, :scheduled}
+    end
+  end
+
+  # One `meeting.series_requested` for the host's automations, in place of
+  # a `meeting.requested` for each session.
+  defp announce_series_request(_series, []), do: :ok
+
+  defp announce_series_request(series, held) do
+    case Oban.insert(Automation.requested_job(series, Enum.map(held, & &1.id))) do
+      {:ok, _job} -> :ok
+      {:error, _reason} = error -> error
     end
   end
 

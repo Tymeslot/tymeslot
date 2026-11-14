@@ -35,6 +35,15 @@ defmodule Tymeslot.Notifications.EventOptions do
   defp event_label("meeting.series_cancelled"),
     do: dgettext("dashboard_automation", "Series Cancelled")
 
+  defp event_label("meeting.series_requested"),
+    do: dgettext("dashboard_automation", "Series Requested")
+
+  defp event_label("meeting.series_declined"),
+    do: dgettext("dashboard_automation", "Series Declined")
+
+  defp event_label("meeting.series_request_expired"),
+    do: dgettext("dashboard_automation", "Series Request Expired")
+
   defp event_label("meeting.requested"), do: dgettext("dashboard_automation", "Booking Requested")
   defp event_label("meeting.declined"), do: dgettext("dashboard_automation", "Booking Declined")
 
@@ -66,6 +75,27 @@ defmodule Tymeslot.Notifications.EventOptions do
       dgettext(
         "dashboard_automation",
         "Triggers once when the remaining sessions of a series are cancelled together, instead of Meeting Cancelled for each session"
+      )
+
+  defp event_description("meeting.series_requested"),
+    do:
+      dgettext(
+        "dashboard_automation",
+        "Triggers once when someone requests a series of sessions that needs your approval, instead of Booking Requested for each session"
+      )
+
+  defp event_description("meeting.series_declined"),
+    do:
+      dgettext(
+        "dashboard_automation",
+        "Triggers once when you decline a series request, instead of Booking Declined for each session"
+      )
+
+  defp event_description("meeting.series_request_expired"),
+    do:
+      dgettext(
+        "dashboard_automation",
+        "Triggers once when nobody answers a series request before its deadline, instead of Booking Request Expired for each session"
       )
 
   defp event_description("meeting.requested"),

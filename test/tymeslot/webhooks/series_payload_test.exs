@@ -49,7 +49,12 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
     "meeting.series_created",
     "meeting.cancelled",
     "meeting.series_cancelled",
-    "meeting.requested"
+    "meeting.requested",
+    "meeting.series_requested",
+    "meeting.declined",
+    "meeting.series_declined",
+    "meeting.request_expired",
+    "meeting.series_request_expired"
   ]
 
   defmodule NoAutomations do
@@ -231,10 +236,7 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
     assert {:ok, %{series: series}} =
              book(host, series_type(host, requires_approval: true), 2)
 
-    # A request fires what a single request does, per session.
-    assert length(deliveries("meeting.requested")) == 2
-    refute_enqueued(worker: SeriesAutomationWorker)
-
+    Repo.delete_all(from(j in Job, where: j.worker == "Tymeslot.Workers.SeriesAutomationWorker"))
     assert {:ok, _confirmed} = SeriesApproval.approve(series, host.user)
 
     assert deliveries("meeting.created") == []
@@ -244,6 +246,94 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
 
     assert deliveries("meeting.created") == []
     assert [_one] = deliveries("meeting.series_created")
+  end
+
+  describe "a series held for approval" do
+    setup do
+      host = host()
+      subscribe(host)
+      assert {:ok, %{series: series}} = book(host, series_type(host, requires_approval: true), 3)
+      %{host: host, series: series}
+    end
+
+    test "is requested once, naming every held session", %{series: series} do
+      assert deliveries("meeting.requested") == []
+      assert %{"event_type" => "meeting.series_requested"} = run_automation()
+
+      assert deliveries("meeting.requested") == []
+      assert [delivery] = deliveries("meeting.series_requested")
+      body = posted_body(delivery)
+
+      assert body["data"]["meeting"]["id"] == hd(sessions()).id
+      assert body["data"]["series"]["id"] == series.id
+
+      assert Enum.map(body["data"]["series"]["sessions"], &{&1["position"], &1["status"]}) ==
+               [{1, "awaiting_approval"}, {2, "awaiting_approval"}, {3, "awaiting_approval"}]
+    end
+
+    test "a decline fires one series_declined", %{host: host, series: series} do
+      Repo.delete_all(
+        from(j in Job, where: j.worker == "Tymeslot.Workers.SeriesAutomationWorker")
+      )
+
+      assert {:ok, _released} = SeriesApproval.decline(series, host.user, "Fully booked")
+      assert %{"event_type" => "meeting.series_declined"} = run_automation()
+
+      assert deliveries("meeting.declined") == []
+      assert [delivery] = deliveries("meeting.series_declined")
+
+      assert delivery |> posted_body() |> get_in(["data", "series", "sessions"]) |> positions() ==
+               [1, 2, 3]
+    end
+
+    test "an expiry fires one series_request_expired", %{series: series} do
+      Repo.delete_all(
+        from(j in Job, where: j.worker == "Tymeslot.Workers.SeriesAutomationWorker")
+      )
+
+      assert {:ok, _released} = SeriesApproval.expire(series)
+      assert %{"event_type" => "meeting.series_request_expired"} = run_automation()
+
+      assert deliveries("meeting.request_expired") == []
+      assert [_one] = deliveries("meeting.series_request_expired")
+    end
+
+    test "a withdrawal fires one series_cancelled", %{series: series} do
+      Repo.delete_all(
+        from(j in Job, where: j.worker == "Tymeslot.Workers.SeriesAutomationWorker")
+      )
+
+      assert {:ok, _withdrawn} =
+               BookingSeries.cancel_remaining(series, caller: :attendee, expect: :withdraw)
+
+      assert %{"event_type" => "meeting.series_cancelled"} = run_automation()
+      assert deliveries("meeting.cancelled") == []
+      assert [_one] = deliveries("meeting.series_cancelled")
+    end
+
+    test "Slack and Telegram word the request for the series", %{series: series} do
+      summary = %{"count" => 3, "sessions" => [%{}, %{}, %{}], "id" => series.id}
+      [first | _rest] = sessions()
+
+      texts =
+        "meeting.series_requested"
+        |> MessageBuilder.build_blocks(first, "Etc/UTC", summary)
+        |> Enum.map(&get_in(&1, ["text", "text"]))
+
+      assert "New series request" in texts
+
+      assert Enum.any?(
+               texts,
+               &(is_binary(&1) and &1 =~ "*Ada Lovelace* asked for 3 sessions of *Mentoring*")
+             )
+
+      assert TelegramMessageBuilder.build_message(
+               "meeting.series_declined",
+               first,
+               "Etc/UTC",
+               summary
+             ) =~ "<b>Ada Lovelace</b>'s request for 3 sessions of <i>Mentoring</i> was declined"
+    end
   end
 
   test "cancel all remaining fires one series_cancelled" do

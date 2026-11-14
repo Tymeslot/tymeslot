@@ -215,8 +215,8 @@ defmodule Tymeslot.Notifications.Events do
   a transaction; see `meeting_created_deferred/1`.
 
   `emails: false` schedules none of the request's emails, nudge or expiry,
-  and only returns the fan-out: a session of a booking series, whose
-  request is sent once for the whole series
+  and returns no fan-out: a session of a booking series, whose request is
+  sent once for the whole series, to people and automations alike
   (`Tymeslot.BookingSeries.Notifications.schedule_series_request/1`).
   """
   @spec meeting_requested_deferred(term(), keyword()) ::
@@ -225,7 +225,7 @@ defmodule Tymeslot.Notifications.Events do
     if Keyword.get(opts, :emails, true) do
       schedule_request(meeting, opts)
     else
-      {{:ok, :requested_with_series}, [{:meeting_requested, meeting, :once}]}
+      {{:ok, :requested_with_series}, []}
     end
   end
 
@@ -282,8 +282,9 @@ defmodule Tymeslot.Notifications.Events do
 
   `emails: false` (here, in `meeting_request_expired/2` and in
   `meeting_cancelled/2`) skips the emails and runs only the integration
-  fan-out: a session of a booking series released with the rest of it,
-  whose people are told once for the whole series.
+  fan-out. A booking series released whole calls neither: its people and
+  its automations are told once for the whole series
+  (`Tymeslot.BookingSeries.Approval`).
   """
   @spec meeting_declined(term(), keyword()) :: {:ok, term()} | {:error, term()}
   def meeting_declined(meeting, opts \\ []),

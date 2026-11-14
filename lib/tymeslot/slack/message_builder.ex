@@ -32,6 +32,9 @@ defmodule Tymeslot.Slack.MessageBuilder do
   @request_expired EventTypes.to_event_type(:meeting_request_expired)
   @series_created EventTypes.to_event_type(:meeting_series_created)
   @series_cancelled EventTypes.to_event_type(:meeting_series_cancelled)
+  @series_requested EventTypes.to_event_type(:meeting_series_requested)
+  @series_declined EventTypes.to_event_type(:meeting_series_declined)
+  @series_request_expired EventTypes.to_event_type(:meeting_series_request_expired)
 
   @doc """
   Builds the blocks list for a given event and meeting.
@@ -67,6 +70,45 @@ defmodule Tymeslot.Slack.MessageBuilder do
       ),
       divider(),
       section_cancellation(meeting)
+    ]
+  end
+
+  def build_blocks(@series_requested, meeting, timezone, series) do
+    base = [
+      header("New series request"),
+      section_text(
+        "*#{escape(attendee_name(meeting))}* asked for #{session_count(series)} sessions of " <>
+          "*#{escape(type_name(meeting))}*, starting #{format_single_time(meeting.start_time, timezone)}"
+      ),
+      divider(),
+      section_request_details(meeting, timezone)
+      | details_sections(meeting)
+    ]
+
+    append_actions(base, meeting)
+  end
+
+  def build_blocks(@series_declined, meeting, _timezone, series) do
+    [
+      header("Series request declined"),
+      section_text(
+        "*#{escape(attendee_name(meeting))}*'s request for #{session_count(series)} sessions of " <>
+          "*#{escape(type_name(meeting))}* was declined"
+      ),
+      divider(),
+      section_decline(meeting)
+    ]
+  end
+
+  def build_blocks(@series_request_expired, meeting, _timezone, series) do
+    [
+      header("Series request expired"),
+      section_text(
+        "*#{escape(attendee_name(meeting))}*'s request for #{session_count(series)} sessions of " <>
+          "*#{escape(type_name(meeting))}* expired"
+      ),
+      divider(),
+      section_expired()
     ]
   end
 

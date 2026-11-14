@@ -24,11 +24,16 @@ defmodule Tymeslot.Notifications.EventTypes do
     * `meeting.series_cancelled` — "Cancel all remaining" called off the
       rest of a series: one event, in place of a `meeting.cancelled` for
       each session.
+    * `meeting.series_requested`, `meeting.series_declined`,
+      `meeting.series_request_expired` — a series held for the host's
+      approval was requested, declined, or left unanswered past its
+      deadline: one event each, in place of the request event for each
+      session.
 
   Every event about one session of a series (a cancellation of that
-  session alone, a reschedule, a request) stays per session.
+  session alone, a reschedule) stays per session.
 
-  Meeting types without approval never emit the three request events, so
+  Meeting types without approval never emit the request events, so
   existing consumers see no change.
 
   The module depends on nothing, so channels can match on its names at
@@ -44,8 +49,11 @@ defmodule Tymeslot.Notifications.EventTypes do
     meeting_created: "meeting.created",
     meeting_series_created: "meeting.series_created",
     meeting_requested: "meeting.requested",
+    meeting_series_requested: "meeting.series_requested",
     meeting_declined: "meeting.declined",
+    meeting_series_declined: "meeting.series_declined",
     meeting_request_expired: "meeting.request_expired",
+    meeting_series_request_expired: "meeting.series_request_expired",
     meeting_cancelled: "meeting.cancelled",
     meeting_series_cancelled: "meeting.series_cancelled",
     meeting_rescheduled: "meeting.rescheduled"

@@ -111,8 +111,9 @@ defmodule Tymeslot.Bookings.Activation do
   # about — so it takes the request fan-out instead. A session of a series
   # (`announce: :series`) schedules no request emails, nudge or expiry of its
   # own: the series is requested once, for all its sessions
-  # (`Tymeslot.BookingSeries.Notifications.schedule_series_request/1`), and
-  # only the integration fan-out is returned.
+  # (`Tymeslot.BookingSeries.Notifications.schedule_series_request/1`),
+  # which also tells the host's automations once, so no fan-out is
+  # returned for the session either.
   def activate_in_transaction(%Meeting{status: :awaiting_approval} = meeting, opts) do
     emails? = Keyword.get(opts, :announce, :meeting) == :meeting
 

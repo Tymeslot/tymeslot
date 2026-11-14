@@ -48,6 +48,7 @@ defmodule Tymeslot.BookingSeries.Approval do
   alias Tymeslot.Auth.UserSchema, as: User
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Activation
+  alias Tymeslot.BookingSeries.Automation
   alias Tymeslot.BookingSeries.Cancel, as: SeriesCancel
   alias Tymeslot.BookingSeries.Notifications
   alias Tymeslot.BookingSeries.SeriesQueries
@@ -62,7 +63,6 @@ defmodule Tymeslot.BookingSeries.Approval do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.DispatchInTransactionError
-  alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
 
   @typedoc """
@@ -367,21 +367,35 @@ defmodule Tymeslot.BookingSeries.Approval do
     best_effort(series, "announce release", fn -> announce.(released) end)
   end
 
-  # Integrations hear of each session, as for any booking; the booker reads
-  # one email.
-  defp announce_outcome(series, released, :declined) do
-    Enum.each(released, &Events.meeting_declined(&1, emails: false))
-    Notifications.schedule_series_request_outcome(series, :declined)
+  # Integrations hear of the series once (`meeting.series_declined`,
+  # `meeting.series_request_expired`), as they heard of its request; the
+  # booker reads one email.
+  defp announce_outcome(series, released, variant) when variant in [:declined, :expired] do
+    announce_release_to_automations(series, released, variant)
+    Notifications.schedule_series_request_outcome(series, variant)
   end
 
-  defp announce_outcome(series, released, :expired) do
-    Enum.each(released, &Events.meeting_request_expired(&1, emails: false))
-    Notifications.schedule_series_request_outcome(series, :expired)
+  defp announce_release_to_automations(_series, [], _variant), do: :ok
+
+  defp announce_release_to_automations(series, released, variant) do
+    series
+    |> Automation.request_ended_job(variant, Enum.map(released, & &1.id))
+    |> Oban.insert()
   end
 
+  # A withdrawn request is cancelled whole: integrations hear one
+  # `meeting.series_cancelled`, as they heard one `meeting.series_requested`.
   defp announce_withdrawal(series, released, withdrawn_by) do
-    Enum.each(released, &Events.meeting_cancelled(&1, emails: false))
+    announce_withdrawal_to_automations(series, released)
     Notifications.schedule_series_cancellation(series, released, cancelled_by(withdrawn_by))
+  end
+
+  defp announce_withdrawal_to_automations(_series, []), do: :ok
+
+  defp announce_withdrawal_to_automations(series, released) do
+    series
+    |> Automation.cancelled_job(Enum.map(released, & &1.id))
+    |> Oban.insert()
   end
 
   defp cancelled_by(:attendee), do: :attendee

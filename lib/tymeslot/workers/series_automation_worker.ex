@@ -2,7 +2,9 @@ defmodule Tymeslot.Workers.SeriesAutomationWorker do
   @moduledoc """
   Tells the host's automations (webhooks, Telegram, Slack) about a booking
   series as a whole: `meeting.series_created` once it is confirmed,
-  `meeting.series_cancelled` once the rest of it is cancelled together
+  `meeting.series_cancelled` once the rest of it is cancelled together, and
+  for a series held for approval `meeting.series_requested`,
+  `meeting.series_declined` and `meeting.series_request_expired`
   (`Tymeslot.BookingSeries.Automation`).
 
   The job only schedules the per-integration deliveries, each its own job
@@ -13,10 +15,11 @@ defmodule Tymeslot.Workers.SeriesAutomationWorker do
   a completed one included: the series confirmation can be queued again
   (an announcement job rescued after a node stopped mid-run), and must not
   announce the series twice. Oban prunes completed jobs after a week, which
-  bounds that guarantee; nothing queues a confirmation that late. A
-  `meeting.series_cancelled` job is unique only while it is still to run:
-  cancelling the rest of a series happens once, in a transaction that
-  finds nothing left to cancel the second time.
+  bounds that guarantee; nothing queues a confirmation that late. The
+  request events are unique the same way: a series is requested, and
+  answered, once. A `meeting.series_cancelled` job is unique only while
+  it is still to run: cancelling the rest of a series happens once, in a
+  transaction that finds nothing left to cancel the second time.
 
   The fan-out itself is claimed (`Tymeslot.Workers.DeliveryClaims`), so
   this job rescued after it scheduled the deliveries does not schedule them
@@ -40,7 +43,7 @@ defmodule Tymeslot.Workers.SeriesAutomationWorker do
 
   @series_gone "Series not found"
 
-  @series_created "meeting.series_created"
+  @series_cancelled "meeting.series_cancelled"
 
   @still_to_run [:suspended, :available, :scheduled, :executing, :retryable]
 
@@ -49,7 +52,8 @@ defmodule Tymeslot.Workers.SeriesAutomationWorker do
 
   @doc """
   The job announcing `event_type` about the series `series_id`;
-  `occurrence_ids` names the sessions a cancellation cancelled.
+  `occurrence_ids` names the sessions it concerns (all but
+  `meeting.series_created`).
   """
   @spec new_event(binary(), String.t(), [binary()] | nil) :: Oban.Job.changeset()
   def new_event(series_id, event_type, occurrence_ids \\ nil) do
@@ -60,8 +64,8 @@ defmodule Tymeslot.Workers.SeriesAutomationWorker do
     )
   end
 
-  defp states(@series_created), do: [:completed | @still_to_run]
-  defp states(_event_type), do: @still_to_run
+  defp states(@series_cancelled), do: @still_to_run
+  defp states(_once_per_series), do: [:completed | @still_to_run]
 
   @impl Oban.Worker
   def perform(
