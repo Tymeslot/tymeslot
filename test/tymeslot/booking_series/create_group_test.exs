@@ -16,6 +16,7 @@ defmodule Tymeslot.BookingSeries.CreateGroupTest do
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.ConfigTestHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Bookings.RescheduleSeat
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Occurrence
@@ -322,6 +323,30 @@ defmodule Tymeslot.BookingSeries.CreateGroupTest do
     # The room's release step, run for each session, finds only series seats.
     for meeting <- meetings, do: assert(:ok = Events.announce_video_room_outcome(meeting))
     assert jobs(EmailWorker, "send_seat_confirmation_emails") == []
+  end
+
+  test "a later seat moves past the booking window, within the series' year", %{
+    host: host,
+    today: today
+  } do
+    host.schedule |> Changeset.change(advance_booking_days: 30) |> Repo.update!()
+    type = group_type(host)
+
+    assert {:ok, %{participants: seats}} = book_series(host, type, weekly(today, 8))
+
+    assert {:ok, %{participant: moved}} =
+             RescheduleSeat.execute(
+               List.last(seats).management_token,
+               %{
+                 date: Date.to_iso8601(Date.add(today, 57)),
+                 time: "11:00",
+                 duration: "30min",
+                 user_timezone: "Etc/UTC"
+               },
+               host.user.id
+             )
+
+    assert %ParticipantSchema{series_position: 8, cancelled_at: nil} = Repo.reload!(moved)
   end
 
   test "a moved seat stays in its series", %{host: host, today: today} do

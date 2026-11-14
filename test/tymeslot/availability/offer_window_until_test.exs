@@ -20,6 +20,7 @@ defmodule Tymeslot.Availability.OfferWindowUntilTest do
   alias Tymeslot.CalendarMock
   alias Tymeslot.Clock
   alias Tymeslot.Repo
+  alias Tymeslot.Scheduling.RescheduleContext
   alias Tymeslot.Test.ClockHelpers
   alias Tymeslot.TestMocks
 
@@ -83,5 +84,60 @@ defmodule Tymeslot.Availability.OfferWindowUntilTest do
 
     refute "10:00 AM" in slots
     assert "12:00 PM" in slots
+  end
+
+  describe "rescheduling a session of a series" do
+    # A series whose first session is tomorrow, so its year reaches day 40;
+    # the session being moved is a later one.
+    defp moving(profile, series_id) do
+      today = Clock.utc_today()
+      first = DateTime.new!(Date.add(today, 1), ~T[09:00:00], "Etc/UTC")
+      later = DateTime.new!(Date.add(today, 22), ~T[09:00:00], "Etc/UTC")
+
+      meeting = fn start, position ->
+        insert(:meeting,
+          organizer_user_id: profile.user_id,
+          start_time: start,
+          end_time: DateTime.add(start, 3600),
+          duration: 60,
+          status: "confirmed",
+          series_id: series_id,
+          series_position: position
+        )
+      end
+
+      if series_id, do: meeting.(first, 1)
+      meeting = meeting.(later, if(series_id, do: 2))
+
+      %{
+        profile: profile,
+        user_timezone: "Etc/UTC",
+        reschedule_uid: meeting.uid,
+        reschedule: RescheduleContext.new(meeting, nil)
+      }
+    end
+
+    defp series_id(profile) do
+      insert(:booking_series, organizer_user: nil, organizer_user_id: profile.user_id).id
+    end
+
+    test "offers the day past the window, by date and by month",
+         %{profile: profile, day: day} do
+      request = moving(profile, series_id(profile))
+
+      assert {:ok, slots} = Offer.slots_for_date(request, Date.to_iso8601(day), 60)
+      assert "10:00 AM" in slots
+
+      assert {:ok, days} = Offer.days_in_range(request, day, day, 60)
+      assert days[Date.to_iso8601(day)] == true
+    end
+
+    test "a meeting outside a series keeps to the window", %{profile: profile, day: day} do
+      request = moving(profile, nil)
+
+      assert {:ok, []} = Offer.slots_for_date(request, Date.to_iso8601(day), 60)
+      assert {:ok, days} = Offer.days_in_range(request, day, day, 60)
+      refute days[Date.to_iso8601(day)]
+    end
   end
 end

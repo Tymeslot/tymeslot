@@ -63,6 +63,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.Bookings.Validation
+  alias Tymeslot.BookingSeries
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GroupMeetingQueries
@@ -99,7 +100,12 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
          :ok <- ensure_same_organizer(old_meeting, organizer_user_id),
          :ok <- Policy.can_reschedule_meeting?(old_meeting) do
       meeting_type = resolve_meeting_type(old_meeting)
-      config = Schedules.booking_config(old_meeting.organizer_user_id, meeting_type)
+      # A series seat may move as far as the series reaches, past the window.
+      config =
+        old_meeting.organizer_user_id
+        |> Schedules.booking_config(meeting_type)
+        |> BookingSeries.widen_window(participant)
+
       guest_emails = guest_emails(participant)
 
       with :ok <- ensure_group_type(meeting_type),

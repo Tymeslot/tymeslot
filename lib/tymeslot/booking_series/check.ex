@@ -63,6 +63,10 @@ defmodule Tymeslot.BookingSeries.Check do
 
   @seconds_per_day 86_400
 
+  @doc "How many days after the first session every later one must start within."
+  @spec span_days() :: pos_integer()
+  def span_days, do: @series_span_days
+
   @doc """
   Judges every occurrence of `plan`, in order.
 

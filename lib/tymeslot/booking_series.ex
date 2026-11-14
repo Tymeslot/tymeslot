@@ -27,6 +27,7 @@ defmodule Tymeslot.BookingSeries do
     Sessions
   }
 
+  alias Tymeslot.Clock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -254,6 +255,55 @@ defmodule Tymeslot.BookingSeries do
   defdelegate describe_rule_for_sessions(series, starts, locale, timezone, opts \\ []),
     to: Rule,
     as: :describe_sessions
+
+  @doc """
+  The last day a session of the series `occurrence` (a meeting or a seat)
+  belongs to may be moved to: a year after the series' first session, the
+  span every session was booked within. The booking window binds the first
+  session alone, so a later one can lie past it and still be moved. Nil
+  outside a series.
+  """
+  @spec window_until(%{series_id: binary() | nil}) :: Date.t() | nil
+  def window_until(%{series_id: nil}), do: nil
+
+  def window_until(%{series_id: series_id}) when is_binary(series_id) do
+    case SeriesQueries.first_start(series_id) do
+      %DateTime{} = first -> first |> DateTime.add(Check.span_days(), :day) |> DateTime.to_date()
+      nil -> nil
+    end
+  end
+
+  @doc """
+  `config`'s booking window (`:max_advance_booking_days`) widened, for
+  moving a session of a series, to reach `window_until/1` from today. A
+  window already reaching further, and one outside a series, is kept.
+  The notice is untouched.
+  """
+  @spec widen_window(map(), %{series_id: binary() | nil}) :: map()
+  def widen_window(config, occurrence) do
+    case window_until(occurrence) do
+      nil -> config
+      until -> reach_until(config, until)
+    end
+  end
+
+  @doc """
+  `config`'s booking window widened to reach `until` from today, as a
+  series' later sessions are offered and moved.
+  """
+  @spec reach_until(map(), Date.t()) :: map()
+  def reach_until(config, %Date{} = until) do
+    days = reach_days(0, until)
+    Map.update(config, :max_advance_booking_days, days, &reach_days(&1, until))
+  end
+
+  @doc """
+  A booking window of `days` widened to reach `until` from today; `days`
+  itself when it already does, or when there is no `until`.
+  """
+  @spec reach_days(non_neg_integer(), Date.t() | nil) :: non_neg_integer()
+  def reach_days(days, nil), do: days
+  def reach_days(days, %Date{} = until), do: max(days, Date.diff(until, Clock.utc_today()) + 1)
 
   @doc """
   What a series of `count` sessions of `meeting_type` costs, in cents: the

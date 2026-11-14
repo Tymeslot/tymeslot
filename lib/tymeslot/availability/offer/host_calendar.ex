@@ -75,6 +75,17 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   def for_range(request, date, _end_date), do: fresh(request, date)
 
   @doc """
+  The host's events for a read of `start_date..end_date` that the cache
+  serves while it stays inside the booking window: across the range for a
+  request reaching past the window, else the window's, through the cache.
+  """
+  @spec for_window(map(), Date.t(), Date.t()) :: {:ok, list()} | {:error, any()}
+  def for_window(%{window_until: %Date{}} = request, start_date, end_date),
+    do: for_range(request, start_date, end_date)
+
+  def for_window(request, start_date, _end_date), do: booking_window(request, start_date)
+
+  @doc """
   The context map the calendar fetch reads. Its contract names this one key
   only, so the demo provider's extra keys stay out of it.
   """

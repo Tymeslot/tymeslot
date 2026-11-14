@@ -335,6 +335,51 @@ defmodule Tymeslot.BookingSeries.CreateTest do
     assert List.last(meetings).start_time == at(today, 7 + 7 * 7)
   end
 
+  describe "moving a later session past the booking window" do
+    setup %{host: host, today: today} do
+      host.schedule |> Changeset.change(advance_booking_days: 30) |> Repo.update!()
+      type = series_type(host)
+      {:ok, %{meetings: meetings}} = book_series(host, type, weekly(today, 8))
+      # The eighth session, 56 days out.
+      %{last: List.last(meetings)}
+    end
+
+    test "moves within the series' year", %{host: host, today: today, last: last} do
+      assert {:ok, _moved} = Reschedule.execute(last.uid, move_to(today, 57), host.user.id)
+
+      assert Repo.get!(MeetingSchema, last.id).start_time ==
+               DateTime.new!(Date.add(today, 57), ~T[11:00:00], "Etc/UTC")
+    end
+
+    test "stops a year after the first session", %{host: host, today: today, last: last} do
+      # The first session is 7 days out, so its year ends on day 372.
+      assert {:error, {:too_far_ahead, _days}} =
+               Reschedule.execute(last.uid, move_to(today, 380), host.user.id)
+    end
+
+    test "a single booking stays inside the window", %{host: host, today: today} do
+      single =
+        insert(:meeting,
+          organizer_user_id: host.user.id,
+          start_time: at(today, 8),
+          end_time: DateTime.add(at(today, 8), 30, :minute),
+          duration: 30,
+          status: "confirmed"
+        )
+
+      assert {:error, {:too_far_ahead, 30}} =
+               Reschedule.execute(single.uid, move_to(today, 57), host.user.id)
+    end
+  end
+
+  defp move_to(today, days),
+    do: %{
+      date: Date.to_iso8601(Date.add(today, days)),
+      time: "11:00",
+      duration: 30,
+      user_timezone: "Etc/UTC"
+    }
+
   test "a series on a type without access is refused", %{host: host, today: today} do
     setup_config(:tymeslot, feature_access_checker: DenyChecker)
     type = series_type(host)

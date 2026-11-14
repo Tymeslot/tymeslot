@@ -45,6 +45,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   }
 
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.BookingSeries
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
@@ -128,7 +129,12 @@ defmodule Tymeslot.Bookings.Reschedule do
              organizer_user_id,
              original_meeting.duration
            ),
-         config <- Schedules.booking_config(original_meeting.organizer_user_id, meeting_type),
+         # A session of a series may move as far as the series reaches,
+         # past the booking window, which binds its first session alone.
+         config <-
+           original_meeting.organizer_user_id
+           |> Schedules.booking_config(meeting_type)
+           |> BookingSeries.widen_window(original_meeting),
          {:ok, new_times} <-
            Validation.prepare_new_times(new_params, original_meeting, meeting_type, config),
          :ok <- verify_calendar_free(original_meeting, new_times, config) do
