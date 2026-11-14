@@ -1,0 +1,183 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookers book several sessions in one go, with one confirmation."
+msgstr "Se reservan varias sesiones de una vez, con una sola confirmación."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookers can also book a single session"
+msgstr "Quien reserva también puede reservar una sola sesión"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookers pay %{price} × the number of sessions upfront."
+msgstr "Quien reserva paga por adelantado %{price} × el número de sesiones."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookers pick each session from your available times."
+msgstr "Quien reserva elige cada sesión entre tus horarios disponibles."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Each session in a series takes one seat."
+msgstr "Cada sesión de una serie ocupa un lugar."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Every day"
+msgid_plural "Every %{count} days"
+msgstr[0] "Cada día"
+msgstr[1] "Cada %{count} días"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Every month"
+msgid_plural "Every %{count} months"
+msgstr[0] "Cada mes"
+msgstr[1] "Cada %{count} meses"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Every series has %{count} session."
+msgid_plural "Every series has %{count} sessions."
+msgstr[0] "Cada serie tiene %{count} sesión."
+msgstr[1] "Cada serie tiene %{count} sesiones."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Every series has the same number of sessions, like a course."
+msgstr "Todas las series tienen el mismo número de sesiones, como un curso."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Every session at the same time, for example every Thursday at 17:00."
+msgstr "Todas las sesiones a la misma hora, por ejemplo cada jueves a las 17:00."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Every week"
+msgid_plural "Every %{count} weeks"
+msgstr[0] "Cada semana"
+msgstr[1] "Cada %{count} semanas"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Fixed number"
+msgstr "Número fijo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "From"
+msgstr "Desde"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "From %{min} to %{max} sessions, as the booker chooses."
+msgstr "De %{min} a %{max} sesiones, según elija quien reserva."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "How often"
+msgstr "Con qué frecuencia"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "How the sessions are timed"
+msgstr "Cómo se programan las sesiones"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Let people book a series"
+msgstr "Permitir reservar una serie"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Number of sessions"
+msgstr "Número de sesiones"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "On the same weekday of the month, for example the second Thursday."
+msgstr "El mismo día de la semana del mes, por ejemplo el segundo jueves."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats"
+msgstr "Se repite"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Same time, repeating"
+msgstr "Misma hora, repetida"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Series"
+msgstr "Serie"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Series booking is paused: this meeting type books single sessions until you upgrade."
+msgstr "La reserva de series está en pausa: este tipo de reunión admite solo sesiones sueltas hasta que mejores tu plan."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Sessions at different times"
+msgstr "Sesiones a distintas horas"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "To"
+msgstr "Hasta"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "With series booking on, this applies to the first session only."
+msgstr "Con la reserva de series activada, esto solo se aplica a la primera sesión."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking window (%{days} days) applies to the first session only. Later sessions can be booked up to 12 months ahead."
+msgstr "Tu antelación máxima (%{days} días) se aplica solo a la primera sesión. Las sesiones siguientes se pueden reservar con hasta 12 meses de antelación."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your limit of %{limit} bookings per month is lower than the %{needed} sessions a series can book in one month, so some series won't fit."
+msgstr "Tu límite de %{limit} reservas al mes es inferior a las %{needed} sesiones que una serie puede reservar en un mes, así que algunas series no cabrán."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your limit of %{limit} bookings per week is lower than the %{needed} sessions a series can book in one week, so some series won't fit."
+msgstr "Tu límite de %{limit} reservas por semana es inferior a las %{needed} sesiones que una serie puede reservar en una semana, así que algunas series no cabrán."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "frequency"
+msgid "Every day"
+msgstr "Cada día"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "frequency"
+msgid "Every month"
+msgstr "Cada mes"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "frequency"
+msgid "Every week"
+msgstr "Cada semana"

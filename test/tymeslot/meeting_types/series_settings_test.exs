@@ -224,4 +224,109 @@ defmodule Tymeslot.MeetingTypes.SeriesSettingsTest do
       refute SeriesSettings.offered?(stored_series())
     end
   end
+
+  defp limited(series, limits) do
+    %{series_interval: 1, series_max_occurrences: 8}
+    |> recurring()
+    |> Map.merge(series)
+    |> Map.merge(limits)
+  end
+
+  describe "limit_conflicts/1" do
+    test "a weekly series needs more than a monthly cap of 2" do
+      assert SeriesSettings.limit_conflicts(limited(%{}, %{max_bookings_per_month: 2})) ==
+               [{:per_month, 2, 5}]
+    end
+
+    test "a daily series is checked against the weekly and the monthly cap" do
+      type =
+        limited(%{series_frequency: :daily}, %{
+          max_bookings_per_week: 3,
+          max_bookings_per_month: 6
+        })
+
+      assert SeriesSettings.limit_conflicts(type) == [{:per_week, 3, 7}, {:per_month, 6, 8}]
+    end
+
+    test "the sessions needed are capped at the series' maximum count" do
+      type =
+        limited(%{series_frequency: :daily, series_max_occurrences: 4}, %{
+          max_bookings_per_week: 4
+        })
+
+      assert SeriesSettings.limit_conflicts(type) == []
+
+      assert [{:per_week, 3, 4}] =
+               SeriesSettings.limit_conflicts(%{type | max_bookings_per_week: 3})
+    end
+
+    test "the interval spreads the sessions out" do
+      every_other_week = limited(%{series_interval: 2}, %{max_bookings_per_month: 2})
+      assert SeriesSettings.limit_conflicts(every_other_week) == [{:per_month, 2, 3}]
+
+      every_other_day =
+        limited(%{series_frequency: :daily, series_interval: 2}, %{max_bookings_per_week: 4})
+
+      assert SeriesSettings.limit_conflicts(every_other_day) == []
+
+      assert [{:per_week, 3, 4}] =
+               SeriesSettings.limit_conflicts(%{every_other_day | max_bookings_per_week: 3})
+    end
+
+    test "a cap that fits, or no cap, raises nothing" do
+      assert SeriesSettings.limit_conflicts(limited(%{}, %{max_bookings_per_month: 5})) == []
+      assert SeriesSettings.limit_conflicts(limited(%{}, %{max_bookings_per_month: nil})) == []
+    end
+
+    test "monthly and flexible series are never checked" do
+      monthly =
+        limited(%{series_frequency: :monthly}, %{
+          max_bookings_per_week: 1,
+          max_bookings_per_month: 1
+        })
+
+      assert SeriesSettings.limit_conflicts(monthly) == []
+
+      flexible =
+        limited(%{series_mode: :flexible}, %{max_bookings_per_week: 1, max_bookings_per_month: 1})
+
+      assert SeriesSettings.limit_conflicts(flexible) == []
+
+      assert SeriesSettings.limit_conflicts(%{series_mode: nil, max_bookings_per_month: 1}) == []
+    end
+  end
+
+  describe "form_attrs/1" do
+    test "parses the posted series" do
+      assert SeriesSettings.form_attrs(%{
+               "series_mode" => "recurring",
+               "series_frequency" => "weekly",
+               "series_interval" => "2",
+               "series_min_occurrences" => "4",
+               "series_max_occurrences" => "6",
+               "series_required" => "false"
+             }) == %{
+               series_mode: :recurring,
+               series_frequency: :weekly,
+               series_interval: 2,
+               series_min_occurrences: 4,
+               series_max_occurrences: 6,
+               series_required: false
+             }
+    end
+
+    test "a blank or unknown mode is no series, and a bad number is nil" do
+      assert %{series_mode: nil} = SeriesSettings.form_attrs(%{"series_mode" => ""})
+
+      assert %{series_mode: nil, series_min_occurrences: nil} =
+               SeriesSettings.form_attrs(%{
+                 "series_mode" => "weekly",
+                 "series_min_occurrences" => "x"
+               })
+    end
+
+    test "params without a series mode leave the series alone" do
+      assert SeriesSettings.form_attrs(%{"name" => "Course"}) == %{}
+    end
+  end
 end

@@ -134,6 +134,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettings.ComponentView do
               user_agent={@user_agent}
               custom_questions_allowed={@custom_questions_allowed}
               group_bookings_allowed={@group_bookings_allowed}
+              recurring_bookings_allowed={@recurring_bookings_allowed}
               username={@profile.username}
               booking_pages={@booking_pages}
               page_memberships={@page_memberships}

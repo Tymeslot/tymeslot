@@ -21,6 +21,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.MeetingTypes.InputValidation
   alias Tymeslot.MeetingTypes.Reminders
+  alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Validation.Constraints
 
   @typedoc "Why form input could not be mapped onto schema attributes."
@@ -73,6 +74,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         |> maybe_put_locations(params)
         |> maybe_put_extra_lengths(params)
         |> maybe_put_fixed_dates(params)
+        |> Map.merge(SeriesSettings.form_attrs(params))
         |> Map.merge(payment)
         |> unpaid_when_group()
 

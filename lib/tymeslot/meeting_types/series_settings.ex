@@ -52,6 +52,14 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
   @spec feature() :: atom()
   def feature, do: @feature
 
+  @doc "The session counts a host may set as a series' minimum and maximum."
+  @spec count_bounds() :: Range.t()
+  def count_bounds, do: @min_count..@max_count
+
+  @doc "The intervals a recurring series may repeat at (every 1 to 4 days, weeks or months)."
+  @spec intervals() :: Range.t()
+  def intervals, do: @intervals
+
   @doc "Whether the type has a series configured, whatever the host's plan."
   @spec series?(MeetingTypeSchema.t()) :: boolean()
   def series?(%{series_mode: nil}), do: false
@@ -132,6 +140,87 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
     |> Enum.filter(fn {_field, conflict?, _message} -> conflict? end)
     |> Enum.map(fn {field, _conflict?, message} -> {field, message} end)
   end
+
+  @typedoc "A booking limit one series can exceed: the period, the limit and what a series needs."
+  @type limit_conflict :: {:per_week | :per_month, pos_integer(), pos_integer()}
+
+  # The longest week and month a booking limit counts over, in days.
+  @period_days [per_week: 7, per_month: 31]
+  @frequency_days %{daily: 1, weekly: 7}
+
+  @doc """
+  The booking limits (`max_bookings_per_week`, `max_bookings_per_month`) lower
+  than the sessions one series can put in that period, as
+  `{period, limit, needed}`, so the host can be told some series will not fit.
+
+  Only a recurring daily or weekly series has a known number of sessions per
+  week or month: a flexible one is spread by the booker, and a monthly one
+  never puts more than one session in a month. The number needed is the
+  sessions that fit in the longest such period (7 days, 31 days), capped at
+  the series' maximum count.
+  """
+  @spec limit_conflicts(map()) :: [limit_conflict()]
+  def limit_conflicts(
+        %{
+          series_mode: :recurring,
+          series_frequency: frequency,
+          series_interval: interval,
+          series_max_occurrences: max
+        } = meeting_type
+      )
+      when is_map_key(@frequency_days, frequency) and is_integer(interval) and interval > 0 and
+             is_integer(max) do
+    step = Map.fetch!(@frequency_days, frequency) * interval
+
+    Enum.flat_map(@period_days, fn {period, days} ->
+      needed = min(max, div(days - 1, step) + 1)
+
+      case Map.get(meeting_type, limit_field(period)) do
+        limit when is_integer(limit) and limit < needed -> [{period, limit, needed}]
+        _no_conflict -> []
+      end
+    end)
+  end
+
+  def limit_conflicts(_meeting_type), do: []
+
+  defp limit_field(:per_week), do: :max_bookings_per_week
+  defp limit_field(:per_month), do: :max_bookings_per_month
+
+  @modes %{"recurring" => :recurring, "flexible" => :flexible}
+  @frequencies %{"daily" => :daily, "weekly" => :weekly, "monthly" => :monthly}
+
+  @doc """
+  The series attributes in posted form params (`series_mode`,
+  `series_frequency`, `series_interval`, `series_min_occurrences`,
+  `series_max_occurrences`, `series_required`). Empty when the params carry no
+  `series_mode`, so a form without the series controls leaves the stored
+  series alone. A blank or unknown mode is no series; a number that does not
+  parse is nil, which the changeset then refuses.
+  """
+  @spec form_attrs(map()) :: map()
+  def form_attrs(%{"series_mode" => mode} = params) do
+    %{
+      series_mode: Map.get(@modes, mode),
+      series_frequency: Map.get(@frequencies, params["series_frequency"]),
+      series_interval: parse_count(params["series_interval"]),
+      series_min_occurrences: parse_count(params["series_min_occurrences"]),
+      series_max_occurrences: parse_count(params["series_max_occurrences"]),
+      series_required: params["series_required"] != "false"
+    }
+  end
+
+  def form_attrs(_params), do: %{}
+
+  defp parse_count(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {count, ""} -> count
+      _invalid -> nil
+    end
+  end
+
+  defp parse_count(value) when is_integer(value), do: value
+  defp parse_count(_value), do: nil
 
   @doc "Validates a meeting type changeset against every series rule."
   @spec validate_changeset(Changeset.t()) :: Changeset.t()

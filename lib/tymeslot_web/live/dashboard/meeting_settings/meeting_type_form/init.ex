@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandlers
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesHandlers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers
 
   @doc """
@@ -43,6 +44,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:custom_fields, get_custom_fields(type))
     |> assign_booking_rules(type)
     |> assign_group_bookings_state(type)
+    |> Component.assign(:series, SeriesHandlers.initial(type))
     |> Component.assign(
       :week_start,
       assigns |> Map.get(:current_user) |> user_id() |> Management.get_week_start()

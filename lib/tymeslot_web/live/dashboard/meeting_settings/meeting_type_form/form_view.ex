@@ -41,6 +41,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     PaymentsSection,
     QuestionEditorComponent,
     SchedulingRulesSection,
+    SeriesHandlers,
+    SeriesSection,
     SessionHandlers,
     ShowAsFreeSection,
     SlotIntervalField,
@@ -58,6 +60,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   import LengthsField, only: [lengths_field: 1]
   import LimitsSection, only: [limits_section: 1]
   import SchedulingRulesSection, only: [scheduling_rules_section: 1]
+  import SeriesSection, only: [series_section: 1]
   import ShowAsFreeSection, only: [show_as_free_section: 1]
   import PaymentsSection, only: [payments_section: 1]
   import VisibilitySection, only: [visibility_section: 1]
@@ -340,6 +343,29 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             myself={@myself}
           />
 
+          <.series_section
+            series={@series}
+            allowed={@recurring_bookings_allowed}
+            type={@type}
+            fixed_dates={@fixed_dates}
+            booking_window_days={
+              SchedulingRulesSection.booking_window_days(
+                @scheduling_rules,
+                @schedules,
+                @selected_availability_schedule_id
+              )
+            }
+            booking_limits={@booking_limits}
+            group={@group_bookings_enabled}
+            payment_required={@payment_required}
+            payment_price={@payment_price}
+            payment_currency={@payment_currency}
+            form_id={@id}
+            current_user={@current_user}
+            form_errors={@form_errors}
+            myself={@myself}
+          />
+
           <.fixed_dates_section
             fixed_dates={@fixed_dates}
             group={@group_bookings_enabled}
@@ -391,12 +417,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             schedules={@schedules}
             selected_availability_schedule_id={@selected_availability_schedule_id}
             form_errors={@form_errors}
+            series={@series.series_mode != nil}
             myself={@myself}
           />
 
           <.limits_section
             booking_limits={@booking_limits}
             week_start={@week_start}
+            series_notes={SeriesHandlers.limit_notes(@series, @booking_limits)}
             myself={@myself}
           />
 

@@ -1,0 +1,280 @@
+defmodule TymeslotWeb.Dashboard.MeetingSettings.SeriesSectionTest do
+  @moduledoc """
+  The meeting type editor's Series section: switching a series on and
+  setting it up saves the type, the modes a type cannot offer are disabled
+  with the reason, the notes where the series meets the booking window and
+  limits show, and without the plan the section is locked, or read-only for
+  a type that already has a series.
+  """
+
+  use TymeslotWeb.LiveCase, async: false
+
+  @moduletag :meeting_types
+  @moduletag :live
+
+  import Phoenix.LiveViewTest
+  import Tymeslot.ConfigTestHelpers
+  import Tymeslot.DashboardTestHelpers
+  import Tymeslot.Factory
+
+  alias Tymeslot.MeetingTypes
+
+  setup :setup_dashboard_user
+
+  defp edit(conn, meeting_type) do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+    view
+    |> element("button[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+    |> render_click()
+
+    view
+  end
+
+  defp toggle(view),
+    do: view |> element("input[phx-value-series_action='toggle']") |> render_click()
+
+  defp reload(meeting_type),
+    do: MeetingTypes.get_meeting_type(meeting_type.id, meeting_type.user_id)
+
+  defp change_series(view, field, value) do
+    view
+    |> element("input[name='series[#{field}]']")
+    |> render_change(%{"series" => %{field => value}})
+  end
+
+  defp form_wrapper(meeting_type),
+    do: "#meeting-type-form-wrapper-meeting-type-form-edit-#{meeting_type.id}"
+
+  defp weekly_series(attrs \\ []) do
+    Keyword.merge(
+      [
+        series_mode: :recurring,
+        series_frequency: :weekly,
+        series_interval: 1,
+        series_min_occurrences: 4,
+        series_max_occurrences: 4
+      ],
+      attrs
+    )
+  end
+
+  test "turning series on saves a recurring series", %{conn: conn, user: user} do
+    meeting_type = insert(:meeting_type, user: user)
+    view = edit(conn, meeting_type)
+
+    refute has_element?(view, "[data-testid='series-mode-recurring']")
+
+    toggle(view)
+    change_series(view, "frequency", "weekly")
+    change_series(view, "min", "4")
+    change_series(view, "max", "4")
+
+    assert %{
+             series_mode: :recurring,
+             series_frequency: :weekly,
+             series_min_occurrences: 4,
+             series_max_occurrences: 4,
+             series_required: true
+           } = reload(meeting_type)
+
+    assert has_element?(view, "[data-testid='series-mode-recurring'][aria-pressed='true']")
+  end
+
+  test "the fixed number ties the maximum to the minimum, and a single session can be allowed",
+       %{conn: conn, user: user} do
+    meeting_type = insert(:meeting_type, user: user)
+    view = edit(conn, meeting_type)
+
+    toggle(view)
+    view |> element("input[phx-value-series_action='fixed']") |> render_click()
+    change_series(view, "min", "6")
+
+    refute has_element?(view, "input[name='series[max]']")
+
+    view |> element("input[phx-value-series_action='single']") |> render_click()
+
+    assert %{series_min_occurrences: 6, series_max_occurrences: 6, series_required: false} =
+             reload(meeting_type)
+  end
+
+  test "flexible mode hides the frequency", %{conn: conn, user: user} do
+    meeting_type = insert(:meeting_type, user: user)
+    view = edit(conn, meeting_type)
+
+    toggle(view)
+    assert has_element?(view, "[data-testid='series-rhythm']")
+
+    view |> element("[data-testid='series-mode-flexible']") |> render_click()
+
+    refute has_element?(view, "[data-testid='series-rhythm']")
+    refute has_element?(view, "input[name='series[frequency]']")
+    assert %{series_mode: :flexible, series_frequency: nil} = reload(meeting_type)
+  end
+
+  test "a monthly series explains which day it falls on", %{conn: conn, user: user} do
+    meeting_type = insert(:meeting_type, user: user)
+    view = edit(conn, meeting_type)
+
+    toggle(view)
+    change_series(view, "frequency", "monthly")
+    change_series(view, "interval", "2")
+
+    assert render(view) =~ "On the same weekday of the month, for example the second Thursday."
+    assert %{series_frequency: :monthly, series_interval: 2} = reload(meeting_type)
+  end
+
+  test "one-off types cannot turn series on", %{conn: conn, user: user} do
+    meeting_type = insert(:meeting_type, user: user, one_off: true, max_participants: 5)
+    view = edit(conn, meeting_type)
+
+    assert has_element?(view, "input[phx-value-series_action='toggle'][disabled]")
+    assert render(view) =~ "One-off meeting types cannot be booked as a series."
+
+    view
+    |> with_target(form_wrapper(meeting_type))
+    |> render_click("update_series", %{"series_action" => "toggle"})
+
+    assert reload(meeting_type).series_mode == nil
+  end
+
+  test "a type with fixed dates offers only sessions the booker picks",
+       %{conn: conn, user: user} do
+    meeting_type = insert(:meeting_type, user: user, fixed_dates: true)
+    view = edit(conn, meeting_type)
+
+    toggle(view)
+
+    assert has_element?(view, "[data-testid='series-mode-recurring'][disabled]")
+
+    assert has_element?(
+             view,
+             "[data-testid='series-mode-recurring-reason']",
+             "only as sessions the booker picks"
+           )
+
+    assert reload(meeting_type).series_mode == :flexible
+
+    view
+    |> with_target(form_wrapper(meeting_type))
+    |> render_click("update_series", %{"series_action" => "mode", "mode" => "recurring"})
+
+    assert reload(meeting_type).series_mode == :flexible
+  end
+
+  test "the booking window note shows while a series is on", %{conn: conn, user: user} do
+    meeting_type = insert(:meeting_type, user: user, advance_booking_days: 30)
+    view = edit(conn, meeting_type)
+
+    refute has_element?(view, "[data-testid='series-booking-window']")
+    refute has_element?(view, "[data-testid='booking-window-series-note']")
+
+    toggle(view)
+
+    assert has_element?(
+             view,
+             "[data-testid='series-booking-window']",
+             "Your booking window (30 days) applies to the first session only."
+           )
+
+    assert has_element?(
+             view,
+             "[data-testid='booking-window-series-note']",
+             "this applies to the first session only"
+           )
+  end
+
+  test "a weekly series with a monthly cap of 2 warns", %{conn: conn, user: user} do
+    meeting_type =
+      insert(:meeting_type, [user: user, max_bookings_per_month: 2] ++ weekly_series())
+
+    view = edit(conn, meeting_type)
+
+    message =
+      "Your limit of 2 bookings per month is lower than the 4 sessions a series can book in one month"
+
+    assert has_element?(view, "[data-testid='series-limit-conflict']", message)
+    assert has_element?(view, "[data-testid='limits-series-conflict']", message)
+  end
+
+  test "group and paid series say how they count", %{conn: conn, user: user} do
+    meeting_type =
+      insert(:meeting_type, [user: user, max_participants: 6] ++ weekly_series())
+
+    view = edit(conn, meeting_type)
+
+    assert has_element?(
+             view,
+             "[data-testid='series-group']",
+             "Each session in a series takes one seat."
+           )
+
+    refute has_element?(view, "[data-testid='series-paid']")
+  end
+
+  describe "without the plan" do
+    defmodule DenyRecurringChecker do
+      @behaviour Tymeslot.Features.CheckerBehaviour
+      @impl Tymeslot.Features.CheckerBehaviour
+      def check_access(_user_id, :recurring_bookings_allowed), do: {:error, :insufficient_plan}
+      def check_access(_user_id, _feature), do: :ok
+    end
+
+    setup do
+      assigns = Application.get_env(:tymeslot, :feature_assigns, [])
+
+      setup_config(:tymeslot,
+        feature_access_checker: DenyRecurringChecker,
+        feature_assigns: Keyword.put(assigns, :recurring_bookings_allowed, false),
+        feature_placeholder_components: nil
+      )
+    end
+
+    test "locked without access", %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user)
+      view = edit(conn, meeting_type)
+
+      assert has_element?(
+               view,
+               "[data-testid='series-locked']",
+               "Recurring bookings are not included in your current plan."
+             )
+
+      refute has_element?(view, "input[phx-value-series_action='toggle']")
+
+      view
+      |> with_target(form_wrapper(meeting_type))
+      |> render_click("update_series", %{"series_action" => "toggle"})
+
+      assert reload(meeting_type).series_mode == nil
+    end
+
+    test "read-only when access is gone", %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, [user: user] ++ weekly_series())
+      view = edit(conn, meeting_type)
+
+      refute has_element?(view, "[data-testid='series-locked']")
+
+      assert has_element?(
+               view,
+               "[data-testid='series-paused']",
+               "Series booking is paused: this meeting type books single sessions until you upgrade."
+             )
+
+      assert has_element?(view, "input[phx-value-series_action='toggle'][checked][disabled]")
+      assert has_element?(view, "input[name='series[min]'][disabled]")
+
+      view
+      |> with_target(form_wrapper(meeting_type))
+      |> render_click("update_series", %{"series_action" => "toggle"})
+
+      # Other changes still save, and keep the series as it was.
+      view
+      |> element("input[name='meeting_type[name]']")
+      |> render_change(%{"meeting_type" => %{"name" => "Renamed course"}})
+
+      assert %{name: "Renamed course", series_mode: :recurring, series_max_occurrences: 4} =
+               reload(meeting_type)
+    end
+  end
+end

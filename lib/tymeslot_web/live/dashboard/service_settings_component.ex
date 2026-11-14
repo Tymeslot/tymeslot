@@ -40,6 +40,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:toggling_type_id, nil)
      |> assign(:custom_questions_allowed, true)
      |> assign(:group_bookings_allowed, true)
+     |> assign(:recurring_bookings_allowed, true)
      |> assign(:payments_accepted, true)
      |> assign(:slug_draft, "")
      |> assign(:delete_sign_ups, {0, 0})

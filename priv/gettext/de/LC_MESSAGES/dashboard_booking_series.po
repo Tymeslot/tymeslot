@@ -1,0 +1,183 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookers book several sessions in one go, with one confirmation."
+msgstr "Buchende buchen mehrere Termine auf einmal, mit einer einzigen Bestätigung."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookers can also book a single session"
+msgstr "Buchende können auch einen einzelnen Termin buchen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookers pay %{price} × the number of sessions upfront."
+msgstr "Buchende zahlen vorab %{price} × die Anzahl der Termine."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookers pick each session from your available times."
+msgstr "Buchende wählen jeden Termin aus Ihren verfügbaren Zeiten."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Each session in a series takes one seat."
+msgstr "Jeder Termin einer Serie belegt einen Platz."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Every day"
+msgid_plural "Every %{count} days"
+msgstr[0] "Jeden Tag"
+msgstr[1] "Alle %{count} Tage"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Every month"
+msgid_plural "Every %{count} months"
+msgstr[0] "Jeden Monat"
+msgstr[1] "Alle %{count} Monate"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Every series has %{count} session."
+msgid_plural "Every series has %{count} sessions."
+msgstr[0] "Jede Serie hat %{count} Termin."
+msgstr[1] "Jede Serie hat %{count} Termine."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Every series has the same number of sessions, like a course."
+msgstr "Jede Serie hat gleich viele Termine, wie ein Kurs."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Every session at the same time, for example every Thursday at 17:00."
+msgstr "Jeder Termin zur gleichen Zeit, zum Beispiel jeden Donnerstag um 17:00 Uhr."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Every week"
+msgid_plural "Every %{count} weeks"
+msgstr[0] "Jede Woche"
+msgstr[1] "Alle %{count} Wochen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Fixed number"
+msgstr "Feste Anzahl"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "From"
+msgstr "Von"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "From %{min} to %{max} sessions, as the booker chooses."
+msgstr "Von %{min} bis %{max} Terminen, je nach Wahl der buchenden Person."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "How often"
+msgstr "Wie oft"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "How the sessions are timed"
+msgstr "Wie die Termine angesetzt werden"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Let people book a series"
+msgstr "Buchung als Serie erlauben"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Number of sessions"
+msgstr "Anzahl der Termine"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "On the same weekday of the month, for example the second Thursday."
+msgstr "Am selben Wochentag des Monats, zum Beispiel am zweiten Donnerstag."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats"
+msgstr "Wiederholung"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Same time, repeating"
+msgstr "Gleiche Uhrzeit, wiederkehrend"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Series"
+msgstr "Serie"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Series booking is paused: this meeting type books single sessions until you upgrade."
+msgstr "Die Serienbuchung ist pausiert: Dieser Termintyp bucht nur einzelne Termine, bis Sie upgraden."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Sessions at different times"
+msgstr "Termine zu unterschiedlichen Zeiten"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "To"
+msgstr "Bis"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/scheduling_rules_section.ex
+#, elixir-autogen, elixir-format
+msgid "With series booking on, this applies to the first session only."
+msgstr "Bei aktivierter Serienbuchung gilt dies nur für den ersten Termin."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking window (%{days} days) applies to the first session only. Later sessions can be booked up to 12 months ahead."
+msgstr "Ihr Vorausbuchungszeitraum (%{days} Tage) gilt nur für den ersten Termin. Spätere Termine können bis zu 12 Monate im Voraus gebucht werden."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your limit of %{limit} bookings per month is lower than the %{needed} sessions a series can book in one month, so some series won't fit."
+msgstr "Ihr Limit von %{limit} Buchungen pro Monat liegt unter den %{needed} Terminen, die eine Serie in einem Monat buchen kann, daher passen manche Serien nicht hinein."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your limit of %{limit} bookings per week is lower than the %{needed} sessions a series can book in one week, so some series won't fit."
+msgstr "Ihr Limit von %{limit} Buchungen pro Woche liegt unter den %{needed} Terminen, die eine Serie in einer Woche buchen kann, daher passen manche Serien nicht hinein."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "frequency"
+msgid "Every day"
+msgstr "Jeden Tag"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "frequency"
+msgid "Every month"
+msgstr "Jeden Monat"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "frequency"
+msgid "Every week"
+msgstr "Jede Woche"
