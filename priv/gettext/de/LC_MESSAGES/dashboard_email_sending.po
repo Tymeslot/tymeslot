@@ -1,0 +1,272 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "A test message is sent only to your current verified account email."
+msgstr "Eine Testnachricht wird nur an die aktuelle verifizierte E-Mail-Adresse Ihres Kontos gesendet."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Check the email settings and try again."
+msgstr "Prüfen Sie die E-Mail-Einstellungen und versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a public SMTP hostname. Private and local mail servers are not supported."
+msgstr "Wählen Sie einen öffentlichen SMTP-Hostnamen. Private und lokale Mailserver werden nicht unterstützt."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Credentials are saved securely. Leave the username and password blank to keep them."
+msgstr "Die Zugangsdaten sind sicher gespeichert. Lassen Sie Nutzername und Passwort leer, um sie beizubehalten."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Custom SMTP is disabled"
+msgstr "Eigenes SMTP ist deaktiviert"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Custom SMTP is enabled"
+msgstr "Eigenes SMTP ist aktiviert"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Delete identity and credentials"
+msgstr "Identität und Zugangsdaten löschen"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Delete saved identity"
+msgstr "Gespeicherte Identität löschen"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Delete this SMTP identity?"
+msgstr "Diese SMTP-Identität löschen?"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Email sending"
+msgstr "E-Mail-Versand"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Email sending settings are unavailable. Reload the page to continue."
+msgstr "Die Einstellungen für den E-Mail-Versand sind nicht verfügbar. Laden Sie die Seite neu, um fortzufahren."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Email settings need attention"
+msgstr "E-Mail-Einstellungen erfordern Ihre Aufmerksamkeit"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Email testing is temporarily unavailable. Try again shortly."
+msgstr "E-Mail-Tests sind vorübergehend nicht verfügbar. Versuchen Sie es in Kürze erneut."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "From address"
+msgstr "Absenderadresse"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "From display name"
+msgstr "Anzeigename des Absenders"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Implicit TLS (port 465)"
+msgstr "Implizites TLS (Port 465)"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Keep identity"
+msgstr "Identität beibehalten"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Required STARTTLS (port 587)"
+msgstr "STARTTLS erforderlich (Port 587)"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "SMTP hostname"
+msgstr "SMTP-Hostname"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "SMTP password or app password"
+msgstr "SMTP-Passwort oder App-Passwort"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "SMTP settings"
+msgstr "SMTP-Einstellungen"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "SMTP username"
+msgstr "SMTP-Nutzername"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Connection security"
+msgstr "Verbindungssicherheit"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Test and save"
+msgstr "Testen und speichern"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Test and save your SMTP settings to activate this sending identity."
+msgstr "Testen und speichern Sie Ihre SMTP-Einstellungen, um diese Absenderidentität zu aktivieren."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Test and save these settings before enabling them."
+msgstr "Testen und speichern Sie diese Einstellungen, bevor Sie sie aktivieren."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Testing SMTP settings"
+msgstr "SMTP-Einstellungen werden getestet"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Testing and saving…"
+msgstr "Wird getestet und gespeichert…"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "The SMTP hostname could not be resolved. Check it and try again."
+msgstr "Der SMTP-Hostname konnte nicht aufgelöst werden. Prüfen Sie ihn und versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "The SMTP operation could not be completed. Check the settings and try again."
+msgstr "Der SMTP-Vorgang konnte nicht abgeschlossen werden. Prüfen Sie die Einstellungen und versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
+#, elixir-autogen, elixir-format
+msgid "The SMTP server accepted the test and your sending identity is now active. Acceptance does not confirm inbox delivery."
+msgstr "Der SMTP-Server hat die Testnachricht angenommen und Ihre Absenderidentität ist jetzt aktiv. Die Annahme bestätigt keine Zustellung im Posteingang."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "The SMTP server did not respond in time. Try again shortly."
+msgstr "Der SMTP-Server hat nicht rechtzeitig geantwortet. Versuchen Sie es in Kürze erneut."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "The SMTP server refused the credentials. Check the username and password, or use an app password."
+msgstr "Der SMTP-Server hat die Zugangsdaten abgelehnt. Prüfen Sie Nutzername und Passwort oder verwenden Sie ein App-Passwort."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "The SMTP server timed out. It may have accepted the message; check before trying again."
+msgstr "Beim SMTP-Server ist eine Zeitüberschreitung aufgetreten. Er hat die Nachricht möglicherweise angenommen. Prüfen Sie dies vor einem erneuten Versuch."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "The required TLS connection failed. Check the SMTP hostname and connection security."
+msgstr "Die erforderliche TLS-Verbindung ist fehlgeschlagen. Prüfen Sie den SMTP-Hostnamen und die Verbindungssicherheit."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
+#, elixir-autogen, elixir-format
+msgid "The saved SMTP identity and credentials were deleted."
+msgstr "Die gespeicherte SMTP-Identität und die Zugangsdaten wurden gelöscht."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "The saved credentials could not be read. Enter them again and test the connection."
+msgstr "Die gespeicherten Zugangsdaten konnten nicht gelesen werden. Geben Sie sie erneut ein und testen Sie die Verbindung."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "The server is being tested. Existing email settings stay unchanged if the test fails."
+msgstr "Der Server wird getestet. Wenn der Test fehlschlägt, bleiben die bisherigen E-Mail-Einstellungen unverändert."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Too many SMTP tests or connections. Wait a few minutes and try again."
+msgstr "Zu viele SMTP-Tests oder Verbindungen. Warten Sie einige Minuten und versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Use a public SMTP server with authenticated TLS. Your provider must authorize the From address and manage SPF, DKIM, and DMARC for its domain."
+msgstr "Verwenden Sie einen öffentlichen SMTP-Server mit Authentifizierung und TLS. Ihr Anbieter muss die Absenderadresse autorisieren und SPF, DKIM und DMARC für deren Domain verwalten."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Use custom sending email"
+msgstr "Eigene E-Mail-Adresse zum Senden verwenden"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Verify your account email before testing or enabling custom SMTP."
+msgstr "Verifizieren Sie die E-Mail-Adresse Ihres Kontos, bevor Sie eigenes SMTP testen oder aktivieren."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Your SMTP identity sends booking confirmations, reminders, cancellations, rescheduling, approvals, and guest/group notices. Account and security emails use the platform sender."
+msgstr "Ihre SMTP-Identität sendet Buchungsbestätigungen, Erinnerungen, Absagen, Terminverschiebungen, Genehmigungen sowie Gast- und Gruppenmitteilungen. Konto- und Sicherheits-E-Mails verwenden den Plattform-Absender."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Your current sending identity has not changed. Review the error and test again."
+msgstr "Ihre aktuelle Absenderidentität wurde nicht geändert. Prüfen Sie den Fehler und testen Sie erneut."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Your email settings changed. Review the current settings and try again."
+msgstr "Ihre E-Mail-Einstellungen wurden geändert. Prüfen Sie die aktuellen Einstellungen und versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Custom SMTP remains selected. Failed scheduling emails are retried without switching to the platform sender."
+msgstr "Eigenes SMTP bleibt ausgewählt. Fehlgeschlagene E-Mails zur Terminplanung werden erneut gesendet, ohne zum Plattform-Absender zu wechseln."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Poll emails, dashboard calendar invitations, updates and cancellations, and booking refund notices also use your SMTP identity. Integration health, dispute and payout notices use the platform sender."
+msgstr "Auch Umfrage-E-Mails, Kalendereinladungen, Aktualisierungen und Absagen aus dem Dashboard sowie Mitteilungen zu Buchungsrückerstattungen verwenden Ihre SMTP-Identität. Mitteilungen zum Integrationsstatus, zu Zahlungsstreitfällen und Auszahlungen verwenden den Plattform-Absender."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling emails currently use the platform sender."
+msgstr "E-Mails zur Terminplanung verwenden derzeit den Plattform-Absender."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling emails now use the platform sender."
+msgstr "E-Mails zur Terminplanung verwenden jetzt den Plattform-Absender."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduling emails use this SMTP identity."
+msgstr "E-Mails zur Terminplanung verwenden diese SMTP-Identität."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending/view.ex
+#, elixir-autogen, elixir-format
+msgid "This removes the saved credentials. Scheduling emails will use the platform sender."
+msgstr "Dadurch werden die gespeicherten Zugangsdaten entfernt. E-Mails zur Terminplanung verwenden anschließend den Plattform-Absender."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/email_sending_component.ex
+#, elixir-autogen, elixir-format
+msgid "SMTP connection healthy. Settings saved and active."
+msgstr "Die SMTP-Verbindung funktioniert. Einstellungen gespeichert und aktiv."

@@ -86,7 +86,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
 
   defdelegate schedule_request_emails(meeting_id, opts \\ []), to: MeetingScheduler
   defdelegate schedule_approval_nudge(meeting_id, send_at), to: MeetingScheduler
-  defdelegate schedule_request_outcome(meeting_id, variant), to: MeetingScheduler
+  defdelegate schedule_request_outcome(meeting_id, variant, opts \\ []), to: MeetingScheduler
   defdelegate schedule_reschedule_request_expired(meeting_id), to: MeetingScheduler
   defdelegate cancel_approval_emails(meeting_id), to: MeetingScheduler
 

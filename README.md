@@ -130,7 +130,7 @@ No add-ons and no per-feature upsells: self-hosted gets all of it.
 | **Availability** | Named schedules with hours, breaks and date overrides; buffers, minimum notice and booking window per type. |
 | **Calendars** | Two-way sync with Google, Outlook, iCloud and any CalDAV server (Nextcloud, Radicale, Zimbra, Baikal, mailbox.org). A conflict anywhere blocks the slot everywhere. Full in-app calendar. |
 | **Video & location** | Rooms created automatically on Google Meet, Teams, Zoom, Jitsi, MiroTalk, kMeet or Nextcloud Talk; in person, phone or a custom link. |
-| **Emails** | Branded, responsive templates with an `.ics` invite, configurable reminders, and cancel or reschedule links that need no login. |
+| **Emails** | Branded, responsive templates with an `.ics` invite, configurable reminders, login-free cancellation and rescheduling, and optional per-user SMTP for scheduling email. [Setup →](docs/USER_SMTP.md) |
 | **Automation** | `meeting_created`, `meeting_cancelled` and `meeting_rescheduled` webhooks (HMAC-signed) for n8n, Zapier, Make or your backend; Slack and Telegram notifications. |
 | **Embed** | Inline, popup or floating button. Tokens are signed and domain-locked. |
 | **Payments** | Optional paid bookings through Stripe Connect, off by default and fee-free for self-hosters. [Setup →](https://tymeslot.app/docs/stripe-self-hosting?utm_source=github&utm_medium=readme&utm_campaign=core) |

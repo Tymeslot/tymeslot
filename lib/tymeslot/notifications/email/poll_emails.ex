@@ -6,13 +6,16 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   updates on new votes.
 
   Every email to a participant carries their personal `?p=` link, read from
-  the participant here rather than from the job args.
+  the participant here rather than from the job args. Every copy uses the
+  poll host's sending identity, frozen once per execution and never persisted
+  in the job or copied from a recipient's settings.
   """
 
   require Logger
 
   alias Tymeslot.Auth
   alias Tymeslot.Clock
+  alias Tymeslot.Emails.BookingDelivery
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
   alias Tymeslot.Emails.Templates.PollCancelled
@@ -110,7 +113,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
         {:discard, @participant_gone}
 
       %{poll: %{status: :open} = poll} = participant ->
-        with_host_staying(poll, action, fn ->
+        with_host_staying(poll, action, fn poll ->
           deliver_to_participant(poll, participant, action, render)
         end)
 
@@ -138,7 +141,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
       username ->
         poll
         |> render.(participant, personal_url(poll, username, participant))
-        |> Delivery.deliver()
+        |> Delivery.deliver(sender: poll.email_sender)
         |> delivery_outcome()
     end
   end
@@ -150,7 +153,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_deadline_reminders(%{"poll_id" => poll_id} = args, job_id) do
     with_current_deadline(poll_id, args, "poll deadline reminders", fn poll ->
-      with_host_staying(poll, "poll deadline reminders", fn ->
+      with_host_staying(poll, "poll deadline reminders", fn poll ->
         send_deadline_reminders(poll, job_id)
       end)
     end)
@@ -183,7 +186,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
         DeliveryClaims.once(job_id, "participant:#{participant.id}", fn ->
           poll
           |> PollDeadlineReminder.render(participant, personal_url(poll, username, participant))
-          |> Delivery.deliver()
+          |> Delivery.deliver(sender: poll.email_sender)
         end)
       end)
 
@@ -196,12 +199,12 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
     cutoff = host_update_cutoff(job_id, @nudge_cutoff)
 
     with_current_deadline(poll_id, args, "poll host nudge", fn poll ->
-      with_host_staying(poll, "poll host nudge", fn ->
+      with_host_staying(poll, "poll host nudge", fn poll ->
         delivered =
           DeliveryClaims.once(job_id, "host", fn ->
             poll
             |> PollHostNudge.render(variant_atom(variant), results_url())
-            |> Delivery.deliver()
+            |> Delivery.deliver(sender: poll.email_sender)
             |> delivery_outcome()
           end)
 
@@ -230,7 +233,9 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
     cutoff = host_update_cutoff(job_id, @digest_cutoff)
 
     with_open_poll(poll_id, "poll vote digest", fn poll ->
-      with_host_staying(poll, "poll vote digest", fn -> send_vote_digest(poll, cutoff, job_id) end)
+      with_host_staying(poll, "poll vote digest", fn poll ->
+        send_vote_digest(poll, cutoff, job_id)
+      end)
     end)
   end
 
@@ -253,7 +258,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
       DeliveryClaims.once(job_id, "host", fn ->
         poll
         |> PollVoteDigest.render(voters, results_url())
-        |> Delivery.deliver()
+        |> Delivery.deliver(sender: poll.email_sender)
         |> delivery_outcome()
       end)
 
@@ -269,7 +274,9 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_new_times(%{"poll_id" => poll_id, "slot_ids" => slot_ids}, job_id) do
     with_open_poll(poll_id, "poll new times", fn poll ->
-      with_host_staying(poll, "poll new times", fn -> send_new_times(poll, slot_ids, job_id) end)
+      with_host_staying(poll, "poll new times", fn poll ->
+        send_new_times(poll, slot_ids, job_id)
+      end)
     end)
   end
 
@@ -293,7 +300,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
                 slots,
                 personal_url(poll, username, participant)
               )
-              |> Delivery.deliver()
+              |> Delivery.deliver(sender: poll.email_sender)
             end)
           end)
 
@@ -317,11 +324,13 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
       ) do
     case Auth.get_user_with_profile(user_id) do
       {:ok, host} ->
-        poll = %PollSchema{id: args["poll_id"], title: title, user: host}
+        poll = %PollSchema{id: args["poll_id"], title: title, user_id: host.id, user: host}
 
-        recipients
-        |> Enum.map(&deliver_cancellation(poll, recipient(&1), job_id))
-        |> cancellation_outcome(poll)
+        with_host_staying(poll, "poll cancellation", fn poll ->
+          recipients
+          |> Enum.map(&deliver_cancellation(poll, recipient(&1), job_id))
+          |> cancellation_outcome(poll)
+        end)
 
       {:error, :not_found} ->
         Logger.info("Skipping poll cancellation emails: the host no longer exists",
@@ -335,9 +344,11 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
   def handle_cancelled(%{"poll_id" => poll_id}, job_id) do
     case PollQueries.get_with_host(poll_id) do
       %{status: :cancelled} = poll ->
-        poll.participants
-        |> Enum.map(&deliver_cancellation(poll, &1, job_id))
-        |> cancellation_outcome(poll)
+        with_host_staying(poll, "poll cancellation", fn poll ->
+          poll.participants
+          |> Enum.map(&deliver_cancellation(poll, &1, job_id))
+          |> cancellation_outcome(poll)
+        end)
 
       # Deleted straight after it was cancelled, before this ran.
       nil ->
@@ -355,7 +366,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
 
   defp deliver_cancellation(poll, participant, job_id) do
     DeliveryClaims.once(job_id, "participant:#{participant.id}", fn ->
-      poll |> PollCancelled.render(participant) |> Delivery.deliver()
+      poll |> PollCancelled.render(participant) |> Delivery.deliver(sender: poll.email_sender)
     end)
   end
 
@@ -446,7 +457,8 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
 
   # A host whose account is about to be deleted is told nothing more about
   # their polls (`Tymeslot.Auth.deletion_pending?/1`; the poll's user is
-  # preloaded, so this costs no query).
+  # preloaded, so this costs no query). Resolve one sending revision only after
+  # that check, and pass it to every copy so edits cannot mix sender accounts.
   defp with_host_staying(poll, action, fun) do
     if Auth.deletion_pending?(poll.user) do
       Logger.info("Skipping poll email: host account pending deletion",
@@ -456,7 +468,14 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
 
       {:discard, @host_leaving}
     else
-      fun.()
+      case BookingDelivery.prepare(%{
+             organizer_user_id: poll.user_id,
+             email_sender: poll.email_sender
+           }) do
+        {:ok, _resource, sender} -> fun.(%{poll | email_sender: sender})
+        {:error, :owner_not_found} -> {:discard, @host_gone}
+        {:error, _reason} = error -> error
+      end
     end
   end
 

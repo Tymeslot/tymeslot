@@ -6,6 +6,7 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefundedTest do
 
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded.RefundContext
+  alias Tymeslot.EmailSending.Sender
 
   defp build_context(overrides \\ %{}) do
     defaults = %{
@@ -111,6 +112,25 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefundedTest do
   end
 
   describe "render/1 Reply-To" do
+    test "uses the selected brand while replies continue to reach the booking host" do
+      sender = %Sender{
+        kind: :user_smtp,
+        owner_id: 123,
+        settings_id: 456,
+        revision: 1,
+        from_name: "Custom brand",
+        from_address: "refunds@brand.example.com"
+      }
+
+      email =
+        BookingPaymentRefunded.render(
+          build_context(%{host_email: "bob@example.com", email_sender: sender})
+        )
+
+      assert email.from == {"Custom brand", "refunds@brand.example.com"}
+      assert email.reply_to == {"Bob Host", "bob@example.com"}
+    end
+
     test "replies to the host, from the instance's address" do
       email = BookingPaymentRefunded.render(build_context(%{host_email: "bob@example.com"}))
 

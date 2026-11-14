@@ -39,6 +39,8 @@ defmodule Tymeslot.Emails.EmailService do
           required(:location) => String.t(),
           required(:location_type) => atom(),
           required(:meeting_type) => String.t(),
+          optional(:organizer_user_id) => pos_integer() | nil,
+          optional(:email_sender) => Tymeslot.EmailSending.Sender.t(),
           optional(:attendee_locale) => String.t(),
           optional(:organizer_locale) => String.t(),
           optional(:booking_page_name) => String.t() | nil,

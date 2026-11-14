@@ -8,12 +8,14 @@ defmodule Tymeslot.Notifications.Email.GuestEmails do
   Split out of `Tymeslot.Notifications.Email.MeetingEmails` so the
   solo and group handlers (`GroupMeetingEmails`) share one send loop. Each
   guest is stamped on success, so a retry only reaches the guests a previous
-  run missed, and a failed guest send never fails the job that made it.
+  run missed. Platform guest sends stay best effort; custom SMTP guest
+  failures are returned so the booking job can retry or snooze.
   """
 
   require Logger
 
   alias Tymeslot.Emails.AppointmentBuilder
+  alias Tymeslot.EmailSending.Sender
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GuestQueries
@@ -68,7 +70,7 @@ defmodule Tymeslot.Notifications.Email.GuestEmails do
   not reach. Builds the payload only when there is somebody to send to, so
   the already-sent path stays one cheap query.
   """
-  @spec invite_missed(MeetingSchema.t()) :: :ok
+  @spec invite_missed(MeetingSchema.t()) :: :ok | {:error, term()}
   def invite_missed(meeting) do
     case GuestQueries.list_unsent_for_meeting(meeting.id) do
       [] ->
@@ -121,31 +123,35 @@ defmodule Tymeslot.Notifications.Email.GuestEmails do
 
   @doc """
   Sends every guest in `guests` their confirmation through `send_to_guests/4`
-  for a caller whose own result the guests must never change: failures are
-  logged and the guest left unsent for the next run.
+  and leaves failures unstamped. Platform guest failures are logged without
+  changing the caller's outcome. Custom SMTP failures are returned so a
+  retry or snooze can reach those guests without repeating successful copies.
 
   Shared by `MeetingEmails` and `GroupMeetingEmails`: the loop is identical
   for a meeting's guests and one participant's guests, they only differ in how
   `guests` was queried (`GuestQueries.list_unsent_for_meeting/1` vs
   `GuestQueries.list_unsent_for_participant/1`).
   """
-  @spec send_confirmations([GuestSchema.t()], MeetingSchema.t(), map(), module()) :: :ok
+  @spec send_confirmations([GuestSchema.t()], MeetingSchema.t(), map(), module()) ::
+          :ok | {:error, term()}
   def send_confirmations(guests, meeting, appointment_details, email_service) do
-    _results = send_to_guests(guests, meeting, appointment_details, email_service)
-    :ok
+    guests
+    |> send_to_guests(meeting, appointment_details, email_service)
+    |> guest_result(meeting, "confirmation")
   end
 
   @doc """
   Reminds the meeting's guests for one configured offset, stamping each guest
   per offset so a retry after a partial send re-emails only the guests it has
-  not reached. Failures are logged and never change the caller's result.
+  not reached. Platform failures are best effort; custom SMTP failures are
+  returned so the caller retries the still-pending guest reminders.
 
   A group-booking guest is reminded from their own participant's view of the
   meeting, and a guest with a language and timezone of their own in those
   (`GuestNotifications.with_inviter_details/4`); `appointment_details` serves
   every other guest.
   """
-  @spec send_reminders(MeetingSchema.t(), map(), term(), term()) :: :ok
+  @spec send_reminders(MeetingSchema.t(), map(), term(), term()) :: :ok | {:error, term()}
   def send_reminders(meeting, appointment_details, reminder_value, reminder_unit) do
     value = Reminders.parse_reminder_value(reminder_value)
     unit = Reminders.normalize_reminder_unit(reminder_unit)
@@ -158,12 +164,13 @@ defmodule Tymeslot.Notifications.Email.GuestEmails do
       appointment_details,
       &AppointmentBuilder.from_meeting(&1, %{value: value, unit: unit})
     )
-    |> Enum.each(fn {guest, owner_details} ->
+    |> Enum.map(fn {guest, owner_details} ->
       details = GuestNotifications.guest_details(owner_details, guest)
 
       case email_service.send_guest_reminder(guest.email, details) do
-        {:ok, _result} ->
+        {:ok, _result} = sent ->
           GuestQueries.mark_reminder_sent(guest, value, unit)
+          sent
 
         other ->
           Logger.error("Guest reminder email failed",
@@ -171,9 +178,19 @@ defmodule Tymeslot.Notifications.Email.GuestEmails do
             guest_id: guest.id,
             result: LogFormat.reason(other)
           )
+
+          other
       end
     end)
+    |> guest_result(meeting, "reminder")
   end
+
+  # Custom SMTP has an independent breaker and connection budget. Returning
+  # its refusals keeps an accepted booking from silently losing guest copies.
+  defp guest_result(results, %{email_sender: %Sender{kind: :user_smtp}} = meeting, kind),
+    do: DeliveryOutcome.from_results("guest #{kind}", [meeting_id: meeting.id], results)
+
+  defp guest_result(_results, _meeting, _kind), do: :ok
 
   defp send_claimed(guest, claimed_at, meeting, appointment_details, email_service) do
     details = GuestNotifications.guest_details(appointment_details, guest)

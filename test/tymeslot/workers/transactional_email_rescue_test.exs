@@ -47,7 +47,10 @@ defmodule Tymeslot.Workers.TransactionalEmailRescueTest do
   end
 
   test "SendBookingPaymentRefunded sends the refund email once across a rescue" do
-    payment = insert_payment(%{refunded_amount_cents: 5000, status: :refunded})
+    host = insert(:user)
+
+    payment =
+      insert_payment(%{host_user_id: host.id, refunded_amount_cents: 5000, status: :refunded})
 
     job = persisted_job(SendBookingPaymentRefunded, %{"booking_payment_id" => payment.id})
     run_twice(SendBookingPaymentRefunded, job)

@@ -82,6 +82,8 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   Builds the email telling `organizer_email` that `meeting` now ends where they
   moved its end in their own calendar, and who was emailed the new end
   (`notice`). Nothing is asked of them: Tymeslot followed their calendar.
+  The attached booking sender supplies this lifecycle summary's From identity;
+  external calendar discrepancy alerts remain platform messages.
   """
   @spec render_end_followed(Meeting.t(), String.t(), end_notice(), String.t()) ::
           Swoosh.Email.t()
@@ -145,7 +147,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
       #{dgettext("emails_booking_changes", "This notification was triggered automatically when a change was detected in your external calendar.")}
       """
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: Map.get(meeting, :email_sender))
       |> to(recipient(meeting.organizer_name, organizer_email))
       |> subject(
         dgettext("emails_booking_changes", "\"%{title}\" now ends at %{time} (%{date})",

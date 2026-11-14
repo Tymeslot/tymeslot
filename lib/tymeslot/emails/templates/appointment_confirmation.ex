@@ -101,7 +101,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       date_short = Formatting.format_date_short(meeting_details.date, locale)
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: Map.get(appointment_details, :email_sender))
       |> to({appointment_details.attendee_name, attendee_email})
       |> MjmlEmail.put_reply_to(
         appointment_details.organizer_name,
@@ -170,7 +170,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
       date_short = Formatting.format_date_short(meeting_details.date, locale)
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: Map.get(appointment_details, :email_sender))
       |> to({guest_name, guest_email})
       |> MjmlEmail.put_reply_to(
         appointment_details.organizer_name,
@@ -236,18 +236,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
 
-      # No ICS attachment for the organiser email. The organiser is the
-      # calendar owner — Tymeslot already writes the event straight to their
-      # CalDAV/OAuth calendar. An iTIP `METHOD:REQUEST` attachment on top of
-      # that causes iMIP-aware mail servers (Zimbra, Exchange, iCloud Mail)
-      # to auto-import the ICS as if it were an external invitation,
-      # producing a duplicate event and re-sending invites to the attendee.
-      MjmlEmail.base_email()
-      |> to({appointment_details.organizer_name, organizer_email})
-      |> MjmlEmail.put_reply_to(
-        appointment_details.attendee_name,
-        appointment_details.attendee_email
-      )
+      MjmlEmail.base_organizer_email(organizer_email, appointment_details)
       |> subject(
         organizer_subject(
           appointment_details,

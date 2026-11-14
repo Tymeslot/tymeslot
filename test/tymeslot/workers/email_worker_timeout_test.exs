@@ -12,6 +12,7 @@ defmodule Tymeslot.Workers.EmailWorkerTimeoutTest do
   import Tymeslot.Factory
 
   alias ExUnit.CaptureLog
+  alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.Guests
@@ -110,7 +111,34 @@ defmodule Tymeslot.Workers.EmailWorkerTimeoutTest do
       assert PollSchema.max_participants() > Guests.max_guests()
 
       assert EmailWorker.email_timeout_ms() ==
-               (PollSchema.max_participants() + 2 + 1) * @send_deadline_ms
+               (PollSchema.max_participants() + 2 + 1) * Delivery.send_budget_ms()
+    end
+
+    test "budgets every calendar attendee beyond the poll limit, including status writes" do
+      recipients = for index <- 1..100, do: "attendee#{index}@example.com"
+
+      assert EmailWorker.email_timeout_ms(%{
+               "action" => "send_event_update_notification",
+               "attendee_emails" => recipients
+             }) == 101 * Delivery.send_budget_ms()
+
+      assert Delivery.send_budget_ms() > @send_deadline_ms
+    end
+
+    test "malformed calendar recipient lists use the default budget" do
+      assert EmailWorker.email_timeout_ms(%{
+               "action" => "send_event_update_notification",
+               "attendee_emails" => "invalid"
+             }) == EmailWorker.email_timeout_ms()
+    end
+
+    test "an explicit timeout override also applies to large calendar batches" do
+      setup_config(:tymeslot, :email_timeout_ms, 50)
+
+      assert EmailWorker.email_timeout_ms(%{
+               "action" => "send_event_update_notification",
+               "attendee_emails" => List.duplicate("attendee@example.com", 100)
+             }) == 50
     end
 
     test "gives every recipient of the largest confirmation a full send deadline before giving up" do

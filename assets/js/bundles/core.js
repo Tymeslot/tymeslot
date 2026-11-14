@@ -31,6 +31,7 @@ import { installClipboardCopy } from "../clipboard_copy"
 import { installTooltips } from "../tooltip"
 import { liveSocketPath } from "../live_socket_path"
 import { takeAttendeePrefill } from "../attendee_prefill"
+import { preserveSmtpCredentialValue } from "../smtp_credential_input"
 
 // Reveal image fallbacks on load error (replaces inline onerror handlers).
 installImageFallback()
@@ -137,7 +138,8 @@ let liveSocket = new LiveSocket(socketPath, Socket, {
     timezone: getUserTimezone(),
     attendee_prefill: attendeePrefill
   },
-  hooks: CoreHooks
+  hooks: CoreHooks,
+  dom: { onBeforeElUpdated: preserveSmtpCredentialValue }
 })
 
 // Progress bar

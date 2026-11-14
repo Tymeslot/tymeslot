@@ -98,9 +98,9 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
           stage_subtitle: personal_sentence(meeting, kind)
         )
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: Map.get(meeting, :email_sender))
       |> to({meeting.attendee_name, meeting.attendee_email})
-      |> from({meeting.organizer_name, MjmlEmail.fetch_from_email()})
+      |> MjmlEmail.from_organizer(meeting.organizer_name, Map.get(meeting, :email_sender))
       |> MjmlEmail.put_reply_to(meeting.organizer_name, meeting.organizer_email)
       |> subject(subject_line(kind, meeting, Formatting.format_date_short(attendee_time, locale)))
       |> html_body(html_body)

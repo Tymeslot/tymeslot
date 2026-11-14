@@ -23,6 +23,7 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
 
   # name => {key passed to `check/2`, the bucket keys it must charge}
   @expected %{
+    user_smtp_test: {42, ["user_smtp_test:user:42"]},
     signup_ip:
       {@ip, ["signup:ip:203.0.113.9:10m", "signup:ip:203.0.113.9:1h", "signup:ip:203.0.113.9:1d"]},
     signup_email:

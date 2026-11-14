@@ -71,10 +71,15 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   The job is what bounds the snooze loops: its execution count, snoozes
   included (`SnoozePolicy.executions/1`), is taken here so that no caller can
   leave it out and snooze for ever.
+
+  `delivery_options` are passed to `Tymeslot.Emails.Delivery.deliver/2`.
+  A scheduling worker supplies its resolved, credential-free `:sender`; callers
+  without an explicit sender retain platform delivery. Render the email with
+  the same sender so its From identity agrees with the selected transport.
   """
-  @spec deliver(Swoosh.Email.t(), Oban.Job.t(), String.t(), keyword()) :: outcome()
-  def deliver(email, %Oban.Job{} = job, failure_message, metadata \\ []) do
-    case Delivery.deliver(email) do
+  @spec deliver(Swoosh.Email.t(), Oban.Job.t(), String.t(), keyword(), keyword()) :: outcome()
+  def deliver(email, %Oban.Job{} = job, failure_message, metadata \\ [], delivery_options \\ []) do
+    case Delivery.deliver(email, delivery_options) do
       {:ok, _result} ->
         :ok
 

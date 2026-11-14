@@ -847,6 +847,26 @@ msgstr ""
 msgid "is already the address of one of your meeting types"
 msgstr ""
 
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be a public SMTP hostname"
+msgstr ""
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be valid UTF-8"
+msgstr ""
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must match the selected SMTP port"
+msgstr ""
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not contain control characters"
+msgstr ""
+
 #: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Invitation links work only for one-to-one meeting types."

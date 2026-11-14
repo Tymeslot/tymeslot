@@ -9,7 +9,6 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   import Ecto.Changeset
 
   alias Ecto.UUID
-
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
   alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.ChangesetValidators.TrackingParams
@@ -51,6 +50,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           organizer_email: String.t() | nil,
           organizer_title: String.t() | nil,
           organizer_user_id: integer() | nil,
+          email_sender: Tymeslot.EmailSending.Sender.t() | nil,
           calendar_integration_id: integer() | nil,
           calendar_path: String.t() | nil,
           attendee_name: String.t() | nil,
@@ -173,6 +173,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # about it fired, and the seat a move replaced. Integrations read it to
     # address that seat.
     field(:seat, :map, virtual: true)
+    # Credential-free notification identity, never cast or stored; shared across recipient views.
+    field(:email_sender, :any, virtual: true)
 
     # Organizer details
     field(:organizer_name, :string)
@@ -564,7 +566,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> EmailChangeset.validate_email(:organizer_email, existing: true)
     |> EmailChangeset.validate_email(:attendee_email)
     |> validate_required([:attendee_locale])
-    |> validate_inclusion(:attendee_locale, supported_locale_codes(),
+    |> validate_inclusion(:attendee_locale, Locales.supported_codes(),
       message: dgettext_noop("errors", "is not a supported locale")
     )
     |> validate_number(:capacity, greater_than: 0)
@@ -644,6 +646,4 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   @doc "Whether only the host manages the meeting; see `Tymeslot.Meetings.HostManaged`."
   defdelegate managed_by_host?(meeting), to: Tymeslot.Meetings.HostManaged, as: :managed?
-
-  defp supported_locale_codes, do: Locales.supported_codes()
 end

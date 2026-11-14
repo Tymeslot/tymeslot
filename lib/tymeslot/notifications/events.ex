@@ -387,21 +387,27 @@ defmodule Tymeslot.Notifications.Events do
   same. A cancellation tells the invitee a confirmed meeting is off; a decline
   tells them a request was never accepted, and sending the cancellation email
   here would refer to a booking they were explicitly told was not one.
+
+  `notify_guests:` carries the release's decision to defer guest cancellations
+  to the outcome job, without re-reading feature configuration between steps.
   """
-  @spec meeting_declined(term()) :: {:ok, term()} | {:error, term()}
-  def meeting_declined(meeting), do: request_ended(meeting, :meeting_declined, :declined)
+  @spec meeting_declined(term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def meeting_declined(meeting, opts \\ []),
+    do: request_ended(meeting, :meeting_declined, :declined, opts)
 
   @doc """
   Handles a booking request nobody answered before its deadline.
-  """
-  @spec meeting_request_expired(term()) :: {:ok, term()} | {:error, term()}
-  def meeting_request_expired(meeting),
-    do: request_ended(meeting, :meeting_request_expired, :expired)
 
-  defp request_ended(meeting, event, variant) do
+  Accepts the same `notify_guests:` release decision as `meeting_declined/2`.
+  """
+  @spec meeting_request_expired(term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def meeting_request_expired(meeting, opts \\ []),
+    do: request_ended(meeting, :meeting_request_expired, :expired, opts)
+
+  defp request_ended(meeting, event, variant, opts) do
     result =
       send_notifications(event, meeting, fn ->
-        Orchestrator.send_request_outcome_notifications(meeting, variant)
+        Orchestrator.send_request_outcome_notifications(meeting, variant, opts)
       end)
 
     dispatch_channels(event, meeting)

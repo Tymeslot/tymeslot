@@ -155,6 +155,15 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
     assert :ok = TransactionalEmailDelivery.deliver(valid_email(), job(), "failed")
   end
 
+  test "an invalid explicit scheduling sender cannot fall back to the platform mailer" do
+    setup_config(:tymeslot, Tymeslot.Mailer, adapter: Swoosh.Adapters.Test)
+
+    assert {:error, :invalid_sender} =
+             TransactionalEmailDelivery.deliver(valid_email(), job(), "failed", [],
+               sender: :invalid
+             )
+  end
+
   # `handle_failure/3` is also what `EmailWorker` calls for these three
   # reasons, so a rate limit means the same thing — a snooze, not a burned
   # attempt — everywhere in the email pipeline rather than only where the

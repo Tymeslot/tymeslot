@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatchTest do
   @moduletag :dashboard
 
   alias Tymeslot.Agenda.Day
+  alias Tymeslot.EmailSending.Settings
   alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
   alias TymeslotWeb.Dashboard.BookingsManagementComponent
@@ -117,6 +118,23 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatchTest do
 
       assert %{profile: %{timezone: "America/New_York"}} =
                ComponentDispatch.props_for_action(assigns)
+    end
+
+    test ":settings passes only the loaded SMTP view through shared data" do
+      settings = %Settings{from_name: "Booking team", from_address: "bookings@example.com"}
+
+      assigns = %{
+        live_action: :settings,
+        profile: %{timezone: "Etc/UTC"},
+        smtp_settings: settings,
+        smtp_settings_loaded: true
+      }
+
+      assert %{shared_data: %{smtp_settings: ^settings, smtp_settings_loaded: true}} =
+               ComponentDispatch.props_for_action(assigns)
+
+      assert %{shared_data: %{smtp_settings: nil, smtp_settings_loaded: false}} =
+               ComponentDispatch.props_for_action(%{live_action: :settings, profile: nil})
     end
 
     test "other actions return an empty prop map" do

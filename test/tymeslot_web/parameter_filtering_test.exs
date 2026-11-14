@@ -44,6 +44,7 @@ defmodule TymeslotWeb.ParameterFilteringTest do
      %{"field" => "api_key", "value" => @secret}},
     {"the CalDAV connect form", %{"integration" => %{"password" => @secret}}},
     {"the CalDAV reconnect dialog", %{"reconnect" => %{"password" => @secret}}},
+    {"the SMTP identity form", %{"smtp" => %{"username" => @secret, "password" => @secret}}},
     {"the Slack connect form", %{"slack" => %{"webhook_url" => @secret}}},
     {"the Telegram connect form", %{"telegram" => %{"bot_token" => @secret}}},
     {"the login form", %{"user" => %{"password" => @secret}}},

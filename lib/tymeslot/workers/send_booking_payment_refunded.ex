@@ -12,9 +12,11 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
 
   Loads a fresh booking-payment row inside `perform/1` so the email reflects
   the row's committed state, not whatever was in flight when the job was
-  enqueued. Standard Oban retry semantics apply: up to five attempts on
-  the `:emails` queue with the platform's CircuitBreaker handling
-  upstream-mailer failures.
+  enqueued. The retained host user ID selects the same tested sending identity
+  as booking notifications, even after the meeting itself is deleted. Deleted
+  hosts are discarded without deriving ownership from retained email addresses.
+  Standard bounded retry and circuit-breaker handling apply on the `:emails`
+  queue.
 
   The send is claimed through `Tymeslot.Workers.DeliveryClaims`, so a job the
   Oban lifeline rescues after the email went out does not send it again.
@@ -32,7 +34,9 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
 
   require Logger
 
+  alias Tymeslot.Auth
   alias Tymeslot.Bookings.BookingTitle
+  alias Tymeslot.Emails.BookingDelivery
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded.RefundContext
@@ -42,6 +46,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.DeliveryClaims
+  alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.TransactionalEmailDelivery
 
   @behaviour ExpectedJobOutcome
@@ -49,10 +54,13 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   # The payment is gone, or the recipient already raised its own alert;
   # missing ids and a payment without an attendee email are recorded.
   @payment_gone "booking_payment not found"
+  @host_gone "booking payment host not found"
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
-    do: reason in [@payment_gone] or TransactionalEmailDelivery.recipient_rejected?(reason)
+    do:
+      reason in [@payment_gone, @host_gone] or
+        TransactionalEmailDelivery.recipient_rejected?(reason)
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"booking_payment_id" => booking_payment_id}} = job) do
@@ -85,26 +93,56 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   end
 
   defp send_email(payment, job) do
-    case build_context(payment) do
-      {:ok, context} ->
-        DeliveryClaims.once(job, "refund_email", fn -> deliver(context, payment, job) end)
-
+    with {:ok, _details, sender} <- prepare_sender(payment),
+         {:ok, context} <- build_context(payment) do
+      context = %{context | email_sender: sender}
+      DeliveryClaims.once(job, "refund_email", fn -> deliver(context, payment, job) end)
+    else
       {:error, :missing_attendee_email} ->
         Logger.warning("Refund email skipped — booking_payment has no attendee_email",
           booking_payment_id: payment.id
         )
 
         {:discard, "missing attendee_email"}
+
+      {:error, :owner_not_found} ->
+        Logger.info("Refund email skipped — booking payment host not found",
+          booking_payment_id: payment.id
+        )
+
+        {:discard, @host_gone}
+
+      {:error, reason} ->
+        TransactionalEmailDelivery.handle_failure(reason, "Refund sender resolution failed",
+          booking_payment_id: payment.id,
+          executions: SnoozePolicy.executions(job)
+        )
     end
   end
 
   defp deliver(context, payment, job) do
     context
     |> BookingPaymentRefunded.render()
-    |> TransactionalEmailDelivery.deliver(job, "Refund email delivery failed",
-      booking_payment_id: payment.id
+    |> TransactionalEmailDelivery.deliver(
+      job,
+      "Refund email delivery failed",
+      [booking_payment_id: payment.id],
+      sender: context.email_sender
     )
   end
+
+  # A payment deliberately retains its host ID after meeting/account deletion.
+  # Check the account even with routing disabled: an orphaned retention row must
+  # never recover credentials or infer a new owner from a recycled email address.
+  defp prepare_sender(%BookingPaymentSchema{host_user_id: id, host_deleted_at: nil})
+       when is_integer(id) and id > 0 do
+    case Auth.get_user(id) do
+      {:ok, _host} -> BookingDelivery.prepare(%{organizer_user_id: id})
+      {:error, :not_found} -> {:error, :owner_not_found}
+    end
+  end
+
+  defp prepare_sender(_payment), do: {:error, :owner_not_found}
 
   defp build_context(%BookingPaymentSchema{attendee_email: email}) when email in [nil, ""],
     do: {:error, :missing_attendee_email}

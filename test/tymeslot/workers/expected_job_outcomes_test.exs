@@ -145,7 +145,11 @@ defmodule Tymeslot.Workers.ExpectedJobOutcomesTest do
      expected: ["booking_payment not found", "Recipient permanently undeliverable"],
      recorded: ["missing host_email", "missing booking_payment_id"]},
     {Workers.SendBookingPaymentRefunded,
-     expected: ["booking_payment not found", "Recipient permanently undeliverable"],
+     expected: [
+       "booking_payment not found",
+       "booking payment host not found",
+       "Recipient permanently undeliverable"
+     ],
      recorded: ["missing booking_payment_id", "missing attendee_email"]},
     {Workers.RenewWebhookChannelsWorker,
      expected: [

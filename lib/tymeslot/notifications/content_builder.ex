@@ -8,6 +8,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.BookingRequestLocation
+  alias Tymeslot.EmailSending.Sender
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
@@ -23,7 +24,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
     attendee_timezone = Recipients.get_attendee_timezone(meeting)
     links = MeetingLinks.for_meeting(meeting)
 
-    %{
+    details = %{
       # The calendar event's UID, as in `AppointmentBuilder`: never the
       # booking's capability-bearing `uid`.
       uid: meeting.calendar_uid,
@@ -82,6 +83,8 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       # Organizer contact info for email templates
       organizer_contact_info: build_organizer_contact_info(meeting)
     }
+
+    Sender.copy_from(details, meeting)
   end
 
   # Private functions

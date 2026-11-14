@@ -67,6 +67,8 @@ config :tymeslot,
 
   # Default email settings for standalone use
   email_adapter_default: "smtp",
+  # Opt-in user-owned SMTP identities and dashboard controls for scheduling notifications.
+  user_smtp_enabled: false,
   trial_ending_reminder_template: nil,
   refund_processed_template: nil,
   dispute_alert_template: nil,
@@ -481,6 +483,9 @@ config :phoenix, :json_library, Jason
 # the "Parameters:" line is not emitted at all, but dev runs at :debug and a
 # deployment raising the level must not start logging whatever an organiser
 # typed into a connect form.
+#
+# SMTP usernames are credentials too. Filter the entire SMTP form map rather
+# than the generic "username" key used by public profile forms.
 config :phoenix, :filter_parameters, [
   "password",
   "secret",
@@ -488,6 +493,7 @@ config :phoenix, :filter_parameters, [
   "api_key",
   "webhook_url",
   "custom_meeting_url",
+  "smtp",
   "invite",
   "value",
   "code",

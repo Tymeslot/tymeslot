@@ -53,6 +53,7 @@ defmodule Tymeslot.Notifications.Email.EndChangeEmails do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.Recipient
+  alias Tymeslot.Notifications.Email.DeliveryOutcome
   alias Tymeslot.Notifications.Email.MeetingEmails
   alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Workers.DeliveryClaims
@@ -133,13 +134,16 @@ defmodule Tymeslot.Notifications.Email.EndChangeEmails do
     # record on, and a retry must still give the host the end it replaced.
     host_from = host_previous_end(job_id, meeting.notified_end_time)
     outcomes = attendee_outcomes(meeting, job_id) ++ guest_outcomes(meeting, job_id)
+    failures = for {:failed, _who, reason} <- outcomes, do: {:error, reason}
 
     cond do
       outcomes == [] ->
         {:discard, @nothing_to_tell}
 
-      Enum.any?(outcomes, &match?({:failed, _who}, &1)) ->
-        {:error, "End change notices failed for some recipients"}
+      failures != [] ->
+        {:error,
+         DeliveryOutcome.first_actionable(failures) ||
+           "End change notices failed for some recipients"}
 
       Enum.any?(outcomes, &match?({:sent, _who, _told}, &1)) ->
         notify_host(meeting, outcomes, host_from, job_id)
@@ -259,7 +263,7 @@ defmodule Tymeslot.Notifications.Email.EndChangeEmails do
         reason: LogFormat.reason(reason)
       )
 
-      {:failed, who}
+      {:failed, who, reason}
     end
   end
 
@@ -288,8 +292,8 @@ defmodule Tymeslot.Notifications.Email.EndChangeEmails do
       end)
 
     case outcome(result, %{who: {:organizer, meeting.organizer_name}, known_end: nil}, meeting) do
-      {:failed, _who} ->
-        {:error, "End change notice to the host failed"}
+      {:failed, _who, reason} ->
+        DeliveryOutcome.from_error(reason, "End change notice to the host failed")
 
       _sent_or_rejected ->
         if MeetingSchema.group?(meeting) or HostManaged.managed?(meeting),

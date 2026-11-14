@@ -24,6 +24,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   alias Tymeslot.Emails.Branding
   alias Tymeslot.Emails.Shared.{AvatarHelper, Frame, Sanitise, Stage, Styles, Urls}
   alias Tymeslot.Emails.Shared.Styles.{CSS, Tokens}
+  alias Tymeslot.EmailSending.Sender
   alias Tymeslot.Mailer
   alias Tymeslot.Mailer.Providers
 
@@ -82,6 +83,9 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   system layout's logo header renders identically in every email client
   without needing an external URL.
 
+  `sender:` selects the credential-free From snapshot carried by a booking's
+  runtime details. Without it, the platform configuration supplies the identity.
+
   Defaults to `:transactional` — the safe choice for any email tied to a
   specific user action (booking confirmation, password reset, receipt).
   Override with `tracking: :lifecycle` or `tracking: :marketing` at the call
@@ -92,42 +96,76 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   @spec base_email(keyword()) :: Swoosh.Email.t()
   def base_email(opts \\ []) do
     tracking = Keyword.get(opts, :tracking, :transactional)
+    sender = Keyword.get(opts, :sender)
 
     new()
-    |> from({fetch_from_name(), fetch_from_email()})
+    |> from({fetch_from_name(sender), fetch_from_email(sender)})
     |> Mailer.put_tracking(tracking)
     |> attach_logo()
   end
 
   @doc """
+  Creates an organizer's booking copy with replies directed to the attendee.
+
+  Calendar attachments are intentionally absent: the organizer owns the calendar
+  Tymeslot already updates. An iTIP attachment can make an iMIP-aware mail server
+  import a duplicate event and send another invitation to the attendee.
+  """
+  @spec base_organizer_email(String.t(), map()) :: Swoosh.Email.t()
+  def base_organizer_email(organizer_email, appointment_details) do
+    base_email(sender: Map.get(appointment_details, :email_sender))
+    |> to({appointment_details.organizer_name, organizer_email})
+    |> put_reply_to(appointment_details.attendee_name, appointment_details.attendee_email)
+  end
+
+  @doc """
   Sets `Reply-To` to the other party of a booking, so that a reply reaches
   that person instead of the instance's sending mailbox, which is often a
-  no-reply address. `From` stays the instance address, keeping SPF, DKIM
-  and DMARC aligned with the sending domain.
+  no-reply address. The existing `From` identity selects the comparison
+  address, so custom SMTP and platform messages follow the same reply rules.
 
   Leaves the email untouched when there is no address (a group meeting's
   organiser copy has no single attendee), or when the address is the
-  instance's own sender, where the header would add nothing.
+  selected sender, where the header would add nothing.
   """
   @spec put_reply_to(Swoosh.Email.t(), String.t() | nil, String.t() | nil) :: Swoosh.Email.t()
   def put_reply_to(email, name, address) do
-    if replies_reach?(address),
+    if replies_reach_from?(address, email_from_address(email)),
       do: reply_to(email, {Sanitise.sanitize_for_header(name), String.trim(address)}),
       else: email
   end
+
+  @doc """
+  Uses the organizer's display name for platform mail while preserving an
+  explicitly selected custom SMTP name and address.
+  """
+  @spec from_organizer(Swoosh.Email.t(), String.t() | nil, Sender.t() | nil) :: Swoosh.Email.t()
+  def from_organizer(email, name, sender \\ nil)
+
+  def from_organizer(email, _name, %Sender{kind: :user_smtp} = sender),
+    do: from(email, {fetch_from_name(sender), fetch_from_email(sender)})
+
+  def from_organizer(email, name, sender),
+    do: from(email, {Sanitise.sanitize_for_header(name), fetch_from_email(sender)})
 
   @doc """
   Whether `put_reply_to/3` sets `Reply-To` for `address`, so that a reply
   reaches that person. A template that tells the reader to reply asks this
   first, since without the header a reply goes to the sending mailbox.
   """
-  @spec replies_reach?(String.t() | nil) :: boolean()
-  def replies_reach?(address) when is_binary(address) do
+  @spec replies_reach?(String.t() | nil, Sender.t() | nil) :: boolean()
+  def replies_reach?(address, sender \\ nil),
+    do: replies_reach_from?(address, fetch_from_email(sender))
+
+  defp replies_reach_from?(address, from) when is_binary(address) do
     address = String.trim(address)
-    address != "" and not same_address?(address, fetch_from_email())
+    address != "" and not same_address?(address, from)
   end
 
-  def replies_reach?(_address), do: false
+  defp replies_reach_from?(_address, _from), do: false
+
+  defp email_from_address(%Swoosh.Email{from: {_name, address}}), do: address
+  defp email_from_address(_email), do: fetch_from_email()
 
   defp same_address?(address, from),
     do: String.downcase(address) == String.downcase(String.trim(from))
@@ -177,13 +215,17 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     end
   end
 
-  @doc "Returns the configured from-email."
-  @spec fetch_from_email() :: String.t()
-  def fetch_from_email, do: get_config_email_setting(:from_email)
+  @doc "Returns the selected sender address, or the platform default."
+  @spec fetch_from_email(Sender.t() | nil) :: String.t()
+  def fetch_from_email(sender \\ nil)
+  def fetch_from_email(%Sender{from_address: address}), do: address
+  def fetch_from_email(nil), do: get_config_email_setting(:from_email)
 
-  @doc "Returns the configured from-name."
-  @spec fetch_from_name() :: String.t()
-  def fetch_from_name, do: get_config_email_setting(:from_name)
+  @doc "Returns the selected sender display name, or the platform default."
+  @spec fetch_from_name(Sender.t() | nil) :: String.t()
+  def fetch_from_name(sender \\ nil)
+  def fetch_from_name(%Sender{from_name: name}), do: name
+  def fetch_from_name(nil), do: get_config_email_setting(:from_name)
 
   defp get_config_email_setting(key) do
     case Application.get_env(:tymeslot, :email) do

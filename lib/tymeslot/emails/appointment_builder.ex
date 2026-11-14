@@ -13,6 +13,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Emails.Shared.Formatting
+  alias Tymeslot.EmailSending.Sender
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.HostManaged
@@ -299,6 +300,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     }
     |> Map.merge(snapshot_texts(attendee_meeting))
     |> put_original_texts(meeting, attendee_meeting)
+    # Runtime identity comes from the source meeting, outside translated content.
+    |> Sender.copy_from(meeting)
   end
 
   defp snapshot_texts(meeting) do

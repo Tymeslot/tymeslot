@@ -28,6 +28,7 @@ defmodule Tymeslot.Emails.Templates.PollVoteDigest do
 
   @intent :confirmed
 
+  @doc "Renders with the host sending identity prepared for this execution, or the platform default."
   @spec render(PollSchema.t(), [PollParticipantSchema.t()], String.t()) :: Swoosh.Email.t()
   def render(%PollSchema{} = poll, [_first | _rest] = voters, results_url)
       when is_binary(results_url) do
@@ -49,7 +50,7 @@ defmodule Tymeslot.Emails.Templates.PollVoteDigest do
           stage_subtitle: poll.title
         )
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: poll.email_sender)
       |> to({host_name, poll.user.email})
       |> subject(dgettext("emails_polls", "New responses on \"%{title}\"", title: poll.title))
       |> html_body(html_body)

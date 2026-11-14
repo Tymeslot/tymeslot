@@ -74,7 +74,7 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
           stage_subtitle: details.meeting_type || ""
         )
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: Map.get(details, :email_sender))
       |> to({details.organizer_name, organizer_email})
       |> MjmlEmail.put_reply_to(details.attendee_name, details.attendee_email)
       |> subject(copy.subject)

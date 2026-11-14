@@ -794,3 +794,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your Tymeslot account is ready. Accept the invitation to sign in."
 msgstr ""
+
+#: lib/tymeslot/email_sending.ex
+#, elixir-autogen, elixir-format
+msgid "SMTP sending test"
+msgstr ""
+
+#: lib/tymeslot/email_sending.ex
+#, elixir-autogen, elixir-format
+msgid "Your SMTP server accepted this test message."
+msgstr ""

@@ -847,6 +847,26 @@ msgstr "ist bereits die Adresse einer Ihrer Buchungsseiten"
 msgid "is already the address of one of your meeting types"
 msgstr "ist bereits die Adresse eines Ihrer Termintypen"
 
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be a public SMTP hostname"
+msgstr "muss ein öffentlicher SMTP-Hostname sein"
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be valid UTF-8"
+msgstr "muss gültiges UTF-8 sein"
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must match the selected SMTP port"
+msgstr "muss zum ausgewählten SMTP-Port passen"
+
+#: lib/tymeslot/email_sending/user_smtp_settings_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not contain control characters"
+msgstr "darf keine Steuerzeichen enthalten"
+
 #: lib/tymeslot/meeting_types/group_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Invitation links work only for one-to-one meeting types."

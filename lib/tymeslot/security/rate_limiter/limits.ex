@@ -90,6 +90,16 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
   ]
 
   @limits DashboardLimits.merge_disjoint(%{
+            # SMTP tests open an arbitrary public relay and send a message.
+            # Charge the verified owner before connecting, including failures.
+            user_smtp_test: [
+              prefix: "user_smtp_test:user",
+              scope: :user,
+              limit: 5,
+              window_ms: 10 * @minute,
+              operation: "SMTP test send",
+              log: false
+            ],
             # Auth
             signup_ip: [
               prefix: "signup:ip",

@@ -86,7 +86,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
 
       ics_details = CalendarEventContent.ics_details(invitation_details, attendee_email)
 
-      MjmlEmail.base_email()
+      MjmlEmail.base_email(sender: Map.get(invitation_details, :email_sender))
       |> CalendarEventContent.from_organiser(invitation_details)
       |> to(attendee_email)
       |> MjmlEmail.put_reply_to(
