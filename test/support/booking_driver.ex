@@ -437,7 +437,7 @@ defmodule TymeslotWeb.BookingDriver do
   end
 
   defp drive(view, opts, done, moves_left) do
-    case next_ask(view, done, opts[:meeting_type]) do
+    case view |> tap(&render_async/1) |> next_ask(done, opts[:meeting_type]) do
       :attendee ->
         finish(view, opts)
 

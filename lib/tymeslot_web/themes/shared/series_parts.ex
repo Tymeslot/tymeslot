@@ -344,6 +344,10 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
   attr :count, :integer, required: true
   attr :class, :any, default: nil
 
+  attr :id, :any,
+    default: @total_id,
+    doc: "the id a submit's `aria-describedby` names; nil for a total no submit names"
+
   @doc "\"Total: €200.00\" below a paid series' sessions; nothing for a free type."
   @spec total(map()) :: Phoenix.LiveView.Rendered.t()
   def total(assigns) do
@@ -355,7 +359,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
       )
 
     ~H"""
-    <p :if={@amount} id={total_id()} class={["series-total", @class]} data-testid="series-total">
+    <p :if={@amount} id={@id} class={["series-total", @class]} data-testid="series-total">
       {dgettext("booking_series", "Total: %{amount}", amount: @amount)}
     </p>
     """

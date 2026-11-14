@@ -161,6 +161,34 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   def enter_ready(socket), do: socket
 
   @doc """
+  Brings each fact up to date (`Fact.refresh/1`) that a shown moment
+  collects, has entered and the booking requires: a moment that opened
+  stays entered while it is shown, so what it derived from a fact above it
+  (the series' sessions from the time picked) follows that fact here.
+  Runs after every step event, before `enter_ready/1`.
+  """
+  @spec refresh_shown(Socket.t()) :: Socket.t()
+  def refresh_shown(
+        %Socket{assigns: %{journey: %Journey{navigator: navigator} = journey}} = socket
+      ) do
+    put_off = MapSet.new(Map.keys(deferred(socket)))
+
+    navigator.visible(journey, socket.assigns)
+    |> Enum.filter(fn {moment, _state} -> MapSet.member?(opened(socket), moment.key) end)
+    |> Enum.flat_map(fn {moment, _state} -> Enum.map(moment.collects, &{moment.key, &1}) end)
+    |> Enum.reject(&MapSet.member?(put_off, &1))
+    |> Enum.map(fn {_moment_key, fact_key} -> Journey.fact!(fact_key) end)
+    |> Enum.uniq()
+    |> Enum.reduce(socket, fn fact, acc ->
+      if function_exported?(fact, :refresh, 1) and fact.required?(acc.assigns),
+        do: fact.refresh(acc),
+        else: acc
+    end)
+  end
+
+  def refresh_shown(socket), do: socket
+
+  @doc """
   On a journey whose address follows its facts (`url: :facts`), moves the
   address with them through `ChoicesInUrl.sync/1`, the one writer of a
   booking page's address (`PathHandlers.facts_address/1`), replacing the
@@ -483,7 +511,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   defp deferred(socket), do: socket.assigns[:journey_deferred] || %{}
 
   defp enter_ready_after({:noreply, socket}),
-    do: {:noreply, socket |> enter_ready() |> follow_url()}
+    do: {:noreply, socket |> refresh_shown() |> enter_ready() |> follow_url()}
 
   defp enter_ready_after(other), do: other
 

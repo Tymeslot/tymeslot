@@ -33,6 +33,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
   alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Answers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.SeriesParts
+  alias TymeslotWeb.Themes.Shared.SeriesSummary
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   @question_events ~w(answer multi_toggle)
@@ -73,7 +75,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
       assign(assigns,
         stage: stage,
         next_day_end: LocalizationHelpers.booking_next_day_end(assigns),
-        focus_after: assigns[:focus_after]
+        focus_after: assigns[:focus_after],
+        series_count: SeriesSummary.pending_count(assigns)
       )
 
     assigns = if stage == :questions, do: Events.assign_render_state(assigns), else: assigns
@@ -93,8 +96,11 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
       >
         {dpgettext("booking_voice", "folio", "A little about you")}
       </JourneyComponents.moment_heading>
-      <p class="folio-you__when" data-testid="folio-you-when">
+      <p :if={is_nil(@series_count)} class="folio-you__when" data-testid="folio-you-when">
         {LocalizationHelpers.format_booking_datetime(@selected_date, @selected_time, @user_timezone)}
+      </p>
+      <p :if={@series_count} class="folio-you__when" data-testid="booking-series-summary">
+        {SeriesSummary.summary_line(assigns, @series_count)}
       </p>
       <p
         :if={@next_day_end}
@@ -241,7 +247,16 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
       />
 
       <div class="folio-actions folio-actions--in-order">
+        <SeriesParts.total
+          :if={@series_count}
+          meeting_type={@meeting_type}
+          currency={@host_currency}
+          locale={@locale}
+          count={@series_count}
+          class="folio-booking__price"
+        />
         <SubmitPrice.price
+          :if={is_nil(@series_count)}
           meeting_type={@meeting_type}
           currency={@host_currency}
           locale={@locale}
@@ -253,9 +268,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
           form="booking-form"
           class="folio-button folio-button--primary"
           data-testid="submit-booking"
-          aria-describedby={
-            SubmitPrice.describedby(@meeting_type, @host_currency, @locale, @is_rescheduling)
-          }
+          aria-describedby={SeriesSummary.price_describedby(assigns, @series_count)}
           data-intent="submit"
           disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
         >
@@ -263,18 +276,25 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
             <span class="folio-spinner" aria-hidden="true"></span>
             <span>{dgettext("booking", "Verifying...")}</span>
           <% else %>
-            {BookingLabels.submit_label(
-              @is_rescheduling,
-              @meeting_type,
-              dgettext("booking", "Submit"),
-              :folio
-            )}
+            {submit_label(@is_rescheduling, @meeting_type, @series_count)}
           <% end %>
         </button>
       </div>
     </div>
     """
   end
+
+  defp submit_label(_is_rescheduling, meeting_type, count) when is_integer(count),
+    do: SeriesParts.submit_label(meeting_type, count)
+
+  defp submit_label(is_rescheduling, meeting_type, _single),
+    do:
+      BookingLabels.submit_label(
+        is_rescheduling,
+        meeting_type,
+        dgettext("booking", "Submit"),
+        :folio
+      )
 
   # The questions this booking has not confirmed, one at a time, then the
   # form, which exists once the attendee fact was entered (as the moment

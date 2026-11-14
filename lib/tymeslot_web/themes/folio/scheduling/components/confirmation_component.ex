@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
   Folio's confirmation step: the full masthead, the outcome (confirmed,
   rescheduled, or a request awaiting the organiser's approval) with its
   badge, for a group type the line saying the booking is one of its spots,
-  the meeting's details (with the day it ends on, when that is the next, and
+  the meeting's details (every session of a series, with its links and
+  the link to manage them all, in place of the day and time; with the day it ends on, when that is the next, and
   a note when the address is still to be arranged), the booker's answers,
   and the calendar file and a fresh start.
 
@@ -25,6 +26,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
+  alias TymeslotWeb.Themes.Shared.SeriesSummary
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   @impl Phoenix.LiveComponent
@@ -38,7 +40,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
     assigns =
       assign(assigns,
         pending: ApprovalDisplay.awaiting_approval?(assigns),
-        next_day_end: LocalizationHelpers.booking_next_day_end(assigns)
+        next_day_end: LocalizationHelpers.booking_next_day_end(assigns),
+        series_count: SeriesSummary.booked_count(assigns)
       )
 
     ~H"""
@@ -75,12 +78,21 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
           <p :if={@meeting_type} class="folio-details__subject" data-testid="chosen-meeting-type">
             {@meeting_type.name}
           </p>
+          <SeriesSummary.booked
+            :if={@series_count}
+            series={@series}
+            meetings={@series_meetings}
+            timezone={@user_timezone}
+            organizer_profile={@organizer_profile}
+            label_class="folio-eyebrow"
+            class="folio-series-booked"
+          />
           <dl class="folio-details__list">
-            <div class="folio-details__row">
+            <div :if={is_nil(@series_count)} class="folio-details__row">
               <dt>{dgettext("booking_confirmation", "Date")}</dt>
               <dd>{LocalizationHelpers.format_date(@selected_date)}</dd>
             </div>
-            <div class="folio-details__row">
+            <div :if={is_nil(@series_count)} class="folio-details__row">
               <dt>{dgettext("booking_confirmation", "Time")}</dt>
               <dd>
                 {LocalizationHelpers.format_slot_label(@selected_time)}
@@ -93,7 +105,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
                 </span>
               </dd>
             </div>
-            <div class="folio-details__row">
+            <div :if={is_nil(@series_count)} class="folio-details__row">
               <dt>{dgettext("booking_confirmation", "Timezone")}</dt>
               <dd>
                 {LocalizationHelpers.format_zone_label(@selected_date, @selected_time, @user_timezone)}
@@ -142,7 +154,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
 
         <div class="folio-actions folio-actions--in-order">
           <a
-            :if={PathHandlers.calendar_ics_path(assigns)}
+            :if={is_nil(@series_count) and PathHandlers.calendar_ics_path(assigns)}
             href={PathHandlers.calendar_ics_path(assigns)}
             download
             class="folio-button folio-button--primary"
@@ -189,6 +201,9 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
   # a session weeks away is never mistaken for this week's.
   # The held line names nobody: the shared held sentence under it starts
   # with the visitor's name. With no name to say, the day alone.
+  defp headline(%{series_count: count} = assigns) when is_integer(count),
+    do: SeriesSummary.headline(assigns, count)
+
   defp headline(assigns) do
     name = first_name(assigns[:name])
     weekday = weekday(assigns[:selected_date])
@@ -243,6 +258,9 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
   end
 
   defp weekday(_no_date), do: ""
+
+  defp message(%{series_count: count} = assigns) when is_integer(count),
+    do: SeriesSummary.message(assigns, :folio)
 
   defp message(assigns) do
     case ConfirmationText.status(assigns) do

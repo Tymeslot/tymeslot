@@ -38,6 +38,12 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
   single session, or a series whose last check found every session
   available.
 
+  A choice made for another first session than the slot now picked is not
+  known: on a page that shows the series below the time (a continuous
+  journey, or one screen holding both), picking another time remakes the
+  choice from it (`refresh/1`, which makes a choice forgotten with its slot
+  again too), as entering the moment again does on a paged journey.
+
   Every change to the choice checks it again with
   `Tymeslot.BookingSeries.preview/3` in a `start_async/3` task under
   `:series_preview`, cancelling the one in flight first, and the result is
@@ -102,7 +108,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
   def known?(assigns) do
     case assigns[:series_choice] do
       :single -> assigns[:series_single_allowed?] == true
-      %{} = choice -> checked_available?(assigns, choice)
+      %{} = choice -> fresh?(assigns, choice) and checked_available?(assigns, choice)
       nil -> false
     end
   end
@@ -144,6 +150,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
     end
   end
 
+  # Another time picked while the moment is shown: the choice follows it,
+  # as entering the moment again would. That covers a choice forgotten
+  # with the slot it was made for (`Runtime` clears a changed fact's
+  # dependents) while its moment stayed open.
+  @impl Fact
+  def refresh(socket), do: enter(socket, %{})
+
   @impl Fact
   def continue(socket) do
     cond do
@@ -155,10 +168,15 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
 
   # The series a booking made goes too: a later booking is a booking of its
   # own, single or series.
+  #
+  # A check in flight is not cancelled, only no longer waited for: its
+  # answer is dropped (`handle_async/3` applies one only while checking).
+  # The runtime calls `clear/1` on a socket it keeps, to see which assigns
+  # a fact holds (`Runtime`'s `changed?/3`), and cancelling there would
+  # kill the check the event just started.
   @impl Fact
   def clear(socket) do
     socket
-    |> cancel_check()
     |> assign(
       series_choice: nil,
       series_preview: nil,
@@ -341,12 +359,16 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
 
   @doc """
   A `start_async/3` result: `:series_preview` (a check) or `{:series_week,
-  week_start}` (the picker's week); `:unhandled` for any other name.
+  week_start}` (the picker's week); `:unhandled` for any other name. A
+  check applied enters what waited on the series on the same moment (the
+  details beside it, `Runtime.enter_ready/1`) and lets the navigator settle.
   """
   @spec handle_async(term(), term(), Socket.t()) :: {:noreply, Socket.t()} | :unhandled
   def handle_async(:series_preview, {:ok, {key, result}}, socket) do
     if socket.assigns[:series_checking?] and key == current_key(socket.assigns),
-      do: {:noreply, socket |> apply_check(key, result) |> Runtime.settle()},
+      do:
+        {:noreply,
+         socket |> apply_check(key, result) |> Runtime.enter_ready() |> Runtime.settle()},
       else: {:noreply, socket}
   end
 
@@ -520,6 +542,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
 
   defp preview_answers?(assigns, choice),
     do: is_list(assigns[:series_preview]) and assigns[:series_preview_key] == key(choice)
+
+  defp fresh?(assigns, %{starts: [first | _rest]}) do
+    case first_start(assigns) do
+      %DateTime{} = picked -> DateTime.compare(first, picked) == :eq
+      nil -> false
+    end
+  end
 
   defp checked_available?(assigns, choice) do
     not assigns[:series_checking?] and preview_answers?(assigns, choice) and

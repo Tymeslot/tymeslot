@@ -20,6 +20,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.SeriesParts
+  alias TymeslotWeb.Themes.Shared.SeriesSummary
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   @impl Phoenix.LiveComponent
@@ -30,7 +32,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
+    assigns =
+      assign(assigns,
+        next_day_end: LocalizationHelpers.booking_next_day_end(assigns),
+        series_count: SeriesSummary.pending_count(assigns)
+      )
 
     ~H"""
     <div
@@ -64,8 +70,17 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 <div class="summary-item">
                   <.icon name="hero-calendar" class="summary-icon hero-icon hero-icon--md" />
                   <div>
-                    <div class="summary-value">{LocalizationHelpers.format_date(@selected_date)}</div>
-                    <div class="summary-label">
+                    <div
+                      :if={@series_count}
+                      class="summary-value"
+                      data-testid="booking-series-summary"
+                    >
+                      {SeriesSummary.summary_line(assigns, @series_count)}
+                    </div>
+                    <div :if={is_nil(@series_count)} class="summary-value">
+                      {LocalizationHelpers.format_date(@selected_date)}
+                    </div>
+                    <div :if={is_nil(@series_count)} class="summary-label">
                       {LocalizationHelpers.format_slot_label(@selected_time) ||
                         dgettext("booking", "No time selected")}
                     </div>
@@ -147,7 +162,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               stage={:before}
             />
 
+            <SeriesParts.total
+              :if={@series_count}
+              meeting_type={@meeting_type}
+              currency={@host_currency}
+              locale={@locale}
+              count={@series_count}
+              class="booking-submit-price"
+            />
             <SubmitPrice.price
+              :if={is_nil(@series_count)}
               meeting_type={@meeting_type}
               currency={@host_currency}
               locale={@locale}
@@ -173,9 +197,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 form="booking-form"
                 class="submit-button"
                 data-testid="submit-booking"
-                aria-describedby={
-                  SubmitPrice.describedby(@meeting_type, @host_currency, @locale, @is_rescheduling)
-                }
+                aria-describedby={SeriesSummary.price_describedby(assigns, @series_count)}
                 data-intent="submit"
                 disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
               >
@@ -183,7 +205,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                   <.spinner class="loading-spinner icon-sm" />
                   <span>{dgettext("booking", "Verifying...")}</span>
                 <% else %>
-                  {submit_label(@is_rescheduling, @meeting_type)}
+                  {submit_label(@is_rescheduling, @meeting_type, @series_count)}
                 <% end %>
               </button>
             </div>
@@ -200,7 +222,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   # action makes the difference visible at the moment of committing —
   # including on a reschedule, which re-enters the approval gate on a gated
   # type just as a fresh submission does.
-  defp submit_label(is_rescheduling, meeting_type) do
+  defp submit_label(_is_rescheduling, meeting_type, count) when is_integer(count),
+    do: SeriesParts.submit_label(meeting_type, count)
+
+  defp submit_label(is_rescheduling, meeting_type, _single) do
     BookingLabels.submit_label(
       is_rescheduling,
       meeting_type,

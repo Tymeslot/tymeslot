@@ -286,26 +286,26 @@ msgid_plural "%{count} sessions"
 msgstr[0] "%{count} sessão"
 msgstr[1] "%{count} sessões"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/shared/series_summary.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} session booked"
 msgid_plural "%{count} sessions booked"
 msgstr[0] "%{count} sessão agendada"
 msgstr[1] "%{count} sessões agendadas"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/shared/series_summary.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} session, first on %{date}"
 msgid_plural "%{count} sessions, first on %{date}"
 msgstr[0] "%{count} sessão, a primeira em %{date}"
 msgstr[1] "%{count} sessões, a primeira em %{date}"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Add a session"
 msgstr "Adicionar uma sessão"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Add at least %{count} more session to continue."
 msgid_plural "Add at least %{count} more sessions to continue."
@@ -322,17 +322,17 @@ msgstr "Já passou"
 msgid "Available"
 msgstr "Disponível"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Book a series"
 msgstr "Agendar uma série"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Book a series instead"
 msgstr "Agendar uma série em vez disso"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Book just this session"
 msgstr "Agendar só esta sessão"
@@ -352,30 +352,30 @@ msgstr "Mudar horário"
 msgid "Checking"
 msgstr "Verificando"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #: lib/tymeslot_web/themes/shared/series_parts.ex
 #, elixir-autogen, elixir-format
 msgid "Checking availability…"
 msgstr "Verificando a disponibilidade…"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Choose between %{min} and %{max} sessions."
 msgstr "Escolha entre %{min} e %{max} sessões."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Choose your %{count} session"
 msgid_plural "Choose your %{count} sessions"
 msgstr[0] "Escolha sua %{count} sessão"
 msgstr[1] "Escolha suas %{count} sessões"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Choose your sessions"
 msgstr "Escolha suas sessões"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Fechar"
@@ -385,7 +385,7 @@ msgstr "Fechar"
 msgid "Days"
 msgstr "Dias"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Every session must be available to continue."
 msgstr "Todas as sessões precisam estar disponíveis para continuar."
@@ -400,12 +400,12 @@ msgstr "Sem vagas"
 msgid "Fully booked"
 msgstr "Agenda cheia"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Loading times…"
 msgstr "Carregando horários…"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/shared/series_summary.ex
 #, elixir-autogen, elixir-format
 msgid "Manage all sessions"
 msgstr "Gerenciar todas as sessões"
@@ -435,17 +435,17 @@ msgstr "Não oferecida neste dia"
 msgid "Not open for booking yet"
 msgstr "Ainda não disponível para agendamento"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Number of sessions"
 msgstr "Número de sessões"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "One session fewer"
 msgstr "Uma sessão a menos"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "One session more"
 msgstr "Uma sessão a mais"
@@ -470,8 +470,8 @@ msgstr "Remarcar"
 msgid "Some sessions aren't available at this time. Pick another time for your first session, or book fewer sessions."
 msgstr "Algumas sessões não estão disponíveis neste horário. Escolha outro horário para sua primeira sessão ou agende menos sessões."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#: lib/tymeslot_web/themes/shared/series_summary.ex
 #, elixir-autogen, elixir-format
 msgid "Times in %{zone}"
 msgstr "Horários no fuso %{zone}"
@@ -501,7 +501,7 @@ msgstr "Tentar novamente"
 msgid "We couldn't check the host's calendar just now. Please try again in a moment."
 msgstr "Não conseguimos consultar o calendário do anfitrião agora. Tente novamente em instantes."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/shared/series_summary.ex
 #, elixir-autogen, elixir-format
 msgid "We've emailed you all the details."
 msgstr "Enviamos todos os detalhes para seu e-mail."
@@ -511,12 +511,12 @@ msgstr "Enviamos todos os detalhes para seu e-mail."
 msgid "You already have this session"
 msgstr "Você já tem esta sessão"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "You're booking just this session:"
 msgstr "Você está agendando só esta sessão:"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/shared/series_summary.ex
 #, elixir-autogen, elixir-format
 msgid "Your request for %{count} session has been sent"
 msgid_plural "Your request for %{count} sessions has been sent"
@@ -548,6 +548,5 @@ msgstr[1] "Agendar %{count} sessões"
 #, elixir-autogen, elixir-format
 msgid "Request %{count} session"
 msgid_plural "Request %{count} sessions"
-
 msgstr[0] "Pedir %{count} sessão"
 msgstr[1] "Pedir %{count} sessões"

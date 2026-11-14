@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
+  alias TymeslotWeb.Themes.Shared.SeriesSummary
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   @impl Phoenix.LiveComponent
@@ -29,7 +30,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
+    assigns =
+      assign(assigns,
+        next_day_end: LocalizationHelpers.booking_next_day_end(assigns),
+        series_count: SeriesSummary.booked_count(assigns)
+      )
 
     ~H"""
     <div class="scheduling-box booker-card" data-locale={@locale} data-testid="booker-card">
@@ -99,7 +104,17 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                 </div>
 
                 <div class="ticket-body">
-                  <div class="ticket-row">
+                  <SeriesSummary.booked
+                    :if={@series_count}
+                    series={@series}
+                    meetings={@series_meetings}
+                    timezone={@user_timezone}
+                    organizer_profile={@organizer_profile}
+                    label_class="ticket-sublabel"
+                    class="ticket-series"
+                  />
+
+                  <div :if={is_nil(@series_count)} class="ticket-row">
                     <div class="ticket-icon">
                       <.icon name="hero-calendar" class="hero-icon hero-icon--md" />
                     </div>
@@ -109,7 +124,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     </div>
                   </div>
 
-                  <div class="ticket-row">
+                  <div :if={is_nil(@series_count)} class="ticket-row">
                     <div class="ticket-icon">
                       <.icon name="hero-clock" class="hero-icon hero-icon--md" />
                     </div>
@@ -208,7 +223,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
               <div class="confirmation-actions-section">
                 <a
-                  :if={PathHandlers.calendar_ics_path(assigns)}
+                  :if={is_nil(@series_count) and PathHandlers.calendar_ics_path(assigns)}
                   href={PathHandlers.calendar_ics_path(assigns)}
                   download
                   class="action-button-primary calendar-download-button"
@@ -255,6 +270,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   # Helper functions
   # Which status applies is decided in ConfirmationText (a held request must
   # not be announced as a confirmed meeting); only the wording is Rhythm's.
+  defp headline(%{series_count: count} = assigns) when is_integer(count),
+    do: SeriesSummary.headline(assigns, count)
+
   defp headline(assigns) do
     case ConfirmationText.status(assigns) do
       :held -> dgettext("booking_confirmation", "Request sent!")
@@ -262,6 +280,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
       :confirmed -> dgettext("booking_confirmation", "You're All Set!")
     end
   end
+
+  defp confirmation_message(%{series_count: count} = assigns) when is_integer(count),
+    do: SeriesSummary.message(assigns, :rhythm)
 
   defp confirmation_message(assigns) do
     case ConfirmationText.status(assigns) do

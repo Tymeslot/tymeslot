@@ -35,6 +35,8 @@
 @import "../../shared/components/booking-fields.css";
 @import "./modules/booking-form.css";
 @import "./modules/book.css";
+@import "../../shared/components/series.css";
+@import "./modules/series.css";
 @import "./modules/confirmation.css";
 @import "../../shared/components/manage-pages.css";
 @import "../../shared/components/polls.css";

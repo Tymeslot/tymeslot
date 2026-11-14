@@ -19,10 +19,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
-  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SeriesParts
+  alias TymeslotWeb.Themes.Shared.SeriesSummary
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   use TymeslotWeb.Components.CoreComponents
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
     assigns =
       assign(assigns,
         next_day_end: LocalizationHelpers.booking_next_day_end(assigns),
-        series_count: Series.count(assigns)
+        series_count: SeriesSummary.pending_count(assigns)
       )
 
     ~H"""
@@ -105,18 +105,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     class="booking-datetime text-quill-secondary"
                     data-testid="booking-series-summary"
                   >
-                    {dngettext(
-                      "booking_series",
-                      "%{count} session, first on %{date}",
-                      "%{count} sessions, first on %{date}",
-                      @series_count,
-                      date:
-                        LocalizationHelpers.format_booking_datetime(
-                          @selected_date,
-                          @selected_time,
-                          @user_timezone
-                        )
-                    )}
+                    {SeriesSummary.summary_line(assigns, @series_count)}
                   </p>
                   <p
                     :if={@next_day_end}
@@ -224,7 +213,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       data-testid="submit-booking"
                       aria-describedby={
                         submit_describedby(
-                          price_describedby(assigns),
+                          SeriesSummary.price_describedby(assigns, @series_count),
                           @submitting,
                           @form
                         )
@@ -270,27 +259,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
       :quill
     )
   end
-
-  # The amount the submit's description names: a series' total, or the
-  # single booking's price.
-  defp price_describedby(%{series_count: count} = assigns) when is_integer(count) do
-    if SeriesParts.total_label(
-         assigns.meeting_type,
-         assigns.host_currency,
-         assigns.locale,
-         count
-       ),
-       do: SeriesParts.total_id()
-  end
-
-  defp price_describedby(assigns),
-    do:
-      SubmitPrice.describedby(
-        assigns.meeting_type,
-        assigns.host_currency,
-        assigns.locale,
-        assigns.is_rescheduling
-      )
 
   defp guests_allowed?(assigns), do: GuestBooking.guests_allowed?(assigns)
 

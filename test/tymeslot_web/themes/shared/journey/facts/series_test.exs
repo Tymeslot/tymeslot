@@ -128,6 +128,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.SeriesTest do
       assert Series.continue(socket(stale)) == {:error, :series_required}
     end
 
+    test "not for a checked choice made for another time than the one picked" do
+      checked = checked(choice(), Enum.map(1..3, &occurrence/1))
+
+      refute Series.known?(%{checked | selected_time: "11:00"})
+      refute Series.known?(%{checked | selected_time: nil})
+    end
+
     test "a single session only where the type allows one" do
       assert Series.known?(booking(%{series_choice: :single, series_single_allowed?: true}))
       refute Series.known?(booking(%{series_choice: :single, series_single_allowed?: false}))
@@ -220,6 +227,19 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.SeriesTest do
              }
 
       refute Series.known?(entered.assigns)
+    end
+
+    test "refresh/1 remakes a choice for another time, and one forgotten with its slot" do
+      socket = socket(checked(choice(5), Enum.map(1..5, &occurrence/1)))
+      moved = %{socket | assigns: %{socket.assigns | selected_time: "11:00"}}
+      remade = %{mode: :recurring, starts: [~U[2026-12-01 11:00:00Z]], count: 2}
+
+      assert Series.refresh(moved).assigns.series_choice == remade
+
+      forgotten = %{moved | assigns: %{moved.assigns | series_choice: nil}}
+      assert Series.refresh(forgotten).assigns.series_choice == remade
+
+      assert Series.refresh(socket).assigns.series_choice == choice(5)
     end
 
     test "entering the moment again for the same time keeps the choice" do
