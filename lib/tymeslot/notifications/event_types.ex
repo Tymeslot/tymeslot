@@ -61,6 +61,16 @@ defmodule Tymeslot.Notifications.EventTypes do
 
   @events_by_atom Map.new(@events)
 
+  # Each per-booking event and the series event sent in its place for a
+  # series, which a host subscribing to the one wants as well.
+  @series_counterparts %{
+    "meeting.created" => "meeting.series_created",
+    "meeting.requested" => "meeting.series_requested",
+    "meeting.declined" => "meeting.series_declined",
+    "meeting.request_expired" => "meeting.series_request_expired",
+    "meeting.cancelled" => "meeting.series_cancelled"
+  }
+
   @doc """
   Converts an internal event atom to the event-type string channels store and
   filter on.
@@ -85,4 +95,12 @@ defmodule Tymeslot.Notifications.EventTypes do
   """
   @spec all() :: [String.t()]
   def all, do: Enum.map(@events, fn {_atom, wire_name} -> wire_name end)
+
+  @doc """
+  The series event sent in place of `event` for a booking series
+  (`meeting.series_created` for `meeting.created`, and so on), or nil for
+  an event a series sends as it is.
+  """
+  @spec series_counterpart(String.t()) :: String.t() | nil
+  def series_counterpart(event), do: Map.get(@series_counterparts, event)
 end

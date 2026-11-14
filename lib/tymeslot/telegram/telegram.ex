@@ -470,7 +470,9 @@ defmodule Tymeslot.Telegram do
       user_id: user_id,
       bot_mode: :shared,
       name: dgettext("dashboard_automation_chat", "My Telegram"),
-      events: ["meeting.created"]
+      # Every event, as a new Slack integration starts: the host prunes
+      # them later, and a series is never missed for want of its event.
+      events: TelegramIntegrationSchema.valid_events()
     }
 
     Repo.transaction(fn ->

@@ -174,6 +174,19 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCrudJourneyTest do
       assert has_element?(view, "#telegram-form button[type=submit]:not([disabled])")
     end
 
+    test "ticking Meeting Created ticks Series Booked too", %{conn: conn} do
+      view = open_telegram_tab(conn)
+      open_create_form(view)
+
+      refute has_element?(view, ~s(#telegram-form input[value="meeting.series_created"][checked]))
+
+      view
+      |> element(~s(#telegram-form input[type=checkbox][value="meeting.created"]))
+      |> render_click()
+
+      assert has_element?(view, ~s(#telegram-form input[value="meeting.series_created"][checked]))
+    end
+
     test "a submission with no events selected is rejected", %{conn: conn, user: user} do
       stub_telegram_api(telegram_ok())
 

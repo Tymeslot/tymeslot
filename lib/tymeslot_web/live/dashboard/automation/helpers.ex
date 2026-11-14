@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
@@ -23,7 +24,10 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   alias TymeslotWeb.Live.Shared.RateLimit
 
   @doc """
-  Toggles an event in the list of selected events.
+  Toggles an event in the list of selected events. Ticking an event a
+  series sends in its own form (`EventTypes.series_counterpart/1`, such as
+  "Series Booked" for "Meeting Created") ticks that one too, so a host who
+  asks to hear of bookings hears of series; unticking leaves it as chosen.
   """
   @spec toggle_event(map(), String.t()) :: map()
   def toggle_event(form_values, event) do
@@ -33,10 +37,17 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
       if event in current_events do
         List.delete(current_events, event)
       else
-        [event | current_events]
+        Enum.uniq([event | with_counterpart(current_events, event)])
       end
 
     Map.put(form_values, "events", new_events)
+  end
+
+  defp with_counterpart(events, event) do
+    case EventTypes.series_counterpart(event) do
+      nil -> events
+      counterpart -> [counterpart | events]
+    end
   end
 
   @doc """
