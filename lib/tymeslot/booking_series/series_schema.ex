@@ -8,6 +8,10 @@ defmodule Tymeslot.BookingSeries.SeriesSchema do
   `interval`); a `flexible` one has its sessions picked at different times and
   needs no rule. `uid` is the bearer for the attendee's series page.
 
+  `first_start_at` is when the first session started as booked. It stays
+  put as sessions move, so the year a later session may be moved within
+  (`Tymeslot.BookingSeries.window_until/1`) cannot creep along with them.
+
   `cancelled_at` says no session of the series is left to come: the rest
   were cancelled, whether all at once or one at a time, or its request was
   released. It does not mean every session was cancelled; sessions that
@@ -35,6 +39,7 @@ defmodule Tymeslot.BookingSeries.SeriesSchema do
           attendee_timezone: String.t() | nil,
           attendee_locale: String.t() | nil,
           unit_price_cents: non_neg_integer() | nil,
+          first_start_at: DateTime.t() | nil,
           cancelled_at: DateTime.t() | nil,
           invitee_data_erased_at: DateTime.t() | nil,
           inserted_at: DateTime.t() | nil,
@@ -55,6 +60,7 @@ defmodule Tymeslot.BookingSeries.SeriesSchema do
     field :attendee_timezone, :string
     field :attendee_locale, :string
     field :unit_price_cents, :integer
+    field :first_start_at, :utc_datetime_usec
     field :cancelled_at, :utc_datetime_usec
     field :invitee_data_erased_at, :utc_datetime_usec
 
@@ -84,7 +90,8 @@ defmodule Tymeslot.BookingSeries.SeriesSchema do
     :attendee_email,
     :attendee_timezone,
     :attendee_locale,
-    :unit_price_cents
+    :unit_price_cents,
+    :first_start_at
   ]
 
   @doc "Changeset for creating a series. `cancelled_at` and erasure are never cast."

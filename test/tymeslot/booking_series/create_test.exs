@@ -357,6 +357,32 @@ defmodule Tymeslot.BookingSeries.CreateTest do
                Reschedule.execute(last.uid, move_to(today, 380), host.user.id)
     end
 
+    test "the first session keeps the booking window", %{host: host, today: today} do
+      first = first_session(host)
+
+      assert {:error, {:too_far_ahead, 30}} =
+               Reschedule.execute(first.uid, move_to(today, 40), host.user.id)
+    end
+
+    test "the year stays anchored on the first session as booked", %{
+      host: host,
+      today: today,
+      last: last
+    } do
+      # The first session moved far out: the second, 14 days out, is now
+      # the earliest, but the year still ends on day 372.
+      host
+      |> first_session()
+      |> Changeset.change(
+        start_time: at(today, 360),
+        end_time: DateTime.add(at(today, 360), 30, :minute)
+      )
+      |> Repo.update!()
+
+      assert {:error, {:too_far_ahead, _days}} =
+               Reschedule.execute(last.uid, move_to(today, 375), host.user.id)
+    end
+
     test "a single booking stays inside the window", %{host: host, today: today} do
       single =
         insert(:meeting,
@@ -370,6 +396,14 @@ defmodule Tymeslot.BookingSeries.CreateTest do
       assert {:error, {:too_far_ahead, 30}} =
                Reschedule.execute(single.uid, move_to(today, 57), host.user.id)
     end
+  end
+
+  defp first_session(host) do
+    Repo.one!(
+      from(m in MeetingSchema,
+        where: m.organizer_user_id == ^host.user.id and m.series_position == 1
+      )
+    )
   end
 
   defp move_to(today, days),

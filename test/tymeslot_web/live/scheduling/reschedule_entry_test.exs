@@ -139,8 +139,8 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
       meeting: meeting,
       original_start: original_start
     } do
-      series = insert(:booking_series, organizer_user: user)
       first = DateTime.add(original_start, -6, :day)
+      series = insert(:booking_series, organizer_user: user, first_start_at: first)
 
       insert(:meeting,
         organizer_user_id: user.id,

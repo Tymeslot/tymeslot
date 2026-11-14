@@ -118,7 +118,13 @@ defmodule Tymeslot.Availability.OfferWindowUntilTest do
     end
 
     defp series_id(profile) do
-      insert(:booking_series, organizer_user: nil, organizer_user_id: profile.user_id).id
+      first = DateTime.new!(Date.add(Clock.utc_today(), 1), ~T[09:00:00], "Etc/UTC")
+
+      insert(:booking_series,
+        organizer_user: nil,
+        organizer_user_id: profile.user_id,
+        first_start_at: first
+      ).id
     end
 
     test "offers the day past the window, by date and by month",

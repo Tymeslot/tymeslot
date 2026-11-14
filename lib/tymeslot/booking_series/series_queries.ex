@@ -140,24 +140,13 @@ defmodule Tymeslot.BookingSeries.SeriesQueries do
   end
 
   @doc """
-  When the series' earliest session starts, cancelled ones included, so a
-  session called off or moved away keeps the start the series was booked
-  from. Nil for a series with no session.
+  When the series' first session started as booked (`first_start_at`),
+  however its sessions have moved since. Nil for an unknown series, or one
+  booked with no first start recorded.
   """
   @spec first_start(binary()) :: DateTime.t() | nil
   def first_start(id) when is_binary(id) do
-    meetings = from(m in Meeting, where: m.series_id == ^id, select: min(m.start_time))
-
-    seats =
-      from(p in Participant,
-        join: m in assoc(p, :meeting),
-        where: p.series_id == ^id,
-        select: min(m.start_time)
-      )
-
-    [Repo.one(meetings), Repo.one(seats)]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.min(DateTime, fn -> nil end)
+    Repo.one(from(s in Series, where: s.id == ^id, select: s.first_start_at))
   end
 
   @doc """

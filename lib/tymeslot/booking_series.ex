@@ -260,14 +260,17 @@ defmodule Tymeslot.BookingSeries do
   @type occurrence :: %{:series_id => binary() | nil, optional(atom()) => any()}
 
   @doc """
-  The last day a session of the series `occurrence` (a meeting or a seat)
-  belongs to may be moved to: a year after the series' first session, the
-  span every session was booked within. The booking window binds the first
-  session alone, so a later one can lie past it and still be moved. Nil
-  outside a series.
+  The last day a later session of the series `occurrence` (a meeting or a
+  seat) belongs to may be moved to: a year after the series' first session
+  as booked, the span every session was booked within. The anchor does not
+  move with the sessions, so moving them cannot push the limit later. The
+  booking window binds the first session alone, so a later one can lie past
+  it and still be moved; the first session itself keeps the window, and gets
+  nil, as does an occurrence outside a series.
   """
   @spec window_until(occurrence()) :: Date.t() | nil
   def window_until(%{series_id: nil}), do: nil
+  def window_until(%{series_position: 1}), do: nil
 
   def window_until(%{series_id: series_id}) when is_binary(series_id) do
     case SeriesQueries.first_start(series_id) do

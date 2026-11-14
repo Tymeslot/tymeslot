@@ -305,6 +305,7 @@ defmodule Tymeslot.BookingSeries.Create do
       frequency: if(recurring?, do: type.series_frequency),
       interval: if(recurring?, do: type.series_interval),
       occurrences_count: length(plan.starts),
+      first_start_at: Enum.min(plan.starts, DateTime),
       attendee_name: booking_data.form_data["name"],
       attendee_email: booking_data.form_data["email"],
       attendee_timezone: Timezones.normalize(plan.booker_tz),
