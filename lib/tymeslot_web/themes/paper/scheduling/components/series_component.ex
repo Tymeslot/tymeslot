@@ -33,7 +33,6 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.SeriesComponent do
   def series(assigns) do
     assigns =
       assign(assigns,
-        next_hint: SeriesChooser.next_hint(assigns),
         can_change_time: Details.time_on_screen?(assigns)
       )
 
@@ -67,11 +66,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.SeriesComponent do
         {LocalizationHelpers.format_booking_datetime(@selected_date, @selected_time, @user_timezone)}
       </Details.chosen_time>
 
-      <SeriesChooser.chooser {assigns} target={@target} />
+      <SeriesChooser.chooser {assigns} target={@target} change_time={Details.change_time()} />
 
-      <p :if={@next_hint} id={SeriesChooser.next_hint_id()} class="series-next-hint">
-        {@next_hint}
-      </p>
+      <SeriesChooser.next_hint {assigns} />
     </section>
     """
   end

@@ -17,10 +17,15 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.SeriesMoment do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Phoenix.LiveView.JS
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.SeriesChooser
   alias TymeslotWeb.Themes.Shared.StepEvents
+
+  # The time picked, in the calendar's section above: where the clash
+  # notice's "Change time" takes the focus.
+  @chosen_time "#when-step .slot-list__slot--selected"
 
   @impl Phoenix.LiveComponent
   defdelegate update(assigns, socket), to: StepEvents
@@ -30,7 +35,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.SeriesMoment do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    assigns = assign(assigns, :next_hint, SeriesChooser.next_hint(assigns))
+    assigns = assign(assigns, :change_time, JS.focus(to: @chosen_time))
 
     ~H"""
     <section
@@ -54,11 +59,9 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.SeriesMoment do
         </p>
       </header>
 
-      <SeriesChooser.chooser {assigns} target={@myself} />
+      <SeriesChooser.chooser {assigns} target={@myself} change_time={@change_time} />
 
-      <p :if={@next_hint} id={SeriesChooser.next_hint_id()} class="series-next-hint">
-        {@next_hint}
-      </p>
+      <SeriesChooser.next_hint {assigns} />
     </section>
     """
   end

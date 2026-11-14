@@ -426,8 +426,10 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   # (a time picked for another meeting type's length, the details form opened
   # for it) is forgotten, so settling moves the page back to the first moment
   # still to complete. The fact itself keeps its new value.
+  # A fact may keep them through a change of its own (a known series counted
+  # again keeps the details opened for it, `Fact.keeps_dependents?/2`).
   defp forget_dependents({:noreply, socket}, fact, before) do
-    if changed?(fact, before, socket) do
+    if changed?(fact, before, socket) and not keeps_dependents?(fact, before, socket) do
       key = fact.key()
       {:noreply, clear(socket, Progress.dependents(key, socket.assigns) -- [key])}
     else
@@ -436,6 +438,11 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   end
 
   defp forget_dependents(other, _fact, _before), do: other
+
+  defp keeps_dependents?(fact, before, socket),
+    do:
+      function_exported?(fact, :keeps_dependents?, 2) and
+        fact.keeps_dependents?(before.assigns, socket.assigns)
 
   # What a fact holds is what its `clear/1` resets, so it changed when one of
   # those assigns did. Comparing them, rather than taking every event as a

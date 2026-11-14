@@ -10,11 +10,14 @@ defmodule TymeslotWeb.Themes.Shared.SeriesChooser do
   link that books just the time picked.
 
   It renders with the moment's own assigns (`{assigns}`) plus `target`
-  (the component every control targets), and is made of `SeriesParts`, so
-  its markup, test ids and `data-fact="series"` marks are the same in
-  every theme; each theme styles it through `series.css` and its own
+  (the component every control targets) and, on a page that shows the
+  time picker above the series, `change_time` (the `JS` command that takes
+  the booker back to it, `SeriesParts.unavailable_notice/1`). It is made
+  of `SeriesParts`, so its markup, test ids and `data-fact="series"` marks
+  are the same in every theme; each theme styles it through `series.css` and its own
   stylesheet. `heading/1` and `next_hint/1` are the moment's heading and
-  the line under a way on the booker cannot take yet, in the shared copy.
+  the line under a way on the booker cannot take yet, in the shared copy,
+  and `can_continue?/1` says whether that way on may be taken.
   """
 
   use Phoenix.Component
@@ -53,17 +56,46 @@ defmodule TymeslotWeb.Themes.Shared.SeriesChooser do
   def heading(_meeting_type), do: dgettext("booking_series", "Book a series")
 
   @doc """
+  Whether a way on from the series moment may be taken: the series is
+  known and no check of it is running (a known series the booker changed
+  stays known while it is checked again, `Series.rechecking?/1`, but is
+  not moved on from until the check answers).
+  """
+  @spec can_continue?(map()) :: boolean()
+  def can_continue?(assigns), do: Series.known?(assigns) and assigns[:series_checking?] != true
+
+  @doc """
   Why the booker cannot move on yet, or nil when they can (or a check is
   still answering): a flexible series short of sessions says how many to
   add; any other says every session must be available.
   """
-  @spec next_hint(map()) :: String.t() | nil
-  def next_hint(assigns) do
+  @spec next_hint_text(map()) :: String.t() | nil
+  def next_hint_text(assigns) do
     cond do
       Series.known?(assigns) or assigns[:series_checking?] == true -> nil
       short = missing(assigns) -> short
       true -> dgettext("booking_series", "Every session must be available to continue.")
     end
+  end
+
+  @doc "The id a way on's `aria-describedby` names while `next_hint/1` shows, else nil."
+  @spec next_hint_describedby(map()) :: String.t() | nil
+  def next_hint_describedby(moment_assigns),
+    do: if(next_hint_text(moment_assigns), do: @next_hint_id)
+
+  @doc """
+  The line under the way on, or under the sessions on a page that opens
+  what follows by itself, saying why the booker cannot move on yet
+  (`next_hint_text/1`); nothing once they can. Takes the moment's assigns
+  (`{assigns}`).
+  """
+  @spec next_hint(map()) :: Phoenix.LiveView.Rendered.t()
+  def next_hint(assigns) do
+    assigns = assign(assigns, :hint_text, next_hint_text(assigns))
+
+    ~H"""
+    <p :if={@hint_text} id={next_hint_id()} class="series-next-hint">{@hint_text}</p>
+    """
   end
 
   defp missing(%{
@@ -81,9 +113,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesChooser do
 
   defp missing(_assigns), do: nil
 
-  @doc "The id of the `next_hint/1` line, for the way on's `aria-describedby`."
-  @spec next_hint_id() :: String.t()
-  def next_hint_id, do: @next_hint_id
+  defp next_hint_id, do: @next_hint_id
 
   # No attrs declared: the moment's assigns arrive whole (`{assigns}`), as
   # `SeriesPicker.days/1` and the fact's helpers read them.
@@ -186,7 +216,11 @@ defmodule TymeslotWeb.Themes.Shared.SeriesChooser do
         />
 
         <SeriesParts.check_error :if={@series_error} reason={@series_error} target={@target} />
-        <SeriesParts.unavailable_notice :if={@unavailable?} target={@target} />
+        <SeriesParts.unavailable_notice
+          :if={@unavailable?}
+          target={@target}
+          change_time={assigns[:change_time]}
+        />
 
         <SeriesParts.total
           :if={!@is_rescheduling and is_map(@choice)}

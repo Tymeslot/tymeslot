@@ -269,6 +269,12 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
 
   attr :target, :any, default: nil
 
+  attr :change_time, :any,
+    default: nil,
+    doc:
+      "what \"Change time\" does: nil goes back a step (`back_step`, a paged journey's " <>
+        "time picker); a `JS` command takes the booker to the picker on the same page"
+
   @doc """
   The notice a series with unavailable sessions shows, with the way back to
   the time picker.
@@ -288,8 +294,8 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
         <button
           type="button"
           class="series-notice-action"
-          phx-click="back_step"
-          phx-target={@target}
+          phx-click={@change_time || "back_step"}
+          phx-target={if is_nil(@change_time), do: @target}
           data-testid="series-change-time"
         >
           {dgettext("booking_series", "Change time")}

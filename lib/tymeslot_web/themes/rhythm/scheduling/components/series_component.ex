@@ -15,7 +15,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.SeriesComponent do
 
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
-  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.SeriesChooser
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -27,11 +26,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.SeriesComponent do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    assigns =
-      assign(assigns,
-        known?: Series.known?(assigns),
-        next_hint: SeriesChooser.next_hint(assigns)
-      )
+    assigns = assign(assigns, :can_continue?, SeriesChooser.can_continue?(assigns))
 
     ~H"""
     <div
@@ -74,21 +69,19 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.SeriesComponent do
               </button>
               <button
                 type="button"
-                class={["next-button", not @known? && "disabled"]}
+                class={["next-button", not @can_continue? && "disabled"]}
                 phx-click="next_step"
                 phx-target={@myself}
                 data-testid="next-step"
                 data-intent="continue"
-                disabled={not @known?}
-                aria-describedby={@next_hint && SeriesChooser.next_hint_id()}
+                disabled={not @can_continue?}
+                aria-describedby={SeriesChooser.next_hint_describedby(assigns)}
               >
                 {dgettext("booking", "Next")}
                 <.icon name="hero-arrow-right" class="inline-icon" />
               </button>
             </div>
-            <p :if={@next_hint} id={SeriesChooser.next_hint_id()} class="series-next-hint">
-              {@next_hint}
-            </p>
+            <SeriesChooser.next_hint {assigns} />
           </div>
         </div>
       </div>

@@ -75,6 +75,71 @@ defmodule TymeslotWeb.Live.Scheduling.PaperSeriesTest do
     assert starts == Enum.map(0..3, &DateTime.add(first, &1 * 7, :day))
   end
 
+  # "Change time" stays on the screen: it brings the picker back and takes
+  # the focus to the time picked, a browser-side command with nothing to
+  # send, so its command and its target are what is asserted.
+  @tag :capture_log
+  test "Paper: change time on a clash goes to the time picked", %{conn: conn, day: day} do
+    %{user: user, profile: profile} = organiser(@theme, "paper-change", weekly())
+    clash(user, at_nine(day, 1))
+
+    view = to_series(conn, profile, day, @flow)
+
+    commands = change_time_commands(view)
+
+    assert ["remove_class", %{"names" => ["paper-card--booking"], "to" => "#schedule-step"}] in commands
+
+    assert [["focus", %{"to" => to}]] = Enum.filter(commands, &match?(["focus", _options], &1))
+    assert to =~ "#schedule-step .slot-list__slot--selected"
+    refute Enum.any?(commands, &match?(["push", _options], &1))
+
+    assert has_element?(view, "#schedule-step .slot-list__slot--selected")
+  end
+
+  @tag :capture_log
+  test "Paper: just this session names the time once", %{conn: conn, day: day} do
+    %{profile: profile} =
+      organiser(@theme, "paper-single", Keyword.put(weekly(), :series_required, false))
+
+    view = to_series(conn, profile, day, @flow)
+    view |> element("[data-testid='series-book-single']") |> render_click()
+    _sync = :sys.get_state(view.pid)
+
+    assert has_element?(view, "form[data-fact='attendee']")
+    assert [_one] = find(view, "[data-testid='paper-change-time']")
+    refute has_element?(view, "[data-testid='paper-book-when']")
+  end
+
+  @tag :capture_log
+  test "Paper: another count keeps the details while it is checked", %{conn: conn, day: day} do
+    %{user: user, profile: profile} =
+      organiser(
+        @theme,
+        "paper-recount",
+        Keyword.merge(weekly(), series_min_occurrences: 2, series_max_occurrences: 4)
+      )
+
+    view = to_series(conn, profile, day, @flow)
+    to_details(view, @flow)
+
+    BookingDriver.fill_attendee(view, %{name: "Ada", email: "ada@example.com"})
+    assert has_element?(view, "[data-intent='submit']:not([disabled])")
+
+    gate = hold_calendar()
+    view |> element("[data-testid='series-count-more']") |> render_click()
+    assert_receive {:calendar_held, _check}, 5_000
+
+    assert has_element?(view, "form[data-fact='attendee']")
+    assert has_element?(view, "[data-intent='submit'][disabled]")
+
+    release_calendar(gate)
+    render_async(view)
+    assert has_element?(view, "[data-intent='submit']:not([disabled])", "Book 3 sessions")
+
+    BookingDriver.submit(view, %{name: "Ada", email: "ada@example.com"})
+    assert length(meetings(user)) == 3
+  end
+
   @tag :capture_log
   test "Paper: a clashing date blocks continue", %{conn: conn, day: day} do
     %{user: user, profile: profile} = organiser(@theme, "paper-clash", weekly())
@@ -204,4 +269,17 @@ defmodule TymeslotWeb.Live.Scheduling.PaperSeriesTest do
     |> Floki.find("[data-fact='time']:not([data-alternate])")
     |> Enum.flat_map(&Floki.attribute(&1, "data-value"))
   end
+
+  defp change_time_commands(view) do
+    [command] =
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.attribute("[data-testid='series-change-time']", "phx-click")
+
+    Jason.decode!(command)
+  end
+
+  defp find(view, selector),
+    do: view |> render() |> Floki.parse_document!() |> Floki.find(selector)
 end

@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   alias TymeslotWeb.Live.Scheduling.BookingConfig
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.Journey.Progress
 
   @type transition_fun :: (Phoenix.LiveView.Socket.t(), atom(), map() ->
@@ -36,7 +37,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   @spec submit_booking(Phoenix.LiveView.Socket.t(), map(), transition_fun()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def submit_booking(socket, booking_params, transition_fun) do
-    if socket.assigns[:submitting] do
+    # A series checked again after the booker changed it is booked once
+    # that check answers: the submit waits, disabled, until then.
+    if socket.assigns[:submitting] or Series.rechecking?(socket.assigns) do
       {:noreply, socket}
     else
       case BookingLocation.validate(socket) do

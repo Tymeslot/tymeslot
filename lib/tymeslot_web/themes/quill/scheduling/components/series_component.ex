@@ -17,7 +17,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.SeriesComponent do
 
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
-  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.SeriesChooser
   alias TymeslotWeb.Themes.Shared.StepEvents
@@ -35,8 +34,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.SeriesComponent do
       assign(assigns,
         navigable_steps: Runtime.navigable_steps(assigns),
         step_numbers: Runtime.step_numbers(assigns),
-        known?: Series.known?(assigns),
-        next_hint: SeriesChooser.next_hint(assigns)
+        can_continue?: SeriesChooser.can_continue?(assigns)
       )
 
     ~H"""
@@ -93,21 +91,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.SeriesComponent do
                     phx-target={@myself}
                     data-testid="next-step"
                     data-intent="continue"
-                    disabled={not @known?}
-                    aria-describedby={@next_hint && SeriesChooser.next_hint_id()}
+                    disabled={not @can_continue?}
+                    aria-describedby={SeriesChooser.next_hint_describedby(assigns)}
                     class="flex-1 gap-2"
                   >
                     {dgettext("booking", "Next")}
                     <.icon name="hero-arrow-right" class="inline-icon" />
                   </.action_button>
                 </div>
-                <p
-                  :if={@next_hint}
-                  id={SeriesChooser.next_hint_id()}
-                  class="mt-2 text-center text-sm opacity-80"
-                >
-                  {@next_hint}
-                </p>
+                <SeriesChooser.next_hint {assigns} />
               </div>
             </.glass_morphism_card>
           </div>

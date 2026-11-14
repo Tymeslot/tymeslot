@@ -86,6 +86,54 @@ defmodule TymeslotWeb.SeriesBookingHelpers do
     %{day: Date.add(Date.utc_today(), 1)}
   end
 
+  @doc """
+  Holds every read of the host's calendar from now on, so a series check
+  started next stays in flight until `release_calendar/1`. Returns the
+  gate. The reads wait in their own processes and tell the test they are
+  waiting (`{:calendar_held, pid}`).
+  """
+  @spec hold_calendar() :: pid()
+  def hold_calendar do
+    test = self()
+    {:ok, gate} = Agent.start_link(fn -> {:held, []} end)
+
+    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+      if wait_at(gate) == :held do
+        send(test, {:calendar_held, self()})
+
+        receive do
+          :release -> :ok
+        end
+      end
+
+      {:ok, []}
+    end)
+
+    gate
+  end
+
+  # Registers the reader at a held gate in the same step that reads it, so
+  # a release never misses a reader that saw the gate held.
+  defp wait_at(gate) do
+    reader = self()
+
+    Agent.get_and_update(gate, fn
+      {:held, readers} -> {:held, {:held, [reader | readers]}}
+      :open -> {:open, :open}
+    end)
+  end
+
+  @doc "Lets every held calendar read, and every later one, through."
+  @spec release_calendar(pid()) :: :ok
+  def release_calendar(gate) do
+    gate
+    |> Agent.get_and_update(fn
+      {:held, readers} -> {readers, :open}
+      :open -> {[], :open}
+    end)
+    |> Enum.each(&send(&1, :release))
+  end
+
   @doc "An organiser on `theme_id` offering the one meeting type `type_attrs`."
   @spec organiser(String.t(), String.t(), keyword()) :: map()
   def organiser(theme_id, username, type_attrs),

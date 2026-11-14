@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Folio.Components.Masthead
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
@@ -84,6 +85,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
             meetings={@series_meetings}
             timezone={@user_timezone}
             organizer_profile={@organizer_profile}
+            duration={BookingText.duration_label(assigns)}
             label_class="folio-eyebrow"
             class="folio-series-booked"
           />

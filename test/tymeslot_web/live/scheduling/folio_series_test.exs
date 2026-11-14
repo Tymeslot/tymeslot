@@ -90,15 +90,52 @@ defmodule TymeslotWeb.Live.Scheduling.FolioSeriesTest do
     view = to_series(conn, profile, day, @flow)
     to_details(view, @flow)
 
+    BookingDriver.fill_attendee(view, %{name: "Ada", email: "ada@example.com"})
+    assert has_element?(view, "[data-intent='submit']:not([disabled])")
+
+    token = live_assigns(view).submission_token
+
+    gate = hold_calendar()
     view |> element("[data-testid='series-count-more']") |> render_click()
+    assert_receive {:calendar_held, _check}, 5_000
+
+    # While the new count is checked the series stays done and the details
+    # stay open, with the same submission, and the submit waits.
+    assert has_element?(view, "#series-step[data-moment-state='done']")
+    assert has_element?(view, "#you-step form[data-fact='attendee']")
+    assert has_element?(view, "[data-intent='submit'][disabled]")
+    assert live_assigns(view).submission_token == token
+
+    release_calendar(gate)
     render_async(view)
+
+    # The answer moves no focus: the booker is still at the stepper.
+    assert has_element?(view, "#series-step[data-moment-state='done']")
+    refute live_assigns(view).journey_focus == :series
+    assert live_assigns(view).submission_token == token
 
     assert length(occurrences(view, "available")) == 3
     to_details(view, @flow)
-    assert has_element?(view, "[data-intent='submit']", "Book 3 sessions")
+    assert has_element?(view, "[data-intent='submit']:not([disabled])", "Book 3 sessions")
 
     BookingDriver.submit(view, %{name: "Ada", email: "ada@example.com"})
     assert length(meetings(user)) == 3
+  end
+
+  # "Change time" takes the focus up to the time picked in the calendar
+  # above, a browser-side command with nothing to send, so its command and
+  # its target are what is asserted.
+  @tag :capture_log
+  test "Folio: change time on a clash goes to the time picked", %{conn: conn, day: day} do
+    %{user: user, profile: profile} = organiser(@theme, "folio-change", weekly())
+    clash(user, at_nine(day, 1))
+
+    view = to_series(conn, profile, day, @flow)
+
+    assert [["focus", %{"to" => "#when-step .slot-list__slot--selected"}]] =
+             change_time_commands(view)
+
+    assert has_element?(view, "#when-step .slot-list__slot--selected")
   end
 
   @tag :capture_log
@@ -230,4 +267,16 @@ defmodule TymeslotWeb.Live.Scheduling.FolioSeriesTest do
     |> Floki.find("[data-fact='time']:not([data-alternate])")
     |> Enum.flat_map(&Floki.attribute(&1, "data-value"))
   end
+
+  defp change_time_commands(view) do
+    [command] =
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.attribute("[data-testid='series-change-time']", "phx-click")
+
+    Jason.decode!(command)
+  end
+
+  defp live_assigns(view), do: :sys.get_state(view.pid).socket.assigns
 end

@@ -77,6 +77,59 @@ defmodule TymeslotWeb.Themes.Shared.SeriesSummary do
       )
 
   @doc """
+  The submit's label: "Book 4 sessions" ("Request 4 sessions" on a type the
+  host approves first) for a series, else `single`, the theme's own label
+  for one booking.
+  """
+  @spec submit_label(map(), String.t()) :: String.t()
+  def submit_label(assigns, single) do
+    case pending_count(assigns) do
+      count when is_integer(count) -> SeriesParts.submit_label(assigns.meeting_type, count)
+      nil -> single
+    end
+  end
+
+  @doc """
+  Whether the submit waits: a known series the booker changed is checked
+  again, and booked once that check answers (`Series.rechecking?/1`).
+  """
+  @spec submit_waits?(map()) :: boolean()
+  def submit_waits?(assigns), do: Series.rechecking?(assigns)
+
+  attr :meeting_type, :any, required: true
+  attr :currency, :string, default: nil
+  attr :locale, :string, required: true
+  attr :rescheduling, :boolean, default: false
+  attr :count, :integer, default: nil, doc: "the sessions of a series, nil for one booking"
+  attr :class, :any, default: nil
+
+  @doc """
+  The amount above the submit: a paid series' total (`SeriesParts.total/1`)
+  or one booking's price (`SubmitPrice.price/1`); nothing for a free type.
+  """
+  @spec price(map()) :: Phoenix.LiveView.Rendered.t()
+  def price(assigns) do
+    ~H"""
+    <SeriesParts.total
+      :if={@count}
+      meeting_type={@meeting_type}
+      currency={@currency}
+      locale={@locale}
+      count={@count}
+      class={@class}
+    />
+    <SubmitPrice.price
+      :if={is_nil(@count)}
+      meeting_type={@meeting_type}
+      currency={@currency}
+      locale={@locale}
+      rescheduling={@rescheduling}
+      class={@class}
+    />
+    """
+  end
+
+  @doc """
   The confirmation's headline for a series: "4 sessions booked", or "Your
   request for 4 sessions has been sent" while the host decides.
   """

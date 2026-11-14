@@ -135,6 +135,25 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.SeriesTest do
       refute Series.known?(%{checked | selected_time: nil})
     end
 
+    test "while a known choice the booker changed is checked again" do
+      known = socket(checked(choice(), Enum.map(1..3, &occurrence/1)))
+      {:noreply, recounted} = Series.handle(known, :series_set_count, "4")
+
+      assert Series.rechecking?(recounted.assigns)
+      assert Series.known?(recounted.assigns)
+      assert Series.keeps_dependents?(known.assigns, recounted.assigns)
+    end
+
+    test "not while a choice that was not known is checked again" do
+      lost = occurrence(2, {:unavailable, :booked})
+      unknown = socket(checked(choice(), [occurrence(1), lost, occurrence(3)]))
+      {:noreply, recounted} = Series.handle(unknown, :series_set_count, "4")
+
+      refute Series.rechecking?(recounted.assigns)
+      refute Series.known?(recounted.assigns)
+      refute Series.keeps_dependents?(unknown.assigns, recounted.assigns)
+    end
+
     test "a single session only where the type allows one" do
       assert Series.known?(booking(%{series_choice: :single, series_single_allowed?: true}))
       refute Series.known?(booking(%{series_choice: :single, series_single_allowed?: false}))
@@ -284,6 +303,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.SeriesTest do
       assert {:noreply, failed} = Series.handle_async(:series_preview, {:ok, result}, socket)
       assert failed.assigns.series_error == :availability_unverifiable
       refute Series.known?(failed.assigns)
+    end
+
+    test "a failed check no longer waited for changes nothing" do
+      socket =
+        socket(%{checked(choice(), Enum.map(1..3, &occurrence/1)) | series_checking?: false})
+
+      assert {:noreply, ^socket} = Series.handle_async(:series_preview, {:exit, :boom}, socket)
     end
 
     test "a crashed check is unverifiable; a cancelled one changes nothing" do

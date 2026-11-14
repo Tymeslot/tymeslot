@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
@@ -110,6 +111,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     meetings={@series_meetings}
                     timezone={@user_timezone}
                     organizer_profile={@organizer_profile}
+                    duration={BookingText.duration_label(assigns)}
                     label_class="ticket-sublabel"
                     class="ticket-series"
                   />

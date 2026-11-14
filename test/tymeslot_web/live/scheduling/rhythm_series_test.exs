@@ -50,6 +50,19 @@ defmodule TymeslotWeb.Live.Scheduling.RhythmSeriesTest do
   end
 
   @tag :capture_log
+  test "Rhythm: change time on a clash goes back to the times", %{conn: conn, day: day} do
+    %{user: user, profile: profile} = organiser(@theme, "rhythm-change", weekly())
+    clash(user, at_nine(day, 1))
+
+    view = to_series(conn, profile, day, @flow)
+    view |> element("[data-testid='series-change-time']") |> render_click()
+    _sync = :sys.get_state(view.pid)
+
+    assert has_element?(view, "#schedule-step [data-fact='time']")
+    refute has_element?(view, "[data-testid='series-step']")
+  end
+
+  @tag :capture_log
   test "Rhythm: a clashing date blocks continue", %{conn: conn, day: day} do
     %{user: user, profile: profile} = organiser(@theme, "rhythm-clash", weekly())
     clash(user, at_nine(day, 1))

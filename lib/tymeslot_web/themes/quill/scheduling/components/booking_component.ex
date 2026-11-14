@@ -16,12 +16,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
-  alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
-  alias TymeslotWeb.Themes.Shared.SeriesParts
   alias TymeslotWeb.Themes.Shared.SeriesSummary
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -171,20 +169,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     stage={:before}
                   />
 
-                  <SeriesParts.total
-                    :if={@series_count}
-                    meeting_type={@meeting_type}
-                    currency={@host_currency}
-                    locale={@locale}
-                    count={@series_count}
-                    class="booking-submit-price"
-                  />
-                  <SubmitPrice.price
-                    :if={is_nil(@series_count)}
+                  <SeriesSummary.price
                     meeting_type={@meeting_type}
                     currency={@host_currency}
                     locale={@locale}
                     rescheduling={@is_rescheduling}
+                    count={@series_count}
                     class="booking-submit-price"
                   />
 
@@ -221,7 +211,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       data-intent="submit"
                       class="flex-1"
                     >
-                      {submit_label(@is_rescheduling, @meeting_type, @series_count)}
+                      {SeriesSummary.submit_label(
+                        assigns,
+                        single_label(@is_rescheduling, @meeting_type)
+                      )}
                     </.loading_button>
                   </div>
                   <p
@@ -248,10 +241,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   # part of this whole feature and the one a visitor reads last — including
   # on a reschedule, which re-enters the approval gate on a gated type just
   # as a fresh submission does.
-  defp submit_label(_is_rescheduling, meeting_type, count) when is_integer(count),
-    do: SeriesParts.submit_label(meeting_type, count)
-
-  defp submit_label(is_rescheduling, meeting_type, _single) do
+  defp single_label(is_rescheduling, meeting_type) do
     BookingLabels.submit_label(
       is_rescheduling,
       meeting_type,

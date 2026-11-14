@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Paper.Components
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
@@ -85,6 +86,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
           meetings={@series_meetings}
           timezone={@user_timezone}
           organizer_profile={@organizer_profile}
+          duration={BookingText.duration_label(assigns)}
           class="paper-series-booked"
         />
         <ul class="paper-facts" role="list">

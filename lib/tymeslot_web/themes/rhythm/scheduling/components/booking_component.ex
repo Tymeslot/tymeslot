@@ -17,10 +17,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
-  alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
-  alias TymeslotWeb.Themes.Shared.SeriesParts
   alias TymeslotWeb.Themes.Shared.SeriesSummary
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -162,20 +160,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               stage={:before}
             />
 
-            <SeriesParts.total
-              :if={@series_count}
-              meeting_type={@meeting_type}
-              currency={@host_currency}
-              locale={@locale}
-              count={@series_count}
-              class="booking-submit-price"
-            />
-            <SubmitPrice.price
-              :if={is_nil(@series_count)}
+            <SeriesSummary.price
               meeting_type={@meeting_type}
               currency={@host_currency}
               locale={@locale}
               rescheduling={@is_rescheduling}
+              count={@series_count}
               class="booking-submit-price"
             />
 
@@ -199,13 +189,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 data-testid="submit-booking"
                 aria-describedby={SeriesSummary.price_describedby(assigns, @series_count)}
                 data-intent="submit"
-                disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
+                disabled={
+                  @submitting || !OrganizerHelpers.form_valid?(@form) ||
+                    SeriesSummary.submit_waits?(assigns)
+                }
               >
                 <%= if @submitting do %>
                   <.spinner class="loading-spinner icon-sm" />
                   <span>{dgettext("booking", "Verifying...")}</span>
                 <% else %>
-                  {submit_label(@is_rescheduling, @meeting_type, @series_count)}
+                  {SeriesSummary.submit_label(assigns, single_label(@is_rescheduling, @meeting_type))}
                 <% end %>
               </button>
             </div>
@@ -222,10 +215,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   # action makes the difference visible at the moment of committing —
   # including on a reschedule, which re-enters the approval gate on a gated
   # type just as a fresh submission does.
-  defp submit_label(_is_rescheduling, meeting_type, count) when is_integer(count),
-    do: SeriesParts.submit_label(meeting_type, count)
-
-  defp submit_label(is_rescheduling, meeting_type, _single) do
+  defp single_label(is_rescheduling, meeting_type) do
     BookingLabels.submit_label(
       is_rescheduling,
       meeting_type,

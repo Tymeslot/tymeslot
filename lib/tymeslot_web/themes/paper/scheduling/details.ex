@@ -41,12 +41,10 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
   alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
-  alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer, as: InputRenderer
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
-  alias TymeslotWeb.Themes.Shared.SeriesParts
   alias TymeslotWeb.Themes.Shared.SeriesSummary
 
   # The month's selection is cleared by paging, so it is always on screen; a
@@ -77,10 +75,16 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
         series_count: SeriesSummary.pending_count(assigns)
       )
 
-    # A series names its first session, and changes it, in its own part
-    # above (`Paper...SeriesComponent`).
+    # Where the series part shows above (`Paper...SeriesComponent`), it
+    # names the first session and changes it: the details say only how many
+    # sessions they book, and nothing more for a single session chosen there.
+    series_shown = assigns[:series_shown] == true
+
     assigns =
-      assign(assigns, :can_change_time, is_nil(assigns.series_count) and time_on_screen?(assigns))
+      assign(assigns,
+        series_shown: series_shown,
+        can_change_time: not series_shown and time_on_screen?(assigns)
+      )
 
     ~H"""
     <section class="paper-book" data-testid="paper-book" aria-labelledby="paper-book-heading">
@@ -113,6 +117,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
         </h2>
       </div>
       <.chosen_time
+        :if={@series_count || not @series_shown}
         can_change={@can_change_time}
         testid={if @series_count, do: "booking-series-summary", else: "paper-book-when"}
       >
@@ -158,18 +163,25 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
         type="button"
         class="paper-book__change"
         data-testid="paper-change-time"
-        phx-click={
-          JS.remove_class("paper-card--booking", to: "#schedule-step")
-          |> JS.focus(
-            to:
-              "#schedule-step .slot-list__slot--selected, #schedule-step [data-fact='slot'][aria-pressed='true']"
-          )
-        }
+        phx-click={change_time()}
       >
         {dpgettext("booking_voice", "paper", "Change time")}
       </button>
     </p>
     """
+  end
+
+  @doc """
+  What "Change time" does: brings the picker back on a wide card and takes
+  the focus to the chosen time in it (the month's selected time, or the
+  week's pressed one). The series part's clash notice does the same.
+  """
+  @spec change_time() :: JS.t()
+  def change_time do
+    JS.focus(JS.remove_class("paper-card--booking", to: "#schedule-step"),
+      to:
+        "#schedule-step .slot-list__slot--selected, #schedule-step [data-fact='slot'][aria-pressed='true']"
+    )
   end
 
   # Every question at once, in the definitions' order, each with the error
@@ -271,20 +283,12 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
       stage={:before}
     />
 
-    <SeriesParts.total
-      :if={@series_count}
-      meeting_type={@meeting_type}
-      currency={@host_currency}
-      locale={@locale}
-      count={@series_count}
-      class="paper-book__price"
-    />
-    <SubmitPrice.price
-      :if={is_nil(@series_count)}
+    <SeriesSummary.price
       meeting_type={@meeting_type}
       currency={@host_currency}
       locale={@locale}
       rescheduling={@is_rescheduling}
+      count={@series_count}
       class="paper-book__price"
     />
 
@@ -296,23 +300,23 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
         data-testid="submit-booking"
         aria-describedby={SeriesSummary.price_describedby(assigns, @series_count)}
         data-intent="submit"
-        disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
+        disabled={
+          @submitting || !OrganizerHelpers.form_valid?(@form) ||
+            SeriesSummary.submit_waits?(assigns)
+        }
       >
         <%= if @submitting do %>
           <.spinner class="paper-spinner" aria-hidden="true" />
           <span>{dpgettext("booking_voice", "paper", "Sending…")}</span>
         <% else %>
-          {submit_label(@is_rescheduling, @meeting_type, @series_count)}
+          {SeriesSummary.submit_label(assigns, single_label(@is_rescheduling, @meeting_type))}
         <% end %>
       </button>
     </div>
     """
   end
 
-  defp submit_label(_is_rescheduling, meeting_type, count) when is_integer(count),
-    do: SeriesParts.submit_label(meeting_type, count)
-
-  defp submit_label(is_rescheduling, meeting_type, _single),
+  defp single_label(is_rescheduling, meeting_type),
     do:
       BookingLabels.submit_label(
         is_rescheduling,
