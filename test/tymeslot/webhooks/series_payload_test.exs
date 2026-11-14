@@ -26,8 +26,12 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.CalendarMock
+  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
+  alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
+  alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Notifications.ChannelFanout
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Slack.MessageBuilder
@@ -47,6 +51,14 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
     "meeting.series_cancelled",
     "meeting.requested"
   ]
+
+  defmodule NoAutomations do
+    @moduledoc false
+    @behaviour Tymeslot.Features.CheckerBehaviour
+    @impl Tymeslot.Features.CheckerBehaviour
+    def check_access(_user_id, :automations_allowed), do: {:error, :insufficient_plan}
+    def check_access(_user_id, _feature), do: :ok
+  end
 
   setup :verify_on_exit!
 
@@ -112,6 +124,10 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
       from(m in MeetingSchema, where: not is_nil(m.series_id), order_by: m.series_position)
     )
   end
+
+  defp statuses_of_series, do: Enum.map(sessions(), & &1.status)
+
+  defp positions(sessions), do: Enum.map(sessions, & &1["position"])
 
   # Runs the series' confirmation, then the automation job it queued.
   defp announce(series) do
@@ -329,6 +345,26 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
     assert Enum.all?(body["data"]["series"]["sessions"], &is_binary(&1["seat_id"]))
   end
 
+  test "an event about one seat of a group series carries the seat's place" do
+    host = host()
+    subscribe(host)
+    assert {:ok, %{series: series}} = book(host, series_type(host, max_participants: 3), 3)
+
+    seat =
+      Repo.one!(
+        from(p in ParticipantSchema,
+          where: p.series_id == ^series.id and p.series_position == 2,
+          preload: :meeting
+        )
+      )
+
+    assert :ok = ChannelFanout.dispatch(:meeting_cancelled, SeatView.at_event(seat.meeting, seat))
+    assert [delivery] = deliveries("meeting.cancelled")
+
+    assert posted_body(delivery)["data"]["series"] ==
+             %{"id" => series.id, "position" => 2, "count" => 3}
+  end
+
   test "Telegram gets one message for a series" do
     setup_config(:tymeslot, telegram_notifications_allowed: true)
     host = host()
@@ -351,6 +387,64 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
              "Etc/UTC",
              summary
            ) =~ "<b>Ada Lovelace</b> booked 2 sessions of <i>Mentoring</i>, starting"
+  end
+
+  test "a late payment for a lapsed series fires series_created once and no booking created" do
+    setup_config(:tymeslot, meeting_payments_enabled: true)
+    host = Paid.paid_host()
+    subscribe(host)
+    Paid.expect_checkout()
+
+    stub(StripeAdapterMock, :retrieve_payment_intent, fn _intent, _opts ->
+      {:ok, %{"latest_charge" => "ch_SERIES"}}
+    end)
+
+    assert {:ok, :payment_required, %{series: series}} =
+             Paid.book(host, Paid.paid_series_type(host), 2)
+
+    assert :ok = CheckoutSessionExpired.handle(Paid.expired_event("evt_LAPSED", series.id))
+
+    event = Paid.completed_event("evt_LATE", series.id, 2 * Paid.price_cents())
+    assert :ok = CheckoutSessionCompleted.handle(event)
+    assert statuses_of_series() == [:confirmed, :confirmed]
+
+    announce(series)
+
+    assert deliveries("meeting.created") == []
+    assert [_one] = deliveries("meeting.series_created")
+  end
+
+  test "cancel all remaining lists only the sessions it cancelled" do
+    host = host()
+    subscribe(host)
+    assert {:ok, %{series: series}} = book(host, series_type(host), 3)
+    [_first, second, _third] = sessions()
+    assert {:ok, _cancelled} = Cancel.execute(second, caller: :attendee)
+    Repo.delete_all(Job)
+
+    assert {:ok, %{cancelled: [_one, _two]}} =
+             BookingSeries.cancel_remaining(series, caller: :attendee)
+
+    run_automation()
+    assert [delivery] = deliveries("meeting.series_cancelled")
+
+    assert delivery |> posted_body() |> get_in(["data", "series", "sessions"]) |> positions() ==
+             [1, 3]
+  end
+
+  test "a host without automations gets no series events" do
+    setup_config(:tymeslot, feature_access_checker: NoAutomations)
+    host = host()
+    subscribe(host)
+    assert {:ok, %{series: series}} = book(host, series_type(host), 2)
+
+    announce(series)
+    assert all_enqueued(worker: WebhookWorker) == []
+
+    Repo.delete_all(from(j in Job, where: j.worker == "Tymeslot.Workers.SeriesAutomationWorker"))
+    assert {:ok, _cancelled} = BookingSeries.cancel_remaining(series, caller: :attendee)
+    run_automation()
+    assert all_enqueued(worker: WebhookWorker) == []
   end
 
   describe "subscribing" do

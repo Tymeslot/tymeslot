@@ -349,12 +349,12 @@ defmodule TymeslotWeb.Journeys.RecurringBookingsJourneyTest do
     assert Enum.map(seats, & &1.series_position) == Enum.to_list(1..6)
     assert Enum.at(seats, 2).meeting_id == week_three.id
 
-    assert Repo.aggregate(
-             from(p in ParticipantSchema,
-               where: p.meeting_id == ^week_three.id and is_nil(p.cancelled_at)
-             ),
-             :count
-           ) == 2
+    # The host sees two of the class's four seats taken in week 3.
+    host_view = dashboard(conn, user)
+
+    assert host_view
+           |> element("#meetings-#{week_three.id} [data-testid='group-seats-badge']")
+           |> render() =~ "2/4 seats taken"
   end
 
   @tag :capture_log

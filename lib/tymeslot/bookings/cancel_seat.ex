@@ -49,7 +49,7 @@ defmodule Tymeslot.Bookings.CancelSeat do
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.Meetings.SeatLookup
-  alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.Events.Seats
   alias Tymeslot.Repo
 
   @doc """
@@ -120,11 +120,11 @@ defmodule Tymeslot.Bookings.CancelSeat do
     case outcome do
       {:cancelled, cancelled_meeting} ->
         Cancel.finalise_cancellation(cancelled_meeting, told)
-        Events.seat_cancelled(meeting, participant, [slot_freed: true] ++ told)
+        Seats.seat_cancelled(meeting, participant, [slot_freed: true] ++ told)
 
       :seats_remain ->
         CalendarJobs.schedule_job(meeting, "update")
-        Events.seat_cancelled(meeting, participant, told)
+        Seats.seat_cancelled(meeting, participant, told)
     end
 
     :ok
@@ -222,12 +222,12 @@ defmodule Tymeslot.Bookings.CancelSeat do
 
     case SeatRelease.release(meeting) do
       {:ok, :meeting_cancelled} ->
-        Events.seat_cancelled(meeting, cancelled, slot_freed: true)
+        Seats.seat_cancelled(meeting, cancelled, slot_freed: true)
         {:ok, :meeting_cancelled}
 
       {:ok, :seats_remain} ->
         CalendarJobs.schedule_job(meeting, "update")
-        Events.seat_cancelled(meeting, cancelled)
+        Seats.seat_cancelled(meeting, cancelled)
         {:ok, :seat_cancelled}
 
       {:error, :release_check_failed} ->
@@ -239,7 +239,7 @@ defmodule Tymeslot.Bookings.CancelSeat do
         # and the organiser still needs telling. `SeatRelease` has already
         # alerted on the check itself failing.
         CalendarJobs.schedule_job(meeting, "update")
-        Events.seat_cancelled(meeting, cancelled)
+        Seats.seat_cancelled(meeting, cancelled)
         {:ok, :seat_cancelled}
     end
   end

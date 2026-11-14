@@ -239,6 +239,23 @@ defmodule Tymeslot.BookingSeries do
   defdelegate describe_rule(series_or_type, locale, opts \\ []), to: Rule, as: :describe
 
   @doc """
+  How the rhythm of `series` reads as its sessions now stand, each of
+  `starts` read in `timezone`: with its day and time while every session
+  keeps them, the rhythm alone once one was moved. See
+  `Tymeslot.BookingSeries.Rule.describe_sessions/5`.
+  """
+  @spec describe_rule_for_sessions(
+          SeriesSchema.t(),
+          [DateTime.t()],
+          String.t(),
+          String.t(),
+          keyword()
+        ) :: String.t() | nil
+  defdelegate describe_rule_for_sessions(series, starts, locale, timezone, opts \\ []),
+    to: Rule,
+    as: :describe_sessions
+
+  @doc """
   What a series of `count` sessions of `meeting_type` costs, in cents: the
   type's price for each session, as its checkout bills it (one line at the
   unit price, the session count as its quantity). Nil for a type that takes

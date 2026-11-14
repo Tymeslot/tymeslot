@@ -22,7 +22,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.GroupAccess
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.Events.Seats
 
   @doc "True when the booking's meeting type holds more than one seat."
   @spec applicable?(map()) :: boolean()
@@ -182,7 +182,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
     with {:ok, _job} <- SeatEffects.schedule_calendar_job(meeting, created?),
          {:ok, defer_emails?} <- schedule_new_slot_jobs(created?, meeting, emails?, opts),
          {{:ok, _scheduled}, pending} <-
-           Events.seat_booked_deferred(meeting, participant,
+           Seats.seat_booked_deferred(meeting, participant,
              defer_emails?: defer_emails?,
              emails: emails?,
              integrations: emails?

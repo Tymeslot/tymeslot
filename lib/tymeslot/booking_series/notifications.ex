@@ -168,8 +168,8 @@ defmodule Tymeslot.BookingSeries.Notifications do
   defp confirm_or_wait(_pending, _series, false), do: {:snooze, @room_wait_seconds}
 
   # The automations hear of the series with its emails, in one step: both
-  # are queued once per series ever, so a confirmation run again announces
-  # nothing twice (`Tymeslot.BookingSeries.Automation`).
+  # are unique per series while Oban keeps them, so a confirmation run again
+  # announces nothing twice (`Tymeslot.BookingSeries.Automation`).
   defp queue_confirmation(series) do
     queued =
       Repo.transaction(fn ->

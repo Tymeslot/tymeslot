@@ -7,11 +7,21 @@ defmodule Tymeslot.Workers.SeriesAutomationWorker do
 
   The job only schedules the per-integration deliveries, each its own job
   with its own retries, so it has nothing to retry itself beyond a series
-  it cannot read.
+  it cannot read or a plan it could not check.
 
-  Unique per series and event for good, a completed job included: the
-  series confirmation can be queued again (an announcement job rescued
-  after a node stopped mid-run), and must not announce the series twice.
+  A `meeting.series_created` job is unique per series while Oban keeps it,
+  a completed one included: the series confirmation can be queued again
+  (an announcement job rescued after a node stopped mid-run), and must not
+  announce the series twice. Oban prunes completed jobs after a week, which
+  bounds that guarantee; nothing queues a confirmation that late. A
+  `meeting.series_cancelled` job is unique only while it is still to run:
+  cancelling the rest of a series happens once, in a transaction that
+  finds nothing left to cancel the second time.
+
+  The fan-out itself is claimed (`Tymeslot.Workers.DeliveryClaims`), so
+  this job rescued after it scheduled the deliveries does not schedule them
+  again. As for any claim, a node stopping between the claim and the end
+  of the fan-out leaves the integrations not yet reached unannounced.
   """
 
   use Oban.Worker,
@@ -24,16 +34,15 @@ defmodule Tymeslot.Workers.SeriesAutomationWorker do
   alias Tymeslot.BookingSeries.Automation
   alias Tymeslot.BookingSeries.SeriesQueries
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Workers.DeliveryClaims
 
   @behaviour ExpectedJobOutcome
 
   @series_gone "Series not found"
 
-  @once_per_series_event [
-    period: :infinity,
-    keys: [:series_id, :event_type],
-    states: [:suspended, :available, :scheduled, :executing, :retryable, :completed]
-  ]
+  @series_created "meeting.series_created"
+
+  @still_to_run [:suspended, :available, :scheduled, :executing, :retryable]
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason), do: reason == @series_gone
@@ -46,14 +55,23 @@ defmodule Tymeslot.Workers.SeriesAutomationWorker do
   def new_event(series_id, event_type, occurrence_ids \\ nil) do
     %{"series_id" => series_id, "event_type" => event_type}
     |> put_occurrences(occurrence_ids)
-    |> new(unique: @once_per_series_event)
+    |> new(
+      unique: [period: :infinity, keys: [:series_id, :event_type], states: states(event_type)]
+    )
   end
 
+  defp states(@series_created), do: [:completed | @still_to_run]
+  defp states(_event_type), do: @still_to_run
+
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"series_id" => series_id, "event_type" => event_type} = args}) do
+  def perform(
+        %Oban.Job{args: %{"series_id" => series_id, "event_type" => event_type} = args} = job
+      ) do
     case SeriesQueries.get(series_id) do
       {:ok, series} ->
-        Automation.announce(series, event_type, args["occurrence_ids"])
+        DeliveryClaims.once(job, "series_automation", fn ->
+          Automation.announce(series, event_type, args["occurrence_ids"])
+        end)
 
       {:error, :not_found} ->
         Logger.info("Series not found, discarding its automation event",

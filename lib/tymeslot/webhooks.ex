@@ -341,10 +341,11 @@ defmodule Tymeslot.Webhooks do
       # a retried delivery replays what this event asserted rather than whatever
       # the meeting has become since. Without it a retried `meeting.requested`
       # would report `status: "confirmed"` under a request envelope once the
-      # host had answered. Everything not snapshotted (guests, join links) is
-      # still read fresh at delivery, which is what you want for those. The
-      # event's `series` object rides in the snapshot too: it is what the
-      # event said, read once.
+      # host had answered. Everything else about the meeting (guests, its
+      # join link) is still read fresh at delivery, which is what you want for
+      # those. The event's `series` object rides in the snapshot instead, so
+      # a series event's sessions, their join links included, are as they
+      # stood when the event was announced.
       WebhookWorker.schedule_delivery(
         webhook.id,
         event_type,

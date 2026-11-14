@@ -77,7 +77,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.Events.Seats
   alias UUID
 
   @typedoc "New-slot parameters, same shape as `Bookings.Reschedule`."
@@ -483,7 +483,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     # still worth having ready, quietly, for whoever opens the new event.
     if booked.created_meeting?, do: SeatEffects.schedule_new_slot_effects(booked.meeting)
 
-    Events.seat_rescheduled(booked.meeting, booked.participant, old_meeting, old_participant,
+    Seats.seat_rescheduled(booked.meeting, booked.participant, old_meeting, old_participant,
       old_slot_freed: old_slot_freed?
     )
 

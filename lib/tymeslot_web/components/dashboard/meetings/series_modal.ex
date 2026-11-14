@@ -21,7 +21,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.SeriesModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.BookingSeries
-  alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Modal
@@ -225,19 +224,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.SeriesModal do
   # phrase while every session keeps it, the rhythm alone once one was
   # moved, as the booker's series page words it.
   defp rule(%{series: series, sessions: sessions}, timezone, time_format) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-
-    phrases =
-      sessions
-      |> Enum.map(fn session ->
-        local = DateTimeUtils.convert_to_timezone(session.start_time, timezone)
-        BookingSeries.describe_rule(series, locale, first_start: local, time_format: time_format)
-      end)
-      |> Enum.uniq()
-
-    case phrases do
-      [phrase] -> phrase
-      _moved -> BookingSeries.describe_rule(series, locale)
-    end
+    BookingSeries.describe_rule_for_sessions(
+      series,
+      Enum.map(sessions, & &1.start_time),
+      Gettext.get_locale(TymeslotWeb.Gettext),
+      timezone,
+      time_format: time_format
+    )
   end
 end

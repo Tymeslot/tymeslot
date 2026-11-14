@@ -9,8 +9,9 @@ defmodule Tymeslot.Meetings.SeatView do
   in `attendee_*`, their seat URLs), narrows a loaded `guests` list to the
   guests that participant invited, and records the seat in the virtual
   `seat` field: which participant it is, how many seats were taken on the
-  slot when the event fired, and, for a seat a move created, the seat it
-  replaced (`previous`).
+  slot when the event fired, for a seat a move created, the seat it
+  replaced (`previous`), and the seat's place in a booking series
+  (`series_id`, `series_position`).
 
   A cancelled seat on a meeting that is still on reads as cancelled, at the
   time the seat was given up: to an integration that seat is a booking, and
@@ -122,7 +123,13 @@ defmodule Tymeslot.Meetings.SeatView do
     put_seat_status(
       %{
         seen
-        | seat: %{participant_id: participant.id, seats_taken: seats_taken, previous: previous},
+        | seat: %{
+            participant_id: participant.id,
+            seats_taken: seats_taken,
+            previous: previous,
+            series_id: participant.series_id,
+            series_position: participant.series_position
+          },
           guests: seat_guests(seen.guests, participant.id)
       },
       participant

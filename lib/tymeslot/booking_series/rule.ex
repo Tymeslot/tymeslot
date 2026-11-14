@@ -34,6 +34,7 @@ defmodule Tymeslot.BookingSeries.Rule do
 
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
@@ -72,6 +73,30 @@ defmodule Tymeslot.BookingSeries.Rule do
         Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
           phrase(frequency, interval, Keyword.get(opts, :first_start), locale, opts)
         end)
+    end
+  end
+
+  @doc """
+  The rhythm of `series` as its sessions now stand, each start read in
+  `timezone`: the full phrase while every session keeps the series' day and
+  time, the rhythm alone once one was moved, since a moved session (the
+  first one included) would otherwise put its own day and time on the whole
+  series. Nil for a flexible series. `opts` as for `describe/3`.
+  """
+  @spec describe_sessions(SeriesSchema.t(), [DateTime.t()], String.t(), String.t(), keyword()) ::
+          String.t() | nil
+  def describe_sessions(%SeriesSchema{} = series, starts, locale, timezone, opts \\ []) do
+    phrases =
+      starts
+      |> Enum.map(fn start ->
+        {local, _zone} = DateTimeUtils.shift_or_utc(start, timezone)
+        describe(series, locale, Keyword.put(opts, :first_start, local))
+      end)
+      |> Enum.uniq()
+
+    case phrases do
+      [phrase] -> phrase
+      _none_or_moved -> describe(series, locale, Keyword.delete(opts, :first_start))
     end
   end
 

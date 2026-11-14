@@ -10,7 +10,9 @@ defmodule Tymeslot.Emails.EmailScheduler.SeriesScheduler do
   alias Tymeslot.Emails.EmailScheduler.Helpers
   alias Tymeslot.Workers.EmailWorker
 
-  # An email a series sends once in its life: a completed job counts too.
+  # An email a series sends once in its life: a completed job counts too,
+  # for as long as Oban keeps it (the Pruner removes completed jobs after a
+  # week, and nothing schedules these that late).
   @once_per_series [
     period: :infinity,
     fields: [:args, :queue],
@@ -20,9 +22,9 @@ defmodule Tymeslot.Emails.EmailScheduler.SeriesScheduler do
 
   @doc """
   Schedules the series confirmation to its booker and organiser, now. One
-  per series ever: a completed job counts too, so an announcement job run
-  again (rescued after a node stopped mid-run) cannot queue a second
-  confirmation once the first has gone out.
+  per series: a completed job counts too, while Oban keeps it (a week), so
+  an announcement job run again (rescued after a node stopped mid-run)
+  cannot queue a second confirmation once the first has gone out.
   """
   @spec schedule_series_confirmation_emails(binary()) :: :ok | {:error, term()}
   def schedule_series_confirmation_emails(series_id) do

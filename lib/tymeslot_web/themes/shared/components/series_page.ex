@@ -326,21 +326,13 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
   # would otherwise put its own day and time on the whole series, so then
   # the rhythm is named alone.
   defp rule(%{series: series, sessions: [_first | _rest] = sessions} = assigns) do
-    phrases =
-      sessions
-      |> Enum.map(&rule_from(series, &1.start_time, assigns))
-      |> Enum.uniq()
-
-    case phrases do
-      [phrase] -> phrase
-      _moved -> BookingSeries.describe_rule(series, assigns.locale)
-    end
+    BookingSeries.describe_rule_for_sessions(
+      series,
+      Enum.map(sessions, & &1.start_time),
+      assigns.locale,
+      assigns.timezone
+    )
   end
 
   defp rule(_assigns), do: nil
-
-  defp rule_from(series, start, %{timezone: timezone, locale: locale}) do
-    {:ok, local} = LocalizationHelpers.to_attendee_datetime(start, timezone)
-    BookingSeries.describe_rule(series, locale, first_start: local)
-  end
 end

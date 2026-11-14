@@ -10,9 +10,10 @@ defmodule Tymeslot.BookingSeries.Automation do
   inserted beside the emails it accompanies: the series confirmation, once
   every session's video room exists (`Tymeslot.BookingSeries.Notifications`),
   so the payload carries each session's join link; and the series
-  cancellation (`Tymeslot.BookingSeries.Cancel`). The job is unique per
-  series and event for good, a completed one included, so a confirmation
-  run again, a retry or a snooze can never announce a series twice.
+  cancellation (`Tymeslot.BookingSeries.Cancel`). A confirmation run
+  again, a retry or a snooze does not announce a series twice: the job is
+  unique per series while Oban keeps it, and its fan-out is claimed (see
+  the worker for the limits of both).
 
   The event is about the series' first session, as an event about one
   booking is, and carries a `series` object: its id, mode, session count,
@@ -29,14 +30,12 @@ defmodule Tymeslot.BookingSeries.Automation do
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
-  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Notifications.ChannelFanout
   alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Notifications.Recipients
-  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Workers.SeriesAutomationWorker
 
   # Integrations read English, as their messages are.
@@ -96,7 +95,9 @@ defmodule Tymeslot.BookingSeries.Automation do
         meeting = as_booking(first)
 
         event_type
-        |> ChannelFanout.dispatch(meeting, series: summary(series, meeting, sessions))
+        |> ChannelFanout.dispatch(meeting,
+          series: summary(series, meeting, sessions, occurrences)
+        )
         |> retry_only_unchecked()
     end
   end
@@ -117,21 +118,11 @@ defmodule Tymeslot.BookingSeries.Automation do
     end
   end
 
-  defp membership(meeting) do
-    case SeatView.participant_id(meeting) do
-      nil ->
-        {meeting.series_id, meeting.series_position}
+  # A seat view carries its seat's place; a group meeting row has none.
+  defp membership(%Meeting{seat: %{} = seat}),
+    do: {Map.get(seat, :series_id), Map.get(seat, :series_position)}
 
-      participant_id ->
-        case ParticipantQueries.get(participant_id) do
-          {:ok, %Participant{series_id: series_id, series_position: position}} ->
-            {series_id, position}
-
-          _missing ->
-            nil
-        end
-    end
-  end
+  defp membership(%Meeting{} = meeting), do: {meeting.series_id, meeting.series_position}
 
   defp retry_only_unchecked({:error, :feature_access_checker_failed} = error), do: error
   defp retry_only_unchecked(_outcome), do: :ok
@@ -153,23 +144,30 @@ defmodule Tymeslot.BookingSeries.Automation do
   defp as_booking(%Meeting{} = meeting), do: meeting
   defp as_booking(%Participant{meeting: meeting} = seat), do: SeatView.at_event(meeting, seat)
 
-  defp summary(series, first, sessions) do
+  defp summary(series, first, sessions, occurrences) do
     %{
       "id" => series.id,
       "mode" => Atom.to_string(series.mode),
       "count" => series.occurrences_count,
-      "rule" => rule(series, first),
+      "rule" => rule(series, first, occurrences),
       "sessions" => Enum.map(sessions, &session/1)
     }
   end
 
-  # The rhythm read in the organiser's zone, as their messages show times.
-  defp rule(series, first) do
-    {local, _zone} =
-      DateTimeUtils.shift_or_utc(first.start_time, Recipients.get_organizer_timezone(first))
-
-    Rule.describe(series, @rule_locale, first_start: local)
+  # The rhythm read in the organiser's zone, as their messages show times,
+  # and as their dashboard words it: with its day and time only while every
+  # session still keeps them.
+  defp rule(series, first, occurrences) do
+    Rule.describe_sessions(
+      series,
+      Enum.map(occurrences, &occurrence_start/1),
+      @rule_locale,
+      Recipients.get_organizer_timezone(first)
+    )
   end
+
+  defp occurrence_start(%Meeting{start_time: start}), do: start
+  defp occurrence_start(%Participant{meeting: %Meeting{start_time: start}}), do: start
 
   defp session(%Meeting{} = meeting) do
     %{
