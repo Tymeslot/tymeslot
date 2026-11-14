@@ -2,8 +2,8 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   @moduledoc """
   Finds and scrubs the personal data invitees give a host, across every table
   that holds it: meetings, group seats, guests, poll participants, the
-  invitees a draft poll holds, invitation links, booking payments and the
-  outgoing delivery logs.
+  invitees a draft poll holds, invitation links, booking payments, booking
+  series and the outgoing delivery logs.
 
   Pure data access. Which rows are scrubbed, and when, is decided by
   `Tymeslot.InviteeData`.
@@ -20,6 +20,7 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
 
   import Ecto.Query
 
+  alias Tymeslot.BookingSeries.SeriesSchema, as: Series
   alias Tymeslot.Invitations.InvitationSchema, as: Invitation
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.GuestSchema, as: Guest
@@ -219,6 +220,78 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
       )
 
     Repo.update_all(query, [])
+  end
+
+  @doc """
+  Clears the booker's name and email on the booking series `email` booked,
+  within `scope`, and marks each as erased. The series' sessions are the
+  person's own bookings, erased with it.
+  """
+  @spec scrub_series_for_email(String.t(), scope(), DateTime.t()) :: {non_neg_integer(), nil}
+  def scrub_series_for_email(email, scope, %DateTime{} = now) do
+    from(s in Series, where: fragment("lower(?)", s.attendee_email) == ^email)
+    |> scope_series(scope)
+    |> scrub_series(now)
+  end
+
+  @doc """
+  Clears the booker's name and email on the series that the meetings `ids`
+  (or seats on them) belong to, once every session of the series is erased
+  (`invitee_data_erased_at` on its meeting), and marks each as erased. Run
+  after the meetings are scrubbed, in the same transaction, so the last
+  session to age out takes its series with it.
+  """
+  @spec scrub_finished_series([binary()], DateTime.t()) :: {non_neg_integer(), nil}
+  def scrub_finished_series(meeting_ids, %DateTime{} = now) do
+    booked =
+      from(m in Meeting,
+        where: m.id in ^meeting_ids and not is_nil(m.series_id),
+        select: m.series_id
+      )
+
+    seated =
+      from(p in Participant,
+        where: p.meeting_id in ^meeting_ids and not is_nil(p.series_id),
+        select: p.series_id
+      )
+
+    unerased_meeting =
+      from(m in Meeting,
+        where: m.series_id == parent_as(:series).id and is_nil(m.invitee_data_erased_at),
+        select: 1
+      )
+
+    unerased_seat =
+      from(p in Participant,
+        join: m in assoc(p, :meeting),
+        where: p.series_id == parent_as(:series).id and is_nil(m.invitee_data_erased_at),
+        select: 1
+      )
+
+    finished =
+      from(s in Series,
+        as: :series,
+        where: s.id in subquery(booked) or s.id in subquery(seated),
+        where: not exists(unerased_meeting) and not exists(unerased_seat)
+      )
+
+    scrub_series(finished, now)
+  end
+
+  # The name and email cannot be null, so they take the placeholder a seat's
+  # do. A series already erased is left as it is.
+  defp scrub_series(query, now) do
+    query
+    |> where([s], is_nil(s.invitee_data_erased_at))
+    |> update([s],
+      set: [
+        attendee_name: "",
+        attendee_email: fragment("'erased-' || ?::text || ?", s.id, ^@erased_suffix),
+        invitee_data_erased_at: ^now,
+        updated_at: ^now
+      ]
+    )
+    |> Repo.update_all([])
   end
 
   @doc "Clears the group seats selected by `rows`, keeping each seat."
@@ -440,6 +513,11 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
 
   defp scope_meetings(query, host_user_id) when is_integer(host_user_id),
     do: where(query, [m], m.organizer_user_id == ^host_user_id)
+
+  defp scope_series(query, :all), do: query
+
+  defp scope_series(query, host_user_id) when is_integer(host_user_id),
+    do: where(query, [s], s.organizer_user_id == ^host_user_id)
 
   defp scope_joined_meeting(query, :all), do: query
 
