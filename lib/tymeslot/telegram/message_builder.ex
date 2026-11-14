@@ -41,7 +41,9 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     #{emoji(:calendar)} <b>New Series Booked</b>
 
     <b>#{esc(attendee_name(meeting))}</b> booked #{session_count(series)} sessions of <i>#{esc(type_name(meeting))}</i>, starting #{format_time(meeting, timezone)}
-    #{emoji(:email)} #{esc(meeting.attendee_email)}
+    #{email_line(meeting)}\
+    #{video_line(meeting, "Join the first session")}\
+    #{details_block(meeting)}\
     #{link_line(meeting)}\
     """)
   end
@@ -218,11 +220,11 @@ defmodule Tymeslot.Telegram.MessageBuilder do
 
   # The organiser's own join link: on providers that issue separate host and
   # guest URLs, `attendee_video_url` would let them in without host controls.
-  defp video_line(meeting) do
+  defp video_line(meeting, label \\ "Join video call") do
     video_url = meeting.organizer_video_url || meeting.meeting_url
 
     if safe_url?(video_url) do
-      "\n#{emoji(:video)} <a href=\"#{esc(video_url)}\">Join video call</a>"
+      "\n#{emoji(:video)} <a href=\"#{esc(video_url)}\">#{label}</a>"
     else
       ""
     end

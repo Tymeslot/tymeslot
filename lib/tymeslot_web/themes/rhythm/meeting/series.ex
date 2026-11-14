@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Series do
       theme_tokens={@theme_tokens}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      offered_locales={assigns[:offered_locales]}
       legal_links={@legal_links}
       show_language_switcher={true}
     >

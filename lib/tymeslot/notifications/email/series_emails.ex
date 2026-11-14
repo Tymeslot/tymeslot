@@ -144,7 +144,9 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
       held = Enum.filter(SeriesQueries.list_meetings(series), &MeetingState.awaiting_approval?/1)
 
       if held != [] and SeriesApproval.series_request?(hd(held)) do
-        details = series |> request_details(held) |> Map.put(:nudge, true)
+        details =
+          series |> request_details(held) |> Map.put(:nudge, true) |> recipient_copy(:organizer)
+
         email_service = Config.email_service_module()
 
         sent =
@@ -239,10 +241,15 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
     results =
       for {role, email} <- [attendee: details.attendee_email, organizer: details.organizer_email] do
         DeliveryClaims.once(job_id, "#{label}:#{role}", fn ->
-          apply(email_service, send_fun, [role, email, details])
+          apply(email_service, send_fun, [role, email, recipient_copy(details, role)])
         end)
       end
 
     DeliveryOutcome.from_results(label, [series_id: details.series.id], results)
   end
+
+  # The payload is built for the booker, in their language; the organiser
+  # reads their own wording, as in a single booking's emails.
+  defp recipient_copy(details, :organizer), do: SeriesBuilder.organizer_copy(details)
+  defp recipient_copy(details, :attendee), do: details
 end

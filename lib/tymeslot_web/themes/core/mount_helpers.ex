@@ -192,6 +192,8 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   defp mount_series(profile, params, socket) do
     case SeriesManagement.load(params["series_uid"], profile) do
       {:ok, series} ->
+        {socket, profile} = follow_attendee_language(socket, profile, series)
+
         socket =
           socket
           |> assign(:organizer_profile, profile)
@@ -216,12 +218,12 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     end
   end
 
-  # A meeting's pages speak the language the attendee booked in, unless the
-  # visitor picked another (`?locale=`, the language switcher's): the emailed
-  # links carry no locale, and the attendee may open them anywhere
-  # (`OrganizerHelpers.follow_booked_language/2`).
-  defp follow_attendee_language(socket, profile, meeting) do
-    socket = OrganizerHelpers.follow_booked_language(socket, meeting.attendee_locale)
+  # A meeting's pages, and a series', speak the language the attendee booked
+  # in, unless the visitor picked another (`?locale=`, the language
+  # switcher's): the emailed links carry no locale, and the attendee may open
+  # them anywhere (`OrganizerHelpers.follow_booked_language/2`).
+  defp follow_attendee_language(socket, profile, %{attendee_locale: booked}) do
+    socket = OrganizerHelpers.follow_booked_language(socket, booked)
     {socket, socket.assigns[:organizer_profile] || profile}
   end
 

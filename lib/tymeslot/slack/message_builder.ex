@@ -52,6 +52,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
       ),
       divider(),
       section_details(meeting, timezone)
+      | details_sections(meeting)
     ]
 
     append_actions(base, meeting)
@@ -359,7 +360,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
   defp type_name(meeting), do: Map.get(meeting, :meeting_type) || meeting_title(meeting)
 
   defp attendee_name(meeting) do
-    meeting.attendee_name || meeting.attendee_email || "guest"
+    AttendeeName.display_name(meeting) || meeting.attendee_email || "guest"
   end
 
   defp meeting_title(meeting) do

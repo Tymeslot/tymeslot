@@ -92,6 +92,19 @@ defmodule Tymeslot.Emails.SeriesBuilder do
     })
   end
 
+  @doc """
+  The organiser's copy of `details`, a `build/3` payload: every session,
+  and the series' meeting type, in the organiser's own wording rather than
+  the attendee's copies the payload is built with
+  (`AppointmentBuilder.with_original_texts/1`), as the organiser's copy of
+  a single booking's email is.
+  """
+  @spec organizer_copy(t()) :: t()
+  def organizer_copy(%{sessions: [_first | _rest] = sessions} = details) do
+    [first | _rest] = sessions = Enum.map(sessions, &AppointmentBuilder.with_original_texts/1)
+    %{details | sessions: sessions, meeting_type: first.meeting_type}
+  end
+
   defp session(%MeetingSchema{} = meeting, series) do
     meeting
     |> AppointmentBuilder.from_meeting()

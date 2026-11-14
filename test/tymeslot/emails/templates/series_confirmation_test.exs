@@ -89,6 +89,19 @@ defmodule Tymeslot.Emails.Templates.SeriesConfirmationTest do
       assert email.text_body =~ "Total paid: €200.00"
     end
 
+    test "writes the total the way the reader's language does" do
+      details =
+        build_series_details(4, %{
+          attendee_locale: "de",
+          total: %{cents: 123_450, currency: "eur"}
+        })
+
+      email = SeriesConfirmation.render(:attendee, "ada@example.com", details)
+
+      assert email.text_body =~ "1.234,50 €"
+      refute email.text_body =~ "€1,234.50"
+    end
+
     test "shows no total for a free series" do
       email = SeriesConfirmation.render(:attendee, "ada@example.com", build_series_details(2))
       refute email.text_body =~ "Total paid"

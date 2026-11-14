@@ -104,7 +104,7 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
   defp subscribe(host, events \\ @every_event),
     do: insert(:webhook, user: host.user, events: events)
 
-  defp book(host, type, count) do
+  defp book(host, type, count, message \\ "") do
     BookingSeries.book(
       %{
         duration: 30,
@@ -113,7 +113,7 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
         meeting_type_id: type.id,
         series: %{mode: :recurring, first_start: Paid.at(7), count: count}
       },
-      %{"name" => "Ada Lovelace", "email" => "ada@example.com", "message" => ""}
+      %{"name" => "Ada Lovelace", "email" => "ada@example.com", "message" => message}
     )
   end
 
@@ -173,6 +173,7 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
 
     assert body["event"] == "meeting.series_created"
     assert body["data"]["meeting"]["id"] == first.id
+    assert body["data"]["meeting"]["managed_by_host"] == false
 
     assert %{
              "id" => series_id,
@@ -306,7 +307,7 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
       events: ["meeting.created", "meeting.series_created"]
     )
 
-    assert {:ok, %{series: series}} = book(host, series_type(host), 4)
+    assert {:ok, %{series: series}} = book(host, series_type(host), 4, "Weekly please")
     announce(series)
 
     assert [%Job{args: %{"event_type" => "meeting.series_created", "series" => summary}}] =
@@ -322,6 +323,9 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
              texts,
              &(is_binary(&1) and &1 =~ "*Ada Lovelace* booked 4 sessions of *Mentoring*")
            )
+
+    # The booker's notes, as a single booking's message carries them.
+    assert Enum.any?(texts, &(is_binary(&1) and &1 =~ "Weekly please"))
   end
 
   test "a group series fires one series_created and no seat booked" do
@@ -374,19 +378,25 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
       events: ["meeting.created", "meeting.series_created"]
     )
 
-    assert {:ok, %{series: series}} = book(host, series_type(host), 2)
+    assert {:ok, %{series: series}} = book(host, series_type(host), 2, "Weekly please")
     announce(series)
 
     assert [%Job{args: %{"series" => summary}}] = all_enqueued(worker: TelegramWorker)
 
     [first | _rest] = sessions()
+    first = %{first | organizer_video_url: "https://meet.example.com/first-session"}
 
-    assert TelegramMessageBuilder.build_message(
-             "meeting.series_created",
-             first,
-             "Etc/UTC",
-             summary
-           ) =~ "<b>Ada Lovelace</b> booked 2 sessions of <i>Mentoring</i>, starting"
+    message =
+      TelegramMessageBuilder.build_message("meeting.series_created", first, "Etc/UTC", summary)
+
+    assert message =~ "<b>Ada Lovelace</b> booked 2 sessions of <i>Mentoring</i>, starting"
+    assert message =~ "ada@example.com"
+    # The booker's notes and the first session's join link, as a single
+    # booking's message carries them.
+    assert message =~ "Weekly please"
+
+    assert message =~
+             ~s(<a href="https://meet.example.com/first-session">Join the first session</a>)
   end
 
   test "a late payment for a lapsed series fires series_created once and no booking created" do

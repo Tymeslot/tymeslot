@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.BookingSeries
+  alias Tymeslot.ContentTranslations.AttendeeTexts
   alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SeriesParts
@@ -283,10 +284,21 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
       "%{type}: %{count} session with %{host}",
       "%{type}: %{count} sessions with %{host}",
       length(sessions),
-      type: type_name(series, sessions),
+      type: type_name(series, sessions, assigns.locale),
       host: host_name(assigns)
     )
   end
+
+  # The booker's copy of the type's name where the booking keeps one in the
+  # page's language (`AttendeeTexts`), as a meeting's own pages show it.
+  defp type_name(series, [%{meeting: %{} = meeting} | _rest] = sessions, locale) do
+    case AttendeeTexts.text(meeting, :meeting_type, locale) do
+      name when is_binary(name) and name != meeting.meeting_type -> name
+      _original -> type_name(series, sessions)
+    end
+  end
+
+  defp type_name(series, sessions, _locale), do: type_name(series, sessions)
 
   defp type_name(%{meeting_type: %{name: name}}, _sessions) when is_binary(name), do: name
 

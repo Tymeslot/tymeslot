@@ -166,10 +166,15 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     end
   end
 
-  # The payload is built for the attendee, in their language, and so carries
-  # the attendee's copies of the meeting type, description, location and
-  # questions (`AttendeeTexts`). The organiser reads their own wording.
-  defp with_original_texts(details),
+  @doc """
+  `details` in the organiser's own wording. The payload is built for the
+  attendee, in their language, and so carries the attendee's copies of the
+  meeting type, description, location and questions (`AttendeeTexts`); the
+  organiser reads the originals. `details` without an attendee copy come
+  back unchanged.
+  """
+  @spec with_original_texts(map()) :: map()
+  def with_original_texts(details),
     do: Map.merge(details, Map.get(details, :original_texts, %{}))
 
   defp organizer_group_links do

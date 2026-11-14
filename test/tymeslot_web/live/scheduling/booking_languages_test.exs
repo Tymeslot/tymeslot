@@ -286,6 +286,25 @@ defmodule TymeslotWeb.Live.Scheduling.BookingLanguagesTest do
         assert render(view) =~ ~s(data-locale="en")
       end
 
+      test "#{theme.slug}: the series page follows the attendee's language and copy", %{
+        conn: conn,
+        user: user,
+        profile: profile
+      } do
+        series = german_series(user)
+
+        {:ok, view, _html} =
+          conn
+          |> put_req_header("accept-language", "en-US,en;q=0.9")
+          |> live("/#{profile.username}/series/#{series.uid}")
+
+        html = render(view)
+        assert html =~ ~s(data-locale="de")
+        assert html =~ "Erstgespräch"
+        refute html =~ "Intro call"
+        assert Enum.sort(switcher_locales(view)) == ["de", "en"]
+      end
+
       for action <- ["cancel", "reschedule"] do
         test "#{theme.slug}: the #{action} page follows the attendee's language and copy", %{
           conn: conn,
@@ -519,6 +538,31 @@ defmodule TymeslotWeb.Live.Scheduling.BookingLanguagesTest do
       attendee_locale: "de",
       attendee_texts: %{"de" => %{"meeting_type" => "Erstgespräch"}}
     )
+  end
+
+  # A two-session series booked in German, each session with the
+  # attendee's copy of the meeting type.
+  defp german_series(user) do
+    series = insert(:booking_series, organizer_user: user, attendee_locale: "de")
+
+    for position <- 1..2 do
+      start_time =
+        DateTime.utc_now() |> DateTime.add(7 * position, :day) |> DateTime.truncate(:second)
+
+      insert(:meeting,
+        organizer_user_id: user.id,
+        organizer_user: user,
+        meeting_type: "Intro call",
+        attendee_locale: "de",
+        attendee_texts: %{"de" => %{"meeting_type" => "Erstgespräch"}},
+        series_id: series.id,
+        series_position: position,
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute)
+      )
+    end
+
+    series
   end
 
   defp switcher_locales(view) do
