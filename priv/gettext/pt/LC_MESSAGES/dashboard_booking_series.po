@@ -398,3 +398,8 @@ msgstr "Ver a série agendada por %{name}"
 #, elixir-autogen, elixir-format
 msgid "session %{position}, %{when}"
 msgstr "sessão %{position}, %{when}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can only be added to single bookings, not to a series."
+msgstr "Convidados só podem ser adicionados a agendamentos avulsos, não a uma série."

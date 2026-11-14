@@ -310,3 +310,8 @@ msgstr "Tento termín čeká na zaplacení své série. Do té doby lze sérii u
 #, elixir-autogen, elixir-format
 msgid "This session is part of a request that is waiting for the host's answer, so it can't be moved yet."
 msgstr "Tento termín patří k žádosti, která čeká na odpověď hostitele, proto ho zatím nelze přesunout."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can only be added to a single booking. Please remove your guests to book a series."
+msgstr "Hosty lze přidat jen k jednotlivé rezervaci. Chcete-li rezervovat sérii, odeberte prosím své hosty."

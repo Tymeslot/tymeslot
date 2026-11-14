@@ -249,6 +249,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SeriesSectionTest do
     refute has_element?(view, "[data-testid='series-paid']")
   end
 
+  test "a series on a type taking guests says guests are for single bookings",
+       %{conn: conn, user: user} do
+    with_guests = insert(:meeting_type, [user: user, allow_guests: true] ++ weekly_series())
+    without_guests = insert(:meeting_type, [user: user, allow_guests: false] ++ weekly_series())
+
+    assert has_element?(
+             edit(conn, with_guests),
+             "[data-testid='series-guests']",
+             "Guests can only be added to single bookings, not to a series."
+           )
+
+    refute has_element?(edit(conn, without_guests), "[data-testid='series-guests']")
+  end
+
   describe "without the plan" do
     defmodule DenyRecurringChecker do
       @behaviour Tymeslot.Features.CheckerBehaviour

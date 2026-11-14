@@ -510,9 +510,12 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   end
 
   # Only a series travels as `:series`: a single session's params stay as
-  # they always were.
+  # they always were. A series takes no guests, so any the booker added
+  # before choosing one (the field then hides) are left behind.
   defp put_series(params, nil), do: params
-  defp put_series(params, series), do: Map.put(params, :series, series)
+
+  defp put_series(params, series),
+    do: Map.merge(params, %{series: series, guest_emails: []})
 
   # The invitation the entry gate let this booking in on, if any.
   defp invitation_id(%{id: id}), do: id

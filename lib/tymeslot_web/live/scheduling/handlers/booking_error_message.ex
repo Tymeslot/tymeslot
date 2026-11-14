@@ -121,6 +121,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     dgettext("booking_errors", "Please choose a number of sessions this meeting type offers.")
   end
 
+  def message(:guests_not_allowed_on_series) do
+    dgettext(
+      "booking_errors",
+      "Guests can only be added to a single booking. Please remove your guests to book a series."
+    )
+  end
+
   # The booking page shows which sessions are taken; this is the fallback for
   # a surface that can only flash a message.
   def message({:occurrences_unavailable, _occurrences}) do

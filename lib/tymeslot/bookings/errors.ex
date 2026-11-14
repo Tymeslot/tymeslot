@@ -47,6 +47,7 @@ defmodule Tymeslot.Bookings.Errors do
           | :series_required
           | :overlapping_starts
           | :invalid_count
+          | :guests_not_allowed_on_series
           | {:occurrences_unavailable, [Occurrence.t()]}
           | refusal()
 
@@ -95,7 +96,8 @@ defmodule Tymeslot.Bookings.Errors do
     series_not_offered: :series_not_offered,
     series_required: :series_required,
     overlapping_starts: :overlapping_starts,
-    invalid_count: :invalid_count
+    invalid_count: :invalid_count,
+    guests_not_allowed_on_series: :guests_not_allowed_on_series
   }
 
   # `Tymeslot.Bookings.ScheduleCheck` is shared by `Create` and `Reschedule`,

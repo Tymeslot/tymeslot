@@ -49,6 +49,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
   attr :booking_window_days, :integer, required: true
   attr :booking_limits, :map, required: true
   attr :group, :boolean, default: false
+  attr :allow_guests, :boolean, default: false
   attr :payment_required, :boolean, default: false
   attr :payment_price, :string, default: ""
   attr :payment_currency, :string, default: "usd"
@@ -292,6 +293,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
           </.note>
           <.note :if={@group} variant={:info} testid="series-group">
             {dgettext("dashboard_booking_series", "Each session in a series takes one seat.")}
+          </.note>
+          <.note :if={@allow_guests} variant={:info} testid="series-guests">
+            {dgettext(
+              "dashboard_booking_series",
+              "Guests can only be added to single bookings, not to a series."
+            )}
           </.note>
           <.note :if={@payment_required} variant={:info} testid="series-paid">
             {dgettext(

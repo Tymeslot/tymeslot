@@ -310,3 +310,8 @@ msgstr "Esta sessão está aguardando o pagamento da sua série. Até lá, a sé
 #, elixir-autogen, elixir-format
 msgid "This session is part of a request that is waiting for the host's answer, so it can't be moved yet."
 msgstr "Esta sessão faz parte de um pedido que está aguardando a resposta do anfitrião, então ainda não pode ser remarcada."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can only be added to a single booking. Please remove your guests to book a series."
+msgstr "Só é possível adicionar convidados a um agendamento avulso. Remova seus convidados para agendar uma série."

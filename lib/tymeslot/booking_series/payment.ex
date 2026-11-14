@@ -5,7 +5,7 @@ defmodule Tymeslot.BookingSeries.Payment do
 
   As for a single paid booking (`Tymeslot.Bookings.Create.PaidBooking`),
   each session is inserted `awaiting_payment` (conflict-checked, so it holds
-  its slot) with its guests, and nothing else: no calendar event, video
+  its slot), and nothing else: no calendar event, video
   room, reminder or confirmation, until the payment completes
   (`Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted`). The
   sessions are inserted in the series' transaction; the checkout is opened
@@ -24,15 +24,15 @@ defmodule Tymeslot.BookingSeries.Payment do
   alias Tymeslot.Meetings.MeetingSchema
 
   @doc """
-  Inserts one session of a paid series, held for payment, with its guests,
-  inside the series' transaction. Returns the meeting and the (empty)
-  fan-out owed, or the first step's error.
+  Inserts one session of a paid series, held for payment, inside the
+  series' transaction. A series brings no guests
+  (`Tymeslot.BookingSeries.Create` refuses them). Returns the meeting and
+  the (empty) fan-out owed, or the insert's error.
   """
-  @spec hold(map(), map()) :: {:ok, {MeetingSchema.t(), []}} | {:error, term()}
-  def hold(meeting_attrs, booking_data) do
+  @spec hold(map()) :: {:ok, {MeetingSchema.t(), []}} | {:error, term()}
+  def hold(meeting_attrs) do
     with {:ok, meeting} <-
-           Persist.create_meeting(Map.put(meeting_attrs, :status, :awaiting_payment)),
-         {:ok, _guests} <- Persist.create_guests(meeting, booking_data) do
+           Persist.create_meeting(Map.put(meeting_attrs, :status, :awaiting_payment)) do
       {:ok, {meeting, []}}
     end
   end

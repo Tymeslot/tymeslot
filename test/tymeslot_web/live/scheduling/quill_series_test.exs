@@ -271,6 +271,22 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
   end
 
   @tag :capture_log
+  test "a series takes no guests, a single session does", %{conn: conn, day: day} do
+    attrs = Keyword.merge(@weekly, allow_guests: true, series_required: false)
+    %{profile: profile} = organiser("series-guests", attrs)
+
+    view = to_series(conn, profile, day)
+    BookingDriver.continue(view)
+    assert has_element?(view, "form[data-fact='attendee']")
+    refute has_element?(view, "[data-testid='guest-field']")
+
+    view = to_series(conn, profile, day)
+    view |> element("[data-testid='series-book-single']") |> render_click()
+    _sync = :sys.get_state(view.pid)
+    assert has_element?(view, "[data-testid='guest-field']")
+  end
+
+  @tag :capture_log
   test "a flexible series of 3 at different times", %{conn: conn, day: day} do
     %{user: user, profile: profile} =
       organiser("series-flexible",

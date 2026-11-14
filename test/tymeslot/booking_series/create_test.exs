@@ -24,6 +24,7 @@ defmodule Tymeslot.BookingSeries.CreateTest do
   alias Tymeslot.BookingSeries.Occurrence
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.CalendarMock
+  alias Tymeslot.Meetings.GuestSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventWorker
@@ -95,6 +96,47 @@ defmodule Tymeslot.BookingSeries.CreateTest do
   defp series_count, do: Repo.aggregate(SeriesSchema, :count)
 
   defp jobs(worker, action), do: all_enqueued(worker: worker, args: %{"action" => action})
+
+  describe "guests" do
+    test "a series refuses guests and books nothing", %{host: host, today: today} do
+      type = series_type(host, allow_guests: true)
+      params = Map.put(params(host, type, weekly(today, 3)), :guest_emails, ["gus@example.com"])
+
+      assert {:error, :guests_not_allowed_on_series} = BookingSeries.book(params, form_data())
+      assert meeting_count() == 0
+      assert series_count() == 0
+    end
+
+    test "a guest list the type ignores refuses nothing", %{host: host, today: today} do
+      type = series_type(host, allow_guests: false)
+      params = Map.put(params(host, type, weekly(today, 2)), :guest_emails, ["gus@example.com"])
+
+      assert {:ok, %{meetings: [_first, _second]}} = BookingSeries.book(params, form_data())
+      assert Repo.aggregate(GuestSchema, :count) == 0
+    end
+
+    test "a single booking on the same type still takes guests", %{host: host, today: today} do
+      type = series_type(host, allow_guests: true, series_required: false)
+
+      params =
+        host
+        |> params(type, nil)
+        |> Map.delete(:series)
+        |> Map.merge(%{
+          date: Date.add(today, 7),
+          time: "09:00",
+          guest_emails: ["gus@example.com"]
+        })
+
+      assert {:ok, %MeetingSchema{id: meeting_id}} =
+               Orchestrator.submit_booking(%{form_data: form_data(), meeting_params: params},
+                 organizer_user_id: host.user.id
+               )
+
+      assert [%GuestSchema{email: "gus@example.com"}] =
+               Repo.all(from(g in GuestSchema, where: g.meeting_id == ^meeting_id))
+    end
+  end
 
   test "books a weekly series as linked meetings", %{host: host, today: today} do
     type = series_type(host)

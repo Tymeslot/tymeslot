@@ -175,6 +175,21 @@ defmodule TymeslotWeb.Live.Scheduling.FolioSeriesTest do
   end
 
   @tag :capture_log
+  test "Folio: a series takes no guests, a single session does", %{conn: conn, day: day} do
+    attrs = Keyword.merge(weekly(), allow_guests: true, series_required: false)
+    %{profile: profile} = organiser(@theme, "folio-guests", attrs)
+
+    view = to_series(conn, profile, day, @flow)
+    to_details(view, @flow)
+    refute has_element?(view, "[data-testid='guest-field']")
+
+    view = to_series(conn, profile, day, @flow)
+    view |> element("[data-testid='series-book-single']") |> render_click()
+    to_details(view, reveal: true)
+    assert has_element?(view, "[data-testid='guest-field']")
+  end
+
+  @tag :capture_log
   test "Folio: a paid series redirects to checkout", %{conn: conn, day: day} do
     %{user: user, profile: profile} =
       organiser(

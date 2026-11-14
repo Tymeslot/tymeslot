@@ -385,6 +385,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             }
             booking_limits={@booking_limits}
             group={@group_bookings_enabled}
+            allow_guests={@allow_guests}
             payment_required={@payment_required}
             payment_price={@payment_price}
             payment_currency={@payment_currency}

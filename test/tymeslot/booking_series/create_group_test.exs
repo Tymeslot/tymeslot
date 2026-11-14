@@ -292,15 +292,14 @@ defmodule Tymeslot.BookingSeries.CreateGroupTest do
     assert participant_id == bob.id
   end
 
-  test "guests need a seat in every session", %{host: host, today: today} do
+  test "a group series refuses guests", %{host: host, today: today} do
     type = group_type(host, max_participants: 3, allow_guests: true)
-    session!(host, type, at(today, 14), ["bob@example.com", "cy@example.com"])
 
-    assert {:error, {:occurrences_unavailable, [%Occurrence{position: 2, status: status}]}} =
+    assert {:error, :guests_not_allowed_on_series} =
              book_series(host, type, weekly(today, 3), %{guest_emails: ["gus@example.com"]})
 
-    assert status == {:unavailable, :session_full}
     assert series_count() == 0
+    assert Repo.aggregate(ParticipantSchema, :count) == 0
   end
 
   test "a series creating sessions with a video room holds back no seat confirmation", %{

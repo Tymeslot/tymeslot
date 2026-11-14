@@ -413,3 +413,8 @@ msgstr "Zobacz serię (osoba rezerwująca: %{name})"
 #, elixir-autogen, elixir-format
 msgid "session %{position}, %{when}"
 msgstr "sesja %{position}, %{when}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/series_section.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can only be added to single bookings, not to a series."
+msgstr "Gości można dodawać tylko do pojedynczych rezerwacji, nie do serii."

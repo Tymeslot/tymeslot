@@ -119,6 +119,7 @@ defmodule Tymeslot.BookingSeries.Create do
 
     with :ok <- Prepare.validate_custom_field_answers(booking_data),
          :ok <- ensure_offered(booking_data),
+         :ok <- refuse_guests(booking_data),
          :ok <- Prepare.validate_admission(booking_data),
          {:ok, plan} <- plan(booking_data, Map.get(meeting_params, :series)),
          {:ok, occurrences} <- check(plan, booking_data),
@@ -139,6 +140,16 @@ defmodule Tymeslot.BookingSeries.Create do
 
   defp ensure_offered(%{meeting_type: %MeetingTypeSchema{} = type}) do
     if SeriesSettings.offered?(type), do: :ok, else: {:error, :series_not_offered}
+  end
+
+  # Guests are not invited to a series' sessions yet, so a series takes
+  # none. Only guests the type would have taken count: a list the type
+  # ignores (or the booker's own address) refuses nothing.
+  defp refuse_guests(booking_data) do
+    case CreateGroup.guest_emails(booking_data) do
+      [] -> :ok
+      [_guest | _rest] -> {:error, :guests_not_allowed_on_series}
+    end
   end
 
   # Plan
@@ -179,12 +190,12 @@ defmodule Tymeslot.BookingSeries.Create do
   # A request in the other mode than the type's, or a malformed one.
   defp plan_for(_mode, _request, _type, _opts), do: {:error, :series_not_offered}
 
-  # Every session is judged; the host's calendars are read strictly. The
-  # guests counted are the ones a seat would take.
+  # Every session is judged; the host's calendars are read strictly. A
+  # series brings no guests (`refuse_guests/1`), so each seat is the
+  # booker's alone.
   defp check(plan, booking_data) do
     Check.check(plan,
       booker_email: booking_data.form_data["email"],
-      guests: length(CreateGroup.guest_emails(booking_data)),
       strict_calendar: true
     )
   end
@@ -275,7 +286,7 @@ defmodule Tymeslot.BookingSeries.Create do
         &book_seat(&1, booking_data, seat_opts)
 
       Prepare.paid?(booking_data) ->
-        &hold_meeting(&1, booking_data)
+        &hold_meeting/1
 
       true ->
         activation_opts = [announce: :series, with_video_room: with_video_room]
@@ -318,8 +329,8 @@ defmodule Tymeslot.BookingSeries.Create do
   end
 
   # A paid session is held for the series' payment, with nothing else done.
-  defp hold_meeting(meeting_attrs, booking_data) do
-    case Payment.hold(meeting_attrs, booking_data) do
+  defp hold_meeting(meeting_attrs) do
+    case Payment.hold(meeting_attrs) do
       {:ok, {meeting, pending}} -> {{meeting, nil}, pending}
       {:error, reason} -> occurrence_failed(meeting_attrs, reason)
     end
