@@ -176,9 +176,11 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
   the focus to the chosen time in it (the month's selected time, or the
   week's pressed one). The series part's clash notice does the same.
   """
-  @spec change_time() :: %JS{}
+  @spec change_time() :: struct()
   def change_time do
-    JS.focus(JS.remove_class("paper-card--booking", to: "#schedule-step"),
+    "paper-card--booking"
+    |> JS.remove_class(to: "#schedule-step")
+    |> JS.focus(
       to:
         "#schedule-step .slot-list__slot--selected, #schedule-step [data-fact='slot'][aria-pressed='true']"
     )
