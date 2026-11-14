@@ -696,3 +696,8 @@ msgstr[1] "Sim, cancelar as sessões"
 #, elixir-autogen, elixir-format
 msgid "session %{position}, %{when}"
 msgstr "sessão %{position}, %{when}"
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "The host answered your request in the meantime, so nothing was withdrawn. The list shows where each session now stands."
+msgstr "O anfitrião respondeu à sua solicitação nesse meio-tempo, então nada foi retirado. A lista mostra a situação atual de cada sessão."

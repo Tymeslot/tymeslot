@@ -112,6 +112,12 @@ defmodule Tymeslot.BookingSeries.Cancel do
       (the default), `{:amount, cents}` or `:none`. Ignored for an
       attendee, whose cancellation never refunds, and for a series request,
       which is refunded in full when withdrawn.
+    * `:expect` - `:withdraw` when the caller means to withdraw an open
+      request and nothing else: a series that is no request any more (the
+      host answered meanwhile) is then left alone and
+      `{:error, :not_awaiting_approval}` returned, rather than its sessions
+      cancelled. Without it, what is left of an answered request is
+      cancelled as any series is.
 
   An explicit `{:amount, cents}` is refused before anything is cancelled
   when it cannot be made: `:invalid_amount` for one that is not a positive
@@ -125,11 +131,13 @@ defmodule Tymeslot.BookingSeries.Cancel do
   def cancel_remaining(%SeriesSchema{} = series, opts) do
     caller = Keyword.fetch!(opts, :caller)
 
+    withdraw_only? = Keyword.get(opts, :expect) == :withdraw
+
     with {:ok, refund_plan} <- authorise(series, caller, opts) do
-      if series_request?(series) do
-        withdraw_request(series, caller, refund_plan)
-      else
-        cancel_all(series, caller, refund_plan)
+      cond do
+        series_request?(series) -> withdraw_request(series, caller, refund_plan, withdraw_only?)
+        withdraw_only? -> {:error, :not_awaiting_approval}
+        true -> cancel_all(series, caller, refund_plan)
       end
     end
   end
@@ -245,13 +253,18 @@ defmodule Tymeslot.BookingSeries.Cancel do
 
   # Withdrawn whole, refunded whole and closed by the withdrawal itself. A
   # request the host answered meanwhile is no request any more: what is
-  # left of it is cancelled as any series is.
-  defp withdraw_request(series, caller, refund_plan) do
+  # left of it is cancelled as any series is, unless the caller meant a
+  # withdrawal only, who is told so instead (an approved, paid series must
+  # never be cancelled without a refund by a click meant to withdraw).
+  defp withdraw_request(series, caller, refund_plan, withdraw_only?) do
     refunded_before = refunded_cents(series)
 
     case Approval.withdraw(series, caller) do
       {:ok, released} ->
         {:ok, %{cancelled: released, refund: refund_since(series, refunded_before)}}
+
+      {:error, :not_awaiting_approval} = answered when withdraw_only? ->
+        answered
 
       {:error, :not_awaiting_approval} ->
         cancel_all(series, caller, refund_plan)

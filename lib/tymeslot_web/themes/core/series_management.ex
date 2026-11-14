@@ -137,15 +137,19 @@ defmodule TymeslotWeb.Themes.Core.SeriesManagement do
   defp series_event(_event, _params, socket), do: {:noreply, socket}
 
   # An open request is withdrawn whole; otherwise the remaining sessions
-  # are cancelled. A host who answered meanwhile turns a withdrawal into a
-  # cancellation of what is left.
+  # are cancelled. A withdrawal is only ever a withdrawal: a host who
+  # answered meanwhile leaves the series as they left it, and the page says
+  # so with the sessions as they now stand.
   defp cancel_remaining(socket, outcome) do
     with_rate_limit(socket, fn ->
       socket.assigns.series
-      |> BookingSeries.cancel_remaining(caller: :attendee)
+      |> BookingSeries.cancel_remaining(caller: :attendee, expect: expected(outcome))
       |> settle(socket, outcome)
     end)
   end
+
+  defp expected(:withdrawn), do: :withdraw
+  defp expected(:cancelled), do: nil
 
   # Only what the page offers can be confirmed.
   defp offered(%{assigns: %{series_open_request: true}}, :withdraw), do: :withdraw
@@ -172,6 +176,19 @@ defmodule TymeslotWeb.Themes.Core.SeriesManagement do
      socket
      |> assign_series(socket.assigns.series)
      |> put_flash(:info, done_message(outcome))}
+  end
+
+  defp settle({:error, :not_awaiting_approval}, socket, :withdrawn) do
+    {:noreply,
+     socket
+     |> assign_series(socket.assigns.series)
+     |> put_flash(
+       :info,
+       dgettext(
+         "booking_series",
+         "The host answered your request in the meantime, so nothing was withdrawn. The list shows where each session now stands."
+       )
+     )}
   end
 
   defp settle({:error, reason}, socket, outcome) do

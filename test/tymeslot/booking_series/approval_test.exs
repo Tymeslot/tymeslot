@@ -360,6 +360,23 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
     assert expired.subject == "Your request for 3 sessions expired"
   end
 
+  test "a withdrawal the host answered first cancels nothing" do
+    %{host: host, series: series} = book_three()
+    assert {:ok, _approved} = SeriesApproval.approve(series, host.user)
+
+    assert {:error, :not_awaiting_approval} =
+             BookingSeries.cancel_remaining(series, caller: :attendee, expect: :withdraw)
+
+    assert statuses() == [:confirmed, :confirmed, :confirmed]
+    assert email_jobs("send_series_cancellation") == []
+
+    # A plain cancel-all of the answered request still cancels it.
+    assert {:ok, %{cancelled: [_first, _second, _third]}} =
+             BookingSeries.cancel_remaining(series, caller: :attendee)
+
+    assert statuses() == [:cancelled, :cancelled, :cancelled]
+  end
+
   test "withdrawing from the attendee side releases the series" do
     %{series: series} = book_three()
     [_first, second, _third] = meetings()

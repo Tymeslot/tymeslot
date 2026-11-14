@@ -714,3 +714,8 @@ msgstr[2] "Ano, zrušit termíny"
 #, elixir-autogen, elixir-format
 msgid "session %{position}, %{when}"
 msgstr "termín %{position}, %{when}"
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "The host answered your request in the meantime, so nothing was withdrawn. The list shows where each session now stands."
+msgstr "Hostitel mezitím na vaši žádost odpověděl, takže nic nebylo staženo. Seznam ukazuje, jak si teď stojí každý termín."

@@ -696,3 +696,8 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "session %{position}, %{when}"
 msgstr ""
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "The host answered your request in the meantime, so nothing was withdrawn. The list shows where each session now stands."
+msgstr ""

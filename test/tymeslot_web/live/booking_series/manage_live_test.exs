@@ -25,6 +25,7 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
   alias Phoenix.HTML
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.BookingSeries
+  alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.CalendarMock
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
@@ -462,6 +463,25 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
 
       assert render(view) =~ refusal |> HTML.html_escape() |> HTML.safe_to_string()
       assert statuses() == [:awaiting_approval, :awaiting_approval, :awaiting_approval]
+    end
+
+    test "a withdrawal the host answered first cancels nothing and says so", %{
+      conn: conn,
+      series: series,
+      host: host
+    } do
+      {:ok, view, _html} = live(conn, page_path(series))
+      view |> element("[data-testid='series-withdraw']") |> render_click()
+
+      # The host approves while the confirmation is open.
+      assert {:ok, _approved} = SeriesApproval.approve(series, host.user)
+
+      html = view |> element("[data-testid='series-withdraw-confirm']") |> render_click()
+
+      assert html =~ "The host answered your request in the meantime"
+      assert statuses() == [:confirmed, :confirmed, :confirmed]
+      assert session_statuses(view) == ["upcoming", "upcoming", "upcoming"]
+      assert series_cancellation_jobs() == []
     end
 
     test "a request with one session moved is cancelled whole, not withdrawn", %{
