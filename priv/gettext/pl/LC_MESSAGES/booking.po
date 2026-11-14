@@ -318,6 +318,7 @@ msgstr "Imię i nazwisko"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
@@ -501,6 +502,7 @@ msgstr "%{organizer} musi jeszcze zaakceptować ten termin. Tak czy inaczej wyś
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
@@ -721,6 +723,7 @@ msgid "Your last action could not be completed. Please try again."
 msgstr "Nie udało się dokończyć ostatniej czynności. Spróbuj ponownie."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
 #: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
@@ -738,6 +741,7 @@ msgid "No times available"
 msgstr "Brak wolnych terminów"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex

@@ -19,8 +19,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.SeriesParts
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   use TymeslotWeb.Components.CoreComponents
@@ -39,7 +41,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
         step_numbers: Runtime.step_numbers(assigns)
       )
 
-    assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
+    assigns =
+      assign(assigns,
+        next_day_end: LocalizationHelpers.booking_next_day_end(assigns),
+        series_count: Series.count(assigns)
+      )
 
     ~H"""
     <div
@@ -87,11 +93,29 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     <% end %>
                   </p>
 
-                  <p class="booking-datetime text-quill-secondary">
+                  <p :if={is_nil(@series_count)} class="booking-datetime text-quill-secondary">
                     {LocalizationHelpers.format_booking_datetime(
                       @selected_date,
                       @selected_time,
                       @user_timezone
+                    )}
+                  </p>
+                  <p
+                    :if={@series_count}
+                    class="booking-datetime text-quill-secondary"
+                    data-testid="booking-series-summary"
+                  >
+                    {dngettext(
+                      "booking_series",
+                      "%{count} session, first on %{date}",
+                      "%{count} sessions, first on %{date}",
+                      @series_count,
+                      date:
+                        LocalizationHelpers.format_booking_datetime(
+                          @selected_date,
+                          @selected_time,
+                          @user_timezone
+                        )
                     )}
                   </p>
                   <p
@@ -158,7 +182,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     stage={:before}
                   />
 
+                  <SeriesParts.total
+                    :if={@series_count}
+                    meeting_type={@meeting_type}
+                    currency={@host_currency}
+                    locale={@locale}
+                    count={@series_count}
+                    class="booking-submit-price"
+                  />
                   <SubmitPrice.price
+                    :if={is_nil(@series_count)}
                     meeting_type={@meeting_type}
                     currency={@host_currency}
                     locale={@locale}
@@ -191,12 +224,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       data-testid="submit-booking"
                       aria-describedby={
                         submit_describedby(
-                          SubmitPrice.describedby(
-                            @meeting_type,
-                            @host_currency,
-                            @locale,
-                            @is_rescheduling
-                          ),
+                          @series_count == nil &&
+                            SubmitPrice.describedby(
+                              @meeting_type,
+                              @host_currency,
+                              @locale,
+                              @is_rescheduling
+                            ),
                           @submitting,
                           @form
                         )
@@ -253,7 +287,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   defp submit_describedby(price_id, submitting, form) do
     hint = if submit_incomplete?(submitting, form), do: "submit-booking-hint"
 
-    case Enum.reject([price_id, hint], &is_nil/1) do
+    case Enum.reject([price_id, hint], &(&1 in [nil, false])) do
       [] -> nil
       ids -> Enum.join(ids, " ")
     end

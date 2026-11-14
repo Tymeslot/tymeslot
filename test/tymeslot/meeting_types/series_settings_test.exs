@@ -178,6 +178,15 @@ defmodule Tymeslot.MeetingTypes.SeriesSettingsTest do
       assert SeriesSettings.single_allowed?(%{type | series_required: false})
     end
 
+    test "offer/1 answers both at once" do
+      type = stored_series(%{series_required: true})
+
+      assert SeriesSettings.offer(type) == %{offered?: true, single_allowed?: false}
+
+      assert SeriesSettings.offer(%{type | series_required: false}) ==
+               %{offered?: true, single_allowed?: true}
+    end
+
     test "a type without a series is never offered and always allows one session" do
       type = %MeetingTypeSchema{user_id: 1}
       refute SeriesSettings.offered?(type)
@@ -207,6 +216,7 @@ defmodule Tymeslot.MeetingTypes.SeriesSettingsTest do
       assert SeriesSettings.series?(type)
       refute SeriesSettings.offered?(type)
       assert SeriesSettings.single_allowed?(type)
+      assert SeriesSettings.offer(type) == %{offered?: false, single_allowed?: true}
     end
 
     test "offered? is false when the checker fails" do

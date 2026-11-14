@@ -83,8 +83,16 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
 
   @doc "Whether a booker may book one session instead of a series."
   @spec single_allowed?(MeetingTypeSchema.t()) :: boolean()
-  def single_allowed?(meeting_type) do
-    not offered?(meeting_type) or meeting_type.series_required == false
+  def single_allowed?(meeting_type), do: offer(meeting_type).single_allowed?
+
+  @doc """
+  `offered?/1` and `single_allowed?/1` together, for a caller that needs both
+  (the booking page): the plan is checked once.
+  """
+  @spec offer(MeetingTypeSchema.t()) :: %{offered?: boolean(), single_allowed?: boolean()}
+  def offer(meeting_type) do
+    offered = offered?(meeting_type)
+    %{offered?: offered, single_allowed?: not offered or meeting_type.series_required == false}
   end
 
   @doc """

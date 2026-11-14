@@ -10,7 +10,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
     CustomQuestionsComponent,
     LengthComponent,
     OverviewComponent,
-    ScheduleComponent
+    ScheduleComponent,
+    SeriesComponent
   }
 
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper
@@ -21,6 +22,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
       overview: OverviewComponent,
       length: LengthComponent,
       schedule: ScheduleComponent,
+      series: SeriesComponent,
       questions: CustomQuestionsComponent,
       booking: BookingComponent,
       confirmation: ConfirmationComponent

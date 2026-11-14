@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Security.Honeypot
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
@@ -51,6 +52,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
 
   require Logger
 
@@ -79,7 +81,15 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       between selection and submit; the caller should return the booker to
       the schedule step with a fresh slot list rather than strand them on
       the form with the now-invalid slot
+    * `{:series_unavailable, socket}` — sessions of a series could not be
+      booked; the socket's series moment already names them
+      (`Journey.Facts.Series.merge_lost/2`) and checks the series again, and
+      the caller should return the booker to it
     * `{:error, socket}` — validation or persistence failure
+
+  A booked series is `{:ok, socket}` too, with `:series` and
+  `:series_meetings` assigned and the booker's first session standing for
+  the booking.
 
   ## Examples
 
@@ -97,6 +107,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
           | {:awaiting_payment, Phoenix.LiveView.Socket.t()}
           | {:honeypot, Phoenix.LiveView.Socket.t()}
           | {:slot_taken, Phoenix.LiveView.Socket.t()}
+          | {:series_unavailable, Phoenix.LiveView.Socket.t()}
           | {:error, Phoenix.LiveView.Socket.t()}
   def submit_booking(socket, booking_params) do
     Logger.info("Submit event triggered for booking form")
@@ -312,11 +323,19 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
   defp handle_submit_result(socket, result, sanitized_params, orchestrator) do
     case result do
-      {:ok, :payment_required, %{meeting: meeting, checkout_url: url}} ->
-        handle_payment_required(socket, meeting, url, sanitized_params)
+      {:ok, :payment_required, %{meeting: meeting, checkout_url: url} = held} ->
+        socket
+        |> assign_series(held)
+        |> handle_payment_required(meeting, url, sanitized_params)
+
+      {:ok, %{series: _series, meetings: [_first | _rest]} = booked} ->
+        handle_series_success(socket, booked, sanitized_params, orchestrator)
 
       {:ok, meeting} ->
         handle_booking_success(socket, meeting, sanitized_params, orchestrator)
+
+      {:error, {:occurrences_unavailable, occurrences}} ->
+        handle_series_unavailable(socket, occurrences)
 
       {:error, :slot_taken} ->
         handle_slot_taken(socket)
@@ -327,6 +346,44 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       {:error, reason} ->
         handle_booking_error(socket, reason)
     end
+  end
+
+  # A booked series is confirmed through its first session, as the booker
+  # holds it: their seat on a group type's session. The confirmation lists
+  # every session from `:series_meetings`.
+  defp handle_series_success(socket, booked, sanitized_params, orchestrator) do
+    [first | _rest] = booked.meetings
+
+    first =
+      case Enum.find(booked[:participants] || [], &(&1.meeting_id == first.id)) do
+        nil -> first
+        seat -> SeatView.at_event(first, seat)
+      end
+
+    socket
+    |> assign_series(booked)
+    |> handle_booking_success(first, sanitized_params, orchestrator)
+  end
+
+  defp assign_series(socket, %{series: series, meetings: meetings}),
+    do: socket |> assign(:series, series) |> assign(:series_meetings, meetings)
+
+  defp assign_series(socket, _single), do: socket
+
+  # Sessions of the series were taken between the check and the submit. The
+  # series moment names them and checks the series again; the caller returns
+  # the booker there.
+  defp handle_series_unavailable(socket, occurrences) do
+    Logger.info("Series refused: sessions no longer available",
+      count: length(occurrences)
+    )
+
+    socket =
+      socket
+      |> BookingGuards.release_submission()
+      |> Series.merge_lost(occurrences)
+
+    {:series_unavailable, socket}
   end
 
   defp handle_expired_preview(socket) do
@@ -415,7 +472,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   end
 
   defp build_meeting_params(socket, sanitized_params) do
-    %{
+    params = %{
       date: socket.assigns.selected_date,
       time: socket.assigns.selected_time,
       duration: AvailabilityHelpers.duration_minutes(socket),
@@ -442,7 +499,14 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       location_venue_id: BookingLocation.submitted_venue_id(socket.assigns),
       invitation_id: invitation_id(socket.assigns[:invitation])
     }
+
+    put_series(params, Series.request(socket.assigns))
   end
+
+  # Only a series travels as `:series`: a single session's params stay as
+  # they always were.
+  defp put_series(params, nil), do: params
+  defp put_series(params, series), do: Map.put(params, :series, series)
 
   # The invitation the entry gate let this booking in on, if any.
   defp invitation_id(%{id: id}), do: id

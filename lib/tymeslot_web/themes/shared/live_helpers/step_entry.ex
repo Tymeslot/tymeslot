@@ -43,6 +43,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Answers
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LiveHelpers.InvitationGate
@@ -308,12 +309,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     PathHandlers.with_query("/" <> socket.assigns[:username_context], query)
   end
 
-  @doc "Makes `meeting_type` the one this booking is for, with its questions, locations and booking window."
+  @doc "Makes `meeting_type` the one this booking is for, with its questions, series offer, locations and booking window."
   @spec assign_meeting_type(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_meeting_type(socket, meeting_type) do
     socket
     |> ChosenLength.keep_if_offered(meeting_type)
     |> assign(:meeting_type, meeting_type)
+    |> Series.assign_offer(meeting_type)
     |> assign(:engine, refreshed_engine(socket, meeting_type))
     |> maybe_subscribe_to_group_seats()
     |> BookingLocation.assign_for_meeting_type(

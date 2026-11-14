@@ -20,12 +20,20 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   `Runtime.follow_url/1`); the classic expansion keeps the route the visit
   arrived on (`url: :route`).
 
-  The facts are `facts/0`: the five shipped ones, plus any fact module listed
+  The facts are `facts/0`: the six shipped ones, plus any fact module listed
   in `config :tymeslot, :extra_booking_facts` (read at compile time; empty in
   every shipped build).
   """
 
-  alias TymeslotWeb.Themes.Shared.Journey.Facts.{Answers, Attendee, Length, MeetingType, Slot}
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.{
+    Answers,
+    Attendee,
+    Length,
+    MeetingType,
+    Series,
+    Slot
+  }
+
   alias TymeslotWeb.Themes.Shared.Journey.Moment
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Paged
 
@@ -54,7 +62,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   @outcome_keys [:confirmation, :awaiting_payment]
   @navigator_callbacks [entry: 3, visible: 2, continue: 2, back: 2, go_to: 3]
 
-  @doc "The fact modules by key: the shipped five and `:extra_booking_facts`."
+  @doc "The fact modules by key: the shipped six and `:extra_booking_facts`."
   @spec facts() :: %{atom() => module()}
   def facts, do: merge_facts!(shipped_facts(), @extra_facts)
 
@@ -68,6 +76,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
       meeting_type: MeetingType,
       length: Length,
       slot: Slot,
+      series: Series,
       answers: Answers,
       attendee: Attendee
     }
@@ -120,22 +129,28 @@ defmodule TymeslotWeb.Themes.Shared.Journey do
   The options of the classic journey for a `steps:` map: `Navigators.Paged`
   over `overview` (the meeting type), `length` (the length, shown only when
   the meeting type offers several, and only for a theme with a `length`
-  step), `schedule` (the slot), `questions` (the answers, shown only when the
-  meeting type has questions) and `booking` (the attendee), ending on the
-  theme's confirmation or the shared payment wait.
+  step), `schedule` (the slot), `series` (the series, shown only when the
+  meeting type offers one, and only for a theme with a `series` step),
+  `questions` (the answers, shown only when the meeting type has questions)
+  and `booking` (the attendee), ending on the theme's confirmation or the
+  shared payment wait.
   """
   @spec classic(%{atom() => module()}) :: keyword()
   def classic(steps) do
     length_moments =
       if steps[:length], do: [{:length, collects: [:length], component: steps.length}], else: []
 
+    series_moments =
+      if steps[:series], do: [{:series, collects: [:series], component: steps.series}], else: []
+
     [
       navigator: Paged,
       moments:
         [{:overview, collects: [:meeting_type], component: steps.overview}] ++
           length_moments ++
+          [{:schedule, collects: [:slot], component: steps.schedule}] ++
+          series_moments ++
           [
-            {:schedule, collects: [:slot], component: steps.schedule},
             {:questions, collects: [:answers], component: steps.questions},
             {:booking, collects: [:attendee], component: steps.booking}
           ],

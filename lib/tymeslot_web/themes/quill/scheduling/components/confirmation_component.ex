@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
@@ -19,6 +20,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
+  alias TymeslotWeb.Themes.Shared.SeriesParts
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   use TymeslotWeb.Components.CoreComponents
@@ -34,7 +36,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
     assigns =
       assign(assigns,
         navigable_steps: Runtime.navigable_steps(assigns),
-        step_numbers: Runtime.step_numbers(assigns)
+        step_numbers: Runtime.step_numbers(assigns),
+        series_count: series_count(assigns)
       )
 
     ~H"""
@@ -99,7 +102,31 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                   <GroupSession.confirmation_line meeting_type={@meeting_type} class="mt-4" />
 
                   <.meeting_details_card title={@meeting_type && @meeting_type.name}>
+                    <div :if={@series_count} class="series-confirmation">
+                      <p class="booking-detail-label">
+                        {BookingText.duration_label(assigns)} · {dgettext(
+                          "booking_series",
+                          "Times in %{zone}",
+                          zone: LocalizationHelpers.format_zone_label(nil, nil, @user_timezone)
+                        )}
+                      </p>
+                      <SeriesParts.booked_list
+                        meetings={@series_meetings}
+                        timezone={@user_timezone}
+                        organizer_profile={@organizer_profile}
+                      />
+                      <a
+                        :if={MeetingLinks.series_url(@series, @organizer_profile)}
+                        href={MeetingLinks.series_url(@series, @organizer_profile)}
+                        class="series-manage-link"
+                        data-testid="series-manage"
+                      >
+                        <.icon name="hero-squares-2x2-mini" class="series-manage-icon" />
+                        {dgettext("booking_series", "Manage all sessions")}
+                      </a>
+                    </div>
                     <.booking_details
+                      :if={is_nil(@series_count)}
                       date={@selected_date}
                       time={@selected_time}
                       duration={BookingText.duration_label(assigns)}
@@ -181,7 +208,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
                   <div class="confirmation-actions">
                     <a
-                      :if={PathHandlers.calendar_ics_path(assigns)}
+                      :if={is_nil(@series_count) and PathHandlers.calendar_ics_path(assigns)}
                       href={PathHandlers.calendar_ics_path(assigns)}
                       download
                       class="action-button action-button--primary calendar-download-button"
@@ -301,6 +328,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   # ========== PRIVATE HELPERS ==========
 
+  # The sessions a series booking made; nil for a single booking.
+  defp series_count(%{series: %{}, series_meetings: [_first | _rest] = meetings}),
+    do: length(meetings)
+
+  defp series_count(_assigns), do: nil
+
   # Placeholder for the amount while the paid line is translated: a private-use
   # character no translation contains.
   @amount_marker "\u{E000}"
@@ -334,11 +367,36 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   # an invitee sees before the emails arrive, so the heading changes too, not
   # just a note underneath it. Which status applies is decided in
   # ConfirmationText; only the wording is Quill's.
+  defp headline(%{series_count: count} = assigns) when is_integer(count) do
+    case ConfirmationText.status(assigns) do
+      :held ->
+        dngettext(
+          "booking_series",
+          "Your request for %{count} session has been sent",
+          "Your request for %{count} sessions has been sent",
+          count
+        )
+
+      _booked ->
+        dngettext("booking_series", "%{count} session booked", "%{count} sessions booked", count)
+    end
+  end
+
   defp headline(assigns) do
     case ConfirmationText.status(assigns) do
       :held -> dgettext("booking_confirmation", "Request sent!")
       :rescheduled -> dgettext("booking_confirmation", "Meeting Rescheduled!")
       :confirmed -> dgettext("booking_confirmation", "Meeting Confirmed!")
+    end
+  end
+
+  defp subtitle(%{series_count: count} = assigns) when is_integer(count) do
+    case ConfirmationText.status(assigns) do
+      :held ->
+        ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :quill)
+
+      _booked ->
+        dgettext("booking_series", "We've emailed you all the details.")
     end
   end
 

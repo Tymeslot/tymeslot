@@ -69,6 +69,10 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
       {:slot_taken, socket} ->
         {:noreply, return_to_schedule_for_new_slot(socket, transition_fun)}
 
+      # The sessions lost are already named on the series moment.
+      {:series_unavailable, socket} ->
+        {:noreply, return_to_series(socket, transition_fun)}
+
       # A bot must not be able to tell the honeypot from a real booking, so
       # it lands on the same confirmation step, with no flash, as a real one.
       {:honeypot, socket} ->
@@ -105,6 +109,18 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
         send(self(), {:load_slots, date})
         assign(socket, :loading_slots, true)
     end
+  end
+
+  # Back to the moment collecting the series, or to the slot's on a journey
+  # without one (a single session cannot lose a series' sessions, so that is
+  # only a guard).
+  defp return_to_series(socket, transition_fun) do
+    journey = socket.assigns.journey
+    moment = Progress.moment_for(journey, :series) || Progress.moment_for(journey, :slot)
+
+    socket
+    |> assign(:submitting, false)
+    |> transition_fun.(moment, %{})
   end
 
   @spec handle_form_validation(Phoenix.LiveView.Socket.t(), map()) ::
