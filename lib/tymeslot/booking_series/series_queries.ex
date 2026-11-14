@@ -164,6 +164,12 @@ defmodule Tymeslot.BookingSeries.SeriesQueries do
   Lists the occurrences of a series by `series_position`: `Meeting` structs
   for one-to-one types, `Participant` structs (meeting preloaded) for group
   types.
+
+  A seat moved to another session is cancelled and replaced by a new seat
+  in the same position (`Tymeslot.Bookings.RescheduleSeat`), so a position
+  can hold several seats; it is listed once, as its current seat: the live
+  one, or, with none live, the one cancelled last. A one-to-one session
+  moves in place and is never doubled.
   """
   @spec list_occurrences(Series.t() | binary()) :: [Meeting.t() | Participant.t()]
   def list_occurrences(%Series{id: id}), do: list_occurrences(id)
@@ -171,12 +177,19 @@ defmodule Tymeslot.BookingSeries.SeriesQueries do
   def list_occurrences(id) when is_binary(id) do
     meetings = Meeting |> where([m], m.series_id == ^id) |> Repo.all()
 
-    participants =
+    seats =
       Participant
       |> where([p], p.series_id == ^id)
       |> preload(:meeting)
       |> Repo.all()
+      |> Enum.group_by(& &1.series_position)
+      |> Enum.map(fn {_position, seats} -> current_seat(seats) end)
 
-    Enum.sort_by(meetings ++ participants, & &1.series_position)
+    Enum.sort_by(meetings ++ seats, & &1.series_position)
+  end
+
+  defp current_seat(seats) do
+    Enum.find(seats, &is_nil(&1.cancelled_at)) ||
+      Enum.max_by(seats, &{DateTime.to_unix(&1.cancelled_at), DateTime.to_unix(&1.inserted_at)})
   end
 end

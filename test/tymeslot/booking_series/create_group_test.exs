@@ -349,6 +349,40 @@ defmodule Tymeslot.BookingSeries.CreateGroupTest do
     assert %ParticipantSchema{series_position: 8, cancelled_at: nil} = Repo.reload!(moved)
   end
 
+  test "a moved seat is listed once, at its new time, to the attendee and the host", %{
+    host: host,
+    today: today
+  } do
+    type = group_type(host)
+
+    assert {:ok, %{series: series, participants: [_first_seat, seat, _third_seat]}} =
+             book_series(host, type, weekly(today, 3))
+
+    new_start = DateTime.new!(Date.add(today, 15), ~T[10:00:00], "Etc/UTC")
+
+    assert {:ok, _moved} =
+             RescheduleSeat.execute(
+               seat.management_token,
+               %{
+                 date: Date.to_iso8601(Date.add(today, 15)),
+                 time: "10:00",
+                 duration: "30min",
+                 user_timezone: "Etc/UTC"
+               },
+               host.user.id
+             )
+
+    attendee = BookingSeries.attendee_overview(series, host.profile)
+    organizer = BookingSeries.organizer_overview(series)
+
+    for overview <- [attendee, organizer] do
+      assert Enum.map(overview.sessions, & &1.position) == [1, 2, 3]
+      assert Enum.at(overview.sessions, 1).start_time == new_start
+    end
+
+    assert attendee.upcoming == 3
+  end
+
   test "a moved seat stays in its series", %{host: host, today: today} do
     type = group_type(host)
 
