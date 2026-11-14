@@ -706,7 +706,11 @@ msgstr "twój organizator"
 #, elixir-autogen, elixir-format
 msgid "Yes, cancel it"
 msgid_plural "Yes, cancel them"
-
 msgstr[0] "Tak, odwołaj sesję"
 msgstr[1] "Tak, odwołaj sesje"
 msgstr[2] "Tak, odwołaj sesje"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "session %{position}, %{when}"
+msgstr "sesja %{position}, %{when}"

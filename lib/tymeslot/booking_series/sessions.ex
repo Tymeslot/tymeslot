@@ -9,21 +9,26 @@ defmodule Tymeslot.BookingSeries.Sessions do
 
   A session is one of:
 
-    * `:upcoming` - live and still to start; the only status with links,
-      the booker's own meeting links on a one-to-one series and their
-      seat's links on a group one;
+    * `:upcoming` - live and still to start, with the booker's own
+      reschedule and cancel links: the meeting's on a one-to-one series,
+      their seat's on a group one;
     * `:past` - started or over;
     * `:cancelled` - cancelled, a request that lapsed, or a seat given up;
-    * `:awaiting_approval` - held for the host's decision;
-    * `:awaiting_payment` - held for the series' checkout.
+    * `:awaiting_approval` - held for the host's decision. Within an open
+      series request it has no links, as the request is withdrawn whole;
+      held on its own (moved back into the gate by a reschedule) it has
+      its own cancel link;
+    * `:awaiting_payment` - held for the series' checkout, no links.
 
-  `upcoming` counts the sessions `Tymeslot.BookingSeries.Cancel` cancels for
-  an attendee: the live ones still to come. Held sessions are not among
-  them, as the cancellation leaves them to the request or the checkout.
+  `upcoming` counts the sessions "Cancel all remaining" cancels, by the
+  rule `Tymeslot.BookingSeries.Cancel` itself applies
+  (`Cancel.cancellable?/2`), so the page never promises a different
+  number; `open_request` is `Cancel.open_request?/1`, the same test that
+  decides whether the call withdraws the request instead.
   """
 
   alias Tymeslot.Bookings.MeetingLinks
-  alias Tymeslot.BookingSeries.Approval
+  alias Tymeslot.BookingSeries.Cancel
   alias Tymeslot.BookingSeries.SeriesQueries
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Clock
@@ -66,40 +71,55 @@ defmodule Tymeslot.BookingSeries.Sessions do
   @spec for_attendee(SeriesSchema.t(), map() | nil, DateTime.t()) :: overview()
   def for_attendee(%SeriesSchema{} = series, organizer_profile, now \\ Clock.utc_now()) do
     occurrences = SeriesQueries.list_occurrences(series)
-    sessions = Enum.map(occurrences, &session(&1, organizer_profile, now))
+    open_request = Cancel.open_request?(series)
+    sessions = Enum.map(occurrences, &session(&1, organizer_profile, open_request, now))
 
     %{
       series: Repo.preload(series, :meeting_type),
       sessions: sessions,
-      upcoming: Enum.count(sessions, &(&1.status == :upcoming)),
+      upcoming: Enum.count(occurrences, &Cancel.cancellable?(&1, now)),
       held_for_approval: Enum.count(sessions, &(&1.status == :awaiting_approval)),
-      open_request: open_request?(sessions),
+      open_request: open_request,
       paid: paid?(series)
     }
   end
 
-  defp session(%Meeting{} = meeting, organizer_profile, now) do
+  defp session(%Meeting{} = meeting, organizer_profile, open_request, now) do
     status = status(meeting, true, now)
 
-    build(meeting, meeting.series_position, status, fn ->
+    build(meeting, meeting.series_position, status, open_request, fn ->
       meeting |> MeetingLinks.for_meeting(organizer_profile) |> urls()
     end)
   end
 
-  defp session(%Participant{meeting: %Meeting{} = meeting} = seat, _organizer_profile, now) do
+  defp session(%Participant{meeting: %Meeting{} = meeting} = seat, _profile, open_request, now) do
     status = status(meeting, Participant.live?(seat), now)
-    build(meeting, seat.series_position, status, fn -> seat_links(meeting, seat) end)
+
+    build(meeting, seat.series_position, status, open_request, fn -> seat_links(meeting, seat) end)
   end
 
-  defp build(meeting, position, status, links_fn) do
+  defp build(meeting, position, status, open_request, links_fn) do
     %{
       position: position,
       meeting: meeting,
       start_time: meeting.start_time,
       status: status,
-      links: if(status == :upcoming, do: links_fn.())
+      links: links(status, open_request, links_fn)
     }
   end
+
+  defp links(:upcoming, _open_request, links_fn), do: links_fn.()
+
+  # A session held on its own is cancelled as a single request is; it has
+  # no time to move to until the host answers.
+  defp links(:awaiting_approval, false, links_fn) do
+    case links_fn.() do
+      %{cancel_url: cancel_url} -> %{reschedule_url: nil, cancel_url: cancel_url}
+      nil -> nil
+    end
+  end
+
+  defp links(_status, _open_request, _links_fn), do: nil
 
   # A seat given up is cancelled whatever its session became.
   defp status(_meeting, false = _live_seat, _now), do: :cancelled
@@ -126,13 +146,6 @@ defmodule Tymeslot.BookingSeries.Sessions do
 
   defp urls(%{reschedule_url: reschedule_url, cancel_url: cancel_url}),
     do: %{reschedule_url: reschedule_url, cancel_url: cancel_url}
-
-  defp open_request?(sessions) do
-    case Enum.find(sessions, &(&1.status == :awaiting_approval)) do
-      nil -> false
-      %{meeting: meeting} -> Approval.series_request?(meeting)
-    end
-  end
 
   defp paid?(%SeriesSchema{id: id}) do
     case MeetingPayments.payment_for_series(id) do

@@ -4,16 +4,17 @@ defmodule TymeslotWeb.Themes.Core.SeriesManagement do
   scheduling dispatcher: loading the series behind the uid, and its events.
 
   The page lists every session (`Tymeslot.BookingSeries.attendee_overview/2`)
-  and offers one action for the whole series, each behind a confirmation
-  step: "Cancel all remaining sessions"
-  (`Tymeslot.BookingSeries.cancel_remaining/2`), or, while the series is
-  still an open approval request, "Withdraw request"
-  (`Tymeslot.BookingSeries.Approval.withdraw/3`). Both are rate-limited as
-  a single meeting's cancellation is.
+  and offers one action for the whole series, behind a confirmation step:
+  "Cancel all remaining sessions", or, while the series is still an open
+  approval request, "Withdraw request". Both are the one domain call
+  `Tymeslot.BookingSeries.cancel_remaining/2`, which withdraws an open
+  request whole and cancels the remaining sessions otherwise, and both are
+  rate-limited as a single meeting's cancellation is.
 
-  Events: `manage_series_confirm` (with `action`, `cancel_all` or `withdraw`) opens
-  the confirmation, `manage_series_back` closes it, `manage_series_cancel_all` and
-  `manage_series_withdraw` act.
+  Events: `manage_series_confirm` (with `action`, `cancel_all` or
+  `withdraw`) opens the confirmation, `manage_series_back` closes it (and
+  sets `:series_refocus`, so the button that opened it takes the focus
+  back), `manage_series_cancel_all` and `manage_series_withdraw` act.
 
   The series uid is the page's bearer, as a meeting's uid is for its
   cancel page: the series is looked up by it alone, then held to the
@@ -22,14 +23,13 @@ defmodule TymeslotWeb.Themes.Core.SeriesManagement do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import Phoenix.Component, only: [assign: 2, assign: 3]
+  import Phoenix.Component, only: [assign: 2]
   import Phoenix.LiveView, only: [put_flash: 3, redirect: 2]
 
   require Logger
 
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.BookingSeries
-  alias Tymeslot.BookingSeries.Approval
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Helpers.ClientIP
@@ -93,7 +93,8 @@ defmodule TymeslotWeb.Themes.Core.SeriesManagement do
       series_open_request: overview.open_request,
       series_paid: overview.paid,
       series_timezone: overview.series.attendee_timezone || "Etc/UTC",
-      series_confirm: nil
+      series_confirm: nil,
+      series_refocus: false
     )
   end
 
@@ -107,43 +108,52 @@ defmodule TymeslotWeb.Themes.Core.SeriesManagement do
 
   defp series_event("manage_series_confirm", %{"action" => action}, socket) do
     case Map.fetch(@confirmations, action) do
-      {:ok, confirm} -> {:noreply, assign(socket, :series_confirm, offered(socket, confirm))}
-      :error -> {:noreply, socket}
+      {:ok, confirm} ->
+        {:noreply,
+         assign(socket, series_confirm: offered(socket, confirm), series_refocus: false)}
+
+      :error ->
+        {:noreply, socket}
     end
   end
 
   defp series_event("manage_series_back", _params, socket),
-    do: {:noreply, assign(socket, :series_confirm, nil)}
+    do: {:noreply, assign(socket, series_confirm: nil, series_refocus: true)}
 
   defp series_event(
          "manage_series_cancel_all",
          _params,
          %{assigns: %{series_confirm: :cancel_all}} = socket
-       ) do
-    with_rate_limit(socket, fn ->
-      socket.assigns.series
-      |> BookingSeries.cancel_remaining(caller: :attendee)
-      |> settle(socket, :cancelled)
-    end)
-  end
+       ),
+       do: cancel_remaining(socket, :cancelled)
 
   defp series_event(
          "manage_series_withdraw",
          _params,
          %{assigns: %{series_confirm: :withdraw}} = socket
-       ) do
-    with_rate_limit(socket, fn ->
-      socket.assigns.series
-      |> Approval.withdraw(:attendee)
-      |> settle(socket, :withdrawn)
-    end)
-  end
+       ),
+       do: cancel_remaining(socket, :withdrawn)
 
   defp series_event(_event, _params, socket), do: {:noreply, socket}
 
+  # An open request is withdrawn whole; otherwise the remaining sessions
+  # are cancelled. A host who answered meanwhile turns a withdrawal into a
+  # cancellation of what is left.
+  defp cancel_remaining(socket, outcome) do
+    with_rate_limit(socket, fn ->
+      socket.assigns.series
+      |> BookingSeries.cancel_remaining(caller: :attendee)
+      |> settle(socket, outcome)
+    end)
+  end
+
   # Only what the page offers can be confirmed.
-  defp offered(%{assigns: %{series_upcoming: count}}, :cancel_all) when count > 0, do: :cancel_all
   defp offered(%{assigns: %{series_open_request: true}}, :withdraw), do: :withdraw
+
+  defp offered(%{assigns: %{series_open_request: false, series_upcoming: count}}, :cancel_all)
+       when count > 0,
+       do: :cancel_all
+
   defp offered(_socket, _confirm), do: nil
 
   defp with_rate_limit(socket, action) do

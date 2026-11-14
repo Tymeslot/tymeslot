@@ -691,3 +691,8 @@ msgid "Yes, cancel it"
 msgid_plural "Yes, cancel them"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "session %{position}, %{when}"
+msgstr ""

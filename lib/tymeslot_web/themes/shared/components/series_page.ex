@@ -22,9 +22,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
 
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
+  alias Phoenix.LiveView.JS
   alias Tymeslot.BookingSeries
   alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.SeriesParts
 
   @doc """
   The body drawn from the series page's own assigns, as
@@ -44,6 +46,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
       locale={@locale}
       organizer_profile={@organizer_profile}
       confirm={@series_confirm}
+      refocus={@series_refocus}
       loading={assigns[:loading] || false}
     />
     """
@@ -59,6 +62,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
   attr :locale, :string, required: true
   attr :organizer_profile, :any, default: nil
   attr :confirm, :atom, default: nil, values: [nil, :cancel_all, :withdraw]
+
+  attr :refocus, :boolean,
+    default: false,
+    doc: "the confirmation was just closed: its opening button takes the focus back"
+
   attr :loading, :boolean, default: false
 
   @doc "The series page's body (see the module docs)."
@@ -107,7 +115,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
                 class="series-list__link"
                 data-testid="series-session-reschedule"
               >
-                {dgettext("booking_series", "Reschedule")}
+                {dgettext("booking_series", "Reschedule")}<.link_context
+                  session={session}
+                  timezone={@timezone}
+                />
               </a>
               <a
                 :if={session.links.cancel_url}
@@ -115,7 +126,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
                 class="series-list__link"
                 data-testid="series-session-cancel"
               >
-                {dgettext("booking_series", "Cancel")}
+                {dgettext("booking_series", "Cancel")}<.link_context
+                  session={session}
+                  timezone={@timezone}
+                />
               </a>
             </span>
           </span>
@@ -162,6 +176,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
         type="button"
         class="manage-page__button manage-page__button--secondary"
         phx-click="manage_series_back"
+        phx-mounted={JS.focus()}
         data-testid="series-keep"
       >
         {dgettext("booking_series", "Keep my sessions")}
@@ -199,6 +214,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
         type="button"
         class="manage-page__button manage-page__button--secondary"
         phx-click="manage_series_back"
+        phx-mounted={JS.focus()}
         data-testid="series-keep"
       >
         {dgettext("booking_series", "Keep my request")}
@@ -218,6 +234,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
         class="manage-page__button manage-page__button--danger"
         phx-click="manage_series_confirm"
         phx-value-action="withdraw"
+        phx-mounted={SeriesParts.refocus(@refocus)}
         data-testid="series-withdraw"
       >
         {dgettext("booking_series", "Withdraw request")}
@@ -234,6 +251,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
         class="manage-page__button manage-page__button--danger"
         phx-click="manage_series_confirm"
         phx-value-action="cancel_all"
+        phx-mounted={SeriesParts.refocus(@refocus)}
         data-testid="series-cancel-all"
       >
         {dgettext("booking_series", "Cancel all remaining sessions")}
@@ -286,12 +304,43 @@ defmodule TymeslotWeb.Themes.Shared.Components.SeriesPage do
 
   defp first_organizer_name(_sessions), do: dgettext("booking_series", "your host")
 
-  # The rhythm of a recurring series, its day and time read in the booker's
-  # zone; nil for a flexible one.
-  defp rule(%{series: series, sessions: [%{start_time: first} | _rest]} = assigns) do
-    {:ok, local} = LocalizationHelpers.to_attendee_datetime(first, assigns.timezone)
-    BookingSeries.describe_rule(series, assigns.locale, first_start: local)
+  attr :session, :map, required: true
+  attr :timezone, :string, required: true
+
+  # ", session 2, Tuesday 1 December, 09:00 AM": what a session's link acts
+  # on, for a screen reader, which reads the link out of its row.
+  defp link_context(assigns) do
+    ~H"""
+    <span class="sr-only">
+      , {dgettext("booking_series", "session %{position}, %{when}",
+        position: @session.position,
+        when: LocalizationHelpers.format_meeting_datetime_compact(@session.start_time, @timezone)
+      )}
+    </span>
+    """
+  end
+
+  # The rhythm of a recurring series, read in the booker's zone; nil for a
+  # flexible one. Its day and time are named only while every session
+  # still keeps them: a session moved on its own (the first one included)
+  # would otherwise put its own day and time on the whole series, so then
+  # the rhythm is named alone.
+  defp rule(%{series: series, sessions: [_first | _rest] = sessions} = assigns) do
+    phrases =
+      sessions
+      |> Enum.map(&rule_from(series, &1.start_time, assigns))
+      |> Enum.uniq()
+
+    case phrases do
+      [phrase] -> phrase
+      _moved -> BookingSeries.describe_rule(series, assigns.locale)
+    end
   end
 
   defp rule(_assigns), do: nil
+
+  defp rule_from(series, start, %{timezone: timezone, locale: locale}) do
+    {:ok, local} = LocalizationHelpers.to_attendee_datetime(start, timezone)
+    BookingSeries.describe_rule(series, locale, first_start: local)
+  end
 end

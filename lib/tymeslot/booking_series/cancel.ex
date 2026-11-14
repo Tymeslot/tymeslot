@@ -222,6 +222,14 @@ defmodule Tymeslot.BookingSeries.Cancel do
 
   # Series request
 
+  @doc """
+  Whether `series` is still an open approval request, which
+  `cancel_remaining/2` withdraws whole rather than cancelling session by
+  session (`Tymeslot.BookingSeries.Approval.series_request?/1`).
+  """
+  @spec open_request?(SeriesSchema.t()) :: boolean()
+  def open_request?(%SeriesSchema{} = series), do: series_request?(series)
+
   defp series_request?(series) do
     case series
          |> SeriesQueries.list_meetings()
@@ -290,8 +298,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
     cancelled =
       locked
       |> locked_occurrences()
-      |> Enum.filter(&remaining?(&1, now))
-      |> Enum.reject(&held_for_payment?/1)
+      |> Enum.filter(&cancellable?(&1, now))
       |> Enum.map(&cancel_occurrence(&1, caller))
 
     if cancelled == [], do: Repo.rollback(:nothing_to_cancel)
@@ -388,6 +395,17 @@ defmodule Tymeslot.BookingSeries.Cancel do
   end
 
   # Remaining
+
+  @doc """
+  Whether `cancel_remaining/2` cancels `occurrence` (a meeting, or a seat
+  with its meeting preloaded) when the series is not an open request: it
+  is live and still to start, and not held for the series' checkout,
+  which releases it itself. A session held for approval on its own, after
+  a reschedule, is cancelled with the rest.
+  """
+  @spec cancellable?(occurrence(), DateTime.t()) :: boolean()
+  def cancellable?(occurrence, now),
+    do: remaining?(occurrence, now) and not held_for_payment?(occurrence)
 
   defp remaining?(%Meeting{} = meeting, now),
     do: not MeetingState.terminal?(meeting) and upcoming?(meeting, now)

@@ -28,6 +28,7 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
   alias Tymeslot.CalendarMock
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
@@ -185,6 +186,108 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
       assert series_cancellation_jobs() == []
     end
 
+    test "a partially cancelled series cancels only what is left", %{conn: conn, series: series} do
+      [first, second, third] = meetings()
+      assert {:ok, _result} = Meetings.cancel_meeting(second)
+
+      {:ok, view, _html} = live(conn, page_path(series))
+
+      assert session_statuses(view) == ["upcoming", "cancelled", "upcoming"]
+      refute has_element?(view, "#series-session-2 a")
+
+      view |> element("[data-testid='series-cancel-all']") |> render_click()
+
+      assert view |> element("[data-testid='series-confirm']") |> render() =~
+               "Cancel 2 upcoming sessions?"
+
+      view |> element("[data-testid='series-cancel-all-confirm']") |> render_click()
+
+      assert statuses() == [:cancelled, :cancelled, :cancelled]
+      assert [%{args: args}] = series_cancellation_jobs()
+      assert Enum.sort(args["occurrence_ids"]) == Enum.sort([first.id, third.id])
+    end
+
+    test "a session held for approval on its own counts, and has its own cancel link", %{
+      conn: conn,
+      series: series
+    } do
+      [_first, held, _third] = meetings()
+
+      # Moved back into the gate by a reschedule on an approval type: a
+      # request of its own, not the series'.
+      held
+      |> Changeset.change(
+        status: :awaiting_approval,
+        approval_requested_at: DateTime.utc_now(:second),
+        approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 48, :hour)
+      )
+      |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, page_path(series))
+
+      assert session_statuses(view) == ["upcoming", "awaiting_approval", "upcoming"]
+      refute has_element?(view, "[data-testid='series-withdraw']")
+
+      assert hrefs(view, "#series-session-2 [data-testid='series-session-cancel']") ==
+               [MeetingLinks.for_meeting(held).cancel_url]
+
+      refute has_element?(view, "#series-session-2 [data-testid='series-session-reschedule']")
+
+      view |> element("[data-testid='series-cancel-all']") |> render_click()
+
+      assert view |> element("[data-testid='series-confirm']") |> render() =~
+               "Cancel 3 upcoming sessions?"
+
+      view |> element("[data-testid='series-cancel-all-confirm']") |> render_click()
+
+      assert statuses() == [:cancelled, :cancelled, :cancelled]
+    end
+
+    test "a moved session drops the day and time from the rhythm", %{conn: conn, series: series} do
+      {:ok, view, _html} = live(conn, page_path(series))
+      assert view |> element("[data-testid='series-rule']") |> render() =~ " at "
+
+      [first | _rest] = meetings()
+      start = DateTime.add(first.start_time, 2, :hour)
+
+      first
+      |> Changeset.change(start_time: start, end_time: DateTime.add(start, 30, :minute))
+      |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, page_path(series))
+      rule = view |> element("[data-testid='series-rule']") |> render()
+
+      assert rule =~ "Every week"
+      refute rule =~ " at "
+    end
+
+    test "the confirmation takes the focus, and going back returns it", %{
+      conn: conn,
+      series: series
+    } do
+      {:ok, view, _html} = live(conn, page_path(series))
+
+      # Nothing takes the focus on load.
+      refute has_element?(view, "[data-testid='series-cancel-all'][phx-mounted]")
+
+      view |> element("[data-testid='series-cancel-all']") |> render_click()
+      assert has_element?(view, "[data-testid='series-keep'][phx-mounted*='focus']")
+
+      view |> element("[data-testid='series-keep']") |> render_click()
+      assert has_element?(view, "[data-testid='series-cancel-all'][phx-mounted*='focus']")
+    end
+
+    test "each session's links name the session for a screen reader", %{
+      conn: conn,
+      series: series
+    } do
+      {:ok, view, _html} = live(conn, page_path(series))
+
+      assert view
+             |> element("#series-session-2 [data-testid='series-session-cancel'] .sr-only")
+             |> render() =~ "session 2,"
+    end
+
     test "a past session has no links", %{conn: conn, series: series} do
       [first | _rest] = meetings()
       start = DateTime.add(DateTime.utc_now(:second), -7, :day)
@@ -330,6 +433,61 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
     assert session_statuses(view) == ["cancelled", "cancelled", "cancelled"]
     refute has_element?(view, "[data-testid='series-withdraw']")
     assert [%{args: %{"cancelled_by" => "attendee"}}] = series_cancellation_jobs()
+  end
+
+  describe "a series held for approval" do
+    setup do
+      book_series(requires_approval: true, approval_window_hours: 48)
+    end
+
+    test "withdrawing without the confirmation step does nothing", %{conn: conn, series: series} do
+      {:ok, view, _html} = live(conn, page_path(series))
+
+      render_click(view, "manage_series_withdraw", %{})
+
+      assert statuses() == [:awaiting_approval, :awaiting_approval, :awaiting_approval]
+      assert series_cancellation_jobs() == []
+    end
+
+    @tag :capture_log
+    test "the withdrawal is rate limited", %{conn: conn, series: series} do
+      conn = %{conn | remote_ip: {203, 0, 113, 78}}
+      {:ok, view, _html} = live(conn, page_path(series))
+
+      client_ip = :sys.get_state(view.pid).socket.assigns[:client_ip] || "unknown"
+      refusal = exhaust_limit!(:meeting_cancel, client_ip)
+
+      view |> element("[data-testid='series-withdraw']") |> render_click()
+      view |> element("[data-testid='series-withdraw-confirm']") |> render_click()
+
+      assert render(view) =~ refusal |> HTML.html_escape() |> HTML.safe_to_string()
+      assert statuses() == [:awaiting_approval, :awaiting_approval, :awaiting_approval]
+    end
+
+    test "a request with one session moved is cancelled whole, not withdrawn", %{
+      conn: conn,
+      series: series
+    } do
+      [_first, moved, _third] = meetings()
+
+      moved
+      |> Changeset.change(approval_requested_at: DateTime.add(moved.approval_requested_at, 60))
+      |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, page_path(series))
+
+      refute has_element?(view, "[data-testid='series-withdraw']")
+      assert length(hrefs(view, "[data-testid='series-session-cancel']")) == 3
+
+      view |> element("[data-testid='series-cancel-all']") |> render_click()
+
+      assert view |> element("[data-testid='series-confirm']") |> render() =~
+               "Cancel 3 upcoming sessions?"
+
+      view |> element("[data-testid='series-cancel-all-confirm']") |> render_click()
+
+      assert statuses() == [:cancelled, :cancelled, :cancelled]
+    end
   end
 
   describe "finding the series" do

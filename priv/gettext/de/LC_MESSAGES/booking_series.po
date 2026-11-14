@@ -689,6 +689,10 @@ msgstr "Ihrem Gastgeber"
 #, elixir-autogen, elixir-format
 msgid "Yes, cancel it"
 msgid_plural "Yes, cancel them"
-
 msgstr[0] "Ja, Termin absagen"
 msgstr[1] "Ja, Termine absagen"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "session %{position}, %{when}"
+msgstr "Termin %{position}, %{when}"

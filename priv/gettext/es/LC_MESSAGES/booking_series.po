@@ -689,6 +689,10 @@ msgstr "tu anfitrión"
 #, elixir-autogen, elixir-format
 msgid "Yes, cancel it"
 msgid_plural "Yes, cancel them"
-
 msgstr[0] "Sí, cancelarla"
 msgstr[1] "Sí, cancelarlas"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "session %{position}, %{when}"
+msgstr "sesión %{position}, %{when}"
