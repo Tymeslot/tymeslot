@@ -87,6 +87,100 @@ defmodule Tymeslot.Precommit.AffectedTest do
     end)
   end
 
+  defp lint_args(narrowed, name) do
+    Enum.find_value(narrowed.steps, fn
+      {^name, args, _env} -> args
+      _step -> nil
+    end)
+  end
+
+  @lint_inputs %{
+    "format" =>
+      MapSet.new(~w[lib/tymeslot/payments/stripe.ex lib/tymeslot_web/button.ex mix.exs]),
+    "credo" => MapSet.new(~w[lib/tymeslot/payments/stripe.ex lib/tymeslot_web/button.ex])
+  }
+
+  defp select_lint(changed, opts \\ []) do
+    Affected.select(
+      @steps,
+      changed,
+      Keyword.get(opts, :index, index()),
+      Keyword.merge([lint_inputs: @lint_inputs], opts)
+    )
+  end
+
+  describe "select/4 format and credo" do
+    test "check only the changed files they read in a full run" do
+      narrowed =
+        select_lint(["lib/tymeslot/payments/stripe.ex", "lib/tymeslot/gone.ex", "README.md"])
+
+      assert lint_args(narrowed, "format") ==
+               ~w[format --check-formatted lib/tymeslot/payments/stripe.ex]
+
+      assert lint_args(narrowed, "credo") == ~w[credo --strict lib/tymeslot/payments/stripe.ex]
+    end
+
+    test "are skipped when no file they read changed" do
+      narrowed = select_lint(["priv/repo/migrations/20260101000000_add_x.exs"])
+
+      assert {"format", "no file it checks changed"} in narrowed.skipped
+      assert {"credo", "no file it checks changed"} in narrowed.skipped
+    end
+
+    test "run repo-wide when their configuration or the code they load changed" do
+      for {path, wide} <- [
+            {".formatter.exs", ["format"]},
+            {"mix.lock", ["format", "credo"]},
+            {".credo.exs", ["credo"]},
+            {"config/config.exs", ["credo"]},
+            {"dev_support/credo_checks/no_native_title.ex", ["credo"]},
+            {"test/support/tag_taxonomy.ex", ["credo"]}
+          ] do
+        narrowed = select_lint(["lib/tymeslot/payments/stripe.ex", path])
+
+        for tool <- ["format", "credo"] do
+          args = lint_args(narrowed, tool)
+
+          assert tool in wide == args in [~w[format --check-formatted], ~w[credo --strict]],
+                 "#{path}: #{tool} ran as #{inspect(args)}"
+        end
+      end
+    end
+
+    test "credo runs repo-wide when a component's :global attribute moves what its callers may pass" do
+      index = %{index() | sources: %{"lib/tymeslot_web/button.ex" => "attr :rest, :global"}}
+
+      assert lint_args(select_lint(["lib/tymeslot_web/button.ex"], index: index), "credo") ==
+               ~w[credo --strict]
+
+      assert lint_args(select_lint(["lib/tymeslot_web/button.ex"]), "credo") ==
+               ~w[credo --strict lib/tymeslot_web/button.ex]
+    end
+
+    test "an upstream code change alone leaves this repository's format and credo unrun" do
+      narrowed =
+        select_lint([],
+          upstream: ["lib/tymeslot/payments/charge.ex"],
+          upstream_index: upstream_index()
+        )
+
+      assert {"format", "no file it checks changed"} in narrowed.skipped
+      assert {"credo", "no file it checks changed"} in narrowed.skipped
+      assert "compile" in names(narrowed)
+    end
+
+    test "an upstream change to the Credo checks this repository loads runs credo repo-wide" do
+      narrowed =
+        select_lint([],
+          upstream: ["dev_support/credo_checks/no_native_title.ex"],
+          upstream_index: upstream_index()
+        )
+
+      assert lint_args(narrowed, "credo") == ~w[credo --strict]
+      assert {"format", "no file it checks changed"} in narrowed.skipped
+    end
+  end
+
   describe "select/4" do
     test "a lib change runs the static steps and only the tests it affects" do
       narrowed = Affected.select(@steps, ["lib/tymeslot/payments/stripe.ex"], index())
