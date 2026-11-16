@@ -74,7 +74,7 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   """
   @spec deliver(Swoosh.Email.t(), Oban.Job.t(), String.t(), keyword()) :: outcome()
   def deliver(email, %Oban.Job{} = job, failure_message, metadata \\ []) do
-    case Delivery.deliver(email) do
+    case Delivery.within_job(job, fn -> Delivery.deliver(email) end) do
       {:ok, _result} ->
         :ok
 

@@ -3,8 +3,12 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
   @moduletag :emails
 
   import Tymeslot.Factory
+  import Tymeslot.Test.DirectEmailSends
 
   alias Tymeslot.Emails.EmailService
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   # EmailService.deliver/1 runs inside CircuitBreaker.call/2, which executes the
   # delivery function inside a GenServer. Swoosh's test adapter delivers to

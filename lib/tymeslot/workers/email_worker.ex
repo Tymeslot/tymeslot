@@ -193,11 +193,13 @@ defmodule Tymeslot.Workers.EmailWorker do
 
     case Bounded.run(
            fn ->
-             Delivery.with_ambiguous_timeouts(
-               policy,
-               fn -> EmailHandlers.execute_email_action(action, args, job.id) end,
-               on_ambiguous: fn -> record_ambiguous_retry(job, action) end
-             )
+             Delivery.within_job(job, fn ->
+               Delivery.with_ambiguous_timeouts(
+                 policy,
+                 fn -> EmailHandlers.execute_email_action(action, args, job.id) end,
+                 on_ambiguous: fn -> record_ambiguous_retry(job, action) end
+               )
+             end)
            end,
            timeout_ms
          ) do

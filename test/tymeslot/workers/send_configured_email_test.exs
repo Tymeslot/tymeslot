@@ -13,6 +13,7 @@ defmodule Tymeslot.Workers.SendConfiguredEmailTest do
   import ExUnit.CaptureLog
   import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.ConfigTestHelpers
+  import Tymeslot.Test.DirectEmailSends
 
   @moduletag :payments
   @moduletag :emails
@@ -53,6 +54,9 @@ defmodule Tymeslot.Workers.SendConfiguredEmailTest do
       )
     end
   end
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   setup do
     setup_config(:tymeslot, :test_configured_notice_template, Template)

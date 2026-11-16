@@ -12,11 +12,15 @@ defmodule Tymeslot.Polls.ConfirmGuestNamesTest do
   @moduletag :integration
 
   import Tymeslot.Factory
+  import Tymeslot.Test.DirectEmailSends
 
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.TestMocks
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   setup do
     TestMocks.resolve_booking_calendars()
