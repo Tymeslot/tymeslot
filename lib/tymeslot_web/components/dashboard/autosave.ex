@@ -45,6 +45,7 @@ defmodule TymeslotWeb.Components.Dashboard.Autosave do
   The status line under an autosaving form, announced politely to screen
   readers as it changes.
   """
+  @spec status(map()) :: Phoenix.LiveView.Rendered.t()
   def status(assigns) do
     ~H"""
     <p
