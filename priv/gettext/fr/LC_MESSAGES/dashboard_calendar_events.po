@@ -401,3 +401,63 @@ msgid "The latest update could not be emailed to this guest. Let them know anoth
 msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
 msgstr[0] "La dernière modification n’a pas pu être envoyée par e-mail à cet invité. Prévenez-le autrement."
 msgstr[1] "La dernière modification n’a pas pu être envoyée par e-mail à ces invités. Prévenez-les autrement."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "Add a title. A meeting without a main participant is known by its title."
+msgstr "Ajoutez un titre. Une réunion sans participant principal se reconnaît à son titre."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "An address, a room or a meeting point"
+msgstr "Une adresse, une salle ou un point de rendez-vous"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Custom location"
+msgstr "Lieu personnalisé"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Custom location…"
+msgstr "Lieu personnalisé…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone is an equal guest who can accept or decline. Only you can move or cancel the meeting."
+msgstr "Tout le monde est invité à égalité et peut accepter ou décliner. Vous seul pouvez déplacer ou annuler la réunion."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Location (optional)"
+msgstr "Lieu (facultatif)"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Main participant"
+msgstr "Participant principal"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "No location"
+msgstr "Aucun lieu"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Saved locations"
+msgstr "Lieux enregistrés"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Shown on the calendar entry and in every invitation."
+msgstr "Affiché dans l’entrée d’agenda et dans chaque invitation."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "That location can no longer be used. Please choose another one."
+msgstr "Ce lieu ne peut plus être utilisé. Veuillez en choisir un autre."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "The main participant can move or cancel the meeting. Turn this off to invite everyone as an equal guest."
+msgstr "Le participant principal peut déplacer ou annuler la réunion. Désactivez cette option pour inviter tout le monde comme invités à égalité."

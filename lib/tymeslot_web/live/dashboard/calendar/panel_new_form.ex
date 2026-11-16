@@ -8,9 +8,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
 
   With a guest, the form offers to send the draft as a Tymeslot meeting
   (`PanelMeetingFields`, `PanelMeeting`). A meeting has times, is busy and
-  has no place of its own, so All day, Show as and Place give way to the
-  meeting's fields while it is ticked, and Notes becomes the note to the
-  guests.
+  takes its place from its own fields, so All day, Show as and Place give
+  way to the meeting's fields while it is ticked, and Notes becomes the
+  note to the guests.
 
   Without guests, and on a plan with group bookings, it offers to make the
   draft a group event instead (`PanelGroupEventFields`, `PanelGroupEvent`).
@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         form_key={@guest_form_key}
         surface={@surface}
       />
-      <PanelMeetingFields.meeting_fields :if={!@group} values={@values} />
+      <PanelMeetingFields.meeting_fields :if={!@group} values={@values} venues={@venues} />
       <PanelGroupEventFields.group_event_fields
         :if={@group_offered}
         values={@values}

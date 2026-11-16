@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
         repeat: %{custom_open: false, draft: nil, version: 0},
         calendar_version: 0,
         video_version: 0,
-        venues: group_venues(socket)
+        venues: Venues.list_venues(socket.assigns.current_user.id)
       },
       preview: nil,
       open_menu: nil
@@ -325,12 +325,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
 
   # Where a group event can take place, read once per draft and only for an
   # organiser who may make one.
-  defp group_venues(socket) do
-    if group_allowed?(socket),
-      do: Venues.list_venues(socket.assigns.current_user.id),
-      else: []
-  end
-
   defp start_create(socket, panel) do
     with {:ok, create} <- cast_params(socket, panel.form),
          {:ok, socket} <- Creation.start(socket, panel.draft_id, create) do
