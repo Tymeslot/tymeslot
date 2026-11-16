@@ -21,7 +21,25 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   attr :automations_allowed, :boolean, default: true
   attr :analytics_allowed, :boolean, default: true
   attr :full_width, :boolean, default: false
+
+  attr :compact_nav, :boolean,
+    default: false,
+    doc: "a slimmer top bar, for sections whose content should take the screen"
+
+  attr :focus, :boolean,
+    default: false,
+    doc: "focus mode: from the lg breakpoint the menu is hidden (see `CalendarFocus`)"
+
   attr :sidebar_extensions, :list, default: []
+
+  attr :nav_rail, :boolean,
+    default: false,
+    doc: "from the lg breakpoint, the menu is a narrow column of icons"
+
+  attr :nav_rail_toggle, :boolean,
+    default: false,
+    doc: "offer the control that switches the menu between full width and the rail"
+
   attr :unseen_announcements, :list, default: []
   slot :inner_block, required: true
 
@@ -29,8 +47,9 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   def dashboard_layout(assigns) do
     ~H"""
     <div
-      class="flex flex-col h-screen overflow-hidden"
+      class="flex flex-col h-dvh overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
       id="dashboard-root"
+      data-calendar-focus={@focus && "true"}
       phx-hook="ClipboardCopy"
     >
       <%!-- Feature-announcement carousel. Renders nothing when the list is empty. --%>
@@ -44,11 +63,11 @@ defmodule TymeslotWeb.Components.DashboardLayout do
 
       <%!-- Top Navigation --%>
       <div class="shrink-0">
-        <.top_navigation current_user={@current_user} profile={@profile} />
+        <.top_navigation current_user={@current_user} profile={@profile} compact={@compact_nav} />
       </div>
 
       <%!-- Main Layout Area --%>
-      <div class="flex lg:gap-8 flex-1 overflow-hidden min-h-0">
+      <div class="dashboard-main-row flex lg:gap-8 flex-1 overflow-hidden min-h-0">
         <DashboardSidebar.sidebar
           current_action={@current_action}
           integration_status={@integration_status}
@@ -56,6 +75,8 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           automations_allowed={@automations_allowed}
           analytics_allowed={@analytics_allowed}
           sidebar_extensions={@sidebar_extensions}
+          rail={@nav_rail}
+          rail_toggle={@nav_rail_toggle}
         />
 
         <%!-- Main Content Area --%>
@@ -131,14 +152,24 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   attr :current_user, :any, required: true
   attr :profile, :any, required: true
   attr :show_sidebar_toggle, :boolean, default: true
+  attr :compact, :boolean, default: false
 
   @spec top_navigation(map()) :: Phoenix.LiveView.Rendered.t()
   def top_navigation(assigns) do
     ~H"""
-    <div class="w-full px-2 sm:px-4 py-4 sm:py-6">
-      <nav class="brand-nav relative" style="z-index: 50;">
+    <div
+      id="dashboard-top-nav"
+      data-compact={to_string(@compact)}
+      class={["w-full px-2 sm:px-4", if(@compact, do: "py-0.5", else: "py-4 sm:py-6")]}
+    >
+      <%!-- Compact: one 44px row (the touch-target height of its controls)
+           with no padding around it, about 52px in all. --%>
+      <nav class={["brand-nav relative", @compact && "brand-nav-compact"]} style="z-index: 50;">
         <div class="w-full px-1 sm:px-4">
-          <div class="flex items-center justify-between gap-2 h-16">
+          <div class={[
+            "flex items-center justify-between gap-2",
+            if(@compact, do: "h-11", else: "h-16")
+          ]}>
             <%!-- Left side: Logo and Mobile Menu Button --%>
             <div class="flex items-center space-x-2 sm:space-x-4 sm:-ml-4 flex-1 min-w-0">
               <%= if @show_sidebar_toggle do %>
@@ -146,7 +177,11 @@ defmodule TymeslotWeb.Components.DashboardLayout do
                 <button
                   id="dashboard-sidebar-toggle"
                   type="button"
-                  class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-token-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all shrink-0"
+                  class={[
+                    "lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center",
+                    if(@compact, do: "w-11 h-11", else: "w-12 h-12"),
+                    "rounded-token-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all shrink-0"
+                  ]}
                   phx-click={
                     JS.toggle_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
                     |> JS.toggle_class("hidden", to: "#dashboard-sidebar-overlay")
@@ -164,7 +199,12 @@ defmodule TymeslotWeb.Components.DashboardLayout do
               <div class="flex items-center space-x-3 min-w-0">
                 <TymeslotWeb.Components.CoreComponents.Brand.logo
                   mode={:full}
-                  img_class="h-10 sm:h-16 shrink min-w-0"
+                  img_class={
+                    if(@compact,
+                      do: "h-8 sm:h-10 shrink min-w-0",
+                      else: "h-10 sm:h-16 shrink min-w-0"
+                    )
+                  }
                 />
               </div>
             </div>
@@ -176,6 +216,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
                 id="user-dropdown"
                 current_user={@current_user}
                 profile={@profile}
+                compact={@compact}
               />
             </div>
           </div>

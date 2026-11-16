@@ -330,4 +330,15 @@ defmodule TymeslotWeb.Components.CoreComponentsTabBarTest do
       assert [_dot] = Floki.find(doc, "#test-tabs-tab-b span.bg-amber-400")
     end
   end
+
+  test "a tab with :flag leads its label with that language's flag" do
+    doc =
+      render_bar(
+        [%{id: "de", label: "Deutsch", flag: "de"}, %{id: "fr", label: "Français"}],
+        "de"
+      )
+
+    assert [_flag] = Floki.find(doc, "#test-tabs-tab-de svg")
+    assert [] = Floki.find(doc, "#test-tabs-tab-fr svg")
+  end
 end

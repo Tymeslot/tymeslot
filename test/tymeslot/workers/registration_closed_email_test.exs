@@ -15,6 +15,7 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
   import Mox
   import Swoosh.TestAssertions
   import Tymeslot.Factory
+  import Tymeslot.Test.DirectEmailSends
 
   alias Ecto.Changeset
   alias Swoosh.Attachment
@@ -29,6 +30,9 @@ defmodule Tymeslot.Workers.RegistrationClosedEmailTest do
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   setup :verify_on_exit!
   # Delivery runs inside the CircuitBreaker GenServer; global mode routes the

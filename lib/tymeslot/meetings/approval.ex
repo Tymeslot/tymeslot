@@ -91,7 +91,6 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
   alias Tymeslot.Notifications.DispatchInTransactionError
   alias Tymeslot.Notifications.Events
-  alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Repo
   alias Tymeslot.Validation.Constraints
@@ -484,7 +483,8 @@ defmodule Tymeslot.Meetings.Approval do
   # order that matters: stop the jobs that would contradict the outcome, take
   # the hold off the host's calendar, take the video room off the provider,
   # refund whatever the attendee paid for a booking that never got approved,
-  # then tell the invitee. Each step runs through `best_effort/3` so a crash
+  # then tell the invitee, and any guests a reschedule had invited, from email
+  # jobs (`Orchestrator.send_request_outcome_notifications/2`). Each step runs through `best_effort/3` so a crash
   # in one cannot stop the next; none of them may fail the transition, which
   # has already been committed and cannot be undone.
   defp after_release(%Meeting{status: status} = meeting) do
@@ -503,7 +503,6 @@ defmodule Tymeslot.Meetings.Approval do
     end)
 
     best_effort(meeting, "announce release", fn -> announce_release(meeting, status) end)
-    best_effort(meeting, "notify guests", fn -> GuestNotifications.notify_released(meeting) end)
 
     :ok
   end

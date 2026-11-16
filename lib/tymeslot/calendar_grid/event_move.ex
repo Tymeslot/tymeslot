@@ -166,6 +166,45 @@ defmodule Tymeslot.CalendarGrid.EventMove do
     end
   end
 
+  @doc """
+  `move_event/3`, answered in the shape a calendar LiveView and its
+  `Tymeslot.CalendarGrid.WriteGuardian` read a move's result in, the
+  message `{:event_move_result, result}`: `{:ok, keyword}` with the moved
+  event's `:uid` and `:integration_id`, the `:source` note `move_event/3`
+  gave (or `nil`), and the `:original_event`; or `{:error, keyword}` with
+  the `:original_event` and the `:reason`.
+
+  `series_to` is the destination calendar's name for a whole series' move,
+  `nil` for a single event. It rides along as `:series_to`, which tells the
+  guardian a series was held for the move and the calendars which toast to
+  show.
+  """
+  @spec reported(pos_integer(), map(), destination(), String.t() | nil) ::
+          {:ok, keyword()} | {:error, keyword()}
+  def reported(user_id, event, destination, series_to) do
+    case move_event(user_id, event, destination) do
+      {:ok, moved} ->
+        {:ok,
+         [
+           uid: moved.uid,
+           integration_id: moved.integration_id,
+           source: moved[:source],
+           original_event: event
+         ] ++ series(series_to)}
+
+      {:error, reason} ->
+        {:error, [original_event: event, reason: reason] ++ series(series_to)}
+    end
+  end
+
+  @doc "What a move of `event` answers when its task crashes, in `reported/4`'s shape."
+  @spec crash_report(map(), String.t() | nil) :: {:error, keyword()}
+  def crash_report(event, series_to),
+    do: {:error, [original_event: event, reason: :crashed] ++ series(series_to)}
+
+  defp series(nil), do: []
+  defp series(calendar), do: [series_to: calendar]
+
   defp move_single(user_id, event, stored, %{integration: integration} = destination) do
     moved = moved_event(event, stored, integration, Map.get(destination, :calendar_id))
 

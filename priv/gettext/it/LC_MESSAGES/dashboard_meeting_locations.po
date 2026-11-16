@@ -189,11 +189,6 @@ msgstr "Mostrato a chi prenota e inserito nell'invito del calendario."
 msgid "Something else"
 msgstr "Altro"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Somewhere else"
-msgstr "Altrove"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "The booker picks: %{providers}"

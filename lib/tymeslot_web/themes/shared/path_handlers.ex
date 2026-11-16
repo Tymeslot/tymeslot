@@ -496,7 +496,10 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   `reschedule_meeting_uid` query param, so the restarted booking updates
   the existing meeting instead of silently creating a duplicate — the
   reschedule context is derived solely from that param
-  (`LiveHelpers.Mount.handle_scheduling_params/2`).
+  (`LiveHelpers.Mount.handle_scheduling_params/2`). The page's language
+  goes with it as `locale`, so the booking flow carries on in the language
+  the reschedule page was shown in (the attendee's booked one, unless they
+  picked another) rather than switching to the browser's midway.
 
   Falls back to "/" if the profile or username is unavailable.
   """
@@ -504,18 +507,20 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   def organizer_scheduling_path(assigns) do
     case BookingPages.public_address(assigns[:organizer_profile]) do
       address when is_binary(address) and address != "" ->
-        maybe_append_reschedule_uid("/#{address}", assigns[:meeting_uid])
+        with_query("/#{address}", reschedule_query(assigns[:meeting_uid], assigns[:locale]))
 
       _other ->
         "/"
     end
   end
 
-  defp maybe_append_reschedule_uid(base_path, uid) when is_binary(uid) and uid != "" do
-    "#{base_path}?#{URI.encode_query(%{"reschedule_meeting_uid" => uid})}"
+  defp reschedule_query(uid, locale) when is_binary(uid) and uid != "" do
+    Map.reject(%{"reschedule_meeting_uid" => uid, "locale" => locale}, fn {_key, value} ->
+      is_nil(value)
+    end)
   end
 
-  defp maybe_append_reschedule_uid(base_path, _uid), do: base_path
+  defp reschedule_query(_uid, _locale), do: %{}
 
   @doc """
   The confirmation step's "Add to calendar" link: the booked meeting as a

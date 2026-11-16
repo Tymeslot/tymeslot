@@ -3,10 +3,13 @@ defmodule Tymeslot.Emails.DeliveryTest do
 
   @moduletag :emails
 
+  import ExUnit.CaptureLog
   import Tymeslot.ConfigTestHelpers
+  import Tymeslot.Test.DirectEmailSends
 
   alias Swoosh.Email
   alias Tymeslot.Emails.Delivery
+  alias Tymeslot.Emails.DeliveryOutsideJobError
   alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
   alias Tymeslot.Test.FailingMailerAdapter
@@ -32,6 +35,51 @@ defmodule Tymeslot.Emails.DeliveryTest do
         html_body: "<p>HTML body.</p>"
       ] ++ overrides
     )
+  end
+
+  setup :allow_direct_sends
+
+  describe "deliver/2 outside an email job" do
+    # These tests take back the module's allowance, to see what a send from
+    # application code, outside any job, meets.
+    setup do
+      Process.delete({Delivery, :email_job})
+      Application.put_env(:swoosh, :shared_test_process, self())
+      on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
+    end
+
+    test "is refused, and nothing is sent" do
+      assert_raise DeliveryOutsideJobError, fn -> Delivery.deliver(valid_email()) end
+      refute_received {:email, _email}
+    end
+
+    test "is sent from inside an email job, and refused again once the job's work is done" do
+      job = %Oban.Job{id: System.unique_integer([:positive])}
+
+      assert {:ok, _receipt} = Delivery.within_job(job, fn -> Delivery.deliver(valid_email()) end)
+      assert_received {:email, %Email{subject: "Test subject"}}
+
+      assert_raise DeliveryOutsideJobError, fn -> Delivery.deliver(valid_email()) end
+    end
+
+    test "is sent where dev tooling allows it" do
+      assert {:ok, _receipt} =
+               Delivery.allow_outside_job(fn -> Delivery.deliver(valid_email()) end)
+
+      assert_received {:email, %Email{subject: "Test subject"}}
+    end
+
+    test "is reported and still sent under `:report`" do
+      with_config(:tymeslot, :email_delivery_outside_job, :report)
+
+      log =
+        capture_log(fn ->
+          assert {:ok, _receipt} = Delivery.deliver(valid_email())
+        end)
+
+      assert log =~ "email sent outside an email job"
+      assert_received {:email, %Email{subject: "Test subject"}}
+    end
   end
 
   describe "deliver/1 — text_body validation" do

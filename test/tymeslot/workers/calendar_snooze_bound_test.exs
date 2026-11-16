@@ -50,17 +50,14 @@ defmodule Tymeslot.Workers.CalendarSnoozeBoundTest do
     test "tells the owner when the last attempt ends the wait", %{args: args} do
       meeting_id = args["meeting_id"]
 
-      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, fn meeting, _reason ->
-        assert meeting.id == meeting_id
-        :ok
-      end)
-
       assert {:error, _reason} =
                perform_job(CalendarEventWorker, args,
                  attempt: 5,
                  max_attempts: 5,
                  meta: %{"snoozed" => 11}
                )
+
+      assert_sync_error_enqueued(meeting_id)
     end
 
     test "tells the owner when a rate limit outlasts the last attempt", %{args: args} do
@@ -68,14 +65,14 @@ defmodule Tymeslot.Workers.CalendarSnoozeBoundTest do
         {:error, :rate_limited}
       end)
 
-      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, fn _meeting, _reason -> :ok end)
-
       assert {:error, _reason} =
                perform_job(CalendarEventWorker, args,
                  attempt: 5,
                  max_attempts: 5,
                  meta: %{"snoozed" => 11}
                )
+
+      assert_sync_error_enqueued(args["meeting_id"])
     end
 
     # The worker waits an open breaker out by snoozing, which costs no
@@ -83,25 +80,21 @@ defmodule Tymeslot.Workers.CalendarSnoozeBoundTest do
     # that attempt again. Only the end of the wait tells the owner, or each
     # of those waits would send another copy.
     test "does not tell the owner while the last attempt is still waiting", %{args: args} do
-      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, 0, fn _meeting, _reason ->
-        :ok
-      end)
-
       assert {:snooze, _seconds} =
                perform_job(CalendarEventWorker, args, attempt: 5, max_attempts: 5)
+
+      refute_sync_error_enqueued()
     end
 
     test "does not tell the owner while attempts remain", %{args: args} do
-      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, 0, fn _meeting, _reason ->
-        :ok
-      end)
-
       assert {:error, _reason} =
                perform_job(CalendarEventWorker, args,
                  attempt: 4,
                  max_attempts: 5,
                  meta: %{"snoozed" => 11}
                )
+
+      refute_sync_error_enqueued()
     end
   end
 
@@ -109,24 +102,31 @@ defmodule Tymeslot.Workers.CalendarSnoozeBoundTest do
     test "tells the owner of a booking still waiting for its calendar event" do
       meeting = insert(:meeting)
 
-      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, fn notified, _reason ->
-        assert notified.id == meeting.id
-        :ok
-      end)
-
       assert :ok = CalendarEventSync.notify_create_abandoned(meeting.id, "gave up")
+      assert_sync_error_enqueued(meeting.id)
     end
 
     test "sends nothing for a cancelled booking or one that is gone" do
       cancelled = insert(:meeting, status: :cancelled)
 
-      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, 0, fn _meeting, _reason ->
-        :ok
-      end)
-
       assert :ok = CalendarEventSync.notify_create_abandoned(cancelled.id, "gave up")
       assert :ok = CalendarEventSync.notify_create_abandoned(UUID.generate(), "gave up")
+      refute_sync_error_enqueued()
     end
+  end
+
+  defp assert_sync_error_enqueued(meeting_id) do
+    assert_enqueued(
+      worker: Tymeslot.Workers.EmailWorker,
+      args: %{"action" => "send_calendar_sync_error", "meeting_id" => meeting_id}
+    )
+  end
+
+  defp refute_sync_error_enqueued do
+    refute_enqueued(
+      worker: Tymeslot.Workers.EmailWorker,
+      args: %{"action" => "send_calendar_sync_error"}
+    )
   end
 
   describe "a Google sync waiting for an open breaker" do

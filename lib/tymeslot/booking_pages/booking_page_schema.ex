@@ -10,8 +10,8 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
   profile and everything that renders a start page reads the result unchanged.
 
   The slug is trimmed and stored lowercase, follows the username rules and
-  is none of the fixed second segments routed under a username
-  (`reserved_slugs/0`); that it is free of the profile's other pages and
+  is none of the fixed second segments routed under a username, nor of the
+  legacy `<n>min` duration links (`reserved?/1`); that it is free of the profile's other pages and
   meeting types is checked by `Tymeslot.BookingPages`, with the unique index
   on `(profile_id, lower(slug))` as the backstop between pages.
   """
@@ -34,6 +34,7 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
           booking_heading: String.t() | nil,
           booking_greeting: String.t() | nil,
           booking_instruction: String.t() | nil,
+          translations: map(),
           profile: ProfileSchema.t() | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -44,6 +45,10 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
   # The literal second segments the router serves under `/:username/`
   # (`TymeslotWeb.Router`): a page there would never be reached.
   @reserved_slugs ~w(book meeting poll thank-you)
+  # The legacy duration links: the URL layer reads `/:username/30min` as the
+  # meeting type `30-minutes`, so a page there would take over a link the
+  # host may already have shared.
+  @duration_link_format ~r/^\d+min$/
 
   schema "booking_pages" do
     field(:slug, :string)
@@ -54,6 +59,10 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
     field(:booking_greeting, :string)
     field(:booking_instruction, :string)
 
+    # Translations of the texts above (`Tymeslot.ContentTranslations`). No
+    # changeset here casts it, so a form save can never wipe it.
+    field(:translations, :map, default: %{})
+
     belongs_to(:profile, ProfileSchema)
 
     timestamps(type: :utc_datetime)
@@ -63,9 +72,17 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
   @spec name_max_length() :: pos_integer()
   def name_max_length, do: @name_max_length
 
-  @doc "The slugs no page may take: the fixed paths routed under a username."
+  @doc "The fixed paths routed under a username, which no page may take."
   @spec reserved_slugs() :: [String.t()]
   def reserved_slugs, do: @reserved_slugs
+
+  @doc """
+  Whether no page may take `slug`: a fixed path routed under a username, or
+  a legacy `<n>min` duration link.
+  """
+  @spec reserved?(String.t()) :: boolean()
+  def reserved?(slug) when is_binary(slug),
+    do: slug in @reserved_slugs or Regex.match?(@duration_link_format, slug)
 
   @doc """
   A new page: its owner, starting theme, name and address.
@@ -117,7 +134,7 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
     validate_change(changeset, :slug, fn :slug, slug ->
       cond do
         UsernameValidator.validate(slug) != :ok -> [slug: address_format_message()]
-        slug in @reserved_slugs -> [slug: {"is reserved", validation: :reserved}]
+        reserved?(slug) -> [slug: {"is reserved", validation: :reserved}]
         true -> []
       end
     end)

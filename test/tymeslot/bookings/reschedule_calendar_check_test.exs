@@ -24,6 +24,7 @@ defmodule Tymeslot.Bookings.RescheduleCalendarCheckTest do
 
   import Tymeslot.AvailabilityTestHelpers
 
+  alias Tymeslot.Availability.Bookability
   alias Tymeslot.Availability.Offer
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -129,6 +130,56 @@ defmodule Tymeslot.Bookings.RescheduleCalendarCheckTest do
       refute "2:15 PM" in slots(context, meeting.uid)
 
       assert {:error, :slot_taken} = reschedule(meeting, date, "2:15 PM", user.id)
+    end
+  end
+
+  # The organiser's "Treat as" choices (`Bookability`) reach the submit's
+  # re-read through `apply_to_busy/3`, which the meeting's `exclude:` filter
+  # then runs over.
+  describe "a free all-day event on a read-only subscription" do
+    setup %{user: user, date: date, meeting: meeting} do
+      feed = insert(:calendar_integration, user: user, provider: "ics_url", is_active: true)
+
+      # Cached free, as a holiday feed marks it. Its uid is neither of the
+      # meeting's identifiers, so the exclusion cannot be what refuses it.
+      holiday =
+        insert(:provider_calendar_event,
+          calendar_integration: feed,
+          uid: "bank-holiday-#{Date.to_iso8601(date)}",
+          provider_event_id: nil,
+          provider: "ics_url",
+          provider_calendar_id: "feed",
+          summary: "Bank holiday",
+          all_day: true,
+          start_date: date,
+          end_date: Date.add(date, 1),
+          start_at: nil,
+          end_at: nil,
+          transparency: "transparent"
+        )
+
+      refute holiday.uid in [meeting.calendar_uid, meeting.provider_event_id, meeting.uid]
+
+      %{feed: feed, holiday: holiday}
+    end
+
+    test "lets the move through", context do
+      %{user: user, meeting: meeting, date: date} = context
+
+      assert {:ok, moved} = reschedule(meeting, date, "3:00 PM", user.id)
+      assert moved.start_time == DateTime.new!(date, ~T[15:00:00], @timezone)
+    end
+
+    test "refuses a move onto it once Treat as Busy closes the day, and the meeting keeps its time",
+         context do
+      %{user: user, meeting: meeting, date: date, feed: feed, holiday: holiday} = context
+
+      :ok = Bookability.set(user.id, feed.id, holiday.uid, true)
+
+      assert {:error, :slot_taken} = reschedule(meeting, date, "3:00 PM", user.id)
+
+      assert {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
+      assert DateTime.compare(unchanged.start_time, meeting.start_time) == :eq
     end
   end
 

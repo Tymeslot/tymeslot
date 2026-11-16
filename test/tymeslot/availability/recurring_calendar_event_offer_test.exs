@@ -94,6 +94,7 @@ defmodule Tymeslot.Availability.RecurringCalendarEventOfferTest do
   describe "a recurring calendar event that began years ago" do
     test "still hides its slot today, and the booking API refuses it" do
       %{user: user, profile: profile} = create_bookable_profile(timezone: "Etc/UTC")
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 30)
       target_date = next_bookable_weekday()
 
       # Three years of weekdays is far more occurrences than one expansion
@@ -133,7 +134,8 @@ defmodule Tymeslot.Availability.RecurringCalendarEventOfferTest do
                    time: "11:00 AM",
                    duration: "30min",
                    user_timezone: "Etc/UTC",
-                   organizer_user_id: user.id
+                   organizer_user_id: user.id,
+                   meeting_type_id: meeting_type.id
                  },
                  %{
                    "name" => "Standup Attendee",
@@ -147,6 +149,7 @@ defmodule Tymeslot.Availability.RecurringCalendarEventOfferTest do
   describe "a CalDAV series created on the other side of a DST change" do
     test "blocks its local time, and a moved occurrence only its new time" do
       %{user: user, profile: profile} = create_bookable_profile(timezone: "Europe/Berlin")
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 30)
       target_date = next_bookable_weekday()
       moved_day = Date.add(target_date, 7)
 
@@ -193,7 +196,8 @@ defmodule Tymeslot.Availability.RecurringCalendarEventOfferTest do
                    time: "1:00 PM",
                    duration: "30min",
                    user_timezone: "Europe/Berlin",
-                   organizer_user_id: user.id
+                   organizer_user_id: user.id,
+                   meeting_type_id: meeting_type.id
                  },
                  %{
                    "name" => "Sync Attendee",

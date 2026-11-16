@@ -6,10 +6,14 @@ defmodule Tymeslot.Emails.AccountDeletionNoticeDeliveryTest do
   @moduletag :auth
 
   import Mox
+  import Tymeslot.Test.DirectEmailSends
 
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Emails.EmailService.AuthEmails
   alias Tymeslot.Notifications.Email.AuthEmails, as: AuthEmailHandlers
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   setup :verify_on_exit!
 

@@ -5,6 +5,7 @@ defmodule Tymeslot.FreeBusyTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Availability.Bookability
   alias Tymeslot.FreeBusy
 
   describe "feed token lifecycle" do
@@ -181,6 +182,49 @@ defmodule Tymeslot.FreeBusyTest do
       assert [{s, e}] = intervals
       assert DateTime.compare(s, ~U[2030-05-31 14:00:00Z]) == :eq
       assert DateTime.compare(e, ~U[2030-06-01 14:00:00Z]) == :eq
+    end
+  end
+
+  describe "busy_intervals/3 and the organiser's \"Treat as\" choices" do
+    setup do
+      profile = insert(:profile, timezone: "Etc/UTC")
+      integration = insert(:calendar_integration, user: profile.user)
+      %{profile: profile, integration: integration}
+    end
+
+    defp all_day(integration, transparency) do
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        all_day: true,
+        start_date: ~D[2030-06-01],
+        end_date: ~D[2030-06-02],
+        start_at: nil,
+        end_at: nil,
+        transparency: transparency,
+        status: "confirmed"
+      )
+    end
+
+    defp june(profile),
+      do: FreeBusy.busy_intervals(profile, ~U[2030-05-01 00:00:00Z], ~U[2030-07-01 00:00:00Z])
+
+    test "Treat as Busy publishes an all-day event its calendar marks free", ctx do
+      row = all_day(ctx.integration, "transparent")
+      assert june(ctx.profile) == []
+
+      :ok = Bookability.set(ctx.profile.user_id, ctx.integration.id, row.uid, true)
+
+      assert [{s, _e}] = june(ctx.profile)
+      assert DateTime.compare(s, ~U[2030-06-01 00:00:00Z]) == :eq
+    end
+
+    test "Treat as Free leaves out an all-day event its calendar marks busy", ctx do
+      row = all_day(ctx.integration, "opaque")
+      assert [_busy] = june(ctx.profile)
+
+      :ok = Bookability.set(ctx.profile.user_id, ctx.integration.id, row.uid, false)
+
+      assert june(ctx.profile) == []
     end
   end
 

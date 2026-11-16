@@ -14,6 +14,7 @@ defmodule Tymeslot.Workers.PollVoteDigestTest do
   import Tymeslot.ConfigTestHelpers, only: [with_config: 3]
   import Tymeslot.Factory
   import Tymeslot.Test.ClockHelpers, only: [freeze_clock: 1]
+  import Tymeslot.Test.DirectEmailSends
   import Tymeslot.WorkerTestHelpers
 
   alias Ecto.Changeset
@@ -25,6 +26,9 @@ defmodule Tymeslot.Workers.PollVoteDigestTest do
   alias Tymeslot.Repo
   alias Tymeslot.Test.FailingMailerAdapter
   alias Tymeslot.Workers.EmailWorker
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   # Delivery runs inside the CircuitBreaker GenServer, so Swoosh's test adapter
   # would otherwise post {:email, _} to that process. Global mode routes it to

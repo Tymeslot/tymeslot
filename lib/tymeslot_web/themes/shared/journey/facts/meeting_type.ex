@@ -3,11 +3,14 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.MeetingType do
   The meeting type the booking is for: the booker's choice of duration
   (`select_duration`), resolved to the organiser's meeting type.
 
-  Known once the chosen duration is one the organiser offers, or once a type
-  is resolved on the socket (a direct link, a reschedule). Moving on needs
-  the former, as the overview's Next always has. "Back" returns to a moment
-  collecting it only for a booker who came through the overview: a direct or
-  private link must never show the organiser's other types. `default/2`
+  Known once the type is resolved on the socket (a choice on the overview,
+  a `?duration=` or direct link, a reschedule), since the submit books under
+  it; only a page with no organiser to resolve a type for (a theme preview)
+  settles for a chosen duration the page offers. Moving on also needs that
+  duration to be one on offer, as the overview's Next always has. "Back"
+  returns to a moment collecting it only for a booker who came through the
+  overview: a direct or private link must never show the organiser's other
+  types. `default/2`
   settles it without asking: on the organiser's first or shortest type, or
   (`:only`) on the one type an organiser who offers one has.
   """
@@ -34,12 +37,17 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.MeetingType do
   @impl Fact
   def required?(_assigns), do: true
 
-  # A resolved type counts on its own: a demo organiser's types are
-  # synthesised rather than stored, so the duration is the one test every
-  # page can answer, and a slug link resolves the type without a duration
-  # check ever running.
+  # A resolved type counts on its own: a slug link resolves it without a
+  # duration check ever running. A duration alone never does where a type can
+  # be resolved (any organiser's page, a demo persona's included, whose
+  # synthesised types resolve the same way): a booking that moved on with
+  # only the duration would be submitted with no type, and so under none of
+  # its rules.
   @impl Fact
-  def known?(assigns), do: not is_nil(assigns[:meeting_type]) or selection(assigns) == :ok
+  def known?(%{meeting_type: %{}}), do: true
+
+  def known?(assigns),
+    do: not StepEntry.resolves_meeting_type?(assigns) and selection(assigns) == :ok
 
   @impl Fact
   def events, do: [:select_duration]
@@ -81,7 +89,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.MeetingType do
   @impl Fact
   def continue(socket) do
     case selection(socket.assigns) do
-      :ok -> {:done, socket}
+      :ok -> if known?(socket.assigns), do: {:done, socket}, else: {:error, :duration_invalid}
       {:error, reason} -> {:error, reason}
     end
   end

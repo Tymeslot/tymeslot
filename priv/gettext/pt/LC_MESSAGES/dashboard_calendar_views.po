@@ -1,0 +1,89 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pt\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hidden"
+msgid_plural "%{count} hidden"
+msgstr[0] "%{count} oculto"
+msgstr[1] "%{count} ocultos"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "%{date}, show this day's events"
+msgstr "%{date}, mostrar os eventos deste dia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#, elixir-autogen, elixir-format
+msgid "%{first} to %{last}"
+msgstr "%{first} a %{last}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Days of this week"
+msgstr "Dias desta semana"
+
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#, elixir-autogen, elixir-format
+msgid "Earlier"
+msgstr "Antes"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Events: %{count}"
+msgstr "Eventos: %{count}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#, elixir-autogen, elixir-format
+msgid "From %{date}"
+msgstr "A partir de %{date}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "From %{time}"
+msgstr "A partir das %{time}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
+#, elixir-autogen, elixir-format
+msgid "Later"
+msgstr "Depois"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Loading more"
+msgstr "A carregar mais"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing planned in these weeks."
+msgstr "Nada planejado nestas semanas."
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Show later"
+msgstr "Mostrar mais tarde"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Until %{time}"
+msgstr "Até às %{time}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "includes something that needs your attention"
+msgstr "inclui algo que precisa da sua atenção"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "More on %{date}: %{count}"
+msgstr "Mais em %{date}: %{count}"

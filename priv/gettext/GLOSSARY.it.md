@@ -175,6 +175,25 @@ Settled while translating; reuse rather than re-coining.
 | in-person (location) | **di persona** |
 | unlisted | **Non elencato** |
 | Pending / Declined / Cancelled | **In attesa** / **Rifiutato** / **Annullato** |
+| **bookable times** / **bookable** (the hatched layer on the organiser's calendar) | **orari prenotabili** / **prenotabile**: never `disponibile` or `libero` |
+| **Layers** (calendar rail heading) | **Livelli** |
+| **Open for booking** (opening extra time for a meeting type) | **Apri alle prenotazioni**; the resulting state and toasts: `Prenotazioni aperte per %{name} …` |
+| Just this once / Every week (open-for-booking repeat) | **Solo questa volta** / **Ogni settimana** |
+| **Treat as** Busy / Free (local override on a read-only all-day event) | **Considera come** Occupato / Libero; `Considerato occupato per le prenotazioni` |
+| **Block this time** / Blocked | **Blocca questo orario** / **Bloccato**; `Orario sbloccato` for Unblocked |
+| **Copy free times** | **Copia gli orari liberi** |
+| put back (bookable times, undo) | **ripristinare** |
+| booking request (calendar pill) / Expired (pill) | **Richiesta** / **Scaduta**; `decaduta senza risposta` for "expired without an answer" |
+| Accept (a booking request) | **Accetta**, matching `dashboard_bookings` |
+| translation (noun; booking-page languages) | **traduzione** (f., pl. **traduzioni**); *%{language} translations* → **Traduzioni: %{language}**, *Your %{language} translations* → **Le tue traduzioni (%{language})**: `%{language}` is filled with the language's own name, so it goes after a colon or in brackets, never after an article or *in* |
+| translate | **tradurre**; the participle agrees with *testi* (*%{translated}/%{total} tradotti*) |
+| original language (the language the host writes their texts in) | **lingua originale**; *in %{language}* → **nella lingua originale (%{language})**; the original text is **l'originale** (*nella versione originale*), and the badge beside that language reads **originale** |
+| translation language (a language the host translates into) | **lingua di traduzione** (pl. **lingue di traduzione**) |
+| language switcher (the visitor-facing control on the booking page) | **selettore della lingua** |
+| Outdated (a translation whose original changed) | **Da aggiornare** (invariable: *%{count} da aggiornare*, *sono da aggiornare*) |
+| Missing (a text not translated yet) | **Mancante** (pl. **mancanti**) |
+| Translated (status) | **Tradotto** |
+| Review (the link to a language's review page) | **Controlla** |
 
 **Weekday abbreviations:** Lun · Mar · Mer · Gio · Ven · Sab · Dom
 

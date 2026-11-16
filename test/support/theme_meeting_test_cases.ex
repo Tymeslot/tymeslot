@@ -104,7 +104,8 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
   The CTA must return to the organiser's scheduling page carrying the
   `reschedule_meeting_uid` query param — without it the restarted booking
   loses its reschedule context and silently creates a duplicate meeting
-  instead of moving the existing one.
+  instead of moving the existing one — and the page's language as `locale`,
+  so the booking flow stays in it.
   """
   @spec test_reschedule_page_navigation(term(), String.t(), String.t(), String.t()) :: term()
   def test_reschedule_page_navigation(view, button_text, profile_username, meeting_uid) do
@@ -114,7 +115,7 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
              |> render_click()
 
     assert redirect_type in [:redirect, :live_redirect]
-    assert to == "/#{profile_username}?reschedule_meeting_uid=#{meeting_uid}"
+    assert to == "/#{profile_username}?locale=en&reschedule_meeting_uid=#{meeting_uid}"
   end
 
   @doc """

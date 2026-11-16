@@ -470,11 +470,6 @@ msgstr "Kalendář, do kterého tento typ schůzky rezervuje, je nyní jen pro �
 msgid "The price of %{amount} is kept and applies again once Stripe is connected."
 msgstr "Cena %{amount} zůstává uložena a začne znovu platit po připojení Stripe."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/init.ex
-#, elixir-autogen, elixir-format
-msgid "In person"
-msgstr "Osobně"
-
 #: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "A selected location is not one of yours"

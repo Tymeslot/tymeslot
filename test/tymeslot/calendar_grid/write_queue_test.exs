@@ -3,8 +3,9 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
   The grid's write queue as plain data: the references it gives writes,
   how it waits for an event another driver is writing, and what it can
   still save for a later sync when it will never be driven to its end. The ordering itself is covered end to end by
-  `TymeslotWeb.Dashboard.CalendarGrid.EventWriteOrderTest` and
-  `SeriesHoldLiveViewTest`.
+  `TymeslotWeb.Dashboard.Calendar.CalendarSurfaceWriteOrderTest` and
+  `CalendarSurfaceWriteLendingTest` (which also covers a write to a whole
+  series refused while another tab writes one occurrence).
   """
 
   use ExUnit.Case, async: true
@@ -50,6 +51,20 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
       {key, first_seq} = first.ref
       assert {^key, second_seq} = second.ref
       assert second_seq > first_seq
+    end
+
+    # The caller keeps the reference to recognise the write's own answer,
+    # whether the write starts at once or waits behind another.
+    test "update_ref/5 answers the reference of the write it took" do
+      {queue, [{:start, first, _event}], first_ref} =
+        WriteQueue.update_ref(WriteQueue.new(), @event, %{summary: "A"}, [])
+
+      assert first_ref == first.ref
+
+      {queue, [], waiting_ref} = WriteQueue.update_ref(queue, @event, %{summary: "B"}, [])
+      {_queue, [{:start, second, _event}]} = WriteQueue.settle(queue, first_ref, {:ok, @event})
+
+      assert waiting_ref == second.ref
     end
   end
 
@@ -573,42 +588,34 @@ defmodule Tymeslot.CalendarGrid.WriteQueueTest do
     end
   end
 
-  describe "telling the attendees" do
-    @notify %{original: @event, saved_message: "Saved"}
-
-    test "an accepted write made with notify asks for it, in the scope it was written in" do
-      updated = %{@event | summary: "Renamed"}
+  describe "telling the guests a write added or removed" do
+    test "an accepted :membership write asks for it, from the event as it found and left it" do
+      updated = Map.put(@event, :attendees, [%{email: "new@example.com"}])
 
       {queue, [{:start, write, _event}]} =
-        WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [], @notify)
+        WriteQueue.update(
+          WriteQueue.new(),
+          @event,
+          %{attendees: updated.attendees},
+          [],
+          :membership
+        )
 
-      assert {_queue, [{:notify, @notify, ^updated, :this_only}]} =
+      assert {_queue, [{:membership_changed, @event, ^updated}]} =
                WriteQueue.settle(queue, write.ref, {:ok, updated})
     end
 
-    test "a failed write, or one made without notify, asks nobody" do
+    test "a failed write, or one made without :membership, asks nobody" do
       {queue, [{:start, write, _event}]} =
-        WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [], @notify)
+        WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [], :membership)
 
       assert {_queue, effects} = WriteQueue.settle(queue, write.ref, :failed)
-      refute Enum.any?(effects, &match?({:notify, _, _, _}, &1))
+      refute Enum.any?(effects, &match?({:membership_changed, _, _}, &1))
 
       {queue, [{:start, plain, _event}]} =
         WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [])
 
       assert {_queue, []} = WriteQueue.settle(queue, plain.ref, {:ok, @event})
-    end
-
-    test "a write saved to sync later asks for it from the event as the replay will leave it, without its saved message" do
-      updated = %{@event | summary: "Renamed"}
-
-      {queue, [{:start, write, _event}]} =
-        WriteQueue.update(WriteQueue.new(), @event, %{summary: "Renamed"}, [], @notify)
-
-      assert {_queue, [{:notify, notify, ^updated, :this_only}]} =
-               WriteQueue.settle(queue, write.ref, :queued)
-
-      assert notify == %{@notify | saved_message: nil}
     end
 
     test "a change of who attends tells them once accepted or saved to sync later, never once failed" do

@@ -102,6 +102,23 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   end
 
   @doc """
+  As `get_day_availability_with_breaks/2`, locking the day's row
+  (`FOR UPDATE`) until the caller's transaction ends. The lock also holds off
+  a break being added to that day meanwhile: its insert waits on the row.
+  """
+  @spec lock_day_availability_with_breaks(integer(), integer()) ::
+          WeeklyAvailabilitySchema.t() | nil
+  def lock_day_availability_with_breaks(schedule_id, day_of_week) do
+    breaks_query = from(b in AvailabilityBreakSchema, order_by: b.sort_order)
+
+    WeeklyAvailabilitySchema
+    |> where([wa], wa.schedule_id == ^schedule_id and wa.day_of_week == ^day_of_week)
+    |> preload([wa], breaks: ^breaks_query)
+    |> lock("FOR UPDATE")
+    |> Repo.one()
+  end
+
+  @doc """
   Creates the seven default weekly days for a new schedule.
 
   Accepts an optional `repo` argument so callers inside an existing database

@@ -67,6 +67,10 @@ defmodule Tymeslot.MeetingTypes.Duplication do
 
   @copied_embeds [:custom_fields, :attachments, :locations]
 
+  # Copied, but never as a create attribute, which the changeset does not
+  # cast: `translations/1` hands them over to be checked against the copy.
+  @copied_translations [:translations]
+
   # Left out on purpose: the identity and timestamps of the row, the name and
   # state the copy is given (`copy_attrs/1`), the slug (see the moduledoc),
   # and `allow_video` and `video_integration_id`, which the changeset derives
@@ -85,7 +89,11 @@ defmodule Tymeslot.MeetingTypes.Duplication do
 
   @doc false
   @spec field_partition() :: %{copied: [atom()], not_copied: [atom()]}
-  def field_partition, do: %{copied: @copied_fields ++ @copied_embeds, not_copied: @not_copied}
+  def field_partition,
+    do: %{
+      copied: @copied_fields ++ @copied_embeds ++ @copied_translations,
+      not_copied: @not_copied
+    }
 
   @doc """
   The create attributes for a copy of `source`.
@@ -101,6 +109,17 @@ defmodule Tymeslot.MeetingTypes.Duplication do
     |> Map.merge(embed_attrs(source))
     |> Map.merge(%{name: copy_name(source), is_active: false, is_archived: false})
   end
+
+  @doc """
+  The translations a copy of `source` takes over, for
+  `Tymeslot.MeetingTypes.create_meeting_type/2`'s `:translations` option.
+  They are keyed by the paths of the embeds, whose ids the copy keeps, so
+  each still fits, bar those already orphaned on the source, which the
+  create prunes; the name's reads as outdated, as the copy's name is a new
+  one (`Tymeslot.ContentTranslations.status/3`).
+  """
+  @spec translations(MeetingTypeSchema.t()) :: map()
+  def translations(%MeetingTypeSchema{translations: translations}), do: translations || %{}
 
   # An empty list is left out rather than passed: the changeset reads a
   # supplied empty `locations` as the owner removing every location, and

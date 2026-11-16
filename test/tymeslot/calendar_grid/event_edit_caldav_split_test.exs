@@ -21,7 +21,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
   import Tymeslot.WorkerTestHelpers, only: [running_job: 2]
 
   alias Ecto.Changeset
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
@@ -181,7 +181,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
 
       # 11:00 in Berlin (UTC+2) on 15 September: two hours later.
       assert {:ok, _updated} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  occurrence,
                  %{
@@ -241,7 +241,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
       end)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -275,7 +275,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
       expect_split_puts()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -303,7 +303,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
       expect_split_puts()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -325,7 +325,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
       end)
 
       assert {:error, %{retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -349,7 +349,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
       expect_series_put()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, first, %{summary: "Standup"},
+               Changes.update_event(user.id, first, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -395,7 +395,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
       expect_split_puts()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -459,7 +459,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
       expect_split_puts()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -494,7 +494,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
         cached.("#{uid}_20260922T090000", "/cal/#{uid}.ics", ~U[2026-09-22 07:00:00.000000Z])
 
       expect_resource_delete("https://caldav.example.com/cal/#{uid}.ics")
-      assert {:ok, _deleted} = CalendarGrid.delete_event(user.id, tail_row, :series)
+      assert {:ok, _deleted} = Changes.delete_event(user.id, tail_row, :series)
 
       refute_enqueued(worker: VideoSyncWorker, args: %{"event_room_id" => room.id})
       assert [%{id: room_id}] = EventVideoRooms.rooms_on_integration(head_row, talk.id)
@@ -502,7 +502,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
 
       # The earlier occurrences take the room with them when they go in turn.
       expect_resource_delete(@series_url)
-      assert {:ok, _deleted} = CalendarGrid.delete_event(user.id, head_row, :series)
+      assert {:ok, _deleted} = Changes.delete_event(user.id, head_row, :series)
 
       assert_enqueued(
         worker: VideoSyncWorker,

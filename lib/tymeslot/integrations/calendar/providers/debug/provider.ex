@@ -11,9 +11,14 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   also show as busy on the booking page, and vice-versa.
 
   The recurring `pattern` + explicit `rules` are projected into busy blocks by
-  the pure `DebugSchedule` generator; in-app events are stored verbatim. All
-  store access tolerates the store not running (e.g. in `:test`, or dev without
-  the interactive calendar enabled) — reads then return an empty set.
+  the pure `DebugSchedule` generator; in-app events are stored verbatim, except
+  that a repeating one is kept as the iCalendar document a CalDAV server would
+  hold, and written, listed and expanded by the CalDAV family's own code
+  (`DebugCalendarProvider.Series`), so the grid's scoped edits and deletes of a
+  debug series behave exactly as they do on CalDAV. All store access tolerates
+  the store not running: it runs on every dev server, in `:test` only when a
+  test starts it, and reads then fall back to the default pattern (not an
+  empty set).
 
   Only wired up in development/test via the `debug` integration provider.
   """
@@ -23,8 +28,10 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.DebugCalendarProvider.Series
   alias Tymeslot.Integrations.Calendar.DebugSchedule
   alias Tymeslot.Integrations.Calendar.DebugStore
+  alias Tymeslot.Integrations.Calendar.ICalNormaliser
 
   # Synthetic events have no real timezone; default to UTC for the provider path.
   # The interactive dev calendar (`Tymeslot.Dev.Calendar`) resolves the
@@ -45,28 +52,57 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
 
     event_data
     |> stored_event_from(uid)
+    |> Series.stored_form()
     |> DebugStore.put_event()
 
     {:ok, CreatedEvent.new(uid)}
   end
 
+  # A scoped edit of a series names it by its address and the occurrence by
+  # its key, as `SeriesEdit` does for the CalDAV family, and is answered as
+  # the CalDAV writer answers it; anything else is a whole-event write, which
+  # patches a series' document as CalDAV patches a synced event.
   @impl Tymeslot.Integrations.Calendar.Provider
-  def update_event(_client, uid, event_data) do
-    existing =
-      case DebugStore.fetch_event(uid) do
-        {:ok, event} -> event
-        :error -> %{}
-      end
+  def update_event(_client, _uid, %{occurrence: %{href: _href, key: _key, scope: _scope} = occ}),
+    do: Series.write(occ)
 
-    merged = Map.merge(existing, stored_event_from(event_data, uid))
-    DebugStore.put_event(merged)
-    :ok
+  def update_event(_client, uid, event_data) do
+    case DebugStore.fetch_event(uid) do
+      {:ok, existing} ->
+        DebugStore.put_event(patched(existing, event_data, uid))
+
+      # A write for an event the store does not hold creates it when it says
+      # when it is; a partial one would only be a half-event to overlap-check.
+      :error
+      when is_map_key(event_data, :start_time) and
+             :erlang.map_get(:start_time, event_data) != nil ->
+        DebugStore.put_event(Series.stored_form(stored_event_from(event_data, uid)))
+
+      :error ->
+        {:error, :not_found}
+    end
   end
 
+  defp patched(existing, event_data, uid) do
+    case Series.stored_form(existing) do
+      %{raw_ical: _document} = series -> Series.patch(series, event_data)
+      event -> Series.stored_form(Map.merge(event, stored_event_from(event_data, uid)))
+    end
+  end
+
+  # One occurrence is deleted (`opts[:occurrence]`) and answered as the
+  # CalDAV writer answers it; otherwise the event, or the series its address
+  # names, goes. The runtime hands a provider outside the CalDAV family its
+  # `provider_event_id` as the id, so a series' address can arrive either way.
   @impl Tymeslot.Integrations.Calendar.Provider
-  def delete_event(_client, uid, _opts) do
-    DebugStore.delete_event(uid)
-    :ok
+  def delete_event(_client, id, opts) do
+    case opts[:occurrence] do
+      %{href: _href, key: _key} = occurrence ->
+        Series.delete(occurrence)
+
+      _whole ->
+        DebugStore.delete_event(Series.uid(opts[:provider_event_id]) || Series.uid(id) || id)
+    end
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -100,15 +136,18 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def build_client_configs(integration) do
-    if Application.get_env(:tymeslot, :environment) in [:dev, :test] do
-      [%{user_id: integration.user_id}]
-    else
-      []
-    end
+    if dev_or_test?(), do: [%{user_id: integration.user_id}], else: []
   end
 
+  # Every write the calendar makes (create, edit, delete) resolves its client
+  # through this config. Without one, each answered :no_calendar_integration
+  # wherever the interactive dev stub was not compiled in.
   @impl Tymeslot.Integrations.Calendar.Provider
-  def build_booking_client_config(_integration), do: nil
+  def build_booking_client_config(integration) do
+    if dev_or_test?(), do: %{user_id: integration.user_id}, else: nil
+  end
+
+  defp dev_or_test?, do: Application.get_env(:tymeslot, :environment) in [:dev, :test]
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def list_events(_client, opts) do
@@ -122,7 +161,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
       |> DebugSchedule.events(rules, start_time, end_time, @default_timezone)
       |> Enum.map(&Map.put(&1, :created_by_tymeslot, false))
 
-    created = events_in_range(Map.values(events), start_time, end_time)
+    created = listed(Map.values(events), start_time, end_time)
 
     {:ok, generated ++ created}
   end
@@ -133,10 +172,13 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   @impl Tymeslot.Integrations.Calendar.Provider
   def convert_events(events), do: events
 
+  # A series' VEVENTs are expanded by the normaliser the CalDAV sync uses,
+  # over the window every sync reads.
   @impl Tymeslot.Integrations.Calendar.Provider
   def normalise_events(raw_events, context) when is_list(raw_events) do
-    events = Enum.map(raw_events, &normalise_event(&1, context))
-    {:ok, events}
+    {series, others} = Enum.split_with(raw_events, &Map.has_key?(&1, :raw_ical))
+    {:ok, expanded} = ICalNormaliser.normalise_events(series, context, :debug)
+    {:ok, Enum.map(others, &normalise_event(&1, context)) ++ expanded}
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -170,7 +212,9 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
       :recurrence_rule,
       :colour,
       :attendees,
-      :provider_calendar_id
+      :transparency,
+      :provider_calendar_id,
+      :timezone
     ])
     |> Map.put(:uid, uid)
     |> Map.put_new(:all_day, false)
@@ -178,11 +222,59 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     |> Map.put(:created_by_tymeslot, true)
   end
 
-  # Keeps stored events overlapping the range. Timed events compare directly;
-  # all-day events are projected to a day-spanning block for the overlap check
-  # but returned verbatim so normalisation can emit start_date/end_date.
-  defp events_in_range(events, range_start, range_end) do
-    Enum.filter(events, &overlaps?(&1, range_start, range_end))
+  @doc """
+  The stored events overlapping `[range_start, range_end)` in the busy-block
+  shape the interactive dev calendar reads: a one-off event as stored, and
+  each occurrence of a repeating one as the live CalDAV busy-time check
+  expands it (`DebugCalendarProvider.Series.occurrences/3`), timed ones in
+  UTC and all-day ones by date with an exclusive end date, as the cache keeps
+  them. All-day events are projected to day-spanning blocks for the overlap
+  check but returned with their dates.
+  """
+  @spec stored_events_in_range(DateTime.t(), DateTime.t()) :: [map()]
+  def stored_events_in_range(range_start, range_end) do
+    DebugStore.snapshot().events
+    |> Map.values()
+    |> Enum.flat_map(&stored_in_range(Series.stored_form(&1), range_start, range_end))
+  end
+
+  defp stored_in_range(%{raw_ical: _document} = entry, range_start, range_end) do
+    entry
+    |> Series.resource(range_start, range_end)
+    |> Series.occurrences(range_start, range_end)
+    |> Enum.map(&busy_occurrence/1)
+  end
+
+  defp stored_in_range(event, range_start, range_end),
+    do: Enum.filter([event], &overlaps?(&1, range_start, range_end))
+
+  defp busy_occurrence(%{start_time: %Date{} = start} = occurrence) do
+    finish = Map.get(occurrence, :end_time) || Date.add(start, 1)
+
+    Map.merge(occurrence, %{
+      all_day: true,
+      end_time: Enum.max([Date.add(start, 1), finish], Date),
+      status: "confirmed"
+    })
+  end
+
+  defp busy_occurrence(occurrence),
+    do: Map.merge(occurrence, %{all_day: false, status: "confirmed"})
+
+  @doc "Where a debug series is addressed, as a CalDAV resource is by its href."
+  @spec series_href(String.t()) :: String.t()
+  defdelegate series_href(uid), to: Series, as: :href
+
+  # The stored events as a listing hands them over: a series as the parsed
+  # VEVENTs of its document, which `normalise_events/2` expands as the CalDAV
+  # sync does, a one-off event as stored.
+  defp listed(events, range_start, range_end) do
+    Enum.flat_map(events, fn event ->
+      case Series.stored_form(event) do
+        %{raw_ical: _document} = series -> Series.resource(series, range_start, range_end)
+        one_off -> Enum.filter([one_off], &overlaps?(&1, range_start, range_end))
+      end
+    end)
   end
 
   defp overlaps?(
@@ -190,9 +282,10 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
          range_start,
          range_end
        ) do
-    end_date = Map.get(event, :end_time, start_date)
+    # The end date is exclusive, as the cache keeps every all-day event.
+    end_date = Enum.max([Map.get(event, :end_time, start_date), Date.add(start_date, 1)], Date)
     block_start = day_start(start_date)
-    block_end = day_start(Date.add(end_date, 1))
+    block_end = day_start(end_date)
 
     DateTime.compare(block_start, range_end) == :lt and
       DateTime.compare(block_end, range_start) == :gt
@@ -225,6 +318,9 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   defp base_attrs(raw, context) do
     %{
       uid: Map.fetch!(raw, :uid),
+      provider_event_id: Map.get(raw, :provider_event_id),
+      provider_metadata: Map.get(raw, :provider_metadata, %{}),
+      timezone: Map.get(raw, :timezone),
       calendar_integration_id: context.calendar_integration_id,
       provider: :debug,
       provider_calendar_id: Map.get(raw, :provider_calendar_id) || context.provider_calendar_id,
@@ -237,10 +333,14 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
       colour: Map.get(raw, :colour),
       attendees: Enum.map(Map.get(raw, :attendees) || [], &Attendee.normalise/1),
       status: :confirmed,
-      transparency: :opaque,
+      transparency: transparency(Map.get(raw, :transparency)),
       created_by_tymeslot: Map.get(raw, :created_by_tymeslot, false)
     }
   end
+
+  # A grid write stores the cache's string; anything else, or nothing, is busy.
+  defp transparency(value) when value in ["transparent", :transparent], do: :transparent
+  defp transparency(_value), do: :opaque
 
   defp timing_attrs(%{all_day: true, start_time: %Date{} = start_date} = raw) do
     %{

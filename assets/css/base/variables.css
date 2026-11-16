@@ -62,6 +62,7 @@
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-error-bg: #fef2f2;
+  --color-error-strong: #dc2626; /* error red that holds AA contrast under white text */
   --color-info: #3b82f6;
   
   /* Background Colors - Glass Theme */
@@ -313,6 +314,66 @@
   --dropdown-item-danger-text: var(--color-error);
   --dropdown-item-danger-hover-bg: var(--color-error-bg);
   --dropdown-divider: var(--color-border-light);
+
+  /* Calendar surface (components/calendar-surface.css). Event text is each
+     calendar's colour mixed towards --cal-ink, over a light tint of the same
+     colour, which holds contrast above 4.5:1 for every palette colour. Past
+     events use a paler tint with full-contrast text, never opacity. */
+  --cal-surface: #ffffff;
+  --cal-ink: #18181b;
+  --cal-text: var(--color-neutral-900);
+  --cal-text-muted: var(--color-neutral-600);
+  --cal-text-past: var(--color-neutral-700);
+  --cal-line: var(--color-neutral-200);
+  --cal-line-strong: var(--color-neutral-300);
+  --cal-hover: var(--color-neutral-100);
+  --cal-chip: var(--color-neutral-50);
+  --cal-weekend: rgba(244, 244, 245, 0.45);
+  --cal-off-hours: rgba(244, 244, 245, 0.75);
+  --cal-night: var(--color-neutral-100);
+  --cal-skeleton: var(--color-neutral-100);
+  --cal-focus: var(--color-primary-500);
+  --cal-today: var(--color-primary-700);
+  --cal-booking: var(--color-primary-700);
+  /* So a booking's swatch reads var(--color-<token>) like every calendar's. */
+  --color-booking: var(--cal-booking);
+  --cal-on-booking: #ffffff;
+  --cal-on-check: #ffffff;
+  --cal-now: var(--color-error-strong);
+  --cal-on-now: #ffffff;
+  --cal-warn: var(--color-warning);
+  /* A booking request's edge and flag: amber, because it needs an answer. */
+  --cal-request: var(--color-warning);
+  --cal-on-request: var(--color-neutral-900);
+  /* Booking requests and the bookable layer (components/calendar-booking.css).
+     Request text and the pill hold at least 7:1 on their fills; the band label
+     is turquoise 800 on white (7.6:1). */
+  --cal-request-ink: #78350f;
+  --cal-request-strong: #92400e;
+  --cal-expired: var(--color-neutral-400);
+  --cal-bookable: var(--color-primary-500);
+  --cal-bookable-ink: var(--color-primary-800);
+
+  /* The calendar's stacking order (plan 5). Grid internals (3, 30, 40) stay
+     inside the isolated surface row; the dashboard's top bar is 50 and a
+     core modal 9999. */
+  --cal-z-fab: 45;
+  /* The .ics drop overlay: above the grid and the + button, below popovers. */
+  --cal-z-drop: 55;
+  --cal-z-pop: 60;
+  --cal-z-scrim: 65;
+  --cal-z-sheet: 70;
+  --cal-z-editor: 75;
+  --cal-z-command: 80; /* the command bar and its scrim: above sheets and the editor, below core modals and toasts */
+  --cal-z-toast: 10000;
+
+  /* Phone chrome sizes: the tab bar, the + button, the room lists and the
+     grid leave under it, and the on-screen keyboard's height (written by the
+     calendar hook while the keyboard is open). */
+  --cal-tabs-h: 3.5rem;
+  --cal-fab-size: 3.5rem;
+  --cal-fab-clear: calc(var(--cal-fab-size) + 1.5rem);
+  --cal-kb-inset: 0px;
 }
 
 /* Dark Mode Overrides */

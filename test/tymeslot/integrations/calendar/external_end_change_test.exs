@@ -198,7 +198,12 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
       {:ok, updated} = MeetingQueries.get_meeting(ctx.meeting.id)
       assert updated.calendar_sync_status == :externally_modified
       assert updated.end_time == ctx.meeting.end_time
-      refute_enqueued(worker: EmailWorker)
+      refute_enqueued(worker: EmailWorker, args: %{"action" => "send_end_change_emails"})
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_external_booking_change", "discrepancy" => "modified"}
+      )
     end
   end
 

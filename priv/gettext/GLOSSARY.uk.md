@@ -102,6 +102,21 @@ Instructions and prompts take the **2nd-person-plural imperative** (`Вибер�
 | staff | **працівники** |
 | Agenda (calendar view) | **Розклад** |
 | Weekly Schedule (availability) | **Тижневий розклад** |
+| **bookable times** (the hatched layer on the organiser's calendar) | **час для бронювання**; the short band label *Bookable* → **Можна забронювати**. Never `доступний час` (that is *availability*) or `вільний час` (the opposite of *busy*) |
+| **open for booking** (opening extra time for a meeting type) | **відкрити для бронювання** / **відкрито для бронювання**; *Just this once* → **Лише цього разу**, *Every week* → **Щотижня** |
+| **treat as busy / free** (a local setting on a read-only all-day event) | **для бронювань вважається зайнятим / вільним**; the label *Treat as* before the Busy/Free choice → **Для бронювань** |
+| **Layers** (calendar rail heading) | **Шари** |
+| **block this time** / **Blocked** | **заблокувати цей час** / **Заблоковано** |
+| **Request** (pill on a calendar block) / **booking request** | **Запит** / **запит на бронювання**; the *Expired* pill → **Протерміновано** |
+| translation (noun; booking-page languages) | **переклад** (pl. **переклади**); *%{language} translations* → **Переклади: %{language}**, *Your %{language} translations* → **Ваші переклади (%{language})**: `%{language}` is filled with the language's own name and can't be declined |
+| translate | **перекласти** / **перекладати**; *%{translated}/%{total} translated* → **Перекладено %{translated}/%{total}** |
+| original language (the language the host writes their texts in) | **мова оригіналу**; *in %{language}* → **мовою оригіналу (%{language})**; the original text is **оригінал** (*в оригіналі*), and the badge beside that language reads **оригінал** |
+| translation language (a language the host translates into) | **мова перекладу** (pl. **мови перекладу**: *вашими мовами перекладу*) |
+| language switcher (the visitor-facing control on the booking page) | **перемикач мови** |
+| Outdated (a translation whose original changed) | **Застаріло** as the status; attributive **застарілий** (*%{count} застарілий текст / застарілі тексти / застарілих текстів*) |
+| Missing (a text not translated yet) | **Бракує** as the status pill; attributive **відсутній** (*Лише відсутні або застарілі*) |
+| Translated (status) | **Перекладено** |
+| Review (the link to a language's review page) | **Перевірити** |
 
 ### Booking pages (a host's extra pages)
 
@@ -280,9 +295,9 @@ Never `режим` for a calendar view (it means *mode* and is used for other th
 
 ### `+%{count} more`
 
-**`ще %{count}`** in all four catalogues that carry it (`dashboard_home`,
-`dashboard_calendar`, `dashboard_calendar_events`, `marketing_home`). `ще` already means
-"more"; the leading `+` was English-idiom noise.
+**`ще %{count}`** in both catalogues that carry it (`dashboard_home` and
+SaaS's `marketing_home`). `ще` already means "more"; the leading `+` was
+English-idiom noise.
 
 ---
 

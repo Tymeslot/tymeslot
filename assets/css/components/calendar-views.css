@@ -1,0 +1,480 @@
+/*
+ * Month and agenda views and the phone's week strip, drawn by the
+ * CalendarCanvas hook (calendar/render_month.js, render_agenda.js,
+ * render_strip.js). Colours come only from the --cal-* tokens; an event's
+ * own colour arrives as --cal-ev on its element.
+ */
+
+/* Month ------------------------------------------------------------- */
+
+.cal-month {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--cal-surface);
+}
+
+.cal-month-head {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--cal-line);
+}
+
+.cal-month-weekday {
+  padding: 6px 8px;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.cal-month-weeks {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  min-height: 0;
+}
+
+.cal-mweek {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-height: 0;
+  overflow: hidden;
+  border-bottom: 1px solid var(--cal-line);
+}
+
+.cal-mday {
+  min-width: 0;
+  border-right: 1px solid var(--cal-line);
+  cursor: pointer;
+}
+
+.cal-mday.is-weekend {
+  background: var(--cal-weekend);
+}
+
+.cal-mday.is-other-month {
+  background: var(--cal-chip);
+}
+
+.cal-mday:hover {
+  background: var(--cal-hover);
+}
+
+.cal-mday-num {
+  min-width: 24px;
+  height: 22px;
+  margin: 1px 4px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  color: var(--cal-text);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.cal-mday.is-other-month .cal-mday-num {
+  color: var(--cal-text-muted);
+}
+
+.cal-mday-num[aria-current="date"],
+.cal-mday.is-today .cal-mday-num {
+  background: var(--cal-today);
+  color: var(--cal-on-booking);
+}
+
+.cal-mbar,
+.cal-mchip,
+.cal-mmore {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  height: 18px;
+  margin: 1px 4px;
+  padding: 0 6px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  line-height: 18px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cal-mbar {
+  border: 1px solid color-mix(in srgb, var(--cal-ev) 40%, transparent);
+  background: color-mix(in srgb, var(--cal-ev) 16%, var(--cal-surface));
+  color: color-mix(in srgb, var(--cal-ev) 45%, var(--cal-ink));
+  font-weight: 600;
+}
+
+.cal-mbar.cut-start {
+  margin-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.cal-mbar.cut-end {
+  margin-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.cal-mbar.is-free {
+  border: 1.5px dashed var(--cal-ev);
+  background: var(--cal-surface);
+}
+
+.cal-mbar.is-booking {
+  border-color: transparent;
+  background: var(--cal-booking);
+  color: var(--cal-on-booking);
+}
+
+.cal-mbar.is-past {
+  background: color-mix(in srgb, var(--cal-ev) 8%, var(--cal-surface));
+  color: var(--cal-text-past);
+}
+
+.cal-mchip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--cal-text);
+}
+
+.cal-mchip:hover,
+.cal-mmore:hover {
+  background: var(--cal-hover);
+}
+
+.cal-mchip.is-past {
+  color: var(--cal-text-past);
+}
+
+.cal-mchip-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--cal-ev);
+}
+
+.cal-mchip.is-free .cal-mchip-dot {
+  border: 1.5px dashed var(--cal-ev);
+  background: transparent;
+}
+
+.cal-mchip.is-booking .cal-mchip-dot {
+  background: var(--cal-booking);
+}
+
+.cal-mchip.is-request .cal-mchip-dot {
+  background: var(--cal-request);
+}
+
+.cal-mchip-time {
+  flex: 0 0 auto;
+  color: var(--cal-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-mchip-title {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.cal-mchip-flag,
+.cal-agenda-flag {
+  margin-right: 2px;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  background: var(--cal-request);
+  color: var(--cal-on-request);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.is-expired .cal-mchip-flag,
+.cal-agenda-row.is-expired .cal-agenda-flag {
+  background: var(--cal-chip);
+  box-shadow: inset 0 0 0 1px var(--cal-line-strong);
+  color: var(--cal-text-past);
+}
+
+.cal-mmore {
+  color: var(--cal-text-muted);
+  font-weight: 600;
+}
+
+.cal-mmore.is-warn::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--cal-warn);
+}
+
+/* Month on a phone: dots, and the chosen day's events below. */
+
+.cal-mweek.is-phone {
+  overflow: visible;
+}
+
+.cal-mday.is-phone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px;
+  padding-top: 4px;
+}
+
+.cal-mday.is-phone[aria-pressed="true"] .cal-mday-num {
+  background: var(--cal-text);
+  color: var(--cal-surface);
+}
+
+.cal-month-agenda {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-top: 1px solid var(--cal-line);
+}
+
+.cal-month.is-phone .cal-month-weeks {
+  flex: 0 0 auto;
+  grid-template-rows: none;
+}
+
+/* Dots (month on a phone, week strip) ------------------------------- */
+
+.cal-dots {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+}
+
+.cal-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--cal-ev);
+}
+
+.cal-dot.is-free {
+  box-shadow: inset 0 0 0 1.5px var(--cal-ev);
+  background: transparent;
+}
+
+.cal-dot.is-attention {
+  background: var(--cal-warn);
+}
+
+/* Agenda ------------------------------------------------------------ */
+
+.cal-agenda {
+  height: 100%;
+  min-height: 0;
+  padding: 8px 16px 24px;
+  overflow-y: auto;
+  background: var(--cal-surface);
+}
+
+.cal-agenda-days,
+.cal-agenda-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cal-agenda-day {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--cal-line);
+}
+
+.cal-agenda-date {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.cal-agenda-num {
+  color: var(--cal-text);
+  font-size: var(--font-size-xl);
+  line-height: 1.2;
+}
+
+.cal-agenda-day.is-today .cal-agenda-num,
+.cal-agenda-today {
+  color: var(--cal-today);
+}
+
+.cal-agenda-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cal-agenda-row {
+  display: grid;
+  grid-template-columns: 8.5rem 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  color: var(--cal-text);
+  font-size: var(--font-size-sm);
+  text-align: left;
+}
+
+.cal-agenda-row:hover {
+  background: var(--cal-hover);
+}
+
+.cal-agenda-row.is-past {
+  color: var(--cal-text-past);
+}
+
+.cal-agenda-time {
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-agenda-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--cal-ev);
+}
+
+.cal-agenda-row.is-free .cal-agenda-swatch {
+  border: 1.5px dashed var(--cal-ev);
+  background: transparent;
+}
+
+.cal-agenda-row.is-booking .cal-agenda-swatch {
+  background: var(--cal-booking);
+}
+
+.cal-agenda-title {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-agenda-empty,
+.cal-agenda-more {
+  margin: 24px 0;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.cal-agenda-later {
+  display: block;
+  margin: 16px auto;
+  padding: 6px 12px;
+  border: 1px solid var(--cal-line-strong);
+  border-radius: var(--radius-md);
+  color: var(--cal-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.cal-agenda-later:hover {
+  background: var(--cal-hover);
+}
+
+/* Week strip (Day view on a phone) ----------------------------------- */
+
+.cal-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--cal-line);
+  background: var(--cal-surface);
+}
+
+.cal-strip-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.cal-strip-num {
+  min-width: 24px;
+  border-radius: var(--radius-full);
+  color: var(--cal-text);
+  font-weight: 600;
+  text-align: center;
+}
+
+.cal-strip-day[aria-current="date"] .cal-strip-num {
+  color: var(--cal-today);
+}
+
+.cal-strip-day[aria-pressed="true"] .cal-strip-num {
+  background: var(--cal-today);
+  color: var(--cal-on-booking);
+}
+
+@media (width < 40rem) {
+  .cal-agenda-row,
+  .cal-agenda-later {
+    min-height: 44px;
+  }
+
+  .cal-agenda-row {
+    grid-template-columns: 4.5rem 10px minmax(0, 1fr) auto;
+  }
+}
+
+/* Focus, for every control above. */
+
+.cal-mday-num:focus-visible,
+.cal-mday.is-phone:focus-visible,
+.cal-mbar:focus-visible,
+.cal-mchip:focus-visible,
+.cal-mmore:focus-visible,
+.cal-agenda-row:focus-visible,
+.cal-agenda-later:focus-visible,
+.cal-strip-day:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: -2px;
+}
+
+/* All-day bars fill the row render.js sized from the viewport's metrics
+   (--cal-allday-row): 22px, or 32px on a phone, so a bar is a thumb-sized
+   target. */
+.cal-allday .cal-adbar,
+.cal-allday .cal-admore {
+  height: var(--cal-allday-row, 22px);
+}
+
+/* Day view on a phone: the week strip, drawn just before the grid, keeps its
+   own height and the grid takes the rest of the canvas. */
+.cal-canvas > :has(+ .cal-grid) {
+  flex: none;
+}

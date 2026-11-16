@@ -1,0 +1,87 @@
+/* Touch on the calendar canvas: long-press dragging and the selected event's
+   resize handle (hooks/calendar_canvas/touch_drag.js). */
+
+/* A long press on an event picks it up; iOS must not open its callout
+   instead. */
+.cal-ev {
+  -webkit-touch-callout: none;
+}
+
+/* A finger is resting on the event: a lift now opens it, holding on picks
+   it up. */
+.cal-ev.is-pressing {
+  box-shadow: var(--shadow-md);
+}
+
+/* The event a finger chose: ringed, and lifted above its neighbours. */
+.cal-ev.is-selected {
+  z-index: var(--cal-lift);
+  box-shadow:
+    0 0 0 2px var(--cal-surface),
+    0 0 0 4px var(--cal-ev);
+}
+
+/* Both at once: the ring stays, the press shadow joins it. */
+.cal-ev.is-selected.is-pressing {
+  box-shadow:
+    0 0 0 2px var(--cal-surface),
+    0 0 0 4px var(--cal-ev),
+    var(--shadow-md);
+}
+
+/* The handle under a selected event's bottom edge: a 44px hit area outside
+   the event, so it never covers the title, with a 24px grip at its top.
+   touch_drag.js copies the block's --l, --w and --cal-ev onto it. */
+.cal-touch-handle {
+  position: absolute;
+  left: calc(var(--l) + var(--w) / 2 - 22px);
+  z-index: calc(var(--cal-lift) + 1);
+  width: 44px;
+  height: 44px;
+}
+
+.cal-touch-handle::after {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  width: 24px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--cal-ev);
+  box-shadow: 0 0 0 2px var(--cal-surface);
+  content: "";
+}
+
+/* A press on the handle is a resize from its first pixel, never a scroll. */
+[data-touch-handle] {
+  touch-action: none;
+}
+
+/* The grid scrolls up and down by itself; a sideways swipe and a pinch are
+   the hook's (hooks/calendar_canvas/gestures.js). This also stops the
+   browser's page zoom over the grid: a pinch there zooms the hours. */
+.cal-scroll {
+  touch-action: pan-y;
+}
+
+/* The month leaves a sideways swipe to the hook wherever it starts. */
+.cal-canvas:has([data-month-day]),
+.cal-canvas:has([data-month-day]) * {
+  touch-action: pan-y;
+}
+
+/* While a finger swipes, the drawn period follows it (--cal-swipe-x, set by
+   the hook) without spilling past the canvas. */
+.cal-canvas:has(> .cal-swiping) {
+  overflow: hidden;
+}
+
+.cal-swiping {
+  transform: translateX(var(--cal-swipe-x, 0px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cal-swiping {
+    transform: none;
+  }
+}

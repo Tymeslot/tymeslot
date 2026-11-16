@@ -17,7 +17,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSeriesRefreshTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
 
@@ -168,7 +168,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSeriesRefreshTest do
       lengthened_on_server()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :all
                )
 
@@ -187,7 +187,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSeriesRefreshTest do
       lengthened_on_server()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -206,7 +206,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSeriesRefreshTest do
       lengthened_on_server()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :this_only
                )
 
@@ -271,7 +271,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSeriesRefreshTest do
       end)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Late shift"},
+               Changes.update_event(user.id, occurrence, %{summary: "Late shift"},
                  recurrence_scope: :all
                )
 

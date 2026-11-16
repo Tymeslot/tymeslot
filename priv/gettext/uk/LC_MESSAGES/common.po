@@ -261,11 +261,13 @@ msgid "%{label} before"
 msgstr "за %{label} до"
 
 #: lib/tymeslot_web/components/shared/reminder_picker.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "1 hour before"
 msgstr "за 1 годину до"
 
 #: lib/tymeslot_web/components/shared/reminder_picker.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "30 min. before"
 msgstr "за 30 хв до"
@@ -329,6 +331,7 @@ msgid "Reminder value must be a positive number"
 msgstr "Час нагадування має бути додатним числом"
 
 #: lib/tymeslot_web/components/shared/reminder_picker.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
 msgstr "Нагадування"

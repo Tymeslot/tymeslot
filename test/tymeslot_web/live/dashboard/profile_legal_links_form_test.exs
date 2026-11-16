@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Dashboard.ProfileLegalLinksFormTest do
   @moduledoc """
   The organiser's legal notice and privacy policy links, from the "Legal
-  links" form in Profile Settings: both fields present, saved with the
-  button, flagged while typed when invalid, refused when unsafe, showing the
+  links" form in Profile Settings: both fields present, saved when a field
+  is left, flagged while typed when invalid, refused when unsafe, showing the
   instance default while blank, restored when the page is opened again,
   and shown to guests at the foot of the booking page once saved.
   """
@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.ProfileLegalLinksFormTest do
     conn
     |> open_settings()
     |> form("#legal-links-form", profile_legal_links: links)
-    |> render_submit()
+    |> render_change()
   end
 
   defp public_page(profile) do
@@ -96,9 +96,10 @@ defmodule TymeslotWeb.Dashboard.ProfileLegalLinksFormTest do
           privacy_policy_url: "https://example.com/privacy"
         }
       )
-      |> render_submit()
+      |> render_change()
 
-      assert render(view) =~ "Legal links saved"
+      assert has_element?(view, "#legal-links-form-status[data-autosave-status='saved']", "Saved")
+      assert_push_event(view, "autosave:clean", %{id: "legal-links-form"})
 
       assert stored(profile) ==
                {"https://example.com/imprint", "https://example.com/privacy"}
@@ -130,11 +131,11 @@ defmodule TymeslotWeb.Dashboard.ProfileLegalLinksFormTest do
         |> form("#legal-links-form",
           profile_legal_links: %{legal_notice_url: "javascript:alert(1)"}
         )
-        |> render_submit()
+        |> render_change()
 
-      refute html =~ "Legal links saved"
-      assert render(view) =~ "save your legal links"
+      refute html =~ ~s(data-autosave-status="saved")
       assert has_element?(view, "#legal-links-form [role='alert']")
+      refute_push_event(view, "autosave:clean", %{id: "legal-links-form"})
       assert stored(profile) == {nil, nil}
     end
 

@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Seats
+  alias Tymeslot.MeetingTypes
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Feedback
@@ -31,7 +32,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   attr :time_format, :string, required: true
   attr :cancelling_meeting, :any, required: false
   attr :sending_reschedule, :any, required: false
-  attr :answering_request, :any, default: nil
+
+  attr :answering_request, :any,
+    default: MapSet.new(),
+    doc: "the ids of the requests whose answer is in flight"
+
   attr :move_offer, :map, default: nil
   attr :target, :any, required: true
 
@@ -485,7 +490,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
     end
   end
 
-  defp place(%{location: location}), do: written_place(location)
+  # A default location label ("In person") reads in the dashboard's language.
+  defp place(%{location: location, location_kind: kind})
+       when is_binary(location) and location != "",
+       do: MeetingTypes.display_location(location, kind)
+
+  defp place(_meeting), do: nil
 
   defp written_place(location) when is_binary(location) and location != "", do: location
   defp written_place(_location), do: nil

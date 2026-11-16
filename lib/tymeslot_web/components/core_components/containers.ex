@@ -136,6 +136,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   attr :id, :string, default: nil, doc: "The heading's id"
   attr :class, :any, default: nil, doc: "Layout classes only"
   slot :actions
+  slot :title_suffix, doc: "Marks after the title, such as a section's translation status"
 
   @spec subsection_header(map()) :: Phoenix.LiveView.Rendered.t()
   def subsection_header(assigns) do
@@ -157,6 +158,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
           >
             {@title}
           </.dynamic_tag>
+          {render_slot(@title_suffix)}
         </div>
         <p :if={@description} class="mt-1 text-token-sm text-tymeslot-600">{@description}</p>
       </div>

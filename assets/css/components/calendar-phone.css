@@ -1,0 +1,252 @@
+/*
+ * The calendar on a phone: below 40rem, Tailwind's `sm` boundary, the
+ * query PHONE_QUERY in assets/js/calendar/viewport.js names. The server
+ * renders the desktop and the phone chrome alike and these rules choose, so
+ * the first paint is right before any script runs. Every rule sits inside
+ * the phone query; the toast's all-width base rule lives in
+ * calendar-editing.css.
+ */
+
+@media (width < 40rem) {
+  /* A first paint never draws seven columns on a phone: the server shows
+     three days there, and a skeleton rendered before it knew the width is
+     cut to three. */
+  .cal-skeleton:has(> .cal-skeleton-col:nth-child(4)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .cal-skeleton-col:nth-child(n + 4) {
+    display: none;
+  }
+}
+
+@media (width < 40rem) {
+  /* In normal flow at the foot of the surface; it grows by the home
+     indicator's inset rather than sitting under it. */
+  .cal-tabs {
+    min-height: calc(var(--cal-tabs-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Above the tab bar's right end, in thumb reach. */
+  .cal-fab {
+    position: fixed;
+    right: calc(1rem + env(safe-area-inset-right));
+    bottom: calc(var(--cal-tabs-h) + env(safe-area-inset-bottom) + 1rem);
+    z-index: var(--cal-z-fab);
+    width: var(--cal-fab-size);
+    height: var(--cal-fab-size);
+  }
+
+  /* The last row and the 23:00 slot scroll clear of the + button. */
+  .cal-agenda,
+  .cal-month-agenda,
+  .cal-scroll {
+    padding-bottom: var(--cal-fab-clear);
+  }
+
+  /* The grid's floating note ("Next bookable time ... Show", or the failed
+     load's) sits at the foot of the grid, which is the + button's corner:
+     lifted to the button's top edge it never runs under it. Its Show button
+     is a touch target. */
+  .cal-bookable-note {
+    bottom: var(--cal-fab-clear);
+  }
+
+  .cal-bookable-show {
+    min-height: 2.75rem;
+    padding-inline: 0.5rem;
+  }
+
+  /* Above the tab bar and the + button. */
+  .cal-toast-region,
+  .cal-notice {
+    bottom: calc(var(--cal-tabs-h) + env(safe-area-inset-bottom) + 5.5rem);
+  }
+
+  /* A sheet, the preview or the full-screen editor covers the bottom of the
+     screen, so a toast moves to the top while one is open. A core modal is
+     open while its overlay is shown (`<.modal>` writes the display inline). */
+  :root.cal-sheet-open :is(.cal-toast-region, .cal-notice),
+  :root:has(#calendar-panel, #calendar-preview, .modal-overlay[style*="display: flex"]) :is(.cal-toast-region, .cal-notice) {
+    top: calc(env(safe-area-inset-top) + 0.5rem);
+    bottom: auto;
+  }
+}
+
+@media (width < 40rem) {
+  /* The Calendars sheet's checkboxes are touch targets; their rows grow with them. */
+  .cal-sheet-list [role="checkbox"] {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+@media (width < 40rem) {
+  /* The sheet's density control (a small segmented control) is a touch target too. */
+  #calendar-sheet-density button {
+    min-height: 2.75rem;
+  }
+}
+
+/* Sheets. On a phone the hook's overlays (the "+N" list, quick create, the
+   band explainer) carry .is-sheet (assets/js/calendar/sheet.js), and the
+   preview is drawn as a sheet here; each has a .cal-scrim just before it,
+   which takes the tap that closes it, so that tap never reaches the grid.
+   --cal-kb-inset (written from visualViewport) lifts a sheet above the iOS
+   keyboard. The list and the explainer live inside the surface row, an
+   isolated stacking context, so the row is lifted while it holds one. */
+@media (width < 40rem) {
+  .cal-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: var(--cal-z-scrim);
+    background: color-mix(in srgb, var(--cal-ink) 30%, transparent);
+  }
+
+  .cal-list.is-sheet,
+  .cal-qc.is-sheet,
+  .cal-bookable-pop.is-sheet,
+  .cal-preview {
+    top: auto;
+    right: 0;
+    bottom: var(--cal-kb-inset, 0px);
+    left: 0;
+    z-index: var(--cal-z-sheet);
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    max-height: calc(100dvh - var(--cal-kb-inset, 0px) - env(safe-area-inset-top) - 2rem);
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-bottom: 0;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  }
+
+  .cal-row:has(.is-sheet) {
+    z-index: var(--cal-z-sheet);
+  }
+
+  /* Room for quick create's draft to scroll clear of the sheet, even late
+     in the day. */
+  :root:has(.cal-qc.is-sheet) .cal-scroll {
+    padding-bottom: 50dvh;
+  }
+}
+
+/* The full-screen editor. Below 640px the side panel covers the whole
+   screen, nav, header and tabs included: the surface row it lives in is
+   an isolated stacking context, so the row itself is lifted above the
+   dashboard's nav while the panel is open. Its foot follows the on-screen
+   keyboard (--cal-kb-inset), its edges keep clear of the notch and the
+   home indicator, every button in it is at least 44px high and its fields
+   are 16px, so iOS never zooms. The preview sheet's actions are 44px too. */
+@media (width < 40rem) {
+  .cal-row:has(.cal-panel) {
+    z-index: var(--cal-z-editor);
+  }
+
+  .cal-panel {
+    position: fixed;
+    inset: 0 0 var(--cal-kb-inset, 0px) 0;
+    z-index: var(--cal-z-editor);
+    width: auto;
+    max-width: none;
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    border-left: 0;
+    box-shadow: none;
+  }
+
+  .cal-panel-head {
+    min-height: 3.5rem;
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+
+  .cal-panel-head .icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .cal-panel button:not([role="switch"], #calendar-panel-guests li button) {
+    min-height: 44px;
+  }
+
+  .cal-panel [role="group"] button,
+  .cal-preview [role="group"] button {
+    min-width: 44px;
+  }
+
+  .cal-panel #calendar-panel-repeat-custom label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* A guest chip's remove button stays small; its hit area is 44px. */
+  #calendar-panel-guests li button {
+    position: relative;
+  }
+
+  #calendar-panel-guests li button::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+
+  .cal-panel :is(input, select, textarea) {
+    font-size: var(--font-size-base);
+  }
+
+  .cal-preview :is(button, a) {
+    min-height: 44px;
+  }
+
+  .cal-preview .icon-button {
+    min-width: 44px;
+  }
+}
+
+/* Quick create's sheet at thumb size: 44px chips and buttons, 14px chip
+   text, 16px in the select and the native inputs so iOS never zooms. */
+@media (width < 40rem) {
+  .cal-qc-chips {
+    gap: 8px;
+  }
+
+  .cal-qc-chip {
+    min-height: 44px;
+    padding-inline: 16px;
+    font-size: var(--font-size-sm);
+  }
+
+  .cal-qc-native.is-open {
+    min-height: 44px;
+    padding-inline: 16px;
+  }
+
+  span.cal-qc-chip {
+    padding-block: 1px;
+    line-height: 40px;
+  }
+
+  .cal-qc-seg button,
+  .cal-qc-more,
+  .cal-qc-save {
+    min-height: 44px;
+  }
+
+  .cal-qc-calendar select,
+  .cal-qc-native,
+  .cal-qc-native.is-open {
+    font-size: var(--font-size-base);
+  }
+}

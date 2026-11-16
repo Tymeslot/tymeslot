@@ -1,7 +1,7 @@
 defmodule Tymeslot.CalendarGrid.FreshnessTest do
   @moduledoc """
-  The refresh the calendar grid starts by itself when it opens on stale
-  events, against the owner's own Refresh: the first leaves a sync waiting
+  The sync the calendar grid asks for by itself when it opens on stale
+  events, against the owner's own Sync now: the first leaves a sync waiting
   out an error's backoff to it, the second brings it forward.
   """
   use Tymeslot.DataCase, async: true
@@ -31,25 +31,29 @@ defmodule Tymeslot.CalendarGrid.FreshnessTest do
       set: [state: "retryable", scheduled_at: backoff_until, attempt: 1]
     )
 
-    %{user: user, idle: idle, job: job, backoff_until: backoff_until}
+    %{user: user, failing: failing, idle: idle, job: job, backoff_until: backoff_until}
   end
 
-  test "an opened grid leaves a retrying sync to its backoff and counts it as skipped", ctx do
-    assert {:ok, %{enqueued: 1, skipped: 1, errors: []}} =
-             Freshness.refresh_events(ctx.user.id, :opened)
+  describe "one account's sync" do
+    test "asked for on opening leaves a retrying sync to its backoff", ctx do
+      assert :backing_off = Freshness.request_sync(ctx.user.id, ctx.failing.id, :opened)
+      assert Repo.get!(Oban.Job, ctx.job.id).scheduled_at == ctx.backoff_until
+    end
 
-    assert Repo.get!(Oban.Job, ctx.job.id).scheduled_at == ctx.backoff_until
+    test "asked for on opening enqueues one that is not backing off", ctx do
+      assert :ok = Freshness.request_sync(ctx.user.id, ctx.idle.id, :opened)
 
-    assert_enqueued(
-      worker: SyncGoogleCalendarWorker,
-      args: %{"calendar_integration_id" => ctx.idle.id}
-    )
-  end
+      assert_enqueued(
+        worker: SyncGoogleCalendarWorker,
+        args: %{"calendar_integration_id" => ctx.idle.id}
+      )
+    end
 
-  test "the owner's Refresh brings a retrying sync forward", ctx do
-    assert {:ok, %{enqueued: 2, skipped: 0, errors: []}} = Freshness.refresh_events(ctx.user.id)
+    test "Sync now brings a retrying sync forward", ctx do
+      assert :ok = Freshness.request_sync(ctx.user.id, ctx.failing.id)
 
-    %{scheduled_at: scheduled_at} = Repo.get!(Oban.Job, ctx.job.id)
-    assert DateTime.before?(scheduled_at, DateTime.add(DateTime.utc_now(), 5, :second))
+      %{scheduled_at: scheduled_at} = Repo.get!(Oban.Job, ctx.job.id)
+      assert DateTime.before?(scheduled_at, DateTime.add(DateTime.utc_now(), 5, :second))
+    end
   end
 end

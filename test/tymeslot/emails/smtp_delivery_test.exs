@@ -19,6 +19,7 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
 
   import ExUnit.CaptureLog
   import Tymeslot.ConfigTestHelpers
+  import Tymeslot.Test.DirectEmailSends
 
   alias Swoosh.Email
   alias Tymeslot.Emails.Delivery
@@ -26,6 +27,9 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
   alias Tymeslot.Mailer.SMTPConfig
   alias Tymeslot.Test.FakeSmtpRelay
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   setup do
     # credo:disable-for-next-line Credo.Check.Warning.UnsafeToAtom

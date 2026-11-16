@@ -162,6 +162,25 @@ flow and in the dashboard.
 | free/busy | livre/ocupado |
 | payout | repasse |
 | custom domain | domínio próprio |
+| bookable times · bookable (the calendar layer) | horários agendáveis · Agendável; never *horários disponíveis* or *livres* here |
+| Layers (calendar rail heading) | Camadas |
+| hatched (times on the calendar) | hachurados |
+| Open for booking (add bookable time) · Open for %{name} | Abrir para agendamento · Aberto para %{name} |
+| Just this once · Every week | Só desta vez · Toda semana |
+| Treat as · Treat as Busy / Free (read-only all-day event) | Considerar como · Considerado ocupado / livre para agendamentos |
+| Block this time · Blocked (event title) · Unblocked | Bloquear este horário · Bloqueado · Desbloqueado |
+| Copy free times | Copiar horários livres |
+| Request · Expired (calendar pill for a booking request) | Pedido · Expirado (masculine, agreeing with *pedido*) |
+| put back (bookable times restored by undo) | restaurados |
+| translation (noun; booking-page languages) | tradução (pl. traduções); *"%{language} translations"* → *"Traduções: %{language}"*, *"Your %{language} translations"* → *"Suas traduções (%{language})"*: `%{language}` is filled with the language's own name, so it goes after a colon or in brackets, never after *em* or *para* |
+| translate | traduzir; the participle agrees with *textos* (*"%{translated}/%{total} traduzidos"*) |
+| original language (the language the host writes their texts in) | idioma original; *"in %{language}"* → *"no idioma original (%{language})"*; the original text is *o original*, and the badge beside that language reads *original* |
+| translation language (a language the host translates into) | idioma de tradução (pl. idiomas de tradução) |
+| language switcher (the visitor-facing control on the booking page) | seletor de idioma |
+| outdated (a translation whose original changed) | desatualizado (pl. desatualizados) |
+| missing (a text not translated yet) | **Sem tradução** as the status pill and in the filter (*"Só sem tradução ou desatualizados"*); in running text *faltando* (*"alguns textos estão faltando"*) |
+| translated (status) | traduzido |
+| review (the link to a language's review page) | Revisar |
 
 **Settings flash messages** put the name after a colon, *"Configuração ativada: %{name}."*
 (also *desativada*, *atualizada*), so the participle agrees with *configuração* and never

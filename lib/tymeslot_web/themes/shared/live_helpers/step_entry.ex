@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   alias Tymeslot.BookingPages
   alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.Bookings.SubmissionToken
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.CustomFields
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes
@@ -62,7 +63,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   def maybe_assign_meeting_type(socket, duration) do
     duration_str = if is_integer(duration), do: "#{duration}min", else: duration
 
-    if socket.assigns[:username_context] && socket.assigns[:organizer_user_id] do
+    if resolves_meeting_type?(socket.assigns) do
       case resolve_meeting_type(socket, duration_str) do
         nil -> socket
         meeting_type -> assign_meeting_type(socket, meeting_type)
@@ -71,6 +72,51 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
       socket
     end
   end
+
+  @doc """
+  Resolves the type a `?duration=` link names, as `maybe_assign_meeting_type/2`
+  does, and sends a link naming a type this address does not offer on to the
+  type's own address, with the rest of the page's query (the day, an embed's
+  parameters), the way a type's own link at the wrong address is
+  (`resolve_slug_meeting_type/4`). `?duration=` resolves by slug, so the
+  redirect tells the visitor nothing their link did not already name. An
+  invitation-only type is not sent on: its address admits no one without an
+  invitation, which a `?duration=` link never carries.
+  """
+  @spec resolve_duration_link(Phoenix.LiveView.Socket.t(), String.t() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def resolve_duration_link(socket, nil), do: socket
+
+  def resolve_duration_link(socket, slug) do
+    socket = maybe_assign_meeting_type(socket, slug)
+
+    with nil <- socket.assigns[:meeting_type],
+         true <- resolves_meeting_type?(socket.assigns),
+         %ProfileSchema{} = profile <- socket.assigns[:organizer_profile],
+         %{invitation_only: false} = meeting_type <-
+           ThemeFlow.resolve_meeting_type_for_slug(socket.assigns.organizer_user_id, slug) do
+      query = Map.drop(socket.assigns[:page_query_params] || %{}, ["duration", "step"])
+
+      redirect(socket,
+        to:
+          profile
+          |> BookingPages.meeting_type_path(meeting_type)
+          |> PathHandlers.with_query(query)
+      )
+    else
+      _resolved_or_unknown -> socket
+    end
+  end
+
+  @doc """
+  Whether this page can resolve a meeting type at all: only an organiser's
+  page can (a theme preview has no organiser). `maybe_assign_meeting_type/2`
+  resolves nothing elsewhere, so a caller waiting for a resolved type must
+  ask this first, or it waits for one that never comes.
+  """
+  @spec resolves_meeting_type?(map()) :: boolean()
+  def resolves_meeting_type?(assigns),
+    do: is_binary(assigns[:username_context]) and is_integer(assigns[:organizer_user_id])
 
   # A reschedule stays on the meeting's own type, because that is the one whose
   # rules the submit will be validated against. Everything else picks by
@@ -291,7 +337,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # an embed the redirect stays an embed (`PathHandlers.put_embed_params/2`,
   # from verified assigns only), or the guest would see the full profile page
   # in the host's iframe, and carries `reason`, which the embed's lost flash
-  # cannot (`EntryRefusal.put_param/3`).
+  # cannot (`EntryRefusal.put_param/3`). The language the visitor picked, when
+  # it is the page's, goes along too: an embed's iframe gets no session to
+  # remember it.
   defp invalid_meeting_type_redirect_path(socket, reason) do
     query =
       case socket.assigns[:reschedule_meeting_uid] do
@@ -301,6 +349,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
     query =
       query
+      |> Map.merge(picked_locale_param(socket.assigns))
       |> Map.merge(PathHandlers.demo_theme_param(socket.assigns))
       |> PathHandlers.put_embed_params(socket)
       |> EntryRefusal.put_param(socket, reason)
@@ -308,9 +357,19 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     PathHandlers.with_query("/" <> socket.assigns[:username_context], query)
   end
 
+  defp picked_locale_param(%{locale_choice: locale, locale: locale}) when is_binary(locale),
+    do: %{"locale" => locale}
+
+  defp picked_locale_param(_assigns), do: %{}
+
   @doc "Makes `meeting_type` the one this booking is for, with its questions, locations and booking window."
   @spec assign_meeting_type(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_meeting_type(socket, meeting_type) do
+    # Looked up afresh, not taken from the page's (already translated) list,
+    # so its texts are put into the page's content language here, before the
+    # questions and locations are read from it.
+    meeting_type = ContentTranslations.localise(meeting_type, socket.assigns[:content_locale])
+
     socket
     |> ChosenLength.keep_if_offered(meeting_type)
     |> assign(:meeting_type, meeting_type)

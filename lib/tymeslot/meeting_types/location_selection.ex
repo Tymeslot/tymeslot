@@ -43,8 +43,19 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Locales
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Venues
+
+  # Each kind's default label in English, as it is stored: on the location,
+  # and in the meeting a booking on it writes. It is read in each reader's
+  # language (`default_label/1`, `display_location/2`).
+  @default_labels %{
+    video: "Video call",
+    in_person: "In person",
+    phone: "Phone call",
+    custom: "Somewhere else"
+  }
 
   @typedoc "The meeting fields that follow from the booker's chosen location."
   @type resolution :: %{
@@ -69,15 +80,18 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   so it is the name nobody chose rather than one the host wrote.
   """
   @spec options(map() | nil) :: [LocationOption.t()]
-  def options(nil), do: []
+  def options(meeting_type),
+    do: meeting_type |> stored_options() |> Enum.map(&localise_default_label/1)
 
-  def options(%{locations: locations}) when is_list(locations) and locations != [] do
-    locations
-    |> Enum.sort_by(&(&1.position || 0))
-    |> Enum.map(&localise_default_label/1)
-  end
+  # The locations as stored, a default label in English: what a booking
+  # resolves against, so the meeting records the default rather than one
+  # reader's wording of it.
+  defp stored_options(nil), do: []
 
-  def options(meeting_type), do: derived_options(meeting_type)
+  defp stored_options(%{locations: locations}) when is_list(locations) and locations != [],
+    do: Enum.sort_by(locations, &(&1.position || 0))
+
+  defp stored_options(meeting_type), do: derived_options(meeting_type)
 
   @doc """
   Whether the booker has anything to choose: between locations, between the
@@ -97,10 +111,14 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
 
   defp several?(choices), do: Enum.any?(Map.values(choices || %{}), &(length(&1) > 1))
 
-  @doc "The option with `id`, or the first one when `id` matches nothing."
+  @doc """
+  The option with `id`, or the first one when `id` matches nothing, as
+  stored: a default label stays the English default (`display_location/2`
+  reads it in the reader's language).
+  """
   @spec fetch(map() | nil, String.t() | nil) :: LocationOption.t() | nil
   def fetch(meeting_type, id) do
-    opts = options(meeting_type)
+    opts = stored_options(meeting_type)
 
     Enum.find(opts, &(&1.id == id)) || List.first(opts)
   end
@@ -240,7 +258,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       %LocationOption{
         id: "legacy-video",
         kind: :video,
-        label: default_label(:video),
+        label: @default_labels.video,
         video_integration_ids: [id],
         position: 0
       }
@@ -252,29 +270,91 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
       %LocationOption{
         id: "legacy-in-person",
         kind: :in_person,
-        label: default_label(:in_person),
+        label: @default_labels.in_person,
         position: 0
       }
     ]
   end
 
-  # Each kind's default label in English, as the default meeting types store
-  # it, and in the current locale.
-  @default_labels %{
-    video: "Video call",
-    in_person: "In person",
-    phone: "Phone call",
-    custom: "Somewhere else"
-  }
+  @doc """
+  Whether a location's label still reads as its kind's English default. Such
+  a label is shown in the visitor's language already, so it is not the host's
+  own text to translate.
+  """
+  @spec default_label?(map()) :: boolean()
+  def default_label?(%{kind: kind, label: label}), do: Map.get(@default_labels, kind) == label
+  def default_label?(_location), do: false
 
-  defp localise_default_label(%LocationOption{kind: kind, label: label} = option) do
-    if Map.get(@default_labels, kind) == label,
-      do: %{option | label: default_label(kind)},
+  @doc """
+  `label` as a location of `kind` stores it: its kind's English default when
+  it reads as that default in any supported language, otherwise unchanged.
+
+  The editor shows a stored default in the host's own language
+  (`options/1`), so a form saved untouched posts it back localised; stored
+  as such it would read as text the host wrote, shown untranslated to every
+  visitor and offered for translation. Stored as the English default, it
+  stays the name nobody chose, shown in each reader's language.
+  """
+  @spec stored_label(LocationOption.kind() | nil, String.t() | nil) :: String.t() | nil
+  def stored_label(kind, label) when is_binary(label) do
+    case Map.fetch(@default_labels, kind) do
+      {:ok, english} -> if label in localised_defaults(kind), do: english, else: label
+      :error -> label
+    end
+  end
+
+  def stored_label(_kind, label), do: label
+
+  defp localised_defaults(kind) do
+    for locale <- Locales.supported_codes() do
+      Gettext.with_locale(TymeslotWeb.Gettext, locale, fn -> default_label(kind) end)
+    end
+  end
+
+  defp localise_default_label(%LocationOption{} = option) do
+    if default_label?(option),
+      do: %{option | label: default_label(option.kind)},
       else: option
   end
 
-  defp default_label(:video), do: dgettext("booking", "Video call")
-  defp default_label(:in_person), do: dgettext("booking", "In person")
-  defp default_label(:phone), do: dgettext("booking", "Phone call")
-  defp default_label(:custom), do: dgettext("booking", "Somewhere else")
+  @doc """
+  A meeting's `location` as a reader sees it, in the current locale: a
+  location of `kind` still carrying its kind's English default ("In person",
+  or "Phone call (+44 20 7946 0000)" with the number it adds) reads in that
+  language; anything else (a venue, a label the host wrote) as written.
+
+  A default label is product wording rather than the host's text, so every
+  reader sees it in their own language, translated or not.
+  """
+  @spec display_location(String.t(), LocationOption.kind() | nil) :: String.t()
+  @spec display_location(nil, LocationOption.kind() | nil) :: nil
+  def display_location(location, kind) when is_binary(location) do
+    with {:ok, english} <- Map.fetch(@default_labels, kind),
+         {:ok, rest} <- after_default(location, english) do
+      default_label(kind) <> rest
+    else
+      _written -> location
+    end
+  end
+
+  def display_location(location, _kind), do: location
+
+  defp after_default(english, english), do: {:ok, ""}
+
+  defp after_default(location, english) do
+    if String.starts_with?(location, english <> " ("),
+      do: {:ok, String.replace_prefix(location, english, "")},
+      else: :error
+  end
+
+  @doc """
+  The default label of `kind` in the current locale: what a location still
+  carrying its English default reads as (`options/1`), and the name an
+  editor gives a location the host has not named.
+  """
+  @spec default_label(LocationOption.kind()) :: String.t()
+  def default_label(:video), do: dgettext("booking", "Video call")
+  def default_label(:in_person), do: dgettext("booking", "In person")
+  def default_label(:phone), do: dgettext("booking", "Phone call")
+  def default_label(:custom), do: dgettext("booking", "Somewhere else")
 end

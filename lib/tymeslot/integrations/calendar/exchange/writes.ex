@@ -132,10 +132,14 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Writes do
       start_time: event_data[:start_time],
       end_time: event_data[:end_time],
       location: event_data[:location],
-      transparency: event_data[:transparency] || :opaque,
+      transparency: transparency(event_data[:transparency]),
       reminder_minutes: reminder_minutes(event_data[:reminders])
     }
   end
+
+  # A booking says `:transparent`; a calendar edit carries the cache's string.
+  defp transparency(value) when value in [:transparent, "transparent"], do: :transparent
+  defp transparency(_value), do: :opaque
 
   # EWS carries one reminder per item, as a lead time in minutes, so only the
   # first survives. Outlook's Graph mapping loses the rest the same way, and

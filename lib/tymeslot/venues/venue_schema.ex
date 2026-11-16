@@ -32,6 +32,7 @@ defmodule Tymeslot.Venues.VenueSchema do
           name: String.t() | nil,
           description: String.t() | nil,
           position: integer(),
+          translations: map(),
           user: UserSchema.t() | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -41,6 +42,9 @@ defmodule Tymeslot.Venues.VenueSchema do
     field(:name, :string)
     field(:description, :string)
     field(:position, :integer, default: 0)
+    # Translations of the name and description (`Tymeslot.ContentTranslations`).
+    # No changeset here casts it, so a form save can never wipe it.
+    field(:translations, :map, default: %{})
 
     belongs_to(:user, UserSchema)
 

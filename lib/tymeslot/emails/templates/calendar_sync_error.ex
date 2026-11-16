@@ -9,6 +9,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
 
   alias Swoosh.Email
   alias Tymeslot.Emails.RecipientLocale
+  alias Tymeslot.MeetingTypes
 
   alias Tymeslot.Emails.Shared.{
     Callouts,
@@ -23,11 +24,29 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   alias Tymeslot.Utils.DateTimeUtils
 
   alias Tymeslot.Emails.HostClock
+  alias Tymeslot.Infrastructure.Logging.EmailMasker
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Logging.Redactor
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   # A sync failure the user needs to act on.
   @intent :alert
+
+  # The failures `describe_error/1` puts in words, and their stored names:
+  # the email is sent from a job, whose JSON args turn an atom into a string.
+  @described [
+    :refused,
+    :calendar_event_not_updatable,
+    :not_found,
+    :server_error,
+    :network_error,
+    :malformed_response
+  ]
+  @by_stored_name Map.new(@described, &{Atom.to_string(&1), &1})
+
+  # The longest provider message kept, in a job's args and in the email.
+  @max_reason_bytes 2_048
 
   @type meeting_map :: %{
           required(:start_time) => DateTime.t(),
@@ -46,7 +65,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   @spec render(meeting_map(), any()) :: Email.t()
   def render(meeting, error_reason) do
     RecipientLocale.with_user_id_locale(Map.get(meeting, :organizer_user_id), fn ->
-      error_details = describe_error(error_reason)
+      error_details = error_reason |> restore_reason() |> describe_error()
       locale = Gettext.get_locale(TymeslotWeb.Gettext)
       clock = HostClock.for_meeting(meeting, locale)
       owner_start_time = DateTimeUtils.convert_to_timezone(meeting.start_time, clock.timezone)
@@ -85,7 +104,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     title: dgettext("emails_integrations", "Calendar Sync Error"))}
 
     #{Text.title_section(dgettext("emails_integrations", "Meeting Details"))}
-    #{MeetingComponents.meeting_details_table(%{date: owner_start_time, start_time: owner_start_time, duration: meeting.duration, location: meeting.location, time_format: clock.time_format}, locale)}
+    #{MeetingComponents.meeting_details_table(%{date: owner_start_time, start_time: owner_start_time, duration: meeting.duration, location: place(meeting), time_format: clock.time_format}, locale)}
 
     #{Text.divider()}
 
@@ -129,7 +148,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     #{dgettext("emails_integrations", "Date:")} #{Formatting.format_date(owner_start_time, locale)}
     #{dgettext("emails_integrations", "Time:")} #{Formatting.format_time(owner_start_time, locale, clock.time_format)}
     #{dgettext("emails_integrations", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
-    #{dgettext("emails_integrations", "Location:")} #{meeting.location || dgettext("emails_integrations", "Not specified")}
+    #{dgettext("emails_integrations", "Location:")} #{place(meeting) || dgettext("emails_integrations", "Not specified")}
 
     #{dgettext("emails_integrations", "ERROR DETAILS:")}
     #{error_details}
@@ -176,6 +195,23 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
 
   defp describe_error(error), do: TemplateHelper.format_error_reason(error)
 
+  @doc """
+  `error_reason` as an email job stores it, for `render/2` to read back: a
+  failure this email describes in words by its name, anything else as text
+  with addresses and credentials masked and its length bounded, since a
+  provider's error can quote a response body.
+  """
+  @spec storable_reason(term()) :: String.t()
+  def storable_reason(reason) when reason in @described, do: Atom.to_string(reason)
+
+  def storable_reason(reason) when is_binary(reason),
+    do: reason |> EmailMasker.mask_emails() |> Redactor.redact_and_truncate(@max_reason_bytes)
+
+  def storable_reason(reason), do: LogFormat.reason(reason)
+
+  defp restore_reason(reason) when is_binary(reason), do: Map.get(@by_stored_name, reason, reason)
+  defp restore_reason(reason), do: reason
+
   # The four causes are one list translated once, then laid out by whichever body
   # needs them. Keeping them as separate msgids from the surrounding prose means
   # a translator never has to reproduce list markup by hand.
@@ -192,4 +228,9 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     causes = Enum.map_join(common_causes(), "\n- ", & &1)
     "#{dgettext("emails_integrations", "Common causes:")}\n- #{causes}"
   end
+
+  # A default location label ("In person") in the organiser's language; a
+  # venue or the host's own text as written.
+  defp place(meeting),
+    do: MeetingTypes.display_location(meeting.location, Map.get(meeting, :location_kind))
 end

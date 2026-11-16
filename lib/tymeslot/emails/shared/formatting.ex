@@ -18,6 +18,7 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   take a locale, gettext-backed helpers read the ambient one.**
   """
 
+  alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Utils.DateTimeUtils.Duration
@@ -406,12 +407,22 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   # releases wrote, or no string at all, falls back to the translated label.
   def format_location(%{location_type: :phone} = details) do
     case details[:location] do
-      location when is_binary(location) and location not in ["", "Phone Call"] -> location
-      _other -> dgettext("emails", "Phone Call")
+      location when is_binary(location) and location not in ["", "Phone Call"] ->
+        BookingRequestLocation.display(location, :phone)
+
+      _other ->
+        dgettext("emails", "Phone Call")
     end
   end
 
-  def format_location(details), do: details[:location] || dgettext("emails", "TBD")
+  # A location still carrying its default label ("In person") is read in the
+  # recipient's language; a venue or the host's own text as written.
+  def format_location(details) do
+    case details[:location] do
+      nil -> dgettext("emails", "TBD")
+      location -> BookingRequestLocation.display(location, details[:location_type])
+    end
+  end
 
   @doc """
   The line shown under the location of an in-person meeting whose address is

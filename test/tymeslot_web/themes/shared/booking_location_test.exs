@@ -324,6 +324,24 @@ defmodule TymeslotWeb.Themes.Shared.BookingLocationTest do
       assert BookingLocation.chosen_display(assigns(to_arrange)) == "Headquarters"
     end
 
+    test "reads a kept default label in the visitor's language" do
+      kept =
+        rescheduling(%{
+          reschedule_location: %{
+            option_id: "loc-hq",
+            venue_id: nil,
+            location: "In person",
+            address_to_arrange: true
+          },
+          selected_location_id: "loc-hq"
+        })
+
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert BookingLocation.kept_location(assigns(kept)).location == "Vor Ort"
+        assert BookingLocation.chosen_display(assigns(kept)) == "Vor Ort"
+      end)
+    end
+
     test "shows no venue chosen on the meeting's location, and yields once the booker picks one" do
       # Back from another location, the picker does not fall back to the
       # first venue: nothing is chosen until the booker picks.

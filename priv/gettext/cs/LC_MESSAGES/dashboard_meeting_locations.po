@@ -189,11 +189,6 @@ msgstr "Zobrazí se rezervujícímu a zapíše se do pozvánky v kalendáři."
 msgid "Something else"
 msgstr "Něco jiného"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Somewhere else"
-msgstr "Někde jinde"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "The booker picks: %{providers}"

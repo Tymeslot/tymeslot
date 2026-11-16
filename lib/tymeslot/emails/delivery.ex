@@ -4,13 +4,21 @@ defmodule Tymeslot.Emails.Delivery do
 
   All `send_*` functions in `Tymeslot.Emails.EmailService` delegate to
   `deliver/1` here once they have built a `Swoosh.Email` struct.
+
+  Only an email job sends: `deliver/2` refuses an email sent anywhere but
+  inside `within_job/2`, which each email worker wraps its work in (see
+  `Tymeslot.Emails.DeliveryOutsideJobError` for why). What a refusal does is
+  `config :tymeslot, :email_delivery_outside_job`: `:raise` (the default),
+  or `:report`, which reports the error and sends the email anyway.
   """
 
   require Logger
 
+  alias Tymeslot.Emails.DeliveryOutsideJobError
   alias Tymeslot.Emails.Shared.Sanitise
   alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.EmailMasker
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
@@ -39,6 +47,7 @@ defmodule Tymeslot.Emails.Delivery do
   # reports a relay that hung before any message data was sent as retryable.
   @default_send_deadline_ms 20_000
   @ambiguous_policy {__MODULE__, :ambiguous_timeouts}
+  @email_job {__MODULE__, :email_job}
   @ambiguous_seen {__MODULE__, :ambiguous_timeout_seen}
 
   @doc """
@@ -64,7 +73,8 @@ defmodule Tymeslot.Emails.Delivery do
   def deliver(email, opts \\ []) do
     email = sanitise_headers(email)
 
-    with :ok <- check_text_body(email) do
+    with :ok <- check_text_body(email),
+         :ok <- check_email_job() do
       Logger.debug("Delivering email via Mailer", recipient_domains: recipient_domains(email))
 
       breaker = Keyword.get_lazy(opts, :breaker, &CircuitBreakerSupervisor.email_breaker_name/0)
@@ -83,6 +93,47 @@ defmodule Tymeslot.Emails.Delivery do
   # does a refusal from an open circuit.
   defp delivery_result({:ok, _receipt} = result), do: result
   defp delivery_result({:error, _reason} = result), do: result
+
+  @doc """
+  Runs `fun` as the work of the email job `job`, so that every `deliver/2`
+  it makes is allowed to send. Every worker that sends email wraps its work
+  in this, in the process that sends: a send from a task the job spawns is
+  refused, since the mark does not follow it.
+  """
+  @spec within_job(Oban.Job.t(), (-> result)) :: result when result: term()
+  def within_job(%Oban.Job{id: job_id}, fun), do: marked({:job, job_id}, fun)
+
+  @doc """
+  Runs `fun` with sends allowed outside an email job. For dev tooling that
+  sends a sample email on request, and for tests that exercise a send
+  directly; application code schedules its email instead.
+  """
+  @spec allow_outside_job((-> result)) :: result when result: term()
+  def allow_outside_job(fun), do: marked(:allowed_outside_job, fun)
+
+  defp marked(mark, fun) do
+    previous = Process.put(@email_job, mark)
+
+    try do
+      fun.()
+    after
+      if previous, do: Process.put(@email_job, previous), else: Process.delete(@email_job)
+    end
+  end
+
+  defp check_email_job do
+    if Process.get(@email_job), do: :ok, else: refuse_outside_job()
+  end
+
+  defp refuse_outside_job do
+    case Application.get_env(:tymeslot, :email_delivery_outside_job, :raise) do
+      :report ->
+        ErrorTracking.report_error(%DeliveryOutsideJobError{}, nil)
+
+      :raise ->
+        raise DeliveryOutsideJobError
+    end
+  end
 
   @doc """
   Runs `fun` with `policy` for ambiguous timeouts in every `deliver/2` it

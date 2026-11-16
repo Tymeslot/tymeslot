@@ -13,7 +13,7 @@ defmodule TymeslotWeb.DashboardLive do
   talk to each other: a child asks for a sibling to be refreshed, or for a flash
   to be shown, by messaging the parent. `handle_info/2` is therefore mostly a
   routing table, with the calendar and meeting-type-form traffic delegated to
-  `TymeslotWeb.Dashboard.CalendarEventHandlers` and
+  `TymeslotWeb.Dashboard.CalendarMessages` and
   `TymeslotWeb.Dashboard.MeetingFormMessages`.
 
   ## Extensions
@@ -28,19 +28,21 @@ defmodule TymeslotWeb.DashboardLive do
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Availability
   alias Tymeslot.BookingPages
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.WriteGuardian
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Meetings
   alias Tymeslot.Onboarding
-  alias Tymeslot.Profiles
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Components.Shared.PickerPreferences
   alias TymeslotWeb.Components.TourOverlay
+  alias TymeslotWeb.Dashboard.AgendaRefresh
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
   alias TymeslotWeb.Dashboard.BookingLinkShare
-  alias TymeslotWeb.Dashboard.CalendarEventHandlers
-  alias TymeslotWeb.Dashboard.CalendarGridComponent
+  alias TymeslotWeb.Dashboard.CalendarFocus
+  alias TymeslotWeb.Dashboard.CalendarMessages
   alias TymeslotWeb.Dashboard.CalendarUpNextStrip
   alias TymeslotWeb.Dashboard.ComponentDispatch
   alias TymeslotWeb.Dashboard.MeetingFormMessages
@@ -53,13 +55,6 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Helpers.PageTitles
 
   require Logger
-
-  # Cadence for the overview agenda's live refresh. Unlike the calendar
-  # grid's query-free `:tick` (which only re-sends `current_time`), this
-  # re-runs `Agenda.day_agenda/2` from the database every 60s to advance
-  # the now-line, drop entries that have ended, and pick up bookings or
-  # calendar events created since the last load.
-  @agenda_tick_ms 60_000
 
   # The sections showing the Theme screen, which follows booking page changes.
   @booking_page_actions [:theme, :theme_customization]
@@ -88,8 +83,19 @@ defmodule TymeslotWeb.DashboardLive do
       end
 
     # `:agenda` defaults nil so the calendar's Up-next strip can be guarded on
-    # the dead render, before `load_dashboard_data/1` has run.
-    {:ok, assign(socket, first_dashboard_visit: first_visit?, agenda: nil)}
+    # the dead render, before `AgendaRefresh.load/1` has run.
+    # `:calendar_focus` waits for the calendar's first open, which loads it
+    # once per process (nil until then).
+    # `viewport_fit: :cover` lets the root layout write the dashboard's
+    # viewport meta (under the notch, resized by the on-screen keyboard).
+    {:ok,
+     assign(socket,
+       first_dashboard_visit: first_visit?,
+       agenda: nil,
+       calendar_focus: nil,
+       nav_expanded: false,
+       viewport_fit: :cover
+     )}
   end
 
   @impl Phoenix.LiveView
@@ -132,10 +138,10 @@ defmodule TymeslotWeb.DashboardLive do
   defp handle_dashboard_params(params, socket) do
     action = socket.assigns.live_action
 
-    # Leaving the calendar unmounts the grid while this process lives on,
+    # Leaving the calendar unmounts the surface while this process lives on,
     # so the writes it still has queued are handed to their guardian. The
-    # count tells a grid LiveView revives, rather than mounts afresh, to
-    # take them back (see `EventWrites.adopt/1`).
+    # count tells a surface LiveView revives, rather than mounts afresh, to
+    # take them back (see `Dashboard.Calendar.Writes.adopt/1`).
     socket =
       if action == :calendar do
         assign_new(socket, :calendar_left, fn -> 0 end)
@@ -151,12 +157,14 @@ defmodule TymeslotWeb.DashboardLive do
 
         Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{user_id}")
         Meetings.subscribe_to_guest_rsvp_updates(user_id)
+        Availability.subscribe(user_id)
 
         assign(socket, :calendar_pubsub_subscribed, true)
       else
         socket
       end
 
+    socket = if action == :calendar, do: assign_calendar_focus(socket), else: socket
     socket = subscribe_to_booking_pages(socket, action)
 
     socket =
@@ -170,10 +178,10 @@ defmodule TymeslotWeb.DashboardLive do
         do: PaymentsHandlers.maybe_enqueue_resync(params, socket),
         else: socket
 
-    socket = if connected?(socket), do: load_dashboard_data(socket), else: socket
+    socket = if connected?(socket), do: AgendaRefresh.load(socket), else: socket
 
     socket
-    |> reschedule_agenda_tick(action)
+    |> AgendaRefresh.reschedule()
     |> PollEventHandlers.keep_deadline_timer(action)
   end
 
@@ -191,23 +199,17 @@ defmodule TymeslotWeb.DashboardLive do
 
   defp subscribe_to_booking_pages(socket, _action), do: socket
 
-  # Keeps a single agenda-refresh timer alive only while a section that shows
-  # the agenda (overview, calendar's Up-next strip) is open. Cancels any prior
-  # timer first so repeated visits never stack ticks.
-  defp reschedule_agenda_tick(socket, action) when action in [:overview, :calendar] do
-    if ref = socket.assigns[:agenda_tick_ref], do: Process.cancel_timer(ref)
-
-    if connected?(socket) do
-      assign(socket, :agenda_tick_ref, Process.send_after(self(), :agenda_tick, @agenda_tick_ms))
-    else
-      assign(socket, :agenda_tick_ref, nil)
-    end
+  # Whether focus mode is on, read once per process (the dead render too, so
+  # the menu never flashes): later changes go through
+  # `handle_event("calendar:toggle_focus", ...)`, which keeps it current.
+  defp assign_calendar_focus(
+         %{assigns: %{calendar_focus: nil, current_user: %{id: user_id}}} = socket
+       ) do
+    preferences = CalendarGrid.get_or_create_preferences(user_id)
+    assign(socket, :calendar_focus, preferences.focus_mode)
   end
 
-  defp reschedule_agenda_tick(socket, _action) do
-    if ref = socket.assigns[:agenda_tick_ref], do: Process.cancel_timer(ref)
-    assign(socket, :agenda_tick_ref, nil)
-  end
+  defp assign_calendar_focus(socket), do: socket
 
   @impl Phoenix.LiveView
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -226,6 +228,7 @@ defmodule TymeslotWeb.DashboardLive do
         :should_render_feature,
         ComponentDispatch.should_render_feature?(assigns.live_action, assigns)
       )
+      |> assign(:calendar_focus_active, CalendarFocus.active?(assigns))
 
     ~H"""
     <DashboardLayout.dashboard_layout
@@ -236,6 +239,10 @@ defmodule TymeslotWeb.DashboardLive do
       automations_allowed={@automations_allowed}
       analytics_allowed={@analytics_allowed}
       full_width={@live_action == :calendar}
+      compact_nav={@live_action == :calendar}
+      focus={@calendar_focus_active}
+      nav_rail={@live_action == :calendar and not @nav_expanded}
+      nav_rail_toggle={@live_action == :calendar}
       sidebar_extensions={@sidebar_extensions}
       unseen_announcements={@unseen_announcements}
     >
@@ -261,23 +268,34 @@ defmodule TymeslotWeb.DashboardLive do
       <%!-- Content --%>
       <div class={if @live_action == :calendar, do: "flex-1 flex flex-col min-h-0", else: ""}>
         <%= if @live_action == :calendar do %>
-          <div
-            :if={OnboardingChecklist.visible?(@current_user, @integration_status, @profile)}
-            class="shrink-0 px-3 pt-2 md:px-4"
-          >
-            <OnboardingChecklist.onboarding_checklist
-              variant={:compact}
-              integration_status={@integration_status}
-              current_user={@current_user}
-              profile={@profile}
-            />
+          <%!-- Always rendered, so a strip appearing never changes the siblings
+               of the grid's wrapper (morphdom would rebuild it and detach the
+               surface). The calendar leaves Up next to its agenda tab on
+               phones. --%>
+          <div id="calendar-strips" class="shrink-0">
+            <div
+              :if={OnboardingChecklist.visible?(@current_user, @integration_status, @profile)}
+              class="px-3 pt-2 md:px-4"
+            >
+              <OnboardingChecklist.onboarding_checklist
+                variant={:compact}
+                integration_status={@integration_status}
+                current_user={@current_user}
+                profile={@profile}
+              />
+            </div>
+            <div
+              :if={@agenda && @agenda.next}
+              id="calendar-up-next"
+              class="max-sm:hidden"
+            >
+              <CalendarUpNextStrip.up_next_strip
+                entry={@agenda.next}
+                timezone={@agenda.timezone}
+                time_format={@time_format}
+              />
+            </div>
           </div>
-          <CalendarUpNextStrip.up_next_strip
-            :if={@agenda && @agenda.next}
-            entry={@agenda.next}
-            timezone={@agenda.timezone}
-            time_format={@time_format}
-          />
         <% end %>
         <div class={
           if @live_action == :calendar, do: "flex-1 min-h-0 flex flex-col", else: "contents"
@@ -295,8 +313,10 @@ defmodule TymeslotWeb.DashboardLive do
               saving={@saving}
               client_ip={@client_ip}
               user_agent={@user_agent}
+              viewport_hint={@viewport}
               live_action={@live_action}
               calendar_left={@calendar_left}
+              calendar_focus={@calendar_focus_active}
               params={@params}
               custom_questions_allowed={@custom_questions_allowed}
               group_bookings_allowed={@group_bookings_allowed}
@@ -362,7 +382,7 @@ defmodule TymeslotWeb.DashboardLive do
      socket
      |> handle_saving_animation()
      |> refresh_dashboard_data()
-     |> load_dashboard_data()}
+     |> AgendaRefresh.load()}
   end
 
   @spec handle_info({:flash, {atom(), String.t()}}, Phoenix.LiveView.Socket.t()) ::
@@ -488,84 +508,17 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info({:poll_deadline_next, deadline}, socket),
     do: PollEventHandlers.handle_poll_deadline_next(deadline, socket)
 
-  # Calendar-specific handle_info clauses — delegated to CalendarEventHandlers.
-
-  def handle_info({:guest_rsvp_updated, _meeting_id}, socket) do
-    send_update(
-      CalendarGridComponent,
-      id: ComponentDispatch.component_id(:calendar),
-      action: :refresh_guest_summaries
-    )
-
-    {:noreply, socket}
-  end
-
-  def handle_info(:tick, socket),
-    do: CalendarEventHandlers.handle_tick(socket)
-
   def handle_info(:agenda_tick, socket) do
-    {:noreply, socket |> reschedule_agenda_tick(socket.assigns.live_action) |> refresh_agenda()}
+    {:noreply, socket |> AgendaRefresh.reschedule() |> AgendaRefresh.refresh()}
   end
-
-  def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket),
-    do: socket |> CalendarEventHandlers.handle_calendar_events_updated() |> rebuild_agenda()
-
-  def handle_info({:calendar_sync_complete, _user_id, _integration_id}, socket),
-    do: CalendarEventHandlers.handle_calendar_sync_complete(socket)
-
-  def handle_info(:calendar_sync_flash, socket),
-    do: CalendarEventHandlers.handle_calendar_sync_flash(socket)
-
-  def handle_info(:reset_calendar_sync, socket),
-    do: CalendarEventHandlers.handle_reset_calendar_sync(socket)
-
-  def handle_info({:event_update_result, result}, socket),
-    do: result |> CalendarEventHandlers.handle_event_update_result(socket) |> rebuild_agenda()
-
-  def handle_info({:event_move_result, result}, socket),
-    do: result |> CalendarEventHandlers.handle_event_move_result(socket) |> rebuild_agenda()
-
-  def handle_info({:event_video_result, result}, socket),
-    do: CalendarEventHandlers.handle_event_video_result(result, socket)
-
-  def handle_info({:event_writes_released, release}, socket),
-    do: CalendarEventHandlers.handle_event_writes_released(release, socket)
-
-  def handle_info({:execute_create_event, payload}, socket),
-    do: CalendarEventHandlers.handle_execute_create_event(payload, socket)
-
-  def handle_info({:create_event_result, result}, socket),
-    do: result |> CalendarEventHandlers.handle_create_event_result(socket) |> rebuild_agenda()
-
-  def handle_info({:execute_create_ad_hoc_meeting, params}, socket),
-    do: CalendarEventHandlers.handle_execute_create_ad_hoc_meeting(params, socket)
-
-  def handle_info({:create_ad_hoc_meeting_result, result}, socket),
-    do:
-      result
-      |> CalendarEventHandlers.handle_create_ad_hoc_meeting_result(socket)
-      |> rebuild_agenda()
-
-  def handle_info({:execute_ics_import, payload}, socket),
-    do: CalendarEventHandlers.handle_execute_ics_import(payload, socket)
-
-  def handle_info({:ics_import_progress, done}, socket),
-    do: CalendarEventHandlers.handle_ics_import_progress(done, socket)
-
-  def handle_info({:ics_import_result, result}, socket),
-    do: CalendarEventHandlers.handle_ics_import_result(result, socket)
-
-  def handle_info({:execute_delete_event, payload}, socket),
-    do: CalendarEventHandlers.handle_execute_delete_event(payload, socket)
-
-  def handle_info({:delete_event_result, result}, socket),
-    do: result |> CalendarEventHandlers.handle_delete_event_result(socket) |> rebuild_agenda()
 
   @spec handle_info(any(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info(_msg, socket) do
-    # Silently ignore unhandled messages
-    {:noreply, socket}
+  def handle_info(message, socket) do
+    case CalendarMessages.handle_info(message, socket) do
+      :unhandled -> {:noreply, socket}
+      reply -> reply
+    end
   end
 
   @impl Phoenix.LiveView
@@ -580,6 +533,14 @@ defmodule TymeslotWeb.DashboardLive do
 
   def handle_event("booking_link_copied", params, socket),
     do: BookingLinkShare.handle_copied(socket, params["channel"])
+
+  def handle_event("calendar:toggle_focus", _params, socket),
+    do: {:noreply, CalendarFocus.toggle(socket)}
+
+  # The calendar shows the menu as an icon rail so the grid gets the width;
+  # this widens it again for the rest of the visit.
+  def handle_event("nav:toggle_rail", _params, socket),
+    do: {:noreply, update(socket, :nav_expanded, &(not &1))}
 
   def handle_event("onboarding:dismiss", _params, socket),
     do: keep_user(Onboarding.dismiss_dashboard_setup(socket.assigns.current_user), socket)
@@ -614,36 +575,4 @@ defmodule TymeslotWeb.DashboardLive do
       socket
     end
   end
-
-  @spec load_dashboard_data(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  defp load_dashboard_data(socket) do
-    user = socket.assigns[:current_user]
-    action = socket.assigns[:live_action]
-    timezone = Profiles.timezone(socket.assigns[:profile])
-
-    if user do
-      dashboard_data = DashboardContext.get_dashboard_data_for_action(user, timezone, action)
-      assign(socket, dashboard_data)
-    else
-      socket
-    end
-  end
-
-  # Rebuilds only the agenda on a tick; a stale timer that fires after the
-  # user has navigated elsewhere is a no-op.
-  defp refresh_agenda(%{assigns: %{live_action: action}} = socket)
-       when action in [:overview, :calendar],
-       do: load_dashboard_data(socket)
-
-  defp refresh_agenda(socket), do: socket
-
-  # The Up-next strip and the overview agenda run their own query rather than
-  # reading the grid's events, so a mutation the grid applies to itself leaves
-  # them showing the old answer until the next tick — an event deleted from the
-  # grid stayed advertised above it for up to a minute. Wrapped around every
-  # result that can add, move, or remove an entry, including the failure paths:
-  # a rebuild costs one read and is a no-op off the two agenda-bearing actions,
-  # which is cheaper than reasoning per-handler about which outcomes changed
-  # what.
-  defp rebuild_agenda({:noreply, socket}), do: {:noreply, refresh_agenda(socket)}
 end

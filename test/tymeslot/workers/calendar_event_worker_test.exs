@@ -144,15 +144,16 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
         {:error, :refused}
       end)
 
-      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, fn _meeting, :refused ->
-        :ok
-      end)
-
       assert {:discard, "Calendar refused the request"} =
                perform_job(CalendarEventWorker, %{
                  "action" => "create",
                  "meeting_id" => meeting.id
                })
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_calendar_sync_error", "error_reason" => "refused"}
+      )
     end
 
     # A read-only grant (Google's "insufficient authentication scopes") can
@@ -202,10 +203,6 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
         {:error, "Fatal server error"}
       end)
 
-      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, fn _meeting, _reason ->
-        :ok
-      end)
-
       # Final attempt is 5
       assert {:error, "Fatal server error"} =
                perform_job(
@@ -216,6 +213,11 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
                  },
                  attempt: 5
                )
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_calendar_sync_error", "meeting_id" => meeting.id}
+      )
     end
   end
 

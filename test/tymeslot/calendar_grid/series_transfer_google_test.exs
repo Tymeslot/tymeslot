@@ -1,7 +1,7 @@
 defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
   @moduledoc """
   Moving a Google recurring series to another calendar through
-  `CalendarGrid.move_event/3`, down to the HTTP client.
+  `Changes.move_event/3`, down to the HTTP client.
 
   Within one integration the master is moved with Google's own
   `events.move`, and nothing else is written. Across integrations the
@@ -18,7 +18,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
   import Mox
   import Tymeslot.WorkerTestHelpers, only: [running_job: 2]
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -179,7 +179,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
   end
 
   defp move(user, event, integration, calendar_id) do
-    CalendarGrid.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
+    Changes.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
   end
 
   defp insert_room(user, integration) do

@@ -142,7 +142,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
       # Both block until released, and the test releases them only once both
       # have reported starting, so the run can only finish if the suite and
       # credo were genuinely in flight at the same time.
-      capture_fun = fn [name], _env, [] ->
+      capture_fun = fn [name], _env, _extra_env ->
         send(test_pid, {:started, name, self()})
 
         receive do
@@ -338,7 +338,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
       ]
 
       capture_fun = fn
-        ["credo"], :dev, [] -> {"2 issues found\n", 4}
+        ["credo"], :dev, _extra_env -> {"2 issues found\n", 4}
         ["sobelow"], :dev, [] -> {"", 0}
       end
 
@@ -352,6 +352,84 @@ defmodule Tymeslot.Precommit.RunnerTest do
       assert output =~ "2 issues found"
       assert output =~ "failed  credo (4)"
       assert output =~ "ok      sobelow"
+    end
+
+    test "a passing step's soft-limit warnings are announced and repeated after the summary" do
+      steps = [{"compile", ["compile"], :dev}, {"credo", ["credo"], :dev}]
+
+      credo_output = """
+      ┃ [D] ↘ Soft limit: `Tymeslot.Meetings` has 690 lines (warns over 650, fails
+      ┃       over 750). Split it into smaller, more focused modules, or file a
+      ┃       lib/tymeslot/meetings.ex:1 #(Tymeslot.Meetings)
+      ┃ [D] ↘ Soft limit: `Tymeslot.Profiles` has 700 lines (warns over 650, fails
+      ┃       lib/tymeslot/profiles.ex:1 #(Tymeslot.Profiles)
+      """
+
+      output =
+        capture_plain(fn ->
+          assert Runner.run(steps, false,
+                   cmd: stub(%{["compile"] => 0}),
+                   capture: fn ["credo"], :dev, [] -> {credo_output, 0} end
+                 ) == :ok
+        end)
+
+      assert output =~ "\nprecommit: warn credo (2)\n"
+      [_before, after_summary] = String.split(output, "\nSummary\n")
+      [_steps, warnings] = String.split(after_summary, "\nWarnings  (not failing the run)\n")
+
+      assert String.split(warnings, "\n", trim: true) == [
+               "  warn    credo: Soft limit: `Tymeslot.Meetings` has 690 lines (warns over 650, fails",
+               "  warn    credo: Soft limit: `Tymeslot.Profiles` has 700 lines (warns over 650, fails"
+             ]
+    end
+
+    test "a run without warnings prints no warnings section" do
+      steps = [{"compile", ["compile"], :dev}, {"credo", ["credo"], :dev}]
+
+      output =
+        capture_plain(fn ->
+          Runner.run(steps, false,
+            cmd: stub(%{["compile"] => 0}),
+            capture: fn ["credo"], :dev, [] -> {"no issues\n", 0} end
+          )
+        end)
+
+      refute output =~ "warn"
+      refute output =~ "Warnings"
+    end
+  end
+
+  # Each static check is a BEAM of its own, starting one scheduler per allowed
+  # core on top of the partitions already sized to those cores. Losing the cap
+  # would not fail anything, only oversubscribe the run again, so it is pinned
+  # here on the environment each check is started with.
+  describe "run/3 with the static checks beside the suite" do
+    test "caps each check's schedulers, leaving dialyzer its own cap" do
+      test_pid = self()
+
+      steps = [
+        {"compile", ["compile"], :dev},
+        {"test", ["test"], :test},
+        {"credo", ["credo"], :dev},
+        {"dialyzer", ["dialyzer.incremental"], :dev}
+      ]
+
+      capture_fun = fn [command | _rest], _env, extra_env ->
+        send(test_pid, {:env, command, Map.new(extra_env)})
+        {"", 0}
+      end
+
+      capture_plain(fn ->
+        assert Runner.run(steps, false, cmd: stub(%{["compile"] => 0}), capture: capture_fun) ==
+                 :ok
+      end)
+
+      assert_received {:env, "credo", %{"ERL_FLAGS" => credo_flags}}
+      assert credo_flags =~ ~r/\+S #{min(2, System.schedulers_online())}:\d+$/
+      assert_received {:env, "dialyzer.incremental", dialyzer_env}
+      assert dialyzer_env == %{}
+      assert_received {:env, "test", suite_env}
+      assert suite_env == %{}
     end
   end
 
@@ -480,7 +558,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
         ["test"], :test, [] ->
           {"", 0}
 
-        ["credo"], :dev, [] ->
+        ["credo"], :dev, _extra_env ->
           send(test_pid, {:credo_started, self()})
 
           receive do
@@ -516,7 +594,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
         ["test"], :test, [] ->
           {"1 test, 1 failure\n", 2}
 
-        ["credo"], :dev, [] ->
+        ["credo"], :dev, _extra_env ->
           send(test_pid, {:credo_started, self()})
 
           receive do

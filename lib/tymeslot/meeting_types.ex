@@ -37,6 +37,15 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate location_options(meeting_type), to: LocationSelection, as: :options
 
   @doc """
+  A meeting's location as a reader sees it in the current locale: a default
+  location label in their language, anything the host wrote as written; see
+  `Tymeslot.MeetingTypes.LocationSelection.display_location/2`.
+  """
+  @spec display_location(String.t(), LocationOption.kind() | nil) :: String.t()
+  @spec display_location(nil, LocationOption.kind() | nil) :: nil
+  defdelegate display_location(location, kind), to: LocationSelection
+
+  @doc """
   Whether `meeting_type` lets several people book the same slot. Anything
   that is not a stored meeting type (`nil`, a demo's plain-map type) is not.
   """
@@ -65,8 +74,10 @@ defmodule Tymeslot.MeetingTypes do
   The venues the booker can pick between, per in-person location; see
   `Tymeslot.MeetingTypes.LocationChoices.location_venue_choices/1`.
   """
-  @spec location_venue_choices(map() | nil) :: %{String.t() => [Venues.choice()]}
-  defdelegate location_venue_choices(meeting_type), to: LocationChoices
+  @spec location_venue_choices(map() | nil, String.t() | nil) :: %{
+          String.t() => [Venues.choice()]
+        }
+  defdelegate location_venue_choices(meeting_type, content_locale \\ nil), to: LocationChoices
 
   @doc """
   Gets all active meeting types for a user. A pure read: a host may have
@@ -76,6 +87,10 @@ defmodule Tymeslot.MeetingTypes do
   @spec get_active_meeting_types(integer()) :: [Ecto.Schema.t()]
   def get_active_meeting_types(user_id),
     do: MeetingTypeQueries.list_active_meeting_types(user_id)
+
+  @doc "The host's types guests can book now: active, not archived, in the host's order."
+  @spec get_bookable_meeting_types(integer()) :: [Ecto.Schema.t()]
+  defdelegate get_bookable_meeting_types(user_id), to: MeetingTypeQueries
 
   @doc """
   The longest booking window, in days, any of the user's active meeting types
@@ -145,7 +160,9 @@ defmodule Tymeslot.MeetingTypes do
   @doc """
   Creates a new meeting type.
 
-  `opts` are forwarded to the changeset for payment-validation context.
+  `opts` are forwarded to the changeset for payment-validation context, bar
+  `:translations`, a copy's translations
+  (`MeetingTypeQueries.create_meeting_type/2`).
   """
   @spec create_meeting_type(map(), keyword()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t() | :not_found}
@@ -184,7 +201,10 @@ defmodule Tymeslot.MeetingTypes do
     attrs = Duplication.copy_attrs(source)
 
     with :ok <- FormValidation.check(user_id, attrs) do
-      create_meeting_type(attrs, FormMapper.payment_opts(user_id))
+      create_meeting_type(
+        attrs,
+        [translations: Duplication.translations(source)] ++ FormMapper.payment_opts(user_id)
+      )
     end
   end
 
@@ -264,12 +284,11 @@ defmodule Tymeslot.MeetingTypes do
   @doc """
   Deletes a meeting type.
 
-  A fixed-date type's upcoming dates are cancelled first, through the host's
-  own cancel path, which tells everyone booked on them
-  (`Tymeslot.Meetings.PlannedSessions.cancel/2`): deleted with the type, they
-  would stay on the calendar and in people's diaries with nothing left to
-  manage them from. Should a cancellation fail, the type is kept, so the
-  host can try again. `upcoming_sign_ups/1` is what the confirmation shows.
+  A fixed-date type's upcoming dates are cancelled first, through the host's own
+  cancel path, which tells everyone booked on them (`PlannedSessions.cancel/2`):
+  deleted with the type, they would stay on the calendar with nothing left to
+  manage them from. Should a cancellation fail, the type is kept, so the host can
+  try again. `upcoming_sign_ups/1` is what the confirmation shows.
   """
   @spec delete_meeting_type(Ecto.Schema.t()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t() | term()}

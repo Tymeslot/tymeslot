@@ -148,6 +148,14 @@ Settled while translating; reuse rather than re-coining.
 | glassmorphism | **Glasmorphismus** (*im Glasmorphismus-Stil*); *frosted glass* stays **Milchglas** |
 | booking approval / approval (per meeting type) | **Buchungsfreigabe** / **Freigabe** (*Freigabe vor der Bestätigung*, *Freigabe nötig*, *mit Freigabe*); approve / decline → **annehmen** / **ablehnen**. Never *Genehmigung*. |
 | an unanswered request expires | **die Anfrage verfällt** / **Anfragen verfallen**. Never *wird freigegeben*, which reads as the opposite. |
+| bookable times / bookable (the calendar layer guests can book) | **buchbare Zeiten** / **Buchbar** (label); never *verfügbar* (availability) or *frei* (the opposite of busy) |
+| Layers (calendar rail heading) | **Ebenen** |
+| open for booking (organiser opens extra time) | **für Buchungen öffnen** / **für %{name} geöffnet**; never *freigeben*, reserved for booking approval |
+| just this once / every week (open-for-booking repeat) | **Nur dieses Mal** / **Jede Woche** |
+| treat as busy / free (local setting on a read-only event) | **Behandeln als** + **Beschäftigt** / **Frei**; *als beschäftigt behandelt*, matching the calendar's *Als beschäftigt angezeigt* |
+| block this time / Blocked / unblock | **Diese Zeit blockieren** / **Blockiert** / **Blockierung aufgehoben** |
+| request (calendar pill) / Expired (expired-request pill) | **Anfrage** / **Verfallen** (per the expiry term above) |
+| hatched (bookable layer) | **schraffiert** |
 | time off | **Abwesenheit** (*als Abwesenheit eintragen*); holidays inside it stay *Urlaub* |
 | rescheduling terms (a host's own policy) | **Bedingungen zur Terminverschiebung**, per *reschedule* above; never *Umbuchung* |
 | starter setup (the /for page section) | **Starter-Einrichtung** |
@@ -158,6 +166,15 @@ Settled while translating; reuse rather than re-coining.
 | free time(s) (open bookable times shown on the page) | **freie Zeit** / **freie Zeiten**; a counted *open slot* is **Zeitfenster** (*%{count} freie Zeitfenster in dieser Woche*). Not *freier Termin*: *Termin* is the booked meeting. |
 | Apple Account (Apple's current name) | **Apple Account**, untranslated, as Apple's German UI writes it; strings that still say *Apple ID* keep **Apple-ID** |
 | a message the host sends to someone they know (wizard share text, *Hi %{name}, you can pick a time with me here*) | **du**: the only sanctioned exception to section 1, because the host is writing in their own voice to a contact. The wizard's own UI around it stays **Sie**. |
+| translation (noun; booking-page languages) | **Übersetzung** (plural **Übersetzungen**); *%{language} translations* → **Übersetzungen: %{language}**, *Your %{language} translations* → **Ihre Übersetzungen für %{language}**: `%{language}` is filled with the language's own name and can't be inflected or compounded |
+| translate | **übersetzen**; *%{translated}/%{total} translated* → **%{translated}/%{total} übersetzt** |
+| original language (the language the host writes their texts in) | **Originalsprache**; *in %{language}* → **in der Originalsprache (%{language})**; the original text is **das Original**, and the badge beside that language reads **Original** |
+| translation language (a language the host translates into) | **Übersetzungssprache** (plural **Übersetzungssprachen**) |
+| language switcher (the visitor-facing control on the booking page) | **Sprachauswahl** |
+| Outdated (a translation whose original changed) | **Veraltet**; *%{count} outdated* → **%{count} veraltet** |
+| Missing (a text not translated yet) | **Fehlt** as the status pill; attributive **fehlend** (*Nur fehlende oder veraltete*) |
+| Translated (status) | **Übersetzt** |
+| Review (the link to a language's review page) | **Prüfen** |
 
 **Weekday abbreviations:** Mo · Di · Mi · Do · Fr · Sa · So
 

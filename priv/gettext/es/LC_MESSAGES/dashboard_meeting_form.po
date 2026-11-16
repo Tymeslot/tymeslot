@@ -468,11 +468,6 @@ msgstr "El calendario donde se crean las reservas de este tipo de reunión ahora
 msgid "The price of %{amount} is kept and applies again once Stripe is connected."
 msgstr "El precio de %{amount} se conserva y vuelve a aplicarse cuando Stripe esté conectado."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/init.ex
-#, elixir-autogen, elixir-format
-msgid "In person"
-msgstr "En persona"
-
 #: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "A selected location is not one of yours"

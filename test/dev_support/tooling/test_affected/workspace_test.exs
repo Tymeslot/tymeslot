@@ -40,6 +40,64 @@ defmodule Tymeslot.TestAffected.WorkspaceTest do
     end
   end
 
+  describe "index/1 naming modules" do
+    @tag :tmp_dir
+    test "a module brought in by a multi-alias is found by its full name", %{tmp_dir: dir} do
+      write!(dir, "lib/tymeslot/widgets/dial.ex", "defmodule Tymeslot.Widgets.Dial do\nend\n")
+
+      write!(dir, "test/tymeslot_web/panel_test.exs", """
+      defmodule TymeslotWeb.PanelTest do
+        @moduletag :auth
+        alias Tymeslot.Widgets.{
+          Knob,
+          Dial
+        }
+      end
+      """)
+
+      for name <- ~w[one two three], do: write!(dir, "test/tymeslot_web/#{name}_test.exs", "")
+
+      plan = Selection.plan(["lib/tymeslot/widgets/dial.ex"], Workspace.index(dir))
+
+      # With no mirror anywhere, an unnamed module would widen.
+      assert plan.scope == :selection
+      assert "test/tymeslot_web/panel_test.exs" in plan.files
+    end
+
+    @tag :tmp_dir
+    test "a support module the suite's configuration names widens", %{tmp_dir: dir} do
+      write!(dir, "test/support/clock_mock.ex", "defmodule Tymeslot.ClockMock do\nend\n")
+      write!(dir, "config/test.exs", "config :tymeslot, clock: Tymeslot.ClockMock\n")
+      write!(dir, "test/tymeslot/clock_test.exs", "Tymeslot.ClockMock.now()\n")
+
+      plan = Selection.plan(["test/support/clock_mock.ex"], Workspace.index(dir))
+
+      assert plan.scope == :full_suite
+      assert Enum.any?(plan.reasons, &(&1 =~ "config/test.exs"))
+    end
+  end
+
+  describe "lint_inputs/1" do
+    @tag :tmp_dir
+    test "lists what a full format and Credo run would read", %{tmp_dir: dir} do
+      write!(dir, ".formatter.exs", ~s|[inputs: ["{lib,test}/**/*.{ex,exs}"]]|)
+
+      write!(dir, ".credo.exs", ~S"""
+      %{configs: [%{files: %{included: ["lib/"], excluded: [~r"/lib/generated/"]}}]}
+      """)
+
+      for path <- ~w[lib/a.ex lib/generated/b.ex test/a_test.exs priv/repo/seeds.exs],
+          do: write!(dir, path, "")
+
+      inputs = Workspace.lint_inputs(dir)
+
+      assert inputs["format"] ==
+               MapSet.new(~w[lib/a.ex lib/generated/b.ex test/a_test.exs])
+
+      assert inputs["credo"] == MapSet.new(~w[lib/a.ex])
+    end
+  end
+
   defp write!(dir, path, contents) do
     file = Path.join(dir, path)
     File.mkdir_p!(Path.dirname(file))

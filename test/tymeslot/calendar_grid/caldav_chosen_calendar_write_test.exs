@@ -17,7 +17,7 @@ defmodule Tymeslot.CalendarGrid.CalDAVChosenCalendarWriteTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
@@ -121,7 +121,7 @@ defmodule Tymeslot.CalendarGrid.CalDAVChosenCalendarWriteTest do
       end)
 
       assert {:ok, %{uid: uid}} =
-               CalendarGrid.move_event(user.id, event, %{
+               Changes.move_event(user.id, event, %{
                  integration: integration,
                  calendar_id: "/cal/projects/"
                })

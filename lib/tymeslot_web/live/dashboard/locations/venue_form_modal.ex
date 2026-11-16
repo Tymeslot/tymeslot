@@ -3,19 +3,33 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueFormModal do
   The add and edit modal on the Locations page: a name and a free-text
   address. Its events go to the owning `LocationsComponent` (`@myself`),
   which validates and saves through `Tymeslot.Venues`.
+
+  Editing a saved venue with a translation language, the modal says how far
+  its name and address are translated and links to it on the Languages page
+  (`TymeslotWeb.Dashboard.Languages.TranslationStatus`).
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Venues.VenueSchema
+  alias TymeslotWeb.Dashboard.Languages.TranslationStatus
 
   attr :form, Phoenix.HTML.Form, required: true
   attr :mode, :atom, required: true, values: [:new, :edit]
   attr :myself, :any, required: true
+  attr :venue, VenueSchema, default: nil, doc: "the venue being edited, for its translations"
+  attr :profile, :any, default: nil, doc: "for the booking languages"
 
   @spec venue_form_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def venue_form_modal(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :translation_status,
+        TranslationStatus.build(assigns.profile, :venues, :venue, assigns.venue)
+      )
+
     ~H"""
     <.modal
       id="venue-form-modal"
@@ -37,6 +51,8 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueFormModal do
         )}
       </:subtitle>
 
+      <TranslationStatus.strip status={@translation_status} class="mb-4" />
+
       <.form
         for={@form}
         id="venue-form"
@@ -53,7 +69,11 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueFormModal do
           maxlength={VenueSchema.name_max_length()}
           required
           phx-hook={@mode == :new && "AutoFocus"}
-        />
+        >
+          <:label_suffix>
+            <TranslationStatus.mark status={@translation_status} path="name" />
+          </:label_suffix>
+        </.input>
 
         <.input
           field={@form[:description]}
@@ -62,6 +82,9 @@ defmodule TymeslotWeb.Dashboard.Locations.VenueFormModal do
           label={dgettext("dashboard_meeting_types", "Address and directions (optional)")}
           maxlength={VenueSchema.description_max_length()}
         >
+          <:label_suffix>
+            <TranslationStatus.mark status={@translation_status} path="description" />
+          </:label_suffix>
           <:description>
             {dgettext(
               "dashboard_meeting_types",

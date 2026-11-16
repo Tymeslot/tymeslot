@@ -12,6 +12,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   alias Tymeslot.MeetingTypes.GroupValidation
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.MeetingTypes.PaymentValidation
   alias Tymeslot.MeetingTypes.ReminderValidation
@@ -21,6 +22,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           id: integer() | nil,
           name: String.t() | nil,
           description: String.t() | nil,
+          translations: map(),
           duration_minutes: integer() | nil,
           extra_lengths_minutes: [integer()] | nil,
           slot_interval_minutes: integer() | nil,
@@ -133,6 +135,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     # "does this type do video, and on which integration" keep working.
     embeds_many(:locations, LocationOption, on_replace: :delete)
 
+    # Translations of the name, description, questions and locations, keyed
+    # by path (`Tymeslot.ContentTranslations`): the embeds carry none of their
+    # own. No changeset here casts it, so the form, its autosave and the
+    # question and location editors can never wipe it.
+    field(:translations, :map, default: %{})
+
     timestamps(type: :utc_datetime)
   end
 
@@ -235,7 +243,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     ])
     |> cast_embed(:custom_fields, with: &FieldDefinition.changeset/2)
     |> cast_embed(:attachments, with: &MeetingTypeAttachment.changeset/2)
-    |> cast_embed(:locations, with: &LocationOption.changeset/2)
+    |> cast_embed(:locations, with: &location_changeset/2)
     |> validate_locations()
     |> project_video_fields()
     |> validate_required([:name, :duration_minutes, :user_id])
@@ -418,6 +426,19 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           true ->
             changeset
         end
+    end
+  end
+
+  # A location's label is stored with any localised default put back into
+  # English (`LocationSelection.stored_label/2`), so a label the editor showed
+  # in the host's language and posted back untouched is not saved as theirs.
+  defp location_changeset(option, attrs) do
+    changeset = LocationOption.changeset(option, attrs)
+    label = get_field(changeset, :label)
+
+    case LocationSelection.stored_label(get_field(changeset, :kind), label) do
+      ^label -> changeset
+      stored -> put_change(changeset, :label, stored)
     end
   end
 

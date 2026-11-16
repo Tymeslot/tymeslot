@@ -9,20 +9,20 @@ defmodule Tymeslot.Integrations.Calendar.DebugStore do
   pattern + rules into busy blocks; `events` carry the full event payload
   (recurrence, reminders, colour, all-day, location, description, attendees) so
   they round-trip through both the booking availability path and the dashboard
-  calendar grid.
+  calendar grid. A repeating event is kept as the iCalendar document a CalDAV
+  server would hold (`:raw_ical`; see `DebugCalendarProvider.Series`).
 
   This module lives in `lib/` (not `dev/support`) so the `:debug` calendar
-  provider — which is compiled in all environments — can read and write it
-  without a compile-time call into a dev-only module. To keep that safe in
-  `:test` and in dev without the interactive calendar enabled, the Agent is only
-  started when `config :tymeslot, :dev_calendar_enabled` is true. **Every public
-  function therefore guards on the process being alive**: when it is not running,
-  reads return an empty snapshot and writes are no-ops that return the value the
-  running path would have returned. Callers never need to know whether the store
-  is up.
+  provider, which is compiled in all environments, can read and write it
+  without a compile-time call into a dev-only module. The Agent runs on every
+  dev server and, in `:test`, only when a test starts it. **Every public
+  function therefore guards on the process being alive**: when it is not
+  running, reads fall back to the default pattern with no rules or events (not
+  an empty set), and writes are no-ops that return the value the running path
+  would have returned. Callers never need to know whether the store is up.
 
-  An `Agent` is the right fit — low-frequency mutations, no hot path, no complex
-  behaviour — and it is supervised per the OTP "no unsupervised processes" rule.
+  An `Agent` is the right fit (low-frequency mutations, no hot path, no complex
+  behaviour) and it is supervised per the OTP "no unsupervised processes" rule.
   """
 
   use Agent
@@ -31,7 +31,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugStore do
 
   @typedoc """
   A rich stored event. `start_time`/`end_time` are a `Date` for all-day events
-  and a `DateTime` for timed events — stored verbatim as received from the
+  and a `DateTime` for timed events: stored verbatim as received from the
   provider/booking layer.
   """
   @type stored_event :: %{
@@ -62,8 +62,8 @@ defmodule Tymeslot.Integrations.Calendar.DebugStore do
   defp running?, do: Process.whereis(__MODULE__) != nil
 
   @doc """
-  Returns the current pattern, rules and stored events. Returns an empty default
-  snapshot when the store is not running.
+  Returns the current pattern, rules and stored events. Returns the default
+  pattern with no rules or events when the store is not running.
   """
   @spec snapshot() :: state()
   def snapshot do

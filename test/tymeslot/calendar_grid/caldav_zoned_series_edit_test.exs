@@ -18,7 +18,7 @@ defmodule Tymeslot.CalendarGrid.CalDAVZonedSeriesEditTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
@@ -125,7 +125,7 @@ defmodule Tymeslot.CalendarGrid.CalDAVZonedSeriesEditTest do
     occurrence = cached_occurrence(context, ~N[2026-10-12 09:00:00])
 
     assert {:ok, _updated} =
-             CalendarGrid.update_event(context.user.id, occurrence, %{summary: "Moved sync"},
+             Changes.update_event(context.user.id, occurrence, %{summary: "Moved sync"},
                recurrence_scope: :this_only
              )
 
@@ -139,7 +139,7 @@ defmodule Tymeslot.CalendarGrid.CalDAVZonedSeriesEditTest do
     occurrence = cached_occurrence(context, ~N[2026-11-02 09:00:00])
 
     assert {:ok, _updated} =
-             CalendarGrid.update_event(context.user.id, occurrence, %{summary: "New sync"},
+             Changes.update_event(context.user.id, occurrence, %{summary: "New sync"},
                recurrence_scope: :following
              )
 

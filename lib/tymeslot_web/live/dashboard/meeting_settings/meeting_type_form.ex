@@ -53,6 +53,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # - page_memberships: `BookingPages.memberships/1`, which pages list which type
   # - pages_editable: `BookingPages.editable?/1`, whether the booking pages'
   #   switches may be flipped
+  # - profile: the booking languages, for the translation status the form
+  #   shows (`Languages.TranslationStatus`)
 
   # The further lengths' events, all handled by `LengthsHandlers`.
   @lengths_events LengthsHandlers.events()
@@ -115,6 +117,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        booking_pages: [],
        page_memberships: %{},
        pages_editable: true,
+       profile: nil,
        __initialized__: false
      )}
   end

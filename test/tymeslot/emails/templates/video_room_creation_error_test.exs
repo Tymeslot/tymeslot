@@ -6,8 +6,13 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationErrorTest do
   @moduletag :emails
   @moduletag :video
 
+  import Tymeslot.Test.DirectEmailSends
+
   alias Tymeslot.Emails.EmailService.IntegrationEmails
   alias Tymeslot.Emails.Templates.VideoRoomCreationError
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   @user %{id: 1, email: "owner@example.com", name: "Olivia"}
 

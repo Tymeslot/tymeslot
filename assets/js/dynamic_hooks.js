@@ -106,6 +106,7 @@ export function lazyHook(name, loader) {
         // Transfer LiveView context
         Object.assign(this.__actualHook, {
           el: this.el,
+          liveSocket: this.liveSocket,
           pushEvent: this.pushEvent.bind(this),
           pushEventTo: this.pushEventTo.bind(this),
           handleEvent: this.handleEvent.bind(this),

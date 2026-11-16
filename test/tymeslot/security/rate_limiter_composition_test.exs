@@ -40,14 +40,14 @@ defmodule Tymeslot.Security.RateLimiterCompositionTest do
       assert {:error, :rate_limited, _message} = RateLimiter.check(:booking_submit, ip)
     end
 
-    test "check(:webhook, _) allows 100 per 10 minutes then denies" do
+    test "check(:telegram_webhook, _) allows 100 per 10 minutes then denies" do
       ip = unique_ip("webhook-ip")
 
       for _i <- 1..100 do
-        assert :ok = RateLimiter.check(:webhook, ip)
+        assert :ok = RateLimiter.check(:telegram_webhook, ip)
       end
 
-      assert {:error, :rate_limited, _message} = RateLimiter.check(:webhook, ip)
+      assert {:error, :rate_limited, _message} = RateLimiter.check(:telegram_webhook, ip)
     end
 
     test "check(:meeting_cancel, _) allows 10 per 10 minutes then denies with a message" do
@@ -81,7 +81,16 @@ defmodule Tymeslot.Security.RateLimiterCompositionTest do
       assert {:error, :rate_limited, _message} = RateLimiter.check(:booking_submit, ip)
 
       # Webhook bucket shares the IP but has its own key namespace.
-      assert :ok = RateLimiter.check(:webhook, ip)
+      assert :ok = RateLimiter.check(:telegram_webhook, ip)
+    end
+
+    test "exhausting the Telegram webhook bucket does not refuse a Zoom deauthorisation" do
+      ip = unique_ip("cross-telegram-zoom")
+
+      for _i <- 1..100, do: RateLimiter.check(:telegram_webhook, ip)
+      assert {:error, :rate_limited, _message} = RateLimiter.check(:telegram_webhook, ip)
+
+      assert :ok = RateLimiter.check(:zoom_deauth, ip)
     end
 
     test "exhausting auth for one email does not block signup for another" do

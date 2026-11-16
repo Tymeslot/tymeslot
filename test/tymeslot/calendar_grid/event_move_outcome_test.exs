@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventMoveOutcomeTest do
   @moduledoc """
-  What `CalendarGrid.move_event/3` reports and caches once the destination has
+  What `Changes.move_event/3` reports and caches once the destination has
   accepted the event: the uid the moved row is cached under on providers that
   mint their own ids, and a failure after the create, which must never read as
   a move that did not happen.
@@ -19,7 +19,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveOutcomeTest do
   import Mox
   import Tymeslot.Test.CalendarGridHelpers
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Google.EventNormaliser, as: GoogleEventNormaliser
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
@@ -228,6 +228,6 @@ defmodule Tymeslot.CalendarGrid.EventMoveOutcomeTest do
   end
 
   defp move(user, event, integration, calendar_id \\ nil) do
-    CalendarGrid.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
+    Changes.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
   end
 end

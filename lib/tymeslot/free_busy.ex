@@ -8,9 +8,14 @@ defmodule Tymeslot.FreeBusy do
   calendar events the availability engine treats as blocking, plus the
   profile's time off, so a holiday entered in Tymeslot rather than in a
   calendar is published as busy too.
+
+  An event counts as the booking page counts it
+  (`Tymeslot.Availability.Bookability.busy_for_bookings?/2`), so the
+  organiser's "Treat as Busy" or "Treat as Free" on an all-day event reaches
+  the feed too.
   """
 
-  alias Tymeslot.Availability.{Events, TimeOff}
+  alias Tymeslot.Availability.{Bookability, Events, TimeOff}
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.AvailabilityView
   alias Tymeslot.Integrations.Calendar.CalendarEvent
@@ -88,8 +93,13 @@ defmodule Tymeslot.FreeBusy do
           [FreebusyGenerator.interval()]
   def busy_intervals(%ProfileSchema{} = profile, window_start, window_end) do
     integrations = CalendarIntegrationQueries.list_active_for_user(profile.user_id)
-    all_busy_ids = MapSet.new(for %{all_events_busy: true, id: id} <- integrations, do: id)
+    by_id = Map.new(integrations, &{&1.id, &1})
+    overrides = Bookability.for_user(profile.user_id)
 
+    # This reads the event cache directly rather than through
+    # `Ics.Provider.list_events/2`, so it applies a subscription's
+    # `all_events_busy` itself, or a holiday that blocks bookings would be
+    # published as free.
     event_intervals =
       integrations
       |> Enum.map(& &1.id)
@@ -97,19 +107,11 @@ defmodule Tymeslot.FreeBusy do
         {window_start, window_end},
         AvailabilityView.rules(integrations)
       )
-      |> Enum.map(&apply_all_events_busy(&1, all_busy_ids))
-      |> Enum.filter(&CalendarEvent.blocking?/1)
+      |> Enum.map(&Bookability.as_presented(&1, Map.get(by_id, &1.calendar_integration_id)))
+      |> Enum.filter(&Bookability.busy_for_bookings?(&1, overrides))
       |> Enum.flat_map(&event_interval(&1, Profiles.timezone(profile)))
 
     event_intervals ++ TimeOff.busy_intervals(profile, window_start, window_end)
-  end
-
-  # This reads the event cache directly rather than through
-  # `Ics.Provider.list_events/2`, so it applies a subscription's
-  # `all_events_busy` itself, or a holiday that blocks bookings would be
-  # published as free.
-  defp apply_all_events_busy(%CalendarEvent{calendar_integration_id: id} = event, all_busy_ids) do
-    if MapSet.member?(all_busy_ids, id), do: CalendarEvent.as_busy(event), else: event
   end
 
   # An all-day event spans the owner's local day, as it does on the booking

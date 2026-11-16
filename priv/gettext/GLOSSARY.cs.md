@@ -105,6 +105,13 @@ Genitive singular and genitive plural are given wherever a translator will need 
 | break (in the availability grid) | **přestávka** (f., gen. pl. přestávek), kept distinct from *časová rezerva* |
 | booking page / link / flow | **rezervační stránka** / **rezervační odkaz** / **průběh rezervace** |
 | available times | **Volné termíny** |
+| bookable times (the hatched calendar layer for one meeting type) | **termíny k rezervaci**; the pill *Bookable* → **K rezervaci**. Never *volné termíny* here: *free* is the opposite of *busy* |
+| Layers (calendar rail heading) | **Vrstvy** |
+| open for booking (organiser opens extra time) | **otevřít pro rezervace** (button and kind label); the draft title and toasts use a colon frame: *Open for %{name}* → **Otevřeno pro: %{name}**. *Just this once* → **Jen tentokrát**, *Every week* → **Každý týden** |
+| Treat as (Busy / Free on a read-only all-day event) | **Považovat za** + **Obsazeno** / **Volno**; *Treated as busy for bookings* → **Pro rezervace se počítá jako obsazeno** |
+| block this time / Blocked | **zablokovat tento čas** (button, toasts *Zablokováno*); the default event title *Blocked* → **Blokováno**; *Unblocked* → **Odblokováno** |
+| Request / Expired (pills on a booking request) | **Žádost** / **Vypršeno** (as in *dashboard_bookings*); screen-reader fragments: **žádost čeká na vaši odpověď**, **žádost vypršela bez odpovědi** |
+| hatched (times on the calendar) | **vyšrafovaný**: *ve vyšrafovaných časech* |
 | Available / Unavailable (a day or slot badge) | **K dispozici** / **Není k dispozici**: gender-neutral, so it is safe on *den*, *termín* and *schůzka* alike |
 | Unlisted | **Neveřejné** |
 | Default (badge / option label) | **Výchozí** |
@@ -123,6 +130,15 @@ Genitive singular and genitive plural are given wherever a translator will need 
 | ad trackers | **reklamní sledovací prvky** (*bez reklamních sledovacích prvků*); avoid *trackery* |
 | managed cloud / self-hosted version | **spravovaný cloud** / **verze pro vlastní server** |
 | `+%{count} more` | **`+%{count} dalších`** in all three plural forms: the elided noun differs per surface (událost f., účastník m., kalendář m.), so no agreeing form is right everywhere; the invariant genitive plural is the convention |
+| translation (noun; booking-page languages) | **překlad** (m.i., pl. **překlady**); *%{language} translations* → **Překlady: %{language}**, *Your %{language} translations* → **Vaše překlady (%{language})**: `%{language}` is filled with the language's own name and can't be declined |
+| translate | **přeložit** (pf.) / **překládat** (impf.); *%{translated}/%{total} translated* → **Přeloženo %{translated}/%{total}** |
+| original language (the language the host writes their texts in) | **původní jazyk** (m.i.); *in %{language}* → **v původním jazyce (%{language})**; the original text is **originál** (*v originále*); the badge beside that language is **původní**, agreeing with *jazyk* |
+| translation language (a language the host translates into) | **jazyk překladu** (pl. **jazyky překladu**) |
+| language switcher (the visitor-facing control on the booking page) | **přepínač jazyka** (m.i.) |
+| Outdated (a translation whose original changed) | **Neaktuální**, never *zastaralý*; counted **%{count} neaktuální text / neaktuální texty / neaktuálních textů** |
+| Missing (a text not translated yet) | **Chybí** as the status pill; attributive **chybějící** (*Jen chybějící nebo neaktuální*) |
+| Translated (status) | **Přeloženo** (impersonal neuter, safe for any text) |
+| Review (the link to a language's review page) | **Zkontrolovat** |
 
 ### Booking pages (a host's extra pages)
 

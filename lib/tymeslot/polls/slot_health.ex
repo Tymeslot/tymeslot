@@ -13,6 +13,7 @@ defmodule Tymeslot.Polls.SlotHealth do
   host's calendar events returns every slot as `:ok` and never blocks anything.
   """
 
+  alias Tymeslot.Availability.Bookability
   alias Tymeslot.Availability.Events
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
@@ -37,11 +38,11 @@ defmodule Tymeslot.Polls.SlotHealth do
   def check(%{time_slots: []}), do: %{}
 
   def check(%{time_slots: slots} = poll) when is_list(slots) do
-    {range_start, range_end} = slot_range(slots)
+    dates = slots |> slot_range() |> fetch_dates()
 
-    case fetch_events(poll.user_id, range_start, range_end) do
+    case fetch_events(poll.user_id, dates) do
       {:ok, events} ->
-        busy = busy_intervals(events, Profiles.get_user_timezone(poll.user_id))
+        busy = busy_intervals(events, poll.user_id, dates)
         Map.new(slots, &{&1.id, slot_status(&1, busy)})
 
       {:error, reason} ->
@@ -74,14 +75,17 @@ defmodule Tymeslot.Polls.SlotHealth do
   # Padded by a day each side: an all-day event blocks the host's local day,
   # which can sit in the UTC day before or after a slot's, and a provider asked
   # only about the slots' UTC days would not return it.
-  @spec fetch_events(integer(), DateTime.t(), DateTime.t()) :: {:ok, list()} | {:error, term()}
-  defp fetch_events(user_id, range_start, range_end) do
-    CalendarEvents.get_events_for_range_fresh(
-      user_id,
+  @spec fetch_dates({DateTime.t(), DateTime.t()}) :: {Date.t(), Date.t()}
+  defp fetch_dates({range_start, range_end}) do
+    {
       range_start |> DateTime.to_date() |> Date.add(-1),
       range_end |> DateTime.to_date() |> Date.add(1)
-    )
+    }
   end
+
+  @spec fetch_events(integer(), {Date.t(), Date.t()}) :: {:ok, list()} | {:error, term()}
+  defp fetch_events(user_id, {first, last}),
+    do: CalendarEvents.get_events_for_range_fresh(user_id, first, last)
 
   @spec slot_range([map()]) :: {DateTime.t(), DateTime.t()}
   defp slot_range(slots) do
@@ -92,12 +96,15 @@ defmodule Tymeslot.Polls.SlotHealth do
   end
 
   # All-day events arrive as bare dates; they block the host's local day, the
-  # same stretch the booking page and the booking submit block.
-  @spec busy_intervals(list(), String.t()) :: [map()]
-  defp busy_intervals(events, owner_timezone) do
+  # same stretch the booking page and the booking submit block. Which events
+  # block is the booking page's rule too: the organiser's "Treat as" choices
+  # (`Bookability.apply_to_busy/3`), then `CalendarEvent.blocking?/1`.
+  @spec busy_intervals(list(), integer(), {Date.t(), Date.t()}) :: [map()]
+  defp busy_intervals(events, user_id, dates) do
     events
+    |> Bookability.apply_to_busy(user_id, dates)
     |> Enum.filter(&CalendarEvent.blocking?/1)
-    |> Events.convert_events_to_timezone(owner_timezone, "Etc/UTC")
+    |> Events.convert_events_to_timezone(Profiles.get_user_timezone(user_id), "Etc/UTC")
   end
 
   @spec slot_status(map(), [map()]) :: slot_status()

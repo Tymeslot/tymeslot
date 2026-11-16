@@ -27,12 +27,20 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   the folded maps, so a calendar sync cannot leave the two disagreeing about
   how fresh they are.
 
-  A range (`for_range/2`) is read fresh, as the booking page's week view
-  needs, unless the request asks for the cached entry with
-  `cached_calendar: true`, as the setup preview of the host's week does, so
-  that reloading it costs no provider round trip.
+  A range (`for_range/3`) is read fresh, as the booking page's week view
+  needs, unless the caller asks for the cached entry: with `:cached`, as the
+  calendar's bookable layer does so that it agrees with the day and month
+  views, or with `cached_calendar: true` on the request, as the setup preview
+  of the host's week does, so that reloading it costs no provider round trip.
+
+  Either way the events come back with the bookability rule applied
+  (`Tymeslot.Availability.Bookability`): the host's "Treat as Busy" or
+  "Treat as Free" on an all-day event wins over its calendar. The cached entry is stored with
+  the rule already applied; an override and a calendar's settings both call
+  `Tymeslot.Availability.changed/1`, which drops it.
   """
 
+  alias Tymeslot.Availability.Bookability
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
 
@@ -41,14 +49,38 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   def booking_window(%{profile: %{user_id: user_id}} = request, date) do
     AvailabilityCache.get_or_compute_events(
       AvailabilityCache.booking_window_events_key(user_id),
-      fn -> fresh(request, date) end
+      fn ->
+        with {:ok, events} <- fresh(request, date) do
+          {:ok, Bookability.apply_to_window(events, user_id)}
+        end
+      end
     )
   end
 
-  @doc "The host's events for a range read: fresh, or cached when asked."
-  @spec for_range(map(), Date.t()) :: {:ok, list()} | {:error, any()}
-  def for_range(%{cached_calendar: true} = request, date), do: booking_window(request, date)
-  def for_range(request, date), do: fresh(request, date)
+  @doc """
+  The host's events for a read of `first_date..last_date`: fresh (`source`
+  `:fresh`, the default), or the cached booking-window entry when `source` is
+  `:cached` or the request sets `cached_calendar: true`.
+  """
+  @spec for_range(map(), {Date.t(), Date.t()}, :fresh | :cached) ::
+          {:ok, list()} | {:error, any()}
+  def for_range(request, dates, source \\ :fresh)
+
+  def for_range(%{cached_calendar: true} = request, {first_date, _last_date}, _source),
+    do: booking_window(request, first_date)
+
+  def for_range(request, {first_date, _last_date}, :cached),
+    do: booking_window(request, first_date)
+
+  def for_range(
+        %{profile: %{user_id: user_id}} = request,
+        {first_date, _last_date} = dates,
+        :fresh
+      ) do
+    with {:ok, events} <- fresh(request, first_date) do
+      {:ok, Bookability.apply_to_dates(events, user_id, dates)}
+    end
+  end
 
   @doc """
   The context map the calendar fetch reads. Its contract names this one key

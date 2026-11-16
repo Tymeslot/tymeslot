@@ -6,6 +6,7 @@ defmodule Tymeslot.CalendarGridCacheTest do
   import Mox
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
 
   setup :verify_on_exit!
 
@@ -21,7 +22,7 @@ defmodule Tymeslot.CalendarGridCacheTest do
       end_at = DateTime.new!(~D[2026-04-14], ~T[16:15:00], "Etc/UTC")
 
       assert :ok =
-               CalendarGrid.cache_created_event(%{
+               Changes.cache_created_event(%{
                  uid: "regression-second-precision",
                  calendar_integration_id: integration.id,
                  provider: "nextcloud",
@@ -61,7 +62,7 @@ defmodule Tymeslot.CalendarGridCacheTest do
       end_at = DateTime.new!(~D[2026-04-14], ~T[16:15:00], "Etc/UTC")
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{
+               Changes.update_event(user.id, event, %{
                  summary: "After",
                  start_at: start_at,
                  end_at: end_at

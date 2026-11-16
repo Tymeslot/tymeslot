@@ -253,6 +253,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatchTest do
                {:ok, %{"summary" => "Standup"}}
     end
 
+    test "free and busy are sent as Google's transparency" do
+      assert SeriesPatch.build(@master, edit(%{transparency: "transparent"})) ==
+               {:ok, %{"transparency" => "transparent"}}
+
+      assert SeriesPatch.build(@master, edit(%{transparency: "opaque"})) ==
+               {:ok, %{"transparency" => "opaque"}}
+    end
+
     test "a cleared colour and reminders are sent cleared" do
       assert SeriesPatch.build(@master, edit(%{colour: nil, reminders: []})) ==
                {:ok, %{"colorId" => nil, "reminders" => %{"useDefault" => true}}}

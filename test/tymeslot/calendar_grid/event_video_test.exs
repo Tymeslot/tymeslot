@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventVideoTest do
   @moduledoc """
-  `CalendarGrid.change_event_video/3` gives a calendar-grid event a room on
+  `Changes.change_event_video/3` gives a calendar-grid event a room on
   one of the organiser's video integrations, or removes its link, on both the
   provider event and the cached row.
 
@@ -27,7 +27,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
   import Mox
   import Tymeslot.Test.CalendarGridHelpers
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
@@ -89,7 +89,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       expect_provider_update(:ok)
 
       assert {:ok, @new_url} =
-               CalendarGrid.change_event_video(user.id, event, video_integration.id)
+               Changes.change_event_video(user.id, event, video_integration.id)
 
       row = reload(event)
       assert row.video_link == @new_url
@@ -110,7 +110,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       expect_provider_update(:ok)
 
       assert {:ok, @new_url} =
-               CalendarGrid.change_event_video(user.id, event, video_integration.id)
+               Changes.change_event_video(user.id, event, video_integration.id)
 
       assert_received {:provider_update, uid, payload}
       assert uid == event.uid
@@ -135,7 +135,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       expect_provider_update(:ok)
 
       assert {:ok, @new_url} =
-               CalendarGrid.change_event_video(user.id, event, video_integration.id)
+               Changes.change_event_video(user.id, event, video_integration.id)
 
       assert_received {:provider_update, _uid, payload}
       assert payload.description == "Agenda\n\nJoin video call: #{@new_url}"
@@ -161,7 +161,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       expect_provider_update({:error, :server_error})
 
       assert {:ok, @new_url} =
-               CalendarGrid.change_event_video(user.id, event, video_integration.id)
+               Changes.change_event_video(user.id, event, video_integration.id)
 
       row = reload(event)
       assert row.video_link == @new_url
@@ -178,7 +178,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       expect_provider_update({:error, :unauthorized})
 
       assert {:error, :unauthorized} =
-               CalendarGrid.change_event_video(user.id, event, video_integration.id)
+               Changes.change_event_video(user.id, event, video_integration.id)
 
       row = reload(event)
       assert row.video_link == @old_url
@@ -197,7 +197,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       end)
 
       assert {:error, :missing_meeting_url} =
-               CalendarGrid.change_event_video(user.id, event, video_integration.id)
+               Changes.change_event_video(user.id, event, video_integration.id)
 
       row = reload(event)
       assert row.video_link == @old_url
@@ -217,7 +217,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       end)
 
       assert {:error, _reason} =
-               CalendarGrid.change_event_video(user.id, event, video_integration.id)
+               Changes.change_event_video(user.id, event, video_integration.id)
 
       assert reload(event).video_link == @old_url
     end
@@ -240,7 +240,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       event = insert_event(integration, @weekly_sync)
       expect_provider_update(:ok)
 
-      assert {:ok, url} = CalendarGrid.change_event_video(user.id, event, video_integration.id)
+      assert {:ok, url} = Changes.change_event_video(user.id, event, video_integration.id)
 
       assert {:ok, slug} = LinkRoom.slug(event.uid)
       assert url == "https://meet.example.com/#{slug}"
@@ -253,7 +253,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       foreign = insert(:video_integration, user: insert(:user), provider: "mirotalk")
       event = insert_event(integration, @weekly_sync)
 
-      assert {:error, :not_found} = CalendarGrid.change_event_video(user.id, event, foreign.id)
+      assert {:error, :not_found} = Changes.change_event_video(user.id, event, foreign.id)
 
       row = reload(event)
       assert row.video_link == nil
@@ -279,10 +279,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       event = insert_event(integration, @weekly_sync)
 
       assert {:error, :not_found} =
-               CalendarGrid.change_event_video(user.id, event, disconnected.id)
+               Changes.change_event_video(user.id, event, disconnected.id)
 
       assert {:error, :video_integration_inactive} =
-               CalendarGrid.change_event_video(user.id, event, switched_off.id)
+               Changes.change_event_video(user.id, event, switched_off.id)
 
       assert reload(event).video_link == nil
     end
@@ -299,7 +299,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
         })
 
       assert {:ok, :unchanged} =
-               CalendarGrid.change_event_video(user.id, event, video_integration.id)
+               Changes.change_event_video(user.id, event, video_integration.id)
     end
 
     test "still provisions a room when the integration is set but its link is missing", %{
@@ -317,7 +317,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       expect_provider_update(:ok)
 
       assert {:ok, @new_url} =
-               CalendarGrid.change_event_video(user.id, event, video_integration.id)
+               Changes.change_event_video(user.id, event, video_integration.id)
 
       assert reload(event).video_link == @new_url
     end
@@ -330,7 +330,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
     } do
       event = insert_event(integration, @weekly_sync)
 
-      assert {:ok, :unchanged} = CalendarGrid.change_event_video(user.id, event, nil)
+      assert {:ok, :unchanged} = Changes.change_event_video(user.id, event, nil)
     end
 
     test "clears the link and integration, and takes the join line out of the description", %{
@@ -347,7 +347,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
 
       expect_provider_update(:ok)
 
-      assert {:ok, nil} = CalendarGrid.change_event_video(user.id, event, nil)
+      assert {:ok, nil} = Changes.change_event_video(user.id, event, nil)
 
       assert_received {:provider_update, _uid, payload}
       assert payload.description == "Agenda"
@@ -374,7 +374,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
 
       expect_provider_update(:ok)
 
-      assert {:ok, nil} = CalendarGrid.change_event_video(user.id, event, nil)
+      assert {:ok, nil} = Changes.change_event_video(user.id, event, nil)
       assert_received {:provider_update, _uid, %{description: ""}}
 
       args = %{
@@ -425,7 +425,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
         {:ok, %Req.Response{status: 204, body: ""}}
       end)
 
-      assert {:ok, nil} = CalendarGrid.change_event_video(user.id, event, nil)
+      assert {:ok, nil} = Changes.change_event_video(user.id, event, nil)
       refute_received {:room_deleted, _url}
       refute_enqueued(worker: VideoSyncWorker)
       assert reload(event).video_link == nil
@@ -448,7 +448,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
 
       log_event =
         LogCapture.with_capture([logger_level: :info], fn ->
-          assert {:ok, nil} = CalendarGrid.change_event_video(user.id, event, nil)
+          assert {:ok, nil} = Changes.change_event_video(user.id, event, nil)
           LogCapture.await_log("Video room left in place")
         end)
 

@@ -80,6 +80,7 @@ defmodule Tymeslot.Integrations.Calendar.IntegrationCacheQueries do
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Availability.BookabilityOverrideQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -201,15 +202,28 @@ defmodule Tymeslot.Integrations.Calendar.IntegrationCacheQueries do
   def replace_cached_rows(calendar_integration_id, scope, events_attrs)
       when is_list(events_attrs) do
     under_lock(calendar_integration_id, fn ->
-      ProviderCalendarEventSchema
-      |> where([e], e.calendar_integration_id == ^calendar_integration_id)
-      |> where_scope(scope)
-      |> Repo.delete_all()
+      {_deleted, uids} =
+        ProviderCalendarEventSchema
+        |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+        |> where_scope(scope)
+        |> select([e], e.uid)
+        |> Repo.delete_all()
 
       {:ok, count} = ProviderCalendarEventQueries.upsert_batch(events_attrs)
+      drop_orphaned_overrides(calendar_integration_id, scope, uids)
       count
     end)
   end
+
+  # Only an unscoped refresh is a complete read of the integration (a feed,
+  # fetched whole or not at all), so only there is a row it did not put back
+  # an event that is gone. A scoped one can leave rows out because the read
+  # narrowed (a deselected calendar, a calendar no longer read), so the
+  # organiser's choices on them stay.
+  defp drop_orphaned_overrides(calendar_integration_id, :all, uids),
+    do: BookabilityOverrideQueries.delete_orphaned(calendar_integration_id, uids)
+
+  defp drop_orphaned_overrides(_calendar_integration_id, _scope, _uids), do: 0
 
   defp where_scope(query, :all), do: query
 

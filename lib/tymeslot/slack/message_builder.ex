@@ -16,6 +16,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Meetings.AttendeeName
   alias Tymeslot.Meetings.HostManaged
+  alias Tymeslot.Notifications.BookingDetails
   alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -38,6 +39,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
       section_summary(meeting),
       divider(),
       section_details(meeting, timezone)
+      | details_sections(meeting)
     ]
 
     append_actions(base, meeting)
@@ -58,6 +60,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
       section_summary(meeting),
       divider(),
       section_reschedule(meeting, timezone)
+      | details_sections(meeting)
     ]
 
     append_actions(base, meeting)
@@ -69,6 +72,7 @@ defmodule Tymeslot.Slack.MessageBuilder do
       section_summary(meeting),
       divider(),
       section_request_details(meeting, timezone)
+      | details_sections(meeting)
     ]
 
     append_actions(base, meeting)
@@ -162,6 +166,58 @@ defmodule Tymeslot.Slack.MessageBuilder do
     ]
 
     %{"type" => "section", "fields" => fields}
+  end
+
+  # What the booker told the organiser: where to meet and how to reach them,
+  # their notes, and their answers. `BookingDetails` bounds every value, so
+  # no field or section can pass Slack's limits once escaped.
+  defp details_sections(meeting) do
+    details = BookingDetails.from_meeting(meeting)
+
+    Enum.reject(
+      [contact_section(details), note_section(details), answers_section(details)],
+      &is_nil/1
+    ) ++ more_answers_context(details)
+  end
+
+  defp contact_section(details) do
+    fields =
+      for {key, label} <- [location: "*Where*", phone: "*Phone*", company: "*Company*"],
+          value = details[key],
+          do: mrkdwn_field(label, escape(value))
+
+    if fields != [], do: %{"type" => "section", "fields" => fields}
+  end
+
+  defp note_section(%{note: nil}), do: nil
+
+  defp note_section(%{note: note}) do
+    quoted = note |> escape() |> String.split("\n") |> Enum.map_join("\n", &(">" <> &1))
+    section_text("*Notes*\n" <> quoted)
+  end
+
+  defp answers_section(%{answers: []}), do: nil
+
+  defp answers_section(%{answers: answers}) do
+    fields =
+      Enum.map(answers, fn {label, value} ->
+        mrkdwn_field("*#{escape(label)}*", escape(value))
+      end)
+
+    %{"type" => "section", "fields" => fields}
+  end
+
+  defp more_answers_context(%{more_answers: 0}), do: []
+
+  defp more_answers_context(%{more_answers: more}) do
+    noun = if more == 1, do: "answer", else: "answers"
+
+    [
+      %{
+        "type" => "context",
+        "elements" => [%{"type" => "mrkdwn", "text" => "#{more} more #{noun} in Tymeslot"}]
+      }
+    ]
   end
 
   defp section_cancellation(meeting) do

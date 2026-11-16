@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.ProfileIntroFormTest do
   @moduledoc """
   The organiser's headline and bio, from the "About You" form in Profile
-  Settings to Folio's booking page: saved with the button, shown as
+  Settings to Folio's booking page: saved when a field is left, shown as
   paragraphs and line breaks, escaped, cleaned of null bytes, refused over
   the caps, and gone again when cleared.
   """
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.ProfileIntroFormTest do
 
   defp save_intro(conn, intro) do
     {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
-    view |> form("#intro-form", profile_intro: intro) |> render_submit()
+    view |> form("#intro-form", profile_intro: intro) |> render_change()
     view
   end
 
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Dashboard.ProfileIntroFormTest do
           bio: "I help new managers.\nOne call at a time.\n\nBook a slot below."
         })
 
-      assert render(view) =~ "Headline and bio saved"
+      assert has_element?(view, "#intro-form-status[data-autosave-status='saved']", "Saved")
 
       {page, _html} = booking_page(profile)
 
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.ProfileIntroFormTest do
       view = save_intro(conn, %{headline: String.duplicate("a", 121), bio: "Fine."})
 
       assert has_element?(view, "#intro-form", "should be at most 120 character(s)")
-      refute render(view) =~ "Headline and bio saved"
+      refute has_element?(view, "#intro-form-status[data-autosave-status='saved']")
       assert stored(profile) == {nil, nil}
     end
 
@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Dashboard.ProfileIntroFormTest do
   end
 
   describe "the form" do
-    test "sits in Profile Settings with both fields and the save button", %{conn: conn} do
+    test "sits in Profile Settings with both fields and no save button", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
       assert has_element?(view, "#intro-form-container", "About You")
@@ -141,7 +141,49 @@ defmodule TymeslotWeb.Dashboard.ProfileIntroFormTest do
                "#intro-form textarea[name='profile_intro[bio]'][maxlength='1000']"
              )
 
-      assert has_element?(view, "#intro-form [data-testid='save-intro']")
+      refute has_element?(view, "#intro-form button[type='submit']")
+
+      assert has_element?(
+               view,
+               "#intro-form[phx-hook='UnsavedChanges'] #intro-form-status",
+               "Changes save when you leave a field."
+             )
+    end
+
+    test "leaving a field saves it and tells the browser nothing is pending", %{
+      conn: conn,
+      profile: profile
+    } do
+      view = save_intro(conn, %{headline: "Career coach", bio: ""})
+
+      assert stored(profile) == {"Career coach", nil}
+      assert_push_event(view, "autosave:clean", %{id: "intro-form"})
+    end
+
+    test "Enter in the headline saves as leaving it would", %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      view
+      |> form("#intro-form", profile_intro: %{headline: "Career coach", bio: ""})
+      |> render_submit()
+
+      assert stored(profile) == {"Career coach", nil}
+      assert has_element?(view, "#intro-form-status[data-autosave-status='saved']")
+    end
+
+    test "an unchanged value is not saved again, and is not pending", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      view
+      |> form("#intro-form", profile_intro: %{headline: "", bio: ""})
+      |> render_change()
+
+      assert_push_event(view, "autosave:clean", %{id: "intro-form"})
+      refute has_element?(view, "#intro-form-status[data-autosave-status='saved']")
+      assert Repo.reload!(profile).updated_at == profile.updated_at
     end
 
     test "flags an over-long bio while it is typed, and saves nothing", %{
@@ -156,6 +198,7 @@ defmodule TymeslotWeb.Dashboard.ProfileIntroFormTest do
 
       assert has_element?(view, "#intro-form", "should be at most 1000 character(s)")
       assert Repo.reload!(profile).bio == nil
+      refute_push_event(view, "autosave:clean", %{id: "intro-form"})
     end
 
     test "shows what is saved when the page is opened again", %{conn: conn} do

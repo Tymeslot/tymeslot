@@ -1,0 +1,294 @@
+/* Calendar booking layer: booking requests, the bookable-times bands and
+   their explainer on the organiser calendar. The CalendarCanvas
+   hook draws all of these as class strings (assets/js/calendar/render.js,
+   assets/js/calendar/bookable.js, assets/js/hooks/calendar_canvas.js), so
+   they live here rather than as Tailwind utilities a template scan would
+   never see. Loaded after calendar-surface.css and calendar-editing.css, so
+   a request's rules win over the booking and past rules of equal weight.
+   Colours come from the --cal-* tokens in base/variables.css. Past and
+   expired items use paler fills with full-contrast text, never opacity. */
+
+/* Requests: the loudest item on the grid. An amber tint, an amber border, a
+   striped edge and a solid "Request" pill. */
+.cal-ev.is-request {
+  padding-left: 12px;
+  border: 1.5px solid var(--cal-request);
+  background: color-mix(in srgb, var(--cal-request) 14%, var(--cal-surface));
+  box-shadow: none;
+  color: var(--cal-request-ink);
+}
+
+.cal-ev.is-request::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--cal-request) 0 4px,
+    color-mix(in srgb, var(--cal-request) 30%, var(--cal-surface)) 4px 8px
+  );
+  pointer-events: none;
+}
+
+.cal-ev-request {
+  align-self: flex-start;
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--cal-request-strong);
+  color: var(--cal-on-booking);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+/* A block with room for under two title lines (render.js) keeps the guest's
+   name on its first line: the flag becomes a dot in the top-right corner, out
+   of the text flow. Solid --cal-request-strong on the block's pale tint is
+   well over 3:1 for a graphic; the word "Request" stays in the aria-label. */
+.cal-ev.is-request .cal-ev-request.is-compact {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  background: var(--cal-request-strong);
+  box-shadow: 0 0 0 1px var(--cal-surface);
+}
+
+.cal-ev.is-request.has-badge .cal-ev-title {
+  padding-right: 12px;
+}
+
+.cal-ev.is-request.is-past .cal-ev-request.is-compact,
+.cal-ev.is-request.is-expired .cal-ev-request.is-compact {
+  background: var(--cal-text-past);
+}
+
+/* On a one-row block the pill sits before the title and the title gives way. */
+.cal-ev.is-short .cal-ev-request {
+  align-self: center;
+  margin-right: 4px;
+}
+
+/* An ended or expired request: neutral, grey stripes, full-contrast text. */
+.cal-ev.is-request.is-past,
+.cal-ev.is-request.is-expired {
+  padding-left: 12px;
+  border: 1px solid var(--cal-line-strong);
+  background: var(--cal-chip);
+  box-shadow: none;
+  color: var(--cal-text-past);
+}
+
+.cal-ev.is-request.is-past::before,
+.cal-ev.is-request.is-expired::before {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--cal-expired) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+.cal-ev.is-request.is-past .cal-ev-request,
+.cal-ev.is-request.is-expired .cal-ev-request {
+  background: var(--cal-line);
+  color: var(--cal-text-past);
+}
+
+/* Bookable bands: a faint hatch behind events (events stack from z-index 3,
+   the now line is 2). Top and height are inline. */
+.cal-bookable {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--cal-bookable) 22%, transparent) 0 1.5px,
+      transparent 1.5px 7px
+    ),
+    color-mix(in srgb, var(--cal-bookable) 6%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--cal-bookable) 55%, transparent);
+  pointer-events: none;
+}
+
+/* One label per day, at the top edge of its first band, or lower where an
+   event's title line is there (calendar/bookable.js clearLabelTop). It sits
+   above the events (z-index one above the column's --cal-lift, which is
+   above every event and chip, and below a draft block and the popovers) so
+   an event overlapping the band never hides it. A band shorter than the
+   label (under 20px) does not clip it: the label simply extends below the
+   band's bottom edge. */
+.cal-bookable-label {
+  position: absolute;
+  left: 4px;
+  z-index: max(calc(var(--cal-lift, 3) + 1), 3);
+  display: inline-flex;
+  align-items: center;
+  max-width: calc(100% - 8px);
+  min-height: 20px;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--cal-bookable) 45%, var(--cal-line));
+  border-radius: var(--radius-full);
+  background: var(--cal-surface);
+  color: var(--cal-bookable-ink);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cal-bookable-label:hover {
+  background: color-mix(in srgb, var(--cal-bookable) 10%, var(--cal-surface));
+}
+
+.cal-bookable-label:focus-visible,
+.cal-bookable-show:focus-visible,
+.cal-bookable-pop-button:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 1px;
+}
+
+/* "Next bookable time: Mon 19 Oct, 09:00 · Show", floating over the bottom
+   of the grid when no future bookable time is in view. */
+.cal-bookable-note {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 32px);
+  padding: 6px 12px;
+  overflow: hidden;
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-full);
+  background: var(--cal-chip);
+  box-shadow: var(--shadow-md);
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.cal-bookable-show {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cal-bookable-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cal-bookable-show:hover {
+  text-decoration: underline;
+}
+
+/* The explainer, placed by the hook like the "+N more" list. */
+.cal-bookable-pop {
+  position: fixed;
+  z-index: var(--cal-z-pop);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 18rem;
+  max-width: calc(100vw - 16px);
+  padding: 12px;
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-xl);
+  background: var(--cal-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.cal-bookable-pop-title {
+  margin: 0;
+  color: var(--cal-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.cal-bookable-pop-text {
+  margin: 0;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+.cal-bookable-pop-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cal-bookable-pop-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--cal-text);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cal-bookable-pop-button:hover {
+  background: var(--cal-hover);
+}
+
+.cal-bookable-pop-time,
+.cal-bookable-pop-status {
+  margin: 0;
+  color: var(--cal-bookable-ink);
+  font-size: var(--font-size-xs);
+}
+
+.cal-bookable-pop-hint {
+  margin: 0;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* Disabled while a request is in flight: muted ink on the chip fill (7:1),
+   never opacity, which would drop the label under 4.5:1. */
+.cal-bookable-pop-button:disabled {
+  background: var(--cal-chip);
+  color: var(--cal-text-muted);
+  opacity: 1;
+}
+
+/* The note after a failed load: the same place, warning ink. */
+.cal-bookable-note.is-error {
+  color: var(--cal-request-ink);
+}
+
+/* An "Open for booking" draft in quick create (Task 13's .is-opening): the
+   band's hatch and edge, so it reads as bookable time being added rather
+   than as an event. Solid edge: dashed means "free" on this grid. */
+.cal-ev.is-draft.is-opening {
+  border: 1.5px solid var(--cal-bookable);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--cal-bookable) 22%, transparent) 0 1.5px,
+      transparent 1.5px 7px
+    ),
+    color-mix(in srgb, var(--cal-bookable) 10%, var(--cal-surface));
+  color: var(--cal-bookable-ink);
+}

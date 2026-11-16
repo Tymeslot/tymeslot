@@ -1,7 +1,7 @@
 defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
   @moduledoc """
   Moving an Outlook recurring series to another calendar through
-  `CalendarGrid.move_event/3`, down to the HTTP client.
+  `Changes.move_event/3`, down to the HTTP client.
 
   Graph has no move for events, so within one integration and across two
   alike the master is read on the source, created in the destination
@@ -18,7 +18,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
   import Mox
 
   alias Ecto.Changeset
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -248,7 +248,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
   end
 
   defp move(user, event, integration, calendar_id) do
-    CalendarGrid.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
+    Changes.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
   end
 
   defp insert_room(user, integration) do

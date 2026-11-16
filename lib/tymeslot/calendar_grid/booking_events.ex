@@ -10,59 +10,97 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
   """
 
   alias Tymeslot.CalendarGrid.BookingEvent
+  alias Tymeslot.Clock
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.HostManaged
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.Seats
+  alias Tymeslot.MeetingTypes
 
   @doc """
   Returns the user's live bookings overlapping `[start_dt, end_dt)` as
-  `BookingEvent` structs, excluding any whose synced provider copy is already
-  present.
+  `BookingEvent` structs, including those written back to a connected
+  calendar: the caller draws a booking in place of its calendar copy
+  (`PreferredBookings`).
 
-  `cached_events` is the cached provider events loaded for the same window. A
-  booking that has been written back to a connected calendar reappears in the
-  cache as a `created_by_tymeslot` event; that copy stays the interactive one
-  on the grid, so the booking projection is dropped to avoid a duplicate
-  block.
+  Options:
 
-  Pass the cached events themselves rather than a pre-extracted key set: which
-  identifier links the two sides varies by provider family, and
-  `Tymeslot.Meetings.CalendarEventLink` is the one place that knows the rule.
+    * `include_expired: true` adds the requests that expired unanswered.
   """
-  @spec list_for_range(pos_integer(), DateTime.t(), DateTime.t(), Enumerable.t()) :: [
-          BookingEvent.t()
-        ]
-  def list_for_range(user_id, start_dt, end_dt, cached_events \\ []) do
-    synced_identifiers = Meetings.calendar_identifier_set(cached_events)
+  @spec list_for_range(pos_integer(), DateTime.t(), DateTime.t(), keyword()) ::
+          [BookingEvent.t()]
+  def list_for_range(user_id, start_dt, end_dt, opts \\ []) do
+    now = Clock.utc_now()
 
-    user_id
-    |> Meetings.list_meetings_in_range_for_organizer(start_dt, end_dt)
-    |> Enum.reject(&Meetings.linked_to_calendar_event?(&1, synced_identifiers))
-    |> Meetings.with_live_participants()
-    |> Enum.map(&to_event/1)
+    meetings =
+      user_id
+      |> meetings(start_dt, end_dt, Keyword.get(opts, :include_expired, false))
+      |> Meetings.with_live_people()
+
+    # Only a booking whose event the host moved costs a query here.
+    offers = Meetings.calendar_move_offers(meetings)
+
+    Enum.map(meetings, &to_event(&1, now, offers[&1.id]))
   end
 
-  defp to_event(meeting) do
+  defp meetings(user_id, start_dt, end_dt, false),
+    do: Meetings.list_meetings_in_range_for_organizer(user_id, start_dt, end_dt)
+
+  defp meetings(user_id, start_dt, end_dt, true) do
+    expired = Meetings.list_expired_requests_in_range_for_organizer(user_id, start_dt, end_dt)
+
+    user_id
+    |> meetings(start_dt, end_dt, false)
+    |> Kernel.++(expired)
+    |> Enum.sort_by(& &1.start_time, DateTime)
+  end
+
+  defp to_event(meeting, now, move_offer) do
     %BookingEvent{
       id: "booking-#{meeting.id}",
       meeting_id: meeting.id,
       # The event-shaped identity, matching the provider copy's `uid`.
       uid: meeting.calendar_uid,
       summary: presence(meeting.title) || "Meeting",
-      location: presence(meeting.location),
+      # A default location label ("In person") reads in the dashboard's language.
+      location: presence(MeetingTypes.display_location(meeting.location, meeting.location_kind)),
       start_at: meeting.start_time,
       end_at: meeting.end_time,
       attendee_name: attendee_name(meeting),
       attendee_email: attendee_email(meeting),
       join_url: Meetings.organizer_join_url(meeting),
       provider_event_id: meeting.provider_event_id,
+      meeting_type: presence(meeting.meeting_type),
+      approval_deadline_at: meeting.approval_deadline_at,
       participants: participants(meeting),
+      guests:
+        Enum.map(meeting.guests, &%{name: presence(&1.name), email: &1.email, status: &1.status}),
       capacity: meeting.capacity,
       planned: meeting.planned,
       seats_taken: seats_taken(meeting),
       # Event-shaped, like a provider copy: the grid reads statuses as strings.
-      status: Atom.to_string(meeting.status)
+      status: Atom.to_string(meeting.status),
+      request: MeetingState.awaiting_approval?(meeting),
+      expired: expired_request?(meeting, now),
+      move_offer: move_offer
     }
+  end
+
+  # A request that can no longer be answered: expired by the sweep, or still
+  # held past its deadline or its start, which the sweep has not reached yet
+  # (it runs every 15 minutes).
+  defp expired_request?(meeting, now) do
+    cond do
+      MeetingState.expired?(meeting) ->
+        not is_nil(meeting.approval_requested_at)
+
+      MeetingState.awaiting_approval?(meeting) ->
+        MeetingState.approval_deadline_passed?(meeting, now) or
+          DateTime.compare(meeting.start_time, now) != :gt
+
+      true ->
+        false
+    end
   end
 
   # The person the grid names under a booking, and their address. A meeting

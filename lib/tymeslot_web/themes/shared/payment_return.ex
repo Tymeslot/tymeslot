@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.LiveView
   alias Phoenix.PubSub
   alias Tymeslot.BookingPages
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.Demo
   alias Tymeslot.Invitations
   alias Tymeslot.MeetingPayments
@@ -33,6 +34,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
+  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Core.Registry, as: ThemeRegistry
   alias TymeslotWeb.Themes.Shared.EventHandlers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -153,16 +155,51 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   Assigns the organiser's profile (`:organizer_profile`, which a theme's page
   shell may draw) and the legal links the page's footer shows
   (`:legal_links`, `Profiles.public_legal_links/1`: the organiser's own, else
-  the instance defaults). Called on the connected mount, once the meeting's
-  organiser is known.
+  the instance defaults), in the page's language (`assign_language/3`).
+  Called on the connected mount, once the meeting's organiser is known.
   """
-  @spec assign_organizer(LiveView.Socket.t(), Tymeslot.Profiles.ProfileSchema.t()) ::
+  @spec assign_organizer(LiveView.Socket.t(), Tymeslot.Profiles.ProfileSchema.t(), Meeting.t()) ::
           LiveView.Socket.t()
-  def assign_organizer(socket, profile) do
+  def assign_organizer(socket, profile, meeting) do
+    socket = assign_language(socket, profile, meeting)
+
     Component.assign(socket,
-      organizer_profile: profile,
+      organizer_profile: ContentTranslations.localise(profile, socket.assigns.content_locale),
       legal_links: Profiles.public_legal_links(profile)
     )
+  end
+
+  @doc """
+  Assigns the page's language on the dead render, so the first paint is
+  already in it and its switcher lists only the languages the organiser
+  offers: the meeting and its organiser are looked up for that alone, and
+  nothing else of theirs is shown before the connected mount has authorised
+  the visitor. A meeting not found leaves the page as the locale hook set it;
+  the connected mount sends the visitor away.
+  """
+  @spec assign_dead_render_language(LiveView.Socket.t(), String.t(), String.t()) ::
+          LiveView.Socket.t()
+  def assign_dead_render_language(socket, meeting_id, theme_slug) do
+    case organizer(meeting_id, theme_slug) do
+      {:ok, meeting, profile} -> assign_language(socket, profile, meeting)
+      {:error, _reason} -> socket
+    end
+  end
+
+  # The booking page's rule (`OrganizerHelpers.assign_page_language/3`): the
+  # visitor's own pick, else the language the meeting was booked in, else the
+  # browser's, among the languages the organiser offers, so the attendee
+  # comes back from Stripe in a language the booking page offers.
+  # `:offered_locales` restricts the switcher alike. A pick the organiser
+  # does not offer gives the original; when the URL's own `?locale=` asked
+  # for it, the page reloads with `?locale=` naming the original.
+  defp assign_language(socket, profile, meeting) do
+    socket = OrganizerHelpers.assign_page_language(socket, profile, meeting.attendee_locale)
+
+    if socket.assigns.stale_locale_param,
+      do:
+        LiveView.redirect(socket, external: build_path_with_locale(socket, socket.assigns.locale)),
+      else: socket
   end
 
   @doc """
@@ -281,7 +318,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   Mounts the payment-processing page. Authorises the meeting,
   subscribes to the payment topic, then reads meeting/payment state and
   assigns `:meeting`, `:payment`, `:organizer_profile` and `:legal_links`
-  (`assign_organizer/2`; none on the dead render, `no_organizer/1`),
+  (`assign_organizer/3`; none on the dead render, `no_organizer/1`, which
+  sets only the page's language, `assign_dead_render_language/3`),
   `:rebook_path` (where a failed checkout can start again) and the
   organiser's customisation (`assign_customization/2`) on success. On
   failure the socket is redirected to `/` with a generic flash so we never
@@ -313,7 +351,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           socket =
             socket
             |> assign_customization(profile)
-            |> assign_organizer(profile)
+            |> assign_organizer(profile, meeting)
             |> Component.assign(loading: false, meeting: meeting, payment: payment)
             |> Component.assign(rebook(profile, meeting, true))
 
@@ -325,6 +363,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
     else
       socket =
         socket
+        |> assign_dead_render_language(meeting_id, theme_slug)
         |> no_customization()
         |> no_organizer()
         |> Component.assign(
