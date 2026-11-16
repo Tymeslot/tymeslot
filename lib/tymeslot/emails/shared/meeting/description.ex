@@ -26,10 +26,22 @@ defmodule Tymeslot.Emails.Shared.Meeting.Description do
       |> Map.get(:description)
       |> EventVideo.without_join_lines()
 
-    case text && text |> HtmlSanitizeEx.strip_tags() |> String.trim() do
+    case text && text |> plain_text() |> String.trim() do
       "" -> nil
       stripped -> stripped
     end
+  end
+
+  # `strip_tags/1` parses the markup (decoding its entities) and re-escapes
+  # `&`, `<` and `>` in what is left. Every caller escapes for its own output
+  # and the text part needs none, so the escaping is undone here; otherwise a
+  # host's "Q&A" reaches the guest as "Q&amp;A".
+  @entities %{"amp" => "&", "lt" => "<", "gt" => ">"}
+
+  defp plain_text(text) do
+    Regex.replace(~r/&(amp|lt|gt);/, HtmlSanitizeEx.strip_tags(text), fn _match, name ->
+      Map.fetch!(@entities, name)
+    end)
   end
 
   @doc """

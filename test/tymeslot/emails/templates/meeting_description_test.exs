@@ -43,6 +43,21 @@ defmodule Tymeslot.Emails.Templates.MeetingDescriptionTest do
         assert email.text_body =~ "DESCRIPTION:\n#{@description}"
       end
 
+      # Escaped once for the HTML part and not at all for the text part, so
+      # the guest reads what the host typed.
+      test "shows special characters as the organiser typed them" do
+        email =
+          @template.render(
+            @role,
+            "someone@example.com",
+            build_appointment_details(%{description: ~s(Q&A: 5 < 6, "quoted" & it's &amp; too)})
+          )
+
+        assert email.html_body =~ "Q&amp;A: 5 &lt; 6, &quot;quoted&quot; &amp; it&#39;s &amp; too"
+        refute email.html_body =~ "&amp;amp;"
+        assert email.text_body =~ ~s(DESCRIPTION:\nQ&A: 5 < 6, "quoted" & it's & too)
+      end
+
       test "leaves the section out when there is no description" do
         for description <- [nil, "", "  \n "] do
           email =
