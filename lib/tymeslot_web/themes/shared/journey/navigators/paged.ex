@@ -34,7 +34,6 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Paged do
   alias TymeslotWeb.Themes.Shared.Journey.Navigator
   alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
-  alias TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry
 
   @behaviour Navigator
 
@@ -96,24 +95,18 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Navigators.Paged do
   last one reached before it (the questions, whose answers no URL carries).
   A moment before the route's own entry is shown only when it may be
   revisited, as Back would, so a direct link never resumes on the overview.
-  The meeting type the URL names is resolved first: the moments it needs
-  (a length to choose, questions to answer) follow from it.
+  The meeting type the URL names is already resolved by then
+  (`LiveHelpers.Mount.handle_param_updates/2`): the moments it needs (a
+  length to choose, questions to answer) follow from it.
   """
   @impl Navigator
   def resume(journey, socket, step, params) do
-    socket = resolve_meeting_type(socket)
-
     case landing(journey, socket.assigns, step) do
       nil -> socket
       key when key == socket.assigns.current_state -> socket
       key -> Runtime.transition_to(socket, key, params)
     end
   end
-
-  defp resolve_meeting_type(%{assigns: %{meeting_type: %{}}} = socket), do: socket
-
-  defp resolve_meeting_type(socket),
-    do: StepEntry.maybe_assign_meeting_type(socket, socket.assigns[:selected_duration])
 
   # Nothing on a route that opens on an outcome (the confirmation's), nor
   # for a `step` naming no moment.

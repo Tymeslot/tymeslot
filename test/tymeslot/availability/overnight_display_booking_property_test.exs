@@ -107,6 +107,10 @@ defmodule Tymeslot.Availability.OvernightDisplayBookingPropertyTest do
           profile: %{max_bookings_per_day: daily_cap}
         )
 
+      # The booking's length is the type's; the cap is the profile's, so the
+      # type adds no limit of its own.
+      meeting_type = insert(:meeting_type, user: host.user, duration_minutes: duration)
+
       insert_booking(
         host,
         DateTime.new!(Date.add(date, booked_day), Time.new!(booked_hour, 0, 0), host_tz)
@@ -128,7 +132,7 @@ defmodule Tymeslot.Availability.OvernightDisplayBookingPropertyTest do
               duration: "#{duration}min",
               user_timezone: booker_tz,
               organizer_user_id: host.user.id,
-              meeting_type_id: nil
+              meeting_type_id: meeting_type.id
             },
             %{
               "name" => "Property",

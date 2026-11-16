@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   def maybe_assign_meeting_type(socket, duration) do
     duration_str = if is_integer(duration), do: "#{duration}min", else: duration
 
-    if socket.assigns[:username_context] && socket.assigns[:organizer_user_id] do
+    if resolves_meeting_type?(socket.assigns) do
       case resolve_meeting_type(socket, duration_str) do
         nil -> socket
         meeting_type -> assign_meeting_type(socket, meeting_type)
@@ -72,6 +72,16 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
       socket
     end
   end
+
+  @doc """
+  Whether this page can resolve a meeting type at all: only an organiser's
+  page can (a theme preview has no organiser). `maybe_assign_meeting_type/2`
+  resolves nothing elsewhere, so a caller waiting for a resolved type must
+  ask this first, or it waits for one that never comes.
+  """
+  @spec resolves_meeting_type?(map()) :: boolean()
+  def resolves_meeting_type?(assigns),
+    do: is_binary(assigns[:username_context]) and is_integer(assigns[:organizer_user_id])
 
   # A reschedule stays on the meeting's own type, because that is the one whose
   # rules the submit will be validated against. Everything else picks by

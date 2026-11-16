@@ -32,12 +32,18 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
       # `build_meeting_params/1` books mid-afternoon, so the host must offer
       # that hour: booking creation refuses a time the schedule never offers.
       %{user: user, profile: profile} = create_always_bookable_profile()
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 60)
 
-      %{user: user, profile: profile}
+      %{user: user, profile: profile, meeting_type: meeting_type}
     end
 
-    test "succeeds when time slot is available", %{user: user} do
-      meeting_params = build_meeting_params(user, %{date: Date.add(Date.utc_today(), 5)})
+    test "succeeds when time slot is available", %{user: user, meeting_type: meeting_type} do
+      meeting_params =
+        build_meeting_params(user, %{
+          date: Date.add(Date.utc_today(), 5),
+          meeting_type_id: meeting_type.id
+        })
+
       form_data = build_form_data()
 
       assert {:ok, meeting} =
@@ -46,7 +52,7 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
       assert meeting.status == :confirmed
     end
 
-    test "fails when time slot has conflict", %{user: user} do
+    test "fails when time slot has conflict", %{user: user, meeting_type: meeting_type} do
       booking_date = Date.add(Date.utc_today(), 2)
 
       start_time =
@@ -66,14 +72,15 @@ defmodule Tymeslot.MeetingsContext.LifecycleTest do
       meeting_params =
         build_meeting_params(user, %{
           date: booking_date,
-          time: "14:00"
+          time: "14:00",
+          meeting_type_id: meeting_type.id
         })
 
       form_data = build_form_data()
 
       result = Create.execute(meeting_params, form_data)
 
-      assert {:error, _reason} = result
+      assert {:error, :slot_taken} = result
     end
   end
 
