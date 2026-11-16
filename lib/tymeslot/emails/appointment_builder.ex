@@ -194,14 +194,12 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       base_details = base_details(meeting, attendee_locale)
       timezone_details = timezone_details(meeting, owner_timezone, attendee_timezone)
       participant_details = participant_details(meeting, organizer_profile)
-      preparation_details = preparation_details()
       url_details = url_details(meeting, organizer_profile)
       reminder_details = reminder_details(meeting, reminder_interval)
 
       base_details
       |> Map.merge(timezone_details)
       |> Map.merge(participant_details)
-      |> Map.merge(preparation_details)
       |> Map.merge(url_details)
       |> Map.merge(reminder_details)
       |> Map.put(:attendee_locale, attendee_locale)
@@ -353,14 +351,6 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       organizer_note: meeting.organizer_note,
       attendee_phone: meeting.attendee_phone,
       attendee_company: meeting.attendee_company
-    }
-  end
-
-  defp preparation_details do
-    %{
-      contact_info: dgettext("emails", "reply to this email"),
-      allow_contact: true,
-      time_until_friendly: dgettext("emails", "in 30 minutes")
     }
   end
 

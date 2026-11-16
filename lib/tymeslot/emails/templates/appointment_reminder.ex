@@ -13,7 +13,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     JoinUrl,
     MeetingComponents,
     MjmlEmail,
-    Sanitise,
     TemplateHelper,
     Text,
     TextBodyHelper
@@ -39,6 +38,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
       #{MeetingComponents.time_alert_badge(@intent, appointment_details.time_until)}
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
+
+      #{MeetingComponents.description_section(appointment_details)}
 
       #{MeetingComponents.organizer_note_box(@intent, appointment_details[:organizer_note])}
 
@@ -103,6 +104,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
+      #{MeetingComponents.description_section(appointment_details)}
+
       #{MeetingComponents.organizer_note_box(@intent, appointment_details[:organizer_note])}
 
       #{if guest_video_url do
@@ -158,6 +161,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
       mjml_content = """
       #{MeetingComponents.meeting_details_table(meeting_details, organizer_locale(appointment_details))}
 
+      #{MeetingComponents.description_section(appointment_details)}
+
       #{MeetingComponents.custom_answers_section(appointment_details)}
 
       #{MeetingComponents.counterpart_section(@intent, appointment_details)}
@@ -169,9 +174,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
         title: dgettext("emails_booking", "Host video call"),
         button_text: dgettext("emails_booking", "Start Meeting"))
       end}
-
-      #{Text.section_title(dgettext("emails_booking", "Quick prep"))}
-      #{Text.bullet_list(organizer_prep_items(appointment_details))}
 
       #{MeetingComponents.actions_section(@intent, dgettext("emails_booking", "Quick actions"), organizer_actions(appointment_details))}
       """
@@ -270,7 +272,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     #{dgettext("emails_booking", "I'm looking forward to our conversation!")}
 
     #{dgettext("emails_booking", "DETAILS:")}
-    #{meeting_details}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{custom_answers}
+    #{meeting_details}#{MeetingComponents.description_text(appointment_details)}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{custom_answers}
     #{if action_links != "", do: dgettext("emails_booking", "Need to change plans?") <> action_links}
 
     #{dgettext("emails_booking", "See you %{time_until}!", time_until: appointment_details.time_until_friendly || dgettext("emails_booking", "soon"))}
@@ -294,7 +296,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     #{guest_coming_up_line(appointment_details)}
 
     #{dgettext("emails_booking", "DETAILS:")}
-    #{meeting_details}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{TextBodyHelper.format_guest_answers(appointment_details, dgettext("emails_booking", "CAN YOU STILL MAKE IT?"))}
+    #{meeting_details}#{MeetingComponents.description_text(appointment_details)}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{TextBodyHelper.format_guest_answers(appointment_details, dgettext("emails_booking", "CAN YOU STILL MAKE IT?"))}
     #{if note = guest_changes_note(appointment_details), do: "\n" <> note}
     """
   end
@@ -385,35 +387,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     #{dgettext("emails_booking", "Meeting with %{name}", name: appointment_details.attendee_name)}
 
     #{dgettext("emails_booking", "MEETING DETAILS:")}
-    #{meeting_details}#{video_section}#{attendee_info}#{custom_answers}
-
-    #{dgettext("emails_booking", "QUICK PREP:")}
-    #{TextBodyHelper.format_bullets(organizer_prep_items(appointment_details))}#{action_links}
+    #{meeting_details}#{MeetingComponents.description_text(appointment_details)}#{video_section}#{attendee_info}#{custom_answers}#{action_links}
 
     #{dgettext("emails_booking", "Best,")}
     #{appointment_details.organizer_name}
     """
-  end
-
-  @doc """
-  The organiser's quick preparation list, in their locale: the one list both
-  the HTML and the plain-text body of their reminder render. A video meeting
-  asks for the camera and microphone, any other for the location.
-  """
-  @spec organizer_prep_items(Tymeslot.Emails.EmailService.appointment_details()) :: [
-          String.t()
-        ]
-  def organizer_prep_items(appointment_details) do
-    Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(appointment_details), fn ->
-      [
-        if(Sanitise.safe_web_url?(JoinUrl.for(:organizer, appointment_details)),
-          do: dgettext("emails_booking", "Camera & mic ready"),
-          else: dgettext("emails_booking", "Location confirmed")
-        ),
-        dgettext("emails_booking", "Materials prepared"),
-        dgettext("emails_booking", "Agenda ready")
-      ]
-    end)
   end
 
   # The payload's `time_until` is already formatted in the attendee's
