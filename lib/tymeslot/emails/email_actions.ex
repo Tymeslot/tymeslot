@@ -25,6 +25,7 @@ defmodule Tymeslot.Emails.EmailActions do
   alias Tymeslot.Notifications.Email.AdminEmails
   alias Tymeslot.Notifications.Email.AuthEmails
   alias Tymeslot.Notifications.Email.BookingApprovalEmails
+  alias Tymeslot.Notifications.Email.CalendarSyncEmails
   alias Tymeslot.Notifications.Email.EndChangeEmails
   alias Tymeslot.Notifications.Email.GroupMeetingEmails
   alias Tymeslot.Notifications.Email.GuestEmails
@@ -102,6 +103,9 @@ defmodule Tymeslot.Emails.EmailActions do
       {["meeting_id", "variant"], {BookingApprovalEmails, :handle_booking_request_outcome}},
     "send_reschedule_request_expired" =>
       {["meeting_id"], {BookingApprovalEmails, :handle_reschedule_request_expired}},
+    "send_released_guest_cancellations" =>
+      {["meeting_id"],
+       {BookingApprovalEmails, :handle_released_guest_cancellations, :with_job_id}},
     # Polls
     "send_poll_deadline_reminders" =>
       {["poll_id"], {PollEmails, :handle_deadline_reminders, :with_job_id}},
@@ -161,6 +165,10 @@ defmodule Tymeslot.Emails.EmailActions do
          "event_start_at",
          "event_end_at"
        ], {IntegrationEmails, :handle_calendar_invitation}},
+    "send_external_booking_change" =>
+      {["meeting_id", "discrepancy"], {CalendarSyncEmails, :handle_external_booking_change}},
+    "send_calendar_sync_error" =>
+      {["meeting_id", "error_reason"], {CalendarSyncEmails, :handle_calendar_sync_error}},
     "send_event_update_notification" =>
       {[
          "user_id",

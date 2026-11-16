@@ -163,6 +163,24 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   @doc """
+  Schedules the cancellation to the guests of a held request that was
+  declined or expired after a reschedule sent it back into the gate, once
+  they had been invited. Sent immediately, and unique per meeting like the
+  invitee's outcome email.
+  """
+  @spec schedule_released_guest_cancellations(term()) :: :ok | {:error, term()}
+  def schedule_released_guest_cancellations(meeting_id) do
+    %{"action" => "send_released_guest_cancellations", "meeting_id" => meeting_id}
+    |> EmailWorker.new(
+      queue: :emails,
+      priority: 0,
+      unique: [period: 300, fields: [:args, :queue], keys: [:action, :meeting_id]]
+    )
+    |> Helpers.insert(meeting_id: meeting_id)
+    |> Helpers.ok()
+  end
+
+  @doc """
   Deletes any pending nudge for a meeting.
 
   Called on every exit from the approval gate. A nudge that fires after the

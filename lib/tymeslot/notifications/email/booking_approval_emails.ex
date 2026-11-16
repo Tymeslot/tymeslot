@@ -17,6 +17,7 @@ defmodule Tymeslot.Notifications.Email.BookingApprovalEmails do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.Email.DeliveryOutcome
   alias Tymeslot.Notifications.Email.MeetingEmails
+  alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Workers.DeliveryClaims
 
   @doc """
@@ -193,6 +194,32 @@ defmodule Tymeslot.Notifications.Email.BookingApprovalEmails do
     )
 
     {:discard, "Meeting #{meeting.status}"}
+  end
+
+  @doc """
+  Tells the guests of a released held request, one a reschedule sent back
+  into the gate, that the booking is off. Each guest's send is claimed on
+  the job, so a retry writes only to the guests a failed run missed.
+
+  Guest-only by design: the booker and the host were given the request's
+  outcome (`handle_booking_request_outcome/1`), which the meeting's ordinary
+  cancellation would repeat.
+  """
+  @spec handle_released_guest_cancellations(%{String.t() => term()}, term()) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_released_guest_cancellations(%{"meeting_id" => meeting_id}, job_id) do
+    MeetingEmails.with_meeting(meeting_id, "released guest cancellations", fn
+      %{status: status} = meeting when status in [:cancelled, :expired] ->
+        GuestNotifications.notify_released(meeting, &DeliveryClaims.once(job_id, &1, &2))
+
+      meeting ->
+        Logger.info("Skipping released guest cancellations - meeting not released",
+          meeting_id: meeting.id,
+          status: meeting.status
+        )
+
+        {:discard, "Meeting #{meeting.status}"}
+    end)
   end
 
   defp send_nudge(meeting) do

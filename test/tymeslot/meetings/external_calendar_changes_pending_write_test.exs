@@ -8,6 +8,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
   """
 
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   import Ecto.Query
   import Tymeslot.Factory
@@ -24,8 +25,6 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
 
   setup do
     TestMocks.setup_email_mocks()
-    Application.put_env(:swoosh, :shared_test_process, self())
-    on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
 
     user = insert(:user)
     integration = insert(:calendar_integration, user: user)
@@ -39,6 +38,22 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
       )
 
     %{meeting: meeting, integration: integration}
+  end
+
+  # The host is told from an email job, so what the change itself leaves
+  # behind is that job.
+  defp assert_host_notice(meeting) do
+    assert_enqueued(
+      worker: Tymeslot.Workers.EmailWorker,
+      args: %{"action" => "send_external_booking_change", "meeting_id" => meeting.id}
+    )
+  end
+
+  defp refute_host_notice do
+    refute_enqueued(
+      worker: Tymeslot.Workers.EmailWorker,
+      args: %{"action" => "send_external_booking_change"}
+    )
   end
 
   defp reload(meeting) do
@@ -65,7 +80,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
       assert :ok = ExternalCalendarChanges.apply_change_to_meeting(meeting, :modified)
 
       assert reload(meeting).calendar_sync_status == nil
-      refute_received {:email, _email}
+      refute_host_notice()
     end
 
     for state <- ~w(scheduled executing retryable) do
@@ -75,7 +90,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
         assert :ok = ExternalCalendarChanges.apply_change_to_meeting(meeting, :modified)
 
         assert reload(meeting).calendar_sync_status == nil
-        refute_received {:email, _email}
+        refute_host_notice()
       end
     end
 
@@ -86,8 +101,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
       assert :ok = ExternalCalendarChanges.apply_change_to_meeting(meeting, :modified)
 
       assert reload(meeting).calendar_sync_status == :externally_modified
-      organizer_email = meeting.organizer_email
-      assert_received {:email, %{to: [{_name, ^organizer_email}]}}
+      assert_host_notice(meeting)
     end
 
     # Neither wrote anything to the calendar, so nothing is still to land and
@@ -122,7 +136,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
       assert :ok = modified_from_read_at(integration, read_at)
 
       assert reload(meeting).calendar_sync_status == nil
-      refute_received {:email, _email}
+      refute_host_notice()
     end
 
     test "a write completed before the read does not", %{
@@ -135,8 +149,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesPendingWriteTest do
       assert :ok = modified_from_read_at(integration, read_at)
 
       assert reload(meeting).calendar_sync_status == :externally_modified
-      organizer_email = meeting.organizer_email
-      assert_received {:email, %{to: [{_name, ^organizer_email}]}}
+      assert_host_notice(meeting)
     end
 
     test "a write discarded after the read does not", %{
