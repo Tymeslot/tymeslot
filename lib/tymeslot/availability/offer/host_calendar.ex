@@ -34,8 +34,8 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   of the host's week does, so that reloading it costs no provider round trip.
 
   Either way the events come back with the bookability rule applied
-  (`Tymeslot.Availability.Bookability`): a read-only all-day event blocks the
-  host's time unless they treat it as free. The cached entry is stored with
+  (`Tymeslot.Availability.Bookability`): the host's "Treat as Busy" or
+  "Treat as Free" on an all-day event wins over its calendar. The cached entry is stored with
   the rule already applied; an override and a calendar's settings both call
   `Tymeslot.Availability.changed/1`, which drops it.
   """

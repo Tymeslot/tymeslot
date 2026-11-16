@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
     {:reply, reply, socket}
   end
 
-  # The preview's "Treat as" for a read-only all-day event (see `TreatAs`);
+  # The preview's "Treat as" for an all-day event (see `TreatAs`);
   # anything else it could not have sent is ignored.
   def handle("calendar:bookability", %{"id" => id, "busy" => busy}, socket)
       when is_binary(id) and busy in ["true", "false", "default"],

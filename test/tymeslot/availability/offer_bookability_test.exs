@@ -1,11 +1,12 @@
 defmodule Tymeslot.Availability.OfferBookabilityTest do
   @moduledoc """
-  What a guest can book around an all-day event on a read-only calendar.
+  What a guest can book around an all-day event, and the organiser's say
+  over it.
 
-  A holiday feed marks its days free, and they used to stay bookable. Now an
-  all-day event on a read-only calendar that blocks availability closes the
-  day even when marked free, and the organiser's "Treat as Free" opens it
-  again. Checked on the booking page (`Offer.slots_for_date/3`), in the
+  An all-day event counts as its calendar marks it, whether or not the
+  calendar takes writes: a colleague's free "WFH" day on a shared calendar
+  leaves the day open. The organiser's "Treat as Busy" closes such a day and
+  "Treat as Free" opens one its calendar marks busy. Checked on the booking page (`Offer.slots_for_date/3`), in the
   guest's week view (`Offer.slots_for_range/4`, which reads the calendar
   fresh), in the month view's day markers (`Offer.days_in_range/4`), in the
   calendar's bookable windows, and in the submit's own re-read
@@ -137,69 +138,58 @@ defmodule Tymeslot.Availability.OfferBookabilityTest do
     )
   end
 
-  test "a free all-day event on a read-only calendar closes the day", ctx do
+  test "a free all-day event on a read-only calendar leaves the day open", ctx do
     holiday(ctx)
-
-    assert page(ctx, ctx.date) == []
-    assert "11:00 AM" in page(ctx, Date.add(ctx.date, 7))
-  end
-
-  test "the calendar's bookable windows close the day with the page", ctx do
-    holiday(ctx)
-
-    assert {:ok, []} =
-             Availability.bookable_windows(ctx.user.id, ctx.meeting_type.id, ctx.date, ctx.date)
-  end
-
-  test "the week view closes the day, and Treat as Free opens it", ctx do
-    row = holiday(ctx)
-
-    assert week(ctx, ctx.date) == []
-
-    :ok = Bookability.set(ctx.user.id, ctx.integration.id, row.uid, false)
-
-    assert "11:00 AM" in week(ctx, ctx.date)
-  end
-
-  test "the month view marks the day closed, and Treat as Free opens it", ctx do
-    row = holiday(ctx)
-
-    refute month_day_open?(ctx, ctx.date)
-    assert month_day_open?(ctx, Date.add(ctx.date, 7))
-
-    :ok = Bookability.set(ctx.user.id, ctx.integration.id, row.uid, false)
-
-    assert month_day_open?(ctx, ctx.date)
-  end
-
-  test "the submit's re-check refuses the day as well", ctx do
-    holiday(ctx)
-
-    assert {:error, :slot_unavailable} = probe(ctx)
-  end
-
-  test "Treat as Free opens the day on the page, the windows and the re-check", ctx do
-    row = holiday(ctx)
-    assert page(ctx, ctx.date) == []
-
-    :ok = Bookability.set(ctx.user.id, ctx.integration.id, row.uid, false)
 
     assert "11:00 AM" in page(ctx, ctx.date)
 
     assert {:ok, [_window | _rest]} =
              Availability.bookable_windows(ctx.user.id, ctx.meeting_type.id, ctx.date, ctx.date)
 
+    assert "11:00 AM" in week(ctx, ctx.date)
+    assert month_day_open?(ctx, ctx.date)
     assert :ok = probe(ctx)
   end
 
-  test "clearing the override closes the day again", ctx do
+  test "Treat as Busy closes the day on the page, the windows and the re-check", ctx do
     row = holiday(ctx)
-    :ok = Bookability.set(ctx.user.id, ctx.integration.id, row.uid, false)
-    assert "11:00 AM" in page(ctx, ctx.date)
+
+    :ok = Bookability.set(ctx.user.id, ctx.integration.id, row.uid, true)
+
+    assert page(ctx, ctx.date) == []
+    assert "11:00 AM" in page(ctx, Date.add(ctx.date, 7))
+
+    assert {:ok, []} =
+             Availability.bookable_windows(ctx.user.id, ctx.meeting_type.id, ctx.date, ctx.date)
+
+    assert {:error, :slot_unavailable} = probe(ctx)
+  end
+
+  test "Treat as Busy closes the day in the week view", ctx do
+    row = holiday(ctx)
+
+    :ok = Bookability.set(ctx.user.id, ctx.integration.id, row.uid, true)
+
+    assert week(ctx, ctx.date) == []
+  end
+
+  test "Treat as Busy marks the day closed in the month view", ctx do
+    row = holiday(ctx)
+
+    :ok = Bookability.set(ctx.user.id, ctx.integration.id, row.uid, true)
+
+    refute month_day_open?(ctx, ctx.date)
+    assert month_day_open?(ctx, Date.add(ctx.date, 7))
+  end
+
+  test "clearing the override opens the day again", ctx do
+    row = holiday(ctx)
+    :ok = Bookability.set(ctx.user.id, ctx.integration.id, row.uid, true)
+    assert page(ctx, ctx.date) == []
 
     :ok = Bookability.clear(ctx.user.id, ctx.integration.id, row.uid)
 
-    assert page(ctx, ctx.date) == []
+    assert "11:00 AM" in page(ctx, ctx.date)
   end
 
   test "Treat as Free frees an all-day event its calendar marks busy", ctx do
@@ -217,6 +207,16 @@ defmodule Tymeslot.Availability.OfferBookabilityTest do
     holiday(ctx, %{provider_calendar_id: "work"})
 
     assert "11:00 AM" in page(ctx, ctx.date)
+  end
+
+  test "Treat as Free frees a busy all-day event on a writable calendar", ctx do
+    row = holiday(ctx, %{provider_calendar_id: "work", transparency: "opaque"})
+    assert page(ctx, ctx.date) == []
+
+    :ok = Bookability.set(ctx.user.id, ctx.integration.id, row.uid, false)
+
+    assert "11:00 AM" in page(ctx, ctx.date)
+    assert :ok = probe(ctx)
   end
 
   test "Treat as Busy closes a day a writable calendar marks free", ctx do
@@ -239,8 +239,9 @@ defmodule Tymeslot.Availability.OfferBookabilityTest do
     assert "11:00 AM" in page(ctx, ctx.date)
   end
 
-  test "a read-only calendar set not to block keeps its days open", ctx do
-    holiday(ctx)
+  test "Treat as Busy on a calendar set not to block keeps its days open", ctx do
+    row = holiday(ctx)
+    :ok = Bookability.set(ctx.user.id, ctx.integration.id, row.uid, true)
 
     ctx.integration
     |> Changeset.change(
@@ -315,7 +316,7 @@ defmodule Tymeslot.Availability.OfferBookabilityTest do
     assert :ok = probe(ctx)
   end
 
-  test "an owner east of UTC: the re-check refuses the early hours of their holiday", ctx do
+  test "an owner east of UTC: the re-check refuses the early hours of a busy day", ctx do
     %{user: user, profile: profile} =
       create_bookable_profile(timezone: "Pacific/Auckland", days: Enum.to_list(1..7))
 
@@ -338,10 +339,10 @@ defmodule Tymeslot.Availability.OfferBookabilityTest do
     assert Date.compare(DateTime.to_date(DateTime.shift_zone!(start, "Etc/UTC")), owner.date) ==
              :lt
 
-    assert {:error, :slot_unavailable} = probe_at(owner, start)
-
-    :ok = Bookability.set(user.id, integration.id, row.uid, false)
-
     assert :ok = probe_at(owner, start)
+
+    :ok = Bookability.set(user.id, integration.id, row.uid, true)
+
+    assert {:error, :slot_unavailable} = probe_at(owner, start)
   end
 end

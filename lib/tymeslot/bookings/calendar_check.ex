@@ -27,12 +27,12 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   `Tymeslot.Meetings.CalendarEventLink` owns the rule for which event that is,
   because the identifier the two sides share differs by provider family.
 
-  ## Read-only all-day events
+  ## "Treat as" choices
 
   The fresh events go through the same bookability rule as the booking page
-  (`Tymeslot.Availability.Bookability.apply_to_busy/3`), so a holiday on a
-  read-only calendar refuses here exactly when the page leaves it out, and an
-  event the organiser treats as free is not a clash.
+  (`Tymeslot.Availability.Bookability.apply_to_busy/3`), so an all-day event
+  the organiser treats as busy refuses here exactly when the page leaves it
+  out, and one they treat as free is not a clash.
   """
 
   require Logger

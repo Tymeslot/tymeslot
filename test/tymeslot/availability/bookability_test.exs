@@ -45,16 +45,31 @@ defmodule Tymeslot.Availability.BookabilityTest do
     )
   end
 
-  describe "busy_for_bookings?/3" do
-    test "a free all-day event on a read-only calendar is busy" do
-      assert Bookability.busy_for_bookings?(event(%{}), true, %{})
+  describe "busy_for_bookings?/2" do
+    test "without an override, a free all-day event is free" do
+      refute Bookability.busy_for_bookings?(event(%{}), %{})
     end
 
-    test "the same event on a writable calendar is free" do
-      refute Bookability.busy_for_bookings?(event(%{}), false, %{})
+    test "without an override, a busy all-day event is busy" do
+      assert Bookability.busy_for_bookings?(event(%{transparency: :opaque}), %{})
     end
 
-    test "a free timed event on a read-only calendar is free" do
+    test "a cancelled all-day event is free" do
+      refute Bookability.busy_for_bookings?(
+               event(%{transparency: :opaque, status: :cancelled}),
+               %{}
+             )
+    end
+
+    test "an override on an all-day event wins either way" do
+      free = event(%{})
+      busy = event(%{transparency: :opaque})
+
+      assert Bookability.busy_for_bookings?(free, %{{1, "event-1"} => true})
+      refute Bookability.busy_for_bookings?(busy, %{{1, "event-1"} => false})
+    end
+
+    test "an override on a timed event does not reach bookings" do
       timed =
         event(%{
           all_day: false,
@@ -64,20 +79,7 @@ defmodule Tymeslot.Availability.BookabilityTest do
           end_at: ~U[2026-12-25 11:00:00Z]
         })
 
-      refute Bookability.busy_for_bookings?(timed, true, %{})
-    end
-
-    test "a cancelled all-day event on a read-only calendar is free" do
-      refute Bookability.busy_for_bookings?(event(%{status: :cancelled}), true, %{})
-    end
-
-    test "an override wins either way" do
-      holiday = event(%{})
-      busy = event(%{transparency: :opaque})
-
-      refute Bookability.busy_for_bookings?(holiday, true, %{{1, "event-1"} => false})
-      assert Bookability.busy_for_bookings?(holiday, false, %{{1, "event-1"} => true})
-      refute Bookability.busy_for_bookings?(busy, false, %{{1, "event-1"} => false})
+      refute Bookability.busy_for_bookings?(timed, %{{1, "event-1"} => true})
     end
   end
 
@@ -201,28 +203,5 @@ defmodule Tymeslot.Availability.BookabilityTest do
     %{uid: uid, calendar_integration_id: integration.id, provider_event_id: "evt-" <> uid}
     |> event()
     |> ProviderCalendarEventSchema.from_calendar_event()
-  end
-
-  describe "read_only?/2" do
-    test "a subscribed feed and a calendar the provider marks read-only are read-only" do
-      feed = insert(:calendar_integration, provider: "ics_url")
-
-      google =
-        insert(:calendar_integration,
-          provider: "google",
-          calendar_list: [
-            %{"id" => "holidays", "selected" => true, "read_only" => true},
-            %{"id" => "work", "selected" => true}
-          ]
-        )
-
-      assert Bookability.read_only?(event(%{calendar_integration_id: feed.id}), feed)
-      assert Bookability.read_only?(event(%{calendar_integration_id: google.id}), google)
-
-      refute Bookability.read_only?(
-               event(%{calendar_integration_id: google.id, provider_calendar_id: "work"}),
-               google
-             )
-    end
   end
 end
