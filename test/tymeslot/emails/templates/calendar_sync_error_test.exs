@@ -145,8 +145,10 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
         {:malformed_response, "could not be reached"}
       ]
 
-      for {error_reason, sentence} <- described do
-        email = CalendarSyncError.render(meeting, error_reason)
+      # Both as the write path raises it and as an email job stores it.
+      for {error_reason, sentence} <- described,
+          given <- [error_reason, CalendarSyncError.storable_reason(error_reason)] do
+        email = CalendarSyncError.render(meeting, given)
         raw = inspect(error_reason)
 
         assert email.html_body =~ sentence
@@ -154,6 +156,30 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
         refute email.html_body =~ raw
         refute email.text_body =~ raw
       end
+    end
+  end
+
+  describe "CalendarSyncError.storable_reason/1" do
+    test "masks addresses and credentials in a provider's error" do
+      reason = {:http_error, 401, %{"body" => "token=abc123secret for jane.doe@example.com"}}
+
+      stored = CalendarSyncError.storable_reason(reason)
+
+      assert stored =~ "401"
+      refute stored =~ "abc123secret"
+      refute stored =~ "jane.doe@example.com"
+    end
+
+    test "masks a provider message given as text, and keeps it readable" do
+      stored = CalendarSyncError.storable_reason("Quota exceeded for jane.doe@example.com")
+
+      assert stored =~ "Quota exceeded for j***@example.com"
+    end
+
+    test "bounds a long provider message" do
+      stored = CalendarSyncError.storable_reason(String.duplicate("x", 10_000))
+
+      assert byte_size(stored) < 2_100
     end
   end
 
