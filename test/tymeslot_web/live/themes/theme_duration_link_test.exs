@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeDurationLinkTest do
 
   import Mox
   import Phoenix.LiveViewTest
+  import Tymeslot.Factory, only: [insert: 2]
   import Tymeslot.JourneyFixtureHelpers, only: [seed_organiser: 3, live_assigns: 1]
 
   @moduletag :themes
@@ -116,6 +117,46 @@ defmodule TymeslotWeb.Live.Themes.ThemeDurationLinkTest do
         assert meeting.status == :awaiting_approval
         assert meeting.duration == 45
       end
+    end
+  end
+
+  # A link shared before the type moved off the profile's own page, or one
+  # naming a type only its own link reaches, goes on to that type's address,
+  # as the type's own link would, keeping the day it named.
+  describe "a ?duration= link naming a type the address does not offer" do
+    setup do
+      seed_organiser("1", "dl-elsewhere",
+        types: [
+          [name: "Quick Chat", duration_minutes: 30],
+          [name: "Workshop", slug: "workshop", duration_minutes: 60, is_private: true],
+          [name: "Secret", slug: "secret", duration_minutes: 45, is_private: true]
+        ]
+      )
+    end
+
+    test "goes on to the booking page that lists the type", %{
+      conn: conn,
+      profile: profile,
+      meeting_types: [_chat, workshop, _secret]
+    } do
+      page = insert(:booking_page, profile: profile, slug: "teams")
+      insert(:booking_page_meeting_type, booking_page: page, meeting_type: workshop)
+      date = iso_in(3)
+
+      assert {:error, {:redirect, %{to: to}}} =
+               live(conn, "/dl-elsewhere?duration=workshop&date=#{date}&step=schedule")
+
+      assert to == "/dl-elsewhere/teams/workshop?date=#{date}"
+    end
+
+    test "goes on to the type's own link when no page lists it", %{conn: conn} do
+      assert {:error, {:redirect, %{to: "/dl-elsewhere/secret"}}} =
+               live(conn, "/dl-elsewhere?duration=secret")
+    end
+
+    test "names no type the host does not have, and stays on the page", %{conn: conn} do
+      assert {:ok, view, _html} = live(conn, "/dl-elsewhere?duration=no-such-type")
+      assert live_assigns(view)[:meeting_type] == nil
     end
   end
 end

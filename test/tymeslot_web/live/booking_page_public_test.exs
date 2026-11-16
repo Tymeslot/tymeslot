@@ -384,13 +384,14 @@ defmodule TymeslotWeb.BookingPagePublicTest do
       assert :sys.get_state(view.pid).socket.assigns.meeting_type.name == "ISO audit"
     end
 
-    test "is not taken on the username's page when it is private", %{conn: conn, user: user} do
+    test "is not taken on the username's page when it is private, but sent to its own link", %{
+      conn: conn,
+      user: user
+    } do
       insert(:meeting_type, user: user, name: "Hidden review", is_private: true)
 
-      {:ok, view, _html} =
-        live(conn, ~p"/joern?duration=hidden-review&step=schedule&timezone=#{@timezone}")
-
-      assert is_nil(:sys.get_state(view.pid).socket.assigns.meeting_type)
+      assert {:error, {:redirect, %{to: "/joern/hidden-review?timezone=" <> _zone}}} =
+               live(conn, ~p"/joern?duration=hidden-review&step=schedule&timezone=#{@timezone}")
     end
 
     test "leaves a private type's own link working", %{conn: conn, user: user} do
