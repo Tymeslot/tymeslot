@@ -5,7 +5,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
   undelivered-update notice.
   `CalendarSurface` routes every event in `events/0` to `handle/3`, which
   hands it to the module `@routes` names; each of those exposes the same
-  `handle/3` and parses its params again, ignoring anything else.
+  `handle/3` and parses its params again, ignoring anything else. So does
+  `handle/3` itself: the surface's catch-all routes here every event it has
+  no clause for, including one of its own sent without the params that clause
+  needs, and a stale or crafted client must not take the dashboard down.
 
   `defaults/1` assigns the power layer's state when the surface mounts.
   """
@@ -53,7 +56,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
   def events, do: Map.keys(@routes)
 
   @spec handle(String.t(), map(), socket()) :: {:noreply, socket()} | {:reply, map(), socket()}
-  def handle(event, params, socket), do: Map.fetch!(@routes, event).handle(event, params, socket)
+  def handle(event, params, socket) do
+    case Map.fetch(@routes, event) do
+      {:ok, module} -> module.handle(event, params, socket)
+      :error -> {:noreply, socket}
+    end
+  end
 
   @doc "The `start_async/3` names `async/3` answers."
   @spec async_keys() :: [atom()]
