@@ -17,7 +17,8 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
       and multiple events;
     * the host's rules - a buffer before and a buffer after, drawn
       independently, a minimum notice, a meeting type with and without its own
-      slot interval, and a daily booking limit with bookings already counting
+      slot interval (every booking is made under a type: `Create` refuses one
+      without), and a daily booking limit with bookings already counting
       against it.
 
   It asserts the safety-critical direction of the invariant: **any slot the
@@ -111,7 +112,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
               duration: "#{duration}min",
               user_timezone: timezone,
               organizer_user_id: host.user.id,
-              meeting_type_id: host.meeting_type && host.meeting_type.id
+              meeting_type_id: host.meeting_type.id
             },
             %{
               "name" => "Property Attendee",
@@ -133,7 +134,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
   end
 
   # The host the booking page reads: a weekday schedule carrying the generated
-  # buffer and notice, an optional meeting type with its own slot interval, and
+  # buffer and notice, a meeting type with or without its own slot interval, and
   # a daily booking limit with bookings already counting against it.
   defp create_host(timezone, duration, rules, target_date) do
     %{user: user, profile: profile, schedule: schedule} =
@@ -168,8 +169,6 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
     %{user: user, profile: profile, meeting_type: meeting_type(user, duration, rules)}
   end
 
-  defp meeting_type(_user, _duration, %{slot_interval_minutes: :no_meeting_type}), do: nil
-
   defp meeting_type(user, duration, %{slot_interval_minutes: interval}) do
     insert(:meeting_type,
       user: user,
@@ -179,8 +178,8 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
   end
 
   # Every scheduling rule the page's config carries beyond the schedule itself.
-  # `:no_meeting_type` covers the ad-hoc booking, where there is no type to
-  # resolve a duration or an interval from. The 480-hour notice is longer than
+  # A `nil` interval is a type without one of its own, which falls back to the
+  # duration-locked grid. The 480-hour notice is longer than
   # the distance to the target date, so it empties the day: like a day at its
   # booking cap, that is what makes the rule load-bearing rather than merely
   # present.
@@ -189,7 +188,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
           buffer_before_minutes <- member_of([0, 10, 30]),
           buffer_after_minutes <- member_of([0, 15, 30]),
           min_advance_hours <- member_of([0, 24, 48, 480]),
-          slot_interval_minutes <- member_of([:no_meeting_type, nil, 15, 30]),
+          slot_interval_minutes <- member_of([nil, 15, 30]),
           {max_bookings_per_day, existing_bookings} <- booking_limit()
         ) do
       %{

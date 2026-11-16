@@ -221,6 +221,7 @@ defmodule Tymeslot.Availability.OfferBookedSlotsTest do
       # last date or it offers a slot the submit, which reads the slot's own
       # range, then refuses.
       host = around_the_clock_host()
+      meeting_type = insert(:meeting_type, user: host.user, duration_minutes: 1440)
       last_date = Date.add(Date.utc_today(), host.schedule.advance_booking_days)
       event_start = DateTime.new!(Date.add(last_date, 1), ~T[00:05:00], "Etc/UTC")
 
@@ -251,7 +252,7 @@ defmodule Tymeslot.Availability.OfferBookedSlotsTest do
                    duration: "1440min",
                    user_timezone: "Etc/UTC",
                    organizer_user_id: host.user.id,
-                   meeting_type_id: nil
+                   meeting_type_id: meeting_type.id
                  },
                  %{"name" => "Late", "email" => "late@example.com", "message" => ""}
                )

@@ -35,24 +35,28 @@ defmodule Tymeslot.Bookings.LegacyOrganiserEmailTest do
     %{user: user} = create_always_bookable_profile(timezone: "Etc/UTC")
     # Written past the changeset, as an account created before the rules was.
     user = user |> Changeset.change(email: @legacy_address) |> Repo.update!()
-    %{user: user}
+    %{user: user, meeting_type: insert(:meeting_type, user: user, duration_minutes: 60)}
   end
 
-  defp booking_params(user) do
+  defp booking_params(user, meeting_type) do
     %{
       date: Date.add(Date.utc_today(), 5),
       time: "2:00 PM",
       duration: "60min",
       user_timezone: "Etc/UTC",
-      organizer_user_id: user.id
+      organizer_user_id: user.id,
+      meeting_type_id: meeting_type.id
     }
   end
 
   defp form_data(email), do: %{"name" => "Test Attendee", "email" => email, "message" => "Hi"}
 
-  test "a visitor's booking succeeds under the host's stored address", %{user: user} do
+  test "a visitor's booking succeeds under the host's stored address", %{
+    user: user,
+    meeting_type: meeting_type
+  } do
     assert {:ok, meeting} =
-             Create.execute(booking_params(user), form_data("attendee@test.com"))
+             Create.execute(booking_params(user, meeting_type), form_data("attendee@test.com"))
 
     assert Repo.get!(MeetingSchema, meeting.id).organizer_email == @legacy_address
   end
@@ -77,9 +81,15 @@ defmodule Tymeslot.Bookings.LegacyOrganiserEmailTest do
     assert Repo.get!(MeetingSchema, meeting.id).organizer_email == @legacy_address
   end
 
-  test "an attendee address outside the format rules is still refused", %{user: user} do
+  test "an attendee address outside the format rules is still refused", %{
+    user: user,
+    meeting_type: meeting_type
+  } do
     assert {:error, _reason} =
-             Create.execute(booking_params(user), form_data(~s("guest"@example.com)))
+             Create.execute(
+               booking_params(user, meeting_type),
+               form_data(~s("guest"@example.com))
+             )
 
     assert Repo.all(MeetingSchema) == []
   end

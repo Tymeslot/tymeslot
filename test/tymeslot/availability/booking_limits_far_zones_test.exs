@@ -41,6 +41,7 @@ defmodule Tymeslot.Availability.BookingLimitsFarZonesTest do
     # Tuesday in Kiritimati (UTC+14).
     host = capped_host("Pacific/Pago_Pago", 7)
     booker = "Pacific/Kiritimati"
+    meeting_type = insert(:meeting_type, user: host.user, duration_minutes: 30)
     date = ~D[2027-02-02]
 
     assert offered(host.profile, date, 30, timezone: booker) == ["12:00 AM", "12:30 AM"]
@@ -50,7 +51,7 @@ defmodule Tymeslot.Availability.BookingLimitsFarZonesTest do
 
     assert offered(host.profile, date, 30, timezone: booker) == []
     refute available_day?(host, date, booker)
-    assert {:error, :booking_limit_reached} = book(host, date, "12:30 AM", booker)
+    assert {:error, :booking_limit_reached} = book(host, meeting_type, date, "12:30 AM", booker)
   end
 
   test "a booker far west of the host sees the host's full Monday as full" do
@@ -58,6 +59,7 @@ defmodule Tymeslot.Availability.BookingLimitsFarZonesTest do
     # in Pago Pago.
     host = capped_host("Pacific/Kiritimati", 1)
     booker = "Pacific/Pago_Pago"
+    meeting_type = insert(:meeting_type, user: host.user, duration_minutes: 30)
     date = ~D[2027-01-30]
 
     assert offered(host.profile, date, 30, timezone: booker) == ["11:00 PM", "11:30 PM"]
@@ -67,7 +69,7 @@ defmodule Tymeslot.Availability.BookingLimitsFarZonesTest do
 
     assert offered(host.profile, date, 30, timezone: booker) == []
     refute available_day?(host, date, booker)
-    assert {:error, :booking_limit_reached} = book(host, date, "11:30 PM", booker)
+    assert {:error, :booking_limit_reached} = book(host, meeting_type, date, "11:30 PM", booker)
   end
 
   # One booking a day, and one hour of hours on `day_of_week`, from 23:00 to
@@ -113,7 +115,8 @@ defmodule Tymeslot.Availability.BookingLimitsFarZonesTest do
     Map.fetch!(days, Date.to_iso8601(date))
   end
 
-  defp book(host, date, time, booker) do
+  # The cap is the account's, on the profile; the type adds no limit of its own.
+  defp book(host, meeting_type, date, time, booker) do
     Create.execute(
       %{
         date: date,
@@ -121,7 +124,7 @@ defmodule Tymeslot.Availability.BookingLimitsFarZonesTest do
         duration: "30min",
         user_timezone: booker,
         organizer_user_id: host.user.id,
-        meeting_type_id: nil
+        meeting_type_id: meeting_type.id
       },
       %{"name" => "Far Away", "email" => "far@example.com", "message" => ""}
     )

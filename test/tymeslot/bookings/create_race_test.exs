@@ -37,7 +37,12 @@ defmodule Tymeslot.Bookings.CreateRaceTest do
       {:ok, []}
     end)
 
-    user = unboxed(fn -> create_always_bookable_profile().user end)
+    {user, meeting_type} =
+      unboxed(fn ->
+        user = create_always_bookable_profile().user
+        {user, insert(:meeting_type, user: user, duration_minutes: 60)}
+      end)
+
     last_job_id = unboxed(fn -> Repo.aggregate(Oban.Job, :max, :id) || 0 end)
 
     on_exit(fn ->
@@ -51,11 +56,16 @@ defmodule Tymeslot.Bookings.CreateRaceTest do
 
     RaceConductor.attach_parking()
 
-    %{user: user}
+    %{user: user, meeting_type: meeting_type}
   end
 
   test "two bookers of the same start: the loser is told the slot is taken", ctx do
-    params = build_meeting_params(ctx.user, %{date: Date.add(Date.utc_today(), 5), time: "14:00"})
+    params =
+      build_meeting_params(ctx.user, %{
+        date: Date.add(Date.utc_today(), 5),
+        time: "14:00",
+        meeting_type_id: ctx.meeting_type.id
+      })
 
     results =
       race([

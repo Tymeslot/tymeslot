@@ -21,13 +21,16 @@ defmodule Tymeslot.Bookings.CreateTest do
     # An always-open host: these tests are about the calendar conflict check,
     # so the schedule must never be the reason a booking is refused.
     %{user: user} = create_always_bookable_profile(timezone: "America/New_York")
+    # A plain type with no rules of its own, so it adds no reason to refuse.
+    meeting_type = insert(:meeting_type, user: user, duration_minutes: 60)
 
     meeting_params = %{
       date: Date.add(Date.utc_today(), 1),
       time: "14:00",
       duration: "60min",
       user_timezone: "America/New_York",
-      organizer_user_id: user.id
+      organizer_user_id: user.id,
+      meeting_type_id: meeting_type.id
     }
 
     form_data = %{
@@ -36,7 +39,12 @@ defmodule Tymeslot.Bookings.CreateTest do
       "message" => "Test message"
     }
 
-    %{user: user, meeting_params: meeting_params, form_data: form_data}
+    %{
+      user: user,
+      meeting_type: meeting_type,
+      meeting_params: meeting_params,
+      form_data: form_data
+    }
   end
 
   # Helper functions for MockCalendar responses
@@ -334,6 +342,7 @@ defmodule Tymeslot.Bookings.CreateTest do
 
     test "ignores video_integration_id that does not belong to organizer", %{
       user: user,
+      meeting_type: meeting_type,
       form_data: form_data
     } do
       other_user = insert(:user)
@@ -346,16 +355,17 @@ defmodule Tymeslot.Bookings.CreateTest do
       meeting_params = %{
         date: Date.add(Date.utc_today(), 1),
         time: "11:00",
-        duration: "30min",
+        duration: "60min",
         user_timezone: "UTC",
         organizer_user_id: user.id,
+        meeting_type_id: meeting_type.id,
         video_integration_id: other_video_integration.id
       }
 
       assert {:ok, meeting} = Create.execute(meeting_params, form_data)
 
       assert meeting.video_integration_id == nil
-      assert meeting.meeting_type == "General Meeting"
+      assert meeting.meeting_type == meeting_type.name
     end
 
     test "fails when meeting type is inactive", %{
@@ -475,6 +485,7 @@ defmodule Tymeslot.Bookings.CreateTest do
 
     test "rejects booking when a required custom field answer is missing", %{
       user: user,
+      meeting_type: meeting_type,
       form_data: form_data
     } do
       set_calendar_empty()
@@ -491,9 +502,10 @@ defmodule Tymeslot.Bookings.CreateTest do
       meeting_params = %{
         date: Date.add(Date.utc_today(), 1),
         time: "15:00",
-        duration: "30min",
+        duration: "60min",
         user_timezone: "UTC",
         organizer_user_id: user.id,
+        meeting_type_id: meeting_type.id,
         custom_fields_snapshot: snapshot,
         # No answer provided for the required field
         custom_field_answers: %{}
@@ -511,6 +523,7 @@ defmodule Tymeslot.Bookings.CreateTest do
 
     test "accepts booking when all required custom field answers are present", %{
       user: user,
+      meeting_type: meeting_type,
       form_data: form_data
     } do
       set_calendar_empty()
@@ -526,10 +539,11 @@ defmodule Tymeslot.Bookings.CreateTest do
 
       meeting_params = %{
         date: Date.add(Date.utc_today(), 1),
-        time: "15:30",
-        duration: "30min",
+        time: "16:00",
+        duration: "60min",
         user_timezone: "UTC",
         organizer_user_id: user.id,
+        meeting_type_id: meeting_type.id,
         custom_fields_snapshot: snapshot,
         custom_field_answers: %{"field-1" => "Acme Corp"}
       }
