@@ -45,7 +45,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.MeetingType do
   # its rules.
   @impl Fact
   def known?(%{meeting_type: %{}}), do: true
-  def known?(assigns), do: not resolvable?(assigns) and selection(assigns) == :ok
+
+  def known?(assigns),
+    do: not StepEntry.resolves_meeting_type?(assigns) and selection(assigns) == :ok
 
   @impl Fact
   def events, do: [:select_duration]
@@ -144,11 +146,6 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.MeetingType do
   # the visitor chooses.
   defp pick([only], :only), do: only
   defp pick(_meeting_types, :only), do: nil
-
-  # Whether this page can resolve a meeting type at all, as
-  # `StepEntry.maybe_assign_meeting_type/2` does: only on an organiser's page.
-  defp resolvable?(assigns),
-    do: is_binary(assigns[:username_context]) and is_integer(assigns[:organizer_user_id])
 
   defp selection(assigns),
     do:
