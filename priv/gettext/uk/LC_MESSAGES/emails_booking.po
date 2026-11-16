@@ -283,11 +283,6 @@ msgstr "КВИТАНЦІЯ ПРО ОПЛАТУ:"
 msgid "PAYMENT RECEIVED:"
 msgstr "ОПЛАТУ ОТРИМАНО:"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "PREPARATION REMINDERS:"
-msgstr "НАГАДУВАННЯ ЩОДО ПІДГОТОВКИ:"
-
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Payment receipt"
@@ -302,11 +297,6 @@ msgstr "Раніше було заплановано на"
 #, elixir-autogen, elixir-format
 msgid "QUESTIONS?"
 msgstr "ЗАПИТАННЯ?"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "QUICK PREP:"
-msgstr "ШВИДКА ПІДГОТОВКА:"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
@@ -630,61 +620,6 @@ msgstr "Те саме посилання, новий час завершення
 #, elixir-autogen, elixir-format
 msgid "The meeting now ends at %{time}."
 msgstr "Зустріч тепер закінчується о %{time}."
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Agenda ready"
-msgstr "Порядок денний готовий"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Camera & mic ready"
-msgstr "Камера та мікрофон готові"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Location confirmed"
-msgstr "Місце підтверджено"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Materials prepared"
-msgstr "Матеріали підготовлено"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "No reminder emails are scheduled for this appointment"
-msgstr "Для цієї зустрічі не заплановано нагадувань електронною поштою"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Preparation reminders"
-msgstr "Нагадування щодо підготовки"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Prepare an agenda if needed"
-msgstr "Підготуйте порядок денний, якщо потрібно"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Quick prep"
-msgstr "Швидка підготовка"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Review any relevant materials"
-msgstr "Перегляньте відповідні матеріали"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Set a reminder %{time} before"
-msgstr "Налаштуйте нагадування за %{time} до початку"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Test video/audio setup if virtual"
-msgstr "Перевірте налаштування відео/аудіо, якщо зустріч онлайн"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format

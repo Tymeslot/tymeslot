@@ -183,6 +183,17 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
   end
 
+  describe "format_reminder_label/2" do
+    # The label follows a preposition ("за 1 годину до початку"), so a case
+    # language takes the accusative, not a bare duration's nominative.
+    test "inflects the lead time for the sentence it goes into" do
+      assert Formatting.format_reminder_label(%{value: 1, unit: "hours"}, "uk") == "1 годину"
+      assert Formatting.format_duration(60, "uk") != "1 годину"
+      assert Formatting.format_reminder_label(%{value: 1, unit: "days"}, "uk") == "1 день"
+      assert Formatting.format_reminder_label(%{value: 30, unit: "minutes"}, "en") == "30 minutes"
+    end
+  end
+
   describe "format_duration/2" do
     test "formats durations in English" do
       assert Formatting.format_duration(1, "en") == "1 minute"

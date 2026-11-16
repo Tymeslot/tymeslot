@@ -283,11 +283,6 @@ msgstr "RECIBO DE PAGAMENTO:"
 msgid "PAYMENT RECEIVED:"
 msgstr "PAGAMENTO RECEBIDO:"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "PREPARATION REMINDERS:"
-msgstr "LEMBRETES DE PREPARAÇÃO:"
-
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Payment receipt"
@@ -302,11 +297,6 @@ msgstr "Horário anterior"
 #, elixir-autogen, elixir-format
 msgid "QUESTIONS?"
 msgstr "DÚVIDAS?"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "QUICK PREP:"
-msgstr "PREPARAÇÃO RÁPIDA:"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #, elixir-autogen, elixir-format
@@ -630,61 +620,6 @@ msgstr "Mesmo link, novo horário de término"
 #, elixir-autogen, elixir-format
 msgid "The meeting now ends at %{time}."
 msgstr "A reunião agora termina às %{time}."
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Agenda ready"
-msgstr "Pauta pronta"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Camera & mic ready"
-msgstr "Câmera e microfone prontos"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Location confirmed"
-msgstr "Local confirmado"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Materials prepared"
-msgstr "Materiais preparados"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "No reminder emails are scheduled for this appointment"
-msgstr "Nenhum e-mail de lembrete está agendado para este compromisso"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Preparation reminders"
-msgstr "Lembretes de preparação"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Prepare an agenda if needed"
-msgstr "Prepare uma pauta, se precisar"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Quick prep"
-msgstr "Preparação rápida"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Review any relevant materials"
-msgstr "Revise os materiais relevantes"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Set a reminder %{time} before"
-msgstr "Marque um lembrete %{time} antes"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Test video/audio setup if virtual"
-msgstr "Teste vídeo e áudio, se for on-line"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
 #, elixir-autogen, elixir-format

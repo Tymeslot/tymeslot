@@ -160,11 +160,6 @@ msgstr "Teilnehmer"
 msgid "in %{label}"
 msgstr "in %{label}"
 
-#: lib/tymeslot/emails/appointment_builder.ex
-#, elixir-autogen, elixir-format
-msgid "in 30 minutes"
-msgstr "in 30 Minuten"
-
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "minute"
@@ -553,11 +548,12 @@ msgid "%{name} has removed you from an event."
 msgstr "%{name} hat Sie aus einem Termin entfernt."
 
 #: lib/tymeslot/emails/shared/calendar_event_content.ex
+#: lib/tymeslot/emails/shared/meeting/description.ex
 #, elixir-autogen, elixir-format
 msgid "DESCRIPTION:"
 msgstr "BESCHREIBUNG:"
 
-#: lib/tymeslot/emails/shared/calendar_event_content.ex
+#: lib/tymeslot/emails/shared/meeting/description.ex
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr "Beschreibung"

@@ -13,7 +13,8 @@ defmodule Tymeslot.Emails.Shared.CalendarEventContent do
   """
 
   alias Tymeslot.CalendarGrid.EventVideo
-  alias Tymeslot.Emails.Shared.{Callouts, Cards, MjmlEmail, Sanitise}
+  alias Tymeslot.Emails.Shared.{Callouts, MjmlEmail, Sanitise}
+  alias Tymeslot.Emails.Shared.Meeting.Description
   alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Integrations.Calendar.Recurrence.Summary
 
@@ -70,17 +71,7 @@ defmodule Tymeslot.Emails.Shared.CalendarEventContent do
   nil when nothing is left.
   """
   @spec description(map()) :: String.t() | nil
-  def description(details) do
-    text =
-      details
-      |> Map.get(:description)
-      |> EventVideo.without_join_lines()
-
-    case text && text |> HtmlSanitizeEx.strip_tags() |> String.trim() do
-      "" -> nil
-      stripped -> stripped
-    end
-  end
+  defdelegate description(details), to: Description, as: :text
 
   @doc """
   How a repeating event repeats, in the current Gettext locale ("Repeats
@@ -107,13 +98,7 @@ defmodule Tymeslot.Emails.Shared.CalendarEventContent do
         summary -> Callouts.alert_box(intent, summary)
       end
 
-    description_html =
-      case description(details) do
-        nil -> ""
-        text -> Cards.message_content_card(dgettext("emails", "Description"), text)
-      end
-
-    repeats_html <> "\n" <> description_html
+    repeats_html <> "\n" <> Description.section(details)
   end
 
   @doc """

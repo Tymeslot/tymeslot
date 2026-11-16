@@ -243,6 +243,35 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       assert subjects["attendee@example.com"] =~ "Appointment Confirmed"
     end
 
+    # The meeting type's description is where the host says what to bring or
+    # prepare; it is copied onto the meeting at booking and has to reach both
+    # parties' emails from there.
+    test "carries the meeting type's description into both parties' emails", %{
+      meeting_type: meeting_type,
+      meeting_params: meeting_params,
+      form_data: form_data
+    } do
+      meeting_type
+      |> Changeset.change(description: "Bring last quarter's numbers")
+      |> Repo.update!()
+
+      assert {:ok, meeting} = Create.execute(meeting_params, form_data)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_confirmation_emails",
+                 "meeting_id" => meeting.id
+               })
+
+      assert_received {:email, one}
+      assert_received {:email, other}
+
+      for email <- [one, other] do
+        assert email.html_body =~ "Bring last quarter&#39;s numbers"
+        assert email.text_body =~ "DESCRIPTION:\nBring last quarter's numbers"
+      end
+    end
+
     # Both copies are sent from the instance's own, often no-reply, address,
     # so a reply only reaches a person through Reply-To.
     test "lets each party reply to the other, not to the instance's address", %{
