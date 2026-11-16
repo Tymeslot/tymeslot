@@ -118,10 +118,10 @@ defmodule Tymeslot.CalendarGrid.MeetingParamsTest do
     assert String.length(note) == 2000
   end
 
-  test "rate_limit/1 lets 20 meetings through, then refuses" do
+  test "rate_limit/1 lets 10 meetings through, then refuses" do
     user_id = System.unique_integer([:positive])
 
-    for _n <- 1..20, do: assert(MeetingParams.rate_limit(user_id) == :ok)
+    for _n <- 1..10, do: assert(MeetingParams.rate_limit(user_id) == :ok)
 
     assert {:error, :rate_limited, _message} = MeetingParams.rate_limit(user_id)
   end
