@@ -75,7 +75,10 @@ defmodule Tymeslot.Precommit.Runner do
   `mix precommit --affected` drops the steps a diff cannot reach (see
   `Tymeslot.Precommit.Affected`) and passes them as `:skipped`, each with its
   reason. The summary lists them after the steps that ran, so a narrowed run
-  can never read as the full gate.
+  can never read as the full gate. Steps that already passed on the same tree
+  are passed the same way (see `Tymeslot.Precommit.PassRecord`); the
+  `:on_results` callback receives the results of every run, which is how
+  passes are recorded.
 
   ## Partitioning the suite
 
@@ -136,6 +139,7 @@ defmodule Tymeslot.Precommit.Runner do
     suite_plan_fun = Keyword.get(opts, :suite_plan, fn -> nil end)
     results = run_all(steps, fail_fast?, cmd_fun, {capture_fun, suite_plan_fun})
 
+    Keyword.get(opts, :on_results, fn _results -> :ok end).(results)
     report(results, Keyword.get(opts, :skipped, []))
 
     if Enum.any?(results, &match?({_name, :failed, _code}, &1)) do

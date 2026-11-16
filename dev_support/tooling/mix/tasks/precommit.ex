@@ -85,6 +85,7 @@ defmodule Mix.Tasks.Precommit do
   alias Tymeslot.Precommit.Affected
   alias Tymeslot.Precommit.CpuBudget
   alias Tymeslot.Precommit.Guard
+  alias Tymeslot.Precommit.PassRecord
   alias Tymeslot.Precommit.Runner
 
   @steps [
@@ -145,16 +146,24 @@ defmodule Mix.Tasks.Precommit do
 
     fail_fast? = Keyword.get(opts, :fail_fast, false)
 
+    record = PassRecord.open()
+
     if opts[:affected] do
       narrowed = Affected.narrow(@steps, base: opts[:base])
+      {steps, passed} = PassRecord.split(record, narrowed.steps)
 
-      Runner.run(narrowed.steps, fail_fast?,
-        skipped: narrowed.skipped,
-        suite_plan: CpuBudget.planner(narrowed.suite)
+      Runner.run(steps, fail_fast?,
+        skipped: passed ++ narrowed.skipped,
+        suite_plan: CpuBudget.planner(narrowed.suite),
+        on_results: &PassRecord.save(record, steps, &1)
       )
     else
       if opts[:base], do: Mix.raise("--base only applies together with --affected")
-      Runner.run(@steps, fail_fast?, suite_plan: CpuBudget.planner(nil))
+
+      Runner.run(@steps, fail_fast?,
+        suite_plan: CpuBudget.planner(nil),
+        on_results: &PassRecord.save(record, @steps, &1)
+      )
     end
   end
 end
