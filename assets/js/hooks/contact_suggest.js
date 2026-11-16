@@ -16,7 +16,9 @@
  * the field's owner expects (`data-mode`):
  *   - `replace` (default): the field becomes the address. With
  *     `data-named`, it becomes `Name <address>` instead. With
- *     `data-submit`, its form is then submitted (an "Add" form); with
+ *     `data-submit`, its form is then submitted (an "Add" form), through
+ *     the button `data-submitter` names when the form has more than one
+ *     action; with
  *     `data-name-input`, that field takes the contact's name when empty.
  *     Fields bound with `phx-blur` are told through a focusout, those in
  *     a `phx-change` form through an input event.
@@ -223,7 +225,9 @@ export const ContactSuggest = {
     }
 
     if (this.el.dataset.submit !== undefined && input.form) {
-      input.form.requestSubmit();
+      const submitter = this.el.dataset.submitter && document.getElementById(this.el.dataset.submitter);
+      if (submitter) input.form.requestSubmit(submitter);
+      else input.form.requestSubmit();
     } else {
       input.focus();
     }

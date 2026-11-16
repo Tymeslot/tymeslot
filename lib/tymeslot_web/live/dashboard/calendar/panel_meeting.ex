@@ -10,7 +10,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
 
   The meeting's fields live in the panel's `form` beside the event's own
   (`"meeting"`, `"guest_name"`, `"locale"`, `"reminders"`), so the form
-  draws what was typed. The box counts only while the draft has a guest
+  draws what was typed. A guest added as `Name <address>` (what choosing a
+  contact fills in) keeps the name in `"guest_names"` (`name_guest/3`): the
+  first guest's becomes the guest name when none is typed yet, the others'
+  go with their invitations. The box counts only while the draft has a guest
   (`on?/1`). A meeting has times: ticking it makes an all-day draft timed.
 
   Create hands the booking to the dashboard
@@ -29,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
 
   alias Tymeslot.CalendarGrid.MeetingParams
   alias Tymeslot.Locales
+  alias Tymeslot.Meetings.Guests
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
   alias TymeslotWeb.Dashboard.Calendar.PanelState
@@ -44,8 +48,40 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
       "meeting" => false,
       "guest_name" => "",
       "locale" => Locales.guest_default_locale(user),
-      "reminders" => []
+      "reminders" => [],
+      "guest_names" => %{}
     }
+
+  @doc """
+  Keeps `name`, typed with the guest `email` the form has just taken, when
+  it is a name a guest can be given. The first guest's name also becomes the
+  guest name while that is empty.
+  """
+  @spec name_guest(map(), String.t(), String.t() | nil) :: map()
+  def name_guest(form, email, name) do
+    case Guests.with_names([email], %{email => name}) do
+      [%{name: nil}] ->
+        form
+
+      [%{name: name}] ->
+        form
+        |> Map.update("guest_names", %{email => name}, &Map.put(&1, email, name))
+        |> first_guest_name(email, name)
+    end
+  end
+
+  defp first_guest_name(%{"guests" => [email | _others]} = form, email, name) do
+    if String.trim(form["guest_name"] || "") == "",
+      do: Map.put(form, "guest_name", name),
+      else: form
+  end
+
+  defp first_guest_name(form, _email, _name), do: form
+
+  @doc "Forgets the name typed with the guest `email`, who has left the form."
+  @spec forget_guest(map(), String.t()) :: map()
+  def forget_guest(form, email),
+    do: Map.update(form, "guest_names", %{}, &Map.delete(&1, email))
 
   @doc """
   The meeting fields among a form change's `params`, cleaned; with the box

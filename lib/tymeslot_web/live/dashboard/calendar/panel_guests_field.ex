@@ -9,12 +9,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
   lists the guests without either control, since both email them. Also the
   "Guests haven't been told" note (`untold_note/1`) the panel shows below
   its header.
+
+  Both email fields offer the host's contacts as they type
+  (`ContactSuggestions`) and take an address with a name,
+  `Name <address>`, which is what choosing a contact fills in.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CalendarGrid.GuestReplies
+  alias TymeslotWeb.Components.Dashboard.ContactSuggestions
   alias TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
 
@@ -72,7 +77,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
       >
         <div class="min-w-0 flex-1">
           <.input
-            type="email"
+            type="text"
+            inputmode="email"
+            autocomplete="off"
             id={"calendar-panel-guest-email-#{@form_key}"}
             name="email"
             value=""
@@ -84,6 +91,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
           {dgettext("dashboard_calendar_editing", "Invite")}
         </.action_button>
       </form>
+      <ContactSuggestions.contact_suggestions
+        :if={@organiser}
+        for={"calendar-panel-guest-email-#{@form_key}"}
+        submit
+        named
+      />
       <p
         :if={!@organiser}
         id="calendar-panel-guests-not-organiser"
@@ -102,6 +115,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
   end
 
   attr :guests, :list, required: true, doc: "email strings"
+  attr :names, :map, default: %{}, doc: "the names typed with them, by address"
   attr :form_key, :integer, required: true
   attr :surface, :any, required: true
 
@@ -118,7 +132,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
           class="inline-flex max-w-full items-center gap-1 rounded-token-full bg-tymeslot-100 py-0.5 pl-2.5 pr-1 text-token-sm text-tymeslot-800"
         >
           <input type="hidden" name="guests[]" value={email} />
-          <span class="truncate">{email}</span>
+          <span :if={!@names[email]} class="truncate">{email}</span>
+          <span :if={@names[email]} class="truncate">
+            {@names[email]} <span class="text-tymeslot-500">{email}</span>
+          </span>
           <button
             type="button"
             phx-click={JS.push("panel:draft_drop_guest", value: %{email: email}, target: @surface)}
@@ -132,7 +149,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
       <div class="flex items-end gap-2">
         <div class="min-w-0 flex-1">
           <.input
-            type="email"
+            type="text"
+            inputmode="email"
+            autocomplete="off"
             id={"calendar-panel-guest-email-#{@form_key}"}
             name="guest_email"
             value=""
@@ -151,6 +170,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
           {dgettext("dashboard_calendar_editing", "Add")}
         </.action_button>
       </div>
+      <ContactSuggestions.contact_suggestions
+        for={"calendar-panel-guest-email-#{@form_key}"}
+        submit
+        submitter="calendar-panel-guest-add"
+        named
+      />
       <p :if={@guests != []} class="text-token-xs text-tymeslot-500">
         {dgettext("dashboard_calendar_editing", "They'll be invited when you create the event.")}
       </p>

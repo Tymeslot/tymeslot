@@ -51,6 +51,7 @@ defmodule Tymeslot.CalendarGrid.MeetingParamsTest do
                 end_time: ~U[2026-10-15 13:00:00Z],
                 attendee_name: "Ada Lovelace",
                 attendee_email: "ada@example.com",
+                guest_names: %{},
                 attendee_timezone: "Europe/London",
                 organizer_user_id: 42,
                 calendar_integration_id: 7,

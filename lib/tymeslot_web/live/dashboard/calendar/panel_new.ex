@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.Validation.AddressList
   alias Tymeslot.Venues
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.Deletion
@@ -163,7 +164,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
         email
       )
       when is_binary(email) and status != :saving do
-    form = %{form | "guests" => List.delete(form["guests"], email)}
+    form =
+      PanelMeeting.forget_guest(%{form | "guests" => List.delete(form["guests"], email)}, email)
+
     {draft, status} = cast(socket, form, panel.draft)
 
     socket
@@ -384,35 +387,44 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   end
 
   defp add_guest(%{assigns: %{panel: %{form: form} = panel}} = socket, raw) do
-    user_id = socket.assigns.current_user.id
-    guests = form["guests"]
+    case new_guest(socket.assigns.current_user.id, form["guests"], raw) do
+      {:ok, email, name} ->
+        form =
+          PanelMeeting.name_guest(%{form | "guests" => form["guests"] ++ [email]}, email, name)
 
-    # The domain's own rules (valid address, not the organiser's, at most
-    # `CreateParams.max_guests/0`), so the chips never promise an invitation
-    # a create would drop.
-    with {:ok, [email]} <- one_guest(user_id, raw),
-         :ok <- not_yet_a_guest(guests, email),
-         {:ok, _kept} <- CreateParams.guests(user_id, guests ++ [email]) do
-      form = %{form | "guests" => guests ++ [email]}
-      {draft, status} = cast(socket, form, panel.draft)
+        {draft, status} = cast(socket, form, panel.draft)
 
-      socket
-      |> assign(:panel, %{panel | form: form, draft: draft, status: status})
-      |> assign(:guest_form_key, socket.assigns.guest_form_key + 1)
-    else
-      {:ok, []} ->
-        warn(socket, Creation.guest_message(:organiser))
+        socket
+        |> assign(:panel, %{panel | form: form, draft: draft, status: status})
+        |> assign(:guest_form_key, socket.assigns.guest_form_key + 1)
 
-      {:error, :guests, :too_many} ->
-        warn(socket, Creation.refusal_message(:guests, :too_many))
-
-      {:error, :guests, _invalid} ->
-        warn(socket, Creation.guest_message(:invalid))
-
-      {:error, :already_a_guest, email} ->
-        warn(socket, Creation.guest_message({:duplicate, email}))
+      refusal ->
+        warn(socket, guest_refusal(refusal))
     end
   end
+
+  # The guest `raw` names, a bare address or one with a name (`Name
+  # <address>`), checked by the domain's own rules (valid address, not the
+  # organiser's, at most `CreateParams.max_guests/0`), so the chips never
+  # promise an invitation a create would drop.
+  defp new_guest(user_id, guests, raw) do
+    typed = AddressList.parse_entry(raw)
+
+    with {:ok, [email]} <- one_guest(user_id, typed.email),
+         :ok <- not_yet_a_guest(guests, email),
+         {:ok, _kept} <- CreateParams.guests(user_id, guests ++ [email]),
+         do: {:ok, email, typed.name}
+  end
+
+  defp guest_refusal({:ok, []}), do: Creation.guest_message(:organiser)
+
+  defp guest_refusal({:error, :guests, :too_many}),
+    do: Creation.refusal_message(:guests, :too_many)
+
+  defp guest_refusal({:error, :guests, _invalid}), do: Creation.guest_message(:invalid)
+
+  defp guest_refusal({:error, :already_a_guest, email}),
+    do: Creation.guest_message({:duplicate, email})
 
   defp one_guest(user_id, raw), do: CreateParams.guests(user_id, [raw])
 

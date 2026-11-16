@@ -148,6 +148,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
       <PanelGuestsField.draft_guests
         :if={!@group}
         guests={@values["guests"]}
+        names={@values["guest_names"] || %{}}
         form_key={@guest_form_key}
         surface={@surface}
       />

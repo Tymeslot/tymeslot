@@ -101,6 +101,22 @@ describe("ContactSuggest hook", () => {
     expect(el.querySelector("[role=listbox]").hidden).toBe(true);
   });
 
+  it("submits through the button it names, in a form with more than one action", async () => {
+    mount({ submit: "", submitter: "add" });
+    const add = document.createElement("button");
+    add.id = "add";
+    add.type = "submit";
+    input.form.append(add);
+    const requestSubmit = vi.fn();
+    input.form.requestSubmit = requestSubmit;
+
+    await type("ad");
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+
+    expect(requestSubmit).toHaveBeenCalledWith(add);
+  });
+
   it("fills in the name with the address in a field that takes both", async () => {
     mount({ named: "" });
     await type("ad");

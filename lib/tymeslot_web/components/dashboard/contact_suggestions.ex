@@ -22,6 +22,11 @@ defmodule TymeslotWeb.Components.Dashboard.ContactSuggestions do
     doc: "`replace` sets the field to the address; `append` adds `Name <address>` to a list"
 
   attr :submit, :boolean, default: false, doc: "submit the field's form once one is chosen"
+
+  attr :submitter, :string,
+    default: nil,
+    doc: "the id of the button to submit through, in a form with more than one action"
+
   attr :name_input, :string, default: nil, doc: "the id of a name field to fill when empty"
 
   attr :named, :boolean,
@@ -38,6 +43,7 @@ defmodule TymeslotWeb.Components.Dashboard.ContactSuggestions do
       data-input={@for}
       data-mode={@mode}
       data-submit={@submit}
+      data-submitter={@submitter}
       data-name-input={@name_input}
       data-named={@named}
       data-announce={
