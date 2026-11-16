@@ -353,6 +353,50 @@ defmodule Tymeslot.Precommit.RunnerTest do
       assert output =~ "failed  credo (4)"
       assert output =~ "ok      sobelow"
     end
+
+    test "a passing step's soft-limit warnings are announced and repeated after the summary" do
+      steps = [{"compile", ["compile"], :dev}, {"credo", ["credo"], :dev}]
+
+      credo_output = """
+      ┃ [D] ↘ Soft limit: `Tymeslot.Meetings` has 690 lines (warns over 650, fails
+      ┃       over 750). Split it into smaller, more focused modules, or file a
+      ┃       lib/tymeslot/meetings.ex:1 #(Tymeslot.Meetings)
+      ┃ [D] ↘ Soft limit: `Tymeslot.Profiles` has 700 lines (warns over 650, fails
+      ┃       lib/tymeslot/profiles.ex:1 #(Tymeslot.Profiles)
+      """
+
+      output =
+        capture_plain(fn ->
+          assert Runner.run(steps, false,
+                   cmd: stub(%{["compile"] => 0}),
+                   capture: fn ["credo"], :dev, [] -> {credo_output, 0} end
+                 ) == :ok
+        end)
+
+      assert output =~ "\nprecommit: warn credo (2)\n"
+      [_before, after_summary] = String.split(output, "\nSummary\n")
+      [_steps, warnings] = String.split(after_summary, "\nWarnings  (not failing the run)\n")
+
+      assert String.split(warnings, "\n", trim: true) == [
+               "  warn    credo: Soft limit: `Tymeslot.Meetings` has 690 lines (warns over 650, fails",
+               "  warn    credo: Soft limit: `Tymeslot.Profiles` has 700 lines (warns over 650, fails"
+             ]
+    end
+
+    test "a run without warnings prints no warnings section" do
+      steps = [{"compile", ["compile"], :dev}, {"credo", ["credo"], :dev}]
+
+      output =
+        capture_plain(fn ->
+          Runner.run(steps, false,
+            cmd: stub(%{["compile"] => 0}),
+            capture: fn ["credo"], :dev, [] -> {"no issues\n", 0} end
+          )
+        end)
+
+      refute output =~ "warn"
+      refute output =~ "Warnings"
+    end
   end
 
   describe "run/3 with a partitioned suite" do

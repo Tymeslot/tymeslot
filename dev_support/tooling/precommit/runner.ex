@@ -66,6 +66,11 @@ defmodule Tymeslot.Precommit.Runner do
   forwards only these lines to the terminal as they arrive, so a run that is
   interrupted has still reported every step that finished.
 
+  A concurrent step that passes but whose output carries warnings, today the
+  modules over the `CredoChecks.LargeModules` soft limit, also prints
+  `precommit: warn credo (2)`, and the warnings are listed again under the
+  summary, so a green run cannot bury them in credo's block.
+
   `--fail-fast` turns all of this off and runs everything in sequence. It asks
   for the first failure as soon as possible, which is incompatible with steps
   whose results are only known when they finish together.
@@ -108,6 +113,9 @@ defmodule Tymeslot.Precommit.Runner do
 
   @barrier_prefix "compile"
   @result_prefix "precommit: "
+  # The prefix `CredoChecks.LargeModules` starts a warning-band message with.
+  # The checks are not compiled into the build, so the literal is repeated here.
+  @warning_marker "Soft limit:"
   @dialyzer_schedulers 8
 
   @type step :: {name :: String.t(), args :: [String.t()], env :: atom()}
@@ -137,10 +145,10 @@ defmodule Tymeslot.Precommit.Runner do
     cmd_fun = Keyword.get(opts, :cmd, &cmd/2)
     capture_fun = Keyword.get(opts, :capture, &capture/3)
     suite_plan_fun = Keyword.get(opts, :suite_plan, fn -> nil end)
-    results = run_all(steps, fail_fast?, cmd_fun, {capture_fun, suite_plan_fun})
+    {results, warnings} = run_all(steps, fail_fast?, cmd_fun, {capture_fun, suite_plan_fun})
 
     Keyword.get(opts, :on_results, fn _results -> :ok end).(results)
-    report(results, Keyword.get(opts, :skipped, []))
+    report(results, Keyword.get(opts, :skipped, []), warnings)
 
     if Enum.any?(results, &match?({_name, :failed, _code}, &1)) do
       exit({:shutdown, 1})
@@ -151,14 +159,14 @@ defmodule Tymeslot.Precommit.Runner do
 
   # `--fail-fast` keeps the plain sequential path: a run that stops at the first
   # failure cannot also be waiting on a step that only reports at the end.
-  defp run_all(steps, true, cmd_fun, _background), do: run_steps(steps, true, cmd_fun, [])
+  defp run_all(steps, true, cmd_fun, _background), do: {run_steps(steps, true, cmd_fun, []), []}
 
   defp run_all(steps, false, cmd_fun, {capture_fun, suite_plan_fun}) do
     {head, tail} = split_after_last_barrier(steps)
     head_results = run_steps(head, false, cmd_fun, [])
 
     if broken?(head_results) do
-      head_results
+      {head_results, []}
     else
       {backgrounded, tail} = Enum.split_with(tail, &background?/1)
 
@@ -166,27 +174,29 @@ defmodule Tymeslot.Precommit.Runner do
       # the beams the compile steps produce, and a build that does not compile
       # is the case those barriers exist to stop.
       tasks = Enum.map(backgrounded, &start_background(&1, capture_fun, suite_plan_fun))
-      tail_results = run_tail(head, tail, cmd_fun, capture_fun)
+      {tail_results, warnings} = run_tail(head, tail, cmd_fun, capture_fun)
 
-      order_like(steps, head_results ++ tail_results ++ Enum.map(tasks, &join/1))
+      {order_like(steps, head_results ++ tail_results ++ Enum.map(tasks, &join/1)), warnings}
     end
   end
 
   # Overlapping the static checks is only safe against a build the gate has
   # established, so a step list without a compile barrier keeps them in
   # sequence.
-  defp run_tail([], tail, cmd_fun, _capture_fun), do: run_steps(tail, false, cmd_fun, [])
+  defp run_tail([], tail, cmd_fun, _capture_fun), do: {run_steps(tail, false, cmd_fun, []), []}
 
   defp run_tail(_head, tail, cmd_fun, capture_fun) do
     {writers, readers} = Enum.split_with(tail, &writes_build?/1)
-    run_steps(writers, false, cmd_fun, []) ++ run_concurrently(readers, capture_fun)
+    writer_results = run_steps(writers, false, cmd_fun, [])
+    {reader_results, warnings} = run_concurrently(readers, capture_fun)
+    {writer_results ++ reader_results, warnings}
   end
 
   # Each step's output is printed as it finishes rather than in declared order,
   # so a fast failure is on screen while credo and dialyzer are still running.
   # The suite's task prints its own block at the same time, so each block goes
   # out as one write (`print_block/2`) to keep the two from interleaving.
-  defp run_concurrently([], _capture_fun), do: []
+  defp run_concurrently([], _capture_fun), do: {[], []}
 
   defp run_concurrently(steps, capture_fun) do
     names = Enum.map_join(steps, ", ", fn {name, _args, _env} -> name end)
@@ -207,8 +217,37 @@ defmodule Tymeslot.Precommit.Runner do
     )
     |> Enum.map(fn {:ok, {name, args, {output, code}}} ->
       print_block(block_header(name, "  mix #{Enum.join(args, " ")}"), output)
-      name |> status(code) |> announce()
+      result = name |> status(code) |> announce()
+      {result, announce_warnings(name, warnings(output))}
     end)
+    |> Enum.unzip()
+    |> then(fn {results, warnings} -> {results, List.flatten(warnings)} end)
+  end
+
+  @doc """
+  The warnings a step's output carries without failing it: one line per module
+  over the `CredoChecks.LargeModules` soft limit, found by the prefix that
+  check puts at the start of the message (`@warning_marker`, which its test
+  holds equal to the check's own). Credo prints each issue's first line with a
+  gutter in front of the message, so the line is returned from the marker on.
+  """
+  @spec warnings(String.t()) :: [String.t()]
+  def warnings(output) do
+    for line <- String.split(output, "\n"),
+        [_gutter, warning] <- [String.split(line, @warning_marker, parts: 2)],
+        do: String.trim_trailing(@warning_marker <> warning)
+  end
+
+  @doc false
+  @spec warning_marker() :: String.t()
+  def warning_marker, do: @warning_marker
+
+  # Plain text, like `announce/1`, so `mix.sh -p` forwards it as it arrives.
+  defp announce_warnings(_name, []), do: []
+
+  defp announce_warnings(name, warnings) do
+    IO.puts("#{@result_prefix}warn #{name} (#{length(warnings)})")
+    Enum.map(warnings, &{name, &1})
   end
 
   # The summary reads as the gate's running order, not as the order results
@@ -475,7 +514,7 @@ defmodule Tymeslot.Precommit.Runner do
   @spec dialyzer_schedulers(pos_integer()) :: pos_integer()
   def dialyzer_schedulers(cores), do: min(@dialyzer_schedulers, cores)
 
-  defp report(results, skipped) do
+  defp report(results, skipped, warnings) do
     Mix.shell().info([:bright, "\nSummary", :reset])
 
     Enum.each(results, fn
@@ -491,6 +530,20 @@ defmodule Tymeslot.Precommit.Runner do
 
     Enum.each(skipped, fn {name, reason} ->
       Mix.shell().info(["  ", :faint, "not run  ", :reset, name, :faint, " (#{reason})", :reset])
+    end)
+
+    report_warnings(warnings)
+  end
+
+  # Printed after the step lines so a passing run ends on them rather than
+  # leaving them in a step's block further up, where they scroll past.
+  defp report_warnings([]), do: :ok
+
+  defp report_warnings(warnings) do
+    Mix.shell().info([:bright, "\nWarnings", :reset, :faint, "  (not failing the run)", :reset])
+
+    Enum.each(warnings, fn {name, warning} ->
+      Mix.shell().info(["  ", :yellow, "warn    ", :reset, name, ": ", warning])
     end)
   end
 end

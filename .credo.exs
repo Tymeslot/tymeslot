@@ -92,7 +92,7 @@
           #
           {CredoChecks.ThinWrapperFunctions, [priority: :low]},
           {CredoChecks.EmptyFiles, [priority: :low]},
-          {CredoChecks.LargeModules, [priority: :low]},
+          {CredoChecks.LargeModules, [priority: :low, max_lines: 650, hard_max_lines: 750]},
           # Suggest ~p/url(~p) in appropriate contexts (conservative by default)
           {CredoChecks.Phoenix.UsePSigil, [priority: :low, mode: :moderate, ignore_tests?: true]},
           {CredoChecks.UseCoreInputs, []},
