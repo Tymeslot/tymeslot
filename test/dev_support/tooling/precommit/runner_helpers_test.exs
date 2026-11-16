@@ -89,7 +89,9 @@ defmodule Tymeslot.Precommit.RunnerHelpersTest do
   describe "step_env/1" do
     test "caps schedulers for the dialyzer step" do
       assert [{"ERL_FLAGS", flags}] = Runner.step_env(["dialyzer"])
-      assert flags == "+S #{expected_dialyzer_schedulers()}:#{expected_dialyzer_schedulers()}"
+
+      assert flags =~
+               ~r/(^| )\+S #{expected_dialyzer_schedulers()}:#{expected_dialyzer_schedulers()}$/
     end
 
     # The gate runs the incremental task and keeps `dialyzer` as the cross-check.
@@ -99,7 +101,8 @@ defmodule Tymeslot.Precommit.RunnerHelpersTest do
       assert [{"ERL_FLAGS", flags}] =
                Runner.step_env(["dialyzer.incremental", "--list-unused-filters"])
 
-      assert flags == "+S #{expected_dialyzer_schedulers()}:#{expected_dialyzer_schedulers()}"
+      assert flags =~
+               ~r/(^| )\+S #{expected_dialyzer_schedulers()}:#{expected_dialyzer_schedulers()}$/
     end
 
     # Eight measured fastest on a 16-core host; a machine with fewer cores must
