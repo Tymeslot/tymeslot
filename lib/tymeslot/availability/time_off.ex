@@ -238,6 +238,19 @@ defmodule Tymeslot.Availability.TimeOff do
   end
 
   @doc """
+  Deletes one of a profile's periods, but only once it has ended
+  (`ended?/2`): a finished period no longer affects availability, so it can
+  go without the confirmation a current one asks for.
+  """
+  @spec delete_ended(integer(), integer(), Date.t()) ::
+          result() | {:error, :not_found | :not_ended}
+  def delete_ended(profile_id, id, today) do
+    with {:ok, period} <- fetch(profile_id, id) do
+      if ended?(period, today), do: delete(period), else: {:error, :not_ended}
+    end
+  end
+
+  @doc """
   Fetches one of a profile's periods.
 
   Scoped by profile rather than by id alone so a submitted id can never reach
