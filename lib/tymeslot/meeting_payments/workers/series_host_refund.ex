@@ -14,7 +14,11 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   rolled back is answered with that same refund on retry, and recorded
   then, even when another refund of the payment landed in between (a key
   derived from the payment's refunded total would have changed with it,
-  and refunded twice). The retries end within about four hours
+  and refunded twice). That holds when the `charge.refunded` webhook
+  recorded the refund in between, too: the refund is recorded as Stripe's
+  refunded total for the charge, so the replay adds nothing, and an amount
+  the balance no longer covers is put to Stripe under the key rather than
+  refused (`Refunds.issue_host_refund/5`). The retries end within about four hours
   (`backoff/1`), well inside the 24 hours Stripe keeps a key.
 
   Whether the refund is already made is the job's own record, never the
