@@ -71,7 +71,13 @@ defmodule Tymeslot.BookingSeries.Rule do
 
       {frequency, interval} ->
         Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-          phrase(frequency, interval, Keyword.get(opts, :first_start), locale, opts)
+          phrase(
+            frequency,
+            interval,
+            Keyword.get(opts, :first_start),
+            locale,
+            Keyword.delete(opts, :ordinal)
+          )
         end)
     end
   end
@@ -82,23 +88,82 @@ defmodule Tymeslot.BookingSeries.Rule do
   time, the rhythm alone once one was moved, since a moved session (the
   first one included) would otherwise put its own day and time on the whole
   series. Nil for a flexible series. `opts` as for `describe/3`.
+
+  A monthly series that began on a fifth weekday is held on the month's last
+  one (`Tymeslot.BookingSeries.Dates`), so a session on a fourth weekday that
+  is its month's last still keeps the rhythm: "on the last Friday" covers
+  Friday 30 January and Friday 27 February alike. The series' first start
+  (`first_start_at`, or the earliest of `starts` without one) says whether
+  it is held on the last weekday.
   """
   @spec describe_sessions(SeriesSchema.t(), [DateTime.t()], String.t(), String.t(), keyword()) ::
           String.t() | nil
   def describe_sessions(%SeriesSchema{} = series, starts, locale, timezone, opts \\ []) do
-    phrases =
-      starts
-      |> Enum.map(fn start ->
-        {local, _zone} = DateTimeUtils.shift_or_utc(start, timezone)
-        describe(series, locale, Keyword.put(opts, :first_start, local))
-      end)
-      |> Enum.uniq()
+    locals = Enum.map(starts, &local(&1, timezone))
+    held_last? = held_on_last?(series.first_start_at, locals, timezone)
 
-    case phrases do
-      [phrase] -> phrase
-      _none_or_moved -> describe(series, locale, Keyword.delete(opts, :first_start))
+    case rhythm(series) do
+      nil ->
+        nil
+
+      {frequency, interval} ->
+        keys = locals |> Enum.map(&session_key(frequency, &1, held_last?)) |> Enum.uniq()
+
+        Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+          case keys do
+            [key] ->
+              opts = Keyword.put(opts, :ordinal, key[:ordinal])
+              phrase(frequency, interval, hd(locals), locale, opts)
+
+            _none_or_moved ->
+              phrase(frequency, interval, nil, locale, opts)
+          end
+        end)
     end
   end
+
+  defp local(start, timezone) do
+    {local, _zone} = DateTimeUtils.shift_or_utc(start, timezone)
+    local
+  end
+
+  # What the phrase names of one session: the time, the weekday for a weekly
+  # or monthly series, and the weekday's ordinal for a monthly one.
+  defp session_key(:daily, local, _held_last?), do: [time: DateTime.to_time(local)]
+
+  defp session_key(:weekly, local, _held_last?),
+    do: [time: DateTime.to_time(local), weekday: weekday(local)]
+
+  defp session_key(:monthly, local, held_last?),
+    do: [
+      time: DateTime.to_time(local),
+      weekday: weekday(local),
+      ordinal: session_ordinal(local, held_last?)
+    ]
+
+  defp weekday(local), do: local |> DateTime.to_date() |> Date.day_of_week()
+
+  # Whether the series is held on its month's last weekday: it began on a
+  # fifth one.
+  defp held_on_last?(%DateTime{} = first_start, _locals, timezone),
+    do: ordinal(DateTime.to_date(local(first_start, timezone))) == :last
+
+  defp held_on_last?(nil, [], _timezone), do: false
+
+  defp held_on_last?(nil, locals, _timezone),
+    do: ordinal(DateTime.to_date(Enum.min(locals, DateTime))) == :last
+
+  # A session's ordinal as the series reads it: the month's last weekday
+  # counts as "last" in a series held on the last weekday.
+  defp session_ordinal(local, held_last?) do
+    date = DateTime.to_date(local)
+
+    if held_last? and last_weekday_of_month?(date),
+      do: :last,
+      else: ordinal(date)
+  end
+
+  defp last_weekday_of_month?(date), do: Date.add(date, 7).month != date.month
 
   defp rhythm(%SeriesSchema{mode: :recurring, frequency: frequency, interval: interval})
        when frequency in [:daily, :weekly, :monthly],
@@ -139,7 +204,7 @@ defmodule Tymeslot.BookingSeries.Rule do
   defp phrase(frequency, interval, %DateTime{} = first_start, locale, opts) do
     dgettext("booking_series", "%{frequency} %{day} at %{time}",
       frequency: every(frequency, interval),
-      day: day(frequency, DateTime.to_date(first_start)),
+      day: day(frequency, DateTime.to_date(first_start), opts[:ordinal]),
       time: time(first_start, locale, opts)
     )
   end
@@ -160,8 +225,11 @@ defmodule Tymeslot.BookingSeries.Rule do
   defp every(:monthly, interval),
     do: dngettext("booking_series", "Every %{count} month", "Every %{count} months", interval)
 
-  defp day(:weekly, date), do: on_weekday(Date.day_of_week(date))
-  defp day(:monthly, date), do: on_position(ordinal(date), Date.day_of_week(date))
+  # `ordinal` overrides the date's own (`describe_sessions/5`).
+  defp day(:weekly, date, _ordinal), do: on_weekday(Date.day_of_week(date))
+
+  defp day(:monthly, date, ordinal),
+    do: on_position(ordinal || ordinal(date), Date.day_of_week(date))
 
   # The weekday's ordinal in its month, as `Dates` steps it: a fifth weekday
   # is held as the month's last one.
