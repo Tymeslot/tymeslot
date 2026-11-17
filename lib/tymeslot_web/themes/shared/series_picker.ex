@@ -8,6 +8,16 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
   booking window binds the first session only, so the fetch reaches the
   year past it (`Offer`'s `window_until:`).
 
+  The host's calendar is read six weeks at a time, the six weeks holding
+  the week asked for, counted from the first session's week, and each
+  read is kept (`:series_weeks`) for the same first session, length and
+  timezone, for five minutes: paging back over a week
+  already shown, and reopening the picker after adding a session, read
+  nothing, so a year of the picker costs nine reads. Each read is charged
+  to the visitor (`Series.charge_read/1`). The picker opens on the week of
+  the last session chosen. A time it offers from a kept read is checked
+  afresh, with the whole series, once added.
+
   `:series_picker` is nil while the picker is closed, else `%{week_start,
   days, loading?, error, day}`: the week shown, its slots by ISO date (nil
   while loading), whether it is loading, why it could not be fetched, and
@@ -29,6 +39,11 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
 
   require Logger
+
+  # How long a read of six weeks is kept, and how many days one read covers
+  # (`Offer.slots_for_range/4` takes at most 42).
+  @weeks_ttl_ms 5 * 60_000
+  @block_days 42
 
   @doc """
   The flexible picker's offered sessions on the week it shows, by day, as
@@ -98,24 +113,27 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
     |> Enum.find(&(DateTime.compare(&1.start, start) == :eq))
   end
 
-  @doc "The picker's week, a `start_async/3` result; one for a week left behind is dropped."
+  @doc """
+  The picker's six weeks, a `start_async/3` result, kept for the week it
+  was read for; one for a week left behind is dropped.
+  """
   @spec handle_async({:series_week, Date.t()}, term(), Socket.t()) :: {:noreply, Socket.t()}
   def handle_async({:series_week, week}, result, socket) do
     case socket.assigns[:series_picker] do
       %{week_start: ^week, loading?: true} = picker ->
-        {:noreply, assign(socket, :series_picker, week_result(picker, result))}
+        {:noreply, socket |> keep_block(week, result) |> show_result(picker, result)}
 
       _other_week ->
         {:noreply, socket}
     end
   end
 
-  @doc "Opens the picker on the first session's week."
+  @doc "Opens the picker on the week of the last session chosen."
   @spec open(Socket.t()) :: Socket.t()
-  def open(%{assigns: %{series_choice: %{mode: :flexible}}} = socket) do
+  def open(%{assigns: %{series_choice: %{mode: :flexible, starts: starts}}} = socket) do
     case Series.first_start(socket.assigns) do
       nil -> socket
-      first -> fetch_week(socket, first_week(socket.assigns, first))
+      _first -> fetch_week(socket, week_of(socket.assigns, List.last(starts)))
     end
   end
 
@@ -167,54 +185,122 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
 
   def pick_day(socket, _iso), do: socket
 
-  # The request and the duration are built before the task, so it captures
-  # plain values and never the socket. The booking window binds the first
-  # session only: the week may reach a year past it (`window_until:`).
-  # Each week reads the host's calendars afresh, so it is charged to the
-  # visitor (`Series.charge_read/1`); past the limit the week is not read
-  # and the picker says so, with a retry.
+  # A week inside a kept read is shown from it. Otherwise its six weeks are
+  # read, charged to the visitor (`Series.charge_read/1`); past the limit
+  # nothing is read and the picker says so, with a retry.
   defp fetch_week(socket, week_start) do
-    case Series.charge_read(socket) do
-      :ok -> start_week(socket, week_start)
-      {:error, :rate_limited} -> assign(socket, :series_picker, week_refused(week_start))
+    case kept_week(socket, week_start) do
+      %{} = days ->
+        assign(socket, :series_picker, picker(week_start, days, false, nil))
+
+      nil ->
+        case Series.charge_read(socket) do
+          :ok ->
+            start_block(socket, week_start)
+
+          {:error, :rate_limited} ->
+            assign(socket, :series_picker, picker(week_start, %{}, false, :rate_limited))
+        end
     end
   end
 
-  defp week_refused(week_start),
-    do: %{week_start: week_start, days: %{}, loading?: false, error: :rate_limited, day: nil}
+  defp picker(week_start, days, loading?, error),
+    do: %{week_start: week_start, days: days, loading?: loading?, error: error, day: nil}
 
-  defp start_week(socket, week_start) do
+  # The request and the duration are built before the task, so it captures
+  # plain values and never the socket. The booking window binds the first
+  # session only: the weeks may reach a year past it (`window_until:`).
+  defp start_block(socket, week_start) do
     request =
       socket
       |> AvailabilityHelpers.request()
       |> Map.put(:window_until, window_until(socket.assigns))
 
     duration = AvailabilityHelpers.duration_minutes(socket)
-    week_end = Date.add(week_start, 6)
+    block = block_start(socket.assigns, week_start)
+    block_end = Date.add(block, @block_days - 1)
 
     socket
-    |> assign(:series_picker, %{
-      week_start: week_start,
-      days: nil,
-      loading?: true,
-      error: nil,
-      day: nil
-    })
+    |> assign(:series_picker, picker(week_start, nil, true, nil))
     |> start_async(
       {:series_week, week_start},
-      Tasks.with_context(fn -> Offer.slots_for_range(request, week_start, week_end, duration) end)
+      Tasks.with_context(fn -> Offer.slots_for_range(request, block, block_end, duration) end)
     )
   end
 
-  defp week_result(picker, {:ok, {:ok, days}}), do: %{picker | days: days, loading?: false}
+  defp show_result(socket, picker, {:ok, {:ok, days}}),
+    do:
+      assign(socket, :series_picker, %{
+        picker
+        | days: week_days(days, picker.week_start),
+          loading?: false
+      })
 
-  defp week_result(picker, {:ok, {:error, reason}}), do: week_failed(picker, reason)
-  defp week_result(picker, {:exit, reason}), do: week_failed(picker, reason)
+  defp show_result(socket, picker, {:ok, {:error, reason}}),
+    do: assign(socket, :series_picker, week_failed(picker, reason))
+
+  defp show_result(socket, picker, {:exit, reason}),
+    do: assign(socket, :series_picker, week_failed(picker, reason))
 
   defp week_failed(picker, reason) do
     Logger.warning("Series picker week fetch failed", reason: LogFormat.reason(reason))
     %{picker | days: %{}, loading?: false, error: :availability_unverifiable}
   end
+
+  # Kept reads
+
+  # The reads kept answer one first session, length and timezone; another
+  # of any of them starts afresh.
+  defp weeks_key(socket) do
+    assigns = socket.assigns
+
+    {Series.first_start(assigns), Map.get(assigns[:meeting_type] || %{}, :id),
+     AvailabilityHelpers.duration_minutes(socket), timezone(assigns)}
+  end
+
+  defp kept_week(%{assigns: assigns} = socket, week_start) do
+    with %{key: key, blocks: blocks} <- assigns[:series_weeks],
+         true <- key == weeks_key(socket),
+         %{days: days, at: at} <- Map.get(blocks, block_start(assigns, week_start)),
+         true <- now_ms() - at < @weeks_ttl_ms do
+      week_days(days, week_start)
+    else
+      _not_kept -> nil
+    end
+  end
+
+  defp keep_block(socket, week, {:ok, {:ok, days}}) do
+    key = weeks_key(socket)
+
+    blocks =
+      case socket.assigns[:series_weeks] do
+        %{key: ^key, blocks: blocks} -> blocks
+        _other -> %{}
+      end
+
+    entry = %{days: days, at: now_ms()}
+
+    assign(socket, :series_weeks, %{
+      key: key,
+      blocks: Map.put(blocks, block_start(socket.assigns, week), entry)
+    })
+  end
+
+  defp keep_block(socket, _week, _failed), do: socket
+
+  defp week_days(days, week_start),
+    do: Map.take(days, Enum.map(0..6, &Date.to_iso8601(Date.add(week_start, &1))))
+
+  # The six weeks holding `week`, counted from the first session's week.
+  defp block_start(assigns, week) do
+    first = first_week(assigns, Series.first_start(assigns))
+    Date.add(first, div(Date.diff(week, first), @block_days) * @block_days)
+  end
+
+  defp week_of(assigns, start),
+    do: start |> DateTime.to_date() |> Date.beginning_of_week(assigns[:week_start] || :monday)
+
+  defp now_ms, do: System.monotonic_time(:millisecond)
 
   defp first_week(assigns, first) do
     first

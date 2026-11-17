@@ -26,7 +26,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
       (`:availability_unverifiable`, `:overlapping_starts`, `:invalid_count`),
       or nil;
     * `:series_picker`: a flexible series' picker of further sessions, nil
-      while closed (`TymeslotWeb.Themes.Shared.SeriesPicker`);
+      while closed (`TymeslotWeb.Themes.Shared.SeriesPicker`), and
+      `:series_weeks` the weeks of offered times it has read and keeps;
     * `:series_offered?` and `:series_single_allowed?`: the meeting type's
       offer, settled once per meeting type when the page assigns it
       (`assign_offer/2`), since each costs a subscription query on the
@@ -228,6 +229,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
       series_rechecking?: false,
       series_error: nil,
       series_picker: nil,
+      series_weeks: nil,
       series_refocus: false,
       series_restoring: nil,
       carried_series: nil,

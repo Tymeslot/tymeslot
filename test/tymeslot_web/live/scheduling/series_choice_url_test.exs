@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Live.Scheduling.SeriesChoiceUrlTest do
   alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.RateLimiter.Limits
+  alias TymeslotWeb.BookingDriver
   alias TymeslotWeb.BookingDriver.Page
 
   setup :verify_on_exit!
@@ -224,10 +225,12 @@ defmodule TymeslotWeb.Live.Scheduling.SeriesChoiceUrlTest do
       refute_received {:calendar_read, _range}
     end
 
-    # The picker's week and the check of the choice with a session added
-    # are a charge each: with two left both run, and the next week is refused.
+    # The picker's six weeks and the check of the choice with a session
+    # added are a charge each: with two left both run. Reopening the picker
+    # shows weeks it already read for nothing; the first week past them is
+    # refused.
     @tag :capture_log
-    test "every check and every picker week is charged to the visitor",
+    test "every check and every read of the picker's weeks is charged to the visitor",
          %{conn: conn, day: day} do
       %{profile: profile} = organiser("1", "limit-charged", @flex)
       view = to_series(conn, profile, day, reveal: false)
@@ -240,9 +243,56 @@ defmodule TymeslotWeb.Live.Scheduling.SeriesChoiceUrlTest do
       add_last_time_of_day(view, 0)
       assert length(occurrences(view, "available")) == 2
 
+      count_calendar_reads()
       view |> element("[data-testid='series-add']") |> render_click()
       render_async(view)
-      assert %{error: :rate_limited} = Page.assigns(view).series_picker
+
+      opened = Page.assigns(view).series_picker
+      assert %{error: nil, loading?: false} = opened
+      assert has_element?(view, "[data-testid='series-picker-day']")
+      refute_received {:calendar_read, _range}
+
+      first_week = Date.beginning_of_week(day, :monday)
+      refused = later_until_refused(view)
+      assert refused.error == :rate_limited
+      assert refused.week_start == Date.add(first_week, 42)
+      refute_received {:calendar_read, _range}
+    end
+  end
+
+  describe "a flexible series at the type's most" do
+    @most Keyword.merge(flexible(), series_min_occurrences: 26, series_max_occurrences: 26)
+
+    for {cadence, weeks} <- [weekly: 1, fortnightly: 2] do
+      @tag :capture_log
+      test "a #{cadence} series of 26 picked one by one stays well inside the limit",
+           %{conn: conn, day: day} do
+        %{user: user, profile: profile} =
+          organiser("1", "most-#{unquote(cadence)}", @most)
+
+        view = to_series(conn, profile, day, reveal: false)
+        ip = Page.assigns(view).client_ip
+        RateLimiter.clear_all()
+        count_calendar_reads()
+
+        starts = Enum.map(0..25, &at_nine(day, &1 * unquote(weeks)))
+        Enum.each(tl(starts), &add_session(view, &1))
+
+        assert length(occurrences(view, "available")) == 26
+        reads = drain_calendar_reads(0)
+
+        limit = Limits.fetch!(:booking_series_check)[:limit]
+        charged = limit - charges_left(ip, limit)
+        # 25 checks and one read per six weeks reached; charged only for
+        # what reads the host's calendar.
+        assert charged == reads
+        assert charged <= div(limit, 3)
+
+        RateLimiter.clear_all()
+        to_details(view, reveal: false)
+        BookingDriver.submit(view, %{name: "Ada", email: "ada@example.com"})
+        assert user |> meetings() |> Enum.map(& &1.start_time) == starts
+      end
     end
   end
 
@@ -299,6 +349,57 @@ defmodule TymeslotWeb.Live.Scheduling.SeriesChoiceUrlTest do
 
     charges = Stream.repeatedly(fn -> RateLimiter.check(:booking_series_check, ip) end)
     Enum.find(charges, &match?({:error, :rate_limited, _message}, &1))
+  end
+
+  # Adds the session starting at `start` through the picker, paging on
+  # from the week it opens on.
+  defp add_session(view, start) do
+    view |> element("[data-testid='series-add']") |> render_click()
+    render_async(view)
+
+    iso = start |> DateTime.to_date() |> Date.to_iso8601()
+    page_to_day(view, iso, 0)
+
+    view |> element("[data-testid='series-picker-day'][data-date='#{iso}']") |> render_click()
+
+    view
+    |> element("[data-testid='series-picker-time'][data-value='#{DateTime.to_iso8601(start)}']")
+    |> render_click()
+
+    render_async(view)
+  end
+
+  defp page_to_day(view, iso, hops) do
+    unless has_element?(view, "[data-testid='series-picker-day'][data-date='#{iso}']") do
+      assert hops < 3, "the picker never reached #{iso}"
+      view |> element("[data-testid='series-picker-later']") |> render_click()
+      render_async(view)
+      page_to_day(view, iso, hops + 1)
+    end
+  end
+
+  defp later_until_refused(view) do
+    view |> element("[data-testid='series-picker-later']") |> render_click()
+    render_async(view)
+
+    case Page.assigns(view).series_picker do
+      %{error: nil} -> later_until_refused(view)
+      picker -> picker
+    end
+  end
+
+  # How many more charges the visitor's bucket takes, charging it to the
+  # limit.
+  defp charges_left(ip, limit) do
+    Enum.count(1..limit, fn _hit -> RateLimiter.check(:booking_series_check, ip) == :ok end)
+  end
+
+  defp drain_calendar_reads(count) do
+    receive do
+      {:calendar_read, _range} -> drain_calendar_reads(count + 1)
+    after
+      0 -> count
+    end
   end
 
   defp count_calendar_reads do
