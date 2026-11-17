@@ -104,9 +104,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliserAttendeesTest do
 
     test "are the guests of an event Tymeslot wrote" do
       assert [
-               %{email: "ada@example.com", display_name: "Ada Lovelace"},
-               %{email: "grace@example.com", display_name: "Hopper, Grace"},
-               %{email: "ops@example.com", display_name: nil}
+               %{email: "ada@example.com", display_name: "Ada Lovelace", response_status: nil},
+               %{email: "grace@example.com", display_name: "Hopper, Grace", response_status: nil},
+               %{email: "ops@example.com", display_name: nil, response_status: nil}
              ] =
                cached("planning@tymeslot.com", """
                CONTACT:Ada Lovelace <ada@example.com>

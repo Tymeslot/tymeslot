@@ -288,9 +288,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   # RFC 5545 §3.8.4.2 — `CONTACT`, as `Properties.build_attendee_lines/2`
   # writes a guest on a server that would invite an `ATTENDEE` itself
   # (`CalDAV.Scheduling`'s `:contact` mode): `Name <address>`, or the address
-  # alone. In the attendee shape, so the normaliser can take them for an
-  # event's guests where they are (see `ICalNormaliser`); a value naming no
-  # address is left out.
+  # alone. With an attendee's `"email"` and `"name"` but no reply, which a
+  # `CONTACT` cannot carry, so the normaliser can take them for an event's
+  # guests where they are (see `ICalNormaliser`); a value naming no address
+  # is left out.
   defp extract_contacts(lines) do
     lines
     |> Enum.filter(&(String.starts_with?(&1, "CONTACT:") or String.starts_with?(&1, "CONTACT;")))
@@ -304,11 +305,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   defp parse_contact(value) do
     case Regex.run(~r/^(.*?)\s*<([^<>\s]+@[^<>\s]+)>$/, value) do
       [_match, name, email] ->
-        %{"email" => email, "name" => blank_to_nil(name), "status" => nil}
+        %{"email" => email, "name" => blank_to_nil(name)}
 
       nil ->
         if Regex.match?(~r/^[^<>\s]+@[^<>\s]+$/, value),
-          do: %{"email" => value, "name" => nil, "status" => nil}
+          do: %{"email" => value, "name" => nil}
     end
   end
 

@@ -357,13 +357,20 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   # without them here, the sync left it guestless, and deleting or moving it
   # told nobody. Taken only from an event of Tymeslot's own (its UID) that
   # names no `ATTENDEE`, which is the block `Patcher` treats as Tymeslot's
-  # too; a `CONTACT` on anyone else's event is not a guest.
+  # too; a `CONTACT` on anyone else's event is not a guest. A `CONTACT` line
+  # carries no reply, nor any way to record one, so such a guest has none to
+  # show (`Attendee`'s `nil`) rather than one pending for ever.
   defp attendees(raw) do
     case map_attendees(raw[:attendee] || raw[:attendees]) do
-      [] -> if tymeslot_origin?(raw), do: map_attendees(raw[:contacts]), else: []
+      [] -> if tymeslot_origin?(raw), do: map_contacts(raw[:contacts]), else: []
       attendees -> attendees
     end
   end
+
+  defp map_contacts(contacts) when is_list(contacts),
+    do: Enum.map(contacts, &Attendee.new(email: &1["email"], display_name: &1["name"]))
+
+  defp map_contacts(_other), do: []
 
   defp map_attendees(nil), do: []
   defp map_attendees(attendees) when is_list(attendees), do: Enum.map(attendees, &map_attendee/1)
