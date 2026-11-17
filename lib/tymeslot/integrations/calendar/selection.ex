@@ -7,7 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   alias Tymeslot.Availability
   alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationLockQueries
   alias Tymeslot.Integrations.Calendar.CalendarSelectionQueries
   alias Tymeslot.Integrations.Calendar.EventSelection
   alias Tymeslot.Integrations.Calendar.Management
@@ -266,7 +266,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   # Dropped once the write commits, never inside a caller's transaction,
   # where a read in between would cache the old answer again.
   defp invalidate_after_commit({:ok, %{user_id: user_id}} = ok) do
-    unless CalendarIntegrationQueries.in_transaction?(),
+    unless CalendarIntegrationLockQueries.in_transaction?(),
       do: Availability.changed(user_id)
 
     ok

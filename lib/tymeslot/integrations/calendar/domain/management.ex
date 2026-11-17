@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Management do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Availability
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationActivationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Defaults
@@ -223,14 +224,14 @@ defmodule Tymeslot.Integrations.Calendar.Management do
   defp toggle_stored(integration) do
     case CalendarIntegrationQueries.reload(integration) do
       nil -> {:error, :not_found}
-      stored -> CalendarIntegrationQueries.toggle_active(stored)
+      stored -> CalendarIntegrationActivationQueries.toggle_active(stored)
     end
   end
 
   defp deactivate_stored(integration) do
     case CalendarIntegrationQueries.reload(integration) do
       nil -> {:error, :not_found}
-      stored -> CalendarIntegrationQueries.deactivate(stored)
+      stored -> CalendarIntegrationActivationQueries.deactivate(stored)
     end
   end
 
@@ -480,7 +481,7 @@ defmodule Tymeslot.Integrations.Calendar.Management do
   end
 
   defp reactivation_allowed(%{is_active: false} = stored, %{is_active: true}),
-    do: CalendarIntegrationQueries.check_reactivation_conflict(stored)
+    do: CalendarIntegrationActivationQueries.check_reactivation_conflict(stored)
 
   defp reactivation_allowed(_stored, _attrs), do: :ok
 end

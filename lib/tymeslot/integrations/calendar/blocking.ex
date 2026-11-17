@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Blocking do
   the integration is gone). A meeting-type write that names a booking calendar
   runs `promote_booking_target/3` first, in its own transaction, so it locks:
 
-    1. the user's row, `FOR KEY SHARE` (`CalendarIntegrationQueries.lock_owner/1`);
+    1. the user's row, `FOR KEY SHARE` (`CalendarIntegrationLockQueries.lock_owner/1`);
     2. the calendar integration's row, `FOR UPDATE`;
     3. the meeting type's row, by writing it.
 
@@ -42,7 +42,7 @@ defmodule Tymeslot.Integrations.Calendar.Blocking do
 
   alias Tymeslot.Availability
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationLockQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarSelectionQueries
   alias Tymeslot.Integrations.Calendar.Defaults
@@ -335,7 +335,7 @@ defmodule Tymeslot.Integrations.Calendar.Blocking do
   @spec promote_booking_target(pos_integer(), pos_integer(), String.t()) ::
           {:ok, :promoted | :unchanged} | {:error, term()}
   def promote_booking_target(user_id, integration_id, calendar_id) do
-    with true <- CalendarIntegrationQueries.lock_owner(user_id),
+    with true <- CalendarIntegrationLockQueries.lock_owner(user_id),
          {:ok, %{user_id: ^user_id} = stored} <-
            CalendarSelectionQueries.lock_stored(integration_id) do
       promote(stored, calendar_id)
@@ -401,7 +401,7 @@ defmodule Tymeslot.Integrations.Calendar.Blocking do
   end
 
   defp invalidate_on_success({:ok, %{user_id: user_id}} = ok) do
-    unless CalendarIntegrationQueries.in_transaction?(),
+    unless CalendarIntegrationLockQueries.in_transaction?(),
       do: Availability.changed(user_id)
 
     ok

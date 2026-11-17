@@ -9,7 +9,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
 
   @doc """
@@ -434,74 +433,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   @spec reload(CalendarIntegrationSchema.t()) :: CalendarIntegrationSchema.t() | nil
   def reload(%CalendarIntegrationSchema{id: id}), do: Repo.get(CalendarIntegrationSchema, id)
 
-  @doc """
-  Sets the integration inactive, never the other way round: the write forces
-  `is_active` to false whatever the struct says, so a stale struct cannot turn
-  a pause into a no-op or a reactivation.
-  """
-  @spec deactivate(CalendarIntegrationSchema.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Changeset.t()}
-  def deactivate(%CalendarIntegrationSchema{} = integration) do
-    integration
-    |> Changeset.change()
-    |> Changeset.force_change(:is_active, false)
-    |> Repo.update()
-  end
-
-  @doc """
-  Toggles the active status of an integration.
-
-  When reactivating, checks that no other active integration exists for the same
-  `(user_id, provider, provider_account_id)` to prevent a unique-constraint violation.
-  """
-  @spec toggle_active(CalendarIntegrationSchema.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t() | :duplicate_account}
-  def toggle_active(%CalendarIntegrationSchema{} = integration) do
-    if integration.is_active do
-      integration
-      |> CalendarIntegrationSchema.activation_changeset(false)
-      |> Repo.update()
-    else
-      case check_reactivation_conflict(integration) do
-        :ok ->
-          integration
-          |> CalendarIntegrationSchema.activation_changeset(true)
-          |> Repo.update()
-
-        {:error, :duplicate_account} = err ->
-          err
-      end
-    end
-  end
-
-  # Every uniqueness index here is predicated on `is_active = true`, so
-  # reactivating a row moves it *into* the index. A row whose account id is
-  # NULL falls under the legacy-row index on `(user_id, provider)`, and one
-  # whose account id is the empty string falls under the account index, because
-  # `''` is not NULL. Waving both through returned `:ok` for exactly the rows
-  # that contend, with no concurrency involved at all.
-  @spec check_reactivation_conflict(CalendarIntegrationSchema.t()) ::
-          :ok | {:error, :duplicate_account}
-  def check_reactivation_conflict(%{provider_account_id: nil} = integration) do
-    if active_null_account_exists?(integration.user_id, integration.provider) do
-      {:error, :duplicate_account}
-    else
-      :ok
-    end
-  end
-
-  def check_reactivation_conflict(integration) do
-    if active_account_exists?(
-         integration.user_id,
-         integration.provider,
-         integration.provider_account_id
-       ) do
-      {:error, :duplicate_account}
-    else
-      :ok
-    end
-  end
-
   # The three-outcome lookup shape of `get/1` and `get_for_user/2`.
   defp fetch_decrypted(nil), do: {:error, :not_found}
 
@@ -523,32 +454,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
     end
   end
 
-  # Existence-only checks: the reactivation conflict check never needs the
-  # conflicting row's credentials, and decrypting them (as the equivalent
-  # `get_*` lookups do) can raise on a row whose ciphertext no longer decrypts
-  # under the current keyring — turning a refusal into a crash.
-  defp active_null_account_exists?(user_id, provider) do
-    CalendarIntegrationSchema
-    |> where(
-      [c],
-      c.user_id == ^user_id and c.provider == ^provider and
-        is_nil(c.provider_account_id) and c.is_active == true
-    )
-    |> Repo.exists?()
-  end
-
-  defp active_account_exists?(user_id, provider, provider_account_id) do
-    CalendarIntegrationSchema
-    |> where(
-      [c],
-      c.user_id == ^user_id and
-        c.provider == ^provider and
-        c.provider_account_id == ^provider_account_id and
-        c.is_active == true
-    )
-    |> Repo.exists?()
-  end
-
   @doc """
   Whether this integration belongs to this user.
 
@@ -565,54 +470,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   def owned_by?(_id, _user_id), do: false
-
-  @doc """
-  Whether the caller runs inside a transaction, so a write can leave what
-  must wait for the commit (dropping a cache) to the caller that commits.
-  """
-  @spec in_transaction?() :: boolean()
-  def in_transaction?, do: Repo.in_transaction?()
-
-  @doc """
-  Holds the user's row `FOR KEY SHARE` for the rest of the transaction, so the
-  account cannot be deleted under it: an account deletion locks that row
-  `FOR UPDATE` before its cascade reaches the user's calendars and meeting
-  types, and waits here, or this waits for it. `false` when the user is gone.
-
-  Must be called from inside a `Repo.transaction/1`.
-  """
-  @spec lock_owner(integer()) :: boolean()
-  def lock_owner(user_id) do
-    Repo.exists?(from(u in UserSchema, where: u.id == ^user_id, lock: "FOR KEY SHARE"))
-  end
-
-  @doc """
-  Locks the user's profile row, then every calendar integration row of theirs,
-  for the rest of the transaction. Every change that can move the user's
-  primary calendar takes it first (create, toggle, pause, delete, reconnect),
-  so those changes run one at a time per user and always lock in the same
-  order. A user without a profile has no primary to move, so locking nothing
-  there is harmless.
-
-  Must be called from inside a `Repo.transaction/1`.
-  """
-  @spec lock_user_profile_and_integrations(integer()) :: :ok
-  def lock_user_profile_and_integrations(user_id) do
-    _locked_profile =
-      Repo.one(from(p in ProfileSchema, where: p.user_id == ^user_id, lock: "FOR UPDATE"))
-
-    _locked_integration_ids =
-      Repo.all(
-        from(ci in CalendarIntegrationSchema,
-          where: ci.user_id == ^user_id,
-          order_by: ci.id,
-          select: ci.id,
-          lock: "FOR UPDATE"
-        )
-      )
-
-    :ok
-  end
 
   @doc """
   Checks whether the user already has a default booking calendar set.
