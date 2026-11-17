@@ -10,6 +10,7 @@ defmodule Tymeslot.Bookings.Policy do
   `Tymeslot.Bookings.MeetingAttributes`, and its links by
   `Tymeslot.Bookings.MeetingLinks`.
   """
+  alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.Clock
   alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingState
@@ -111,9 +112,12 @@ defmodule Tymeslot.Bookings.Policy do
 
   defp held_for_series_payment?(_meeting), do: false
 
-  defp held_for_series_approval?(%{status: :awaiting_approval, series_id: series_id})
+  # Only an open series request: a confirmed session the booker moved back
+  # into the approval gate is a request of its own, moved like any single
+  # booking awaiting approval.
+  defp held_for_series_approval?(%{status: :awaiting_approval, series_id: series_id} = meeting)
        when is_binary(series_id),
-       do: true
+       do: SeriesApproval.series_request?(meeting)
 
   defp held_for_series_approval?(_meeting), do: false
 

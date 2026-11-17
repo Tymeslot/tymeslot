@@ -42,6 +42,7 @@ defmodule Tymeslot.Meetings.Cancellation do
   """
 
   alias Tymeslot.Bookings.Cancel
+  alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.MeetingPayments
 
   @refusals [:not_paid, :outside_refund_window, :under_dispute]
@@ -140,16 +141,18 @@ defmodule Tymeslot.Meetings.Cancellation do
           | {:error, :not_found}
           | {:error, {:refund_failed, term()}}
           | {:error, term()}
-  # A session of a series held for approval is answered with its series
+  # A session of an open series request is answered with its series
   # (decline, from the request), never cancelled on its own: the dashboard
-  # offers no cancel for it, and a crafted event is refused here.
-  def cancel(%{status: :awaiting_approval, series_id: series_id}, _acting_user_id, _refund_action)
-      when is_binary(series_id),
-      do: {:error, {:not_cancellable, :held_for_series_approval}}
-
+  # offers no cancel for it, and a crafted event is refused here. A
+  # confirmed session the booker moved back into the approval gate is a
+  # request of its own (`SeriesApproval.series_request?/1` is false for it),
+  # cancelled like any single booking awaiting approval.
   def cancel(%{organizer_user_id: owner_id} = meeting, acting_user_id, refund_action)
-      when is_integer(owner_id) and owner_id == acting_user_id,
-      do: cancel_as_organizer(meeting, acting_user_id, refund_action)
+      when is_integer(owner_id) and owner_id == acting_user_id do
+    if SeriesApproval.series_request?(meeting),
+      do: {:error, {:not_cancellable, :held_for_series_approval}},
+      else: cancel_as_organizer(meeting, acting_user_id, refund_action)
+  end
 
   def cancel(_meeting, _acting_user_id, _refund_action), do: {:error, :not_found}
 
