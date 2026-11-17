@@ -11,6 +11,7 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import Ecto.Query, only: [where: 2]
   import Mox
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
@@ -31,6 +32,7 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.Meetings.Workers.EmailVerificationExpiryWorker
   alias Tymeslot.Meetings.Workers.EmailVerificationSweepWorker
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
@@ -221,6 +223,37 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
       assert %{cancelled_at: %DateTime{}, email_verified_at: nil} = reload(seat)
       assert reload(slot).status == :confirmed
       assert_nothing_started()
+    end
+
+    # A fresh seat on either type would be refused (`:meeting_type_inactive`,
+    # `:series_required`), so a held one is not confirmed past the host's
+    # change either.
+    for {became, changes} <- [
+          {"deactivated", [is_active: false]},
+          {"series-only",
+           [
+             series_mode: :recurring,
+             series_frequency: :weekly,
+             series_interval: 1,
+             series_min_occurrences: 2,
+             series_max_occurrences: 12,
+             series_required: true
+           ]}
+        ] do
+      test "a seat on a held slot whose meeting type was #{became} is released", ctx do
+        slot = slot(ctx, :awaiting_verification)
+        seat = held_seat(slot, "first@example.com")
+        :ok = EmailVerificationJobs.schedule_seat_expiry(seat)
+
+        Repo.update_all(where(MeetingTypeSchema, id: ^ctx.type.id), set: unquote(changes))
+
+        assert {:error, :expired} = EmailVerification.verify_seat(seat)
+
+        assert %{cancelled_at: %DateTime{}, email_verified_at: nil} = reload(seat)
+        assert %{status: :expired, email_verified_at: nil} = reload(slot)
+        refute_enqueued(worker: EmailVerificationExpiryWorker)
+        assert_nothing_started()
+      end
     end
 
     test "a seat verified after its slot was cancelled reads expired", ctx do

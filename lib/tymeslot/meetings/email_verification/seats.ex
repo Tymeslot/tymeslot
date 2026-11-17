@@ -31,6 +31,7 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
+  alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Repo
 
   @doc """
@@ -46,9 +47,10 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
 
   Returns the slot in the tuple. A seat past its deadline is released
   instead (`{:error, :expired}`), as is one whose slot no longer occupies its
-  time, and one whose meeting type was deleted while it was held, held slot
-  or live, exactly as `EmailVerification.verify/1` releases such a booking.
-  Group types cannot be invitation-only, so no invitation check applies. `{:error, :not_scheduled}` means the seat's work could not be
+  time, and one whose meeting type was deleted, deactivated or made
+  series-only while it was held, held slot or live, as
+  `EmailVerification.verify/1` releases such a booking. Group types cannot be
+  invitation-only, so no invitation check applies. `{:error, :not_scheduled}` means the seat's work could not be
   queued; it is still held and the booker may try again. A seat no longer
   held is answered for as stored: `{:ok, :already_verified, slot}` while it
   counts, `{:error, :expired}` once released or cancelled.
@@ -70,7 +72,7 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
     Repo.transaction(fn ->
       with {:ok, slot} <- lock_slot(seat),
            :ok <- ensure_occupying(slot),
-           :ok <- ensure_meeting_type(slot),
+           :ok <- ensure_still_wanted(slot),
            {:ok, verified} <-
              ParticipantQueries.transition_from_unverified(
                seat.id,
@@ -104,9 +106,10 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
     do: {:error, :expired}
 
   # As for a one-to-one booking (`EmailVerification.verify/1`): a seat whose
-  # meeting type was deleted while it was held is released, silently, rather
-  # than confirmed onto a type the host has removed.
-  defp verify_outcome({:error, :meeting_type_gone}, seat), do: expire_instead(seat)
+  # meeting type was deleted, deactivated or made series-only while it was
+  # held is released, silently, rather than confirmed onto a type that would
+  # refuse it were it booked now.
+  defp verify_outcome({:error, :no_longer_wanted}, seat), do: expire_instead(seat)
 
   defp verify_outcome({:error, :slot_taken}, seat) do
     Logger.warning("Seat verification refused: the slot was taken",
@@ -229,16 +232,22 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
 
   defp void_if_unheld(slot, _now), do: slot
 
-  # A deleted type nilifies the column; an archived one is still read.
-  defp ensure_meeting_type(%{meeting_type_id: type_id, organizer_user_id: user_id})
+  # The checks the booking path makes (`Tymeslot.Bookings.Create`): a type
+  # the host has deactivated, or made series-only, would refuse this seat
+  # were it booked now. A deleted type nilifies the column; an archived one
+  # is still read.
+  defp ensure_still_wanted(%{meeting_type_id: type_id, organizer_user_id: user_id})
        when is_integer(type_id) and is_integer(user_id) do
     case MeetingTypes.get_meeting_type(type_id, user_id) do
-      %MeetingType{} -> :ok
-      nil -> {:error, :meeting_type_gone}
+      %MeetingType{is_active: true} = type ->
+        if SeriesSettings.single_allowed?(type), do: :ok, else: {:error, :no_longer_wanted}
+
+      _gone_or_inactive ->
+        {:error, :no_longer_wanted}
     end
   end
 
-  defp ensure_meeting_type(_slot), do: {:error, :meeting_type_gone}
+  defp ensure_still_wanted(_slot), do: {:error, :no_longer_wanted}
 
   defp lock_slot(seat), do: MeetingQueries.get_meeting_for_update(seat.meeting_id)
 
