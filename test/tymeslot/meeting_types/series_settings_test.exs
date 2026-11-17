@@ -298,6 +298,25 @@ defmodule Tymeslot.MeetingTypes.SeriesSettingsTest do
     assert errors(cs, :series_mode) == []
   end
 
+  test "making a paid series a group is refused on the payment field" do
+    cs =
+      changeset(
+        %{max_participants: 5},
+        stored_series(%{
+          series_mode: :recurring,
+          series_frequency: :weekly,
+          payment_required: true,
+          price_cents: 5000,
+          max_participants: 1
+        })
+      )
+
+    assert {"Paid group meeting types cannot be booked as a series.", []} in errors(
+             cs,
+             :payment_required
+           )
+  end
+
   test "turning the series off clears its settings" do
     stored =
       stored_series(%{

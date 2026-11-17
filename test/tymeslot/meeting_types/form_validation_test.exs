@@ -32,12 +32,13 @@ defmodule Tymeslot.MeetingTypes.FormValidationTest do
   test "a paid group type needs the group gate" do
     setup_config(:tymeslot, feature_access_checker: NoGroupChecker)
 
-    assert {:error, :group_bookings_not_allowed} = FormValidation.check(1, @paid_group)
+    assert {:error, :group_bookings_not_allowed} =
+             FormValidation.check(insert(:user).id, @paid_group)
   end
 
   test "a paid group type needs the payments gate" do
     setup_config(:tymeslot, feature_access_checker: NoPaymentsChecker)
 
-    assert {:error, :insufficient_plan} = FormValidation.check(1, @paid_group)
+    assert {:error, :insufficient_plan} = FormValidation.check(insert(:user).id, @paid_group)
   end
 end

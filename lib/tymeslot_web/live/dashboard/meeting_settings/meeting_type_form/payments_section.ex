@@ -133,13 +133,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
             amount: Money.format(@currency_minimum_cents, @currency)
           )}
         </p>
-        <p :if={@group_bookings_enabled} class="mt-1 text-token-sm text-tymeslot-600">
-          {dgettext(
-            "dashboard_meeting_form",
-            "Each booker pays this for every seat they take, guests included."
-          )}
-        </p>
       </div>
+
+      <%!-- Outside the charges-only block, so a host without charges who keeps
+            a stored price on a group type still reads that it is per seat. --%>
+      <p
+        :if={@group_bookings_enabled and @payment_required}
+        class="mt-1 text-token-sm text-tymeslot-600"
+      >
+        {dgettext(
+          "dashboard_meeting_form",
+          "Each booker pays this for every seat they take, guests included."
+        )}
+      </p>
 
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :payment_required) do %>
         <p class="form-error">{Helpers.format_errors(error)}</p>
