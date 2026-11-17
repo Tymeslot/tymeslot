@@ -140,6 +140,15 @@ Genitive singular and genitive plural are given wherever a translator will need 
 | Translated (status) | **Přeloženo** (impersonal neuter, safe for any text) |
 | Review (the link to a language's review page) | **Zkontrolovat** |
 
+### Booking series
+
+A **series** is several sessions of one meeting type that a booker books with a host in one go; each **session** is one meeting of that series. The terms below are the ones `emails_booking_series` uses; keep them in every series string.
+
+| English | cs |
+|---|---|
+| session (one meeting within a booking series) | **termín** (m. inanimate: *termín / termíny / termínů*; `Termín %{position} z %{count}`, `Zrušit termín`, `Spravovat všechny termíny`). Never `schůzka` for a session of a series, so it matches `booking_errors` |
+| series (a booking series) | **série** (`Nová série`) |
+
 ### Booking pages (a host's extra pages)
 
 A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.

@@ -196,3 +196,58 @@ msgstr "Tout est prêt !"
 #, elixir-autogen, elixir-format
 msgid "with %{name}"
 msgstr "avec %{name}"
+
+#: lib/tymeslot_web/themes/shared/confirmation_text.ex
+#, elixir-autogen, elixir-format
+msgid "Check your inbox"
+msgstr "Consultez votre boîte de réception"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Resend email"
+msgstr "Renvoyer l’e-mail"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sending…"
+msgstr "Envoi en cours…"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sent"
+msgstr "Envoyé"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sent again. It can take a minute to arrive."
+msgstr "E-mail renvoyé. Il peut mettre une minute à arriver."
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "The email could not be sent. Please try again."
+msgstr "L’e-mail n’a pas pu être envoyé. Veuillez réessayer."
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "The time was released because the booking was not confirmed in time. Please book again."
+msgstr "Le créneau a été libéré, car la réservation n’a pas été confirmée à temps. Veuillez réserver à nouveau."
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer waiting for your confirmation, so there is nothing to resend."
+msgstr "Cette réservation n’attend plus votre confirmation, il n’y a donc rien à renvoyer."
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Try again in a moment."
+msgstr "Trop de tentatives. Réessayez dans un instant."
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "We cannot send the email again. If it has not arrived, check your spam folder."
+msgstr "Nous ne pouvons pas renvoyer l’e-mail. S’il n’est pas arrivé, vérifiez votre dossier de spams."
+
+#: lib/tymeslot_web/themes/shared/confirmation_text.ex
+#, elixir-autogen, elixir-format
+msgid "We have sent a link to %{email}. Click it by %{deadline} to confirm your booking. Until then the time is held for you."
+msgstr "Nous avons envoyé un lien à %{email}. Cliquez dessus au plus tard le %{deadline} pour confirmer votre réservation. D’ici là, le créneau vous est réservé."

@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   alias Phoenix.Component
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.BookingPages
+  alias Tymeslot.BookingSeries
   alias Tymeslot.ContentTranslations
   alias Tymeslot.ContentTranslations.Languages
   alias Tymeslot.Demo
@@ -227,19 +228,24 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   Re-reads the booking window for whatever meeting type is now selected.
 
   Call after assigning `:meeting_type`; the window is first assigned at mount,
-  when no meeting type has been picked yet.
+  when no meeting type has been picked yet. A reschedule of a series session
+  reaches as far as the series does.
   """
   @spec assign_booking_window(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def assign_booking_window(socket) do
-    assign(
-      socket,
-      :booking_window_days,
-      booking_window_days(
-        socket.assigns[:organizer_profile],
-        socket.assigns[:meeting_type]
-      )
-    )
+    days =
+      socket.assigns[:organizer_profile]
+      |> booking_window_days(socket.assigns[:meeting_type])
+      |> BookingSeries.reach_days(series_reach(socket.assigns))
+
+    assign(socket, :booking_window_days, days)
   end
+
+  # Moving a session of a series, the page reaches as far as the series
+  # does (`BookingSeries.window_until/1`), past the booking window.
+  defp series_reach(%{seat_move_context: %{window_until: until}}), do: until
+  defp series_reach(%{reschedule_context: %{window_until: until}}), do: until
+  defp series_reach(_assigns), do: nil
 
   @doc "Initialises form, touched-field, validation-error, and saving assigns."
   @spec setup_form_state(Phoenix.LiveView.Socket.t(), map(), keyword()) ::

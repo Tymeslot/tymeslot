@@ -36,7 +36,7 @@ msgstr "Ein Fehler ist aufgetreten"
 msgid "Booking Destination"
 msgstr "Buchungsziel"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/details_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Brief description of this meeting type"
 msgstr "Kurze Beschreibung dieses Termintyps"
@@ -81,7 +81,7 @@ msgstr "Änderungen konnten nicht gespeichert werden"
 msgid "Custom booking questions are available on Pro plans."
 msgstr "Benutzerdefinierte Buchungsfragen sind in Pro-Tarifen verfügbar."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/details_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Description (optional)"
 msgstr "Beschreibung (optional)"
@@ -147,7 +147,7 @@ msgstr "Termintyp erstellt"
 msgid "Minimum %{amount}."
 msgstr "Mindestens %{amount}."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/details_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Name"
@@ -188,7 +188,7 @@ msgstr "Erneut verbinden"
 msgid "Refreshing calendars..."
 msgstr "Kalender werden aktualisiert…"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
 msgstr "Erinnerungen"
@@ -218,7 +218,7 @@ msgstr "Abonnementstatus konnte nicht überprüft werden. Bitte versuchen Sie es
 msgid "Unsaved changes"
 msgstr "Nicht gespeicherte Änderungen"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/details_panel.ex
 #, elixir-autogen, elixir-format
 msgid "e.g., Quick Chat"
 msgstr "z. B. Kurzes Gespräch"
@@ -313,22 +313,22 @@ msgstr "Pro Monat"
 msgid "Per week"
 msgstr "Pro Woche"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Booking Rules"
 msgstr "Buchungsregeln"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Details"
 msgstr "Details"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Location & Calendar"
 msgstr "Ort & Kalender"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_tabs.ex
 #, elixir-autogen, elixir-format
 msgid "Questions"
 msgstr "Fragen"
@@ -411,7 +411,7 @@ msgstr[1] "Stunden"
 msgid "%{minutes} min"
 msgstr "%{minutes} Min."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/details_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Booking slot interval"
 msgstr "Buchungsintervall"
@@ -426,7 +426,7 @@ msgstr "Abstand zwischen den angebotenen Startzeiten. Standard entspricht der Te
 msgid "Same as meeting length"
 msgstr "Wie die Termindauer"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/details_panel.ex
 #, elixir-autogen, elixir-format
 msgid "Custom interval (minutes)"
 msgstr "Eigenes Intervall (Minuten)"
@@ -898,3 +898,50 @@ msgstr "Einladungslinks gibt es nur für Einzeltermintypen."
 #, elixir-autogen, elixir-format
 msgid "Only people with an invitation link can book"
 msgstr "Nur Personen mit einem Einladungslink können buchen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Ask invitees to confirm their email"
+msgstr "Gäste ihre E-Mail-Adresse bestätigen lassen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Email confirmation"
+msgstr "E-Mail-Bestätigung"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off group bookings to ask invitees to confirm their email."
+msgstr "Deaktivieren Sie Gruppenbuchungen, um Gäste ihre E-Mail-Adresse bestätigen zu lassen."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
+msgstr "Deaktivieren Sie Zahlungen, um Gäste ihre E-Mail-Adresse bestätigen zu lassen. Mit der Zahlung steht bereits fest, wer sie sind."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minute, and you are not notified."
+msgid_plural "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minutes, and you are not notified."
+msgstr[0] "Eine Buchung zählt erst, wenn der Gast auf den Link in unserer E-Mail klickt. Bis dahin bleibt die Zeit bis zu %{count} Minute reserviert, und Sie erhalten keine Benachrichtigung."
+msgstr[1] "Eine Buchung zählt erst, wenn der Gast auf den Link in unserer E-Mail klickt. Bis dahin bleibt die Zeit bis zu %{count} Minuten reserviert, und Sie erhalten keine Benachrichtigung."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off email confirmation to enable group bookings."
+msgstr "Deaktivieren Sie die E-Mail-Bestätigung, um Gruppenbuchungen zu aktivieren."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off email confirmation to require payment."
+msgstr "Deaktivieren Sie die E-Mail-Bestätigung, um Zahlungen zu verlangen."
+
+#: lib/tymeslot_web/helpers/context_errors.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring bookings are not included in your current plan."
+msgstr "Wiederkehrende Buchungen sind in Ihrem aktuellen Tarif nicht enthalten."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off series booking to ask invitees to confirm their email. A series confirms all its sessions at once."
+msgstr "Deaktivieren Sie die Serienbuchung, um Gäste ihre E-Mail-Adresse bestätigen zu lassen. Bei einer Serie werden alle Termine auf einmal bestätigt."

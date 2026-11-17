@@ -20,13 +20,22 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Scheduling.PreviewToken
-  alias TymeslotWeb.Themes.Core.{Context, ErrorBoundary, MeetingManagement, PollVoting, Registry}
+
+  alias TymeslotWeb.Themes.Core.{
+    Context,
+    ErrorBoundary,
+    MeetingManagement,
+    PollVoting,
+    Registry,
+    SeriesManagement
+  }
+
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
 
   @doc """
   Mounts the socket when an organizer profile is present.
 
-  Delegates to the meeting-management, poll-voting or scheduling-flow mount
+  Delegates to the meeting-management, series, poll-voting or scheduling-flow mount
   depending on the live action and params. Accepts `delegate_fn` — a
   `(theme_id, function, args -> result)` function — for delegating
   scheduling-flow mounts to the theme module.
@@ -39,6 +48,9 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     cond do
       action in [:reschedule, :cancel, :cancel_confirmed] && params["meeting_uid"] ->
         mount_meeting_management(profile, params, socket, action)
+
+      action == :series && params["series_uid"] ->
+        mount_series(profile, params, socket)
 
       action == :poll_voting && params["token"] ->
         mount_poll_voting(profile, params, socket)
@@ -63,8 +75,9 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     end
   end
 
-  # A cancel or reschedule link under a username nobody holds any more: the
-  # host has since renamed themselves. The uid names the meeting, so send the
+  # A cancel, reschedule or series link under a username nobody holds any
+  # more: the host has since renamed themselves. The uid names the meeting
+  # (or the series), so send the
   # visitor to the host's current page for it. A username someone else has
   # since claimed is handled by `meeting_not_found/4` instead, after that
   # host's scoped lookup has found nothing of theirs.
@@ -72,6 +85,10 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
        when is_binary(username) and is_binary(uid) and
               action in [:reschedule, :cancel, :cancel_confirmed],
        do: MeetingLinks.current_path(uid, action)
+
+  defp renamed_host_meeting_path(%{"username" => username, "series_uid" => uid}, :series)
+       when is_binary(username) and is_binary(uid),
+       do: MeetingLinks.current_series_path(uid)
 
   defp renamed_host_meeting_path(_params, _action), do: {:error, :not_found}
 
@@ -168,12 +185,45 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     end
   end
 
-  # A meeting's pages speak the language the attendee booked in, unless the
-  # visitor picked another (`?locale=`, the language switcher's): the emailed
-  # links carry no locale, and the attendee may open them anywhere
-  # (`OrganizerHelpers.follow_booked_language/2`).
-  defp follow_attendee_language(socket, profile, meeting) do
-    socket = OrganizerHelpers.follow_booked_language(socket, meeting.attendee_locale)
+  # The attendee's page for a whole series. Not found, and a series of
+  # another host's, are treated as a meeting's uid is.
+  @spec mount_series(map(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  defp mount_series(profile, params, socket) do
+    case SeriesManagement.load(params["series_uid"], profile) do
+      {:ok, series} ->
+        {socket, profile} = follow_attendee_language(socket, profile, series)
+
+        socket =
+          socket
+          |> assign(:organizer_profile, profile)
+          |> SeriesManagement.assign_series(series)
+          |> assign(:loading, false)
+          |> assign(:has_theme, true)
+
+        # A series booked through a booking page is managed in its look.
+        profile =
+          case socket.assigns.series_sessions do
+            [%{meeting: meeting} | _rest] -> BookingPages.for_meeting(profile, meeting)
+            [] -> profile
+          end
+
+        {:ok, socket |> assign(:organizer_profile, profile) |> assign_page_theme(profile, params)}
+
+      {:redirect, path} ->
+        {:ok, LiveView.redirect(socket, to: path)}
+
+      {:error, :not_found} ->
+        {:ok, SeriesManagement.not_found_redirect(socket)}
+    end
+  end
+
+  # A meeting's pages, and a series', speak the language the attendee booked
+  # in, unless the visitor picked another (`?locale=`, the language
+  # switcher's): the emailed links carry no locale, and the attendee may open
+  # them anywhere (`OrganizerHelpers.follow_booked_language/2`).
+  defp follow_attendee_language(socket, profile, %{attendee_locale: booked}) do
+    socket = OrganizerHelpers.follow_booked_language(socket, booked)
     {socket, socket.assigns[:organizer_profile] || profile}
   end
 
@@ -316,10 +366,15 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
       |> assign(:meeting_uid, meeting_uid)
       |> assign(:loading, false)
       |> assign(:has_theme, true)
+      |> assign_page_theme(profile, params)
 
-    # The booking pages' resolution: `?theme=`, then the organiser's theme,
-    # each only when the catalogue knows it, then the default. The page, its
-    # stylesheet and its customisation all follow the one answer.
+    MeetingManagement.assign_action_specific_data(socket, action, meeting, params)
+  end
+
+  # The booking pages' resolution: `?theme=`, then the organiser's theme,
+  # each only when the catalogue knows it, then the default. The page, its
+  # stylesheet and its customisation all follow the one answer.
+  defp assign_page_theme(socket, profile, params) do
     {socket, theme_id} =
       case Context.from_params(params, profile) do
         %Context{} = context ->
@@ -330,7 +385,6 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
           {assign(socket, :theme_id, theme_id), theme_id}
       end
 
-    socket = MeetingManagement.assign_action_specific_data(socket, action, meeting, params)
     ThemeCustomizationHelpers.assign_theme_customization(socket, profile, theme_id)
   end
 end

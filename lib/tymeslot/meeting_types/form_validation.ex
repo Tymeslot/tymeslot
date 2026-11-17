@@ -35,6 +35,7 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.UriUtils
   alias Tymeslot.Venues
@@ -52,6 +53,7 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
           | :no_writable_calendars
           | :invalid_availability_schedule
           | :group_bookings_not_allowed
+          | :recurring_bookings_not_allowed
           | atom()
 
   @doc """
@@ -61,10 +63,11 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   write: 1 when creating. Only a write raising the limit above both it and 1
   needs group-bookings access.
   """
-  @spec check(integer(), map(), pos_integer()) :: :ok | {:error, error()}
-  def check(user_id, attrs, current_max_participants \\ 1) do
+  @spec check(integer(), map(), pos_integer(), atom() | nil) :: :ok | {:error, error()}
+  def check(user_id, attrs, current_max_participants \\ 1, current_series_mode \\ nil) do
     with :ok <- gate_custom_fields(user_id, attrs),
          :ok <- gate_group_bookings(user_id, attrs, current_max_participants),
+         :ok <- gate_series(user_id, attrs, current_series_mode),
          :ok <- gate_payment(user_id, attrs),
          :ok <- validate_availability_schedule(attrs, user_id),
          :ok <- validate_video_integration(attrs, user_id),
@@ -238,6 +241,19 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   end
 
   defp gate_group_bookings(_user_id, _attrs, _current), do: :ok
+
+  # Switching a series on needs access; changing the settings of a series that
+  # is already on, or switching it off, never does, so a host who lost Pro
+  # keeps what they set up.
+  defp gate_series(user_id, %{series_mode: mode}, nil) when mode != nil do
+    case Features.check_access(user_id, SeriesSettings.feature()) do
+      :ok -> :ok
+      {:error, :feature_access_checker_failed} = error -> error
+      {:error, _denied} -> {:error, :recurring_bookings_not_allowed}
+    end
+  end
+
+  defp gate_series(_user_id, _attrs, _current), do: :ok
 
   # Mirrors `Features.meeting_payments_allowed?/1`'s yes/no decision
   # (`:stripe_required` counts as allowed: the host has the plan but no

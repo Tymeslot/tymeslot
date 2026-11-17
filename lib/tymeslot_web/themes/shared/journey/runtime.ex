@@ -59,6 +59,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   alias TymeslotWeb.Themes.Shared.Journey.Moment
   alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.Themes.Shared.ReschedulePin
+  alias TymeslotWeb.Themes.Shared.VerificationResend
 
   @type reply :: {:noreply, Socket.t()}
 
@@ -159,6 +160,34 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   end
 
   def enter_ready(socket), do: socket
+
+  @doc """
+  Brings each fact up to date (`Fact.refresh/1`) that a shown moment
+  collects, has entered and the booking requires: a moment that opened
+  stays entered while it is shown, so what it derived from a fact above it
+  (the series' sessions from the time picked) follows that fact here.
+  Runs after every step event, before `enter_ready/1`.
+  """
+  @spec refresh_shown(Socket.t()) :: Socket.t()
+  def refresh_shown(
+        %Socket{assigns: %{journey: %Journey{navigator: navigator} = journey}} = socket
+      ) do
+    put_off = MapSet.new(Map.keys(deferred(socket)))
+
+    navigator.visible(journey, socket.assigns)
+    |> Enum.filter(fn {moment, _state} -> MapSet.member?(opened(socket), moment.key) end)
+    |> Enum.flat_map(fn {moment, _state} -> Enum.map(moment.collects, &{moment.key, &1}) end)
+    |> Enum.reject(&MapSet.member?(put_off, &1))
+    |> Enum.map(fn {_moment_key, fact_key} -> Journey.fact!(fact_key) end)
+    |> Enum.uniq()
+    |> Enum.reduce(socket, fn fact, acc ->
+      if function_exported?(fact, :refresh, 1) and fact.required?(acc.assigns),
+        do: fact.refresh(acc),
+        else: acc
+    end)
+  end
+
+  def refresh_shown(socket), do: socket
 
   @doc """
   On a journey whose address follows its facts (`url: :facts`), moves the
@@ -262,6 +291,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     socket
     |> clear(Progress.dependents(:meeting_type, socket.assigns) -- [:meeting_type])
     |> forget_payment_wait()
+    |> VerificationResend.forget()
     |> GuestBooking.assign_defaults()
     |> ReschedulePin.abandon()
     |> assign(selected_date: nil, selected_time: nil, form: nil, paid_payment: nil)
@@ -398,8 +428,10 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   # (a time picked for another meeting type's length, the details form opened
   # for it) is forgotten, so settling moves the page back to the first moment
   # still to complete. The fact itself keeps its new value.
+  # A fact may keep them through a change of its own (a known series counted
+  # again keeps the details opened for it, `Fact.keeps_dependents?/2`).
   defp forget_dependents({:noreply, socket}, fact, before) do
-    if changed?(fact, before, socket) do
+    if changed?(fact, before, socket) and not keeps_dependents?(fact, before, socket) do
       key = fact.key()
       {:noreply, clear(socket, Progress.dependents(key, socket.assigns) -- [key])}
     else
@@ -408,6 +440,11 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   end
 
   defp forget_dependents(other, _fact, _before), do: other
+
+  defp keeps_dependents?(fact, before, socket),
+    do:
+      function_exported?(fact, :keeps_dependents?, 2) and
+        fact.keeps_dependents?(before.assigns, socket.assigns)
 
   # What a fact holds is what its `clear/1` resets, so it changed when one of
   # those assigns did. Comparing them, rather than taking every event as a
@@ -483,7 +520,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   defp deferred(socket), do: socket.assigns[:journey_deferred] || %{}
 
   defp enter_ready_after({:noreply, socket}),
-    do: {:noreply, socket |> enter_ready() |> follow_url()}
+    do: {:noreply, socket |> refresh_shown() |> enter_ready() |> follow_url()}
 
   defp enter_ready_after(other), do: other
 

@@ -16,11 +16,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
-  alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
+  alias TymeslotWeb.Themes.Shared.Components.VerificationNotice
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.SeriesSummary
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   use TymeslotWeb.Components.CoreComponents
@@ -39,7 +40,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
         step_numbers: Runtime.step_numbers(assigns)
       )
 
-    assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
+    assigns =
+      assign(assigns,
+        next_day_end: LocalizationHelpers.booking_next_day_end(assigns),
+        series_count: SeriesSummary.pending_count(assigns)
+      )
 
     ~H"""
     <div
@@ -87,12 +92,19 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     <% end %>
                   </p>
 
-                  <p class="booking-datetime text-quill-secondary">
+                  <p :if={is_nil(@series_count)} class="booking-datetime text-quill-secondary">
                     {LocalizationHelpers.format_booking_datetime(
                       @selected_date,
                       @selected_time,
                       @user_timezone
                     )}
+                  </p>
+                  <p
+                    :if={@series_count}
+                    class="booking-datetime text-quill-secondary"
+                    data-testid="booking-series-summary"
+                  >
+                    {SeriesSummary.summary_line(assigns, @series_count)}
                   </p>
                   <p
                     :if={@next_day_end}
@@ -158,11 +170,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     stage={:before}
                   />
 
-                  <SubmitPrice.price
+                  <VerificationNotice.line meeting_type={@meeting_type} />
+
+                  <SeriesSummary.price
                     meeting_type={@meeting_type}
                     currency={@host_currency}
                     locale={@locale}
                     rescheduling={@is_rescheduling}
+                    count={@series_count}
                     class="booking-submit-price"
                   />
 
@@ -191,12 +206,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       data-testid="submit-booking"
                       aria-describedby={
                         submit_describedby(
-                          SubmitPrice.describedby(
-                            @meeting_type,
-                            @host_currency,
-                            @locale,
-                            @is_rescheduling
-                          ),
+                          SeriesSummary.price_describedby(assigns, @series_count),
                           @submitting,
                           @form
                         )
@@ -204,7 +214,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       data-intent="submit"
                       class="flex-1"
                     >
-                      {submit_label(@is_rescheduling, @meeting_type)}
+                      {SeriesSummary.submit_label(
+                        assigns,
+                        single_label(@is_rescheduling, @meeting_type)
+                      )}
                     </.loading_button>
                   </div>
                   <p
@@ -231,7 +244,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   # part of this whole feature and the one a visitor reads last — including
   # on a reschedule, which re-enters the approval gate on a gated type just
   # as a fresh submission does.
-  defp submit_label(is_rescheduling, meeting_type) do
+  defp single_label(is_rescheduling, meeting_type) do
     BookingLabels.submit_label(
       is_rescheduling,
       meeting_type,

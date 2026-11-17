@@ -10,7 +10,7 @@ defmodule Tymeslot.Emails.EmailActionsTest do
   # under the old name, so a change to this list must be deliberate.
   @names ~w(
     send_account_deletion_notice send_account_invitation send_admin_alert send_admin_alert_digest
-    send_booking_approval_nudge send_booking_request_emails send_booking_request_outcome
+    send_booking_approval_nudge send_booking_email_verification send_booking_request_emails send_booking_request_outcome
     send_calendar_invitation send_calendars_removed_notification send_cancellation_emails
     send_confirmation_emails send_email_change_confirmations send_email_change_notification
     send_email_change_verification send_email_verification send_end_change_emails
@@ -27,6 +27,8 @@ defmodule Tymeslot.Emails.EmailActionsTest do
     send_poll_new_times send_poll_cancelled
     send_seat_session_moved
     send_registration_closed send_booking_link_email
+    send_series_confirmation send_series_cancellation send_series_request
+    send_series_request_outcome send_series_request_nudge
     send_released_guest_cancellations send_external_booking_change send_calendar_sync_error
   )
 

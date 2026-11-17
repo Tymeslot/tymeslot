@@ -133,6 +133,61 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
     end
   end
 
+  # A first-booker collision on the `(organizer_user_id, start_time)` index,
+  # staged by leaving a meeting already at the slot out of the conflict
+  # check, as a writer skipping the schedule lock would. That callback runs
+  # once per attempt, so it also counts them.
+  describe "book_seat/3 — a first-booker index collision" do
+    setup ctx do
+      blocker =
+        insert(:meeting,
+          organizer_user_id: ctx.user.id,
+          start_time: ctx.start_time,
+          end_time: DateTime.add(ctx.start_time, 30, :minute),
+          status: :confirmed
+        )
+
+      test_pid = self()
+
+      %{
+        attrs: meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time),
+        exclude: fn ->
+          send(test_pid, :attempt)
+          blocker.uid
+        end
+      }
+    end
+
+    test "on its own transaction, is retried and then surfaces the changeset", ctx do
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               GroupScheduling.book_seat(ctx.attrs, seat_request("one@example.com"),
+                 exclude_from_conflicts: ctx.exclude
+               )
+
+      assert MeetingSchema.unique_slot_violation?(changeset)
+      assert_received :attempt
+      assert_received :attempt
+      refute_received :attempt
+    end
+
+    test "inside the caller's transaction, which it aborted, is refused as :slot_taken", ctx do
+      opts = [in_outer_transaction: true, exclude_from_conflicts: ctx.exclude]
+
+      assert {:error, :slot_taken} =
+               Repo.transaction(fn ->
+                 {:error, reason} =
+                   GroupScheduling.book_seat(ctx.attrs, seat_request("one@example.com"), opts)
+
+                 Repo.rollback(reason)
+               end)
+
+      assert_received :attempt
+      refute_received :attempt
+
+      assert Repo.aggregate(MeetingSchema, :count) == 1
+    end
+  end
+
   describe "book_seat/2 — joining and filling" do
     test "second booker joins the existing meeting", ctx do
       attrs = meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)

@@ -3,6 +3,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
   Rhythm: sliding steps over a video background.
   """
 
+  alias TymeslotWeb.Themes.Rhythm.Meeting.Series
+
   use TymeslotWeb.Themes.Core.Theme,
     live_view: TymeslotWeb.Themes.Rhythm.Scheduling.Live,
     font: "inter",
@@ -31,4 +33,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
   defdelegate onboarding_preview(assigns),
     to: TymeslotWeb.Themes.Rhythm.OnboardingPreview,
     as: :render
+
+  # The series page is the shared body in Rhythm's own card; the other meeting
+  # pages are its conventional modules.
+  @impl TymeslotWeb.Themes.Core.Behaviour
+  def render_meeting_action(assigns, :series), do: Series.render(assigns)
+  def render_meeting_action(assigns, action), do: super(assigns, action)
 end

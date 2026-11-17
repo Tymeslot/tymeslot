@@ -30,6 +30,13 @@ defmodule Tymeslot.MeetingTypes.DuplicateMeetingTypeTest do
   end
 
   describe "duplicate_meeting_type/1" do
+    test "duplicating a type keeps email verification" do
+      source = insert(:meeting_type, user: insert(:user), requires_email_verification: true)
+
+      assert {:ok, copy} = MeetingTypes.duplicate_meeting_type(source)
+      assert copy.requires_email_verification == true
+    end
+
     test "copies the settings under a (copy) name, switched off" do
       user = insert(:user)
       schedule_profile = insert(:profile, user: user)

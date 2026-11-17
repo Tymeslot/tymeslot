@@ -37,6 +37,10 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   time shows its free seats, the month's through `SlotList` and the week's
   through `WeekGrid`, both given the meeting type.
 
+  For a meeting type that offers a series, picking a time opens the series
+  part first (`SeriesComponent`), and the details part below it once every
+  session is available.
+
   There is no Next: picking a time opens the details part. The one Back,
   shown to a visitor who came through the overview, heads the card above the
   brand, so it stays in reach however long the details part grows below,
@@ -66,6 +70,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Paper.Components
+  alias TymeslotWeb.Themes.Paper.Scheduling.Components.SeriesComponent
   alias TymeslotWeb.Themes.Paper.Scheduling.Details
   alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
@@ -75,6 +80,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Themes.Shared.Components.WeekGrid
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
   alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Slot
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.StepEvents
 
@@ -117,11 +124,18 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
     view = calendar_view(assigns.theme_tokens, assigns[:planned_sessions])
     days = month_days(view, assigns)
 
+    series_shown = series_shown?(assigns)
+
     assigns =
       assign(assigns,
         view: view,
         week_empty: week_empty?(assigns),
         stage: stage(assigns),
+        series_shown: series_shown,
+        # The series part, when shown, takes the focus a pick gives; the
+        # details below it then open without taking it.
+        series_focus: assigns[:focus_details] == true,
+        focus_details: assigns[:focus_details] == true and not series_shown,
         show_back: assigns[:entered_via_overview] == true,
         chosen: not is_nil(assigns.selected_date) and not is_nil(assigns.selected_time),
         duration_text: BookingText.duration_label(assigns),
@@ -264,6 +278,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
           </div>
         </div>
 
+        <SeriesComponent.series :if={@series_shown} {assigns} target={@myself} />
         <Details.book :if={@stage != :none} {assigns} target={@myself} />
       </div>
 
@@ -297,12 +312,22 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ScheduleComponent do
   # What follows the picker: nothing until a time is picked; then the
   # details part (the questions, if any, and the form below them), once the
   # form exists: the runtime enters the attendee as the time is picked.
+  # A series the booking needs comes first: the details wait until every
+  # session is available.
   defp stage(%{selected_date: date, selected_time: time} = assigns)
        when is_binary(date) and is_binary(time) do
-    if match?(%Phoenix.HTML.Form{}, assigns[:form]), do: :details, else: :none
+    cond do
+      Series.required?(assigns) and not Series.known?(assigns) -> :none
+      match?(%Phoenix.HTML.Form{}, assigns[:form]) -> :details
+      true -> :none
+    end
   end
 
   defp stage(_assigns), do: :none
+
+  # The series part follows the time once one is picked, for a type that
+  # offers a series.
+  defp series_shown?(assigns), do: Series.required?(assigns) and Slot.known?(assigns)
 
   # The organiser's calendar view; no tokens, or none resolved, is a month,
   # and so is every fixed-date type's (its sessions are a list of days).

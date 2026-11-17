@@ -83,6 +83,34 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
     |> Helpers.ok()
   end
 
+  @doc """
+  Schedules the email that asks an attendee to verify their address.
+
+  `send` numbers the send: 1 for the email sent with the booking, and a higher
+  number for each resend. It is part of the job's args and of its uniqueness,
+  so enqueuing the same send twice within five minutes inserts one job, while
+  a resend (a different number) is never swallowed by an earlier job. The
+  handler claims its delivery per send as well.
+
+  Inserts through Oban's repo, so called inside a `Repo.transaction` the job
+  commits with the booking.
+  """
+  @spec schedule_verification_email(term(), pos_integer()) :: :ok | {:error, term()}
+  def schedule_verification_email(meeting_id, send \\ 1) when is_integer(send) and send > 0 do
+    %{"action" => "send_booking_email_verification", "meeting_id" => meeting_id, "send" => send}
+    |> EmailWorker.new(
+      queue: :emails,
+      priority: 0,
+      unique: [
+        period: 300,
+        fields: [:args, :queue],
+        keys: [:action, :meeting_id, :send]
+      ]
+    )
+    |> Helpers.insert(meeting_id: meeting_id)
+    |> Helpers.ok()
+  end
+
   # A reschedule back into the approval gate knows the time the booking was
   # moved from; nothing persists it, so the job carries it to the emails.
   defp maybe_put_previous_start(args, %DateTime{} = previous),

@@ -172,7 +172,7 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
       )
     end
 
-    test "says when the host has another booking at the new time", ctx do
+    test "says when the new time is no longer available", ctx do
       {:ok, session} =
         PlannedSessions.add(ctx.meeting_type, ctx.meeting_type.user_id, at(10, ~T[18:00:00]))
 
@@ -186,7 +186,12 @@ defmodule TymeslotWeb.Dashboard.FixedDatesRegistrationCloseTest do
         "time" => "09:30"
       })
 
-      assert has_element?(view, "[data-testid='edit-session']", "already have a booking")
+      assert has_element?(
+               view,
+               "[data-testid='edit-session']",
+               "This time is no longer available"
+             )
+
       assert Repo.reload!(session).start_time == at(10, ~T[18:00:00])
     end
   end

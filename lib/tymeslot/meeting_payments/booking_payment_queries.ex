@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
   alias Ecto.UUID
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
 
@@ -71,22 +72,58 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     end
   end
 
+  @doc """
+  The payment the meeting `meeting_id` owns itself, or `nil`. A session of a
+  paid series owns none: see `for_meeting/1`.
+  """
   @spec by_meeting_id(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
   def by_meeting_id(meeting_id),
     do: Repo.get_by(BookingPaymentSchema, meeting_id: meeting_id)
 
+  @doc "The payment the series `series_id` owns, or `nil`."
+  @spec by_series_id(term()) :: BookingPaymentSchema.t() | nil
+  def by_series_id(series_id) do
+    case cast_id(series_id) do
+      {:ok, uuid} -> Repo.get_by(BookingPaymentSchema, series_id: uuid)
+      {:error, :not_found} -> nil
+    end
+  end
+
   @doc """
-  Fetches the payment for a meeting only if `host_user_id` took it, or `nil`.
+  The payment that paid for the meeting `meeting_id`, or `nil`: its own, or,
+  for a session of a paid series, the series' one payment, returned with its
+  `series` preloaded. A malformed id returns `nil`.
   """
-  @spec by_meeting_id_for_host(term(), integer()) :: BookingPaymentSchema.t() | nil
-  def by_meeting_id_for_host(meeting_id, host_user_id) when is_integer(host_user_id) do
+  @spec for_meeting(term()) :: BookingPaymentSchema.t() | nil
+  def for_meeting(meeting_id) do
+    case cast_id(meeting_id) do
+      {:ok, uuid} -> by_meeting_id(uuid) || series_payment(uuid, dynamic(true))
+      {:error, :not_found} -> nil
+    end
+  end
+
+  @doc """
+  As `for_meeting/1`, but only a payment `host_user_id` took, or `nil`.
+  """
+  @spec for_meeting_for_host(term(), integer()) :: BookingPaymentSchema.t() | nil
+  def for_meeting_for_host(meeting_id, host_user_id) when is_integer(host_user_id) do
     case cast_id(meeting_id) do
       {:ok, uuid} ->
-        Repo.get_by(BookingPaymentSchema, meeting_id: uuid, host_user_id: host_user_id)
+        Repo.get_by(BookingPaymentSchema, meeting_id: uuid, host_user_id: host_user_id) ||
+          series_payment(uuid, dynamic([bp], bp.host_user_id == ^host_user_id))
 
       {:error, :not_found} ->
         nil
     end
+  end
+
+  defp series_payment(meeting_id, scope) do
+    BookingPaymentSchema
+    |> join(:inner, [bp], m in MeetingSchema, on: m.series_id == bp.series_id)
+    |> where([_bp, m], m.id == ^meeting_id)
+    |> where(^scope)
+    |> preload(:series)
+    |> Repo.one()
   end
 
   @spec by_checkout_session(String.t()) :: BookingPaymentSchema.t() | nil
@@ -144,13 +181,22 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     Repo.all(query)
   end
 
+  @doc """
+  The host's recent payments, newest first: every charge that moved money,
+  and none that never did. A checkout still `:pending`, or `:failed` with
+  nothing captured (`paid_at` nil), is left out. Keyed on the payment row
+  alone, never on the meeting: a late payment refused on an `:expired`
+  meeting moved money and stays listed.
+  """
   @spec for_host(integer(), keyword()) :: [BookingPaymentSchema.t()]
   def for_host(host_user_id, opts) do
     limit = Keyword.get(opts, :limit, 25)
 
     query =
       from b in BookingPaymentSchema,
-        where: b.host_user_id == ^host_user_id,
+        where:
+          b.host_user_id == ^host_user_id and b.status != :pending and
+            not (b.status == :failed and is_nil(b.paid_at)),
         order_by: [desc: b.inserted_at],
         limit: ^limit
 
@@ -242,14 +288,37 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   defp outstanding_refunds_query(host_user_id) do
     query =
       from b in BookingPaymentSchema,
-        join: m in assoc(b, :meeting),
+        as: :payment,
+        join: m in MeetingSchema,
         as: :meeting,
+        # The payment's meeting, or its series' first session still there:
+        # one equality on the meeting id, so the join stays a primary-key
+        # lookup per payment.
+        on:
+          m.id ==
+            fragment(
+              "COALESCE(?, (SELECT sm.id FROM meetings AS sm WHERE sm.series_id = ? ORDER BY sm.series_position LIMIT 1))",
+              b.meeting_id,
+              b.series_id
+            ),
         where:
           b.host_user_id == ^host_user_id and
             b.status in ^BookingPaymentSchema.refundable_statuses() and
-            b.refunded_amount_cents < b.amount_cents
+            b.refunded_amount_cents < b.amount_cents,
+        where: is_nil(b.series_id) or not exists(series_sessions_going_ahead())
 
     MeetingState.where_released(query, :meeting)
+  end
+
+  # A paid series' one payment is owed back once none of its sessions goes
+  # ahead (a late payment refused, say); it is listed by its first session
+  # still there, whichever position that is.
+  # One session cancelled alone is refunded its share when the host cancels
+  # it, and the rest still pays for the sessions going ahead.
+  defp series_sessions_going_ahead do
+    MeetingState.where_not_released(
+      from(m in MeetingSchema, where: m.series_id == parent_as(:payment).series_id)
+    )
   end
 
   @doc """

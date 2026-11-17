@@ -229,6 +229,15 @@ agosto · septiembre · octubre · noviembre · diciembre
 | app-specific password (Apple) | see *Third-party UI labels* below: **contraseña específica para la app** in prose, **Contraseñas específicas para apps** as Apple's menu label |
 | phone (the device) | **teléfono** (`Abrir en el teléfono`, `la cámara del teléfono`); see section 7 |
 
+### Booking series
+
+A **series** is several sessions of one meeting type that a booker books with a host in one go; each **session** is one meeting of that series. The terms below are the ones `emails_booking_series` uses; keep them in every series string.
+
+| English | es |
+|---|---|
+| session (one meeting within a booking series) | **sesión** (`Sesión %{position} de %{count}`, `Gestionar todas las sesiones`); feminine, so eyebrows agree: `Confirmadas`, `Canceladas` |
+| series (a booking series) | **serie** (`Nueva serie`) |
+
 ### Booking pages (a host's extra pages)
 
 A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.

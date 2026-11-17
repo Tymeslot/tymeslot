@@ -70,6 +70,23 @@ defmodule Tymeslot.Webhooks.MeetingSnapshot do
   end
 
   @doc """
+  Adds the event's `series` object (`Tymeslot.BookingSeries.Automation`) to
+  a snapshot, under `"series"`; nil, for a booking outside any series,
+  adds nothing.
+  """
+  @spec put_series(map(), map() | nil) :: map()
+  def put_series(snapshot, nil), do: snapshot
+  def put_series(snapshot, series) when is_map(series), do: Map.put(snapshot, "series", series)
+
+  @doc """
+  The `series` object the event carried, or `nil` for a booking outside any
+  series and for a delivery queued before events carried one.
+  """
+  @spec series(map() | nil) :: map() | nil
+  def series(%{"series" => series}) when is_map(series), do: series
+  def series(_snapshot), do: nil
+
+  @doc """
   The seats taken on the slot when the event fired, or `nil` when the
   snapshot pinned none.
   """

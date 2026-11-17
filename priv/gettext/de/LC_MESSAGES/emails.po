@@ -139,6 +139,7 @@ msgid "Type:"
 msgstr "Art:"
 
 #: lib/tymeslot/emails/shared/formatting.ex
+#: lib/tymeslot/emails/shared/series_sessions.ex
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Video Call"

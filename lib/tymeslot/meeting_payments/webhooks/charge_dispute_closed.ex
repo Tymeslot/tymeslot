@@ -50,12 +50,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.HeldMeetings
   alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.MeetingPayments.Webhooks.DisputeOutcome
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Payments.Behaviours.WebhookHandler
 
   @event_type "charge.dispute.closed"
@@ -158,18 +158,17 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
 
   # Money back with the host for a booking that never happened is owed to
   # the attendee, as it was before the dispute opened: after a won dispute,
-  # and after a partly lost one, for the part the dispute did not take.
-  defp maybe_schedule_refund(%{status: status, meeting_id: meeting_id} = payment)
-       when is_binary(meeting_id) do
-    with true <- status in BookingPaymentSchema.refundable_statuses(),
-         {:ok, %{status: :expired}} <- MeetingQueries.get_meeting(meeting_id) do
+  # and after a partly lost one, for the part the dispute did not take. A
+  # series never happened when every one of its sessions expired.
+  defp maybe_schedule_refund(payment) do
+    with true <- payment.status in BookingPaymentSchema.refundable_statuses(),
+         [_first | _rest] = meetings <- HeldMeetings.meetings_for(payment),
+         true <- Enum.all?(meetings, &match?(%{status: :expired}, &1)) do
       Oban.insert(RefundLatePayment.new_after_dispute(payment.id))
     else
       _not_owed -> {:ok, :none}
     end
   end
-
-  defp maybe_schedule_refund(_payment), do: {:ok, :none}
 
   defp outcome_attrs(payment, :won, _disputed_amount),
     do: %{status: derive_status_from_refund(payment, payment.refunded_amount_cents)}

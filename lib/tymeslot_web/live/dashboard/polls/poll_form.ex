@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   their calendar (`Tymeslot.Polls.SlotHealth`, checked off the LiveView
   process whenever the times change), carries a warning; neither stops the
   poll being created, because confirmation is where both are enforced.
+  The rows and those checks are kept on the socket by `CandidateTimesState`.
 
   "Save draft" keeps the poll as it stands without publishing it
   (`Tymeslot.Polls.create_draft/2`). Given a saved `draft`, the form opens
@@ -22,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   until the host chooses: listing anyone presets it to invited people only
   (`Tymeslot.Polls.default_invite_only?/1`, the rule `create_poll/2` applies).
 
-  On submit it converts the local datetime values to UTC and calls
+  On submit it converts the local datetime values to UTC (`PollFormAttrs`) and calls
   `Tymeslot.Polls.create_poll/2`, or the draft function the button chose. Success flashes via the parent LiveView and
   asks the parent `PollsComponent` to refresh and close the form; failures map
   to friendly inline errors.
@@ -31,26 +32,26 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
-  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.{HostAvailability, Invitations, PollLocation, PollSchema}
+  alias Tymeslot.Polls.{Invitations, PollLocation, PollSchema}
 
   alias TymeslotWeb.Dashboard.Polls.{
     AvailabilityWeek,
     CandidateTimes,
     CandidateTimesField,
+    CandidateTimesState,
     DraftFields,
     LocalTime,
     PollAccess,
     PollDuration,
     PollFormActions,
+    PollFormAttrs,
     PollFormErrors,
     PollInvite,
     PollLocationField,
     PollReminders,
     PollsComponent,
-    PollTimezone,
-    SlotWarnings
+    PollTimezone
   }
 
   alias TymeslotWeb.Live.Shared.Flash
@@ -109,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
      |> assign_new(:location_options, &Polls.location_options(&1.current_user.id))
      |> load_draft()
      |> assign_type_location()
-     |> refresh_availability()}
+     |> CandidateTimesState.refresh_availability()}
   end
 
   # Once per draft: the parent passes the same draft on every update, and the
@@ -121,8 +122,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     socket
     |> assign(DraftFields.assigns(draft))
     |> assign(loaded_draft_id: id, errors: %{})
-    |> assign_time_off_keys()
-    |> check_calendar()
+    |> CandidateTimesState.assign_time_off_keys()
+    |> CandidateTimesState.check_calendar()
   end
 
   defp load_draft(socket), do: socket
@@ -261,7 +262,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
         </form>
 
         <PollReminders.reminders_form
-          :if={invitees_entered?(@invitees)}
+          :if={PollFormAttrs.invitees_entered?(@invitees)}
           id={"poll-create-reminders-#{@id}"}
           state={@reminder_picker}
           myself={@myself}
@@ -294,7 +295,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        meeting_type_id: meeting_type_id,
        duration: duration,
        deadline: Map.get(params, "deadline", socket.assigns.deadline),
-       notify_on_vote: checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
+       notify_on_vote:
+         PollFormAttrs.checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
        invitees: Map.get(params, "invitees", socket.assigns.invitees),
        access: access,
        access_chosen?: access_chosen?,
@@ -303,9 +305,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
      )
      |> assign(PollLocationField.form_state(params, socket.assigns))
      |> assign_type_location()
-     |> assign_time_off_keys()
-     |> check_calendar()
-     |> refresh_availability()}
+     |> CandidateTimesState.assign_time_off_keys()
+     |> CandidateTimesState.check_calendar()
+     |> CandidateTimesState.refresh_availability()}
   end
 
   def handle_event("form_change", _params, socket), do: {:noreply, socket}
@@ -313,7 +315,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   def handle_event(event, params, socket) when event in @timezone_events do
     case PollTimezone.handle_event(event, params, socket) do
       {:changed, socket} ->
-        {:noreply, socket |> assign_time_off_keys() |> check_calendar() |> refresh_availability()}
+        {:noreply,
+         socket
+         |> CandidateTimesState.assign_time_off_keys()
+         |> CandidateTimesState.check_calendar()
+         |> CandidateTimesState.refresh_availability()}
 
       {:unchanged, socket} ->
         {:noreply, socket}
@@ -332,26 +338,32 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("add_slot", _params, socket) do
-    {:noreply, append_slot(socket, "")}
+    {:noreply, CandidateTimesState.append(socket, "")}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("remove_slot", %{"key" => key}, socket),
-    do: {:noreply, remove_slot(socket, key)}
+    do: {:noreply, CandidateTimesState.remove(socket, key)}
 
   def handle_event("pick_time", %{"at" => value}, socket) do
     case AvailabilityWeek.toggle(socket.assigns.slots, value) do
       {:remove, key} ->
-        {:noreply, remove_slot(socket, key)}
+        {:noreply, CandidateTimesState.remove(socket, key)}
 
       :add ->
-        {:noreply, socket |> append_slot(value) |> assign_time_off_keys() |> check_calendar()}
+        {:noreply,
+         socket
+         |> CandidateTimesState.append(value)
+         |> CandidateTimesState.assign_time_off_keys()
+         |> CandidateTimesState.check_calendar()}
     end
   end
 
   def handle_event("availability_week", %{"to" => direction}, socket) do
     offset = AvailabilityWeek.shift(socket.assigns.week_offset, direction)
-    {:noreply, socket |> assign(:week_offset, offset) |> refresh_availability()}
+
+    {:noreply,
+     socket |> assign(:week_offset, offset) |> CandidateTimesState.refresh_availability()}
   end
 
   @impl Phoenix.LiveComponent
@@ -363,7 +375,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     # The picker shows only with invitees, so a lead time typed into it
     # before they were cleared is not the host's intent any more, and an
     # invalid one must not stop a save through an error nobody can see.
-    if invitees_entered?(Map.get(params, "invitees", socket.assigns.invitees)) do
+    if PollFormAttrs.invitees_entered?(Map.get(params, "invitees", socket.assigns.invitees)) do
       case PollReminders.commit_pending(socket.assigns.reminder_picker) do
         {:ok, picker} -> create(assign(socket, :reminder_picker, picker), params)
         {:error, rejected} -> {:noreply, assign(socket, :reminder_picker, rejected)}
@@ -394,8 +406,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     intent = if params["intent"] == "draft", do: :draft, else: :publish
 
     with :ok <- PollFormErrors.finished_times(params, "slots"),
-         {:ok, invitees} <- parse_invitees(params),
-         attrs = Map.put(build_attrs(params, socket), :invitees, invitees),
+         {:ok, invitees} <- PollFormAttrs.invitees(params),
+         attrs = Map.put(PollFormAttrs.attrs(params, socket.assigns), :invitees, invitees),
          {:ok, poll} <- save(intent, socket.assigns.draft, socket.assigns.current_user.id, attrs) do
       Flash.info(saved_message(intent, poll, invitees))
       send_update(PollsComponent, id: socket.assigns.parent_id, poll_created: true)
@@ -436,147 +448,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   defp saved_message(:publish, poll, invitees),
     do: PollInvite.created_message(Invitations.uninvited(poll, invitees))
 
-  # --- Slot helpers ---
-
-  defp append_slot(socket, value) do
-    if length(socket.assigns.slots) >= PollSchema.max_slots() do
-      assign(
-        socket,
-        :errors,
-        Map.put(socket.assigns.errors, :slots, [PollFormErrors.too_many_message()])
-      )
-    else
-      {slots, counter} =
-        CandidateTimes.add(socket.assigns.slots, socket.assigns.slot_counter, value)
-
-      assign(socket,
-        slots: slots,
-        slot_counter: counter,
-        errors: Map.delete(socket.assigns.errors, :slots)
-      )
-    end
-  end
-
-  defp remove_slot(socket, key) do
-    case CandidateTimes.remove(socket.assigns.slots, key) do
-      {:ok, slots, key} ->
-        socket
-        |> assign(
-          slots: slots,
-          time_off_keys: MapSet.delete(socket.assigns.time_off_keys, key),
-          conflict_keys: MapSet.delete(socket.assigns.conflict_keys, key),
-          errors: Map.delete(socket.assigns.errors, :slots)
-        )
-        |> check_calendar()
-
-      :error ->
-        socket
-    end
-  end
-
-  # The grid's week and the host's busy time and hours for it, read again
-  # only when that week or the timezone changes.
-  defp refresh_availability(socket) do
-    %{week_offset: offset, timezone: timezone, current_user: user} = socket.assigns
-    {first_day, {from, to} = window} = AvailabilityWeek.week(timezone, offset)
-    socket = assign(socket, :first_day, first_day)
-
-    if window == socket.assigns.availability_window do
-      socket
-    else
-      socket
-      |> assign(availability_window: window, availability: :loading)
-      |> start_async(
-        :host_availability,
-        Tasks.with_context(fn -> HostAvailability.for_window(user.id, from, to) end)
-      )
-    end
-  end
-
-  # The rows read as times, for the warnings under them.
-  defp slot_ranges(%{slots: slots, timezone: timezone, duration: duration}),
-    do: SlotWarnings.ranges(slots, timezone, PollDuration.parse(duration))
-
-  # Asks the host's calendar which rows clash with an event, off the LiveView
-  # process, whenever the times the rows name change (their time, timezone or
-  # duration). A newer check replaces one still running.
-  defp check_calendar(socket) do
-    ranges = slot_ranges(socket.assigns)
-
-    cond do
-      ranges == socket.assigns.checked_ranges ->
-        socket
-
-      ranges == [] ->
-        assign(socket, checked_ranges: [], conflict_keys: MapSet.new())
-
-      true ->
-        user_id = socket.assigns.current_user.id
-        draft_id = socket.assigns.draft && socket.assigns.draft.id
-
-        socket
-        |> assign(:checked_ranges, ranges)
-        |> start_async(
-          :calendar_conflicts,
-          Tasks.with_context(fn -> SlotWarnings.conflict_keys(user_id, draft_id, ranges) end)
-        )
-    end
-  end
-
-  # Recomputed on every change, for the same reasons.
-  defp assign_time_off_keys(socket) do
-    keys = SlotWarnings.time_off_keys(socket.assigns.current_user.id, slot_ranges(socket.assigns))
-    assign(socket, :time_off_keys, keys)
-  end
-
-  # --- Attribute building ---
-
-  # Reminders reach only invitees, so the picker waits until someone is.
-  defp invitees_entered?(invitees), do: String.trim(invitees || "") != ""
-
-  defp build_attrs(params, socket) do
-    timezone = Map.get(params, "timezone", socket.assigns.timezone)
-
-    params
-    |> PollLocationField.attrs()
-    |> Map.merge(%{
-      title: Map.get(params, "title", ""),
-      description: blank_to_nil(Map.get(params, "description")),
-      timezone: timezone,
-      duration_minutes: PollDuration.parse(Map.get(params, "duration", socket.assigns.duration)),
-      meeting_type_id: parse_meeting_type_id(Map.get(params, "meeting_type_id")),
-      deadline_at: LocalTime.to_utc(Map.get(params, "deadline"), timezone),
-      notify_on_vote: checked?(params, "notify_on_vote", socket.assigns.notify_on_vote),
-      reminder_config: PollReminders.to_config(socket.assigns.reminder_picker),
-      invite_only:
-        params |> PollAccess.resolve(nil, socket.assigns) |> elem(0) |> PollAccess.invite_only?(),
-      slots: build_slots(Map.get(params, "slots", %{}), timezone)
-    })
-  end
-
-  defp parse_invitees(params) do
-    case Invitations.parse(Map.get(params, "invitees")) do
-      {:ok, invitees} -> {:ok, invitees}
-      {:error, reason} -> {:error, {:invitees, reason}}
-    end
-  end
-
-  defp build_slots(values, timezone) do
-    values
-    |> Enum.sort_by(fn {key, _value} -> slot_order(key) end)
-    |> Enum.map(fn {_key, value} -> LocalTime.to_utc(value, timezone) end)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.map(fn start_time -> %{start_time: start_time} end)
-  end
-
-  # Rows are keyed by the counter the form issued; a forged key sorts last.
-  defp slot_order(key) do
-    case Integer.parse(key) do
-      {order, ""} -> order
-      _forged -> :infinity
-    end
-  end
-
   # --- Meeting-type / duration resolution ---
 
   defp resolve_duration(params, meeting_type_id, socket) do
@@ -604,27 +475,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   defp meeting_type_options(meeting_types) do
     Enum.map(meeting_types, &{&1.name, &1.id})
   end
-
-  defp parse_meeting_type_id(id) when id in [nil, ""], do: nil
-
-  defp parse_meeting_type_id(id) do
-    case Integer.parse(id) do
-      {int, _rest} -> int
-      :error -> nil
-    end
-  end
-
-  # --- Misc ---
-
-  defp checked?(params, key, default) do
-    case Map.get(params, key) do
-      nil -> default
-      value -> value == "true"
-    end
-  end
-
-  defp blank_to_nil(value) when value in [nil, ""], do: nil
-  defp blank_to_nil(value), do: value
 
   defp errors_for({:invitees, reason}), do: %{invitees: [PollInvite.error_message(reason)]}
   defp errors_for(:poll_full), do: %{invitees: [PollInvite.error_message(:poll_full)]}

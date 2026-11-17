@@ -19,7 +19,13 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
   `select_date`, `select_time`, `toggle_hour`, `change_timezone`,
   `search_timezone`, `toggle_timezone_dropdown`, `close_timezone_dropdown`,
   `prev_month`, `next_month`, `prev_week`, `next_week`, `load_week`, `select_slot`, `first_available_week`, `back_step`,
-  `next_step` (schedule); `validate`, `field_blur`, `submit`, `back_step`,
+  `next_step` (schedule); `series_set_count`, `series_single` (just the
+  slot picked, then the way on, relayed as `series_single` and `next_step`),
+  `series_as_series`, `series_add_start`, `series_remove_start`,
+  `series_retry`, `series_picker_open`, `series_picker_close`,
+  `series_picker_week`, `series_picker_day`, `series_picker_retry`,
+  `next_step`, `back_step`
+  (series); `validate`, `field_blur`, `submit`, `back_step`,
   `select_location`, `select_video_provider`, `select_venue`,
   `location_phone_change`, `toggle_guests`, `close_guests`, `guest_input_change`, `add_guest`,
   `remove_guest` (booking); `answer`, `multi_toggle`, `next_step`, `back_step`
@@ -63,6 +69,13 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
   # the overview's Next always did.
   def handle_event("choose_duration", %{"duration" => duration}, socket) do
     {:noreply, socket} = relay(socket, :select_duration, duration)
+    relay(socket, :next_step, nil)
+  end
+
+  # A single session where the series is optional: the choice, then the way
+  # on, as `choose_duration` relays its pair.
+  def handle_event("series_single", _params, socket) do
+    {:noreply, socket} = relay(socket, :series_single, nil)
     relay(socket, :next_step, nil)
   end
 
@@ -161,5 +174,15 @@ defmodule TymeslotWeb.Themes.Shared.StepEvents do
   defp message("add_guest", params), do: {:add_guest, params["guest_email"] || ""}
   defp message("remove_guest", %{"email" => email}), do: {:remove_guest, email}
   defp message("schedule_another", _params), do: {:schedule_another, nil}
+  defp message("series_set_count", %{"count" => count}), do: {:series_set_count, count}
+  defp message("series_as_series", _params), do: {:series_as_series, nil}
+  defp message("series_add_start", %{"start" => start}), do: {:series_add_start, start}
+  defp message("series_remove_start", %{"start" => start}), do: {:series_remove_start, start}
+  defp message("series_retry", _params), do: {:series_retry, nil}
+  defp message("series_picker_open", _params), do: {:series_picker_open, nil}
+  defp message("series_picker_close", _params), do: {:series_picker_close, nil}
+  defp message("series_picker_week", %{"dir" => dir}), do: {:series_picker_week, dir}
+  defp message("series_picker_day", %{"date" => date}), do: {:series_picker_day, date}
+  defp message("series_picker_retry", _params), do: {:series_picker_retry, nil}
   defp message(_event, _params), do: :ignore
 end

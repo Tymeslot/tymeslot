@@ -78,6 +78,11 @@ defmodule Tymeslot.Invitations do
   @doc """
   The host's invitations for a type, newest first, each with its derived
   status. `limit:` caps how many are loaded (the newest).
+
+  Only meetings the host may see (`MeetingState.visible_to_organiser?/1`)
+  count here, so an invitation whose booking awaits its attendee's email
+  verification or its payment reads as available. The booking side still
+  reads every meeting, so the hold refuses a second booker meanwhile.
   """
   @spec list(pos_integer(), MeetingTypeSchema.t(), limit: pos_integer()) :: [entry()]
   def list(user_id, %MeetingTypeSchema{id: meeting_type_id}, opts \\ []) do
@@ -85,7 +90,8 @@ defmodule Tymeslot.Invitations do
 
     user_id
     |> InvitationQueries.list_for_meeting_type(meeting_type_id, opts)
-    |> Enum.map(fn %InvitationSchema{meetings: meetings} = invitation ->
+    |> Enum.map(fn %InvitationSchema{meetings: all_meetings} = invitation ->
+      meetings = visible_to_host(all_meetings)
       consuming = InvitationStatus.consuming_meeting(invitation, meetings)
 
       %{
@@ -111,12 +117,32 @@ defmodule Tymeslot.Invitations do
   end
 
   @doc """
+  Whether the invitation has been revoked (and not reopened since). An
+  invitation that no longer exists reads as not revoked.
+
+  For a booking held while its attendee confirms their email: the host never
+  sees it, so may revoke the link it came through meanwhile.
+
+  Intentionally not scoped to a host: the system asks with only the id.
+  """
+  @spec revoked?(pos_integer()) :: boolean()
+  def revoked?(id),
+    do: match?(%InvitationSchema{revoked_at: %DateTime{}}, InvitationQueries.get(id))
+
+  @doc """
   Makes a used invitation (whose meeting no longer holds a slot) or a revoked
   one bookable again. Meetings booked before the reopen stop counting.
 
   A revoked invitation whose expiry has passed is refused with
   `{:error, :expired}`, since reopening it would only leave it expired; nothing
   is written.
+
+  Judged on the meetings the host can see, as `list/3` is, so every Reopen the
+  list offers works. A link the host revoked while a booking through it
+  awaited its attendee's email verification therefore reopens; the held
+  booking keeps occupying the link (a second booker is still refused) and, if
+  its attendee then verifies, goes ahead on a link the host has made bookable
+  again. Had the host left it revoked, verification would refuse it instead.
   """
   @spec reopen(pos_integer(), pos_integer()) ::
           {:ok, InvitationSchema.t()} | {:error, :not_found | :not_reopenable | :expired}
@@ -124,7 +150,7 @@ defmodule Tymeslot.Invitations do
     now = Clock.utc_now()
 
     with_invitation(user_id, id, fn invitation ->
-      with :ok <- check_reopenable(invitation, consuming_meeting(invitation), now) do
+      with :ok <- check_reopenable(invitation, host_consuming_meeting(invitation), now) do
         invitation |> InvitationSchema.reopen_changeset(now) |> InvitationQueries.update()
       end
     end)
@@ -205,7 +231,8 @@ defmodule Tymeslot.Invitations do
   checkout cancelled or failed) needs to book through the same invitation
   again: `{:ok, token}`, the link's token, for a link back to the booking
   page and never for a log; `:held` while `meeting` itself still awaits its
-  payment, so holds the invitation until its checkout lapses; `:none` for a
+  payment or its attendee's email verification, so holds the invitation
+  until its checkout or its hold lapses; `:none` for a
   meeting booked without an invitation, or whose invitation is gone. Whether
   the link then books is the entry gate's decision, which says why when it
   does not.
@@ -216,7 +243,7 @@ defmodule Tymeslot.Invitations do
   def retry_token(%MeetingSchema{invitation_id: nil}), do: :none
 
   def retry_token(%MeetingSchema{invitation_id: id} = meeting) do
-    if MeetingState.awaiting_payment?(meeting) do
+    if MeetingState.awaiting_payment?(meeting) or MeetingState.awaiting_verification?(meeting) do
       :held
     else
       case InvitationQueries.get(id) do
@@ -231,6 +258,15 @@ defmodule Tymeslot.Invitations do
 
   defp consuming_meeting(%InvitationSchema{id: id} = invitation),
     do: InvitationStatus.consuming_meeting(invitation, MeetingQueries.list_for_invitation(id))
+
+  # The consuming meeting as the host sees it: bookings hidden from the host
+  # (`MeetingState.visible_to_organiser?/1`) do not count.
+  defp host_consuming_meeting(%InvitationSchema{id: id} = invitation) do
+    meetings = id |> MeetingQueries.list_for_invitation() |> visible_to_host()
+    InvitationStatus.consuming_meeting(invitation, meetings)
+  end
+
+  defp visible_to_host(meetings), do: Enum.filter(meetings, &MeetingState.visible_to_organiser?/1)
 
   defp status_of(invitation),
     do: InvitationStatus.status(invitation, consuming_meeting(invitation), Clock.utc_now())

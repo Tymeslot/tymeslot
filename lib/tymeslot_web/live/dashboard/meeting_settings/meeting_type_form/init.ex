@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandlers
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesHandlers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers
 
   @doc """
@@ -44,6 +45,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:custom_fields, get_custom_fields(type))
     |> assign_booking_rules(type)
     |> assign_group_bookings_state(type)
+    |> Component.assign(:series, SeriesHandlers.initial(type))
     |> Component.assign(
       :week_start,
       assigns |> Map.get(:current_user) |> user_id() |> Management.get_week_start()
@@ -71,6 +73,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
       allow_guests: get_allow_guests(type),
       guest_limit: Map.get(type || %{}, :max_guests_per_booking),
       requires_approval: get_requires_approval(type),
+      requires_email_verification: get_requires_email_verification(type),
       approval_window_hours: get_approval_window_hours(type),
       show_as_free: get_show_as_free(type),
       booking_limits: get_booking_limits(type),
@@ -256,6 +259,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   @spec get_requires_approval(Ecto.Schema.t() | nil) :: boolean()
   defp get_requires_approval(%{requires_approval: true}), do: true
   defp get_requires_approval(_type), do: false
+
+  @spec get_requires_email_verification(Ecto.Schema.t() | nil) :: boolean()
+  defp get_requires_email_verification(%{requires_email_verification: true}), do: true
+  defp get_requires_email_verification(_type), do: false
 
   # Nil is meaningful and is not replaced with the default here: the form shows
   # the default as a placeholder so a host can see what blank means without the

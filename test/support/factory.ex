@@ -15,6 +15,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.BookingPages.BookingPageMeetingTypeSchema
   alias Tymeslot.BookingPages.BookingPageSchema
+  alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -96,6 +97,20 @@ defmodule Tymeslot.Factory do
     build(:meeting, status: status)
   end
 
+  @doc """
+  A booking held for email verification, its 30-minute hold just begun.
+  Pass `verification_deadline_at` to place the deadline elsewhere.
+  """
+  @spec awaiting_verification_meeting_factory(map()) :: Tymeslot.Meetings.MeetingSchema.t()
+  def awaiting_verification_meeting_factory(attrs) do
+    %{
+      status: :awaiting_verification,
+      verification_deadline_at: DateTime.add(DateTime.utc_now(:second), 30, :minute)
+    }
+    |> Map.merge(Map.new(attrs))
+    |> meeting_factory()
+  end
+
   @spec past_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def past_meeting_factory do
     start_time = DateTime.utc_now() |> DateTime.add(-1, :day) |> DateTime.truncate(:second)
@@ -158,6 +173,23 @@ defmodule Tymeslot.Factory do
     |> merge_attributes(attrs)
     |> evaluate_lazy_attributes()
     |> put_token_hash(:management_token, :management_token_hash)
+  end
+
+  @doc "A weekly two-session booking series without its sessions; pass `organizer_user`."
+  @spec booking_series_factory() :: SeriesSchema.t()
+  def booking_series_factory do
+    %SeriesSchema{
+      uid: UUID.generate(),
+      organizer_user: build(:user),
+      mode: :recurring,
+      frequency: :weekly,
+      interval: 1,
+      occurrences_count: 2,
+      attendee_name: "Ada Lovelace",
+      attendee_email: "ada@example.com",
+      attendee_timezone: "Etc/UTC",
+      attendee_locale: "en"
+    }
   end
 
   @spec user_factory() :: Tymeslot.Auth.UserSchema.t()

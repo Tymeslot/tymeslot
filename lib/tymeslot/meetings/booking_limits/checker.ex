@@ -84,16 +84,28 @@ defmodule Tymeslot.Meetings.BookingLimits.Checker do
     end
   end
 
-  # The limits context for the given host dates, or `nil` when no cap is
-  # configured (in which case the database is never queried).
-  defp load_context(
-         organizer_user_id,
-         profile_settings,
-         meeting_type,
-         start_date,
-         end_date,
-         opts
-       ) do
+  @doc """
+  The limits context (`BookingLimits.build_context/4`) counting the live
+  bookings across `start_date..end_date`, the host's dates unless
+  `:booker_timezone` is given, or `nil` when no cap is configured, in which
+  case the database is never queried.
+
+  For a caller weighing several bookings at once: check each with
+  `BookingLimits.slot_blocked?/2` and count it in with
+  `BookingLimits.count_booking/2` before the next.
+
+  Accepts the same options as `build_slot_checker/6`.
+  """
+  @spec load_context(integer(), map() | nil, map() | nil, Date.t(), Date.t(), keyword()) ::
+          BookingLimits.context() | nil
+  def load_context(
+        organizer_user_id,
+        profile_settings,
+        meeting_type,
+        start_date,
+        end_date,
+        opts \\ []
+      ) do
     limits = BookingLimits.limits_for(profile_settings, meeting_type)
 
     if BookingLimits.enabled?(limits) do

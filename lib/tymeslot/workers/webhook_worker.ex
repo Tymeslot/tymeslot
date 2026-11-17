@@ -100,7 +100,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
          :ok = ErrorTracking.put_context(user_id: webhook.user_id),
          :ok <- feature_gate(webhook.user_id, webhook_id, event_type),
          {:ok, meeting} <- fetch_meeting(meeting_id, args["participant_id"], args["snapshot"]),
-         :ok <- deliver_once(webhook, event_type, meeting, job) do
+         :ok <- deliver_once(webhook, event_type, {meeting, args["snapshot"]}, job) do
       :ok
     else
       error -> handle_delivery_error(error, webhook_id, meeting_id, event_type)
@@ -285,9 +285,11 @@ defmodule Tymeslot.Workers.WebhookWorker do
   # claim has settled: a delivered post keeps its claim whatever the log write
   # then does, so a rescued or retried run never posts it a second time. A
   # bare `:ok` is an earlier run's claim, whose outcome that run recorded.
-  defp deliver_once(webhook, event_type, meeting, job) do
+  defp deliver_once(webhook, event_type, {meeting, snapshot}, job) do
+    series = MeetingSnapshot.series(snapshot)
+
     case DeliveryClaims.once(job, "webhook", fn ->
-           deliver_webhook(webhook, event_type, meeting, job)
+           deliver_webhook(webhook, event_type, {meeting, series}, job)
          end) do
       :ok ->
         :ok
@@ -303,9 +305,9 @@ defmodule Tymeslot.Workers.WebhookWorker do
     end
   end
 
-  defp deliver_webhook(%WebhookSchema{} = webhook, event_type, meeting, job) do
+  defp deliver_webhook(%WebhookSchema{} = webhook, event_type, event, job) do
     if WebhookSchema.should_be_active?(webhook) do
-      do_deliver_webhook(webhook, event_type, meeting, job)
+      do_deliver_webhook(webhook, event_type, event, job)
     else
       {:error, :disabled}
     end
@@ -344,9 +346,9 @@ defmodule Tymeslot.Workers.WebhookWorker do
     end
   end
 
-  defp do_deliver_webhook(webhook, event_type, meeting, %Oban.Job{} = job) do
+  defp do_deliver_webhook(webhook, event_type, {meeting, series}, %Oban.Job{} = job) do
     webhook = WebhookSchema.decrypt_token(webhook)
-    payload = PayloadBuilder.build_payload(event_type, meeting, to_string(webhook.id))
+    payload = PayloadBuilder.build_payload(event_type, meeting, to_string(webhook.id), series)
     body = Jason.encode!(payload)
 
     # Signed over `body` itself, the bytes posted, so the receiver can verify

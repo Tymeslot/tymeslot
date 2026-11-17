@@ -71,7 +71,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.RailLayers do
         >
           <.select
             id={"#{@id_prefix}-bookable-type"}
-            name="id"
+            name="meeting_type_id"
             label={dgettext("dashboard_calendar_booking", "Meeting type")}
             value={@bookable.meeting_type && @bookable.meeting_type.id}
             options={Enum.map(@bookable.meeting_types, &{&1.name, &1.id})}

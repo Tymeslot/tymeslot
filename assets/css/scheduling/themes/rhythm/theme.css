@@ -12,6 +12,7 @@
 @import "./modules/video.css";
 @import "./modules/overview.css";
 @import "../../shared/components/approval-notice.css";
+@import "../../shared/components/verification-notice.css";
 @import "../../shared/components/group-session.css";
 @import "../../shared/components/meeting-type-description.css";
 @import "../../shared/components/preview-notice.css";
@@ -34,5 +35,8 @@
 @import "./modules/calendar.css";
 @import "../../shared/components/slot-list.css";
 @import "./modules/time-slots.css";
+@import "../../shared/components/series.css";
+@import "../../shared/components/manage-pages.css";
+@import "./modules/series.css";
 @import "../../shared/embed.css";
 @import "./modules/iframe.css";

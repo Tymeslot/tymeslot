@@ -91,14 +91,29 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       a meeting the same transaction cancels (a seat move vacating its old
       meeting, see `Tymeslot.Bookings.RescheduleSeat`), whose time is free
       the moment this seat commits.
+    * `:in_outer_transaction`: when true, the caller runs this inside a
+      transaction of its own (a booking series taking a seat in each of its
+      sessions, see `Tymeslot.BookingSeries.Create`). The seat then joins
+      that transaction, so a first-booker index collision has already
+      aborted it and cannot be retried here: it is refused as `:slot_taken`
+      instead. A caller that holds the organiser's schedule lock for its
+      whole transaction never meets one, as the lock taken here is the one
+      it holds (`pg_advisory_xact_lock` is re-entrant). The participant
+      attrs may carry `:series_id` and `:series_position` for such a seat.
 
-  Returns `{:ok, booking}` or `{:error, :slot_full | :time_conflict |
-  :organizer_required | Ecto.Changeset.t() | term}`; a slot without an
-  organiser is refused with `:organizer_required`.
+  Returns `{:ok, booking}` or `{:error, :slot_full | :slot_taken |
+  :time_conflict | :organizer_required | Ecto.Changeset.t() | term}`; a slot
+  without an organiser is refused with `:organizer_required`.
   """
   @spec book_seat(map(), seat_request(), keyword()) ::
           {:ok, booking()}
-          | {:error, :slot_full | :time_conflict | :organizer_required | Changeset.t() | term()}
+          | {:error,
+             :slot_full
+             | :slot_taken
+             | :time_conflict
+             | :organizer_required
+             | Changeset.t()
+             | term()}
   def book_seat(meeting_attrs, seat_request, opts \\ []) do
     seats_requested = 1 + length(seat_request.guest_emails)
 
@@ -106,7 +121,8 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       on_booked: Keyword.get(opts, :on_booked, fn _booking -> {:ok, :noop} end),
       also_lock: Keyword.get(opts, :also_lock),
       join_only: Keyword.get(opts, :join_only, false),
-      exclude_from_conflicts: Keyword.get(opts, :exclude_from_conflicts, fn -> nil end)
+      exclude_from_conflicts: Keyword.get(opts, :exclude_from_conflicts, fn -> nil end),
+      in_outer_transaction: Keyword.get(opts, :in_outer_transaction, false)
     }
 
     cond do
@@ -121,7 +137,8 @@ defmodule Tymeslot.Meetings.GroupScheduling do
         {:error, :slot_full}
 
       true ->
-        attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, _retries_left = 1)
+        retries = if hooks.in_outer_transaction, do: 0, else: 1
+        attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, retries)
     end
   end
 
@@ -146,11 +163,59 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     end
   end
 
+  @doc """
+  What a booking of `seats_requested` seats would meet at each of `starts`
+  for `meeting_type_id`, keyed by the start as given:
+  `{:join, meeting, seats_left}` for a live group meeting it would join,
+  `{:full, meeting, seats_left}` for a live meeting that would refuse it as
+  full, and `:none` where it would create a new slot.
+
+  The joinability rule of `join_target/3`, read unlocked for every start in
+  two queries (the meetings, then their seat counts), for a caller weighing
+  many starts at once such as the sessions of a series.
+  """
+  @spec sessions_at(integer(), [DateTime.t()], pos_integer()) :: %{
+          DateTime.t() => {:join | :full, Meeting.t(), non_neg_integer()} | :none
+        }
+  def sessions_at(_meeting_type_id, [], _seats_requested), do: %{}
+
+  def sessions_at(meeting_type_id, starts, seats_requested)
+      when is_integer(meeting_type_id) and is_integer(seats_requested) do
+    meetings =
+      GroupMeetingQueries.list_live_for_type_in_range(
+        meeting_type_id,
+        DateTime.truncate(Enum.min(starts, DateTime), :second),
+        Enum.max(starts, DateTime)
+      )
+
+    seats_left = meetings |> Enum.filter(&Meeting.group?/1) |> Seats.seats_left_by_meeting()
+    by_start = Map.new(meetings, &{DateTime.to_unix(&1.start_time), &1})
+
+    Map.new(starts, fn start ->
+      case Map.fetch(by_start, DateTime.to_unix(start)) do
+        {:ok, meeting} ->
+          {start, session_state(meeting, Map.get(seats_left, meeting.id, 0), seats_requested)}
+
+        :error ->
+          {start, :none}
+      end
+    end)
+  end
+
+  defp session_state(meeting, seats_left, seats_requested) do
+    if joinable?(meeting, seats_requested, seats_left),
+      do: {:join, meeting, seats_left},
+      else: {:full, meeting, seats_left}
+  end
+
   # A solo meeting at the slot (a one-to-one booked before the type became a
   # group type) is never joined: it reads as full, so a private booking stays
   # private.
   defp joinable?(meeting, seats_requested),
-    do: Meeting.group?(meeting) and seats_requested <= Seats.seats_left(meeting, meeting.capacity)
+    do: joinable?(meeting, seats_requested, Seats.seats_left(meeting, meeting.capacity))
+
+  defp joinable?(meeting, seats_requested, seats_left),
+    do: Meeting.group?(meeting) and seats_requested <= seats_left
 
   defp attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, retries_left) do
     result =
@@ -197,9 +262,13 @@ defmodule Tymeslot.Meetings.GroupScheduling do
         {:ok, booking}
 
       {:error, {:validation_error, %Changeset{} = changeset}} ->
-        if Meeting.unique_slot_violation?(changeset) and retries_left > 0,
-          do: retry.(),
-          else: {:error, changeset}
+        cond do
+          not Meeting.unique_slot_violation?(changeset) -> {:error, changeset}
+          retries_left > 0 -> retry.()
+          # The caller's transaction, which the collision has aborted.
+          hooks.in_outer_transaction -> {:error, :slot_taken}
+          true -> {:error, changeset}
+        end
 
       {:error, reason} ->
         {:error, reason}

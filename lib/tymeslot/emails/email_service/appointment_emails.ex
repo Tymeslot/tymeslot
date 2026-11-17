@@ -14,6 +14,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     AppointmentReminder,
     AppointmentRescheduled,
     BookingApprovalRequest,
+    BookingEmailVerification,
     BookingRequestOutcome,
     BookingRequestReceived,
     MeetingEndChanged,
@@ -61,6 +62,19 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   @spec send_booking_request_received(Meeting.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def send_booking_request_received(%Meeting{} = meeting, opts \\ []) do
     Delivery.deliver(BookingRequestReceived.render(meeting, opts))
+  end
+
+  @doc """
+  Asks the attendee to confirm their email address before the booking counts.
+
+  `verify_url` carries the signed token and is built by the caller at send
+  time. The email has no calendar file and no cancel, reschedule or manage
+  link: until the address is verified, nothing in it may open the booking.
+  """
+  @spec send_booking_email_verification(Meeting.t(), String.t()) ::
+          {:ok, any()} | {:error, any()}
+  def send_booking_email_verification(%Meeting{} = meeting, verify_url) do
+    Delivery.deliver(BookingEmailVerification.render(meeting, verify_url))
   end
 
   @doc """

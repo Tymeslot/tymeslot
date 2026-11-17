@@ -41,6 +41,9 @@ defmodule Tymeslot.Announcements.Catalog do
   @spanish_published_at ~U[2026-11-02 00:00:00Z]
   @spanish_expires_at ~U[2026-12-02 00:00:00Z]
 
+  @recurring_bookings_published_at ~U[2026-11-17 00:00:00Z]
+  @recurring_bookings_expires_at ~U[2026-12-17 00:00:00Z]
+
   @calendar_redesign_published_at ~U[2026-11-13 00:00:00Z]
   @calendar_redesign_expires_at ~U[2026-12-13 00:00:00Z]
 
@@ -49,6 +52,7 @@ defmodule Tymeslot.Announcements.Catalog do
     # One builder per announcement keeps this ordered list trivial and each
     # entry's translatable copy readable in isolation.
     [
+      recurring_bookings(),
       calendar_redesign(),
       spanish(),
       new_themes(),
@@ -58,6 +62,26 @@ defmodule Tymeslot.Announcements.Catalog do
       video_providers(),
       time_off()
     ]
+  end
+
+  defp recurring_bookings do
+    %Announcement{
+      key: "recurring_bookings",
+      title: dgettext("onboarding", "Book a whole course of sessions at once"),
+      body:
+        dgettext(
+          "onboarding",
+          "Clients can now book a series in one go: the same time every week or month, or a " <>
+            "set of sessions at times they choose. Each session is a normal booking with its " <>
+            "own reminders and links, and a series can be paid upfront. Turn it on for each " <>
+            "meeting type, under Series."
+        ),
+      image_path: "/images/announcements/recurring-bookings.svg",
+      cta_label: dgettext("onboarding", "Read the docs"),
+      cta_docs_slug: "recurring-bookings",
+      published_at: @recurring_bookings_published_at,
+      expires_at: @recurring_bookings_expires_at
+    }
   end
 
   defp calendar_redesign do

@@ -285,8 +285,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGroupEvent do
         "Registration has to close in the future, and no later than the event starts."
       )
 
+  # The clash may be with a booking the host cannot see (one awaiting its
+  # attendee's email verification or payment), so it never claims one is there.
   defp error_message(:time_conflict),
-    do: dgettext("dashboard_group_events", "You already have a booking at that time.")
+    do:
+      dgettext(
+        "dashboard_group_events",
+        "This time is no longer available. Please choose another time."
+      )
 
   defp error_message(:no_calendar),
     do:

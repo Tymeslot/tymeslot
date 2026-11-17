@@ -5,13 +5,13 @@ defmodule TymeslotWeb.Helpers.DeletionDate do
   account settings modal and flash, so they can never name different days.
   """
 
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @spec format(DateTime.t(), Ecto.Schema.t()) :: String.t()
   def format(%DateTime{} = at, user) do
     at
-    |> Auth.deletion_local_date(user)
+    |> AccountDeletion.deletion_local_date(user)
     |> LocaleFormat.format_date(Gettext.get_locale(TymeslotWeb.Gettext))
   end
 end

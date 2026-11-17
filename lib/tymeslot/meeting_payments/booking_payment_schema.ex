@@ -50,6 +50,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
           dispute_closed_at: DateTime.t() | nil,
           host_deleted_at: DateTime.t() | nil,
           meeting_id: Ecto.UUID.t() | nil,
+          series_id: Ecto.UUID.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -86,6 +87,8 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     field :host_deleted_at, :utc_datetime
 
     belongs_to :meeting, MeetingSchema, type: :binary_id
+    # A paid series has one payment, owned by the series (`meeting_id` nil).
+    belongs_to :series, Tymeslot.BookingSeries.SeriesSchema, type: :binary_id
 
     timestamps(type: :utc_datetime)
   end
@@ -107,12 +110,14 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
   @spec create_changeset(map()) :: Ecto.Changeset.t()
   def create_changeset(attrs) do
     %__MODULE__{}
-    |> cast(attrs, @castable)
+    |> cast(attrs, [:series_id | @castable])
     |> validate_required(@required_on_create)
     |> validate_number(:amount_cents, greater_than: 0)
     |> validate_number(:application_fee_cents, greater_than_or_equal_to: 0)
     |> validate_refunded_bounds()
     |> unique_constraint(:meeting_id)
+    |> unique_constraint(:series_id)
+    |> check_constraint(:series_id, name: :booking_payments_single_owner_check)
     |> unique_constraint(:stripe_checkout_session_id)
     |> unique_constraint(:stripe_payment_intent_id)
     |> unique_constraint(:stripe_charge_id)

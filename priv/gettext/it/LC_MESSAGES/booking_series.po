@@ -1,0 +1,703 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: it\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "%{frequency} %{day} at %{time}"
+msgstr "%{frequency} %{day} alle %{time}"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "%{frequency} at %{time}"
+msgstr "%{frequency} alle %{time}"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every %{count} day"
+msgid_plural "Every %{count} days"
+msgstr[0] "Ogni %{count} giorno"
+msgstr[1] "Ogni %{count} giorni"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every %{count} month"
+msgid_plural "Every %{count} months"
+msgstr[0] "Ogni %{count} mese"
+msgstr[1] "Ogni %{count} mesi"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every %{count} month on the same weekday"
+msgid_plural "Every %{count} months on the same weekday"
+msgstr[0] "Ogni %{count} mese nello stesso giorno della settimana"
+msgstr[1] "Ogni %{count} mesi nello stesso giorno della settimana"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every %{count} week"
+msgid_plural "Every %{count} weeks"
+msgstr[0] "Ogni %{count} settimana"
+msgstr[1] "Ogni %{count} settimane"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every day"
+msgstr "Ogni giorno"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every month"
+msgstr "Ogni mese"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every month on the same weekday"
+msgstr "Ogni mese nello stesso giorno della settimana"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "Every week"
+msgstr "Ogni settimana"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Friday"
+msgstr "il venerdì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Monday"
+msgstr "il lunedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Saturday"
+msgstr "il sabato"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Sunday"
+msgstr "la domenica"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Thursday"
+msgstr "il giovedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Tuesday"
+msgstr "il martedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on Wednesday"
+msgstr "il mercoledì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Friday"
+msgstr "il primo venerdì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Monday"
+msgstr "il primo lunedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Saturday"
+msgstr "il primo sabato"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Sunday"
+msgstr "la prima domenica"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Thursday"
+msgstr "il primo giovedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Tuesday"
+msgstr "il primo martedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the first Wednesday"
+msgstr "il primo mercoledì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Friday"
+msgstr "il quarto venerdì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Monday"
+msgstr "il quarto lunedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Saturday"
+msgstr "il quarto sabato"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Sunday"
+msgstr "la quarta domenica"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Thursday"
+msgstr "il quarto giovedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Tuesday"
+msgstr "il quarto martedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the fourth Wednesday"
+msgstr "il quarto mercoledì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Friday"
+msgstr "l'ultimo venerdì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Monday"
+msgstr "l'ultimo lunedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Saturday"
+msgstr "l'ultimo sabato"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Sunday"
+msgstr "l'ultima domenica"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Thursday"
+msgstr "l'ultimo giovedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Tuesday"
+msgstr "l'ultimo martedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the last Wednesday"
+msgstr "l'ultimo mercoledì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Friday"
+msgstr "il secondo venerdì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Monday"
+msgstr "il secondo lunedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Saturday"
+msgstr "il secondo sabato"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Sunday"
+msgstr "la seconda domenica"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Thursday"
+msgstr "il secondo giovedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Tuesday"
+msgstr "il secondo martedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the second Wednesday"
+msgstr "il secondo mercoledì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Friday"
+msgstr "il terzo venerdì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Monday"
+msgstr "il terzo lunedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Saturday"
+msgstr "il terzo sabato"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Sunday"
+msgstr "la terza domenica"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Thursday"
+msgstr "il terzo giovedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Tuesday"
+msgstr "il terzo martedì"
+
+#: lib/tymeslot/booking_series/rule.ex
+#, elixir-autogen, elixir-format
+msgid "on the third Wednesday"
+msgstr "il terzo mercoledì"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session"
+msgid_plural "%{count} sessions"
+msgstr[0] "%{count} sessione"
+msgstr[1] "%{count} sessioni"
+
+#: lib/tymeslot_web/themes/shared/series_summary.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session booked"
+msgid_plural "%{count} sessions booked"
+msgstr[0] "%{count} sessione prenotata"
+msgstr[1] "%{count} sessioni prenotate"
+
+#: lib/tymeslot_web/themes/shared/series_summary.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session, first on %{date}"
+msgid_plural "%{count} sessions, first on %{date}"
+msgstr[0] "%{count} sessione, la prima il %{date}"
+msgstr[1] "%{count} sessioni, la prima il %{date}"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "Add a session"
+msgstr "Aggiungi una sessione"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "Add at least %{count} more session to continue."
+msgid_plural "Add at least %{count} more sessions to continue."
+msgstr[0] "Aggiungi almeno %{count} altra sessione per continuare."
+msgstr[1] "Aggiungi almeno altre %{count} sessioni per continuare."
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Already passed"
+msgstr "Già passata"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Available"
+msgstr "Disponibile"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "Book a series"
+msgstr "Prenota una serie"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "Book a series instead"
+msgstr "Prenota invece una serie"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "Book just this session"
+msgstr "Prenota solo questa sessione"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Annulla"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Change time"
+msgstr "Cambia orario"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Checking"
+msgstr "Verifica in corso"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Checking availability…"
+msgstr "Verifica della disponibilità…"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "Choose between %{min} and %{max} sessions."
+msgstr "Scegli tra %{min} e %{max} sessioni."
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "Choose your %{count} session"
+msgid_plural "Choose your %{count} sessions"
+msgstr[0] "Scegli la tua %{count} sessione"
+msgstr[1] "Scegli le tue %{count} sessioni"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "Choose your sessions"
+msgstr "Scegli le tue sessioni"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr "Chiudi"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Days"
+msgstr "Giorni"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "Every session must be available to continue."
+msgstr "Per continuare, tutte le sessioni devono essere disponibili."
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Full"
+msgstr "Posti esauriti"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Fully booked"
+msgstr "Al completo"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "Loading times…"
+msgstr "Caricamento degli orari…"
+
+#: lib/tymeslot_web/themes/shared/series_summary.ex
+#, elixir-autogen, elixir-format
+msgid "Manage all sessions"
+msgstr "Gestisci tutte le sessioni"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "No free times this week."
+msgstr "Nessun orario libero questa settimana."
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "No session at this time"
+msgstr "Nessuna sessione a quest'ora"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Not available"
+msgstr "Non disponibile"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Not offered on this day"
+msgstr "Non prevista in questo giorno"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Not open for booking yet"
+msgstr "Non ancora prenotabile"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "Number of sessions"
+msgstr "Numero di sessioni"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "One session fewer"
+msgstr "Una sessione in meno"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "One session more"
+msgstr "Una sessione in più"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Overlaps another of your sessions"
+msgstr "Si sovrappone a un'altra tua sessione"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Remove the session on %{when}"
+msgstr "Rimuovi la sessione del %{when}"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule"
+msgstr "Riprogramma"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Some sessions aren't available at this time. Pick another time for your first session, or book fewer sessions."
+msgstr "Alcune sessioni non sono disponibili a quest'ora. Scegli un altro orario per la prima sessione oppure prenota meno sessioni."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#: lib/tymeslot_web/themes/shared/series_summary.ex
+#, elixir-autogen, elixir-format
+msgid "Times in %{zone}"
+msgstr "Orari nel fuso %{zone}"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Too far ahead"
+msgstr "Troppo lontana"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Too soon to book"
+msgstr "Troppo presto per prenotare"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Total: %{amount}"
+msgstr "Totale: %{amount}"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Try again"
+msgstr "Riprova"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't check the host's calendar just now. Please try again in a moment."
+msgstr "Al momento non riusciamo a consultare il calendario dell'organizzatore. Riprova tra poco."
+
+#: lib/tymeslot_web/themes/shared/series_summary.ex
+#, elixir-autogen, elixir-format
+msgid "We've emailed you all the details."
+msgstr "Ti abbiamo inviato tutti i dettagli via email."
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "You already have this session"
+msgstr "Hai già questa sessione"
+
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
+#, elixir-autogen, elixir-format
+msgid "You're booking just this session:"
+msgstr "Stai prenotando solo questa sessione:"
+
+#: lib/tymeslot_web/themes/shared/series_summary.ex
+#, elixir-autogen, elixir-format
+msgid "Your request for %{count} session has been sent"
+msgid_plural "Your request for %{count} sessions has been sent"
+msgstr[0] "La tua richiesta per %{count} sessione è stata inviata"
+msgstr[1] "La tua richiesta per %{count} sessioni è stata inviata"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "%{available} of %{count} session available"
+msgid_plural "%{available} of %{count} sessions available"
+msgstr[0] "%{available} sessione disponibile su %{count}"
+msgstr[1] "%{available} sessioni disponibili su %{count}"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session not available"
+msgid_plural "%{count} sessions not available"
+msgstr[0] "%{count} sessione non disponibile"
+msgstr[1] "%{count} sessioni non disponibili"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Book %{count} session"
+msgid_plural "Book %{count} sessions"
+msgstr[0] "Prenota %{count} sessione"
+msgstr[1] "Prenota %{count} sessioni"
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Request %{count} session"
+msgid_plural "Request %{count} sessions"
+msgstr[0] "Richiedi %{count} sessione"
+msgstr[1] "Richiedi %{count} sessioni"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} hasn't answered your request yet."
+msgstr "%{host} non ha ancora risposto alla tua richiesta."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "%{type}: %{count} session with %{host}"
+msgid_plural "%{type}: %{count} sessions with %{host}"
+msgstr[0] "%{type}: %{count} sessione con %{host}"
+msgstr[1] "%{type}: %{count} sessioni con %{host}"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Awaiting approval"
+msgstr "In attesa di approvazione"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Awaiting payment"
+msgstr "In attesa di pagamento"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel %{count} upcoming session? This can't be undone."
+msgid_plural "Cancel %{count} upcoming sessions? This can't be undone."
+msgstr[0] "Annullare %{count} sessione in programma? Non si potrà tornare indietro."
+msgstr[1] "Annullare %{count} sessioni in programma? Non si potrà tornare indietro."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel all remaining sessions"
+msgstr "Annulla tutte le sessioni rimanenti"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Annullata"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling doesn't refund your payment automatically. Contact %{host} about a refund."
+msgstr "L'annullamento non prevede il rimborso automatico del pagamento. Per il rimborso contatta %{host}."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling…"
+msgstr "Annullamento in corso…"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Keep my request"
+msgstr "Mantieni la richiesta"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Keep my sessions"
+msgstr "Mantieni le sessioni"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "No session of this series is left to come."
+msgstr "In questa serie non resta nessuna sessione in programma."
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing was left to cancel. The list shows where each session stands."
+msgstr "Non c'era più nulla da annullare. L'elenco mostra a che punto è ogni sessione."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Past"
+msgstr "Passata"
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "The sessions could not be cancelled. Please try again."
+msgstr "Non è stato possibile annullare le sessioni. Riprova."
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "This series could not be found. Check the link in your email."
+msgstr "Non troviamo questa serie. Controlla il link nella tua email."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Upcoming"
+msgstr "In programma"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Withdraw request"
+msgstr "Ritira la richiesta"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Withdraw your request for %{count} session? This can't be undone."
+msgid_plural "Withdraw your request for %{count} sessions? This can't be undone."
+msgstr[0] "Ritirare la tua richiesta per %{count} sessione? Non si potrà tornare indietro."
+msgstr[1] "Ritirare la tua richiesta per %{count} sessioni? Non si potrà tornare indietro."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Withdrawing…"
+msgstr "Ritiro in corso…"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Yes, withdraw it"
+msgstr "Sì, ritirala"
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "Your remaining sessions are cancelled. We've emailed you."
+msgstr "Le sessioni rimanenti sono state annullate. Ti abbiamo inviato un'email."
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "Your request is withdrawn. We've emailed you."
+msgstr "La tua richiesta è stata ritirata. Ti abbiamo inviato un'email."
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Your sessions"
+msgstr "Le tue sessioni"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "your host"
+msgstr "il tuo organizzatore"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "Yes, cancel it"
+msgid_plural "Yes, cancel them"
+msgstr[0] "Sì, annullala"
+msgstr[1] "Sì, annullale"
+
+#: lib/tymeslot_web/themes/shared/components/series_page.ex
+#, elixir-autogen, elixir-format
+msgid "session %{position}, %{when}"
+msgstr "sessione %{position}, %{when}"
+
+#: lib/tymeslot_web/themes/core/series_management.ex
+#, elixir-autogen, elixir-format
+msgid "The host answered your request in the meantime, so nothing was withdrawn. The list shows where each session now stands."
+msgstr "Nel frattempo l'organizzatore ha risposto alla tua richiesta, quindi non è stato ritirato nulla. L'elenco mostra lo stato attuale di ogni sessione."

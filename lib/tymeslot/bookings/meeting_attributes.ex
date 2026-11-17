@@ -82,7 +82,9 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
           required(:tracking_params) => map(),
           required(:visitor_hash) => String.t() | nil,
           required(:booking_page_id) => integer() | nil,
-          required(:invitation_id) => integer() | nil
+          required(:invitation_id) => integer() | nil,
+          required(:series_id) => Ecto.UUID.t() | nil,
+          required(:series_position) => pos_integer() | nil
         }
 
   @doc """
@@ -93,7 +95,50 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
   """
   @spec build(BuildParams.t()) :: meeting_attributes()
   def build(%BuildParams{} = params) do
-    meeting_uid = params.meeting_uid
+    {attrs, _org_username} = assemble(params)
+    attrs
+  end
+
+  @typedoc "What sets one session of a series apart from the others."
+  @type series_session :: %{
+          required(:meeting_uid) => String.t(),
+          required(:start_datetime) => DateTime.t(),
+          required(:end_datetime) => DateTime.t(),
+          required(:series_position) => pos_integer()
+        }
+
+  @doc """
+  The attributes of every session of a series booked with `params`, one per
+  entry of `sessions`, in their order (the series' order, first session
+  first).
+
+  The sessions share everything but their uid, times, position and the
+  action links built from the uid, so the organiser's profile, schedule,
+  meeting type and integrations are read once for the whole series, from
+  the first session, rather than once per session. They also share the
+  first session's approval clock (`share_series_approval_clock/1`).
+  """
+  @spec build_series(BuildParams.t(), [series_session(), ...]) :: [meeting_attributes()]
+  def build_series(%BuildParams{} = params, [first | _rest] = sessions) do
+    {shared, org_username} = assemble(struct!(params, first))
+
+    sessions
+    |> Enum.map(fn session ->
+      shared
+      |> Map.merge(%{
+        uid: session.meeting_uid,
+        start_time: session.start_datetime,
+        end_time: session.end_datetime,
+        series_position: session.series_position
+      })
+      |> Map.merge(build_meeting_action_urls(session.meeting_uid, org_username))
+    end)
+    |> share_series_approval_clock()
+  end
+
+  # The attributes, with the organiser's username the action links were
+  # built from.
+  defp assemble(%BuildParams{} = params) do
     organizer_user_id = params.organizer_user_id
 
     # Resolve meeting type if ID provided
@@ -102,51 +147,87 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
     # Get organizer details from profile if available
     {org_name, org_email, org_username, profile} = get_organizer_details(organizer_user_id)
 
-    # Resolve attendee timezone
-    config = Schedules.booking_config(organizer_user_id, meeting_type_record)
-    user_timezone = params.user_timezone || config.owner_timezone
-
-    # Get calendar integration info
-    {calendar_integration_id, calendar_path} =
-      get_calendar_integration_info(meeting_type_record || organizer_user_id)
+    user_timezone = attendee_timezone(params, meeting_type_record)
 
     # Resolve meeting type details
     {meeting_type_name, resolved_meeting_type_id, video_integration_id} =
       resolve_meeting_type_details(meeting_type_record, params, organizer_user_id)
 
-    # Get reminder configuration
-    reminders = get_meeting_reminders(meeting_type_record)
-
-    # Build complete meeting attributes map
-    %{
-      uid: meeting_uid,
-      start_time: params.start_datetime,
-      end_time: params.end_datetime,
-      duration: params.duration_minutes,
-      meeting_type: meeting_type_name,
-      meeting_type_id: resolved_meeting_type_id,
-      organizer_name: org_name,
-      organizer_email: org_email,
-      organizer_title: nil,
-      organizer_user_id: organizer_user_id,
-      calendar_integration_id: calendar_integration_id,
-      calendar_path: calendar_path,
-      reminders: reminders
-    }
+    params
+    |> base_attributes(meeting_type_record, {meeting_type_name, resolved_meeting_type_id}, {
+      org_name,
+      org_email
+    })
     # A meeting type requiring manual approval holds its bookings instead of
     # confirming them. The deadline is stamped here, at request time, rather
     # than derived later: the meeting type's window can be edited — or the type
     # archived — while a request is outstanding, and the deadline promised to
     # the invitee must not move underneath them.
-    |> Map.merge(approval_attributes(meeting_type_record, params.start_datetime))
+    |> Map.merge(
+      Approval.request_attributes(meeting_type_record, Clock.utc_now(), params.start_datetime)
+    )
     |> Map.merge(meeting_type_attributes(meeting_type_record))
     |> Map.merge(title_attributes(params, meeting_type_name))
     |> Map.merge(attendee_attributes(params, user_timezone))
     |> Map.merge(location_attributes(meeting_type_record, params, video_integration_id))
     |> Map.merge(source_attribution(params))
-    |> Map.merge(build_meeting_action_urls(meeting_uid, org_username))
+    |> Map.merge(build_meeting_action_urls(params.meeting_uid, org_username))
     |> put_booker_texts(meeting_type_record, profile, params)
+    |> then(&{&1, org_username})
   end
+
+  # The booker's timezone, or the organiser's when the booker gave none.
+  defp attendee_timezone(%BuildParams{} = params, meeting_type_record) do
+    config = Schedules.booking_config(params.organizer_user_id, meeting_type_record)
+    params.user_timezone || config.owner_timezone
+  end
+
+  # The booking's times, type, organiser, calendar and reminders.
+  defp base_attributes(
+         %BuildParams{} = params,
+         meeting_type_record,
+         {meeting_type_name, meeting_type_id},
+         {org_name, org_email}
+       ) do
+    {calendar_integration_id, calendar_path} =
+      get_calendar_integration_info(meeting_type_record || params.organizer_user_id)
+
+    %{
+      uid: params.meeting_uid,
+      start_time: params.start_datetime,
+      end_time: params.end_datetime,
+      duration: params.duration_minutes,
+      meeting_type: meeting_type_name,
+      meeting_type_id: meeting_type_id,
+      organizer_name: org_name,
+      organizer_email: org_email,
+      organizer_title: nil,
+      organizer_user_id: params.organizer_user_id,
+      calendar_integration_id: calendar_integration_id,
+      calendar_path: calendar_path,
+      reminders: get_meeting_reminders(meeting_type_record)
+    }
+  end
+
+  @doc """
+  Gives every session of a series the approval clock of its first: the
+  same `approval_requested_at` and `approval_deadline_at`, the deadline
+  capped at the first session's start.
+
+  A series held for approval is one request with one answer
+  (`Tymeslot.BookingSeries.Approval`), so it has one deadline, the one its
+  earliest session allows. Each session's own `build/1` would cap the
+  window at that session's start, giving the later sessions later
+  deadlines. `attrs` are the sessions' attributes in series order; a
+  series not held for approval is returned unchanged.
+  """
+  @spec share_series_approval_clock([meeting_attributes()]) :: [meeting_attributes()]
+  def share_series_approval_clock([%{status: :awaiting_approval} = first | _rest] = attrs) do
+    clock = Map.take(first, [:approval_requested_at, :approval_deadline_at])
+    Enum.map(attrs, &Map.merge(&1, clock))
+  end
+
+  def share_series_approval_clock(attrs) when is_list(attrs), do: attrs
 
   # The booker saw the questions in their own language; the booking keeps
   # them in the organiser's, as its other snapshot strings are, and the
@@ -247,7 +328,9 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
   # Where the booking came from: the UTM parameters and referrer captured on the
   # booking page, the cookieless key joining it to that page view in analytics,
   # the booking page itself, and the single-use invitation link it was made
-  # through. Grouped so the attributes map states the booking.
+  # through, and the series it was booked as one session of
+  # (`Tymeslot.BookingSeries`) and which, both nil for a booking of its own.
+  # Grouped so the attributes map states the booking.
   defp source_attribution(%BuildParams{} = params) do
     %{
       utm_source: params.utm_source,
@@ -259,26 +342,10 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
       tracking_params: params.tracking_params,
       visitor_hash: params.visitor_hash,
       booking_page_id: params.booking_page_id,
-      invitation_id: params.invitation_id
+      invitation_id: params.invitation_id,
+      series_id: params.series_id,
+      series_position: params.series_position
     }
-  end
-
-  # A booking on a meeting type requiring manual approval is held rather than
-  # confirmed, and carries the clock the host is answering against. Everything
-  # else confirms on submission exactly as before, with all three keys nil.
-  defp approval_attributes(meeting_type_record, start_datetime) do
-    if Approval.required?(meeting_type_record) and not is_nil(start_datetime) do
-      requested_at = DateTime.truncate(Clock.utc_now(), :second)
-
-      %{
-        status: :awaiting_approval,
-        approval_requested_at: requested_at,
-        approval_deadline_at:
-          Approval.deadline_for(meeting_type_record, requested_at, start_datetime)
-      }
-    else
-      %{status: :confirmed, approval_requested_at: nil, approval_deadline_at: nil}
-    end
   end
 
   # Snapshots host-uploaded meeting-type attachments as plain maps so the

@@ -1,0 +1,80 @@
+/* ==========================================================================
+   Verification notice: confirming the attendee's email address
+
+   Matches the shared component
+   (TymeslotWeb.Themes.Shared.Components.VerificationNotice):
+
+     .verification-notice: one muted line on the booking form, beside the
+                           approval notice
+     .verification-resend: "Resend email" and what the last press did, on
+                           the check-your-inbox confirmation
+
+   Quieter than the approval notice: nothing here is a catch the visitor must
+   weigh, only a step they will be asked to take. Reads the approval notice's
+   type tokens (--approval-notice-font-size, --approval-notice-ink), so the
+   two lines sit together in every theme.
+   ========================================================================== */
+
+.verification-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin: 0 0 var(--space-md);
+  color: var(--approval-notice-ink);
+  font-size: var(--approval-notice-font-size);
+  line-height: var(--theme-line-height-relaxed);
+  text-align: left;
+}
+
+.verification-notice-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.verification-resend {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3xs);
+  margin-block: var(--space-sm);
+  text-align: center;
+}
+
+.verification-resend-button {
+  min-height: var(--min-touch-target);
+  padding: 0 var(--space-xs);
+  border: none;
+  background: none;
+  color: var(--theme-primary);
+  font: inherit;
+  font-size: var(--approval-notice-font-size);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.verification-resend-button:hover:not(:disabled) {
+  color: var(--theme-primary-hover);
+}
+
+.verification-resend-button:focus-visible {
+  outline: none;
+  border-radius: var(--radius-control);
+  box-shadow: var(--focus-ring);
+}
+
+.verification-resend-button:disabled {
+  color: var(--approval-notice-ink);
+  text-decoration: none;
+  cursor: default;
+}
+
+.verification-resend-status {
+  margin: 0;
+  color: var(--approval-notice-ink);
+  font-size: var(--approval-notice-font-size);
+  line-height: var(--theme-line-height-relaxed);
+}

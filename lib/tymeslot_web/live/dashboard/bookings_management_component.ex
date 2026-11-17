@@ -8,20 +8,22 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   alias Tymeslot.BookingPages
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Security.RateLimiter
 
   alias Phoenix.LiveView
 
+  alias TymeslotWeb.Components.Dashboard.Meetings.CancelSeriesModal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents
+  alias TymeslotWeb.Components.Dashboard.Meetings.SeriesModal
   alias TymeslotWeb.Dashboard.BookingsManagement.CalendarMove
   alias TymeslotWeb.Dashboard.BookingsManagement.Cancellation
   alias TymeslotWeb.Dashboard.BookingsManagement.GuestActions
   alias TymeslotWeb.Dashboard.BookingsManagement.Modals
   alias TymeslotWeb.Dashboard.BookingsManagement.RequestActions
   alias TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest
+  alias TymeslotWeb.Dashboard.BookingsManagement.SeriesActions
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.RateLimit
 
@@ -66,7 +68,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> assign(:guest_stage_error, nil)
      |> assign(:guest_stage_input, "")
      |> assign(:add_guests_existing, [])
-     |> assign(:host_move_meeting, nil)}
+     |> assign(:host_move_meeting, nil)
+     |> SeriesActions.mount()}
   end
 
   @impl Phoenix.LiveComponent
@@ -160,6 +163,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
       end
     )
   end
+
+  def handle_event("series:" <> _action = event, params, socket),
+    do: SeriesActions.handle_event(event, params, socket, &load_meetings/1)
 
   def handle_event("show_cancel_modal", %{"id" => _meeting_id} = params, socket),
     do: {:noreply, Cancellation.show(socket, params, &Policy.can_cancel_meeting?/1)}
@@ -285,14 +291,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     RateLimit.with_rate_limit(
       RateLimiter.check(:dashboard_meeting_approval, socket.assigns.current_user.id),
       socket,
-      fn ->
-        RequestActions.answer(socket, params, &Approval.approve/1,
-          success:
-            dgettext("dashboard_bookings", "Booking confirmed. The invitee has been told."),
-          failure: dgettext("dashboard_bookings", "That request could not be approved."),
-          reload: &load_meetings/1
-        )
-      end
+      fn -> RequestActions.approve(socket, params, &load_meetings/1) end
     )
   end
 
@@ -347,11 +346,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         ModalHook.with_modal_data(socket, :decline_request, fn meeting ->
           socket
           |> ModalHook.hide_modal(:decline_request)
-          |> RequestActions.answer(%{"id" => meeting.id}, &Approval.decline(&1, reason),
-            success: dgettext("dashboard_bookings", "Request declined. The slot is free again."),
-            failure: dgettext("dashboard_bookings", "That request could not be declined."),
-            reload: &load_meetings/1
-          )
+          |> RequestActions.decline(meeting, reason, &load_meetings/1)
         end)
       end
     )
@@ -435,6 +430,21 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         existing_guests={@add_guests_existing}
         profile={@profile}
         time_format={@time_format}
+        target={@myself}
+      />
+
+      <SeriesModal.series_modal
+        id="series-modal"
+        show={@show_series_modal}
+        overview={@series_modal_data}
+        timezone={Helpers.get_meeting_timezone(nil, @profile)}
+        time_format={@time_format}
+        target={@myself}
+      />
+      <CancelSeriesModal.cancel_series_modal
+        id="cancel-series-modal"
+        show={@show_cancel_series_modal}
+        data={@cancel_series_modal_data}
         target={@myself}
       />
 

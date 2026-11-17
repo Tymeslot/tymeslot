@@ -16,6 +16,7 @@ defmodule Tymeslot.Meetings.ApprovalJobs do
 
   require Logger
 
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Jobs
   alias Tymeslot.Meetings.Workers.ApprovalExpiryWorker
@@ -64,6 +65,25 @@ defmodule Tymeslot.Meetings.ApprovalJobs do
     end
 
     :ok
+  end
+
+  @doc """
+  When the host is reminded of a request they have not answered: halfway
+  through its window, so a host who missed the first email still has as
+  long again to act. Nil for a request with no deadline, or whose deadline
+  is not after it was requested: there is nothing left to save. The single
+  request's nudge (`Tymeslot.Notifications.Orchestrator`) and a series
+  request's (`Tymeslot.BookingSeries.Notifications`) both use it.
+  """
+  @spec nudge_at(%{atom() => term()}) :: DateTime.t() | nil
+  def nudge_at(%{approval_deadline_at: nil}), do: nil
+
+  def nudge_at(%{approval_deadline_at: %DateTime{} = deadline} = meeting) do
+    requested_at = meeting.approval_requested_at || Clock.utc_now()
+    seconds_remaining = DateTime.diff(deadline, requested_at)
+
+    if seconds_remaining > 0,
+      do: DateTime.add(requested_at, div(seconds_remaining, 2), :second)
   end
 
   @doc """

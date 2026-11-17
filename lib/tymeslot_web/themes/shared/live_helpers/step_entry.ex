@@ -44,6 +44,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Answers
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LiveHelpers.InvitationGate
@@ -362,7 +363,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
   defp picked_locale_param(_assigns), do: %{}
 
-  @doc "Makes `meeting_type` the one this booking is for, with its questions, locations and booking window."
+  @doc "Makes `meeting_type` the one this booking is for, with its questions, series offer, locations and booking window."
   @spec assign_meeting_type(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_meeting_type(socket, meeting_type) do
     # Looked up afresh, not taken from the page's (already translated) list,
@@ -373,6 +374,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
     socket
     |> ChosenLength.keep_if_offered(meeting_type)
     |> assign(:meeting_type, meeting_type)
+    |> Series.assign_offer(meeting_type)
     |> assign(:engine, refreshed_engine(socket, meeting_type))
     |> maybe_subscribe_to_group_seats()
     |> BookingLocation.assign_for_meeting_type(
@@ -469,7 +471,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
 
         {:ok, socket} ->
           socket
-          |> maybe_route_to_questions()
+          |> route_to_series_or_questions()
           |> do_handle_booking_entry(params)
       end
     else
@@ -526,6 +528,21 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   # enter the attendee's moment again, and again. That is read from the
   # journey, not from `current_state`, which a navigator may update only
   # after the moment has opened.
+  # A `/book` link on a meeting type booked as a series reaches the details
+  # before the series was chosen: the series' moment comes first, as the
+  # questions' does, and moving on from it lands back here.
+  defp route_to_series_or_questions(socket) do
+    journey = socket.assigns.journey
+    series_moment = Progress.moment_for(journey, :series)
+
+    if Series.required?(socket.assigns) and not Series.known?(socket.assigns) and
+         series_moment != Progress.moment_for(journey, :attendee) do
+      Runtime.transition_to(socket, series_moment, %{})
+    else
+      maybe_route_to_questions(socket)
+    end
+  end
+
   defp maybe_route_to_questions(socket) do
     journey = socket.assigns.journey
     answers_moment = Progress.moment_for(journey, :answers)

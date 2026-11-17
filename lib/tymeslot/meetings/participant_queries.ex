@@ -52,6 +52,24 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   end
 
   @doc """
+  The ids among `meeting_ids` of the meetings `email` holds a live seat in,
+  matched case-insensitively as the seat's unique index matches it.
+  """
+  @spec meeting_ids_seating(String.t(), [binary()]) :: MapSet.t(binary())
+  def meeting_ids_seating(_email, []), do: MapSet.new()
+
+  def meeting_ids_seating(email, meeting_ids) when is_binary(email) and is_list(meeting_ids) do
+    from(p in Participant,
+      where:
+        p.meeting_id in ^meeting_ids and is_nil(p.cancelled_at) and
+          fragment("lower(?)", p.email) == ^String.downcase(email),
+      select: p.meeting_id
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  @doc """
   Soft-cancels a participant by stamping `cancelled_at` (defaults to now).
   """
   @spec cancel(Participant.t(), DateTime.t()) ::

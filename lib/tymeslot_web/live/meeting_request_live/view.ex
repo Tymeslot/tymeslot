@@ -23,6 +23,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   attr :meeting, :map, default: nil
   attr :choosing, :atom, default: :approve
   attr :decline_reason, :string, default: ""
+  attr :series_sessions, :list, default: nil
 
   @spec page(map()) :: Phoenix.LiveView.Rendered.t()
   def page(assigns) do
@@ -31,10 +32,16 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
       <div class="mx-auto w-full max-w-2xl">
         <.glass_morphism_card>
           <div class="p-6 sm:p-8">
-            <.outcome :if={@state != :awaiting} state={@state} meeting={@meeting} />
+            <.outcome
+              :if={@state != :awaiting}
+              state={@state}
+              meeting={@meeting}
+              count={session_count(@series_sessions)}
+            />
             <.open_request
               :if={@state == :awaiting}
               meeting={@meeting}
+              sessions={@series_sessions}
               choosing={@choosing}
               decline_reason={@decline_reason}
             />
@@ -46,10 +53,13 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   end
 
   attr :meeting, :map, required: true
+  attr :sessions, :list, default: nil, doc: "every session of a series request, or nil"
   attr :choosing, :atom, required: true
   attr :decline_reason, :string, required: true
 
   defp open_request(assigns) do
+    assigns = assign(assigns, :count, session_count(assigns.sessions))
+
     ~H"""
     <div>
       <.section_header
@@ -65,8 +75,25 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
       </p>
 
       <div class="mt-6 space-y-4">
-        <.detail_line icon="hero-calendar" label={dgettext("booking_manage", "When")}>
+        <.detail_line
+          :if={!@sessions}
+          icon="hero-calendar"
+          label={dgettext("booking_manage", "When")}
+        >
           {when_line(@meeting)}
+        </.detail_line>
+        <%!-- A series request is answered whole, so every session it holds
+             is shown before the host answers for all of them. --%>
+        <.detail_line
+          :if={@sessions}
+          icon="hero-calendar"
+          label={dngettext("booking_manage", "%{count} session", "%{count} sessions", @count)}
+        >
+          <ol class="space-y-1" data-testid="request-sessions">
+            <li :for={session <- @sessions} id={"request-session-#{session.id}"}>
+              {when_line(session)}
+            </li>
+          </ol>
         </.detail_line>
         <.detail_line icon="hero-clock" label={dgettext("booking_manage", "Duration")}>
           {duration_line(@meeting)}
@@ -87,11 +114,19 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
       </div>
 
       <.info_box :if={@meeting.approval_deadline_at} variant={:warning} class="mt-6">
-        {dgettext(
-          "booking_manage",
-          "If you don't answer by %{deadline}, this request lapses and the slot is released.",
-          deadline: deadline_line(@meeting)
-        )}
+        {if @sessions,
+          do:
+            dgettext(
+              "booking_manage",
+              "If you don't answer by %{deadline}, this request lapses and every session is released.",
+              deadline: deadline_line(@meeting)
+            ),
+          else:
+            dgettext(
+              "booking_manage",
+              "If you don't answer by %{deadline}, this request lapses and the slot is released.",
+              deadline: deadline_line(@meeting)
+            )}
       </.info_box>
 
       <div class="mt-8 flex flex-wrap gap-3">
@@ -101,7 +136,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
           phx-disable-with={dgettext("booking_manage", "Approving...")}
           data-testid="approve-request"
         >
-          {dgettext("booking_manage", "Approve booking")}
+          {approve_label(@count)}
         </.action_button>
 
         <.action_button
@@ -134,7 +169,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
               phx-disable-with={dgettext("booking_manage", "Declining...")}
               data-testid="decline-request"
             >
-              {dgettext("booking_manage", "Decline booking")}
+              {decline_label(@count)}
             </.action_button>
 
             <.action_button
@@ -154,6 +189,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
 
   attr :state, :atom, required: true
   attr :meeting, :map, default: nil
+  attr :count, :integer, default: nil, doc: "how many sessions a series request answered"
 
   defp outcome(assigns) do
     ~H"""
@@ -163,7 +199,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
       <h1 class="display-md mt-6">{outcome_title(@state)}</h1>
 
       <p class="mt-3 text-token-base text-tymeslot-600">
-        {outcome_body(@state, @meeting)}
+        {outcome_body(@state, @meeting, @count)}
       </p>
     </div>
     """
@@ -182,6 +218,53 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   defp outcome_title(:lapsed), do: dgettext("booking_manage", "Deadline passed")
   defp outcome_title(:too_late), do: dgettext("booking_manage", "Too late to answer")
   defp outcome_title(_state), do: dgettext("booking_manage", "Link not recognised")
+
+  defp session_count(nil), do: nil
+  defp session_count(sessions), do: length(sessions)
+
+  defp approve_label(nil), do: dgettext("booking_manage", "Approve booking")
+
+  defp approve_label(count),
+    do:
+      dngettext(
+        "booking_manage",
+        "Approve all %{count} session",
+        "Approve all %{count} sessions",
+        count
+      )
+
+  defp decline_label(nil), do: dgettext("booking_manage", "Decline booking")
+
+  defp decline_label(count),
+    do:
+      dngettext(
+        "booking_manage",
+        "Decline all %{count} session",
+        "Decline all %{count} sessions",
+        count
+      )
+
+  defp outcome_body(:approved, meeting, count) when is_integer(count) do
+    dngettext(
+      "booking_manage",
+      "%{name} has been sent the confirmation for all %{count} session.",
+      "%{name} has been sent the confirmation for all %{count} sessions.",
+      count,
+      name: attendee_name(meeting)
+    )
+  end
+
+  defp outcome_body(:declined, meeting, count) when is_integer(count) do
+    dngettext(
+      "booking_manage",
+      "All %{count} session is free again and %{name} has been told.",
+      "All %{count} sessions are free again and %{name} has been told.",
+      count,
+      name: attendee_name(meeting)
+    )
+  end
+
+  defp outcome_body(state, meeting, _count), do: outcome_body(state, meeting)
 
   defp outcome_body(:approved, meeting) do
     dgettext("booking_manage", "%{name} has been sent the confirmation and the calendar invite.",

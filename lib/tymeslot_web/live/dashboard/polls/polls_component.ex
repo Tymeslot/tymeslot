@@ -10,7 +10,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   instead, which saves and publishes it; it has no results yet. It delegates rendering to `PollList` (the cards),
   `PollForm` (the create flow), and `PollResults` (the results panel), reloads
   the list when the form reports a new poll, and drives the confirm/cancel
-  actions plus live vote updates for the selected poll.
+  actions plus live vote updates for the selected poll. The selected poll's
+  state is kept on the socket by `SelectedPoll`, and the confirm refusals are
+  worded by `ConfirmSlotModal.refusal/1`.
 
   Live updates arrive as `{:poll_updated, poll_id}` PubSub messages. Because a
   `LiveComponent` shares the parent LiveView's process, the subscription lives
@@ -34,11 +36,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   alias Ecto.UUID
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
   alias Tymeslot.Polls.Invitations
-  alias Tymeslot.Polls.SlotHealth
   alias Tymeslot.Scheduling.LinkAccessPolicy
 
   alias TymeslotWeb.Dashboard.Polls.{
@@ -48,16 +48,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     PollForm,
     PollInvite,
     PollList,
-    PollResults
+    PollResults,
+    SelectedPoll
   }
 
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.PollDeadlineTimer
 
   require Logger
-
-  @task_supervisor Tymeslot.TaskSupervisor
-  @health_timeout 6_000
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -95,16 +93,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     # re-arm a long wait. Reloading derives "voting open" afresh from the
     # stored deadline (the host may have moved it) and arms the next timer.
     {:ok, reload_all(socket, refresh_health: false)}
-  end
-
-  def update(%{poll_slot_health: {poll_id, health}}, socket) do
-    # The asynchronous slot-health check finished. Apply it only if the poll is
-    # still the one on screen (the host may have moved on while it ran).
-    if socket.assigns[:selected_poll_id] == poll_id do
-      {:ok, assign(socket, slot_health: health, slot_health_loading: false)}
-    else
-      {:ok, socket}
-    end
   end
 
   def update(assigns, socket) do
@@ -152,8 +140,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
           <.live_component
             :if={@show_form}
             module={PollForm}
-            id={if draft = draft(@selected_poll), do: "poll-draft-#{draft.id}", else: "poll-form"}
-            draft={draft(@selected_poll)}
+            id={
+              if draft = SelectedPoll.draft(@selected_poll),
+                do: "poll-draft-#{draft.id}",
+                else: "poll-form"
+            }
+            draft={SelectedPoll.draft(@selected_poll)}
             current_user={@current_user}
             profile={@profile}
             meeting_types={@meeting_types}
@@ -163,7 +155,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
           />
 
           <PollResults.results_panel
-            :if={@selected_poll && !draft(@selected_poll)}
+            :if={@selected_poll && !SelectedPoll.draft(@selected_poll)}
             poll={@selected_poll}
             unconfirmed_count={@unconfirmed_count}
             invite_value={@invite_value}
@@ -242,14 +234,22 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   @impl Phoenix.LiveComponent
   def handle_event("select_poll", %{"id" => id}, socket) do
     case UUID.cast(id) do
-      {:ok, id} -> {:noreply, socket |> release_draft() |> resubscribe(id) |> open_results(id)}
-      :error -> {:noreply, socket}
+      {:ok, id} ->
+        {:noreply,
+         socket
+         |> release_draft()
+         |> SelectedPoll.resubscribe(id)
+         |> SelectedPoll.open(id)
+         |> reload_selected(refresh_health: true)}
+
+      :error ->
+        {:noreply, socket}
     end
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("deselect_poll", _params, socket) do
-    {:noreply, clear_selection(socket)}
+    {:noreply, SelectedPoll.clear(socket)}
   end
 
   @impl Phoenix.LiveComponent
@@ -280,58 +280,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
          |> assign(:slot_errors, %{})
          |> reload_all(refresh_health: false)}
 
-      {:error, :slot_taken} ->
-        # The slot was booked out from under the poll. Keep the poll open, show
-        # an inline error, and refresh conflict badges from the calendar.
-        socket =
-          socket
-          |> put_slot_error(slot_id, dgettext("dashboard_polls", "This time is no longer free"))
-          |> reload_selected(refresh_health: true)
-
-        {:noreply, socket}
-
-      {:error, :time_off} ->
-        {:noreply,
-         put_slot_error(
-           socket,
-           slot_id,
-           dgettext(
-             "dashboard_polls",
-             "This time falls within your time off. Change or remove the time off to confirm it."
-           )
-         )}
-
-      {:error, :slot_in_past} ->
-        {:noreply,
-         put_slot_error(
-           socket,
-           slot_id,
-           dgettext("dashboard_polls", "This time has already begun.")
-         )}
-
-      # The host's own entry is not counted (`Confirm`), so a poll only they
-      # answered has nobody to invite.
-      {:error, :no_participants} ->
-        Flash.error(
-          dgettext(
-            "dashboard_polls",
-            "Nobody but you has joined this poll yet, so there is nobody to invite."
-          )
-        )
-
-        {:noreply, socket}
-
-      {:error, reason} when reason in [:not_open, :not_found] ->
-        {:noreply, poll_no_longer_open(socket)}
-
       {:error, reason} ->
-        Logger.warning("Poll confirmation failed",
-          poll_id: poll_id,
-          reason: LogFormat.reason(reason)
-        )
-
-        Flash.error(dgettext("dashboard_polls", "Couldn't confirm this time. Please try again."))
-        {:noreply, socket}
+        {:noreply, refused(socket, slot_id, reason)}
     end
   end
 
@@ -399,12 +349,12 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     case Polls.delete_poll(poll_id, socket.assigns.current_user.id) do
       :ok ->
         Flash.info(
-          if draft(socket.assigns.selected_poll),
+          if SelectedPoll.draft(socket.assigns.selected_poll),
             do: dgettext("dashboard_polls", "Draft deleted"),
             else: dgettext("dashboard_polls", "Poll deleted")
         )
 
-        {:noreply, socket |> release_draft() |> clear_selection() |> load_polls()}
+        {:noreply, socket |> release_draft() |> SelectedPoll.clear() |> load_polls()}
 
       {:error, _reason} ->
         Flash.error(dgettext("dashboard_polls", "Couldn't delete this poll. Please try again."))
@@ -444,7 +394,51 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     end
   end
 
+  @impl Phoenix.LiveComponent
+  def handle_async(:slot_health, {:ok, {poll_id, health}}, socket) do
+    # Applied only if the poll is still the one on screen (the host may have
+    # moved on while it ran).
+    if socket.assigns[:selected_poll_id] == poll_id do
+      {:noreply, assign(socket, slot_health: health, slot_health_loading: false)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # The check never raises; an exit is the task cut short, and the slots are
+  # shown without badges, as they are when the calendar fetch fails.
+  def handle_async(:slot_health, {:exit, _reason}, socket),
+    do: {:noreply, assign(socket, slot_health: %{}, slot_health_loading: false)}
+
   # --- Results state ---
+
+  # A refused confirmation, answered as `ConfirmSlotModal.refusal/1` says.
+  defp refused(socket, slot_id, reason) do
+    case ConfirmSlotModal.refusal(reason) do
+      {:slot_error, message} ->
+        socket |> SelectedPoll.put_error(slot_id, message) |> refresh_taken_slot(reason)
+
+      {:flash, level, message} ->
+        Flash.put_flash(socket, level, message)
+
+      :no_longer_open ->
+        poll_no_longer_open(socket)
+
+      {:unexpected, message} ->
+        Logger.warning("Poll confirmation failed",
+          poll_id: socket.assigns.selected_poll_id,
+          reason: LogFormat.reason(reason)
+        )
+
+        Flash.put_flash(socket, :error, message)
+    end
+  end
+
+  # The slot was booked out from under the poll, perhaps by a booking the host
+  # cannot see (one still unverified or unpaid), so the copy names no meeting.
+  # The poll stays open and its conflict badges are refreshed.
+  defp refresh_taken_slot(socket, :slot_taken), do: reload_selected(socket, refresh_health: true)
+  defp refresh_taken_slot(socket, _reason), do: socket
 
   # A confirm/cancel raced a lifecycle change (the poll closed under a stale
   # render). Tell the host plainly and reload so the panel shows the true state.
@@ -453,19 +447,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     reload_all(socket, refresh_health: false)
   end
 
-  # Opens the results panel for a poll: loads it, tallies votes and kicks off the
-  # advisory calendar conflict check for open polls.
-  defp open_results(socket, poll_id) do
-    socket
-    |> assign(:selected_poll_id, poll_id)
-    |> assign(slot_errors: %{}, invite_value: "", invite_error: nil)
-    |> reload_selected(refresh_health: true)
-  end
-
-  # The draft the create form holds, or nil.
-  defp draft(%{status: :draft} = poll), do: poll
-  defp draft(_poll), do: nil
-
   # The form holds a draft as the selected poll, so closing it lets go of the
   # draft; a published poll's results stay open.
   defp close_form(socket), do: socket |> assign(:show_form, false) |> release_draft()
@@ -473,8 +454,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   # Lets go of a draft open in the form, closing it; anything else selected
   # stays.
   defp release_draft(socket) do
-    if draft(socket.assigns.selected_poll),
-      do: socket |> clear_selection() |> assign(:show_form, false),
+    if SelectedPoll.draft(socket.assigns.selected_poll),
+      do: socket |> SelectedPoll.clear() |> assign(:show_form, false),
       else: socket
   end
 
@@ -488,139 +469,15 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     end
   end
 
-  defp reload_selected(socket, opts), do: socket |> fetch_selected(opts) |> sync_deadline()
+  # The composition points: the deadline is judged last, once the selected
+  # poll and the list it stands in for are both loaded.
+  defp reload_selected(socket, opts), do: socket |> SelectedPoll.fetch(opts) |> sync_deadline()
 
   defp load_polls(socket), do: socket |> fetch_polls() |> sync_deadline()
 
   # Both reloads, judged once against the result.
   defp reload_all(socket, opts),
-    do: socket |> fetch_selected(opts) |> fetch_polls() |> sync_deadline()
-
-  defp fetch_selected(%{assigns: %{selected_poll_id: nil}} = socket, _opts), do: socket
-
-  defp fetch_selected(socket, opts) do
-    fetched =
-      Polls.get_poll_for_host(socket.assigns.selected_poll_id, socket.assigns.current_user.id)
-
-    socket
-    |> let_go_of_taken_draft(fetched)
-    |> assign_selected(fetched, opts)
-  end
-
-  # The form holds a draft that another tab has since published or deleted.
-  # Left open, it would fall back to an empty create form without a word, so
-  # it closes, with the draft's delete prompt, saying why: a published poll's
-  # results take its place, and a deleted one leaves the list, which is
-  # reloaded for either.
-  defp let_go_of_taken_draft(socket, {:ok, %{status: :draft}}), do: socket
-
-  defp let_go_of_taken_draft(%{assigns: %{selected_poll: %{status: :draft}}} = socket, _fetched) do
-    Flash.warning(
-      dgettext("dashboard_polls", "This draft has already been published or deleted.")
-    )
-
-    socket
-    |> ModalHook.hide_modal(:delete)
-    |> assign(:show_form, false)
-    |> fetch_polls()
-  end
-
-  defp let_go_of_taken_draft(socket, _fetched), do: socket
-
-  defp assign_selected(socket, fetched, opts) do
-    case fetched do
-      {:ok, %{status: :draft} = draft} ->
-        # A draft opens in the create form, which keeps the host's edits:
-        # it is loaded once, not refreshed under them.
-        assign(socket,
-          selected_poll: draft,
-          show_form: true,
-          meeting_types: poll_meeting_types(socket)
-        )
-
-      {:ok, poll} ->
-        socket
-        |> assign(:selected_poll, poll)
-        |> assign(:unconfirmed_count, Polls.count_unconfirmed(poll))
-        |> assign(:tallies, Polls.tallies(poll))
-        |> assign_winning_slot(poll)
-        |> sync_slot_health(poll, opts)
-
-      {:error, :not_found} ->
-        clear_selection(socket)
-    end
-  end
-
-  # Slot health is meaningful only while voting is open. A confirmed poll's own
-  # minted meeting sits on the host calendar, so checking it would flag the
-  # winning slot as a conflict against itself; a cancelled poll needs no badges.
-  defp sync_slot_health(socket, %{status: :open} = poll, opts) do
-    if Keyword.get(opts, :refresh_health, false) do
-      request_slot_health(socket, poll)
-    else
-      socket
-    end
-  end
-
-  defp sync_slot_health(socket, _poll, _opts) do
-    assign(socket, slot_health: %{}, slot_health_loading: false)
-  end
-
-  # Runs the advisory calendar conflict check off the LiveView process so a slow
-  # provider never freezes the dashboard. The panel renders immediately in a
-  # "checking" state; the result arrives as a `{:poll_slot_health, …}` message
-  # routed back through `send_update/3`. `SlotHealth.check_within/2` bounds the
-  # calendar fetch and degrades to all-`:ok` on timeout or failure.
-  defp request_slot_health(socket, poll) do
-    parent = self()
-
-    Tasks.start_child(@task_supervisor, fn ->
-      send(parent, {:poll_slot_health, poll.id, SlotHealth.check_within(poll, @health_timeout)})
-    end)
-
-    assign(socket, slot_health: %{}, slot_health_loading: true)
-  end
-
-  defp assign_winning_slot(socket, poll),
-    do: assign(socket, :winning_slot_id, Polls.winning_slot_id(poll))
-
-  defp put_slot_error(socket, slot_id, message) do
-    assign(socket, :slot_errors, Map.put(socket.assigns.slot_errors, slot_id, message))
-  end
-
-  defp clear_selection(socket) do
-    if prev = socket.assigns[:selected_poll_id], do: Polls.unsubscribe(prev)
-
-    socket
-    |> ModalHook.hide_modal(:delete)
-    |> ModalHook.hide_modal(:cancel)
-    |> assign(
-      selected_poll_id: nil,
-      selected_poll: nil,
-      tallies: %{},
-      slot_health: %{},
-      slot_health_loading: false,
-      slot_errors: %{},
-      winning_slot_id: nil,
-      confirming_slot: nil,
-      expanded_slots: MapSet.new(),
-      editing_details?: false,
-      invite_value: "",
-      invite_error: nil
-    )
-  end
-
-  # Subscribes to the newly selected poll, dropping the previous subscription so
-  # a re-selection never accumulates duplicate PubSub deliveries.
-  defp resubscribe(socket, id) do
-    if socket.assigns[:selected_poll_id] == id do
-      socket
-    else
-      if prev = socket.assigns[:selected_poll_id], do: Polls.unsubscribe(prev)
-      Polls.subscribe(id)
-      socket
-    end
-  end
+    do: socket |> SelectedPoll.fetch(opts) |> fetch_polls() |> sync_deadline()
 
   defp fetch_polls(socket),
     do: assign(socket, :polls, Polls.list_polls(socket.assigns.current_user.id))

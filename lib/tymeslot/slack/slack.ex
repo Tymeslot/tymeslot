@@ -277,11 +277,11 @@ defmodule Tymeslot.Slack do
   # ============================================================================
 
   @impl Channel
-  def schedule_for_event(user_id, event_type, meeting) do
+  def schedule_for_event(user_id, event_type, meeting, series \\ nil) do
     if slack_enabled?() do
       user_id
       |> SlackQueries.list_active_integrations_for_event(event_type)
-      |> Enum.map(&{&1.id, schedule_delivery(&1, event_type, meeting)})
+      |> Enum.map(&{&1.id, schedule_delivery(&1, event_type, meeting, series)})
     else
       Logger.debug("Slack notifications disabled, skipping",
         user_id: user_id,
@@ -294,12 +294,13 @@ defmodule Tymeslot.Slack do
 
   # The list query returns only deliverable integrations subscribed to the
   # event, so each one is scheduled as it stands.
-  defp schedule_delivery(integration, event_type, meeting) do
+  defp schedule_delivery(integration, event_type, meeting, series) do
     SlackWorker.schedule_delivery(
       integration.id,
       event_type,
       meeting.id,
-      SeatView.participant_id(meeting)
+      SeatView.participant_id(meeting),
+      series
     )
   end
 

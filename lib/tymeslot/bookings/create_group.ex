@@ -18,10 +18,11 @@ defmodule Tymeslot.Bookings.CreateGroup do
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.GroupAccess
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.Events.Seats
 
   @doc "True when the booking's meeting type holds more than one seat."
   @spec applicable?(map()) :: boolean()
@@ -91,15 +92,42 @@ defmodule Tymeslot.Bookings.CreateGroup do
   """
   @spec create(map(), map(), keyword()) :: {:ok, map()} | {:error, Errors.classified_error()}
   def create(meeting_attrs, booking_data, opts \\ []) do
+    meeting_attrs
+    |> book_seat(booking_data, opts)
+    |> map_result(booking_data)
+  end
+
+  @doc """
+  Takes the seat `create/3` takes, with every job it owes enqueued in the
+  seat's transaction, and returns `GroupScheduling.book_seat/3`'s result
+  unmapped: the integration fan-out the seat owes is its
+  `:on_booked_result`, for the caller to run once its transaction commits.
+
+  For a caller booking several seats in one transaction of its own (a
+  booking series, `Tymeslot.BookingSeries.Create`). The seat is the series'
+  when `meeting_attrs` carries a `:series_id` and `:series_position`: they
+  go on the booker's participant row, never on the shared slot.
+
+  Options, besides `:with_video_room`:
+
+    * `:emails` - `false` sends no confirmation for the seat, to the booker
+      or the host: a series confirms all its seats in one email. A session
+      the seat creates still gets its reminders and video room, the room
+      holding nothing back.
+    * `:in_outer_transaction` - passed on to `GroupScheduling.book_seat/3`.
+  """
+  @spec book_seat(map(), map(), keyword()) ::
+          {:ok, GroupScheduling.booking()} | {:error, term()}
+  def book_seat(meeting_attrs, booking_data, opts \\ []) do
     %{meeting_type: meeting_type} = booking_data
 
     meeting_attrs
-    |> group_meeting_attrs(meeting_type)
-    |> GroupScheduling.book_seat(build_seat_request(booking_data),
+    |> SeatEffects.slot_attrs(meeting_type.name)
+    |> GroupScheduling.book_seat(build_seat_request(meeting_attrs, booking_data),
       on_booked: &schedule_seat_jobs(&1, opts),
-      join_only: FixedDates.sessions?(meeting_type)
+      join_only: FixedDates.sessions?(meeting_type),
+      in_outer_transaction: Keyword.get(opts, :in_outer_transaction, false)
     )
-    |> map_result(booking_data)
   end
 
   defp map_result({:ok, %{meeting: meeting, on_booked_result: pending}}, _booking_data) do
@@ -122,19 +150,13 @@ defmodule Tymeslot.Bookings.CreateGroup do
   defp map_result({:error, %Ecto.Changeset{} = changeset}, booking_data) do
     cond do
       MeetingSchema.unique_slot_violation?(changeset) -> {:error, :slot_taken}
-      duplicate_seat?(changeset) -> {:error, :already_booked}
+      ParticipantSchema.duplicate_seat?(changeset) -> {:error, :already_booked}
       true -> {:error, Errors.classify_creation_error(changeset, booking_data)}
     end
   end
 
   defp map_result({:error, reason}, booking_data),
     do: {:error, Errors.classify_creation_error(reason, booking_data)}
-
-  defp duplicate_seat?(%Ecto.Changeset{errors: errors}) do
-    Enum.any?(errors, fn {_field, {_message, opts}} ->
-      to_string(opts[:constraint_name] || "") == "meeting_participants_live_email_index"
-    end)
-  end
 
   # Runs inside the seat transaction (see `create/3`); any error rolls the
   # seat back. Runs again from scratch on `book_seat/3`'s retry, whose
@@ -148,13 +170,23 @@ defmodule Tymeslot.Bookings.CreateGroup do
   # immediately and still carry the link when it lands in time. Either way
   # the job sending them is the one the seat's `confirmation_sent_at` and
   # `organizer_notified_at` markers keep from sending twice.
+  #
+  # A seat sending no emails (`emails: false`) has no confirmation for a
+  # room to hold back, so a room it creates is scheduled without one. It is
+  # a seat of a booking series, so it owes no integration fan-out either:
+  # the series is announced whole (`Tymeslot.BookingSeries.Automation`).
   defp schedule_seat_jobs(booking, opts) do
     %{meeting: meeting, participant: participant, created_meeting?: created?} = booking
+    emails? = Keyword.get(opts, :emails, true)
 
     with {:ok, _job} <- SeatEffects.schedule_calendar_job(meeting, created?),
-         {:ok, defer_emails?} <- schedule_new_slot_jobs(created?, meeting, opts),
+         {:ok, defer_emails?} <- schedule_new_slot_jobs(created?, meeting, emails?, opts),
          {{:ok, _scheduled}, pending} <-
-           Events.seat_booked_deferred(meeting, participant, defer_emails?: defer_emails?) do
+           Seats.seat_booked_deferred(meeting, participant,
+             defer_emails?: defer_emails?,
+             emails: emails?,
+             integrations: emails?
+           ) do
       {:ok, pending}
     else
       {{:error, reason}, _pending} -> {:error, reason}
@@ -162,15 +194,12 @@ defmodule Tymeslot.Bookings.CreateGroup do
     end
   end
 
-  defp schedule_new_slot_jobs(false, _meeting, _opts), do: {:ok, false}
+  defp schedule_new_slot_jobs(false, _meeting, _emails?, _opts), do: {:ok, false}
 
-  defp schedule_new_slot_jobs(true, meeting, opts),
-    do: SeatEffects.schedule_new_slot_effects(meeting, Keyword.put(opts, :announce, true))
+  defp schedule_new_slot_jobs(true, meeting, emails?, opts),
+    do: SeatEffects.schedule_new_slot_effects(meeting, Keyword.put(opts, :announce, emails?))
 
-  defp group_meeting_attrs(meeting_attrs, meeting_type),
-    do: SeatEffects.slot_attrs(meeting_attrs, meeting_type.name)
-
-  defp build_seat_request(booking_data) do
+  defp build_seat_request(meeting_attrs, booking_data) do
     %{form_data: form_data, meeting_type: meeting_type} = booking_data
 
     %{
@@ -182,14 +211,22 @@ defmodule Tymeslot.Bookings.CreateGroup do
         message: Map.get(form_data, "message"),
         timezone: booking_data.user_timezone,
         locale: booking_data.attendee_locale,
-        custom_field_answers: booking_data.custom_field_answers
+        custom_field_answers: booking_data.custom_field_answers,
+        series_id: Map.get(meeting_attrs, :series_id),
+        series_position: Map.get(meeting_attrs, :series_position)
       },
       guest_emails: guest_emails(booking_data),
       max_participants: meeting_type.max_participants
     }
   end
 
-  defp guest_emails(booking_data) do
+  @doc """
+  The guests the booker brings to the seat: those submitted, cleaned and
+  capped by the type's guest limit, or none on a type that takes no guests.
+  Each takes a seat of their own.
+  """
+  @spec guest_emails(map()) :: [String.t()]
+  def guest_emails(booking_data) do
     if Policy.guests_allowed?(booking_data) do
       %{form_data: form_data} = booking_data
 

@@ -288,6 +288,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
         Flash.error(dgettext("dashboard_payments", "Currency not supported."))
         {:noreply, socket}
 
+      {:error, :pending_payments_exist} ->
+        Flash.error(
+          dgettext(
+            "dashboard_payments",
+            "A checkout is in progress in your current currency. Try again in a few minutes."
+          )
+        )
+
+        {:noreply, socket}
+
       {:error, _reason} ->
         Flash.error(
           dgettext("dashboard_payments", "Could not update currency. Please try again.")

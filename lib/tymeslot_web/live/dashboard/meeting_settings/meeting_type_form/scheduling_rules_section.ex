@@ -14,6 +14,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SchedulingRulesS
   The inputs are part of the surrounding meeting-type form (no nested form
   element); each change dispatches `update_scheduling_rules` back to the parent
   `MeetingTypeForm` (`@myself`), which owns the socket state and auto-save.
+
+  While the type offers a series (`series`), the booking window bounds its
+  first session only, and a note beside the field says so.
   """
 
   use TymeslotWeb, :html
@@ -30,6 +33,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SchedulingRulesS
   attr :schedules, :list, required: true
   attr :selected_availability_schedule_id, :any, default: nil
   attr :form_errors, :map, default: %{}
+
+  attr :series, :boolean,
+    default: false,
+    doc: "Whether the type offers a series (one paused by the plan does not)"
+
   attr :myself, :any, required: true
 
   @spec scheduling_rules_section(map()) :: Phoenix.LiveView.Rendered.t()
@@ -50,7 +58,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SchedulingRulesS
                   value: Schedules.policy(schedule, field)
                 ),
               range: range(field),
-              errors: field_errors(assigns.form_errors, field)
+              errors: field_errors(assigns.form_errors, field),
+              series_note?: assigns.series and field == :advance_booking_days
             }
           end)
       )
@@ -96,12 +105,39 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SchedulingRulesS
             <p id={"#{@id}-#{f.field}-hint"} class="text-token-xs text-tymeslot-500">
               {f.inherited}
             </p>
+            <p
+              :if={f.series_note?}
+              class="text-token-xs text-tymeslot-600"
+              data-testid="booking-window-series-note"
+            >
+              {dgettext(
+                "dashboard_booking_series",
+                "With series booking on, this applies to the first session only."
+              )}
+            </p>
             <p :for={error <- f.errors} class="text-token-sm text-red-600">{error}</p>
           </div>
         </div>
       </.card>
     </section>
     """
+  end
+
+  @doc """
+  How many days ahead the type's first session may be booked: its own booking
+  window when it sets one, the schedule's otherwise.
+  """
+  @spec booking_window_days(map(), list(), integer() | nil) :: pos_integer()
+  def booking_window_days(scheduling_rules, schedules, selected_availability_schedule_id) do
+    case Integer.parse(Map.get(scheduling_rules, "advance_booking_days") || "") do
+      {days, ""} when days > 0 ->
+        days
+
+      _schedule_window ->
+        schedules
+        |> inherited_schedule(selected_availability_schedule_id)
+        |> Schedules.policy(:advance_booking_days)
+    end
   end
 
   # The schedule this meeting type is booked against: the one picked, or the

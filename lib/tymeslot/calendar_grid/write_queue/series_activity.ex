@@ -5,7 +5,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueue.SeriesActivity do
   it: a write to the whole series made while one of its occurrences is
   still being written, here or by another driver, could be undone by that
   occurrence's write landing after it (see "Events another driver is
-  writing" in `WriteQueue`).
+  writing" in `WriteQueue.Elsewhere`).
   """
 
   alias Tymeslot.CalendarGrid.WriteQueue

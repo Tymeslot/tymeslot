@@ -8,7 +8,7 @@ defmodule TymeslotWeb.AccountLive.Helpers do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Hooks.ModalHook
 
@@ -30,10 +30,10 @@ defmodule TymeslotWeb.AccountLive.Helpers do
     |> ModalHook.mount_modal(delete: false)
     |> assign(:delete_errors, %{})
     |> assign(:delete_values, %{})
-    |> assign(:deletion_grace_days, Auth.account_deletion_grace_days())
+    |> assign(:deletion_grace_days, AccountDeletion.account_deletion_grace_days())
     |> assign(
       :deletion_confirmation,
-      Auth.deletion_confirmation_method(socket.assigns.current_user)
+      AccountDeletion.deletion_confirmation_method(socket.assigns.current_user)
     )
     |> assign(:deletion_feedback_options, deletion_feedback_options())
     |> assign(:is_social_user, social_user?(socket.assigns.current_user))
@@ -93,8 +93,8 @@ defmodule TymeslotWeb.AccountLive.Helpers do
   @doc "The reason picker's options, or `[]` when feedback is not collected."
   @spec deletion_feedback_options() :: [{String.t(), String.t()}]
   def deletion_feedback_options do
-    if Auth.collect_deletion_feedback?(),
-      do: Enum.map(Auth.deletion_feedback_reasons(), &{feedback_label(&1), &1}),
+    if AccountDeletion.collect_deletion_feedback?(),
+      do: Enum.map(AccountDeletion.deletion_feedback_reasons(), &{feedback_label(&1), &1}),
       else: []
   end
 

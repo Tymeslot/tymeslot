@@ -37,6 +37,7 @@ defmodule Tymeslot.Infrastructure.Logging.PathMaskerTest do
 
   test "masks a link token" do
     assert PathMasker.mask("/meeting-request/#{@token}") == "/meeting-request/:id"
+    assert PathMasker.mask("/verify-booking/#{@token}") == "/verify-booking/:id"
     assert PathMasker.mask("/jane/poll/#{@token}") == "/jane/poll/:id"
   end
 

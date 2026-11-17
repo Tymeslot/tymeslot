@@ -170,6 +170,8 @@ config :tymeslot,
     # Run every 15 min to release approval requests whose deadline passed
     # and whose per-meeting expiry job never fired
     {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker},
+    # Run every 5 min to release unverified bookings whose expiry job never fired
+    {"*/5 * * * *", Tymeslot.Meetings.Workers.EmailVerificationSweepWorker},
     # Run daily at 03:05 UTC to resolve quiet errors and prune old ones
     {"5 3 * * *", Tymeslot.Workers.ErrorTrackerMaintenanceWorker},
     # Run daily at 07:00 UTC to email the digest of info-severity admin alerts
@@ -234,6 +236,7 @@ config :tymeslot, :feature_assigns,
   automations_allowed: true,
   custom_questions_allowed: true,
   group_bookings_allowed: true,
+  recurring_bookings_allowed: true,
   analytics_allowed: true,
   booking_pages_allowed: true,
   meeting_payments: false
@@ -476,6 +479,10 @@ config :phoenix, :json_library, Jason
 # when Stripe sends them back would otherwise log the OAuth callback's code and
 # state inside it.
 #
+# "series_uid" is the bearer of a booking series' page
+# (`/:username/series/:series_uid`): whoever holds it may cancel every
+# session of the series.
+#
 # This lives in compile-time config rather than runtime.exs so it holds at every
 # log level and in every environment. Production pins the level to :info, where
 # the "Parameters:" line is not emitted at all, but dev runs at :debug and a
@@ -492,7 +499,8 @@ config :phoenix, :filter_parameters, [
   "value",
   "code",
   "state",
-  "redirect_to"
+  "redirect_to",
+  "series_uid"
 ]
 
 # Precompressed siblings written by `mix phx.digest`, replacing the stock

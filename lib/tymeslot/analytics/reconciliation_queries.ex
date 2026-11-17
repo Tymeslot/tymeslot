@@ -13,6 +13,9 @@ defmodule Tymeslot.Analytics.ReconciliationQueries do
   All `Repo.*` calls for reconciliation live here per the
   `CredoChecks.RepoCallBoundary` rule.
 
+  Bookings are counted as the analytics dashboard counts them, so only those
+  their organiser may see (`MeetingState.where_visible_to_organiser/1`).
+
   ## Salt-awareness and the untracked ratio
 
   `Fingerprint` rotates the visitor hash salt every UTC day for visitor
@@ -39,6 +42,7 @@ defmodule Tymeslot.Analytics.ReconciliationQueries do
 
   alias Tymeslot.Analytics.EventSchema
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
 
   @typedoc """
@@ -106,6 +110,7 @@ defmodule Tymeslot.Analytics.ReconciliationQueries do
   @spec count_converting_visitors(DateTime.t(), DateTime.t()) :: non_neg_integer()
   defp count_converting_visitors(%DateTime{} = from, %DateTime{} = to) do
     MeetingSchema
+    |> MeetingState.where_visible_to_organiser()
     |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
     |> where([m], not is_nil(m.visitor_hash))
     |> select([m], count(m.visitor_hash, :distinct))
@@ -153,6 +158,7 @@ defmodule Tymeslot.Analytics.ReconciliationQueries do
       )
 
     from(m in MeetingSchema, as: :meeting)
+    |> MeetingState.where_visible_to_organiser()
     |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
     |> where([m], not is_nil(m.visitor_hash))
     |> where([m], exists(any_same_day_event))

@@ -137,6 +137,19 @@ defmodule TymeslotWeb.Router do
     end
   end
 
+  # Confirming a booking from the link in the attendee's verification email.
+  # As above, the signed token is the authorisation and loading the page
+  # confirms nothing; see `TymeslotWeb.BookingVerificationLive`.
+  scope "/", TymeslotWeb do
+    pipe_through :browser
+
+    live_session :booking_verification,
+      session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
+      on_mount: [TymeslotWeb.Hooks.LocaleHook, TymeslotWeb.Hooks.ClientInfoHook] do
+      live "/verify-booking/:token", BookingVerificationLive, :show
+    end
+  end
+
   # =============================================================================
   # Authentication Routes
   # =============================================================================
@@ -387,6 +400,10 @@ defmodule TymeslotWeb.Router do
            :cancel_confirmed
 
       live "/:username/meeting/:meeting_uid/reschedule", Themes.Core.Dispatcher, :reschedule
+
+      # Every session of a booking series, for its booker; the series uid
+      # is the page's bearer, as a meeting's uid is.
+      live "/:username/series/:series_uid", Themes.Core.Dispatcher, :series
     end
   end
 
@@ -399,6 +416,14 @@ defmodule TymeslotWeb.Router do
 
     get "/cancel", MeetingLinkController, :cancel
     get "/reschedule", MeetingLinkController, :reschedule
+  end
+
+  # A series page link without a username, resolved the same way: "series"
+  # is a reserved username too.
+  scope "/series/:series_uid", TymeslotWeb do
+    pipe_through :theme_browser
+
+    get "/", MeetingLinkController, :series
   end
 
   # Payment return pages (the Stripe Checkout success and cancel URLs). One

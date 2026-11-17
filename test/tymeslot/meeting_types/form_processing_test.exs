@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.FormMapper
 
   setup do
     # Pin the access checker to Core's default and enable meeting payments so
@@ -26,6 +27,24 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
   # =====================================
   # Creating Meeting Types from Form
   # =====================================
+
+  describe "the form mapper" do
+    test "the form mapper reads the toggle" do
+      params = %{"name" => "Chat", "duration" => "30"}
+
+      assert {:ok, on} =
+               FormMapper.build_attrs(
+                 Map.put(params, "requires_email_verification", "true"),
+                 personal_ui_state(),
+                 "usd"
+               )
+
+      assert on.requires_email_verification == true
+
+      assert {:ok, off} = FormMapper.build_attrs(params, personal_ui_state(), "usd")
+      assert off.requires_email_verification == false
+    end
+  end
 
   describe "when creating meeting type from form" do
     test "creates in-person meeting type" do

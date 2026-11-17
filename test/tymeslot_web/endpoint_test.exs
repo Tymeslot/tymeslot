@@ -25,6 +25,7 @@ defmodule TymeslotWeb.EndpointTest do
             ["seat", "secret-token", "calendar.ics"],
             ["free-busy", "abc"],
             ["meeting-request", "secret-token"],
+            ["verify-booking", "secret-token"],
             ["invite", "secret-token"],
             ["themes", "quill", "payment-processing", "meeting-id"],
             ["themes", "rhythm", "payment-cancelled", "meeting-id"],
@@ -32,7 +33,9 @@ defmodule TymeslotWeb.EndpointTest do
             ["alice", "meeting", "secret-uid", "cancel"],
             ["alice", "meeting", "secret-uid", "cancel-confirmed"],
             ["alice", "meeting", "secret-uid", "reschedule"],
-            ["alice", "meeting", "secret-uid", "calendar.ics"]
+            ["alice", "meeting", "secret-uid", "calendar.ics"],
+            ["alice", "series", "secret-uid"],
+            ["series", "secret-uid"]
           ] do
         assert {path_info, Endpoint.request_log_level(%Plug.Conn{path_info: path_info})} ==
                  {path_info, false}
@@ -52,9 +55,12 @@ defmodule TymeslotWeb.EndpointTest do
             ["auth", "reset-password-sent"],
             ["email-change"],
             ["meeting-request"],
+            ["verify-booking"],
             ["invite"],
             ["themes", "quill", "payment-cancelled"],
             ["alice", "poll"],
+            ["alice", "series"],
+            ["series"],
             # A meeting type slugged "meeting" has its booking page here.
             ["alice", "meeting", "book"],
             ["dashboard", "meetings"]

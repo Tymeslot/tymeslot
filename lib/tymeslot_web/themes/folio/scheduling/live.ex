@@ -3,8 +3,9 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Live do
   Folio's scheduling LiveView: one continuous page on
   `Navigators.Continuous`. The masthead (with the summary bar of what is
   chosen), the ways to work with the organiser, the length for a type
-  that offers several, the calendar once one is chosen, the details once
-  a time is; each opens below the last by itself.
+  that offers several, the calendar once one is chosen, the series
+  once a time is for a type that offers one, the details once the time
+  (and the series) are; each opens below the last by itself.
   The confirmation replaces everything below the masthead; the payment wait
   of an embedded paid booking replaces the whole page with the slim
   masthead above the shared wait. Folio has no events of its own.
@@ -16,6 +17,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Live do
     LengthMoment,
     MastheadMoment,
     OfferMoment,
+    SeriesMoment,
     WhenMoment,
     YouMoment
   }
@@ -32,6 +34,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Live do
         {:offer, collects: [:meeting_type], component: OfferMoment},
         {:length, collects: [:length], component: LengthMoment},
         {:when, collects: [:slot], component: WhenMoment},
+        {:series, collects: [:series], component: SeriesMoment},
         {:you, collects: [:answers, :attendee], component: YouMoment}
       ],
       outcomes: %{

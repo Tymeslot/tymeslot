@@ -205,6 +205,16 @@ msgstr "La tua dashboard, le pagine di prenotazione e tutte le email sono ora di
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
+msgid "Book a whole course of sessions at once"
+msgstr "Prenota un intero ciclo di sessioni in una volta"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Clients can now book a series in one go: the same time every week or month, or a set of sessions at times they choose. Each session is a normal booking with its own reminders and links, and a series can be paid upfront. Turn it on for each meeting type, under Series."
+msgstr "I clienti possono ora prenotare una serie in un'unica volta: alla stessa ora ogni settimana o ogni mese, oppure più sessioni negli orari che scelgono loro. Ogni sessione è una normale prenotazione, con i suoi promemoria e i suoi link, e la serie può essere pagata in anticipo. Attivala per ogni tipo di riunione, in Serie."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
 msgid "Your dashboard calendar, redesigned"
 msgstr "Il calendario della dashboard, ridisegnato"
 

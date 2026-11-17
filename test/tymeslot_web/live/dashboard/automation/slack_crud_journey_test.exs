@@ -259,7 +259,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCrudJourneyTest do
       integration: integration
     } do
       all_events = EventTypes.all()
-      assert length(all_events) == 6
+      assert length(all_events) == 11
 
       integration
       |> Changeset.change(events: all_events)

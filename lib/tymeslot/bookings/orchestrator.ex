@@ -9,6 +9,7 @@ defmodule Tymeslot.Bookings.Orchestrator do
   @behaviour Tymeslot.Bookings.Submitter
 
   alias Tymeslot.Bookings.{Create, Errors, Policy, Refusal, RescheduleSeat, Submitter}
+  alias Tymeslot.BookingSeries
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -28,13 +29,22 @@ defmodule Tymeslot.Bookings.Orchestrator do
   - Rate limiting (if client IP provided)
   - Meeting creation or rescheduling
 
+  `meeting_params` with a `:series` books a series of sessions
+  (`Tymeslot.BookingSeries.book/3`) unless the submission is a reschedule.
+
   Returns:
+    * `{:ok, %{series: series, meetings: meetings, participants: seats}}` for
+      a series, `seats` being the booker's seats on a group type's sessions
+    * `{:error, {:occurrences_unavailable, occurrences}}` when sessions of a
+      series cannot be booked, with only those sessions
     * `{:ok, meeting}` for free bookings (confirmed); for a seat on a group
       meeting, booked or moved, the meeting as that seat
       (`Tymeslot.Meetings.SeatView`)
     * `{:ok, :payment_required, %{meeting: meeting, checkout_url: url}}` when
       the meeting type requires payment — caller should redirect the
-      attendee to the Stripe Checkout URL
+      attendee to the Stripe Checkout URL. For a paid series the map also
+      carries `series` and `meetings`, and `meeting` is its first session,
+      whose payment topic and pages the series' checkout reports on
     * `{:error, reason}` on validation or persistence failure, where
       `reason` is either a semantic atom classified by the domain layer
       (`Tymeslot.Bookings.Errors.classified_error/0`, e.g. `:slot_taken`,
@@ -75,6 +85,9 @@ defmodule Tymeslot.Bookings.Orchestrator do
       {:error, reason} when is_atom(reason) or Refusal.is_refusal(reason) ->
         {:error, reason}
 
+      {:error, {:occurrences_unavailable, _occurrences}} = unavailable ->
+        unavailable
+
       {:error, _reason} ->
         {:error, :booking_failed}
     end
@@ -93,7 +106,7 @@ defmodule Tymeslot.Bookings.Orchestrator do
   def get_meeting_for_reschedule(meeting_uid, organizer_user_id)
       when is_integer(organizer_user_id) do
     with {:ok, meeting} <-
-           MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id),
+           MeetingQueries.get_meeting_by_uid_for_attendee(meeting_uid, organizer_user_id),
          :ok <- Policy.can_reschedule_meeting?(meeting),
          :ok <- Policy.can_booker_move_meeting?(meeting) do
       {:ok, meeting}
@@ -133,6 +146,15 @@ defmodule Tymeslot.Bookings.Orchestrator do
 
   defp submit_action(_seat_token, true, uid, meeting_params, _form_data, org_id),
     do: reschedule_meeting(uid, meeting_params, org_id)
+
+  # A series is booked as a whole; a reschedule moves one of its sessions
+  # like any other meeting.
+  defp submit_action(_seat_token, false, _uid, %{series: series} = meeting_params, form_data, _id)
+       when is_map(series),
+       do:
+         BookingSeries.book(meeting_params, form_data,
+           with_video_room: meeting_params[:with_video_room] == true
+         )
 
   defp submit_action(_seat_token, false, _uid, meeting_params, form_data, _org_id),
     do: create_meeting(meeting_params, form_data)

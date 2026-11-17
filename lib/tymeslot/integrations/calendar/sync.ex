@@ -32,7 +32,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
   alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Integrations.Calendar.SyncReconciliation
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.ExternalCalendar
 
   # How far back and forward a sync reads, for every provider alike, so the
   # dashboard calendar shows one range whichever calendar an event is on.
@@ -139,10 +139,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   defp flag_tymeslot_owned(%CalendarIntegrationSchema{} = integration, calendar_events) do
     identifiers =
       calendar_events
-      |> Meetings.calendar_identifier_set()
+      |> ExternalCalendar.calendar_identifier_set()
       |> MapSet.to_list()
 
-    case Meetings.list_meetings_by_calendar_identifiers(integration.id, identifiers) do
+    case ExternalCalendar.list_meetings_by_calendar_identifiers(integration.id, identifiers) do
       empty when map_size(empty) == 0 ->
         calendar_events
 
@@ -156,7 +156,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   defp mark_if_owned(%CalendarEvent{} = event, meetings_by_identifier) do
     owned? =
       event
-      |> Meetings.calendar_event_identifiers()
+      |> ExternalCalendar.calendar_event_identifiers()
       |> Enum.any?(&Map.has_key?(meetings_by_identifier, &1))
 
     %{event | created_by_tymeslot: owned?}

@@ -152,7 +152,7 @@ defmodule Tymeslot.MeetingTypes.OneOffEvents do
   end
 
   # The name-derived slug the schema would accept, or a random one when it is
-  # taken, too long, empty or reserved (`30min`, `poll`).
+  # taken, too long, empty or reserved (`30min`, `poll`, `series`).
   defp unique_slug(name, user_id, existing) do
     slug =
       name
@@ -162,7 +162,7 @@ defmodule Tymeslot.MeetingTypes.OneOffEvents do
 
     taken = MapSet.new(existing, &Slugs.effective_slug/1)
 
-    if slug == "" or String.length(slug) > 80 or slug == "poll" or
+    if slug == "" or String.length(slug) > 80 or slug in ~w(poll series) or
          Regex.match?(~r/^\d+min$/, slug) or MapSet.member?(taken, slug),
        do: Slugs.generate_random_slug(user_id),
        else: slug

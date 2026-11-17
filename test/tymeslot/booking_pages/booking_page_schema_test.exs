@@ -37,6 +37,9 @@ defmodule Tymeslot.BookingPages.BookingPageSchemaTest do
       assert {"is reserved", _opts} = page_changeset(%{name: "x", slug: slug}).errors[:slug]
     end
 
+    # `/:username/series/:series_uid` is a booking series' page.
+    assert {"is reserved", _opts} = page_changeset(%{name: "x", slug: "series"}).errors[:slug]
+
     assert page_changeset(%{name: "Dash", slug: "dashboard"}).valid?
   end
 

@@ -603,6 +603,33 @@ defmodule Tymeslot.Availability.TimeOffTest do
     end
   end
 
+  describe "delete_ended/3" do
+    test "removes a period that ended before today" do
+      period = insert(:time_off_period, starts_on: ~D[2026-08-20], ends_on: ~D[2026-08-31])
+
+      assert {:ok, _deleted} = TimeOff.delete_ended(period.profile_id, period.id, ~D[2026-09-01])
+      assert TimeOffPeriodQueries.get_for_profile(period.profile_id, period.id) == nil
+    end
+
+    test "refuses a period whose last day is today, and keeps it" do
+      period = insert(:time_off_period, starts_on: ~D[2026-08-20], ends_on: ~D[2026-09-01])
+
+      assert {:error, :not_ended} =
+               TimeOff.delete_ended(period.profile_id, period.id, ~D[2026-09-01])
+
+      assert %{id: id} = TimeOffPeriodQueries.get_for_profile(period.profile_id, period.id)
+      assert id == period.id
+    end
+
+    test "will not reach a period belonging to another profile" do
+      mine = insert(:profile)
+      theirs = insert(:time_off_period, starts_on: ~D[2026-08-20], ends_on: ~D[2026-08-31])
+
+      assert {:error, :not_found} = TimeOff.delete_ended(mine.id, theirs.id, ~D[2026-09-01])
+      assert TimeOffPeriodQueries.get_for_profile(theirs.profile_id, theirs.id)
+    end
+  end
+
   describe "fetch/2" do
     test "will not reach a period belonging to another profile" do
       mine = insert(:profile)

@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
   alias TymeslotWeb.Themes.Shared.GuestBooking
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
 
   @spec assign_theme_state(LiveView.Socket.t()) :: LiveView.Socket.t()
   def assign_theme_state(socket) do
@@ -131,6 +132,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:custom_field_answers, %{})
     |> GuestBooking.assign_defaults()
     |> BookingLocation.assign_defaults()
+    # The series the booker chooses on a type offering one, and whether it
+    # is offered (`Journey.Facts.Series`); settled with the meeting type.
+    |> Series.assign_defaults()
   end
 
   # `SchedulingLive` assigns the journey before it mounts the page.

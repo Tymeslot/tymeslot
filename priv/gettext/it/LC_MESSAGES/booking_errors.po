@@ -263,11 +263,6 @@ msgstr "Questo tipo di riunione si può prenotare solo con un link di invito per
 
 #: lib/tymeslot_web/live/scheduling/invitation_messages.ex
 #, elixir-autogen, elixir-format
-msgid "This invitation link has already been used to book an appointment. To change it, use the link in your confirmation email."
-msgstr "Questo link di invito è già stato usato per prenotare un appuntamento. Per modificarlo, usa il link nella tua email di conferma."
-
-#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
-#, elixir-autogen, elixir-format
 msgid "This invitation link has expired. Please contact the host for a new one."
 msgstr "Questo link di invito è scaduto. Chiedine uno nuovo all'organizzatore."
 
@@ -275,3 +270,63 @@ msgstr "Questo link di invito è scaduto. Chiedine uno nuovo all'organizzatore."
 #, elixir-autogen, elixir-format
 msgid "This invitation link is no longer valid. Please contact the host for a new one."
 msgstr "Questo link di invito non è più valido. Chiedine uno nuovo all'organizzatore."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is not confirmed yet. Confirm it from the link in your email first."
+msgstr "Questa prenotazione non è ancora confermata. Prima confermala dal link nella tua email."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is not confirmed yet. If you do not confirm it, it will be released on its own."
+msgstr "Questa prenotazione non è ancora confermata. Se non la confermi, verrà liberata automaticamente."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has already been used to book an appointment. To change it, use the link in the email we sent you."
+msgstr "Questo link di invito è già stato usato per prenotare un appuntamento. Per modificarlo, usa il link nell’email che ti abbiamo inviato."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "A reschedule request is already waiting for an answer"
+msgstr "Una richiesta di riprogrammazione è già in attesa di risposta"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Please choose a number of sessions this meeting type offers."
+msgstr "Scegli un numero di sessioni offerto da questo tipo di riunione."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Some of your sessions are no longer available. Please review them."
+msgstr "Alcune delle tue sessioni non sono più disponibili. Controllale."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type is booked as a series. Please choose your sessions."
+msgstr "Questo tipo di riunione si prenota come serie. Scegli le tue sessioni."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Two of your sessions overlap. Please choose different times."
+msgstr "Due delle tue sessioni si sovrappongono. Scegli orari diversi."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type can't be booked as a series at the moment."
+msgstr "Al momento questo tipo di riunione non può essere prenotato come serie."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This session is waiting for its series to be paid for. Until then the series can only be released as a whole."
+msgstr "Questa sessione è in attesa del pagamento della sua serie. Fino ad allora la serie può essere liberata solo per intero."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This session is part of a request that is waiting for the host's answer, so it can't be moved yet."
+msgstr "Questa sessione fa parte di una richiesta in attesa della risposta dell'organizzatore, quindi non può ancora essere spostata."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can only be added to a single booking. Please remove your guests to book a series."
+msgstr "Gli ospiti si possono aggiungere solo a una prenotazione singola. Rimuovi i tuoi ospiti per prenotare una serie."

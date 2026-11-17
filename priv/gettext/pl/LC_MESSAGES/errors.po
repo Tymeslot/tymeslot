@@ -467,11 +467,6 @@ msgstr "Stripe musi być podłączony"
 msgid "Work hours not found"
 msgstr "Nie znaleziono godzin pracy"
 
-#: lib/tymeslot/meetings/unique_slot.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a confirmed meeting at this time."
-msgstr "Masz już potwierdzone spotkanie w tym terminie."
-
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "already has a spot at this time"
@@ -543,7 +538,7 @@ msgstr "nie jest obsługiwanym językiem"
 
 #: lib/tymeslot/auth/user_schema.ex
 #: lib/tymeslot/meetings/guest_schema.ex
-#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/meeting_rules.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
@@ -884,6 +879,31 @@ msgstr "musi być w przyszłości"
 msgid "invitation links"
 msgstr "linków z zaproszeniem"
 
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation-only meeting types cannot be booked as a series."
+msgstr "Typów spotkań dostępnych tylko na zaproszenie nie można rezerwować jako serii."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types with fixed dates can offer a series only as sessions the booker picks."
+msgstr "Typy spotkań ze stałymi terminami mogą oferować serię tylko jako terminy wybierane przez osobę rezerwującą."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "One-off meeting types cannot be booked as a series."
+msgstr "Typów spotkań jednorazowych nie można rezerwować jako serii."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be between %{min} and %{max}"
+msgstr "musi mieścić się w zakresie od %{min} do %{max}"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must not be less than the minimum"
+msgstr "nie może być mniejsze niż minimum"
+
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "cannot list a language twice"
@@ -893,3 +913,33 @@ msgstr "nie może zawierać tego samego języka dwa razy"
 #, elixir-autogen, elixir-format
 msgid "is not a translation language"
 msgstr "nie jest językiem tłumaczenia"
+
+#: lib/tymeslot/meetings/unique_slot.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr "Ten termin nie jest już dostępny. Wybierz inny."
+
+#: lib/tymeslot/meeting_types/email_verification_rule.ex
+#, elixir-autogen, elixir-format
+msgid "email confirmation cannot be combined with payment"
+msgstr "potwierdzenia adresu e-mail nie można łączyć z płatnością"
+
+#: lib/tymeslot/meeting_types/group_validation.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require email confirmation"
+msgstr "rezerwacje grupowe nie mogą wymagać potwierdzenia adresu e-mail"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "would give a reserved booking link; choose another name or set a custom link"
+msgstr "z takiej nazwy powstałby zarezerwowany link do rezerwacji; wybierz inną nazwę lub ustaw własny link"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
+msgstr "nie może być większe niż %{max} przy tym odstępie, aby każda sesja mieściła się w ciągu roku"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
+msgstr "Typów spotkań, które proszą zaproszonych o potwierdzenie adresu e-mail, nie można rezerwować jako serii."

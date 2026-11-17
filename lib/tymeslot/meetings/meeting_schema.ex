@@ -4,16 +4,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   video conferencing, and meeting lifecycle management.
   """
 
-  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Ecto.UUID
-
-  alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
-  alias Tymeslot.ChangesetValidators.TimeOrder
-  alias Tymeslot.ChangesetValidators.TrackingParams
-  alias Tymeslot.Locales
+  alias Tymeslot.Meetings.MeetingRules
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.UniqueInvitation
   alias Tymeslot.Meetings.UniqueSlot
@@ -44,7 +38,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
             %{
               participant_id: binary(),
               seats_taken: non_neg_integer(),
-              previous: %{seat_id: binary(), meeting_id: binary(), start_time: DateTime.t()} | nil
+              previous:
+                %{seat_id: binary(), meeting_id: binary(), start_time: DateTime.t()} | nil,
+              series_id: binary() | nil,
+              series_position: pos_integer() | nil
             }
             | nil,
           organizer_name: String.t() | nil,
@@ -82,6 +79,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           reschedule_requested_at: DateTime.t() | nil,
           approval_requested_at: DateTime.t() | nil,
           approval_deadline_at: DateTime.t() | nil,
+          verification_deadline_at: DateTime.t() | nil,
+          verification_emails_sent: pos_integer() | nil,
+          email_verified_at: DateTime.t() | nil,
           approval_resolved_at: DateTime.t() | nil,
           approval_declined_at: DateTime.t() | nil,
           approval_nudge_sent_at: DateTime.t() | nil,
@@ -112,6 +112,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           tracking_params: map(),
           visitor_hash: String.t() | nil,
           invitee_data_erased_at: DateTime.t() | nil,
+          series_id: Ecto.UUID.t() | nil,
+          series_position: integer() | nil,
           booking_page_id: integer() | nil,
           invitation_id: integer() | nil,
           booking_page: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -135,7 +137,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # `calendar_uid` is what the booking is called in external calendars (the
     # event UID written to the organiser's calendar and to the attendee's
     # `.ics`), and grants nothing. Every calendar create, match, update and
-    # delete goes by `calendar_uid`; see `ensure_calendar_uid/1`.
+    # delete goes by `calendar_uid`, which `MeetingRules` mints.
     field(:uid, :string)
     field(:calendar_uid, :string)
     field(:title, :string)
@@ -171,7 +173,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # (`Tymeslot.Meetings.SeatView`), never on a row read from the database:
     # which seat the view is of, the seats taken on the slot when the event
     # about it fired, and the seat a move replaced. Integrations read it to
-    # address that seat.
+    # address that seat, and the seat's place in a booking series, which the
+    # group meeting row does not carry.
     field(:seat, :map, virtual: true)
 
     # Organizer details
@@ -251,8 +254,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # Grouped and read by `Tymeslot.Meetings.MeetingState`, which explains each
     # value; closed in the database by `meetings_status_must_be_known`.
     field(:status, Ecto.Enum,
-      values: ~w(pending awaiting_payment awaiting_approval confirmed cancelled completed
-                 expired reschedule_requested)a,
+      values: ~w(pending awaiting_payment awaiting_approval awaiting_verification confirmed
+                 cancelled completed expired reschedule_requested)a,
       default: :pending
     )
 
@@ -284,6 +287,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # through `Meetings.Approval.declined?/1` rather than matching on it.
     field(:approval_declined_at, :utc_datetime)
     field(:approval_nudge_sent_at, :utc_datetime)
+    # Email verification clock; see `Tymeslot.Meetings.EmailVerification`.
+    field(:verification_deadline_at, :utc_datetime)
+    field(:email_verified_at, :utc_datetime)
+    field(:verification_emails_sent, :integer)
     # The host's optional note when declining. Absent whenever they gave no
     # reason, so it marks nothing on its own.
     field(:decline_reason, :string)
@@ -375,6 +382,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # `Tymeslot.InviteeData`.
     field(:invitee_data_erased_at, :utc_datetime)
 
+    # Read `series_position` only with `series_id`: a nilified series leaves it.
+    belongs_to(:series, Tymeslot.BookingSeries.SeriesSchema, type: :binary_id)
+    field(:series_position, :integer)
+
     timestamps(type: :utc_datetime)
   end
 
@@ -439,6 +450,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :reschedule_requested_at,
     :approval_requested_at,
     :approval_deadline_at,
+    :verification_deadline_at,
+    :email_verified_at,
     :approval_resolved_at,
     :approval_declined_at,
     :approval_nudge_sent_at,
@@ -477,14 +490,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :capacity
   ]
 
-  @organizer_note_max_length 2000
-
-  @doc """
-  The longest note an organiser may leave for the guest. Anything that
-  becomes one (a poll's description) is held to the same limit.
-  """
-  @spec organizer_note_max_length() :: pos_integer()
-  def organizer_note_max_length, do: @organizer_note_max_length
+  @doc "The longest note an organiser may leave for the guest; see `Tymeslot.Meetings.MeetingRules`."
+  defdelegate organizer_note_max_length, to: MeetingRules
 
   @doc """
   Changeset for a solo meeting, and for updates to any meeting.
@@ -511,8 +518,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   so `attendee_name`/`attendee_email` are not required. Status is always
   forced to `:confirmed`, regardless of what the caller passes: group
   meetings never wait on payment, and the single-live-row invariant (backed
-  by `unique_confirmed_meeting_per_organizer_at_time`, which only indexes
-  confirmed rows) depends on every group meeting landing in that status.
+  by `unique_confirmed_meeting_per_organizer_at_time`, which indexes the
+  slot-holding statuses) depends on every group meeting landing in that status.
   """
   @spec group_changeset(t(), map()) :: Ecto.Changeset.t()
   def group_changeset(meeting, attrs) do
@@ -554,78 +561,19 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> UniqueInvitation.cast_on_insert(attrs)
-    |> ensure_calendar_uid()
-    |> ensure_seen_calendar_end()
-    |> validate_required([:calendar_uid | required_fields])
-    # Every writer copies `organizer_email` from the host's stored account (or
-    # the operator's configured fallback), never from a form, so it is held
-    # only to presence and length: an account whose address predates the
-    # current format rules must still be able to take bookings.
-    |> EmailChangeset.validate_email(:organizer_email, existing: true)
-    |> EmailChangeset.validate_email(:attendee_email)
-    |> validate_required([:attendee_locale])
-    |> validate_inclusion(:attendee_locale, supported_locale_codes(),
-      message: dgettext_noop("errors", "is not a supported locale")
-    )
-    |> validate_number(:capacity, greater_than: 0)
-    |> TimeOrder.validate_time_order(:start_time, :end_time)
-    |> validate_length(:utm_source, max: 255)
-    |> validate_length(:utm_medium, max: 255)
-    |> validate_length(:utm_campaign, max: 255)
-    |> validate_length(:utm_content, max: 255)
-    |> validate_length(:utm_term, max: 255)
-    |> validate_length(:referrer_host, max: 255)
-    |> validate_length(:decline_reason, max: 500)
-    |> validate_length(:organizer_note, max: @organizer_note_max_length)
-    |> validate_length(:visitor_hash, max: 64)
-    # Google Calendar's documented maximum event id length.
-    |> validate_length(:provider_event_id, max: 1024)
-    |> TrackingParams.validate_tracking_params(:tracking_params)
-    |> calculate_duration()
-    |> unique_constraint(:uid)
-    |> unique_constraint(:calendar_uid)
-    |> UniqueSlot.constrain()
-    |> check_constraint(:end_time, name: :meetings_end_after_start)
-    |> foreign_key_constraint(:venue_id)
-    |> foreign_key_constraint(:booking_page_id)
-    |> UniqueInvitation.constrain()
+    |> cast_series_on_insert(attrs)
+    |> MeetingRules.validate(required_fields)
   end
 
-  # A new meeting gets its own calendar identity, generated independently of
-  # `uid` so that nothing readable in a calendar leads back to the capability.
-  # A UUID, like `uid`, because callers tell a Tymeslot-minted identifier from
-  # one a provider assigned by that shape (`CalendarEventSync`'s legacy
-  # mapping check, the Exchange busy-interval namespace). An existing meeting
-  # already has one and keeps it: its event is keyed by it, and a new value
-  # would orphan that event.
-  defp ensure_calendar_uid(changeset) do
-    case get_field(changeset, :calendar_uid) do
-      nil -> put_change(changeset, :calendar_uid, UUID.generate())
-      _present -> changeset
-    end
+  # A booking joins its series when it is made, and nothing later moves it to
+  # another series or another place in one.
+  defp cast_series_on_insert(%Ecto.Changeset{data: %{__meta__: %{state: :built}}} = cs, attrs) do
+    cs
+    |> cast(attrs, [:series_id, :series_position])
+    |> foreign_key_constraint(:series_id)
   end
 
-  defp ensure_seen_calendar_end(%Ecto.Changeset{data: %{__meta__: %{state: :built}}} = cs),
-    do: put_change(cs, :seen_calendar_end_time, get_field(cs, :end_time))
-
-  defp ensure_seen_calendar_end(changeset), do: changeset
-
-  defp calculate_duration(changeset) do
-    # Only calculate duration if not provided
-    if get_change(changeset, :duration) do
-      changeset
-    else
-      start_time = get_field(changeset, :start_time)
-      end_time = get_field(changeset, :end_time)
-
-      if start_time && end_time do
-        duration = DateTime.diff(end_time, start_time, :minute)
-        put_change(changeset, :duration, duration)
-      else
-        changeset
-      end
-    end
-  end
+  defp cast_series_on_insert(changeset, _attrs), do: changeset
 
   @doc "Whether a write lost the race for its slot; see `Tymeslot.Meetings.UniqueSlot`."
   defdelegate unique_slot_violation?(changeset), to: UniqueSlot, as: :violation?
@@ -644,6 +592,4 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   @doc "Whether only the host manages the meeting; see `Tymeslot.Meetings.HostManaged`."
   defdelegate managed_by_host?(meeting), to: Tymeslot.Meetings.HostManaged, as: :managed?
-
-  defp supported_locale_codes, do: Locales.supported_codes()
 end

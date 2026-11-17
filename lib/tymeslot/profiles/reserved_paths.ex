@@ -64,8 +64,8 @@ defmodule Tymeslot.Profiles.ReservedPaths do
       webhook callback oauth connect integration marketplace apps plugins
       extensions themes templates layouts components assets static media
       uploads downloads files images icons fonts scripts styles
-      meeting meetings meeting-request schedule user users www home app
-      guest seat invite
+      meeting meetings meeting-request verify-booking schedule user users www home app
+      guest seat invite series
     )
   end
 

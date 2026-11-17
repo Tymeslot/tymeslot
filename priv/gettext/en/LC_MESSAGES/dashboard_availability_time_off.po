@@ -11,17 +11,17 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#: lib/tymeslot_web/components/dashboard/availability/time_off_period_row.ex
 #, elixir-autogen, elixir-format
 msgid "%{from} to %{to}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#: lib/tymeslot_web/components/dashboard/availability/time_off_period_row.ex
 #, elixir-autogen, elixir-format
 msgid "%{range}, from %{time}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#: lib/tymeslot_web/components/dashboard/availability/time_off_period_row.ex
 #, elixir-autogen, elixir-format
 msgid "%{range}, until %{time}"
 msgstr ""
@@ -102,7 +102,7 @@ msgid "Days you are away. These apply to every schedule and every meeting type, 
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#: lib/tymeslot_web/components/dashboard/availability/time_off_period_row.ex
 #, elixir-autogen, elixir-format
 msgid "Edit time off"
 msgstr ""
@@ -153,7 +153,7 @@ msgid "Remove"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#: lib/tymeslot_web/components/dashboard/availability/time_off_period_row.ex
 #, elixir-autogen, elixir-format
 msgid "Remove time off"
 msgstr ""

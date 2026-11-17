@@ -5,11 +5,18 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
   (composed into user-facing figures by `Tymeslot.Analytics` through the
   `Tymeslot.Meetings` context), and which organisers have had a real
   booking.
+
+  Every count reads only meetings the organiser may see
+  (`MeetingState.where_visible_to_organiser/1`): a booking that never
+  verified, or never got past payment, never counts, before or after it
+  expires. A verified or paid one counts from its `inserted_at`, as any
+  booking does.
   """
 
   import Ecto.Query, warn: false
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
 
@@ -28,6 +35,7 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
   def count_bookings(organizer_user_id, %DateTime{} = from, %DateTime{} = to) do
     from(m in Meeting, as: :meeting)
     |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> MeetingState.where_visible_to_organiser()
     |> where(
       [meeting: m],
       (not m.planned and m.inserted_at >= ^from and m.inserted_at <= ^to) or
@@ -64,6 +72,7 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
   def count_by_utm_source(organizer_user_id, %DateTime{} = from, %DateTime{} = to) do
     Meeting
     |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> MeetingState.where_visible_to_organiser()
     |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
     |> where([m], not is_nil(m.utm_source))
     |> group_by([m], m.utm_source)
@@ -79,6 +88,7 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
   def count_converting_visitors(organizer_user_id, %DateTime{} = from, %DateTime{} = to) do
     Meeting
     |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> MeetingState.where_visible_to_organiser()
     |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
     |> where([m], not is_nil(m.visitor_hash))
     |> select([m], count(m.visitor_hash, :distinct))
@@ -96,6 +106,7 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
   def converting_visitors_by_utm_source(organizer_user_id, %DateTime{} = from, %DateTime{} = to) do
     Meeting
     |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> MeetingState.where_visible_to_organiser()
     |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
     |> where([m], not is_nil(m.utm_source))
     |> where([m], not is_nil(m.visitor_hash))
@@ -125,6 +136,7 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
     Meeting
     |> where([m], m.organizer_user_id in ^organizer_user_ids)
     |> where([m], m.status != :cancelled)
+    |> MeetingState.where_visible_to_organiser()
     |> where(
       [m],
       m.attendee_email != m.organizer_email or

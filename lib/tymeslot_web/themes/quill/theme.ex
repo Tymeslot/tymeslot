@@ -3,6 +3,8 @@ defmodule TymeslotWeb.Themes.Quill.Theme do
   Quill: glassmorphism design with a 4-step booking flow.
   """
 
+  alias TymeslotWeb.Themes.Quill.Meeting.Series
+
   use TymeslotWeb.Themes.Core.Theme,
     live_view: TymeslotWeb.Themes.Quill.Scheduling.Live,
     font: "inter",
@@ -32,4 +34,10 @@ defmodule TymeslotWeb.Themes.Quill.Theme do
   defdelegate onboarding_preview(assigns),
     to: TymeslotWeb.Themes.Quill.OnboardingPreview,
     as: :render
+
+  # The series page is the shared body in Quill's own card; the other meeting
+  # pages are its conventional modules.
+  @impl TymeslotWeb.Themes.Core.Behaviour
+  def render_meeting_action(assigns, :series), do: Series.render(assigns)
+  def render_meeting_action(assigns, action), do: super(assigns, action)
 end

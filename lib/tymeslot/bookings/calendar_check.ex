@@ -14,7 +14,8 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   `probe/3` reports what the calendars said and leaves the decision to the
   caller. `enforce/3` adds the refusal policy both submits share: a genuine
   clash and an incompletely readable busy set are refused, while a transport
-  failure is logged and waved through.
+  failure is logged and waved through. `probe_many/3` and `enforce_many/3`
+  answer the same for the sessions of a series from a single fetch.
 
   ## The meeting being moved is not a conflict with itself
 
@@ -43,12 +44,17 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.ExternalCalendar
 
   # Availability was already checked when the slots were displayed, so a slow
   # calendar must not hold the submit open: past this, the booking proceeds on
   # what the display path knew.
   @fetch_timeout_ms 5_000
+
+  # A series reads up to a year of calendar in one fetch, which a provider
+  # can take longer to page through than a single slot's few days.
+  @range_threshold_days 31
+  @range_fetch_timeout_ms 10_000
 
   # Distinct from a transport error: the fetch DID reach the calendar layer,
   # which reported that it could not read every selected calendar. The busy set
@@ -109,41 +115,10 @@ defmodule Tymeslot.Bookings.CalendarCheck do
 
   def probe(%{organizer_user_id: organizer_user_id} = slot, config, opts)
       when is_integer(organizer_user_id) do
-    %{start_datetime: start_datetime, end_datetime: end_datetime} = slot
-    {start_date, end_date} = fetch_range(slot, Calculate.config_buffers(config))
+    range = fetch_range(slot, Calculate.config_buffers(config))
 
-    fetch =
-      Tasks.async_nolink(Tymeslot.TaskSupervisor, fn ->
-        CalendarEvents.get_events_for_range_fresh(organizer_user_id, start_date, end_date)
-      end)
-
-    case Task.yield(fetch, @fetch_timeout_ms) || Task.shutdown(fetch) do
-      {:ok, {:ok, events}} ->
-        blocking =
-          events
-          |> Bookability.apply_to_busy(organizer_user_id, {start_date, end_date})
-          |> Meetings.reject_calendar_event_mirrors(Keyword.get(opts, :exclude))
-
-        Validation.validate_no_conflicts(start_datetime, end_datetime, blocking, config)
-
-      {:ok, {:error, reason}} ->
-        {:error, reason}
-
-      {:exit, reason} ->
-        Logger.error("Calendar availability check crashed",
-          organizer_user_id: organizer_user_id,
-          reason: LogFormat.reason(reason)
-        )
-
-        {:error, :fetch_crashed}
-
-      nil ->
-        Logger.warning("Calendar availability check timed out",
-          organizer_user_id: organizer_user_id,
-          timeout_ms: @fetch_timeout_ms
-        )
-
-        {:error, :timeout}
+    with {:ok, blocking} <- fetch_blocking(organizer_user_id, range, @fetch_timeout_ms, opts) do
+      check_slot(slot, blocking, config)
     end
   end
 
@@ -167,26 +142,171 @@ defmodule Tymeslot.Bookings.CalendarCheck do
       :ok ->
         :ok
 
-      {:error, reason} when reason in [:slot_unavailable, :organizer_required] ->
-        {:error, reason}
-
-      {:error, reason} when reason in @unverifiable_reasons ->
-        Logger.warning("Calendar availability could not be verified, refusing booking",
-          reason: LogFormat.reason(reason),
-          organizer_user_id: Map.get(slot, :organizer_user_id)
-        )
-
-        {:error, :availability_unverifiable}
-
       {:error, reason} ->
-        Logger.warning("Calendar availability check failed, proceeding with booking",
-          reason: LogFormat.reason(reason),
-          organizer_user_id: Map.get(slot, :organizer_user_id)
-        )
-
-        :ok
+        with :proceed <- police(reason, Map.get(slot, :organizer_user_id), false), do: :ok
     end
   end
+
+  @doc """
+  `probe/3` for many slots of one organiser at once, as a series asks: one
+  fresh fetch over `[earliest start - before-buffer, latest end + after-buffer]`,
+  then each slot weighed exactly as `probe/3` weighs one.
+
+  Returns `{:ok, %{busy: starts}}`, the set of slot starts that clash, or the
+  same errors as `probe/3`. A range wider than #{@range_threshold_days} days
+  waits #{@range_fetch_timeout_ms} ms for the providers rather than
+  #{@fetch_timeout_ms}. Every slot must belong to the same organiser.
+
+  Takes the same options as `probe/3`.
+  """
+  @spec probe_many([slot()], map(), keyword()) ::
+          {:ok, %{busy: MapSet.t(DateTime.t())}} | {:error, probe_reason()}
+  def probe_many(slots, config, opts \\ [])
+
+  def probe_many([], _config, _opts), do: {:ok, %{busy: MapSet.new()}}
+
+  def probe_many([%{organizer_user_id: organizer_user_id} | _rest] = slots, config, opts)
+      when is_integer(organizer_user_id) do
+    buffers = Calculate.config_buffers(config)
+
+    {start_date, end_date} =
+      slots
+      |> Enum.map(&fetch_range(&1, buffers))
+      |> Enum.unzip()
+      |> then(fn {starts, ends} -> {Enum.min(starts, Date), Enum.max(ends, Date)} end)
+
+    timeout =
+      if Date.diff(end_date, start_date) > @range_threshold_days,
+        do: @range_fetch_timeout_ms,
+        else: @fetch_timeout_ms
+
+    with {:ok, blocking} <-
+           fetch_blocking(organizer_user_id, {start_date, end_date}, timeout, opts) do
+      busy =
+        for slot <- slots, check_slot(slot, blocking, config) != :ok, into: MapSet.new() do
+          slot.start_datetime
+        end
+
+      {:ok, %{busy: busy}}
+    end
+  end
+
+  def probe_many(_slots, _config, _opts), do: {:error, :organizer_required}
+
+  @doc """
+  `probe_many/3` with `enforce/3`'s refusal policy: an unreadable busy set
+  refuses the whole set with `:availability_unverifiable`, and a transport
+  failure is logged and reads as nothing busy.
+
+  Takes the same options as `probe/3`, plus `strict_calendar: true`, which
+  refuses a transport failure or a timeout with `:availability_unverifiable`
+  too. Booking a series writes many sessions at once, often months of them,
+  so it must not book them over clashes nobody could read; a single booking
+  and a preview keep the lenient default.
+  """
+  @spec enforce_many([slot()], map(), keyword()) ::
+          {:ok, %{busy: MapSet.t(DateTime.t())}}
+          | {:error, :organizer_required | :availability_unverifiable}
+  def enforce_many(slots, config, opts \\ []) do
+    organizer_user_id =
+      case slots do
+        [first | _rest] -> Map.get(first, :organizer_user_id)
+        [] -> nil
+      end
+
+    case probe_many(slots, config, opts) do
+      {:ok, _busy} = ok ->
+        ok
+
+      {:error, reason} ->
+        strict? = Keyword.get(opts, :strict_calendar, false)
+
+        with :proceed <- police(reason, organizer_user_id, strict?),
+             do: {:ok, %{busy: MapSet.new()}}
+    end
+  end
+
+  # The refusal policy `enforce/3` and `enforce_many/3` share: the error a
+  # probe failure refuses with, or `:proceed` for a transport failure, which
+  # each caller answers with its own nothing-busy result. A strict caller
+  # refuses a transport failure too.
+  defp police(reason, _organizer_user_id, _strict?)
+       when reason in [:organizer_required, :slot_unavailable],
+       do: {:error, reason}
+
+  defp police(reason, organizer_user_id, _strict?) when reason in @unverifiable_reasons do
+    Logger.warning("Calendar availability could not be verified, refusing booking",
+      reason: LogFormat.reason(reason),
+      organizer_user_id: organizer_user_id
+    )
+
+    {:error, :availability_unverifiable}
+  end
+
+  defp police(reason, organizer_user_id, true) do
+    Logger.warning("Calendar availability check failed, refusing booking",
+      reason: LogFormat.reason(reason),
+      organizer_user_id: organizer_user_id
+    )
+
+    {:error, :availability_unverifiable}
+  end
+
+  defp police(reason, organizer_user_id, false) do
+    Logger.warning("Calendar availability check failed, proceeding with booking",
+      reason: LogFormat.reason(reason),
+      organizer_user_id: organizer_user_id
+    )
+
+    :proceed
+  end
+
+  # One fresh read of the organiser's calendars over `{start_date, end_date}`,
+  # less the mirrors of the meetings `opts[:exclude]` names. The fetch runs in
+  # an unlinked task, so a provider adapter that raises is reported as
+  # `:fetch_crashed` instead of taking the caller down with it.
+  defp fetch_blocking(organizer_user_id, {start_date, end_date}, timeout_ms, opts) do
+    fetch =
+      Tasks.async_nolink(Tymeslot.TaskSupervisor, fn ->
+        CalendarEvents.get_events_for_range_fresh(organizer_user_id, start_date, end_date)
+      end)
+
+    case Task.yield(fetch, timeout_ms) || Task.shutdown(fetch) do
+      {:ok, {:ok, events}} ->
+        {:ok,
+         events
+         |> Bookability.apply_to_busy(organizer_user_id, {start_date, end_date})
+         |> ExternalCalendar.reject_calendar_event_mirrors(Keyword.get(opts, :exclude))}
+
+      {:ok, {:error, reason}} ->
+        {:error, reason}
+
+      {:exit, reason} ->
+        Logger.error("Calendar availability check crashed",
+          organizer_user_id: organizer_user_id,
+          reason: LogFormat.reason(reason)
+        )
+
+        {:error, :fetch_crashed}
+
+      nil ->
+        Logger.warning("Calendar availability check timed out",
+          organizer_user_id: organizer_user_id,
+          timeout_ms: timeout_ms
+        )
+
+        {:error, :timeout}
+    end
+  end
+
+  # Whether one slot clashes with the events read, by the overlap and buffer
+  # rules of the booking path: the one rule `probe/3` and `probe_many/3` share.
+  defp check_slot(
+         %{start_datetime: start_datetime, end_datetime: end_datetime},
+         blocking,
+         config
+       ),
+       do: Validation.validate_no_conflicts(start_datetime, end_datetime, blocking, config)
 
   # The fetch asks providers for whole UTC days, so the range has to be derived
   # from the slot's own UTC instants rather than from the visitor's local date:

@@ -1,0 +1,55 @@
+/* ==========================================================================
+   Rhythm: the series slide and the series on the confirmation's ticket
+
+   The shared series parts (shared/components/series.css) on Rhythm's dark
+   glass. The slide keeps its heading and its actions in place and lets
+   the sessions scroll between them, as the card is a fixed box over the
+   video; on the ticket the booked sessions take the date and time rows'
+   place.
+   ========================================================================== */
+
+.series-slide {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.series-slide .series-chooser {
+  flex: 1;
+  min-height: 0;
+  margin-top: var(--space-xs);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.series-slide .slide-actions {
+  flex-shrink: 0;
+}
+
+/* The sessions read as the time slots do: quiet rows on the glass. */
+.series-slide .series-list__item,
+.ticket-series .series-list__item {
+  border-color: var(--border-subtle);
+  background: var(--surface-subtle);
+}
+
+/* Every row of the ticket's grid: the sessions run across its columns. */
+.ticket-series {
+  grid-column: 1 / -1;
+  padding: var(--space-xs) 0;
+}
+
+.ticket-series .series-list {
+  margin-top: var(--space-xs);
+}
+
+.series-slide .organizer-instruction {
+  text-align: center;
+}
+
+/* An embed lays the ticket's rows out in a wrapping line: the sessions
+   take a line of their own. */
+html.rhythm-theme[data-embedded] .ticket-series {
+  flex: 1 1 100%;
+}

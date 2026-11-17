@@ -343,14 +343,6 @@ msgstr "Tato platba je reklamována a je nutné ji vyřešit v nástěnce Stri
 msgid "Total received"
 msgstr "Celkem přijato"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
-#, elixir-autogen, elixir-format
-msgid "You have %{count} pending booking awaiting payment. Disconnecting will cancel it."
-msgid_plural "You have %{count} pending bookings awaiting payment. Disconnecting will cancel them."
-msgstr[0] "Máte %{count} rezervaci čekající na platbu. Odpojením ji zrušíte."
-msgstr[1] "Máte %{count} rezervace čekající na platbu. Odpojením je zrušíte."
-msgstr[2] "Máte %{count} rezervací čekajících na platbu. Odpojením je zrušíte."
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is disconnected. Reconnect to accept payments again."
@@ -539,3 +531,16 @@ msgstr "Váš účet Stripe je připojený, ale Stripe ještě potřebuje někte
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is not connected yet. Connect it to start accepting payments."
 msgstr "Váš účet Stripe ještě není připojený. Připojte jej a začněte přijímat platby."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} checkout still in progress will be cancelled when you disconnect."
+msgid_plural "%{count} checkouts still in progress will be cancelled when you disconnect."
+msgstr[0] "Po odpojení bude zrušena %{count} nedokončená platba."
+msgstr[1] "Po odpojení budou zrušeny %{count} nedokončené platby."
+msgstr[2] "Po odpojení bude zrušeno %{count} nedokončených plateb."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "A checkout is in progress in your current currency. Try again in a few minutes."
+msgstr "V aktuální měně právě probíhá platba. Zkuste to znovu za několik minut."

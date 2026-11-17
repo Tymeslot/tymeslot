@@ -174,6 +174,25 @@ defmodule Tymeslot.Bookings.CancelTest do
     end
   end
 
+  describe "an unverified booking" do
+    test "the cancel page refuses an unverified booking" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: 86_400,
+          duration: 3600,
+          status: :awaiting_verification
+        })
+
+      assert {:error, {:not_cancellable, :awaiting_verification}} =
+               Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
+
+      assert Repo.get!(MeetingSchema, meeting.id).status == :awaiting_verification
+      refute_enqueued(worker: EmailWorker)
+    end
+  end
+
   describe "withdrawing a held booking request" do
     # The invitee is invited to withdraw by the "withdraw your request" link in
     # the request-received email, and that link reaches `Cancel.execute/1`

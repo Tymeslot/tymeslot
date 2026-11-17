@@ -5,7 +5,8 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
   A theme passes its wrapper component and its journey, and gets a `render/1`
   that handles every state the booking can be in. The classic journey, the
   five steps Quill and Rhythm show, is one LiveComponent per step, plus an
-  optional `length:` step for a meeting type that offers several lengths:
+  optional `length:` step for a meeting type that offers several lengths and
+  an optional `series:` step for one that offers a series:
 
       defmodule MyTheme.Scheduling.Live do
         alias MyTheme.Scheduling.Components.{
@@ -71,14 +72,18 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
   ignored (`InfoHandlers.handle_unexpected/2`).
 
   The macro also generates `handle_async/3` for the flow's `start_async/3`
-  results (a week view's week of slots,
-  `TymeslotWeb.Live.Scheduling.WeekSlots`); a theme writes none.
+  results (a series check and its picker's week, `Journey.Facts.Series`, and a
+  week view's week of slots, `TymeslotWeb.Live.Scheduling.WeekSlots`); a
+  theme writes none.
   """
 
   @steps [:overview, :schedule, :questions, :booking, :confirmation]
-  # A theme without it books a meeting type offering several lengths for its
-  # primary one (`Journey.Facts.Length`).
-  @optional_steps [:length]
+  # A theme without `length` books a meeting type offering several lengths for
+  # its primary one (`Journey.Facts.Length`); one without `series` offers single
+  # sessions only (`Journey.Facts.Series`), so a meeting type that requires a
+  # series cannot be booked in it: submitting is refused with
+  # `:series_required`. Every shipped theme declares `series`.
+  @optional_steps [:length, :series]
 
   # The generated code names every module in full rather than through an
   # alias, which would also apply to the theme's own code (see `__using__/1`).
@@ -169,12 +174,14 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       end
 
       # The flow's `start_async/3` results, forwarded by the dispatcher: a
-      # week view's week of slots is the only one.
+      # series check or its picker's week, and a week view's week of slots.
       @impl Phoenix.LiveView
       def handle_async(name, result, socket) do
-        case TymeslotWeb.Live.Scheduling.WeekSlots.handle_async(name, result, socket) do
-          :unhandled -> {:noreply, socket}
-          reply -> reply
+        with :unhandled <-
+               TymeslotWeb.Themes.Shared.Journey.Facts.Series.handle_async(name, result, socket),
+             :unhandled <-
+               TymeslotWeb.Live.Scheduling.WeekSlots.handle_async(name, result, socket) do
+          {:noreply, socket}
         end
       end
 
@@ -201,6 +208,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
           socket
           |> TymeslotWeb.Themes.Shared.Journey.Runtime.navigate_to_step(params)
           |> TymeslotWeb.Themes.Shared.ChoicesInUrl.sync()
+
+      # The confirmation step's "Resend email", for a booking waiting for
+      # its attendee to confirm their email; the flow's, like navigation.
+      def handle_event("resend_verification_email", _params, socket),
+        do: TymeslotWeb.Themes.Shared.VerificationResend.resend(socket)
 
       def handle_event("theme:" <> name, params, socket),
         do: handle_theme_event(name, params, socket)

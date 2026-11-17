@@ -15,15 +15,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   outcome reloads the events, so the grid shows what happened.
   """
 
-  use Gettext, backend: TymeslotWeb.Gettext
-
   import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [push_event: 3]
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.BookingsManagement.Cancellation
   alias TymeslotWeb.Dashboard.BookingsManagement.ModalMeeting
@@ -170,15 +167,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
 
   def handle(_name, _params, socket), do: socket
 
-  # Approving runs off the socket's process (`RequestActions.answer/4`), so
+  # Approving runs off the socket's process (`RequestActions.approve/3`), so
   # Accept shows its progress; `CalendarSurface.handle_async/3` hands the
-  # result back to `RequestActions.handle_answer/3`, which reloads.
-  defp accept(socket, id),
-    do:
-      answer(socket, id, &Approval.approve/1,
-        success: dgettext("dashboard_bookings", "Booking confirmed. The invitee has been told."),
-        failure: dgettext("dashboard_bookings", "That request could not be approved.")
-      )
+  # result back to `RequestActions.handle_answer/3`, which reloads. A session
+  # of a series request answers the whole series, and the flash says so, as
+  # it does in the bookings list.
+  defp accept(socket, id) do
+    {:noreply, socket} = RequestActions.approve(socket, %{"id" => id}, &reload_events/1)
+    socket
+  end
 
   # The id as stored (`Ecto.UUID.cast/1` lowercases it), so a request whose
   # answer is already in flight is recognised however its id is spelt; an id
@@ -208,22 +205,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   defp decline(socket, meeting, params) do
     reason = RequestActions.decline_reason(Map.get(params, "reason"))
 
-    socket
-    |> ModalHook.hide_modal(:decline_request)
-    |> answer(meeting.id, &Approval.decline(&1, reason),
-      success: dgettext("dashboard_bookings", "Request declined. The slot is free again."),
-      failure: dgettext("dashboard_bookings", "That request could not be declined.")
-    )
-  end
-
-  defp answer(socket, id, action, messages) do
     {:noreply, socket} =
-      RequestActions.answer(socket, %{"id" => id}, action, [
-        {:reload, &SurfaceData.reload(&1, :events)} | messages
-      ])
+      socket
+      |> ModalHook.hide_modal(:decline_request)
+      |> RequestActions.decline(meeting, reason, &reload_events/1)
 
     socket
   end
+
+  defp reload_events(socket), do: SurfaceData.reload(socket, :events)
 
   defp cancel(socket, meeting, params) do
     {outcome, type, message} =

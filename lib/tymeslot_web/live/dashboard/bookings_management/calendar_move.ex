@@ -216,10 +216,12 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMove do
     )
   end
 
+  # The clash may be with a booking the host cannot see (one awaiting its
+  # attendee's email verification or payment), so it never claims one is there.
   defp refusal_message(:slot_taken) do
     dgettext(
       "dashboard_bookings",
-      "Tymeslot could not move this booking. Another booking already starts at that time."
+      "This time is no longer available. Please choose another time."
     )
   end
 

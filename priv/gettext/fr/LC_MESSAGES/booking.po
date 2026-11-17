@@ -321,9 +321,11 @@ msgstr "Nom"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/series_component.ex
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr "Suivant"
@@ -503,10 +505,12 @@ msgstr "%{organizer} doit encore accepter ce créneau. Nous vous écrirons dans 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/series_component.ex
 #, elixir-autogen, elixir-format
 msgid "Back"
 msgstr "Retour"
@@ -722,6 +726,7 @@ msgstr "Votre dernière action n’a pas pu être effectuée. Veuillez réessaye
 #: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
 #: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Next week"
 msgstr "Semaine suivante"
@@ -738,6 +743,7 @@ msgstr "Aucun horaire disponible"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Previous week"
 msgstr "Semaine précédente"
@@ -897,3 +903,8 @@ msgstr "Ce type de réunion n’a aucun horaire disponible à la réservation po
 #, elixir-autogen, elixir-format
 msgid "%{page} with %{name}"
 msgstr "%{page} avec %{name}"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "We'll email you a link to confirm this booking."
+msgstr "Nous vous enverrons par e-mail un lien pour confirmer cette réservation."

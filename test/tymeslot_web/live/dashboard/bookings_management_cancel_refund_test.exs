@@ -2,7 +2,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
   @moduledoc """
   The paid-booking cancel dialog when a submit is refused: the choice, amount
   and acknowledgement are the host's until submit, so a re-render without them
-  would snap the choice back to a full refund.
+  would snap the choice back to a full refund. And a payment past the refund
+  window, or under dispute: the dialog says up front that cancelling will
+  not refund it, and the cancellation goes through without one, saying why.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -10,11 +12,14 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
   @moduletag :meetings
   @moduletag :live
 
+  import Mox
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
   alias Plug.Test
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
 
@@ -66,5 +71,148 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
     refute has_element?(view, "#cancel-refund-ack-error")
     assert Repo.get(MeetingSchema, meeting.id).status == :confirmed
     assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 0
+  end
+
+  describe "a payment past the refund window" do
+    setup :verify_on_exit!
+
+    setup %{user: user} do
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          attendee_name: "Paid Long Ago"
+        )
+
+      payment =
+        insert(:booking_payment,
+          meeting_id: meeting.id,
+          host_user_id: user.id,
+          host_email: user.email,
+          stripe_account_id: "acct_OLD",
+          stripe_charge_id: "ch_OLD_#{System.unique_integer([:positive])}",
+          amount_cents: 5000,
+          application_fee_cents: 25,
+          currency: "eur",
+          status: :paid,
+          paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day),
+          refunded_amount_cents: 0
+        )
+
+      %{meeting: meeting, payment: payment}
+    end
+
+    test "is cancelled without a refund, and the host is told why first and after",
+         %{conn: conn, meeting: meeting, payment: payment} do
+      expect(StripeAdapterMock, :create_refund, 0, fn _params, _opts -> {:ok, %{}} end)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+      refute has_element?(view, "input[name=cancel_refund_choice]")
+
+      assert has_element?(
+               view,
+               "#cancel-meeting-form",
+               "Cancelling won't refund the attendee: the payment is older than the 60-day refund window."
+             )
+
+      view |> form("#cancel-meeting-form", %{}) |> render_submit()
+      html = render(view)
+
+      assert html =~
+               "Cancelled without a refund: the payment is older than the 60-day refund window."
+
+      refute html =~ "refund could not be issued"
+      assert Repo.get(MeetingSchema, meeting.id).status == :cancelled
+      assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 0
+    end
+
+    # The dialog offers no amount for such a payment; one sent anyway is
+    # refused before anything is cancelled.
+    test "an explicit amount is refused before anything is cancelled", %{payment: payment} do
+      params = %{"cancel_refund_choice" => "partial", "cancel_refund_amount" => "10.00"}
+
+      assert {:error, :outside_refund_window} =
+               Meetings.resolve_cancellation_refund(payment, params)
+
+      assert {:ok, {:not_refunded, :outside_refund_window}} =
+               Meetings.resolve_cancellation_refund(payment, %{})
+    end
+  end
+
+  # A disputed payment is not one the host still owes from here: Stripe
+  # holds the money. The dialog still says why cancelling refunds nothing.
+  test "a disputed payment's dialog says cancelling won't refund it",
+       %{conn: conn, user: user} do
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        organizer_email: user.email,
+        attendee_name: "Paid Disputed"
+      )
+
+    insert(:booking_payment,
+      meeting_id: meeting.id,
+      host_user_id: user.id,
+      host_email: user.email,
+      stripe_account_id: "acct_DISPUTED",
+      stripe_charge_id: "ch_DISPUTED_#{System.unique_integer([:positive])}",
+      amount_cents: 5000,
+      application_fee_cents: 25,
+      currency: "eur",
+      status: :disputed,
+      paid_at: DateTime.utc_now(:second),
+      refunded_amount_cents: 0
+    )
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+    view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+    refute has_element?(view, "input[name=cancel_refund_choice]")
+
+    assert has_element?(
+             view,
+             "#cancel-meeting-form",
+             "Cancelling won't refund the attendee: the payment is under dispute. Settle the dispute in Stripe first."
+           )
+  end
+
+  # Each refusal is one whole sentence to translate, never a fragment
+  # joined to a lead-in, so a language can build it its own way.
+  test "a host working in German reads the warning as one sentence", %{conn: conn} do
+    host = insert(:user, onboarding_completed_at: DateTime.utc_now(), locale: "de")
+    insert(:profile, user: host)
+    conn = log_in_user(conn, host)
+
+    meeting =
+      insert(:meeting,
+        organizer_user_id: host.id,
+        organizer_email: host.email,
+        attendee_name: "Paid Disputed"
+      )
+
+    insert(:booking_payment,
+      meeting_id: meeting.id,
+      host_user_id: host.id,
+      host_email: host.email,
+      stripe_account_id: "acct_DISPUTED_DE",
+      stripe_charge_id: "ch_DISPUTED_DE_#{System.unique_integer([:positive])}",
+      amount_cents: 5000,
+      application_fee_cents: 25,
+      currency: "eur",
+      status: :disputed,
+      paid_at: DateTime.utc_now(:second),
+      refunded_amount_cents: 0
+    )
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+    view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+    assert has_element?(
+             view,
+             "#cancel-meeting-form",
+             "Die Absage erstattet dem Teilnehmer nichts, da die Zahlung angefochten wird. Klären Sie die Anfechtung zuerst in Stripe."
+           )
   end
 end
