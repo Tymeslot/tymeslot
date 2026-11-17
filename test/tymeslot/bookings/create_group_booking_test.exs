@@ -123,6 +123,13 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
     assert {:error, :slot_taken} = execute(ctx, "three@example.com")
   end
 
+  test "a booker already seated on the slot is told :already_booked", ctx do
+    {:ok, meeting} = execute(ctx, "one@example.com")
+
+    assert {:error, :already_booked} = execute(ctx, "ONE@example.com")
+    assert length(ParticipantQueries.list_live_for_meeting(meeting.id)) == 1
+  end
+
   test "guests consume seats and are linked to the participant", ctx do
     assert {:ok, meeting} =
              execute(ctx, "host@example.com", %{guest_emails: ["guest@example.com"]})

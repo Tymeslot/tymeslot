@@ -132,6 +132,17 @@ defmodule Tymeslot.Meetings.SeatHoldSchema do
   defp ensure_held(changeset, %__MODULE__{}),
     do: add_error(changeset, :status, "is not held")
 
+  @doc """
+  Whether the insert failed on `seat_holds_live_email_index`: the email
+  already holds seats on the meeting.
+  """
+  @spec duplicate_hold?(Ecto.Changeset.t()) :: boolean()
+  def duplicate_hold?(%Ecto.Changeset{errors: errors}) do
+    Enum.any?(errors, fn {_field, {_message, opts}} ->
+      to_string(opts[:constraint_name] || "") == "seat_holds_live_email_index"
+    end)
+  end
+
   @spec statuses() :: [status()]
   def statuses, do: @statuses
 

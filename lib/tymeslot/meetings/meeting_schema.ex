@@ -517,18 +517,27 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   Changeset for creating a group meeting's slot row.
 
   Group meetings hold no attendee — bookers live in `meeting_participants` —
-  so `attendee_name`/`attendee_email` are not required. Status is always
-  forced to `:confirmed`, regardless of what the caller passes: group
-  meetings never wait on payment, and the single-live-row invariant (backed
-  by `unique_confirmed_meeting_per_organizer_at_time`, which only indexes
-  confirmed rows) depends on every group meeting landing in that status.
+  so `attendee_name`/`attendee_email` are not required. Status is
+  `:confirmed` whatever the caller passes, with one exception: a slot
+  created by a seat hold (`Tymeslot.Meetings.SeatHolds`) passes
+  `status: :awaiting_payment`, and keeps it until its first paid seat
+  confirms it. Any other status is ignored.
+
+  An `:awaiting_payment` group meeting is outside
+  `unique_confirmed_meeting_per_organizer_at_time`, which indexes only
+  confirmed and awaiting-approval rows, so its single live row rests on
+  the organiser's schedule lock alone (see
+  `Tymeslot.Meetings.GroupScheduling`).
   """
   @spec group_changeset(t(), map()) :: Ecto.Changeset.t()
   def group_changeset(meeting, attrs) do
     meeting
     |> base_changeset(attrs, @group_required_fields)
-    |> put_change(:status, :confirmed)
+    |> put_change(:status, group_status(attrs))
   end
+
+  defp group_status(%{status: :awaiting_payment}), do: :awaiting_payment
+  defp group_status(_attrs), do: :confirmed
 
   @status_transition_fields [
     :status,

@@ -48,6 +48,15 @@ defmodule Tymeslot.Meetings.GroupBookingUidsTest do
     assert locked?(user, meeting, from, to)
   end
 
+  # A hold has no provider event to protect yet: the slot is offered, not
+  # booked, until a seat is paid for.
+  test "a meeting holding only unpaid seats is not", %{user: user, from: from, to: to} do
+    meeting = meeting_for(user, capacity: 2, status: :awaiting_payment)
+    insert(:seat_hold, meeting: meeting, email: "ann@example.com")
+
+    refute locked?(user, meeting, from, to)
+  end
+
   test "a solo booking is not", %{user: user, from: from, to: to} do
     meeting = meeting_for(user)
 

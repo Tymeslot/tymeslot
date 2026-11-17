@@ -149,8 +149,8 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   (`capacity > 1`, start time after `now`), returning how many were updated.
 
   A meeting never ends up with a capacity below the seats already taken on
-  it (live participants plus their guests, the count
-  `ParticipantQueries.count_seats_taken/1` makes): lowering the limit under
+  it (live participants plus their guests, plus the seats held for bookers
+  still paying, `Tymeslot.Meetings.SeatHolds`): lowering the limit under
   that leaves the slot exactly full, and nobody is cancelled. Solo meetings
   (`capacity == 1`) are never touched, so a one-to-one booking stays private
   whatever the type becomes.
@@ -174,9 +174,14 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
                 FROM meeting_participants AS p
                 LEFT JOIN meeting_guests AS g ON g.participant_id = p.id
                 WHERE p.meeting_id = ? AND p.cancelled_at IS NULL
+              )::integer + (
+                SELECT COALESCE(sum(h.seats), 0)
+                FROM seat_holds AS h
+                WHERE h.meeting_id = ? AND h.status = 'held'
               )::integer)
               """,
               ^capacity,
+              m.id,
               m.id
             ),
           updated_at: ^DateTime.truncate(now, :second)

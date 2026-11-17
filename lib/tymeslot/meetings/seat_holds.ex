@@ -1,0 +1,79 @@
+defmodule Tymeslot.Meetings.SeatHolds do
+  @moduledoc """
+  Seats held for a booker who is paying for them (`SeatHoldSchema`).
+
+  A hold counts against its meeting's capacity, guests included, from the
+  moment it is created until it is converted into a participant or released.
+  It is counted wherever seats are counted (`Tymeslot.Meetings.Seats`) and
+  nowhere else: it is no participant, so it is never listed, emailed or put
+  in a calendar. Lapsed holds (`expires_at` in the past) still count until
+  they are released.
+
+  Holds are created only by `GroupScheduling.book_seat/3` with its `:hold`
+  option, under the same locks as a participant, so there is no public
+  insert here.
+
+  `topic/1` and `broadcast/2` carry a hold's payment outcome to the page
+  waiting on it: `{:paid, participant_id}` once it converted, `:expired` once
+  it was released. Broadcast only after the change has committed.
+  """
+
+  alias Tymeslot.Meetings.SeatHoldQueries
+  alias Tymeslot.Meetings.SeatHoldSchema
+
+  @type broadcast_message :: {:paid, binary()} | :expired
+
+  @doc "Fetches a hold by id."
+  @spec get(binary()) :: SeatHoldSchema.t() | nil
+  defdelegate get(id), to: SeatHoldQueries
+
+  @doc "Seats held on a meeting."
+  @spec seats_held(binary()) :: non_neg_integer()
+  defdelegate seats_held(meeting_id), to: SeatHoldQueries
+
+  @doc "Seats held on each of `meeting_ids`; a meeting without holds is absent."
+  @spec seats_held_by_meeting([binary()]) :: %{binary() => non_neg_integer()}
+  defdelegate seats_held_by_meeting(meeting_ids), to: SeatHoldQueries
+
+  @doc """
+  Seats held per start time on the live meetings of `meeting_type_id`
+  starting in `[from_utc, to_utc)`; a slot without holds is absent.
+  """
+  @spec seats_held_for_range(integer(), DateTime.t(), DateTime.t()) ::
+          %{DateTime.t() => non_neg_integer()}
+  defdelegate seats_held_for_range(meeting_type_id, from_utc, to_utc), to: SeatHoldQueries
+
+  @doc "The holds still `held` on a meeting, oldest first."
+  @spec list_held_for_meeting(binary()) :: [SeatHoldSchema.t()]
+  defdelegate list_held_for_meeting(meeting_id), to: SeatHoldQueries
+
+  @doc """
+  Releases a hold that is still `held`, freeing its seats.
+
+  One conditional update, so of two racing callers (an expiry and a
+  conversion) exactly one wins; a hold no longer held is left as it is and
+  `{:ok, :unchanged}` returned. It neither locks the meeting nor changes its
+  status, and broadcasts nothing: the caller announces the release once its
+  transaction has committed.
+  """
+  @spec release(SeatHoldSchema.t(), SeatHoldSchema.release_reason()) ::
+          {:ok, SeatHoldSchema.t()} | {:ok, :unchanged}
+  def release(%SeatHoldSchema{id: id}, reason) do
+    case SeatHoldQueries.release(id, reason) do
+      %SeatHoldSchema{} = released -> {:ok, released}
+      nil -> {:ok, :unchanged}
+    end
+  end
+
+  @doc "The PubSub topic carrying a hold's payment outcome."
+  @spec topic(binary()) :: String.t()
+  def topic(hold_id) when is_binary(hold_id), do: "seat_hold_payment:" <> hold_id
+
+  @doc "Broadcasts a hold's payment outcome on `topic/1`. Call after commit."
+  @spec broadcast(binary(), broadcast_message()) :: :ok | {:error, term()}
+  def broadcast(hold_id, {:paid, participant_id} = message) when is_binary(participant_id),
+    do: Phoenix.PubSub.broadcast(Tymeslot.PubSub, topic(hold_id), message)
+
+  def broadcast(hold_id, :expired),
+    do: Phoenix.PubSub.broadcast(Tymeslot.PubSub, topic(hold_id), :expired)
+end

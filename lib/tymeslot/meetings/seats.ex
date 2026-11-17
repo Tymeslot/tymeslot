@@ -3,12 +3,14 @@ defmodule Tymeslot.Meetings.Seats do
   Seat arithmetic for group meetings.
 
   A meeting's taken seats are its live participants plus their guests, so a
-  booking with G guest emails consumes `1 + G` seats. A guest who declines
+  booking with G guest emails consumes `1 + G` seats, plus the seats held for
+  bookers still paying (`Tymeslot.Meetings.SeatHolds`). A guest who declines
   gives their seat back (`holds_seat?/1`); answering yes again takes one only
   while one is free (`Tymeslot.Meetings.Guests.record_rsvp/2`). Query work is
-  delegated to `Tymeslot.Meetings.ParticipantQueries`; the arithmetic and
-  the traffic-light thresholds live here so availability, booking and the
-  themes all share one definition.
+  delegated to `Tymeslot.Meetings.ParticipantQueries` and `SeatHolds` and
+  added up here, so neither table's queries count the other's. The
+  arithmetic and the traffic-light thresholds live here so availability,
+  booking and the themes all share one definition.
 
   What a booking page says about a slot's seats is the organiser's choice,
   made per meeting type (`show_seat_availability`, `last_spots_threshold`)
@@ -17,15 +19,20 @@ defmodule Tymeslot.Meetings.Seats do
 
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.SeatHolds
 
   # A slot turns amber at half or fewer seats remaining, and red at 20% or
   # fewer (or on the very last seat).
   @amber_threshold 0.5
   @red_threshold 0.2
 
-  @doc "Seats taken on a meeting: live participants plus their guests who hold a seat."
+  @doc """
+  Seats taken on a meeting: live participants plus their guests who hold a
+  seat, plus the seats held for bookers still paying.
+  """
   @spec seats_taken(binary()) :: non_neg_integer()
-  def seats_taken(meeting_id), do: ParticipantQueries.count_seats_taken(meeting_id)
+  def seats_taken(meeting_id),
+    do: ParticipantQueries.count_seats_taken(meeting_id) + SeatHolds.seats_held(meeting_id)
 
   @doc """
   Seats taken from already-loaded participant and guest lists: the
@@ -57,16 +64,24 @@ defmodule Tymeslot.Meetings.Seats do
   end
 
   @doc """
-  Live participants and seats taken (`seats_taken/1`) on each of
-  `meeting_ids`, in one query rather than one per meeting. Every id is in
-  the result; one nobody is booked on counts zero of each.
+  Live participants and seats taken (`seats_taken/1`, holds included) on
+  each of `meeting_ids`, in two queries rather than two per meeting. Every
+  id is in the result; one nobody is booked on counts zero of each, and one
+  with only holds counts zero participants.
   """
   @spec counts_by_meeting([binary()]) :: %{
           binary() => %{participants: non_neg_integer(), seats_taken: non_neg_integer()}
         }
   def counts_by_meeting(meeting_ids) do
     counts = ParticipantQueries.counts_by_meeting(meeting_ids)
-    Map.new(meeting_ids, &{&1, Map.get(counts, &1, %{participants: 0, seats_taken: 0})})
+    held = SeatHolds.seats_held_by_meeting(meeting_ids)
+
+    Map.new(meeting_ids, fn id ->
+      %{participants: participants, seats_taken: seats} =
+        Map.get(counts, id, %{participants: 0, seats_taken: 0})
+
+      {id, %{participants: participants, seats_taken: seats + Map.get(held, id, 0)}}
+    end)
   end
 
   @doc """
@@ -80,14 +95,19 @@ defmodule Tymeslot.Meetings.Seats do
   end
 
   @doc """
-  Map of meeting `start_time` to seats taken for confirmed meetings of the
-  given meeting type whose start falls in `[from_utc, to_utc)`. Slots with
-  no participants are absent from the map.
+  Map of meeting `start_time` to seats taken (holds included) for live
+  meetings of the given meeting type whose start falls in
+  `[from_utc, to_utc)`. Slots with neither participants nor holds are absent
+  from the map.
   """
   @spec seat_counts_for_range(integer(), DateTime.t(), DateTime.t()) ::
           %{DateTime.t() => non_neg_integer()}
   def seat_counts_for_range(meeting_type_id, from_utc, to_utc) do
-    ParticipantQueries.seat_counts_for_range(meeting_type_id, from_utc, to_utc)
+    Map.merge(
+      ParticipantQueries.seat_counts_for_range(meeting_type_id, from_utc, to_utc),
+      SeatHolds.seats_held_for_range(meeting_type_id, from_utc, to_utc),
+      fn _start, booked, held -> booked + held end
+    )
   end
 
   @doc """
