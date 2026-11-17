@@ -18,7 +18,7 @@ defmodule Tymeslot.Workers.AccountFilesPurgeWorkerTest do
   import Tymeslot.Factory
 
   alias Ecto.Adapters.SQL
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Media.Uploads
   alias Tymeslot.Repo
   alias Tymeslot.Workers.AccountFilesPurgeWorker
@@ -41,7 +41,7 @@ defmodule Tymeslot.Workers.AccountFilesPurgeWorkerTest do
 
   test "deleting the account queues a retry instead of leaving the files behind",
        %{profile: profile, dir: dir, avatar: avatar} do
-    assert {:ok, _deleted} = Auth.delete_account(profile.user)
+    assert {:ok, _deleted} = AccountDeletion.delete_account(profile.user)
 
     assert File.exists?(avatar)
     assert_enqueued(worker: AccountFilesPurgeWorker, args: %{"profile_id" => profile.id})
@@ -57,7 +57,7 @@ defmodule Tymeslot.Workers.AccountFilesPurgeWorkerTest do
        %{profile: profile, dir: dir} do
     refuse_purge_jobs!()
 
-    assert {:ok, _deleted} = Auth.delete_account(profile.user)
+    assert {:ok, _deleted} = AccountDeletion.delete_account(profile.user)
 
     refute_enqueued(worker: AccountFilesPurgeWorker)
     assert_received {:send_alert, :account_files_delete_failed, payload}

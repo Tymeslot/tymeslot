@@ -11,17 +11,17 @@ msgstr ""
 "Language: pl\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#: lib/tymeslot_web/components/dashboard/availability/time_off_period_row.ex
 #, elixir-autogen, elixir-format
 msgid "%{from} to %{to}"
 msgstr "%{from} – %{to}"
 
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#: lib/tymeslot_web/components/dashboard/availability/time_off_period_row.ex
 #, elixir-autogen, elixir-format
 msgid "%{range}, from %{time}"
 msgstr "%{range}, od %{time}"
 
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#: lib/tymeslot_web/components/dashboard/availability/time_off_period_row.ex
 #, elixir-autogen, elixir-format
 msgid "%{range}, until %{time}"
 msgstr "%{range}, do %{time}"
@@ -104,7 +104,7 @@ msgid "Days you are away. These apply to every schedule and every meeting type, 
 msgstr "Dni nieobecności. Dotyczą każdego harmonogramu i każdego typu spotkania, a osoby rezerwujące nie widzą, dlaczego te dni są zamknięte."
 
 #: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#: lib/tymeslot_web/components/dashboard/availability/time_off_period_row.ex
 #, elixir-autogen, elixir-format
 msgid "Edit time off"
 msgstr "Edytuj nieobecność"
@@ -155,7 +155,7 @@ msgid "Remove"
 msgstr "Usuń"
 
 #: lib/tymeslot_web/components/dashboard/availability/delete_time_off_modal.ex
-#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#: lib/tymeslot_web/components/dashboard/availability/time_off_period_row.ex
 #, elixir-autogen, elixir-format
 msgid "Remove time off"
 msgstr "Usuń nieobecność"

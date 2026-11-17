@@ -4,7 +4,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
 
   When a calendar sync worker detects that a provider event linked to a
   Tymeslot meeting was deleted or modified externally, the Calendar context
-  delegates here (via `Tymeslot.Meetings.apply_external_calendar_change/4`).
+  delegates here (via `Tymeslot.Meetings.ExternalCalendar.apply_external_calendar_change/5`).
   This module owns the meeting-side consequences: updating the
   `calendar_sync_status`, auto-cancelling the meeting on external deletion
   (with status revert if cancellation fails, so the next sync retries the
@@ -68,7 +68,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   The same work `apply_change/4` does once it has resolved its identifiers,
   for callers that resolved the meeting themselves. A batch reconciling many
   deletions matches them all in one query (see
-  `Tymeslot.Meetings.list_meetings_by_calendar_identifiers/2`) rather than
+  `Tymeslot.Meetings.ExternalCalendar.list_meetings_by_calendar_identifiers/3`) rather than
   paying two lookups per event to learn that most of them link to nothing.
   """
   @spec apply_change_to_meeting(Meeting.t(), signal()) :: :ok | {:error, term()}

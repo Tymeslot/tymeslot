@@ -16,7 +16,7 @@ defmodule Tymeslot.CalendarGrid.PreferredBookings do
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Selection
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.ExternalCalendar
 
   @doc """
   `visible` (the cached events the calendar selection keeps) less the copies
@@ -28,16 +28,16 @@ defmodule Tymeslot.CalendarGrid.PreferredBookings do
   def merge(visible, cached, bookings, integrations) do
     copies = [index(visible), index(cached)]
     bookings = Enum.map(bookings, &with_copy(&1, copies, integrations))
-    mirrored = Meetings.calendar_identifier_set(bookings)
+    mirrored = ExternalCalendar.calendar_identifier_set(bookings)
 
-    Enum.reject(visible, &Meetings.linked_to_calendar_event?(&1, mirrored)) ++ bookings
+    Enum.reject(visible, &ExternalCalendar.linked_to_calendar_event?(&1, mirrored)) ++ bookings
   end
 
   # Every identifier of every row, pointing at the first row that has it.
   defp index(rows) do
     Enum.reduce(rows, %{}, fn row, acc ->
       row
-      |> Meetings.calendar_event_identifiers()
+      |> ExternalCalendar.calendar_event_identifiers()
       |> Enum.reduce(acc, &Map.put_new(&2, &1, row))
     end)
   end
@@ -45,7 +45,7 @@ defmodule Tymeslot.CalendarGrid.PreferredBookings do
   # The first index (visible rows) that knows any of the booking's
   # identifiers wins, so a visible copy is named before a hidden one.
   defp with_copy(booking, copies, integrations) do
-    identifiers = Meetings.calendar_event_identifiers(booking)
+    identifiers = ExternalCalendar.calendar_event_identifiers(booking)
 
     row =
       Enum.find_value(copies, fn index ->

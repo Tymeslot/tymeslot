@@ -8,13 +8,13 @@ defmodule TymeslotWeb.PollDashboardHelpers do
   @doc """
   Waits until the results panel has applied its calendar conflict check.
 
-  Opening an open poll's results, or a refused confirm, starts the check in a
-  supervised task that calls the calendar mock. A test that ends before the
-  task gets there leaves it calling a mock whose stubs went with the test
-  process, which logs a `Mox.UnexpectedCallError`. Call this after any such
-  interaction the test does not otherwise wait on. Rendering is a call to the
-  LiveView, so once the "checking" line is gone the task has finished with the
-  calendar.
+  Opening an open poll's results, or a refused confirm, starts the check as the
+  polls component's `:slot_health` async task, which calls the calendar mock.
+  A test that ends before the task gets there leaves it calling a mock whose
+  stubs went with the test process, which logs a `Mox.UnexpectedCallError`.
+  Call this after any such interaction the test does not otherwise wait on.
+  Rendering is a call to the LiveView, so once the "checking" line is gone the
+  task has finished with the calendar.
   """
   @spec await_slot_health(Phoenix.LiveViewTest.View.t()) :: true
   def await_slot_health(view) do

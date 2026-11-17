@@ -24,6 +24,7 @@ defmodule Tymeslot.CalendarGrid.EventSearch do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.ExternalCalendar
 
   @min_length 2
   @max_length 100
@@ -113,15 +114,18 @@ defmodule Tymeslot.CalendarGrid.EventSearch do
     |> Enum.group_by(& &1.calendar_integration_id)
     |> Enum.flat_map(fn {integration_id, group} ->
       by_identifier =
-        Meetings.list_meetings_by_calendar_identifiers(
+        ExternalCalendar.list_meetings_by_calendar_identifiers(
           integration_id,
-          Enum.flat_map(group, &Meetings.calendar_event_identifiers/1),
+          Enum.flat_map(group, &ExternalCalendar.calendar_event_identifiers/1),
           drawn_for: user_id
         )
 
       Enum.flat_map(group, fn row ->
         meeting =
-          Enum.find_value(Meetings.calendar_event_identifiers(row), &Map.get(by_identifier, &1))
+          Enum.find_value(
+            ExternalCalendar.calendar_event_identifiers(row),
+            &Map.get(by_identifier, &1)
+          )
 
         if meeting, do: [{row.id, meeting}], else: []
       end)

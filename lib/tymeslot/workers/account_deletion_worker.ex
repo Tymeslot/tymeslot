@@ -21,12 +21,12 @@ defmodule Tymeslot.Workers.AccountDeletionWorker do
     max_attempts: 5,
     unique: [period: :infinity, keys: [:user_id], states: :incomplete]
 
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Infrastructure.AdminAlerts
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"user_id" => user_id} = args} = job) when is_integer(user_id) do
-    case Auth.run_scheduled_deletion(user_id, force: Map.get(args, "force") == true) do
+    case AccountDeletion.run_scheduled_deletion(user_id, force: Map.get(args, "force") == true) do
       {:ok, _outcome} ->
         :ok
 

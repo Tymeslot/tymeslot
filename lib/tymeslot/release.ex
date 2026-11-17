@@ -16,7 +16,7 @@ defmodule Tymeslot.Release do
   alias Ecto.Migrator
   alias Tymeslot.AppSettings
   alias Tymeslot.AppSettings.AppSettingsSchema
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Auth.{AdminRoles, AdminUserQueries, UserQueries, UserSchema}
   alias Tymeslot.Infrastructure.{FinchPool, ProxyVerifier}
   alias Tymeslot.Media.UploadMetadataSweep
@@ -103,8 +103,11 @@ defmodule Tymeslot.Release do
 
     with {:ok, user} <- UserQueries.get_user_by_email(email),
          {:ok, _pending} <-
-           Auth.delete_account_now(:cli, user.id, force: force?, job_at: fallback_job_at()) do
-      case Auth.run_scheduled_deletion(user.id, force: force?) do
+           AccountDeletion.delete_account_now(:cli, user.id,
+             force: force?,
+             job_at: fallback_job_at()
+           ) do
+      case AccountDeletion.run_scheduled_deletion(user.id, force: force?) do
         {:ok, outcome} when outcome in [:deleted, :already_deleted] -> {:ok, :deleted}
         {:ok, outcome} -> {:error, outcome}
         {:snooze, _seconds} -> {:error, :not_due}

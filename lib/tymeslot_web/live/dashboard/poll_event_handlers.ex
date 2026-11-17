@@ -32,17 +32,6 @@ defmodule TymeslotWeb.Dashboard.PollEventHandlers do
   end
 
   @doc """
-  The Polls component's advisory slot-health check runs in a supervised task
-  and reports back to the LiveView; this routes it to the component.
-  """
-  @spec handle_poll_slot_health(Ecto.UUID.t(), map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_poll_slot_health(poll_id, health, socket) do
-    send_update(PollsComponent, id: component_id(), poll_slot_health: {poll_id, health})
-    {:noreply, socket}
-  end
-
-  @doc """
   The Polls component's deadline timer fired (see `PollDeadlineTimer`);
   this routes it to the component, which reloads and re-arms.
   """

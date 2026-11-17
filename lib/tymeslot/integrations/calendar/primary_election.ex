@@ -16,7 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryElection do
   booking written to it would fail.
 
   Both run inside `under_lock/3`, which takes
-  `CalendarIntegrationQueries.lock_user_profile_and_integrations/1` before
+  `CalendarIntegrationLockQueries.lock_user_profile_and_integrations/1` before
   anything else, so a concurrent create, toggle, pause, delete or reconnect
   cannot decide from a list another one is changing, and every path locks in
   the same order.
@@ -24,6 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryElection do
 
   alias Tymeslot.Availability
   alias Tymeslot.Integrations.Calendar.BookingEligibility
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationLockQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.IntegrationCacheQueries
@@ -56,12 +57,12 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryElection do
     result =
       Repo.transaction(fn ->
         IntegrationCacheQueries.lock_cache_class(Keyword.get(opts, :cache_of, []))
-        CalendarIntegrationQueries.lock_user_profile_and_integrations(user_id)
+        CalendarIntegrationLockQueries.lock_user_profile_and_integrations(user_id)
         fun.()
       end)
 
     with {:ok, _value} <- result,
-         false <- CalendarIntegrationQueries.in_transaction?() do
+         false <- CalendarIntegrationLockQueries.in_transaction?() do
       Availability.changed(user_id)
     end
 

@@ -80,9 +80,9 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
   alias Tymeslot.Integrations.Calendar.SeriesRules
-  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntries
+  alias Tymeslot.Meetings.ExternalCalendar
   alias Tymeslot.Meetings.MeetingState
 
   @type event :: %{
@@ -169,7 +169,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   # calendar event (`:live`, deleting it cancels the meeting), of one that
   # has ended (`:ended`), or of none.
   defp booking_link(event) do
-    case Meetings.find_meeting_by_calendar_event(
+    case ExternalCalendar.find_meeting_by_calendar_event(
            event.calendar_integration_id,
            Map.get(event, :provider_event_id),
            event.uid
@@ -203,7 +203,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
 
   def booking_copies(events) do
     links =
-      Meetings.list_calendar_links(
+      ExternalCalendar.list_calendar_links(
         events |> Enum.map(& &1.calendar_integration_id) |> Enum.uniq(),
         present(events, &Map.get(&1, :provider_event_id)),
         present(events, & &1.uid)

@@ -12,7 +12,7 @@ defmodule Tymeslot.Workers.AccountDeletionWorkerTest do
 
   alias Ecto.Changeset
   alias Oban.Job
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Auth.AccountDeletion.Runner
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
@@ -109,7 +109,7 @@ defmodule Tymeslot.Workers.AccountDeletionWorkerTest do
       {:ok, job} = AccountDeletionWorker.schedule(user.id, DateTime.utc_now())
       job |> Changeset.change(state: "discarded") |> Repo.update!()
 
-      assert Auth.enqueue_overdue_account_deletions() == 1
+      assert AccountDeletion.enqueue_overdue_account_deletions() == 1
       assert [_discarded, _new] = all_jobs(user.id)
     end
 
@@ -117,7 +117,7 @@ defmodule Tymeslot.Workers.AccountDeletionWorkerTest do
       user = overdue_user()
       {:ok, _job} = AccountDeletionWorker.schedule(user.id, DateTime.utc_now())
 
-      assert Auth.enqueue_overdue_account_deletions() == 0
+      assert AccountDeletion.enqueue_overdue_account_deletions() == 0
       assert [_only] = all_jobs(user.id)
     end
 

@@ -13,7 +13,7 @@ defmodule Tymeslot.Auth.AccountDeletionSessionsTest do
   import Tymeslot.Factory
 
   alias Phoenix.Socket.Broadcast
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Auth.UserSessionQueries
   alias Tymeslot.Security.Token
   alias TymeslotWeb.Endpoint
@@ -33,7 +33,7 @@ defmodule Tymeslot.Auth.AccountDeletionSessionsTest do
     topics = Enum.map(tokens, &live_socket_topic/1)
     Enum.each(topics, &Endpoint.subscribe/1)
 
-    assert {:ok, _deleted} = Auth.delete_account(user)
+    assert {:ok, _deleted} = AccountDeletion.delete_account(user)
 
     for topic <- topics do
       assert_receive %Broadcast{topic: ^topic, event: "disconnect"}
@@ -49,7 +49,7 @@ defmodule Tymeslot.Auth.AccountDeletionSessionsTest do
     other_token = session_for(other)
     Endpoint.subscribe(live_socket_topic(other_token))
 
-    assert {:ok, _deleted} = Auth.delete_account(user)
+    assert {:ok, _deleted} = AccountDeletion.delete_account(user)
 
     refute_receive %Broadcast{event: "disconnect"}
     assert UserSessionQueries.get_user_by_session_token(other_token)

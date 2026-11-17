@@ -21,7 +21,7 @@ defmodule Tymeslot.MeetingPayments.HeldBookingReleaseTest do
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.ConfigTestHelpers
 
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Availability.Offer
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments
@@ -76,7 +76,7 @@ defmodule Tymeslot.MeetingPayments.HeldBookingReleaseTest do
   test "asking for account deletion releases the slot and tells the waiting attendee",
        context do
     assert {:ok, _pending} =
-             Auth.request_account_deletion(
+             AccountDeletion.request_account_deletion(
                context.host,
                %{"current_password" => "Password123!"},
                ip: "203.0.113.9",

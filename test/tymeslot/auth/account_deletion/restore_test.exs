@@ -7,7 +7,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RestoreTest do
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Workers.AccountDeletionWorker
@@ -42,7 +42,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RestoreTest do
     user_id = user.id
     {:ok, _job} = AccountDeletionWorker.schedule(user.id, at)
 
-    assert {:ok, restored} = Auth.restore_account(user)
+    assert {:ok, restored} = AccountDeletion.restore_account(user)
 
     assert restored.deletion_scheduled_at == nil
     assert restored.deletion_requested_at == nil
@@ -51,7 +51,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RestoreTest do
   end
 
   test "refuses an account that is not pending deletion" do
-    assert Auth.restore_account(insert(:user)) == {:error, :not_pending}
+    assert AccountDeletion.restore_account(insert(:user)) == {:error, :not_pending}
     refute_received {:restored, _user_id}
   end
 
@@ -67,7 +67,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RestoreTest do
     user_id = user.id
     {:ok, _job} = AccountDeletionWorker.schedule(user.id, due)
 
-    assert Auth.restore_account(user) == {:error, :deletion_in_progress}
+    assert AccountDeletion.restore_account(user) == {:error, :deletion_in_progress}
 
     assert Repo.get(UserSchema, user_id).deletion_scheduled_at == due
     assert_enqueued(worker: AccountDeletionWorker, args: %{"user_id" => user_id})

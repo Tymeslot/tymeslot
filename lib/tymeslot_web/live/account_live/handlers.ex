@@ -11,6 +11,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
 
   alias Phoenix.LiveView
   alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Locales
   alias TymeslotWeb.AccountLive.Helpers
   alias TymeslotWeb.Helpers.ClientIP
@@ -112,7 +113,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   end
 
   def handle_event("open_delete_account_modal", _params, socket) do
-    due_at = Auth.account_deletion_due_at(DateTime.utc_now())
+    due_at = AccountDeletion.account_deletion_due_at(DateTime.utc_now())
 
     {:noreply,
      socket
@@ -134,7 +135,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     # Everything but the password, which is never sent back to the browser.
     socket = assign(socket, :delete_values, Map.delete(params, "current_password"))
 
-    case Auth.request_account_deletion(socket.assigns.current_user, params, opts) do
+    case AccountDeletion.request_account_deletion(socket.assigns.current_user, params, opts) do
       {:ok, pending} ->
         {:noreply,
          socket
@@ -220,7 +221,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   end
 
   defp deletion_requested_message(pending) do
-    if Auth.account_deletion_grace_days() == 0 do
+    if AccountDeletion.account_deletion_grace_days() == 0 do
       dgettext("account", "Your account has been deleted.")
     else
       dgettext(
