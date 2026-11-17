@@ -921,3 +921,8 @@ msgstr "nesmí obsahovat jeden jazyk dvakrát"
 #, elixir-autogen, elixir-format
 msgid "is not a translation language"
 msgstr "není jazyk překladu"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
+msgstr "smí být při tomto opakování nejvýše %{max}, aby každý termín spadal do jednoho roku"

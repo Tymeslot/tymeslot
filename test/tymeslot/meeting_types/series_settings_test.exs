@@ -88,6 +88,80 @@ defmodule Tymeslot.MeetingTypes.SeriesSettingsTest do
     assert errors(missing, :series_max_occurrences) != []
   end
 
+  describe "the year a recurring series must fall within" do
+    defp rhythm(frequency, interval, min, max) do
+      changeset(
+        recurring(%{
+          series_frequency: frequency,
+          series_interval: interval,
+          series_min_occurrences: min,
+          series_max_occurrences: max
+        })
+      )
+    end
+
+    test "every 4 weeks fits 14 sessions (364 days) and refuses 15 (392 days)" do
+      assert rhythm(:weekly, 4, 2, 14).valid?
+
+      cs = rhythm(:weekly, 4, 2, 15)
+      refute cs.valid?
+      assert [{_msg, opts}] = errors(cs, :series_max_occurrences)
+      assert opts[:max] == 14
+      assert errors(cs, :series_min_occurrences) == []
+    end
+
+    test "every 3 weeks fits 18 sessions and refuses 19" do
+      assert rhythm(:weekly, 3, 2, 18).valid?
+      refute rhythm(:weekly, 3, 2, 19).valid?
+    end
+
+    test "monthly fits 13 sessions, which twelve monthly steps can hold, and refuses 14" do
+      assert rhythm(:monthly, 1, 2, 13).valid?
+
+      cs = rhythm(:monthly, 1, 2, 14)
+      assert [{_msg, opts}] = errors(cs, :series_max_occurrences)
+      assert opts[:max] == 13
+    end
+
+    test "every 2, 3 and 4 months fit 7, 5 and 4 sessions" do
+      for {interval, fitting} <- [{2, 7}, {3, 5}, {4, 4}] do
+        assert rhythm(:monthly, interval, 2, fitting).valid?
+        refute rhythm(:monthly, interval, 2, fitting + 1).valid?
+      end
+    end
+
+    test "a minimum that cannot fit is refused on the minimum too" do
+      cs = rhythm(:monthly, 1, 14, 15)
+
+      assert [{_msg, opts}] = errors(cs, :series_min_occurrences)
+      assert opts[:max] == 13
+      assert [{_msg, _opts}] = errors(cs, :series_max_occurrences)
+    end
+
+    test "a fixed count that cannot fit is reported once, on the maximum" do
+      cs = rhythm(:monthly, 1, 14, 14)
+
+      assert errors(cs, :series_min_occurrences) == []
+      assert [{_msg, _opts}] = errors(cs, :series_max_occurrences)
+    end
+
+    test "daily rhythms always fit the count bounds" do
+      assert rhythm(:daily, 4, 26, 26).valid?
+    end
+
+    test "a flexible series is not held to a rhythm" do
+      cs =
+        changeset(%{
+          series_mode: :flexible,
+          series_frequency: :monthly,
+          series_min_occurrences: 26,
+          series_max_occurrences: 26
+        })
+
+      assert cs.valid?
+    end
+  end
+
   test "a flexible series drops the frequency" do
     cs =
       changeset(%{

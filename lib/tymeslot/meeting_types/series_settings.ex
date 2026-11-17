@@ -37,6 +37,7 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
     ]
 
   alias Ecto.Changeset
+  alias Tymeslot.BookingSeries.Check
   alias Tymeslot.Features
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
@@ -228,8 +229,15 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
   @spec validate_changeset(Changeset.t()) :: Changeset.t()
   def validate_changeset(changeset) do
     case get_field(changeset, :series_mode) do
-      nil -> reset_series(changeset)
-      mode -> changeset |> validate_counts() |> validate_rhythm(mode) |> validate_conflicts()
+      nil ->
+        reset_series(changeset)
+
+      mode ->
+        changeset
+        |> validate_counts()
+        |> validate_rhythm(mode)
+        |> validate_span(mode)
+        |> validate_conflicts()
     end
   end
 
@@ -297,6 +305,64 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
     |> put_change(:series_frequency, nil)
     |> put_change(:series_interval, 1)
   end
+
+  # Every later session must start within `Check.span_days/0` (365) of the
+  # first, so a recurring rhythm caps how many sessions a series can hold.
+  # Only a count that can never fit is refused. Daily and weekly steps are
+  # exact. Monthly steps keep the weekday ordinal, so twelve of them span 364
+  # or 371 days depending on the dates, and thirteen at least 392: twelve
+  # months can fit, thirteen never do.
+  @span_months 12
+
+  defp validate_span(changeset, :recurring) do
+    frequency = get_field(changeset, :series_frequency)
+    interval = get_field(changeset, :series_interval)
+
+    case max_fitting_count(frequency, interval) do
+      nil ->
+        changeset
+
+      fitting ->
+        min = get_field(changeset, :series_min_occurrences)
+        max = get_field(changeset, :series_max_occurrences)
+
+        changeset
+        |> check_fits(:series_max_occurrences, max, fitting)
+        # Equal bounds show as one field, so the error is not repeated there.
+        |> check_fits(:series_min_occurrences, if(min != max, do: min), fitting)
+    end
+  end
+
+  defp validate_span(changeset, :flexible), do: changeset
+
+  @doc """
+  The most sessions a recurring series at `frequency` every `interval` can
+  hold with every one inside `Tymeslot.BookingSeries.Check.span_days/0` of
+  the first, or nil for a rhythm that is not valid.
+  """
+  @spec max_fitting_count(atom(), term()) :: pos_integer() | nil
+  def max_fitting_count(:monthly, interval) when interval in @intervals,
+    do: div(@span_months, interval) + 1
+
+  def max_fitting_count(frequency, interval)
+      when is_map_key(@frequency_days, frequency) and interval in @intervals,
+      do: div(Check.span_days(), Map.fetch!(@frequency_days, frequency) * interval) + 1
+
+  def max_fitting_count(_frequency, _interval), do: nil
+
+  defp check_fits(changeset, field, count, fitting) when is_integer(count) and count > fitting do
+    add_error(
+      changeset,
+      field,
+      dgettext_noop(
+        "errors",
+        "must be at most %{max} at this rhythm, so that every session falls within a year"
+      ),
+      max: fitting
+    )
+  end
+
+  defp check_fits(changeset, _field, _count, _fitting), do: changeset
 
   @doc """
   Adds an error for every setting that cannot go with the series mode, read

@@ -155,10 +155,27 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SeriesSectionTest do
     view = edit(conn, meeting_type)
 
     toggle(view)
-    change_series(view, "rhythm", "monthly:2")
+    change_series(view, "rhythm", "monthly:1")
 
     assert render(view) =~ "On the same weekday of the month, for example the second Thursday."
-    assert %{series_frequency: :monthly, series_interval: 2} = reload(meeting_type)
+    assert %{series_frequency: :monthly, series_interval: 1} = reload(meeting_type)
+  end
+
+  test "a rhythm too slow for the maximum within a year shows the error on the maximum",
+       %{conn: conn, user: user} do
+    meeting_type = insert(:meeting_type, [user: user] ++ weekly_series(series_max_occurrences: 8))
+    view = edit(conn, meeting_type)
+
+    change_series(view, "rhythm", "monthly:4")
+
+    assert has_element?(
+             view,
+             "[id^='series-max-'][id$='-error']",
+             "must be at most 4 at this rhythm, so that every session falls within a year"
+           )
+
+    refute has_element?(view, "[id^='series-min-'][id$='-error']")
+    assert %{series_frequency: :weekly, series_max_occurrences: 8} = reload(meeting_type)
   end
 
   test "one-off types cannot turn series on", %{conn: conn, user: user} do
