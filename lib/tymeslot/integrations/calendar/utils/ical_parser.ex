@@ -303,7 +303,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     %{
       "email" => calendar_user_address(line),
       "name" => common_name(line),
-      "status" => partstat(line)
+      "status" => partstat(line),
+      "rsvp" => rsvp(line)
     }
   end
 
@@ -317,6 +318,16 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   defp common_name(line) do
     case Regex.run(~r/(?:^|;)CN=([^;:]+)/i, line) do
       [_match, cn] -> cn |> String.trim() |> String.trim("\"")
+      nil -> nil
+    end
+  end
+
+  # RFC 5545 §3.2.17. Only an explicit `RSVP=FALSE` reads as `false`: the
+  # standard makes it the default, but many organisers who do expect a reply
+  # leave the parameter out, so an absent one says nothing either way.
+  defp rsvp(line) do
+    case Regex.run(~r/(?:^|;)RSVP=([^;:]+)/i, line) do
+      [_match, value] -> if String.upcase(String.trim(value)) == "FALSE", do: false, else: true
       nil -> nil
     end
   end
