@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupEmailVerificationJourneyTest do
   import Tymeslot.Factory
   import Tymeslot.JourneyFixtureHelpers, only: [first_value: 3, seed_organiser: 3]
   import Tymeslot.Test.ClockHelpers
+  import Ecto.Query, only: [where: 2]
 
   alias Ecto.Changeset
   alias Plug.Test
@@ -39,12 +40,14 @@ defmodule TymeslotWeb.Live.Scheduling.GroupEmailVerificationJourneyTest do
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Meetings.Workers.EmailVerificationExpiryWorker
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.WebhookWorker
   alias TymeslotWeb.BookingDriver
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @first %{name: "Ana Lima", email: "ana@example.com"}
   @second %{name: "Bea Costa", email: "bea@example.com"}
@@ -263,6 +266,55 @@ defmodule TymeslotWeb.Live.Scheduling.GroupEmailVerificationJourneyTest do
     assert spots_left(ctx) == "#{@capacity} spots left"
   end
 
+  # The page names the seat's own deadline, not the slot's: the slot's is its
+  # first held seat's, which a later booker never had.
+  @tag :capture_log
+  test "a second held seat is told its own deadline", ctx do
+    slot = book(ctx, @first)
+    first_deadline = DateTime.add(DateTime.utc_now(), 5, :minute) |> DateTime.truncate(:second)
+
+    Repo.update_all(MeetingSchema |> where(id: ^slot.id),
+      set: [verification_deadline_at: first_deadline]
+    )
+
+    {view, booked} = book_view(ctx, @second)
+    assert booked.id == slot.id
+    held = seat(slot, @second)
+    assert Repo.reload!(slot).verification_deadline_at == first_deadline
+
+    html = view |> element("[data-testid='check-inbox']") |> render()
+
+    assert html =~
+             LocalizationHelpers.format_meeting_datetime(
+               held.verification_deadline_at,
+               held.timezone
+             )
+
+    refute html =~ LocalizationHelpers.format_meeting_datetime(first_deadline, held.timezone)
+  end
+
+  # A slot whose first seat counted at once has no deadline of its own; a
+  # held seat joining it must still be told when to confirm by.
+  @tag :capture_log
+  test "a held seat joining a slot that never was held is told its deadline", ctx do
+    set_verification(ctx.user, false)
+    {_view, slot} = book_view(ctx, @first)
+    assert slot.status == :confirmed
+    assert slot.verification_deadline_at == nil
+
+    set_verification(ctx.user, true)
+    {view, booked} = book_view(ctx, @second)
+    assert booked.id == slot.id
+    held = seat(slot, @second)
+    assert held.email_verified_at == nil
+
+    assert view |> element("[data-testid='check-inbox']") |> render() =~
+             LocalizationHelpers.format_meeting_datetime(
+               held.verification_deadline_at,
+               held.timezone
+             )
+  end
+
   # -- helpers ---------------------------------------------------------------
 
   defp seed(username) do
@@ -309,11 +361,24 @@ defmodule TymeslotWeb.Live.Scheduling.GroupEmailVerificationJourneyTest do
     |> String.trim()
   end
 
-  defp book(%{profile: profile, user: user, date: date, time: time}, attendee) do
+  defp book(ctx, attendee) do
+    {view, slot} = book_view(ctx, attendee)
+    assert has_element?(view, "[data-testid='check-inbox']")
+    slot
+  end
+
+  # Books a seat and returns the booking page, still on its last step, with
+  # the slot.
+  defp book_view(%{profile: profile, user: user, date: date, time: time}, attendee) do
     {:ok, view, _html} = live(build_conn(), "/#{profile.username}")
     BookingDriver.book(view, date: date, time: time, attendee: attendee)
-    assert has_element?(view, "[data-testid='check-inbox']")
-    Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
+    {view, Repo.get_by!(MeetingSchema, organizer_user_id: user.id)}
+  end
+
+  defp set_verification(user, required?) do
+    MeetingTypeSchema
+    |> where(user_id: ^user.id)
+    |> Repo.update_all(set: [requires_email_verification: required?])
   end
 
   # Books a seat and confirms it through the emailed link. Returns the slot

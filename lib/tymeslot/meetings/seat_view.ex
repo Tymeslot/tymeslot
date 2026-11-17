@@ -148,9 +148,16 @@ defmodule Tymeslot.Meetings.SeatView do
 
   defp put_seat_status(%MeetingSchema{status: :cancelled} = meeting, _participant), do: meeting
 
+  # A held seat is held until its own deadline. The slot's deadline is only
+  # its first held seat's, and a planned session, or a slot whose first seat
+  # counted at once, has none at all.
   defp put_seat_status(meeting, %ParticipantSchema{cancelled_at: nil} = participant) do
     if ParticipantSchema.unverified?(participant),
-      do: %{meeting | status: :awaiting_verification},
+      do: %{
+        meeting
+        | status: :awaiting_verification,
+          verification_deadline_at: participant.verification_deadline_at
+      },
       else: meeting
   end
 
