@@ -40,8 +40,8 @@ defmodule TymeslotWeb.Live.Scheduling.GroupEmailVerificationJourneyTest do
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
-  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Meetings.Workers.EmailVerificationExpiryWorker
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
@@ -271,9 +271,9 @@ defmodule TymeslotWeb.Live.Scheduling.GroupEmailVerificationJourneyTest do
   @tag :capture_log
   test "a second held seat is told its own deadline", ctx do
     slot = book(ctx, @first)
-    first_deadline = DateTime.add(DateTime.utc_now(), 5, :minute) |> DateTime.truncate(:second)
+    first_deadline = DateTime.truncate(DateTime.add(DateTime.utc_now(), 5, :minute), :second)
 
-    Repo.update_all(MeetingSchema |> where(id: ^slot.id),
+    Repo.update_all(where(MeetingSchema, id: ^slot.id),
       set: [verification_deadline_at: first_deadline]
     )
 
