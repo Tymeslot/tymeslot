@@ -9,9 +9,10 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   a Mox.
 
   Call sites should pass a freshly created `MeetingSchema` (status
-  `awaiting_payment`), or a paid series whose sessions all are
-  (`create_session_for_series/1`); on success they receive a Stripe-hosted
-  checkout URL to redirect the attendee to.
+  `awaiting_payment`), a paid series whose sessions all are
+  (`create_session_for_series/1`), or a seat hold on a paid group meeting
+  (`create_session_for_seat_hold/1`); on success they receive a
+  Stripe-hosted checkout URL to redirect the attendee to.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -22,6 +23,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   alias Tymeslot.BookingPages
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.SeriesSchema
+  alias Tymeslot.Clock
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
@@ -33,6 +35,8 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     StripeAdapter
   }
 
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
@@ -41,6 +45,9 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   alias TymeslotWeb.Endpoint
 
   @session_expiry_seconds 30 * 60
+
+  # Stripe refuses a session that expires sooner than this.
+  @min_session_seconds 60
 
   @type create_result :: %{
           checkout_url: String.t(),
@@ -70,9 +77,45 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     end
   end
 
-  # What a checkout is for: one meeting, or every session of a series. The
-  # first meeting (the meeting itself, or the series' first session) gives
-  # the attendee, the booking page and the pages the checkout returns to.
+  @doc """
+  Opens a Stripe Checkout for the seats a booker holds on a paid group
+  meeting: one line item at the meeting type's price with the hold's seats
+  (the booker and their guests) as its quantity, recorded as one seat
+  payment (`seat_payment`) for the whole amount, owned by the hold's meeting
+  and linked to the hold.
+
+  The session lapses with the hold (`expires_at`), so the seats are never
+  held for a checkout that can no longer be paid, nor paid for once
+  released. A hold that is no longer held, or lapses in under a minute
+  (Stripe refuses so short a session), is refused as `:hold_expired`
+  before anything is written.
+  """
+  @spec create_session_for_seat_hold(SeatHoldSchema.t()) ::
+          {:ok, create_result()} | {:error, term()}
+  def create_session_for_seat_hold(%SeatHoldSchema{} = hold) do
+    with :ok <- check_hold_open(hold),
+         {:ok, meeting} <- MeetingQueries.get_meeting(hold.meeting_id) do
+      create_session(for_seat_hold(hold, meeting))
+    end
+  end
+
+  @doc "How long a Checkout Session stays open, in seconds."
+  @spec session_expiry_seconds() :: pos_integer()
+  def session_expiry_seconds, do: @session_expiry_seconds
+
+  defp check_hold_open(%SeatHoldSchema{status: :held, expires_at: %DateTime{} = expires_at}) do
+    if DateTime.diff(expires_at, Clock.utc_now()) >= @min_session_seconds,
+      do: :ok,
+      else: {:error, :hold_expired}
+  end
+
+  defp check_hold_open(_hold), do: {:error, :hold_expired}
+
+  # What a checkout is for: one meeting, every session of a series, or the
+  # seats one booker holds on a group meeting. The meeting (the meeting
+  # itself, the series' first session, or the hold's meeting) gives the host
+  # and the booking page; the attendee is whoever pays, and the return pages
+  # are the ones that wait on what is paid for.
   defp for_meeting(meeting) do
     %{
       meeting: meeting,
@@ -81,21 +124,51 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       metadata: %{meeting_id: meeting.id},
       idempotency_key: "checkout:#{meeting.id}",
       unit_price_cents: nil,
-      quantity: 1
+      quantity: 1,
+      sessions: 1,
+      attendee: meeting_attendee(meeting),
+      return: %{path: meeting.id, token: {:checkout_return, meeting.id}},
+      expires_at: System.os_time(:second) + @session_expiry_seconds
     }
   end
 
   defp for_series(series, [first | _rest] = meetings) do
     %{
-      meeting: first,
-      owner: %{series_id: series.id, meeting_id: nil},
-      reference: "series:#{series.id}",
-      metadata: %{series_id: series.id},
-      idempotency_key: "checkout:series:#{series.id}",
-      unit_price_cents: series.unit_price_cents,
-      quantity: length(meetings)
+      for_meeting(first)
+      | owner: %{series_id: series.id, meeting_id: nil},
+        reference: "series:#{series.id}",
+        metadata: %{series_id: series.id},
+        idempotency_key: "checkout:series:#{series.id}",
+        unit_price_cents: series.unit_price_cents,
+        quantity: length(meetings),
+        sessions: length(meetings)
     }
   end
+
+  # Every booker on the slot shares the meeting, so the hold names the
+  # payment, the session and the pages it returns to.
+  defp for_seat_hold(hold, meeting) do
+    %{
+      meeting: meeting,
+      owner: %{meeting_id: meeting.id, seat_hold_id: hold.id, seats: hold.seats},
+      reference: "seat_hold:" <> hold.id,
+      metadata: %{seat_hold_id: hold.id, meeting_id: meeting.id},
+      idempotency_key: "checkout:seat_hold:#{hold.id}",
+      unit_price_cents: nil,
+      quantity: hold.seats,
+      sessions: 1,
+      attendee: %{email: hold.email, name: hold.name, locale: hold.locale},
+      return: %{path: "seat/#{hold.id}", token: {:seat_checkout_return, hold.id}},
+      expires_at: DateTime.to_unix(hold.expires_at)
+    }
+  end
+
+  defp meeting_attendee(meeting),
+    do: %{
+      email: meeting.attendee_email,
+      name: meeting.attendee_name,
+      locale: meeting.attendee_locale
+    }
 
   defp create_session(%{meeting: meeting} = checkout) do
     # The Stripe checkout call is deliberately NOT wrapped in a DB transaction.
@@ -114,8 +187,9 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     # `ReconcileAwaitingPayments` sweeper is the cleanup net (a `pending` row
     # past its grace period with no session id is treated as stale and the
     # meeting expires). Idempotency on the Stripe side is preserved by the
-    # `checkout:<meeting_id>` idempotency key, so a retried booking for the same
-    # meeting collapses to a single Stripe session.
+    # `checkout:<meeting_id>` idempotency key (or the series' or seat hold's),
+    # so a retried booking for the same meeting collapses to a single Stripe
+    # session.
     with {:ok, host} <- fetch_host(meeting.organizer_user_id),
          :ok <- check_payments_access(host.id),
          {:ok, %{booking_payment: booking_payment} = context} <- record_payment(checkout, host),
@@ -144,8 +218,8 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   # share of the whole amount, so `unit_price_cents × quantity` is both what
   # Stripe charges and what the row records (the completed webhook compares
   # them).
-  defp build_context(%{meeting: meeting} = checkout, host, account, meeting_type) do
-    theme_id = resolve_theme_id(host.id, meeting)
+  defp build_context(checkout, host, account, meeting_type) do
+    theme_id = resolve_theme_id(host.id, checkout.meeting)
     unit_price_cents = checkout.unit_price_cents || meeting_type.price_cents
     amount_cents = unit_price_cents * checkout.quantity
     bp_config = Application.get_env(:tymeslot, :payment_application_fee_bp, 0)
@@ -161,7 +235,9 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       fee_cents: fee_cents,
       snapshot:
         checkout.owner
-        |> Map.merge(snapshot_attrs(meeting, host, account, meeting_type, theme_id, fee_cents))
+        |> Map.merge(
+          snapshot_attrs(checkout.attendee, host, account, meeting_type, theme_id, fee_cents)
+        )
         |> Map.put(:amount_cents, amount_cents)
     }
   end
@@ -175,15 +251,15 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
 
   defp check_still_paid(_meeting_type), do: {:error, :payment_not_required}
 
-  defp create_stripe_session(%{meeting: meeting} = checkout, context) do
+  defp create_stripe_session(checkout, context) do
     %{account: account, theme_slug: slug} = context
 
     StripeAdapter.create_checkout_session(
       session_params(
         checkout,
         context,
-        success_url(slug, meeting.id),
-        cancel_url(slug, meeting.id)
+        success_url(slug, checkout.return),
+        cancel_url(slug, checkout.return)
       ),
       connect_account: account.stripe_account_id,
       idempotency_key: checkout.idempotency_key
@@ -276,14 +352,14 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     end
   end
 
-  defp snapshot_attrs(meeting, host, account, meeting_type, theme_id, fee_cents) do
+  defp snapshot_attrs(attendee, host, account, meeting_type, theme_id, fee_cents) do
     %{
       stripe_account_id: account.stripe_account_id,
       host_user_id: host.id,
       host_email: host.email,
       host_name: host.name,
-      attendee_email: meeting.attendee_email,
-      attendee_name: meeting.attendee_name,
+      attendee_email: attendee.email,
+      attendee_name: attendee.name,
       meeting_type_name: meeting_type.name,
       booking_theme_id: theme_id,
       amount_cents: meeting_type.price_cents,
@@ -293,7 +369,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     }
   end
 
-  defp session_params(%{meeting: meeting} = checkout, context, success_url, cancel_url) do
+  defp session_params(%{attendee: attendee} = checkout, context, success_url, cancel_url) do
     %{account: account, meeting_type: meeting_type, fee_cents: fee_cents} = context
 
     %{
@@ -303,7 +379,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
           price_data: %{
             currency: account.default_currency,
             unit_amount: context.unit_price_cents,
-            product_data: %{name: product_name(meeting_type, checkout.quantity, meeting)}
+            product_data: %{name: product_name(meeting_type, checkout.sessions, attendee)}
           },
           quantity: checkout.quantity
         }
@@ -314,21 +390,22 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       # which is what an attendee needs for expensing. Without this the
       # attendee gets only a charge receipt.
       invoice_creation: %{enabled: true},
-      customer_email: meeting.attendee_email,
+      customer_email: attendee.email,
       client_reference_id: checkout.reference,
-      expires_at: System.os_time(:second) + @session_expiry_seconds,
+      expires_at: checkout.expires_at,
       success_url: success_url <> "?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: cancel_url,
-      locale: stripe_locale(meeting.attendee_locale)
+      locale: stripe_locale(attendee.locale)
     }
   end
 
   # A series names how many sessions the one line item is for, in the
-  # attendee's language, as the checkout is shown in it.
-  defp product_name(meeting_type, 1, _meeting), do: meeting_type.name
+  # attendee's language, as the checkout is shown in it. A group seat's
+  # quantity is its seats, which Stripe shows beside the name.
+  defp product_name(meeting_type, 1, _attendee), do: meeting_type.name
 
-  defp product_name(meeting_type, count, meeting) do
-    Gettext.with_locale(TymeslotWeb.Gettext, meeting.attendee_locale || "en", fn ->
+  defp product_name(meeting_type, count, attendee) do
+    Gettext.with_locale(TymeslotWeb.Gettext, attendee.locale || "en", fn ->
       dngettext(
         "booking_payments",
         "%{name}, %{count} session",
@@ -346,17 +423,17 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     )
   end
 
-  defp success_url(theme_slug, meeting_id) do
-    "#{Endpoint.url()}/themes/#{theme_slug}/payment-processing/#{meeting_id}"
+  defp success_url(theme_slug, %{path: path}) do
+    "#{Endpoint.url()}/themes/#{theme_slug}/payment-processing/#{path}"
   end
 
   # Stripe documents `{CHECKOUT_SESSION_ID}` for the success URL only, so the
-  # cancel URL carries a proof of its own: a token signed for this meeting,
-  # which only Stripe and the guest's browser ever see
-  # (`returned_from_checkout?/2`).
-  defp cancel_url(theme_slug, meeting_id) do
-    "#{Endpoint.url()}/themes/#{theme_slug}/payment-cancelled/#{meeting_id}?" <>
-      URI.encode_query(%{"return_token" => SignedToken.sign(:checkout_return, meeting_id)})
+  # cancel URL carries a proof of its own: a token signed for this meeting
+  # (or seat hold), which only Stripe and the guest's browser ever see
+  # (`returned_from_checkout?/2`, `returned_from_seat_checkout?/2`).
+  defp cancel_url(theme_slug, %{path: path, token: {purpose, id}}) do
+    "#{Endpoint.url()}/themes/#{theme_slug}/payment-cancelled/#{path}?" <>
+      URI.encode_query(%{"return_token" => SignedToken.sign(purpose, id)})
   end
 
   @doc """
@@ -374,6 +451,18 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   def returned_from_checkout?(_meeting_id, _return_token), do: false
 
   @doc """
+  As `returned_from_checkout?/2`, for a group seat's checkout: whether
+  `return_token` was signed for the seat hold `hold_id`.
+  """
+  @spec returned_from_seat_checkout?(String.t(), String.t() | nil) :: boolean()
+  def returned_from_seat_checkout?(hold_id, return_token)
+      when is_binary(hold_id) and is_binary(return_token) do
+    SignedToken.verify(:seat_checkout_return, return_token) == {:ok, hold_id}
+  end
+
+  def returned_from_seat_checkout?(_hold_id, _return_token), do: false
+
+  @doc """
   Ends the open Stripe Checkout of a booking whose guest has just left it
   (`returned_from_checkout?/2` holds), rather than letting it run to its
   timeout.
@@ -387,15 +476,26 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   open to expire.
   """
   @spec abandon_checkout(String.t()) :: :ok | {:error, term()}
-  def abandon_checkout(meeting_id) do
-    case BookingPaymentQueries.for_meeting(meeting_id) do
-      %{status: :pending, stripe_checkout_session_id: "cs_" <> _rest = session_id} = payment ->
-        expire_stripe_session(session_id, payment.stripe_account_id)
+  def abandon_checkout(meeting_id),
+    do: meeting_id |> BookingPaymentQueries.for_meeting() |> expire_open_session()
 
-      _nothing_open ->
-        :ok
-    end
-  end
+  @doc """
+  As `abandon_checkout/1`, for the checkout of the seat hold `hold_id`. The
+  hold is released by the `checkout.session.expired` handler, as for a
+  checkout that lapsed, not here.
+  """
+  @spec abandon_seat_checkout(String.t()) :: :ok | {:error, term()}
+  def abandon_seat_checkout(hold_id),
+    do: hold_id |> BookingPaymentQueries.by_seat_hold_id() |> expire_open_session()
+
+  defp expire_open_session(%{
+         status: :pending,
+         stripe_checkout_session_id: "cs_" <> _rest = session_id,
+         stripe_account_id: stripe_account_id
+       }),
+       do: expire_stripe_session(session_id, stripe_account_id)
+
+  defp expire_open_session(_nothing_open), do: :ok
 
   defp expire_stripe_session(session_id, stripe_account_id) do
     case StripeAdapter.expire_checkout_session(session_id, connect_account: stripe_account_id) do

@@ -35,7 +35,12 @@ defmodule Tymeslot.Bookings.Create.PaidBooking do
 
   @typedoc "The successful outcome: a held slot plus somewhere to go and pay."
   @type result ::
-          {:ok, :payment_required, %{meeting: struct(), checkout_url: String.t()}}
+          {:ok, :payment_required,
+           %{
+             required(:meeting) => map(),
+             required(:checkout_url) => String.t(),
+             optional(:seat_hold) => map()
+           }}
           | {:error, term()}
 
   @doc """

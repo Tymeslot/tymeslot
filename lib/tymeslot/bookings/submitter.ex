@@ -17,6 +17,11 @@ defmodule Tymeslot.Bookings.Submitter do
   """
   @callback submit_booking(params :: map(), opts :: keyword()) ::
               {:ok, term()}
-              | {:ok, :payment_required, %{meeting: map(), checkout_url: String.t()}}
+              | {:ok, :payment_required,
+                 %{
+                   required(:meeting) => map(),
+                   required(:checkout_url) => String.t(),
+                   optional(:seat_hold) => map()
+                 }}
               | {:error, term()}
 end

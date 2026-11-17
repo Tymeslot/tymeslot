@@ -52,7 +52,12 @@ defmodule Tymeslot.Bookings.Create do
   """
   @type execute_result ::
           {:ok, map()}
-          | {:ok, :payment_required, %{meeting: map(), checkout_url: String.t()}}
+          | {:ok, :payment_required,
+             %{
+               required(:meeting) => map(),
+               required(:checkout_url) => String.t(),
+               optional(:seat_hold) => map()
+             }}
           | {:error, Errors.classified_error()}
 
   @doc """
@@ -68,10 +73,11 @@ defmodule Tymeslot.Bookings.Create do
       booking page always sets it)
 
   When the booking's meeting type has `payment_required: true`, the meeting
-  is persisted with status `awaiting_payment`, side effects (calendar, video,
-  email) are deferred until payment confirmation, and a Stripe Checkout
-  Session URL is returned alongside the meeting via the
-  `{:ok, :payment_required, ...}` tuple.
+  is persisted with status `awaiting_payment` (on a group type, the booker's
+  seats are held on the slot instead, and the map also carries the
+  `:seat_hold`), side effects (calendar, video, email) are deferred until
+  payment confirmation, and a Stripe Checkout Session URL is returned
+  alongside the meeting via the `{:ok, :payment_required, ...}` tuple.
   """
   @spec execute(meeting_params(), form_data(), keyword()) :: execute_result()
   def execute(meeting_params, form_data, opts \\ []) do

@@ -44,7 +44,8 @@ defmodule Tymeslot.Bookings.Orchestrator do
       the meeting type requires payment — caller should redirect the
       attendee to the Stripe Checkout URL. For a paid series the map also
       carries `series` and `meetings`, and `meeting` is its first session,
-      whose payment topic and pages the series' checkout reports on
+      whose payment topic and pages the series' checkout reports on. For
+      a seat on a paid group type the map also carries the `seat_hold`
     * `{:error, reason}` on validation or persistence failure, where
       `reason` is either a semantic atom classified by the domain layer
       (`Tymeslot.Bookings.Errors.classified_error/0`, e.g. `:slot_taken`,
@@ -56,7 +57,12 @@ defmodule Tymeslot.Bookings.Orchestrator do
   @impl Submitter
   @spec submit_booking(booking_submission_params(), keyword()) ::
           {:ok, term()}
-          | {:ok, :payment_required, %{meeting: map(), checkout_url: String.t()}}
+          | {:ok, :payment_required,
+             %{
+               required(:meeting) => map(),
+               required(:checkout_url) => String.t(),
+               optional(:seat_hold) => map()
+             }}
           | {:error, Errors.classified_error()}
   def submit_booking(params, opts \\ []) do
     %{

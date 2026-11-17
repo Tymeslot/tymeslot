@@ -73,12 +73,35 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   end
 
   @doc """
-  The payment the meeting `meeting_id` owns itself, or `nil`. A session of a
-  paid series owns none: see `for_meeting/1`.
+  The payment the meeting `meeting_id` owns itself, or `nil`: the one payment
+  of a one-to-one booking. A session of a paid series owns none (see
+  `for_meeting/1`), and a group meeting's seat payments, one per paying
+  booker, are never returned here (`list_for_meeting_seats/1`).
   """
   @spec by_meeting_id(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
   def by_meeting_id(meeting_id),
-    do: Repo.get_by(BookingPaymentSchema, meeting_id: meeting_id)
+    do: Repo.one(own_payment(meeting_id))
+
+  @doc "The payment opened for the seat hold `hold_id`, or `nil`. A malformed id returns `nil`."
+  @spec by_seat_hold_id(term()) :: BookingPaymentSchema.t() | nil
+  def by_seat_hold_id(hold_id) do
+    case cast_id(hold_id) do
+      {:ok, uuid} -> Repo.get_by(BookingPaymentSchema, seat_hold_id: uuid)
+      {:error, :not_found} -> nil
+    end
+  end
+
+  @doc "Every seat payment on the group meeting `meeting_id`, oldest first."
+  @spec list_for_meeting_seats(Ecto.UUID.t()) :: [BookingPaymentSchema.t()]
+  def list_for_meeting_seats(meeting_id) do
+    BookingPaymentSchema
+    |> where([b], b.meeting_id == ^meeting_id and b.seat_payment)
+    |> order_by([b], asc: b.inserted_at, asc: b.id)
+    |> Repo.all()
+  end
+
+  defp own_payment(meeting_id),
+    do: where(BookingPaymentSchema, [b], b.meeting_id == ^meeting_id and not b.seat_payment)
 
   @doc "The payment the series `series_id` owns, or `nil`."
   @spec by_series_id(term()) :: BookingPaymentSchema.t() | nil
@@ -103,13 +126,14 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   end
 
   @doc """
-  As `for_meeting/1`, but only a payment `host_user_id` took, or `nil`.
+  As `for_meeting/1`, but only a payment `host_user_id` took, or `nil`. A
+  group meeting's seat payments are never returned, as there.
   """
   @spec for_meeting_for_host(term(), integer()) :: BookingPaymentSchema.t() | nil
   def for_meeting_for_host(meeting_id, host_user_id) when is_integer(host_user_id) do
     case cast_id(meeting_id) do
       {:ok, uuid} ->
-        Repo.get_by(BookingPaymentSchema, meeting_id: uuid, host_user_id: host_user_id) ||
+        Repo.one(where(own_payment(uuid), [b], b.host_user_id == ^host_user_id)) ||
           series_payment(uuid, dynamic([bp], bp.host_user_id == ^host_user_id))
 
       {:error, :not_found} ->

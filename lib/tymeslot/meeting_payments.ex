@@ -48,6 +48,7 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Payments.Config, as: PaymentsConfig
 
   @type account :: ConnectAccountSchema.t()
@@ -515,6 +516,17 @@ defmodule Tymeslot.MeetingPayments do
     to: CheckoutSessions,
     as: :create_session_for_booking
 
+  @doc "Opens a Stripe Checkout for a held group seat. See `CheckoutSessions.create_session_for_seat_hold/1`."
+  @spec create_seat_checkout_session(SeatHoldSchema.t()) ::
+          {:ok, CheckoutSessions.create_result()} | {:error, term()}
+  defdelegate create_seat_checkout_session(hold),
+    to: CheckoutSessions,
+    as: :create_session_for_seat_hold
+
+  @doc "How long a checkout, and so a seat hold, stays open, in seconds."
+  @spec checkout_expiry_seconds() :: pos_integer()
+  defdelegate checkout_expiry_seconds, to: CheckoutSessions, as: :session_expiry_seconds
+
   @doc """
   Opens one Stripe Checkout for every session of a paid series, held
   `awaiting_payment`, at the series' unit price times its sessions. See
@@ -544,6 +556,10 @@ defmodule Tymeslot.MeetingPayments do
   @spec returned_from_checkout?(String.t(), String.t() | nil) :: boolean()
   defdelegate returned_from_checkout?(meeting_id, return_token), to: CheckoutSessions
 
+  @doc "As `returned_from_checkout?/2`, for the checkout of the seat hold `hold_id`."
+  @spec returned_from_seat_checkout?(String.t(), String.t() | nil) :: boolean()
+  defdelegate returned_from_seat_checkout?(hold_id, return_token), to: CheckoutSessions
+
   @doc """
   Expires the open Stripe Checkout of a booking its guest has just left, so
   its hold ends now rather than at the checkout's timeout. See
@@ -551,6 +567,10 @@ defmodule Tymeslot.MeetingPayments do
   """
   @spec abandon_checkout(String.t()) :: :ok | {:error, term()}
   defdelegate abandon_checkout(meeting_id), to: CheckoutSessions
+
+  @doc "As `abandon_checkout/1`, for the checkout of the seat hold `hold_id`."
+  @spec abandon_seat_checkout(String.t()) :: :ok | {:error, term()}
+  defdelegate abandon_seat_checkout(hold_id), to: CheckoutSessions
 
   @doc """
   What an attendee returning from Stripe Checkout should be told about their

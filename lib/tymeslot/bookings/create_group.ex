@@ -10,19 +10,29 @@ defmodule Tymeslot.Bookings.CreateGroup do
   meeting type holds more than one seat.
   """
 
+  require Logger
+
   alias Tymeslot.Bookings.Activation
+  alias Tymeslot.Bookings.Create.Prepare
   alias Tymeslot.Bookings.Errors
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.Telemetry
+  alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
+  alias Tymeslot.Meetings.SeatHolds
+  alias Tymeslot.Meetings.Seats, as: SeatCount
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.GroupAccess
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.Events.Seats
+  alias Tymeslot.Repo
 
   @doc "True when the booking's meeting type holds more than one seat."
   @spec applicable?(map()) :: boolean()
@@ -87,14 +97,104 @@ defmodule Tymeslot.Bookings.CreateGroup do
   telemetry run once the seat has committed: none is durable, and a
   database error in a best-effort dispatcher must not cost the seat.
 
+  On a paid type the booker's seats are held instead (`SeatHolds`) for as
+  long as the Stripe Checkout opened for them stays open, and
+  `{:ok, :payment_required, %{meeting:, seat_hold:, checkout_url:}}` is
+  returned. Nothing is enqueued for a hold: the seat's jobs and emails
+  follow its payment. The checkout is opened once the hold has committed,
+  never inside the seat transaction, which holds the organiser's schedule
+  lock; a checkout that cannot be opened releases the hold at once.
+
   Options are the same ones `Tymeslot.Bookings.Create.execute/3` accepts;
   only `:with_video_room` matters here (see `SeatEffects.schedule_new_slot_effects/2`).
   """
-  @spec create(map(), map(), keyword()) :: {:ok, map()} | {:error, Errors.classified_error()}
+  @spec create(map(), map(), keyword()) ::
+          {:ok, map()}
+          | {:ok, :payment_required,
+             %{meeting: MeetingSchema.t(), seat_hold: map(), checkout_url: String.t()}}
+          | {:error, Errors.classified_error()}
   def create(meeting_attrs, booking_data, opts \\ []) do
+    if Prepare.paid?(booking_data) do
+      create_paid(meeting_attrs, booking_data)
+    else
+      meeting_attrs
+      |> book_seat(booking_data, opts)
+      |> map_result(booking_data)
+    end
+  end
+
+  defp create_paid(meeting_attrs, booking_data) do
+    with {:ok, %{meeting: meeting, seat_hold: hold}} <- hold_seats(meeting_attrs, booking_data),
+         {:ok, url} <- checkout_or_release(meeting, hold) do
+      # A held seat is the booking; its payment completing must not count it
+      # again.
+      Telemetry.booking_created()
+      SeatEffects.broadcast_and_invalidate(meeting)
+      {:ok, :payment_required, %{meeting: meeting, seat_hold: hold, checkout_url: url}}
+    else
+      error -> map_result(error, booking_data)
+    end
+  end
+
+  # The hold lapses with the checkout opened for it, which takes its expiry.
+  defp hold_seats(meeting_attrs, %{meeting_type: meeting_type} = booking_data) do
+    expires_at =
+      Clock.utc_now()
+      |> DateTime.truncate(:second)
+      |> DateTime.add(MeetingPayments.checkout_expiry_seconds())
+
     meeting_attrs
-    |> book_seat(booking_data, opts)
-    |> map_result(booking_data)
+    |> SeatEffects.slot_attrs(meeting_type.name)
+    |> GroupScheduling.book_seat(build_seat_request(meeting_attrs, booking_data),
+      hold: %{expires_at: expires_at},
+      join_only: FixedDates.sessions?(meeting_type)
+    )
+  end
+
+  defp checkout_or_release(meeting, hold) do
+    case MeetingPayments.create_seat_checkout_session(hold) do
+      {:ok, %{checkout_url: url}} ->
+        {:ok, url}
+
+      {:error, reason} ->
+        release_failed_hold(meeting, hold, reason)
+        {:error, {:checkout_failed, reason}}
+    end
+  end
+
+  # Frees the seats of a hold whose checkout never opened, and expires the
+  # meeting when the hold was all it had: a slot it created, still awaiting
+  # payment with nobody else on it. The meeting is locked first, so a
+  # booker joining it meanwhile is counted before the decision, and the hold
+  # after it, in the order `SeatHolds.release/2` sets. Best-effort, as the
+  # booking has already failed: a hold left behind still lapses.
+  # B3 replaces this with its shared hold-release helper.
+  defp release_failed_hold(meeting, hold, reason) do
+    result =
+      Repo.transaction(fn ->
+        _locked = GroupMeetingQueries.lock_for_update(meeting.id)
+        {:ok, _released} = SeatHolds.release(hold, :failed)
+
+        if SeatCount.seats_taken(meeting.id) == 0,
+          do: MeetingPayments.expire_held_meeting(meeting.id),
+          else: {:ok, :unchanged}
+      end)
+
+    case result do
+      {:ok, {:ok, :expired, expired}} -> MeetingPayments.announce_expired(expired)
+      {:ok, {:ok, :unchanged}} -> :ok
+      failed -> log_release_failure(meeting, reason, failed)
+    end
+
+    SeatEffects.broadcast_and_invalidate(meeting)
+  end
+
+  defp log_release_failure(meeting, reason, failed) do
+    Logger.warning("Failed to release a seat hold after checkout failure",
+      meeting_id: meeting.id,
+      checkout_error: LogFormat.reason(reason),
+      release_error: LogFormat.reason(failed)
+    )
   end
 
   @doc """
