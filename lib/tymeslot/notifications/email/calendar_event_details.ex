@@ -73,7 +73,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
          video_link: args["event_video_link"],
          description: args["event_description"],
          recurrence_rule: args["event_recurrence_rule"],
-         organizer_name: user.name || user.email,
+         organizer_name: organiser_name(user),
          organizer_email: user.email,
          organizer_user_id: user.id,
          method: parse_method(args["method"]),
@@ -175,7 +175,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
          location: current_event.location,
          video_link: video_link(current_event),
          description: current_event.description,
-         organizer_name: user.name || user.email,
+         organizer_name: organiser_name(user),
          organizer_email: user.email,
          organizer_user_id: user.id,
          changes: Enum.map(changes, &change_in_zone(&1, view.timezone)),
@@ -229,6 +229,14 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
   # A timed event's instants shifted into the organiser's timezone, with the
   # date taken there, so an event at 00:30 in Berlin is not announced on the
   # day before. An all-day event has dates only and is left as it is.
+  # What the guest knows the organiser by, as a booking's emails name them:
+  # the name on their profile, then the one their account was created with
+  # (`Profiles.user_display_name/1`), and only then their address. An account
+  # made with an email and a password has no name of its own, so reading
+  # `user.name` alone named nearly every organiser by their address.
+  defp organiser_name(user),
+    do: Profiles.user_display_name(%{user | profile: Profiles.get_profile(user.id)}) || user.email
+
   defp in_organiser_view(timing, user) do
     timezone = Profiles.get_user_timezone(user.id)
 
