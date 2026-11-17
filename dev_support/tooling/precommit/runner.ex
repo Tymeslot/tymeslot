@@ -422,6 +422,12 @@ defmodule Tymeslot.Precommit.Runner do
     end
   end
 
+  def cmd(["hex.audit" | _rest] = args, env) do
+    {output, code} = capture(args, env, [])
+    IO.write(output)
+    code
+  end
+
   def cmd(args, env) do
     {_output, code} =
       System.cmd("mix", args,
@@ -433,6 +439,9 @@ defmodule Tymeslot.Precommit.Runner do
     code
   end
 
+  @registry_attempts 3
+  @registry_pause_ms 5_000
+
   # The concurrent counterpart to `cmd/2`: the same invocation, with the output
   # collected rather than streamed so it can be printed in one block when the
   # step finishes.
@@ -442,11 +451,38 @@ defmodule Tymeslot.Precommit.Runner do
   def capture(args, env, extra_env) do
     {command, argv} = launcher(args)
 
-    System.cmd(command, argv,
-      stderr_to_stdout: true,
-      env: [{"MIX_ENV", to_string(env)} | step_env(args)] ++ extra_env
-    )
+    run = fn ->
+      System.cmd(command, argv,
+        stderr_to_stdout: true,
+        env: [{"MIX_ENV", to_string(env)} | step_env(args)] ++ extra_env
+      )
+    end
+
+    if registry_step?(args), do: retry_registry(run, @registry_attempts), else: run.()
   end
+
+  # `hex.audit` asks the live Hex registry, and under the load of a full gate
+  # the requests can time out, which fails the step without any finding. Only
+  # that failure is retried (a real advisory is reported at once), after a
+  # pause that lets the registry or the machine recover.
+  defp registry_step?(["hex.audit" | _rest]), do: true
+  defp registry_step?(_args), do: false
+
+  @doc false
+  @spec retry_registry((-> {String.t(), non_neg_integer()}), pos_integer(), non_neg_integer()) ::
+          {String.t(), non_neg_integer()}
+  def retry_registry(run, attempts_left, pause_ms \\ @registry_pause_ms) do
+    {output, code} = result = run.()
+
+    if code != 0 and attempts_left > 1 and registry_timeout?(output) do
+      Process.sleep(pause_ms)
+      retry_registry(run, attempts_left - 1, pause_ms)
+    else
+      result
+    end
+  end
+
+  defp registry_timeout?(output), do: String.contains?(output, "Failed to fetch record")
 
   # Keyed off the command, as `suite?/1` is, so a niced step can never be the
   # suite's parent: `nice` reaches every process a step starts, and the test
