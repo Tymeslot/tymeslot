@@ -305,34 +305,34 @@ msgstr "Hai annullato le sessioni rimanenti di una serie, ma non è stato possib
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "A refund for a cancelled group session could not be made."
-msgstr ""
+msgstr "Non è stato possibile effettuare il rimborso di una sessione di gruppo annullata."
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "A refund for your cancelled group session could not be made"
-msgstr ""
+msgstr "Non è stato possibile effettuare un rimborso per la tua sessione di gruppo annullata"
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "GROUP SESSION REFUND NOT MADE"
-msgstr ""
+msgstr "RIMBORSO DELLA SESSIONE DI GRUPPO NON EFFETTUATO"
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Group session refund not made"
-msgstr ""
+msgstr "Rimborso della sessione di gruppo non effettuato"
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Refund the attendee from your Stripe dashboard, or let them know what happens next."
-msgstr ""
+msgstr "Rimborsa il partecipante dalla dashboard di Stripe, oppure fagli sapere cosa succede ora."
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Starts:"
-msgstr ""
+msgstr "Inizio:"
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "You cancelled a group session, but the refund of %{amount} to one of its attendees could not be made. The session stays cancelled."
-msgstr ""
+msgstr "Hai annullato una sessione di gruppo, ma non è stato possibile rimborsare %{amount} a uno dei partecipanti. La sessione resta annullata."

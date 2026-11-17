@@ -305,34 +305,34 @@ msgstr "Po zrušení zbývajících termínů série se účastníkovi nepodaři
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "A refund for a cancelled group session could not be made."
-msgstr ""
+msgstr "Platbu za zrušené skupinové setkání se nepodařilo vrátit."
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "A refund for your cancelled group session could not be made"
-msgstr ""
+msgstr "Platbu za vaše zrušené skupinové setkání se nepodařilo vrátit"
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "GROUP SESSION REFUND NOT MADE"
-msgstr ""
+msgstr "VRÁCENÍ PLATBY ZA SKUPINOVÉ SETKÁNÍ NEPROBĚHLO"
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Group session refund not made"
-msgstr ""
+msgstr "Vrácení platby za skupinové setkání neproběhlo"
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Refund the attendee from your Stripe dashboard, or let them know what happens next."
-msgstr ""
+msgstr "Vraťte účastníkovi peníze na nástěnce Stripe, případně mu dejte vědět, jak to bude dál."
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Starts:"
-msgstr ""
+msgstr "Začátek:"
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "You cancelled a group session, but the refund of %{amount} to one of its attendees could not be made. The session stays cancelled."
-msgstr ""
+msgstr "Zrušili jste skupinové setkání, ale jednomu z jeho účastníků se nepodařilo vrátit %{amount}. Setkání zůstává zrušené."
