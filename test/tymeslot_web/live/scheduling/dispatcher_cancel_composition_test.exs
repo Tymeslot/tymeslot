@@ -318,8 +318,14 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
   @tag :capture_log
   test "an expired meeting's refusal is translated too",
        %{conn: conn, user: user, profile: profile} do
+    # A lapsed approval request, as `Approval.expire/1` leaves it.
     meeting =
-      insert(:meeting, organizer_user: user, organizer_user_id: user.id, status: :expired)
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        status: :expired,
+        approval_resolved_at: DateTime.utc_now(:second)
+      )
 
     assert {:error, {:redirect, %{to: "/", flash: flash}}} =
              live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel?locale=de")

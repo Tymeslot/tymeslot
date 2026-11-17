@@ -197,4 +197,35 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementListTest do
       refute has_element?(view, "button", "Load more meetings")
     end
   end
+
+  describe "bookings the host may not see" do
+    test "the bookings page shows no unverified or unpaid booking", %{conn: conn, user: user} do
+      starts = DateTime.add(DateTime.utc_now(:second), 2, :day)
+
+      at = fn hours ->
+        start_time = DateTime.add(starts, hours, :hour)
+        [start_time: start_time, end_time: DateTime.add(start_time, 30, :minute)]
+      end
+
+      insert(:meeting, [organizer_user_id: user.id, attendee_name: "Visible Booker"] ++ at.(0))
+
+      insert(
+        :awaiting_verification_meeting,
+        [organizer_user_id: user.id, attendee_name: "Held Booker"] ++ at.(1)
+      )
+
+      insert(
+        :meeting,
+        [organizer_user_id: user.id, attendee_name: "Unpaid Booker", status: :awaiting_payment] ++
+          at.(2)
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      html = render(view)
+
+      assert html =~ "Visible Booker"
+      refute html =~ "Held Booker"
+      refute html =~ "Unpaid Booker"
+    end
+  end
 end

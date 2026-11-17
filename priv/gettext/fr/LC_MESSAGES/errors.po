@@ -447,11 +447,6 @@ msgstr "Stripe doit être connecté"
 msgid "Work hours not found"
 msgstr "Heures de travail introuvables"
 
-#: lib/tymeslot/meetings/unique_slot.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a confirmed meeting at this time."
-msgstr "Vous avez déjà une réunion confirmée sur ce créneau."
-
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "already has a spot at this time"
@@ -522,7 +517,7 @@ msgstr "n’est pas une langue prise en charge"
 
 #: lib/tymeslot/auth/user_schema.ex
 #: lib/tymeslot/meetings/guest_schema.ex
-#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/meeting_rules.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
@@ -871,3 +866,18 @@ msgstr "ne peut pas contenir deux fois la même langue"
 #, elixir-autogen, elixir-format
 msgid "is not a translation language"
 msgstr "n’est pas une langue de traduction"
+
+#: lib/tymeslot/meetings/unique_slot.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr "Ce créneau n’est plus disponible. Veuillez choisir un autre horaire."
+
+#: lib/tymeslot/meeting_types/email_verification_rule.ex
+#, elixir-autogen, elixir-format
+msgid "email confirmation cannot be combined with payment"
+msgstr "la confirmation de l’adresse e-mail n’est pas compatible avec le paiement"
+
+#: lib/tymeslot/meeting_types/group_validation.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require email confirmation"
+msgstr "les réservations de groupe ne peuvent pas exiger de confirmation de l’adresse e-mail"

@@ -339,14 +339,6 @@ msgstr "Ta płatność jest przedmiotem sporu i trzeba się nią zająć w panel
 msgid "Total received"
 msgstr "Łącznie otrzymano"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
-#, elixir-autogen, elixir-format
-msgid "You have %{count} pending booking awaiting payment. Disconnecting will cancel it."
-msgid_plural "You have %{count} pending bookings awaiting payment. Disconnecting will cancel them."
-msgstr[0] "Masz %{count} rezerwację oczekującą na płatność. Odłączenie ją odwoła."
-msgstr[1] "Masz %{count} rezerwacje oczekujące na płatność. Odłączenie je odwoła."
-msgstr[2] "Masz %{count} rezerwacji oczekujących na płatność. Odłączenie je odwoła."
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is disconnected. Reconnect to accept payments again."
@@ -535,3 +527,16 @@ msgstr "Konto Stripe jest podłączone, ale Stripe potrzebuje jeszcze kilku info
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is not connected yet. Connect it to start accepting payments."
 msgstr "Konto Stripe nie jest jeszcze podłączone. Podłącz je, aby zacząć przyjmować płatności."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} checkout still in progress will be cancelled when you disconnect."
+msgid_plural "%{count} checkouts still in progress will be cancelled when you disconnect."
+msgstr[0] "Po odłączeniu zostanie anulowana %{count} płatność w toku."
+msgstr[1] "Po odłączeniu zostaną anulowane %{count} płatności w toku."
+msgstr[2] "Po odłączeniu zostanie anulowanych %{count} płatności w toku."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "A checkout is in progress in your current currency. Try again in a few minutes."
+msgstr "W twojej obecnej walucie trwa płatność. Spróbuj ponownie za kilka minut."

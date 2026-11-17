@@ -116,6 +116,16 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessageTest do
     end
   end
 
+  describe "message/1 for an unverified booking" do
+    test "each refusal has copy" do
+      assert BookingErrorMessage.message({:not_cancellable, :awaiting_verification}) ==
+               "This booking is not confirmed yet. If you do not confirm it, it will be released on its own."
+
+      assert BookingErrorMessage.message({:not_reschedulable, :awaiting_verification}) ==
+               "This booking is not confirmed yet. Confirm it from the link in your email first."
+    end
+  end
+
   describe "message(:managed_by_host)" do
     test "is translated from the booking errors catalogue" do
       Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->

@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     Autosave,
     AvailabilitySection,
     CustomQuestionsSection,
+    EmailVerificationSection,
     FixedDatesSection,
     GroupBookingsSection,
     GroupRules,
@@ -52,6 +53,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   import ApprovalSection, only: [approval_section: 1]
+  import EmailVerificationSection, only: [email_verification_section: 1]
   import AvailabilitySection, only: [availability_section: 1]
   import FixedDatesSection, only: [fixed_dates_section: 1]
   import GroupBookingsSection, only: [group_bookings_section: 1]
@@ -319,6 +321,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             :if={@payments_feature_enabled}
             charges_enabled={@payments_charges_enabled}
             group_bookings_enabled={@group_bookings_enabled}
+            requires_email_verification={@requires_email_verification}
             payment_required={@payment_required}
             payment_price={@payment_price}
             currency={@payment_currency}
@@ -343,6 +346,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
                 payment_required: @payment_required,
                 payments_charges_enabled: @payments_charges_enabled,
                 requires_approval: @requires_approval,
+                requires_email_verification: @requires_email_verification,
                 extra_lengths: Map.get(@form_data, "extra_lengths", []),
                 locations: @locations,
                 fixed_dates: @fixed_dates,
@@ -396,6 +400,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             errors={
               @form_errors
               |> FormValidationHelpers.field_errors(:approval_window_hours)
+              |> Enum.map(&Helpers.format_errors/1)
+            }
+            myself={@myself}
+          />
+
+          <.email_verification_section
+            requires_email_verification={@requires_email_verification}
+            payment_required={@payment_required}
+            group_bookings_enabled={@group_bookings_enabled}
+            errors={
+              @form_errors
+              |> FormValidationHelpers.field_errors(:requires_email_verification)
               |> Enum.map(&Helpers.format_errors/1)
             }
             myself={@myself}

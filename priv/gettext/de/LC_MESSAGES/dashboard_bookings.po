@@ -754,11 +754,6 @@ msgstr "Der Termin konnte nicht verschoben werden. Bitte versuchen Sie es erneut
 msgid "The new time must be in the future."
 msgstr "Die neue Zeit muss in der Zukunft liegen."
 
-#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a meeting at that time."
-msgstr "Zu dieser Zeit haben Sie bereits einen Termin."
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Poll"
@@ -850,11 +845,6 @@ msgstr "Der Termin wurde in Ihrem Kalender erneut verschoben. Prüfen Sie den ne
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
-msgid "Tymeslot could not move this booking. Another booking already starts at that time."
-msgstr "Tymeslot konnte diese Buchung nicht verschieben. Zu diesem Zeitpunkt beginnt bereits eine andere Buchung."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
-#, elixir-autogen, elixir-format
 msgid "Tymeslot could not move this booking. Please try again."
 msgstr "Tymeslot konnte diese Buchung nicht verschieben. Bitte versuchen Sie es erneut."
 
@@ -922,3 +912,9 @@ msgstr "Vor Ort"
 #, elixir-autogen, elixir-format
 msgid "Phone call"
 msgstr "Telefonanruf"
+
+#: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr "Diese Zeit ist nicht mehr verfügbar. Bitte wählen Sie eine andere."

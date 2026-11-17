@@ -10,6 +10,8 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               {:ok, any()} | {:error, any()}
   @callback send_booking_request_received(struct()) :: {:ok, any()} | {:error, any()}
   @callback send_booking_request_received(struct(), keyword()) :: {:ok, any()} | {:error, any()}
+  @callback send_booking_email_verification(struct(), String.t()) ::
+              {:ok, any()} | {:error, any()}
 
   @callback send_booking_approval_request(atom(), struct(), map(), String.t(), keyword()) ::
               {:ok, any()} | {:error, any()}

@@ -140,8 +140,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal do
   defp error_message(:same_time),
     do: dgettext("dashboard_bookings", "The meeting is already at that time.")
 
+  # The clash may be with a booking the host cannot see (one awaiting its
+  # attendee's email verification or payment), so it never claims one is there.
   defp error_message(:slot_taken),
-    do: dgettext("dashboard_bookings", "You already have a meeting at that time.")
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "This time is no longer available. Please choose another time."
+      )
 
   defp error_message(:time_off),
     do:

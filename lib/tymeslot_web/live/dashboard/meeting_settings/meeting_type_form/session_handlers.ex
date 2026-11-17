@@ -377,8 +377,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   defp error_message(:session_started),
     do: dgettext("dashboard_meeting_fixed_dates", "This date has already started.")
 
+  # The clash may be with a booking the host cannot see (one awaiting its
+  # attendee's email verification or payment), so it never claims one is there.
   defp error_message(:time_conflict),
-    do: dgettext("dashboard_meeting_fixed_dates", "You already have a booking at that time.")
+    do:
+      dgettext(
+        "dashboard_meeting_fixed_dates",
+        "This time is no longer available. Please choose another time."
+      )
 
   defp error_message(:not_fixed_dates),
     do: dgettext("dashboard_meeting_fixed_dates", "Turn on fixed dates and group bookings first.")

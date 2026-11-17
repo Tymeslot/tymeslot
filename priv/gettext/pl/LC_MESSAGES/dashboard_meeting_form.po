@@ -900,3 +900,41 @@ msgstr "Linki z zaproszeniem działają tylko dla indywidualnych typów spotkań
 #, elixir-autogen, elixir-format
 msgid "Only people with an invitation link can book"
 msgstr "Rezerwować mogą tylko osoby z linkiem z zaproszeniem"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Ask invitees to confirm their email"
+msgstr "Proś zaproszonych o potwierdzenie adresu e-mail"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Email confirmation"
+msgstr "Potwierdzenie adresu e-mail"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off group bookings to ask invitees to confirm their email."
+msgstr "Wyłącz rezerwacje grupowe, aby prosić zaproszonych o potwierdzenie adresu e-mail."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
+msgstr "Wyłącz płatności, aby prosić zaproszonych o potwierdzenie adresu e-mail. Płatność i tak potwierdza, kim są."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minute, and you are not notified."
+msgid_plural "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minutes, and you are not notified."
+msgstr[0] "Rezerwacja liczy się dopiero wtedy, gdy zaproszona osoba kliknie link z naszego e-maila. Do tego czasu termin jest zablokowany maksymalnie przez %{count} minutę i nie dostajesz powiadomienia."
+msgstr[1] "Rezerwacja liczy się dopiero wtedy, gdy zaproszona osoba kliknie link z naszego e-maila. Do tego czasu termin jest zablokowany maksymalnie przez %{count} minuty i nie dostajesz powiadomienia."
+msgstr[2] "Rezerwacja liczy się dopiero wtedy, gdy zaproszona osoba kliknie link z naszego e-maila. Do tego czasu termin jest zablokowany maksymalnie przez %{count} minut i nie dostajesz powiadomienia."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off email confirmation to enable group bookings."
+msgstr "Wyłącz potwierdzenie adresu e-mail, aby włączyć rezerwacje grupowe."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off email confirmation to require payment."
+msgstr "Wyłącz potwierdzenie adresu e-mail, aby wymagać płatności."

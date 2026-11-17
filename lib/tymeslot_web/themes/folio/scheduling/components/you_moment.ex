@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
+  alias TymeslotWeb.Themes.Shared.Components.VerificationNotice
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer, as: InputRenderer
@@ -239,6 +240,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
         payment_required={@meeting_type.payment_required}
         stage={:before}
       />
+
+      <VerificationNotice.line meeting_type={@meeting_type} />
 
       <div class="folio-actions folio-actions--in-order">
         <SubmitPrice.price

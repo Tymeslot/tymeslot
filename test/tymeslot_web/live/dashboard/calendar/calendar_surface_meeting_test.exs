@@ -355,7 +355,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
 
     create_meeting(lv)
 
-    eventually(fn -> render(lv) =~ "You already have a meeting at this time." end,
+    eventually(fn -> render(lv) =~ "This time is no longer available." end,
       timeout: @task_timeout
     )
 
@@ -431,7 +431,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
 
       release(holder)
 
-      eventually(fn -> render(lv) =~ "You already have a meeting at this time." end,
+      eventually(fn -> render(lv) =~ "This time is no longer available." end,
         timeout: @task_timeout
       )
 

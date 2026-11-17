@@ -144,13 +144,22 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     Repo.all(query)
   end
 
+  @doc """
+  The host's recent payments, newest first: every charge that moved money,
+  and none that never did. A checkout still `:pending`, or `:failed` with
+  nothing captured (`paid_at` nil), is left out. Keyed on the payment row
+  alone, never on the meeting: a late payment refused on an `:expired`
+  meeting moved money and stays listed.
+  """
   @spec for_host(integer(), keyword()) :: [BookingPaymentSchema.t()]
   def for_host(host_user_id, opts) do
     limit = Keyword.get(opts, :limit, 25)
 
     query =
       from b in BookingPaymentSchema,
-        where: b.host_user_id == ^host_user_id,
+        where:
+          b.host_user_id == ^host_user_id and b.status != :pending and
+            not (b.status == :failed and is_nil(b.paid_at)),
         order_by: [desc: b.inserted_at],
         limit: ^limit
 

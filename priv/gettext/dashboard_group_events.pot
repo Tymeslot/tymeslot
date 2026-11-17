@@ -108,15 +108,15 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_group_event.ex
 #, elixir-autogen, elixir-format
-msgid "You already have a booking at that time."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_group_event.ex
-#, elixir-autogen, elixir-format
 msgid "An event lasts a multiple of %{step} minutes."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_group_event.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar first: people book the event on your booking page, which needs one."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_group_event.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
 msgstr ""

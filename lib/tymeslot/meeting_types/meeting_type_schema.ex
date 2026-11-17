@@ -9,6 +9,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   import Tymeslot.ChangesetValidators.SchedulingPolicy, only: [validate_scheduling_policy: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.MeetingTypes.EmailVerificationRule
   alias Tymeslot.MeetingTypes.GroupValidation
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.LocationOption
@@ -45,6 +46,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           last_spots_threshold: pos_integer() | nil,
           max_guests_per_booking: pos_integer() | nil,
           requires_approval: boolean(),
+          requires_email_verification: boolean(),
           approval_window_hours: pos_integer() | nil,
           is_archived: boolean(),
           max_bookings_per_day: pos_integer() | nil,
@@ -102,6 +104,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     # "use `Constraints.default_approval_window_hours/0`", the same way a nil
     # `availability_schedule_id` means "use the profile default".
     field(:requires_approval, :boolean, default: false)
+    field(:requires_email_verification, :boolean, default: false)
     field(:approval_window_hours, :integer)
     field(:is_archived, :boolean, default: false)
     field(:max_bookings_per_day, :integer)
@@ -231,6 +234,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :last_spots_threshold,
       :max_guests_per_booking,
       :requires_approval,
+      :requires_email_verification,
       :approval_window_hours,
       :is_archived,
       :max_bookings_per_day,
@@ -261,6 +265,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_calendar_destination()
     |> ReminderValidation.validate_changeset()
     |> PaymentValidation.validate_changeset(opts)
+    |> EmailVerificationRule.validate_changeset()
     |> GroupValidation.validate_changeset()
     |> unique_constraint([:user_id, :name],
       error_key: :name,

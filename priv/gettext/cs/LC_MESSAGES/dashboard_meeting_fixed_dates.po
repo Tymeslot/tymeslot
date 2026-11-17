@@ -200,11 +200,6 @@ msgstr "Nejdřív zapněte pevné termíny a skupinové rezervace."
 msgid "Turn on fixed dates, without group bookings, to offer times."
 msgstr "Chcete-li nabízet časy, zapněte pevné termíny bez skupinových rezervací."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a booking at that time."
-msgstr "V tu dobu už máte rezervaci."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/offered_time_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "You already offer that time."
@@ -239,3 +234,8 @@ msgstr "Čas %{time} dne %{date} neexistuje, protože se hodiny posouvají dopř
 #, elixir-autogen, elixir-format
 msgid "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved."
 msgstr "Čas %{time} nastává dne %{date} dvakrát, protože se hodiny posouvají zpět, a proto byl uložen ten dřívější (%{zone})."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr "Tento čas už není k dispozici. Vyberte prosím jiný."

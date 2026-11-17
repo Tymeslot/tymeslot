@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Components.VerificationNotice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -34,7 +35,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
     assigns =
       assign(assigns,
         navigable_steps: Runtime.navigable_steps(assigns),
-        step_numbers: Runtime.step_numbers(assigns)
+        step_numbers: Runtime.step_numbers(assigns),
+        follow_ups: ConfirmationText.follow_ups?(assigns)
       )
 
     ~H"""
@@ -57,22 +59,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       <div class="relative">
                         <div class={[
                           "confirmation-badge rounded-full flex items-center justify-center",
-                          ApprovalDisplay.awaiting_approval?(assigns) && "confirmation-badge--pending"
+                          ConfirmationText.pending?(assigns) && "confirmation-badge--pending"
                         ]}>
                           <.icon
-                            :if={!ApprovalDisplay.awaiting_approval?(assigns)}
-                            name="hero-check"
-                            class="confirmation-badge-icon stroke-3"
-                          />
-                          <.icon
-                            :if={ApprovalDisplay.awaiting_approval?(assigns)}
-                            name="hero-clock"
+                            name={ConfirmationText.badge_icon(assigns)}
                             class="confirmation-badge-icon stroke-3"
                           />
                         </div>
                         <div class={[
                           "confirmation-badge-dot absolute rounded-full flex items-center justify-center",
-                          ApprovalDisplay.awaiting_approval?(assigns) &&
+                          ConfirmationText.pending?(assigns) &&
                             "confirmation-badge-dot--pending"
                         ]}>
                           <.icon name="hero-bell-mini" class="confirmation-badge-dot-icon" />
@@ -83,7 +79,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       <h1 class="section-header confirmation-title">
                         {headline(assigns)}
                       </h1>
-                      <p class="confirmation-subtitle text-quill-primary">
+                      <p
+                        class="confirmation-subtitle text-quill-primary"
+                        data-testid={!@follow_ups && "check-inbox"}
+                      >
                         {subtitle(assigns)}
                       </p>
                     </div>
@@ -93,6 +92,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     :if={ApprovalDisplay.awaiting_approval?(assigns)}
                     organizer_name={Profiles.display_name(@organizer_profile)}
                     stage={:after}
+                    class="mt-4"
+                  />
+
+                  <VerificationNotice.resend
+                    :if={!@follow_ups}
+                    state={assigns[:verification_resend]}
                     class="mt-4"
                   />
 
@@ -146,7 +151,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           <.icon name="hero-envelope-mini" class="confirmation-email-link w-4 h-4" />
                         </div>
                         <p class="text-sm text-white">
-                          {if ApprovalDisplay.awaiting_approval?(assigns),
+                          {if ConfirmationText.pending?(assigns),
                             do: dgettext("booking_confirmation", "Sent to"),
                             else: dgettext("booking_confirmation", "Confirmation sent to")}
                           <span class="confirmation-email-link font-semibold">
@@ -181,7 +186,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
                   <div class="confirmation-actions">
                     <a
-                      :if={PathHandlers.calendar_ics_path(assigns)}
+                      :if={@follow_ups && PathHandlers.calendar_ics_path(assigns)}
                       href={PathHandlers.calendar_ics_path(assigns)}
                       download
                       class="action-button action-button--primary calendar-download-button"
@@ -204,7 +209,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     </button>
                   </div>
 
-                  <p class="confirmation-help-text mt-3 text-xs">
+                  <p :if={@follow_ups} class="confirmation-help-text mt-3 text-xs">
                     {if ApprovalDisplay.awaiting_approval?(assigns),
                       do:
                         dgettext(
@@ -336,6 +341,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   # ConfirmationText; only the wording is Quill's.
   defp headline(assigns) do
     case ConfirmationText.status(assigns) do
+      :check_inbox -> ConfirmationText.check_inbox_headline(:quill)
       :held -> dgettext("booking_confirmation", "Request sent!")
       :rescheduled -> dgettext("booking_confirmation", "Meeting Rescheduled!")
       :confirmed -> dgettext("booking_confirmation", "Meeting Confirmed!")
@@ -344,6 +350,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   defp subtitle(assigns) do
     case ConfirmationText.status(assigns) do
+      :check_inbox ->
+        ConfirmationText.check_inbox_message(assigns, :quill)
+
       :held ->
         ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :quill)
 

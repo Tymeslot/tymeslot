@@ -46,17 +46,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.DisconnectModalTest do
       assert push =~ ~s("event":"disconnect")
     end
 
-    test "shows a warning about pending bookings when the pending count is positive" do
+    test "shows a warning about checkouts in progress when the pending count is positive" do
       html = render_modal(true, 3)
 
-      assert html =~ "3 pending"
-      assert html =~ "Disconnecting will cancel"
+      assert html =~ "3 checkouts still in progress will be cancelled when you disconnect."
     end
 
-    test "omits the pending-bookings warning when there are none" do
+    test "omits the checkouts warning when there are none" do
       html = render_modal(true, 0)
 
-      refute html =~ "awaiting payment"
+      refute html =~ "still in progress"
     end
 
     # Outstanding refunds are a different set from pending bookings: money the

@@ -197,11 +197,6 @@ msgstr "Attiva prima le date fisse e le prenotazioni di gruppo."
 msgid "Turn on fixed dates, without group bookings, to offer times."
 msgstr "Attiva le date fisse, senza prenotazioni di gruppo, per offrire orari."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a booking at that time."
-msgstr "A quell'ora hai già una prenotazione."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/offered_time_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "You already offer that time."
@@ -236,3 +231,8 @@ msgstr "L'orario %{time} non esiste il %{date} perché le lancette vanno avanti,
 #, elixir-autogen, elixir-format
 msgid "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved."
 msgstr "L'orario %{time} si ripete il %{date} perché le lancette tornano indietro, quindi è stato salvato il primo (%{zone})."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr "Questo orario non è più disponibile. Scegline un altro."

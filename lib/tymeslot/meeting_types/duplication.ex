@@ -55,6 +55,7 @@ defmodule Tymeslot.MeetingTypes.Duplication do
     :max_guests_per_booking,
     :allow_guests,
     :requires_approval,
+    :requires_email_verification,
     :approval_window_hours,
     :max_bookings_per_day,
     :max_bookings_per_week,

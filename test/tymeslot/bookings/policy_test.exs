@@ -5,6 +5,38 @@ defmodule Tymeslot.Bookings.PolicyTest do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings.MeetingSchema
 
+  describe "an unverified booking" do
+    # Verification is held back from the organiser, so a refusal that never
+    # reaches the cancellation pipeline is what keeps it that way. A past
+    # start still reports the verification state, not :past.
+    test "an unverified booking cannot be cancelled" do
+      for offset <- [3600, -7200] do
+        meeting =
+          build(:awaiting_verification_meeting,
+            start_time: DateTime.add(DateTime.utc_now(), offset, :second),
+            end_time: DateTime.add(DateTime.utc_now(), offset + 1800, :second)
+          )
+
+        assert Policy.can_cancel_meeting?(meeting) ==
+                 {:error, {:not_cancellable, :awaiting_verification}}
+      end
+    end
+
+    test "an unverified booking cannot be rescheduled" do
+      meeting =
+        build(:awaiting_verification_meeting,
+          start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
+          end_time: DateTime.add(DateTime.utc_now(), 5400, :second)
+        )
+
+      assert Policy.can_reschedule_meeting?(meeting) ==
+               {:error, {:not_reschedulable, :awaiting_verification}}
+
+      assert Policy.can_request_reschedule?(meeting) ==
+               {:error, {:not_reschedulable, :awaiting_verification}}
+    end
+  end
+
   describe "can_cancel_meeting?/1" do
     test "allows cancellation for future meetings" do
       future_meeting = %MeetingSchema{

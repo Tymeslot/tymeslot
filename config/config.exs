@@ -170,6 +170,8 @@ config :tymeslot,
     # Run every 15 min to release approval requests whose deadline passed
     # and whose per-meeting expiry job never fired
     {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker},
+    # Run every 5 min to release unverified bookings whose expiry job never fired
+    {"*/5 * * * *", Tymeslot.Meetings.Workers.EmailVerificationSweepWorker},
     # Run daily at 03:05 UTC to resolve quiet errors and prune old ones
     {"5 3 * * *", Tymeslot.Workers.ErrorTrackerMaintenanceWorker},
     # Run daily at 07:00 UTC to email the digest of info-severity admin alerts

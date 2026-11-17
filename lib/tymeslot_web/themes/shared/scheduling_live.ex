@@ -202,6 +202,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
           |> TymeslotWeb.Themes.Shared.Journey.Runtime.navigate_to_step(params)
           |> TymeslotWeb.Themes.Shared.ChoicesInUrl.sync()
 
+      # The confirmation step's "Resend email", for a booking waiting for
+      # its attendee to confirm their email; the flow's, like navigation.
+      def handle_event("resend_verification_email", _params, socket),
+        do: TymeslotWeb.Themes.Shared.VerificationResend.resend(socket)
+
       def handle_event("theme:" <> name, params, socket),
         do: handle_theme_event(name, params, socket)
 

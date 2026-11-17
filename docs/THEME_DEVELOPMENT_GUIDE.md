@@ -1193,6 +1193,8 @@ Choosing a meeting type is the way on; a theme that wants a separate Next sends 
 | `awaiting_payment_checkout_url` | awaiting payment | optional | the Stripe Checkout address an embedded paid booking opened in a new tab, set as the page enters the wait; a theme's own `awaiting_payment:` outcome hands it to `AwaitingPayment.awaiting_payment/1` |
 | `custom_field_answers` | confirmation | mount | the booker's answers |
 | `meeting_status` | confirmation | optional | the booked meeting's status, set once a booking is submitted |
+| `verification_deadline_at` | confirmation | optional | when the hold on a booking awaiting its attendee's email confirmation runs out (a UTC `DateTime`), set once a booking is submitted, nil for any other booking; `ConfirmationText.check_inbox_message/2` states it on the attendee's clock |
+| `verification_resend` | confirmation | optional | the outcome of the last "Resend email" press while the booking waits for its attendee to confirm their email (`VerificationNotice.resend/1`'s `state`), nil before any |
 | `embedded` | every moment | optional | `true` when the page is served inside a signed embed (`EmbedAuthHook`), unset otherwise; a field there takes no `autofocus`, which the browser refuses inside a cross-origin frame with a console error |
 | `journey_focus` | every moment | optional | the moment that has just become current through the visitor's own action (a choice that opened it, Next, Back, the step indicator, an Edit), whose `Journey.Components.moment_heading/1` then takes the focus; unset on page load and after a reconnect |
 <!-- step-assigns:end -->
@@ -1343,16 +1345,19 @@ The step appears only when the meeting type has custom questions. The engine ren
 | `[data-testid="guest-toggle"]`, `guest-input`, `guest-add`, `guest-chip`, `guest-close` (and `form.guest-add` with `novalidate`) | the guest field, inside the form's block | shared (`GuestField`) | `guest_booking_flow_test.exs`, visual harness |
 | `[data-testid="location-field"]`, `location-option`, `location-error`, `video-provider-field`, `video-provider-option` (`data-video-integration-id`) | the location choice, when the meeting type offers one | shared (`LocationField`) | `location_choice_flow_test.exs`, visual harness |
 | `[data-testid="approval-notice"]` | a block above the submit button, when the meeting type needs approval | shared (`ApprovalNotice.block/1`), placed by the theme | `theme_approval_disclosure_test.exs` |
+| `[data-testid="verification-notice"]` | a line directly after the approval notice, when the meeting type requires the attendee to confirm their email | shared (`VerificationNotice.line/1`), placed by the theme | `verification_preview_test.exs` |
 
 #### Confirmation step
 
 | Hook | Must be on | Provided by | Read by |
 |---|---|---|---|
 | `[data-testid="confirmation-heading"]` | the heading shown once the booking is made (and not shown while a preview or a failed booking blocks it) | theme | booking flow and guest suites, visual harness |
-| `[data-testid="add-to-calendar"]` | an `<a>` to `PathHandlers.calendar_ics_path/1`, rendered only when a `meeting_uid` (or a group seat's `seat_calendar_url`) is known | theme | `custom_fields_booking_flow_test.exs`, visual harness (`confirmationCta`) |
+| `[data-testid="add-to-calendar"]` | an `<a>` to `PathHandlers.calendar_ics_path/1`, rendered only when a `meeting_uid` (or a group seat's `seat_calendar_url`) is known and `ConfirmationText.follow_ups?/1` holds | theme | `custom_fields_booking_flow_test.exs`, visual harness (`confirmationCta`) |
 | `[data-testid="schedule-another"]` | a `<button>` with `phx-click="schedule_another"` | theme | `reschedule_completion_test.exs`, visual harness (`confirmationCta`); `BookingDriver.book/2` waits for its `data-intent="restart"` |
 | `.custom-answers`, `.custom-answers__value` | the booker's answers | shared (`CustomAnswers`) | `long_single_select_flow_test.exs` |
 | `[data-testid="approval-notice"]` | when the booking awaits approval (`ApprovalDisplay.awaiting_approval?/1`) | shared (`ApprovalNotice.block/1`), placed by the theme | `theme_approval_disclosure_test.exs` |
+| `[data-testid="check-inbox"]` | the message under the heading while the booking waits for its attendee to confirm their email (`ConfirmationText.status/1` is `:check_inbox`), reading `ConfirmationText.check_inbox_message/2`; the reschedule or withdraw hints are left out then | theme | `confirmation_verification_test.exs`, `verification_preview_test.exs` |
+| `[data-testid="resend-verification"]` | the "Resend email" button beside that message, `phx-click="resend_verification_email"` to the LiveView (`Shared.VerificationResend`) | shared (`VerificationNotice.resend/1`), placed by the theme | `verification_preview_test.exs` |
 | `[data-testid="awaiting-payment"]` (`#awaiting-payment`, `phx-hook="PaymentRedirectOpenTab"`) | the placeholder for a paid embedded booking | shared (`SchedulingPage`, `AwaitingPayment`) | visual harness |
 
 #### Journey moments

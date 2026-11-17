@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
+  alias TymeslotWeb.Themes.Shared.Components.VerificationNotice
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer, as: InputRenderer
   alias TymeslotWeb.Themes.Shared.GuestBooking
@@ -235,6 +236,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
       payment_required={@meeting_type.payment_required}
       stage={:before}
     />
+
+    <VerificationNotice.line meeting_type={@meeting_type} />
 
     <SubmitPrice.price
       meeting_type={@meeting_type}

@@ -41,6 +41,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_confirmation_emails(meeting_id), to: MeetingScheduler
   defdelegate schedule_seat_confirmation_emails(meeting_id, participant_id), to: MeetingScheduler
   defdelegate schedule_cancellation_emails(meeting_id), to: MeetingScheduler
+  defdelegate schedule_verification_email(meeting_id, send \\ 1), to: MeetingScheduler
   defdelegate schedule_reschedule_emails(meeting, original, opts \\ []), to: MeetingScheduler
   defdelegate schedule_end_change_emails(meeting), to: EndChangeScheduler
 

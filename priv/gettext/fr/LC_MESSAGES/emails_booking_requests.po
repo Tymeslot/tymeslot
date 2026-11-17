@@ -188,6 +188,7 @@ msgstr "Pour %{name}, c’est %{time}."
 msgid "From:"
 msgstr "De :"
 
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
@@ -261,6 +262,7 @@ msgid "Location:"
 msgstr "Lieu :"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
@@ -289,6 +291,7 @@ msgstr "Nouvelle demande de réservation"
 msgid "No longer held"
 msgstr "Créneau libéré"
 
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Not confirmed"
@@ -508,3 +511,33 @@ msgstr "une réunion"
 #, elixir-autogen, elixir-format
 msgid "withdraw your request"
 msgstr "retirer votre demande"
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm booking"
+msgstr "Confirmer la réservation"
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your booking with %{organizer}"
+msgstr "Confirmez votre réservation avec %{organizer}"
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, your booking is not confirmed yet."
+msgstr "Bonjour %{name}, votre réservation n’est pas encore confirmée."
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "If you did not make this booking, ignore this email. Nothing will be booked."
+msgstr "Si vous n’avez pas fait cette réservation, ignorez cet e-mail. Rien ne sera réservé."
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Please confirm your booking"
+msgstr "Veuillez confirmer votre réservation"
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold the time for you until then."
+msgstr "Votre réservation n’est pas encore confirmée. Cliquez sur le bouton ci-dessous au plus tard %{deadline} pour la confirmer. D’ici là, nous vous réservons le créneau."

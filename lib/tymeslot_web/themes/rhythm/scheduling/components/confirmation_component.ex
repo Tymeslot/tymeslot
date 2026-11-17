@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Components.VerificationNotice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -29,7 +30,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    assigns = assign(assigns, :next_day_end, LocalizationHelpers.booking_next_day_end(assigns))
+    assigns =
+      assign(assigns,
+        next_day_end: LocalizationHelpers.booking_next_day_end(assigns),
+        follow_ups: ConfirmationText.follow_ups?(assigns)
+      )
 
     ~H"""
     <div class="scheduling-box booker-card" data-locale={@locale} data-testid="booker-card">
@@ -41,20 +46,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                 <div class="confirmation-title-row">
                   <div class={[
                     "success-badge",
-                    ApprovalDisplay.awaiting_approval?(assigns) && "success-badge--pending"
+                    ConfirmationText.pending?(assigns) && "success-badge--pending"
                   ]}>
                     <div class={[
                       "success-badge-inner",
-                      ApprovalDisplay.awaiting_approval?(assigns) && "success-badge-inner--pending"
+                      ConfirmationText.pending?(assigns) && "success-badge-inner--pending"
                     ]}>
                       <.icon
-                        :if={!ApprovalDisplay.awaiting_approval?(assigns)}
-                        name="hero-check"
-                        class="success-icon stroke-3"
-                      />
-                      <.icon
-                        :if={ApprovalDisplay.awaiting_approval?(assigns)}
-                        name="hero-clock"
+                        name={ConfirmationText.badge_icon(assigns)}
                         class="success-icon stroke-3"
                       />
                     </div>
@@ -65,7 +64,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   </h1>
                 </div>
 
-                <p class="confirmation-message">
+                <p class="confirmation-message" data-testid={!@follow_ups && "check-inbox"}>
                   {confirmation_message(assigns)}
                 </p>
 
@@ -73,6 +72,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   :if={ApprovalDisplay.awaiting_approval?(assigns)}
                   organizer_name={Profiles.display_name(@organizer_profile)}
                   stage={:after}
+                />
+
+                <VerificationNotice.resend
+                  :if={!@follow_ups}
+                  state={assigns[:verification_resend]}
                 />
 
                 <GroupSession.confirmation_line meeting_type={@meeting_type} />
@@ -208,7 +212,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
               <div class="confirmation-actions-section">
                 <a
-                  :if={PathHandlers.calendar_ics_path(assigns)}
+                  :if={@follow_ups && PathHandlers.calendar_ics_path(assigns)}
                   href={PathHandlers.calendar_ics_path(assigns)}
                   download
                   class="action-button-primary calendar-download-button"
@@ -230,7 +234,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   {dgettext("booking_confirmation", "Schedule Another Meeting")}
                 </button>
 
-                <p class="help-text">
+                <p :if={@follow_ups} class="help-text">
                   {if ApprovalDisplay.awaiting_approval?(assigns),
                     do:
                       dgettext(
@@ -257,6 +261,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   # not be announced as a confirmed meeting); only the wording is Rhythm's.
   defp headline(assigns) do
     case ConfirmationText.status(assigns) do
+      :check_inbox -> ConfirmationText.check_inbox_headline(:rhythm)
       :held -> dgettext("booking_confirmation", "Request sent!")
       :rescheduled -> dgettext("booking_confirmation", "Successfully Rescheduled!")
       :confirmed -> dgettext("booking_confirmation", "You're All Set!")
@@ -265,6 +270,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
   defp confirmation_message(assigns) do
     case ConfirmationText.status(assigns) do
+      :check_inbox ->
+        ConfirmationText.check_inbox_message(assigns, :rhythm)
+
       :held ->
         ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :rhythm)
 

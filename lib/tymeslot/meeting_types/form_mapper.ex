@@ -57,6 +57,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         is_active: params["is_active"] == "true",
         allow_guests: params["allow_guests"] == "true",
         requires_approval: params["requires_approval"] == "true",
+        requires_email_verification: params["requires_email_verification"] == "true",
         approval_window_hours: approval_window_hours,
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         availability_schedule_id: blank_to_nil(params["availability_schedule_id"]),

@@ -280,6 +280,28 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
               window_ms: 10 * @minute,
               operation: "booking request answer"
             ],
+            # Confirming or disowning a held booking from the verification
+            # email, keyed on the client for the same reason as
+            # `:meeting_approval`.
+            booking_email_verification: [
+              prefix: "booking_email_verification",
+              scope: :source,
+              limit: 20,
+              window_ms: 10 * @minute,
+              operation: "booking email verification"
+            ],
+            # "Resend email" on the booking page's check-your-inbox step. Each
+            # booking allows three resends (`EmailVerification.resend/1`); this
+            # bounds one client across the bookings it makes, with the same
+            # budget as `:booking_submit`, since a resend sends an email as a
+            # booking does.
+            booking_verification_resend: [
+              prefix: "booking_verification_resend",
+              scope: :source,
+              limit: 10,
+              window_ms: 20 * @minute,
+              operation: "booking verification email resend"
+            ],
             # Counts both the landing page and the response, keyed on the client for
             # the same reason as `:meeting_approval`.
             guest_rsvp: [

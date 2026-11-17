@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.VerificationNotice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -39,6 +40,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
     assigns =
       assign(assigns,
         held: ApprovalDisplay.awaiting_approval?(assigns),
+        pending: ConfirmationText.pending?(assigns),
+        badge_icon: ConfirmationText.badge_icon(assigns),
+        follow_ups: ConfirmationText.follow_ups?(assigns),
         location: BookingLocation.chosen_display(assigns),
         calendar_path: PathHandlers.calendar_ics_path(assigns),
         minutes: Offer.duration_minutes(assigns.meeting_type, assigns.duration),
@@ -50,12 +54,13 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
       <Components.brand theme_tokens={@theme_tokens} />
 
       <header class="paper-confirmation__header">
-        <div class={["paper-confirmation__badge", @held && "paper-confirmation__badge--pending"]}>
-          <.icon :if={!@held} name="hero-check" class="paper-confirmation__icon" />
-          <.icon :if={@held} name="hero-clock" class="paper-confirmation__icon" />
+        <div class={["paper-confirmation__badge", @pending && "paper-confirmation__badge--pending"]}>
+          <.icon name={@badge_icon} class="paper-confirmation__icon" />
         </div>
         <h1 class="paper-title" data-testid="confirmation-heading">{headline(assigns)}</h1>
-        <p class="paper-confirmation__message">{message(assigns)}</p>
+        <p class="paper-confirmation__message" data-testid={!@follow_ups && "check-inbox"}>
+          {message(assigns)}
+        </p>
       </header>
 
       <ApprovalNotice.block
@@ -63,6 +68,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
         organizer_name={Profiles.display_name(@organizer_profile)}
         stage={:after}
       />
+
+      <VerificationNotice.resend :if={!@follow_ups} state={assigns[:verification_resend]} />
 
       <GroupSession.confirmation_line meeting_type={@meeting_type} />
 
@@ -121,7 +128,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
 
       <div class="paper-actions paper-actions--center paper-confirmation__actions">
         <a
-          :if={@calendar_path}
+          :if={@follow_ups && @calendar_path}
           href={@calendar_path}
           download
           class="paper-button paper-button--primary"
@@ -144,7 +151,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
         </button>
       </div>
 
-      <p class="paper-confirmation__help">
+      <p :if={@follow_ups} class="paper-confirmation__help">
         {if @held,
           do:
             dgettext(
@@ -163,6 +170,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
 
   defp headline(assigns) do
     case ConfirmationText.status(assigns) do
+      :check_inbox -> ConfirmationText.check_inbox_headline(:paper)
       :held -> dpgettext("booking_voice", "paper", "Request sent")
       :rescheduled -> dpgettext("booking_voice", "paper", "Meeting rescheduled")
       :confirmed -> dgettext("booking_confirmation", "Booking confirmed")
@@ -173,6 +181,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   # and a profile with no name to give drops the organiser too.
   defp message(assigns) do
     case ConfirmationText.status(assigns) do
+      :check_inbox ->
+        ConfirmationText.check_inbox_message(assigns, :paper)
+
       :held ->
         ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :paper)
 

@@ -28,6 +28,10 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       lifetime (48 hours, not a day count), with the name and email they hold
   15. Extra available times on dates that have passed (see
       `Tymeslot.Availability.ExtraAvailability`)
+  16. Bookings that expired or were disowned without ever being verified, a
+      day after their verification deadline (not a day count), deleted with
+      the name, email and answers they hold (see
+      `Tymeslot.Meetings.EmailVerification.prune_unverified/1`)
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
@@ -49,6 +53,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   alias Tymeslot.Integrations.HealthCheck.AvailabilityRefusalQueries
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.InviteeData
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.MeetingTypes.OfferedTimes
   alias Tymeslot.Payments.Webhooks.StripeEventQueries
   alias Tymeslot.Polls
@@ -133,6 +138,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
     prune_unconfirmed_poll_participants()
 
     prune_past_extra_availability()
+
+    EmailVerification.prune_unverified()
 
     prune_past_offered_times()
 

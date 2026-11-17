@@ -264,11 +264,6 @@ msgstr "Цю зустріч організовує хтось інший, том
 msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
 msgstr "Це групове бронювання. Перенесіть його, скасуйте або змініть учасників у самій зустрічі."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a meeting at this time. Please choose a different time."
-msgstr "На цей час у вас уже є зустріч. Виберіть, будь ласка, інший час."
-
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This repeat pattern can't be saved to Outlook."
@@ -407,3 +402,8 @@ msgid_plural "The latest update could not be emailed to these guests. Let them k
 msgstr[0] "Не вдалося надіслати останню зміну цьому гостю електронною поштою. Повідомте його іншим способом."
 msgstr[1] "Не вдалося надіслати останню зміну цим гостям електронною поштою. Повідомте їх іншим способом."
 msgstr[2] "Не вдалося надіслати останню зміну цим гостям електронною поштою. Повідомте їх іншим способом."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr "Цей час більше недоступний. Виберіть інший."

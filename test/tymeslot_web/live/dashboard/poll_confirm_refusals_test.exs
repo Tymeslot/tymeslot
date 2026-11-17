@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Dashboard.PollConfirmRefusalsTest do
   @moduledoc """
   Confirming a poll's time from the host's results panel when the poll does
   not settle as plainly as `PollResultsTest` covers: the host answered their
-  own poll, only the host did, or the time began while the page was open.
+  own poll, only the host did, the time began while the page was open, or a
+  booking the host cannot see holds it.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -14,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.PollConfirmRefusalsTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Polls
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
@@ -169,6 +171,36 @@ defmodule TymeslotWeb.Dashboard.PollConfirmRefusalsTest do
 
       {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
       assert reloaded.status == :open
+    end
+
+    # A booking still awaiting its attendee's email verification holds its
+    # slot but is hidden from the host, so the refusal must not speak of a
+    # meeting they cannot see.
+    test "confirming a time held by a hidden booking refuses it without naming a meeting", %{
+      conn: conn,
+      user: user
+    } do
+      %{poll: poll, slot1: slot1} = open_poll_with_votes(user)
+
+      insert(:awaiting_verification_meeting,
+        organizer_user_id: user.id,
+        start_time: slot1.start_time,
+        end_time: slot1.end_time
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      select_poll(view, poll)
+
+      confirm_slot(view, slot1)
+      slot_html = view |> element("#poll-slot-#{slot1.id}") |> render()
+
+      assert slot_html =~ "This time is no longer free"
+      refute slot_html =~ "already have"
+
+      {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
+      assert reloaded.status == :open
+      assert reloaded.confirmed_meeting_id == nil
+      assert Repo.aggregate(MeetingSchema, :count) == 1
     end
   end
 end

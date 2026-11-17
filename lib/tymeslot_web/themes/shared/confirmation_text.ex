@@ -8,26 +8,103 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
   approval is announced as a request, never as a confirmed meeting; the
   approval check runs before the reschedule check, because a gated reschedule
   re-enters the hold (see `Tymeslot.Bookings.Reschedule`).
+
+  A booking waiting for its attendee to confirm their email address
+  (`:check_inbox`) is checked before either: a gated approval booking is held
+  for verification first, and only becomes a request once verified. Owner
+  preview never reaches it, as a simulated booking skips verification.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Profiles
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.Voice
 
-  @type status :: :held | :rescheduled | :confirmed
+  @type status :: :check_inbox | :held | :rescheduled | :confirmed
 
-  @doc "Which of the three outcomes the confirmation step describes."
+  @doc "Which of the four outcomes the confirmation step describes."
   @spec status(map()) :: status()
   def status(assigns) do
     cond do
+      check_inbox?(assigns) -> :check_inbox
       ApprovalDisplay.awaiting_approval?(assigns) -> :held
       assigns[:is_rescheduling] -> :rescheduled
       true -> :confirmed
     end
   end
+
+  @doc """
+  Whether the step offers what follows a booking: the calendar file and the
+  hints to reschedule or withdraw. A booking still waiting for its attendee
+  to confirm their email offers neither, as it is not a booking yet.
+  """
+  @spec follow_ups?(map()) :: boolean()
+  def follow_ups?(assigns), do: status(assigns) != :check_inbox
+
+  @doc """
+  Whether the booking still waits on someone, its attendee's email or the
+  host's approval, so the step's badge and the line naming the address must
+  not read as a confirmation.
+  """
+  @spec pending?(map()) :: boolean()
+  def pending?(assigns), do: status(assigns) in [:check_inbox, :held]
+
+  @doc "The icon for the step's badge: an envelope, a clock, or a tick."
+  @spec badge_icon(map()) :: String.t()
+  def badge_icon(assigns) do
+    case status(assigns) do
+      :check_inbox -> "hero-envelope"
+      :held -> "hero-clock"
+      _confirmed_or_rescheduled -> "hero-check"
+    end
+  end
+
+  @doc """
+  The headline while the booking waits for its attendee to confirm their
+  email, in the voice of the theme with key `theme_key` where it has one.
+  """
+  @spec check_inbox_headline(Catalog.theme_key() | nil) :: String.t()
+  def check_inbox_headline(theme_key \\ nil) do
+    Voice.line(Voice.of(theme_key), :check_inbox, %{}, fn ->
+      dgettext("booking_confirmation", "Check your inbox")
+    end)
+  end
+
+  @doc """
+  The sentence under the check-your-inbox headline: where the link went and
+  until when the time is held, in the voice of the theme with key
+  `theme_key` where it has one.
+
+  Names the booking's own `verification_deadline_at` as a date and time on
+  the attendee's clock (`user_timezone`), not the length of the hold: the
+  hold is capped at the meeting's start, so a booking made close to it is
+  held for less. The date is always there, as on the verify page, so a hold
+  running past midnight never reads as a time already gone.
+  """
+  @spec check_inbox_message(map(), Catalog.theme_key() | nil) :: String.t()
+  def check_inbox_message(assigns, theme_key \\ nil) do
+    email = assigns[:email]
+    deadline = deadline_text(assigns[:verification_deadline_at], assigns[:user_timezone])
+    bindings = %{email: email, deadline: deadline}
+
+    Voice.line(Voice.of(theme_key), :check_inbox_message, bindings, fn ->
+      dgettext(
+        "booking_confirmation",
+        "We have sent a link to %{email}. Click it by %{deadline} to confirm your booking. Until then the time is held for you.",
+        email: email,
+        deadline: deadline
+      )
+    end)
+  end
+
+  # A booking awaiting verification always carries its deadline
+  # (`EmailVerification.gate_attributes/2`), so there is no fallback.
+  defp deadline_text(%DateTime{} = deadline, timezone),
+    do: LocalizationHelpers.format_meeting_datetime(deadline, timezone)
 
   @doc """
   The sentence under a held booking's headline, in the voice of the theme
@@ -81,5 +158,10 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
           dgettext("booking_confirmation", "with %{name}", name: name)
         end)
     end
+  end
+
+  defp check_inbox?(assigns) do
+    MeetingState.awaiting_verification_status?(assigns[:meeting_status]) and
+      assigns[:owner_preview] != true
   end
 end

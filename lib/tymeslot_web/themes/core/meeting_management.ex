@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.HostManaged
+  alias Tymeslot.Meetings.MeetingAccess
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Helpers.ClientIP
@@ -44,7 +45,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
              | :managed_by_host
              | :not_found}
   def validate_and_load_meeting(meeting_uid, action, organizer_user_id) do
-    case Meetings.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id) do
+    case MeetingAccess.get_meeting_by_uid_for_attendee(meeting_uid, organizer_user_id) do
       {:ok, meeting} ->
         with :ok <- validate_meeting_action(meeting, action), do: {:ok, meeting}
 

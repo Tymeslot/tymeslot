@@ -903,3 +903,41 @@ msgstr "Посилання із запрошенням працюють лише
 #, elixir-autogen, elixir-format
 msgid "Only people with an invitation link can book"
 msgstr "Бронювати можуть лише люди з посиланням із запрошенням"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Ask invitees to confirm their email"
+msgstr "Просити запрошених підтвердити електронну пошту"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Email confirmation"
+msgstr "Підтвердження електронної пошти"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off group bookings to ask invitees to confirm their email."
+msgstr "Вимкніть групові бронювання, щоб просити запрошених підтвердити електронну пошту."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
+msgstr "Вимкніть оплату, щоб просити запрошених підтвердити електронну пошту. Оплата вже підтверджує, хто вони."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minute, and you are not notified."
+msgid_plural "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minutes, and you are not notified."
+msgstr[0] "Бронювання зараховується лише після того, як запрошений натисне посилання з нашого листа. Доти час зарезервовано щонайбільше на %{count} хвилину, і ви не отримуєте сповіщення."
+msgstr[1] "Бронювання зараховується лише після того, як запрошений натисне посилання з нашого листа. Доти час зарезервовано щонайбільше на %{count} хвилини, і ви не отримуєте сповіщення."
+msgstr[2] "Бронювання зараховується лише після того, як запрошений натисне посилання з нашого листа. Доти час зарезервовано щонайбільше на %{count} хвилин, і ви не отримуєте сповіщення."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off email confirmation to enable group bookings."
+msgstr "Вимкніть підтвердження електронної пошти, щоб увімкнути групові бронювання."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off email confirmation to require payment."
+msgstr "Вимкніть підтвердження електронної пошти, щоб вимагати оплату."

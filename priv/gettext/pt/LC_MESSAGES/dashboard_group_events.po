@@ -108,11 +108,6 @@ msgstr "Videochamada"
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_group_event.ex
 #, elixir-autogen, elixir-format
-msgid "You already have a booking at that time."
-msgstr "Você já tem uma reserva nesse horário."
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_group_event.ex
-#, elixir-autogen, elixir-format
 msgid "An event lasts a multiple of %{step} minutes."
 msgstr "Um evento dura um múltiplo de %{step} minutos."
 
@@ -120,3 +115,8 @@ msgstr "Um evento dura um múltiplo de %{step} minutos."
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar first: people book the event on your booking page, which needs one."
 msgstr "Conecte um calendário primeiro: as pessoas agendam o evento na sua página de agendamento, que precisa de um."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_group_event.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr "Este horário não está mais disponível. Escolha outro."
