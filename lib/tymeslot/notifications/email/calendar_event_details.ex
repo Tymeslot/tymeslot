@@ -226,17 +226,19 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
     }
   end
 
-  # A timed event's instants shifted into the organiser's timezone, with the
-  # date taken there, so an event at 00:30 in Berlin is not announced on the
-  # day before. An all-day event has dates only and is left as it is.
   # What the guest knows the organiser by, as a booking's emails name them:
   # the name on their profile, then the one their account was created with
   # (`Profiles.user_display_name/1`), and only then their address. An account
   # made with an email and a password has no name of its own, so reading
   # `user.name` alone named nearly every organiser by their address.
   defp organiser_name(user),
-    do: Profiles.user_display_name(%{user | profile: Profiles.get_profile(user.id)}) || user.email
+    do:
+      Profiles.user_display_name(Map.put(user, :profile, Profiles.get_profile(user.id))) ||
+        user.email
 
+  # A timed event's instants shifted into the organiser's timezone, with the
+  # date taken there, so an event at 00:30 in Berlin is not announced on the
+  # day before. An all-day event has dates only and is left as it is.
   defp in_organiser_view(timing, user) do
     timezone = Profiles.get_user_timezone(user.id)
 
