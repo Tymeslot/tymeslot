@@ -15,6 +15,7 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Create
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingSchema
@@ -22,11 +23,9 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Meetings.Seats
+  alias Tymeslot.Test.EnqueuedJobs
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
-  alias Tymeslot.Workers.EmailWorker
-  alias Tymeslot.Workers.VideoRoomWorker
-  alias Tymeslot.Workers.WebhookWorker
 
   setup :verify_on_exit!
 
@@ -84,17 +83,27 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
     )
   end
 
-  defp expect_checkout(result \\ :ok) do
+  defp expect_checkout(:ok) do
     expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-      case result do
-        :ok ->
-          {:ok, %{id: "cs_" <> params.client_reference_id, url: "https://checkout.stripe.com/x"}}
-
-        :error ->
-          {:error, %{message: "Stripe is down"}}
-      end
+      {:ok, %{id: "cs_" <> params.client_reference_id, url: "https://checkout.stripe.com/x"}}
     end)
   end
+
+  # The meeting is only known once the seat transaction has run, so the test
+  # subscribes to its payment topic as the checkout is opened for it.
+  defp expect_checkout(:error) do
+    expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
+      :ok =
+        Phoenix.PubSub.subscribe(
+          Tymeslot.PubSub,
+          MeetingPayments.payment_topic(params.payment_intent_data.metadata.meeting_id)
+        )
+
+      {:error, %{message: "Stripe is down"}}
+    end)
+  end
+
+  defp expect_checkout, do: expect_checkout(:ok)
 
   defp hold_for(email), do: Repo.get_by!(SeatHoldSchema, email: email)
 
@@ -115,10 +124,7 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
     assert payment.amount_cents == 4000
     assert payment.seats == 2
 
-    refute_enqueued(worker: EmailWorker)
-    refute_enqueued(worker: CalendarEventWorker)
-    refute_enqueued(worker: VideoRoomWorker)
-    refute_enqueued(worker: WebhookWorker)
+    assert EnqueuedJobs.for_user(ctx.user) == []
   end
 
   test "a failed checkout releases the hold and the slot", ctx do
@@ -129,10 +135,12 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
 
     hold = hold_for("one@example.com")
     assert %{status: :released, released_reason: :failed} = hold
+    assert BookingPaymentQueries.by_seat_hold_id(hold.id).status == :failed
 
     meeting = Repo.get!(MeetingSchema, hold.meeting_id)
     assert meeting.status == :expired
     assert Seats.seats_left(meeting, 4) == 4
+    assert_receive :expired
   end
 
   test "a failed checkout on a joined meeting leaves the meeting alone", ctx do
@@ -150,9 +158,12 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
     expect_checkout(:error)
     assert {:error, :checkout_failed} = execute(ctx, "two@example.com")
 
-    assert %{status: :released, released_reason: :failed} = hold_for("two@example.com")
+    hold = hold_for("two@example.com")
+    assert %{status: :released, released_reason: :failed} = hold
+    assert BookingPaymentQueries.by_seat_hold_id(hold.id).status == :failed
     assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
     assert Seats.seats_left(meeting, 4) == 3
+    refute_receive :expired
   end
 
   test "a failed checkout beside another booker's open hold keeps the meeting held", ctx do
@@ -162,8 +173,10 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
     expect_checkout(:error)
     assert {:error, :checkout_failed} = execute(ctx, "two@example.com")
 
+    assert BookingPaymentQueries.by_seat_hold_id(hold_for("two@example.com").id).status == :failed
     assert Repo.get!(MeetingSchema, meeting.id).status == :awaiting_payment
     assert SeatHolds.seats_held(meeting.id) == 1
+    refute_receive :expired
   end
 
   test "the same email cannot hold a seat twice", ctx do

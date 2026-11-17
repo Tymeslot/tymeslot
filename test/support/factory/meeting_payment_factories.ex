@@ -24,7 +24,9 @@ defmodule Tymeslot.Factory.MeetingPaymentFactories do
           meeting: meeting,
           start_time: meeting.start_time,
           seats: 1,
-          expires_at: DateTime.add(DateTime.utc_now(:second), 30, :minute),
+          # A hold outlives its 30-minute checkout by a grace
+          # (`CheckoutSessions.hold_expiry_seconds/0`).
+          expires_at: DateTime.add(DateTime.utc_now(:second), 35, :minute),
           name: sequence(:seat_hold_name, &"Holder #{&1}"),
           email: sequence(:seat_hold_email, &"holder#{&1}@test.com"),
           timezone: "Europe/Zurich"

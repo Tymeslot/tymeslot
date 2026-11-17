@@ -12,7 +12,6 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
   alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.ApplicationFee
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.SeatHolds
@@ -88,20 +87,28 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
       assert bp.stripe_checkout_session_id == "cs_SEAT"
     end
 
-    test "the fee is calculated on the total", %{meeting: meeting, meeting_type: mt} do
+    test "the fee is calculated on the total", %{
+      user: user,
+      meeting: meeting,
+      meeting_type: mt
+    } do
       Application.put_env(:tymeslot, :payment_application_fee_bp, 50)
       mt |> Changeset.change(price_cents: 333) |> Repo.update!()
       hold = insert(:seat_hold, meeting: meeting, seats: 3, email: "a@example.com")
-      expected_fee = ApplicationFee.calculate(999, 50)
 
+      # 0.5% of 9.99, rounded up to the cent; on one seat's 3.33 it would be 2.
       expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-        assert params.payment_intent_data.application_fee_amount == expected_fee
+        assert params.payment_intent_data == %{
+                 application_fee_amount: 5,
+                 metadata: %{seat_hold_id: hold.id, meeting_id: meeting.id, host_user_id: user.id}
+               }
+
         stripe_session()
       end)
 
       assert {:ok, %{booking_payment: bp}} = MeetingPayments.create_seat_checkout_session(hold)
       assert bp.amount_cents == 999
-      assert bp.application_fee_cents == expected_fee
+      assert bp.application_fee_cents == 5
     end
 
     test "the session carries the hold's booker, not the meeting's", %{
@@ -139,15 +146,30 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
       assert bp.attendee_name == "Bea"
     end
 
-    test "the idempotency key and expiry come from the hold", %{meeting: meeting} do
-      expires_at = DateTime.add(DateTime.utc_now(:second), 17, :minute)
-      hold = insert(:seat_hold, meeting: meeting, email: "a@example.com", expires_at: expires_at)
+    test "the session expires 30 minutes after it is created, before its hold", %{
+      meeting: meeting
+    } do
+      hold_expires_at = DateTime.add(DateTime.utc_now(:second), 35, :minute)
+
+      hold =
+        insert(:seat_hold, meeting: meeting, email: "a@example.com", expires_at: hold_expires_at)
+
+      expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
+        assert_in_delta params.expires_at, System.os_time(:second) + 30 * 60, 5
+        assert params.expires_at < DateTime.to_unix(hold_expires_at)
+        stripe_session()
+      end)
+
+      assert {:ok, _result} = MeetingPayments.create_seat_checkout_session(hold)
+    end
+
+    test "the idempotency key and return pages come from the hold", %{meeting: meeting} do
+      hold = insert(:seat_hold, meeting: meeting, email: "a@example.com")
       base = Endpoint.url() <> "/themes/quill"
 
       expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
         assert opts[:idempotency_key] == "checkout:seat_hold:#{hold.id}"
         assert opts[:connect_account] == "acct_HOST"
-        assert params.expires_at == DateTime.to_unix(expires_at)
 
         assert params.success_url ==
                  "#{base}/payment-processing/seat/#{hold.id}?session_id={CHECKOUT_SESSION_ID}"
@@ -164,15 +186,43 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
       assert {:ok, _result} = MeetingPayments.create_seat_checkout_session(hold)
     end
 
-    test "a hold about to lapse is refused", %{meeting: meeting} do
+    test "a hold that would lapse before its session is refused", %{meeting: meeting} do
       hold =
         insert(:seat_hold,
           meeting: meeting,
           email: "a@example.com",
-          expires_at: DateTime.add(DateTime.utc_now(:second), 30, :second)
+          expires_at: DateTime.add(DateTime.utc_now(:second), 29, :minute)
         )
 
       # Mox raises on any call to the adapter here.
+      assert {:error, :hold_expired} = MeetingPayments.create_seat_checkout_session(hold)
+      assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
+    end
+
+    test "a released hold is refused", %{meeting: meeting} do
+      hold =
+        insert(:seat_hold,
+          meeting: meeting,
+          email: "a@example.com",
+          status: :released,
+          released_reason: :abandoned
+        )
+
+      assert {:error, :hold_expired} = MeetingPayments.create_seat_checkout_session(hold)
+      assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
+    end
+
+    test "a hold already converted to a seat is refused", %{meeting: meeting} do
+      participant = insert(:participant, meeting: meeting, email: "a@example.com")
+
+      hold =
+        insert(:seat_hold,
+          meeting: meeting,
+          email: "a@example.com",
+          status: :converted,
+          participant_id: participant.id
+        )
+
       assert {:error, :hold_expired} = MeetingPayments.create_seat_checkout_session(hold)
       assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
     end
@@ -218,7 +268,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
   end
 
   describe "abandon_seat_checkout/1" do
-    test "abandon_seat_checkout expires the open session", %{user: user, meeting: meeting} do
+    test "expires the open session", %{user: user, meeting: meeting} do
       hold = insert(:seat_hold, meeting: meeting, email: "a@example.com")
 
       insert(:booking_payment,
@@ -241,11 +291,19 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
       assert SeatHolds.get(hold.id).status == :held
     end
 
-    test "abandon_seat_checkout is :ok when nothing is open", %{user: user, meeting: meeting} do
+    # Mox raises on any call to the adapter in the cases below.
+    test "is :ok for a hold with no payment", %{meeting: meeting} do
       hold = insert(:seat_hold, meeting: meeting, email: "a@example.com")
 
       assert :ok = MeetingPayments.abandon_seat_checkout(hold.id)
+    end
+
+    test "is :ok for a malformed hold id" do
       assert :ok = MeetingPayments.abandon_seat_checkout("not-a-uuid")
+    end
+
+    test "is :ok for a hold whose payment is settled", %{user: user, meeting: meeting} do
+      hold = insert(:seat_hold, meeting: meeting, email: "a@example.com")
 
       insert(:booking_payment,
         meeting: meeting,
@@ -256,7 +314,6 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
         stripe_checkout_session_id: "cs_PAID"
       )
 
-      # Mox raises on any call to the adapter here.
       assert :ok = MeetingPayments.abandon_seat_checkout(hold.id)
     end
   end

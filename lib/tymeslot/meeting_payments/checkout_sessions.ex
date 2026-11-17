@@ -30,6 +30,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   alias Tymeslot.MeetingPayments.{
     ApplicationFee,
     BookingPaymentQueries,
+    BookingPaymentSchema,
     ConnectAccountQueries,
     Currency,
     StripeAdapter
@@ -44,14 +45,20 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   alias Tymeslot.Themes.Catalog, as: ThemeCatalog
   alias TymeslotWeb.Endpoint
 
+  # Stripe documents a Checkout Session's `expires_at` as 30 minutes to 24
+  # hours after the session is created, so every session asks for the
+  # shortest it allows, counted from just before the call that creates it.
   @session_expiry_seconds 30 * 60
 
-  # Stripe refuses a session that expires sooner than this.
-  @min_session_seconds 60
+  # A seat hold is taken before its checkout opens, so it outlives the
+  # session by this much: the seat transaction and the round trip to Stripe
+  # both fall inside it, and the hold never lapses while its checkout can
+  # still be paid.
+  @hold_grace_seconds 5 * 60
 
   @type create_result :: %{
           checkout_url: String.t(),
-          booking_payment: Tymeslot.MeetingPayments.BookingPaymentSchema.t()
+          booking_payment: BookingPaymentSchema.t()
         }
 
   @spec create_session_for_booking(Tymeslot.Meetings.MeetingSchema.t()) ::
@@ -84,11 +91,11 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   payment (`seat_payment`) for the whole amount, owned by the hold's meeting
   and linked to the hold.
 
-  The session lapses with the hold (`expires_at`), so the seats are never
-  held for a checkout that can no longer be paid, nor paid for once
-  released. A hold that is no longer held, or lapses in under a minute
-  (Stripe refuses so short a session), is refused as `:hold_expired`
-  before anything is written.
+  The session expires as every checkout does, 30 minutes after it is
+  created, and the hold a little after it (`hold_expiry_seconds/0`), so the
+  seats are never released while the checkout can still be paid. A hold
+  that is no longer held, or would lapse before the session, is refused as
+  `:hold_expired` before anything is written.
   """
   @spec create_session_for_seat_hold(SeatHoldSchema.t()) ::
           {:ok, create_result()} | {:error, term()}
@@ -99,12 +106,16 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     end
   end
 
-  @doc "How long a Checkout Session stays open, in seconds."
-  @spec session_expiry_seconds() :: pos_integer()
-  def session_expiry_seconds, do: @session_expiry_seconds
+  @doc """
+  How long a seat hold lasts, in seconds: as long as the checkout opened for
+  it, plus a grace for the time between taking the hold and creating the
+  session.
+  """
+  @spec hold_expiry_seconds() :: pos_integer()
+  def hold_expiry_seconds, do: @session_expiry_seconds + @hold_grace_seconds
 
   defp check_hold_open(%SeatHoldSchema{status: :held, expires_at: %DateTime{} = expires_at}) do
-    if DateTime.diff(expires_at, Clock.utc_now()) >= @min_session_seconds,
+    if DateTime.to_unix(expires_at) >= session_expires_at(),
       do: :ok,
       else: {:error, :hold_expired}
   end
@@ -127,8 +138,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       quantity: 1,
       sessions: 1,
       attendee: meeting_attendee(meeting),
-      return: %{path: meeting.id, token: {:checkout_return, meeting.id}},
-      expires_at: System.os_time(:second) + @session_expiry_seconds
+      return: %{path: meeting.id, token: {:checkout_return, meeting.id}}
     }
   end
 
@@ -158,8 +168,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       quantity: hold.seats,
       sessions: 1,
       attendee: %{email: hold.email, name: hold.name, locale: hold.locale},
-      return: %{path: "seat/#{hold.id}", token: {:seat_checkout_return, hold.id}},
-      expires_at: DateTime.to_unix(hold.expires_at)
+      return: %{path: "seat/#{hold.id}", token: {:seat_checkout_return, hold.id}}
     }
   end
 
@@ -183,10 +192,12 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     #   2. Call Stripe to create the checkout session, outside any transaction.
     #   3. Attach the returned session id to the row.
     #
-    # If step 2 or 3 fails the row stays `pending` with no session id; the
-    # `ReconcileAwaitingPayments` sweeper is the cleanup net (a `pending` row
-    # past its grace period with no session id is treated as stale and the
-    # meeting expires). Idempotency on the Stripe side is preserved by the
+    # If step 2 or 3 fails the row stays `pending` with no session id, which
+    # the `ReconcileAwaitingPayments` sweeper never picks up: it polls Stripe
+    # by session id. The caller releases what the row was for instead: a
+    # one-to-one booking's meeting or a series' sessions are expired, and a
+    # seat hold is released with its row failed (`Tymeslot.Bookings.CreateGroup`).
+    # Idempotency on the Stripe side is preserved by the
     # `checkout:<meeting_id>` idempotency key (or the series' or seat hold's),
     # so a retried booking for the same meeting collapses to a single Stripe
     # session.
@@ -392,12 +403,14 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       invoice_creation: %{enabled: true},
       customer_email: attendee.email,
       client_reference_id: checkout.reference,
-      expires_at: checkout.expires_at,
+      expires_at: session_expires_at(),
       success_url: success_url <> "?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: cancel_url,
       locale: stripe_locale(attendee.locale)
     }
   end
+
+  defp session_expires_at, do: DateTime.to_unix(Clock.utc_now()) + @session_expiry_seconds
 
   # A series names how many sessions the one line item is for, in the
   # attendee's language, as the checkout is shown in it. A group seat's
@@ -487,6 +500,29 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   @spec abandon_seat_checkout(String.t()) :: :ok | {:error, term()}
   def abandon_seat_checkout(hold_id),
     do: hold_id |> BookingPaymentQueries.by_seat_hold_id() |> expire_open_session()
+
+  @doc """
+  Fails the pending payment opened for the seat hold `hold_id`, whose
+  checkout could not be opened, locking it first. Must run inside the
+  transaction releasing the hold, before the meeting and the hold are
+  locked (payment, meeting, hold is the order every path takes).
+
+  Stripe may have created the session even though the call creating it
+  failed or timed out, so without this the row would stay `pending` with no
+  session id, which nothing ever settles. Returns `{:ok, :unchanged}` when
+  there is no pending payment for the hold.
+  """
+  @spec fail_seat_payment(String.t()) ::
+          {:ok, BookingPaymentSchema.t() | :unchanged} | {:error, Ecto.Changeset.t()}
+  def fail_seat_payment(hold_id) do
+    case BookingPaymentQueries.lock_by_seat_hold_id(hold_id) do
+      %BookingPaymentSchema{status: :pending} = payment ->
+        BookingPaymentQueries.update(payment, %{status: :failed})
+
+      _settled_or_missing ->
+        {:ok, :unchanged}
+    end
+  end
 
   defp expire_open_session(%{
          status: :pending,

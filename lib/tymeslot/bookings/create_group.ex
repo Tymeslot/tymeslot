@@ -27,6 +27,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.SeatHolds
+  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Meetings.Seats, as: SeatCount
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.GroupAccess
@@ -106,15 +107,22 @@ defmodule Tymeslot.Bookings.CreateGroup do
   lock; a checkout that cannot be opened releases the hold at once.
 
   Options are the same ones `Tymeslot.Bookings.Create.execute/3` accepts;
-  only `:with_video_room` matters here (see `SeatEffects.schedule_new_slot_effects/2`).
+  only `:with_video_room` matters here (see `SeatEffects.schedule_new_slot_effects/2`),
+  and only for a free seat: a held seat's jobs follow its payment.
   """
   @spec create(map(), map(), keyword()) ::
           {:ok, map()}
           | {:ok, :payment_required,
-             %{meeting: MeetingSchema.t(), seat_hold: map(), checkout_url: String.t()}}
+             %{
+               meeting: MeetingSchema.t(),
+               seat_hold: SeatHoldSchema.t(),
+               checkout_url: String.t()
+             }}
           | {:error, Errors.classified_error()}
   def create(meeting_attrs, booking_data, opts \\ []) do
     if Prepare.paid?(booking_data) do
+      # A held seat schedules nothing, so takes no options; a paid group
+      # series is out of scope (Decision 9) and never books through here.
       create_paid(meeting_attrs, booking_data)
     else
       meeting_attrs
@@ -136,12 +144,12 @@ defmodule Tymeslot.Bookings.CreateGroup do
     end
   end
 
-  # The hold lapses with the checkout opened for it, which takes its expiry.
+  # The hold outlives the checkout opened for it once it commits.
   defp hold_seats(meeting_attrs, %{meeting_type: meeting_type} = booking_data) do
     expires_at =
       Clock.utc_now()
       |> DateTime.truncate(:second)
-      |> DateTime.add(MeetingPayments.checkout_expiry_seconds())
+      |> DateTime.add(MeetingPayments.hold_expiry_seconds())
 
     meeting_attrs
     |> SeatEffects.slot_attrs(meeting_type.name)
@@ -162,16 +170,21 @@ defmodule Tymeslot.Bookings.CreateGroup do
     end
   end
 
-  # Frees the seats of a hold whose checkout never opened, and expires the
-  # meeting when the hold was all it had: a slot it created, still awaiting
-  # payment with nobody else on it. The meeting is locked first, so a
-  # booker joining it meanwhile is counted before the decision, and the hold
-  # after it, in the order `SeatHolds.release/2` sets. Best-effort, as the
-  # booking has already failed: a hold left behind still lapses.
-  # B3 replaces this with its shared hold-release helper.
+  # Frees the seats of a hold whose checkout never opened, fails the payment
+  # opened for it (Stripe may have created the session even though the call
+  # failed), and expires the meeting when the hold was all it had: a slot it
+  # created, still awaiting payment with nobody else on it. Locks follow the
+  # order every payment path takes: the payment row, then the meeting, so a
+  # booker joining it meanwhile is counted before the decision, then the
+  # hold (`SeatHolds.release/2`). A meeting that cannot be expired is
+  # logged and left, as the booking has already failed; a database error,
+  # or a payment that cannot be failed, raises out of the transaction and
+  # propagates, leaving everything as it was for the hold to lapse. B3
+  # replaces this with its shared hold-release helper.
   defp release_failed_hold(meeting, hold, reason) do
     result =
       Repo.transaction(fn ->
+        {:ok, _payment} = MeetingPayments.fail_seat_payment(hold.id)
         _locked = GroupMeetingQueries.lock_for_update(meeting.id)
         {:ok, _released} = SeatHolds.release(hold, :failed)
 

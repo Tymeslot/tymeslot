@@ -91,6 +91,24 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     end
   end
 
+  @doc """
+  As `by_seat_hold_id/1`, holding the row `FOR UPDATE` for the rest of the
+  current transaction. Must be called inside a `Repo.transaction/1`.
+  """
+  @spec lock_by_seat_hold_id(term()) :: BookingPaymentSchema.t() | nil
+  def lock_by_seat_hold_id(hold_id) do
+    case cast_id(hold_id) do
+      {:ok, uuid} ->
+        BookingPaymentSchema
+        |> where([b], b.seat_hold_id == ^uuid)
+        |> lock("FOR UPDATE")
+        |> Repo.one()
+
+      {:error, :not_found} ->
+        nil
+    end
+  end
+
   @doc "Every seat payment on the group meeting `meeting_id`, oldest first."
   @spec list_for_meeting_seats(Ecto.UUID.t()) :: [BookingPaymentSchema.t()]
   def list_for_meeting_seats(meeting_id) do
@@ -334,6 +352,18 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     MeetingState.where_not_released(
       from(m in MeetingSchema, where: m.series_id == parent_as(:payment).series_id)
     )
+  end
+
+  @doc """
+  Whether a seat checkout of a host's is still pending: a booker holds seats
+  on one of their group meetings, which may have been confirmed by others
+  already, and has not yet paid.
+  """
+  @spec pending_seat_payment_for_host?(integer()) :: boolean()
+  def pending_seat_payment_for_host?(host_user_id) do
+    BookingPaymentSchema
+    |> where([b], b.host_user_id == ^host_user_id and b.seat_payment and b.status == :pending)
+    |> Repo.exists?()
   end
 
   @doc """

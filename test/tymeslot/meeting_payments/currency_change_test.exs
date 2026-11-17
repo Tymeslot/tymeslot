@@ -44,6 +44,40 @@ defmodule Tymeslot.MeetingPayments.CurrencyChangeTest do
       assert price_of(ctx.paid) == 5000
     end
 
+    test "refuses while a seat checkout is open on a confirmed group meeting", ctx do
+      meeting = insert(:group_meeting, organizer_user_id: ctx.user.id, status: :confirmed)
+      hold = insert(:seat_hold, meeting: meeting)
+
+      insert(:booking_payment,
+        meeting: meeting,
+        seat_hold_id: hold.id,
+        seat_payment: true,
+        host_user_id: ctx.user.id,
+        status: :pending
+      )
+
+      assert {:error, :pending_payments_exist} =
+               MeetingPayments.change_default_currency(ctx.account, "gbp")
+
+      assert currency_of(ctx.user) == "eur"
+      assert price_of(ctx.paid) == 5000
+    end
+
+    test "a settled seat payment does not hold a currency change back", ctx do
+      meeting = insert(:group_meeting, organizer_user_id: ctx.user.id, status: :confirmed)
+      hold = insert(:seat_hold, meeting: meeting)
+
+      insert(:booking_payment,
+        meeting: meeting,
+        seat_hold_id: hold.id,
+        seat_payment: true,
+        host_user_id: ctx.user.id,
+        status: :paid
+      )
+
+      assert {:ok, :reset} = MeetingPayments.change_default_currency(ctx.account, "gbp")
+    end
+
     test "refuses while a booking awaits payment, so its price keeps its currency", ctx do
       insert(:meeting, organizer_user_id: ctx.user.id, status: :awaiting_payment)
 

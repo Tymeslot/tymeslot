@@ -516,16 +516,27 @@ defmodule Tymeslot.MeetingPayments do
     to: CheckoutSessions,
     as: :create_session_for_booking
 
-  @doc "Opens a Stripe Checkout for a held group seat. See `CheckoutSessions.create_session_for_seat_hold/1`."
+  @doc """
+  Opens a Stripe Checkout for a held group seat. See
+  `CheckoutSessions.create_session_for_seat_hold/1`.
+  """
   @spec create_seat_checkout_session(SeatHoldSchema.t()) ::
           {:ok, CheckoutSessions.create_result()} | {:error, term()}
   defdelegate create_seat_checkout_session(hold),
     to: CheckoutSessions,
     as: :create_session_for_seat_hold
 
-  @doc "How long a checkout, and so a seat hold, stays open, in seconds."
-  @spec checkout_expiry_seconds() :: pos_integer()
-  defdelegate checkout_expiry_seconds, to: CheckoutSessions, as: :session_expiry_seconds
+  @doc "How long a seat hold lasts, in seconds: a little longer than its checkout."
+  @spec hold_expiry_seconds() :: pos_integer()
+  defdelegate hold_expiry_seconds, to: CheckoutSessions
+
+  @doc """
+  Fails the pending payment of a seat hold whose checkout could not be
+  opened. See `CheckoutSessions.fail_seat_payment/1`.
+  """
+  @spec fail_seat_payment(String.t()) ::
+          {:ok, booking_payment() | :unchanged} | {:error, Ecto.Changeset.t()}
+  defdelegate fail_seat_payment(hold_id), to: CheckoutSessions
 
   @doc """
   Opens one Stripe Checkout for every session of a paid series, held
