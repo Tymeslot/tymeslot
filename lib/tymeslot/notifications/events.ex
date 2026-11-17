@@ -112,7 +112,7 @@ defmodule Tymeslot.Notifications.Events do
   defp integrations?(opts), do: Keyword.get(opts, :integrations, true)
 
   @doc """
-  Runs the integration fan-out `meeting_created_deferred/1`,
+  Runs the integration fan-out `meeting_created_deferred/2`,
   `meeting_requested_deferred/2` or `Tymeslot.Notifications.Events.Seats.seat_booked_deferred/3` returned. Never
   fails the caller: each channel is best-effort, and a failure is logged and
   reported.
@@ -212,7 +212,7 @@ defmodule Tymeslot.Notifications.Events do
 
   @doc """
   `meeting_requested/2` without its integration fan-out, for a caller inside
-  a transaction; see `meeting_created_deferred/1`.
+  a transaction; see `meeting_created_deferred/2`.
 
   `emails: false` schedules none of the request's emails, nudge or expiry,
   and returns no fan-out: a session of a booking series, whose request is

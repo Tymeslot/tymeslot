@@ -62,7 +62,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   @doc """
   Generates an ICS attachment that cancels an existing event
   (`METHOD:PUBLISH` + `STATUS:CANCELLED`). We deliberately avoid
-  `METHOD:CANCEL` here — see the note on `render_vcalendar/3`.
+  `METHOD:CANCEL` here — see the note on `render_vcalendar/2`.
 
   The `sequence` should be the next value after the last sent invitation so
   calendar clients recognise the cancellation as more recent than the event

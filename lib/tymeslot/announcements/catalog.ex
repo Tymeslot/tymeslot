@@ -41,8 +41,8 @@ defmodule Tymeslot.Announcements.Catalog do
   @spanish_published_at ~U[2026-11-02 00:00:00Z]
   @spanish_expires_at ~U[2026-12-02 00:00:00Z]
 
-  @recurring_bookings_published_at ~U[2026-11-16 00:00:00Z]
-  @recurring_bookings_expires_at ~U[2026-12-16 00:00:00Z]
+  @recurring_bookings_published_at ~U[2026-11-17 00:00:00Z]
+  @recurring_bookings_expires_at ~U[2026-12-17 00:00:00Z]
 
   @calendar_redesign_published_at ~U[2026-11-13 00:00:00Z]
   @calendar_redesign_expires_at ~U[2026-12-13 00:00:00Z]

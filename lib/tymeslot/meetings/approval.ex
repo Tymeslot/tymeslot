@@ -331,7 +331,7 @@ defmodule Tymeslot.Meetings.Approval do
   before a reschedule sent it back into the gate is announced as rescheduled
   instead, to the invitee and to every integration
   (`Orchestrator.send_reapproval_notifications/1`,
-  `Notifications.Events.meeting_created_deferred/1`).
+  `Notifications.Events.meeting_created_deferred/2`).
 
   What is left runs here, in this order: stop the request notifications, flip
   the tentative calendar hold to a real event, fan out to webhooks, Telegram
