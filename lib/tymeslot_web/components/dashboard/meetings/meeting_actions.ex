@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingState
   alias TymeslotWeb.Components.Dashboard.Appointments.JoinLink
@@ -107,10 +108,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
           phx-value-id={@meeting.id}
           phx-target={@target}
           disabled={!Helpers.can_reschedule?(@meeting)}
-          tooltip={
-            !Helpers.can_reschedule?(@meeting) && Map.get(@meeting, :planned) &&
-              dgettext("dashboard_bookings", "Move a fixed date from its meeting type.")
-          }
+          tooltip={reschedule_refusal_tip(@meeting)}
           variant={:secondary}
           size={:sm}
           icon="hero-arrows-right-left"
@@ -146,5 +144,29 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
       </div>
     </div>
     """
+  end
+
+  # Why the Reschedule button is disabled, where the reason is one the host
+  # cannot tell from the card alone; `false` leaves it without a tooltip.
+  defp reschedule_refusal_tip(meeting) do
+    case Policy.can_host_change_time?(meeting) do
+      {:error, {:not_reschedulable, :planned}} ->
+        dgettext("dashboard_bookings", "Move a fixed date from its meeting type.")
+
+      {:error, {:not_reschedulable, :already_requested}} ->
+        awaiting_new_time_tip(meeting)
+
+      _reschedulable_or_self_explanatory ->
+        false
+    end
+  end
+
+  defp awaiting_new_time_tip(meeting) do
+    if Helpers.group_meeting?(meeting),
+      do: dgettext("dashboard_bookings", "Waiting for the participants to pick a new time"),
+      else:
+        dgettext("dashboard_bookings", "Waiting for %{name} to pick a new time",
+          name: meeting.attendee_name
+        )
   end
 end

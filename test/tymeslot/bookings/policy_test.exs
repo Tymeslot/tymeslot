@@ -255,6 +255,26 @@ defmodule Tymeslot.Bookings.PolicyTest do
              }) ==
                {:error, {:not_reschedulable, :awaiting_approval}}
     end
+
+    test "refuses a second request while the first awaits a new time" do
+      start_time = DateTime.add(DateTime.utc_now(), 7200, :second)
+
+      meeting = %{
+        status: :confirmed,
+        managed_by_host: false,
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 1800, :second),
+        reschedule_requested_at: nil
+      }
+
+      assert Policy.can_request_reschedule?(meeting) == :ok
+
+      assert Policy.can_request_reschedule?(%{
+               meeting
+               | reschedule_requested_at: DateTime.utc_now()
+             }) ==
+               {:error, {:not_reschedulable, :already_requested}}
+    end
   end
 
   describe "can_host_change_time?/1" do

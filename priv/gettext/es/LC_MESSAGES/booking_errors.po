@@ -285,3 +285,8 @@ msgstr "Esta reserva todavía no está confirmada. Si no la confirmas, se libera
 #, elixir-autogen, elixir-format
 msgid "This invitation link has already been used to book an appointment. To change it, use the link in the email we sent you."
 msgstr "Este enlace de invitación ya se ha usado para reservar una cita. Para cambiarla, usa el enlace del correo que te enviamos."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "A reschedule request is already waiting for an answer"
+msgstr "Ya hay una solicitud de reprogramación esperando respuesta"

@@ -226,6 +226,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
         "A fixed date is moved from its meeting type, together with everyone booked on it"
       )
 
+  def message({:not_reschedulable, :already_requested}),
+    do: dgettext("booking_errors", "A reschedule request is already waiting for an answer")
+
   # Reuses the msgid `localization_helpers.ex` already defines (and every
   # locale already translates) for the same problem.
   def message(:invalid_datetime), do: dgettext("booking_errors", "Invalid date/time")

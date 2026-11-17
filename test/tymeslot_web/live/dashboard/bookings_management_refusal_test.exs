@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementRefusalTest do
 
   alias Phoenix.LiveView.Socket
   alias Plug.Test
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias TymeslotWeb.Dashboard.BookingsManagementComponent
 
@@ -82,6 +83,31 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementRefusalTest do
              |> elem(1)
              |> Map.get(:reschedule_requested_at)
            )
+  end
+
+  test "once a reschedule request is sent, the card's Reschedule button is disabled", ctx do
+    meeting = meeting_for(ctx.host, 24 * 60)
+    view = open_meetings(ctx.conn)
+    push_to_component(view, "show_reschedule_modal", %{"id" => meeting.id})
+
+    push_to_component(view, "confirm_reschedule_request", %{})
+
+    assert has_element?(view, "#reschedule-meeting-#{meeting.id}[aria-disabled]")
+    assert render(view) =~ "Warten darauf, dass Alex Guest einen neuen Termin auswählt"
+  end
+
+  # A second tab still shows the card as it was before the first request.
+  test "a second reschedule request from a stale tab says one is already waiting", ctx do
+    meeting = meeting_for(ctx.host, 24 * 60)
+    view = open_meetings(ctx.conn)
+    push_to_component(view, "show_reschedule_modal", %{"id" => meeting.id})
+
+    assert :ok = Meetings.send_reschedule_request(meeting)
+
+    html = push_to_component(view, "confirm_reschedule_request", %{})
+
+    assert html =~ "Eine Verschiebungsanfrage wartet bereits auf eine Antwort"
+    refute html =~ "Verschiebungsanfrage konnte nicht gesendet werden"
   end
 
   # The meeting started between the host opening the cancel dialog and

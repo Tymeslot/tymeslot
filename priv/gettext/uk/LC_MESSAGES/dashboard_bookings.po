@@ -928,3 +928,13 @@ msgstr "Телефонний дзвінок"
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Цей час більше недоступний. Виберіть інший."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for %{name} to pick a new time"
+msgstr "Очікуємо, поки %{name} вибере новий час"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for the participants to pick a new time"
+msgstr "Очікуємо, поки учасники виберуть новий час"

@@ -918,3 +918,13 @@ msgstr "Ligação telefônica"
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Este horário não está mais disponível. Escolha outro."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for %{name} to pick a new time"
+msgstr "Aguardando %{name} escolher um novo horário"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for the participants to pick a new time"
+msgstr "Aguardando os participantes escolherem um novo horário"

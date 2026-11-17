@@ -48,6 +48,7 @@ defmodule Tymeslot.Bookings.Policy do
           | :started
           | :past
           | :planned
+          | :already_requested
   @type cancel_refusal :: :already_cancelled | {:not_cancellable, meeting_state()}
   @type reschedule_refusal :: {:not_reschedulable, meeting_state()}
   @type booker_move_refusal :: :managed_by_host
@@ -160,6 +161,10 @@ defmodule Tymeslot.Bookings.Policy do
   here would leave a request that still reads as approvable pointing at
   time that no longer holds.
 
+  A meeting already awaiting a new time from an earlier request is refused
+  with `{:not_reschedulable, :already_requested}`: the attendee has been
+  asked, and asking again would void the slot and email them a second time.
+
   A meeting confirmed from a poll (`Tymeslot.Meetings.HostManaged.managed?/1`) has
   nobody to ask for a new time: its host picks one with
   `Tymeslot.Bookings.HostMove.move/3`, so a request is refused with
@@ -177,9 +182,18 @@ defmodule Tymeslot.Bookings.Policy do
   def can_request_reschedule?(%{planned: true}), do: {:error, {:not_reschedulable, :planned}}
 
   def can_request_reschedule?(meeting) do
-    with :ok <- can_booker_move_meeting?(meeting) do
-      can_reschedule_meeting?(meeting)
+    with :ok <- can_booker_move_meeting?(meeting),
+         :ok <- can_reschedule_meeting?(meeting) do
+      refuse_pending_request(meeting)
     end
+  end
+
+  # A request already voided the slot and is waiting on the attendee; a
+  # second one would re-run the voiding and queue a duplicate email.
+  defp refuse_pending_request(meeting) do
+    if MeetingState.awaiting_new_time?(meeting),
+      do: {:error, {:not_reschedulable, :already_requested}},
+      else: :ok
   end
 
   @doc """

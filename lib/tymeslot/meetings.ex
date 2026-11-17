@@ -370,10 +370,6 @@ defmodule Tymeslot.Meetings do
         Logger.info("Reschedule request processed", meeting_id: meeting.id)
         :ok
 
-      {:error, :already_requested} ->
-        Logger.info("Reschedule already requested", meeting_id: meeting.id)
-        :ok
-
       {:error, reason} = error ->
         Logger.warning("Reschedule request failed",
           meeting_id: meeting.id,

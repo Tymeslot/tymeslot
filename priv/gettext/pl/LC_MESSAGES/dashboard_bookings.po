@@ -924,3 +924,13 @@ msgstr "Rozmowa telefoniczna"
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Ten termin nie jest już dostępny. Wybierz inny."
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for %{name} to pick a new time"
+msgstr "Oczekiwanie, aż %{name} wybierze nowy termin"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for the participants to pick a new time"
+msgstr "Oczekiwanie, aż uczestnicy wybiorą nowy termin"
