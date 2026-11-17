@@ -298,7 +298,9 @@ defmodule Tymeslot.CalendarGrid.EventSearchTest do
       booking(user,
         attendee_name: "Dan Request",
         status: "expired",
-        approval_requested_at: ~U[2026-10-10 09:00:00Z]
+        approval_requested_at: ~U[2026-10-10 09:00:00Z],
+        approval_resolved_at: ~U[2026-10-11 09:00:00Z],
+        cancelled_at: ~U[2026-10-11 09:00:00Z]
       )
 
     assert [%{id: id}] = search(user, integration, "dan request").bookings
