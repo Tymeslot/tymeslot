@@ -71,6 +71,27 @@ defmodule Tymeslot.Migrations.AddEmailVerificationToMeetingParticipantsTest do
 
       assert %{rows: [[^before]]} = Repo.query!("SELECT to_regclass($1)::oid", [@index])
     end
+
+    # The state an interrupted `CREATE INDEX CONCURRENTLY` leaves behind,
+    # reached by writing the catalogue: no data can make this build fail.
+    test "an invalid index is dropped and built again" do
+      MigrationRunner.rerun!(@version)
+
+      Repo.query!("UPDATE pg_index SET indisvalid = false WHERE indexrelid = to_regclass($1)", [
+        @index
+      ])
+
+      %{rows: [[invalid_oid]]} = Repo.query!("SELECT to_regclass($1)::oid", [@index])
+
+      MigrationRunner.replay!(@version)
+
+      assert %{rows: [[true]]} =
+               Repo.query!("SELECT indisvalid FROM pg_index WHERE indexrelid = to_regclass($1)", [
+                 @index
+               ])
+
+      refute %{rows: [[invalid_oid]]} == Repo.query!("SELECT to_regclass($1)::oid", [@index])
+    end
   end
 
   describe "down" do
