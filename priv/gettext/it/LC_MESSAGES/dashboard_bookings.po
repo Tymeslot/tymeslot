@@ -347,7 +347,6 @@ msgid "Awaiting your approval"
 msgstr "In attesa della tua conferma"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
-#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Booking confirmed. The invitee has been told."
 msgstr "Prenotazione confermata. L'invitato è stato avvisato."
@@ -393,7 +392,6 @@ msgid "Reason (optional)"
 msgstr "Motivo (facoltativo)"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
-#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Request declined. The slot is free again."
 msgstr "Richiesta rifiutata. L'orario è di nuovo libero."
@@ -414,13 +412,11 @@ msgid "That meeting's start time has already passed."
 msgstr "L'orario di inizio di questa riunione è già passato."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
-#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be approved."
 msgstr "Non è stato possibile accettare questa richiesta."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
-#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be declined."
 msgstr "Non è stato possibile rifiutare questa richiesta."
