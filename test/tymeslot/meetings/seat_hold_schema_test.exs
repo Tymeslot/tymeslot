@@ -15,7 +15,9 @@ defmodule Tymeslot.Meetings.SeatHoldSchemaTest do
       seats: 1,
       expires_at: DateTime.add(DateTime.utc_now(:second), 30, :minute),
       name: "Ann",
-      email: email
+      email: email,
+      timezone: "Europe/Zurich",
+      locale: "en"
     }
   end
 
@@ -25,18 +27,18 @@ defmodule Tymeslot.Meetings.SeatHoldSchemaTest do
 
   test "one live hold per email per meeting" do
     meeting = insert(:group_meeting)
-    assert {:ok, _} = insert_hold(meeting, "Ann@x.test")
+    assert {:ok, _} = insert_hold(meeting, "Ann@example.com")
 
-    assert {:error, changeset} = insert_hold(meeting, "ann@x.test")
+    assert {:error, changeset} = insert_hold(meeting, "ann@example.com")
     assert %{email: [_]} = errors_on(changeset)
   end
 
   test "a released hold frees its email" do
     meeting = insert(:group_meeting)
-    {:ok, first} = insert_hold(meeting, "Ann@x.test")
+    {:ok, first} = insert_hold(meeting, "Ann@example.com")
     {:ok, _} = first |> SeatHoldSchema.release_changeset(:abandoned) |> Repo.update()
 
-    assert {:ok, _} = insert_hold(meeting, "ann@x.test")
+    assert {:ok, _} = insert_hold(meeting, "ann@example.com")
   end
 
   test "released needs a reason" do
@@ -51,10 +53,38 @@ defmodule Tymeslot.Meetings.SeatHoldSchemaTest do
 
   test "seats must be at least one" do
     meeting = insert(:group_meeting)
-    changeset = SeatHoldSchema.create_changeset(%{hold_attrs(meeting, "a@x.test") | seats: 0})
+
+    changeset =
+      SeatHoldSchema.create_changeset(%{hold_attrs(meeting, "a@example.com") | seats: 0})
 
     refute changeset.valid?
     assert %{seats: [_]} = errors_on(changeset)
+  end
+
+  test "a hold needs the contact details a participant needs" do
+    meeting = insert(:group_meeting)
+
+    changeset =
+      meeting
+      |> hold_attrs("not-an-email")
+      |> Map.merge(%{timezone: nil, locale: "xx"})
+      |> SeatHoldSchema.create_changeset()
+
+    refute changeset.valid?
+    assert %{timezone: [_], locale: [_], email: [_]} = errors_on(changeset)
+  end
+
+  test "a hold normalises its email like a participant" do
+    meeting = insert(:group_meeting)
+    {:ok, hold} = insert_hold(meeting, "  Ann@Example.com ")
+    assert hold.email == "ann@example.com"
+  end
+
+  test "an unknown meeting is a changeset error" do
+    attrs = %{hold_attrs(%{id: UUID.generate()}, "a@example.com") | meeting_id: UUID.generate()}
+
+    assert {:error, changeset} = attrs |> SeatHoldSchema.create_changeset() |> Repo.insert()
+    assert %{meeting_id: [_]} = errors_on(changeset)
   end
 
   test "release and convert refuse a hold that is not held" do

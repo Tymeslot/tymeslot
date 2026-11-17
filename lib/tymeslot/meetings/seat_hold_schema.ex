@@ -12,11 +12,25 @@ defmodule Tymeslot.Meetings.SeatHoldSchema do
   `guests` is a list of `%{"name" => nil | String.t(), "email" => String.t()}`.
   A converted hold keeps no database-enforced link to its participant
   (`participant_id` is nilified when the participant is deleted).
+
+  `create_changeset/2` applies the same contact rules as
+  `ParticipantSchema.creation_changeset/2` (`BookerContact`), so a hold that
+  saves can always convert.
+
+  `ensure_held/2` guards the in-memory struct only. A status transition must
+  also be a conditional update (`WHERE status = 'held'`) in the queries
+  module, or two racing callers can both pass the guard.
+
+  The `booking_payments_seat_hold_id_fkey` check is deferred, so it only runs
+  at commit and never in the test sandbox (which never commits). A test that
+  needs it runs
+  `Repo.query!("SET CONSTRAINTS booking_payments_seat_hold_id_fkey IMMEDIATE")`.
   """
 
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.Meetings.BookerContact
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -82,14 +96,16 @@ defmodule Tymeslot.Meetings.SeatHoldSchema do
     name email phone company message timezone locale custom_field_answers
   )a
 
-  @required ~w(meeting_id start_time seats expires_at name email)a
+  @required ~w(meeting_id start_time seats expires_at)a
 
   @spec create_changeset(t(), map()) :: Ecto.Changeset.t()
   def create_changeset(%__MODULE__{} = hold \\ %__MODULE__{}, attrs) do
     hold
     |> cast(attrs, @castable)
     |> validate_required(@required)
+    |> BookerContact.validate()
     |> validate_number(:seats, greater_than_or_equal_to: 1)
+    |> foreign_key_constraint(:meeting_id)
     |> unique_constraint(:email, name: :seat_holds_live_email_index)
     |> check_constraint(:seats, name: :seat_holds_seats_positive)
     |> check_constraint(:status, name: :seat_holds_status_must_be_known)

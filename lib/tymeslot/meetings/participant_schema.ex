@@ -13,8 +13,7 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
-  alias Tymeslot.Locales
+  alias Tymeslot.Meetings.BookerContact
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Token
@@ -116,12 +115,8 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
       :series_id,
       :series_position
     ])
-    |> update_change(:email, &normalize_email/1)
-    |> validate_required([:meeting_id, :name, :email, :timezone, :locale])
-    |> EmailChangeset.validate_email(:email)
-    |> validate_inclusion(:locale, supported_locale_codes(),
-      message: dgettext_noop("errors", "is not a supported locale")
-    )
+    |> validate_required([:meeting_id])
+    |> BookerContact.validate()
     |> ensure_management_token()
     |> Token.put_hash(:management_token, :management_token_hash)
     |> unique_constraint(:management_token_hash)
@@ -199,11 +194,5 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
 
   @doc "An email address as a participant row stores it: trimmed and lower-cased."
   @spec normalize_email(String.t() | nil) :: String.t() | nil
-  def normalize_email(nil), do: nil
-
-  def normalize_email(email) when is_binary(email) do
-    email |> String.trim() |> String.downcase()
-  end
-
-  defp supported_locale_codes, do: Locales.supported_codes()
+  defdelegate normalize_email(email), to: BookerContact
 end

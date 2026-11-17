@@ -125,11 +125,12 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
   @spec create_changeset(map()) :: Ecto.Changeset.t()
   def create_changeset(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:series_id, :seat_hold_id, :participant_id, :seats, :seat_payment | @castable])
+    |> cast(attrs, [:series_id, :seat_hold_id, :participant_id, :seats | @castable])
     |> validate_required(@required_on_create)
     |> validate_number(:amount_cents, greater_than: 0)
     |> validate_number(:application_fee_cents, greater_than_or_equal_to: 0)
     |> validate_refunded_bounds()
+    |> put_seat_payment()
     |> unique_constraint(:meeting_id)
     |> unique_constraint(:series_id)
     |> unique_constraint(:seat_hold_id, name: :booking_payments_seat_hold_id_index)
@@ -151,14 +152,26 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
 
   @doc "Moves a seat payment to another meeting (a rescheduled seat) and its participant."
   @spec move_seat_changeset(t(), map()) :: Ecto.Changeset.t()
-  def move_seat_changeset(schema, attrs) do
-    cast(schema, attrs, [:meeting_id, :participant_id])
+  def move_seat_changeset(%__MODULE__{seat_payment: seat_payment} = schema, attrs) do
+    changeset =
+      schema
+      |> cast(attrs, [:meeting_id, :participant_id])
+      |> validate_required([:meeting_id, :participant_id])
+      |> foreign_key_constraint(:meeting_id)
+      |> foreign_key_constraint(:participant_id)
+
+    if seat_payment,
+      do: changeset,
+      else: add_error(changeset, :seat_payment, "is not a seat payment")
   end
 
   @doc "Links a seat payment to the participant its hold became."
   @spec convert_changeset(t(), map()) :: Ecto.Changeset.t()
   def convert_changeset(schema, attrs) do
-    cast(schema, attrs, [:participant_id])
+    schema
+    |> cast(attrs, [:participant_id])
+    |> validate_required([:participant_id])
+    |> foreign_key_constraint(:participant_id)
   end
 
   @spec valid_statuses() :: [status()]
@@ -174,6 +187,14 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
   """
   @spec refundable_statuses() :: [status()]
   def refundable_statuses, do: @refundable_statuses
+
+  # A payment taken for a hold is a seat payment, and stays one when its hold
+  # is later deleted; callers cannot set the marker themselves.
+  defp put_seat_payment(changeset) do
+    if get_change(changeset, :seat_hold_id),
+      do: put_change(changeset, :seat_payment, true),
+      else: changeset
+  end
 
   defp validate_refunded_bounds(changeset) do
     refunded = get_field(changeset, :refunded_amount_cents) || 0

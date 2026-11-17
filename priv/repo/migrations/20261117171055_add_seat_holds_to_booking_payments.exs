@@ -19,7 +19,12 @@ defmodule Tymeslot.Repo.Migrations.AddSeatHoldsToBookingPayments do
 
   The `seat_hold_id` foreign key is deferred (see the comment in `up/0`): a
   meeting delete would otherwise fail on a payment that references one of the
-  meeting's holds.
+  meeting's holds. A deferred check runs at commit, so it never runs in the
+  test sandbox; a test that needs it runs
+  `Repo.query!("SET CONSTRAINTS booking_payments_seat_hold_id_fkey IMMEDIATE")`.
+
+  `down/0` refuses once a seat payment exists: restoring the one-payment-per-
+  meeting index would fail on, or have to discard, real payments.
   """
 
   use Ecto.Migration
@@ -34,8 +39,8 @@ defmodule Tymeslot.Repo.Migrations.AddSeatHoldsToBookingPayments do
   # The reference columns are new and empty, so their foreign keys validate no
   # row. The defaulted columns are constant defaults, which Postgres adds
   # without rewriting the table. `booking_payments` is small, so plain
-  # (non-concurrent) indexes are acceptable. The raw statements are the
-  # VALIDATE step after a NOT VALID constraint and a constraint drop.
+  # (non-concurrent) indexes are acceptable. The raw statements alter the
+  # foreign key's deferral and drop the check constraint before it is re-added.
 
   def up do
     alter table(:booking_payments) do
@@ -65,14 +70,8 @@ defmodule Tymeslot.Repo.Migrations.AddSeatHoldsToBookingPayments do
 
     execute("ALTER TABLE booking_payments DROP CONSTRAINT IF EXISTS booking_payments_seats_positive")
 
-    create(
-      constraint(:booking_payments, :booking_payments_seats_positive,
-        check: "seats >= 1",
-        validate: false
-      )
-    )
-
-    execute("ALTER TABLE booking_payments VALIDATE CONSTRAINT booking_payments_seats_positive")
+    # `seats` is new and defaulted to 1, so every existing row already passes.
+    create(constraint(:booking_payments, :booking_payments_seats_positive, check: "seats >= 1"))
 
     drop_if_exists(
       index(:booking_payments, [:meeting_id], name: :booking_payments_meeting_id_index)
@@ -104,6 +103,16 @@ defmodule Tymeslot.Repo.Migrations.AddSeatHoldsToBookingPayments do
   end
 
   def down do
+    %{rows: [[seat_payments?]]} =
+      repo().query!("SELECT EXISTS (SELECT 1 FROM booking_payments WHERE seat_payment)")
+
+    if seat_payments? do
+      raise Ecto.MigrationError,
+        message:
+          "cannot roll back: seat payments exist, and several of them share a meeting, " <>
+            "so the one-payment-per-meeting index cannot be restored without losing payments"
+    end
+
     drop_if_exists(
       index(:booking_payments, [:participant_id], name: :booking_payments_participant_id_index)
     )

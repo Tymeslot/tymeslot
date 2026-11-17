@@ -2,7 +2,8 @@ defmodule Tymeslot.Factory.MeetingPaymentFactories do
   @moduledoc """
   The payment factories (Stripe Connect accounts, booking payments, seat
   holds), mixed into `Tymeslot.Factory` with `use`. Call them through
-  `Tymeslot.Factory`: `insert(:booking_payment, meeting: meeting)`.
+  `Tymeslot.Factory`: `insert(:booking_payment, meeting: meeting)`. Seat holds
+  live here because they are payment state: an unpaid booker's claim on seats.
   """
 
   defmacro __using__(_opts) do
@@ -11,18 +12,25 @@ defmodule Tymeslot.Factory.MeetingPaymentFactories do
       alias Tymeslot.MeetingPayments.ConnectAccountSchema
       alias Tymeslot.Meetings.SeatHoldSchema
 
-      @doc "A live hold on one seat of a group meeting; pass `meeting`."
-      @spec seat_hold_factory() :: SeatHoldSchema.t()
-      def seat_hold_factory do
-        %SeatHoldSchema{
-          meeting: build(:group_meeting),
-          start_time: DateTime.utc_now(:second),
+      @doc """
+      A live hold on one seat of a group meeting; pass `meeting`. Its
+      `start_time` is the meeting's unless given.
+      """
+      @spec seat_hold_factory(map()) :: SeatHoldSchema.t()
+      def seat_hold_factory(attrs) do
+        meeting = Map.get_lazy(attrs, :meeting, fn -> build(:group_meeting) end)
+
+        hold = %SeatHoldSchema{
+          meeting: meeting,
+          start_time: meeting.start_time,
           seats: 1,
           expires_at: DateTime.add(DateTime.utc_now(:second), 30, :minute),
           name: sequence(:seat_hold_name, &"Holder #{&1}"),
           email: sequence(:seat_hold_email, &"holder#{&1}@test.com"),
           timezone: "Europe/Zurich"
         }
+
+        hold |> merge_attributes(attrs) |> evaluate_lazy_attributes()
       end
 
       @spec connect_account_factory() :: ConnectAccountSchema.t()
