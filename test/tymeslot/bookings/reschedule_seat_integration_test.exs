@@ -379,7 +379,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
 
   # A meeting's seat count is governed by its own snapshotted capacity for
   # its whole life, not by whatever `max_participants` the caller happens to
-  # be carrying — see `GroupScheduling.join_meeting/3`. Rescheduling a seat
+  # be carrying — see `SeatWrites.take_seat/5`. Rescheduling a seat
   # out of a big slot into a smaller existing one used to fill the target to
   # the *old* slot's capacity.
   test "rescheduling into a smaller existing slot is capped by that slot's own capacity",

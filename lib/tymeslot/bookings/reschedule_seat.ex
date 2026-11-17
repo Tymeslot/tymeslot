@@ -301,7 +301,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   end
 
   # The live target meeting's own snapshotted capacity governs when the move
-  # joins an existing slot (`GroupScheduling.join_meeting/3` reads it
+  # joins an existing slot (`SeatWrites.take_seat/5` reads it
   # directly); the type's `max_participants` only seeds the capacity of a
   # brand-new slot, where the current limit is authoritative rather than the
   # old meeting's capacity.

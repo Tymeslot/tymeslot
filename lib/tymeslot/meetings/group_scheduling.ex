@@ -52,20 +52,14 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   """
 
   alias Ecto.Changeset
-  alias Tymeslot.ContentTranslations.AttendeeTexts
   alias Tymeslot.Meetings.GroupMeetingQueries
-  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingConflictQueries
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
-  alias Tymeslot.Meetings.MeetingState
-  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
-  alias Tymeslot.Meetings.PlannedSessions
-  alias Tymeslot.Meetings.Scheduling
-  alias Tymeslot.Meetings.SeatHoldQueries
+  alias Tymeslot.Meetings.SeatHoldConversion
   alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Meetings.Seats
+  alias Tymeslot.Meetings.SeatWrites
   alias Tymeslot.Repo
 
   @typedoc "One booker's request for seats at a slot."
@@ -191,67 +185,9 @@ defmodule Tymeslot.Meetings.GroupScheduling do
 
   @doc """
   Converts the seat hold `hold_id` into a participant once its payment has
-  completed, booking its booker and their guests as `book_seat/3` would.
-
-  Runs inside the caller's transaction (the payment webhook's, which holds
-  the payment row) and takes the locks in the order every writer of a hold
-  takes them: the organiser's schedule lock, the hold's meeting row, then
-  the hold. The meeting is found by the hold's `meeting_id`, never by the
-  slot the hold snapshotted, as a planned session can move without its holds.
-
-    * A hold still held, or released on its expiry, a failure or its booker
-      abandoning the checkout, converts while a slot has room for all its
-      seats: its own meeting while that still holds its slot, else the live
-      meeting at that meeting's slot, else a new one (`:new_slot`).
-    * A hold already converted, released because its meeting was cancelled,
-      or whose meeting has since been cancelled is refused as
-      `:hold_not_convertible`; its payment is always refunded.
-    * No room for the hold's seats, or no meeting to join on a type that
-      takes no new one, is refused as `:slot_full`.
-
-  Both refusals are decided under the locks before anything is written, so
-  they leave the caller's transaction usable. Any other error rolls it back;
-  a unique-slot violation (a confirmed meeting of the organiser's already at
-  the slot) has by then aborted it in Postgres.
-
-  The hold stops counting against its slot before the seats are taken, so a
-  slot it alone fills still takes it. Joining an `:awaiting_payment` meeting
-  confirms it and reports `created_meeting?: true`, as for a free seat.
-
-  Options:
-    * `:on_booked`: as for `book_seat/3`, run with the booking once the
-      participant exists.
-    * `:new_slot`: `(hold, meeting -> {:ok, (-> meeting_attrs), max_participants} | :none)`,
-      asked only when the hold's own meeting no longer holds its slot: the
-      capacity of a meeting the conversion would create there and a
-      function building its attrs (called only if it is created), or
-      `:none` for a type that takes no new meeting (a fixed-date type, whose
-      sessions only its host plans). Defaults to `:none`.
+  completed; see `Tymeslot.Meetings.SeatHoldConversion.convert_hold/2`.
   """
-  @spec convert_hold(Ecto.UUID.t(), keyword()) ::
-          {:ok,
-           %{
-             meeting: Meeting.t(),
-             participant: ParticipantSchema.t(),
-             created_meeting?: boolean(),
-             on_booked_result: term()
-           }}
-          | {:error, :slot_full | :hold_not_convertible | term()}
-  def convert_hold(hold_id, opts \\ []) when is_binary(hold_id) do
-    hooks = %{
-      on_booked: Keyword.get(opts, :on_booked, fn _booking -> {:ok, :noop} end),
-      new_slot: Keyword.get(opts, :new_slot, fn _hold, _meeting -> :none end),
-      join_only: false,
-      hold: nil,
-      exclude_from_conflicts: fn -> nil end
-    }
-
-    case Repo.transaction(fn -> convert_locked(hold_id, hooks) end) do
-      {:ok, {:error, _refusal} = refused} -> refused
-      {:ok, booking} -> {:ok, booking}
-      {:error, _reason} = error -> error
-    end
-  end
+  defdelegate convert_hold(hold_id, opts \\ []), to: SeatHoldConversion
 
   @doc """
   The live group meeting at `(meeting_type_id, start_time)` that a booking of
@@ -269,7 +205,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     start_utc = start_time |> DateTime.shift_zone!("Etc/UTC") |> DateTime.truncate(:second)
 
     case GroupMeetingQueries.get_live_at(meeting_type_id, start_utc) do
-      %Meeting{} = meeting -> if joinable?(meeting, seats_requested), do: meeting
+      %Meeting{} = meeting -> if SeatWrites.joinable?(meeting, seats_requested), do: meeting
       nil -> nil
     end
   end
@@ -314,19 +250,10 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   end
 
   defp session_state(meeting, seats_left, seats_requested) do
-    if joinable?(meeting, seats_requested, seats_left),
+    if SeatWrites.joinable?(meeting, seats_requested, seats_left),
       do: {:join, meeting, seats_left},
       else: {:full, meeting, seats_left}
   end
-
-  # A solo meeting at the slot (a one-to-one booked before the type became a
-  # group type) is never joined: it reads as full, so a private booking stays
-  # private.
-  defp joinable?(meeting, seats_requested),
-    do: joinable?(meeting, seats_requested, Seats.seats_left(meeting, meeting.capacity))
-
-  defp joinable?(meeting, seats_requested, seats_left),
-    do: Meeting.group?(meeting) and seats_requested <= seats_left
 
   defp attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, retries_left) do
     result =
@@ -344,8 +271,8 @@ defmodule Tymeslot.Meetings.GroupScheduling do
           )
 
         live_meeting
-        |> take_seat(meeting_attrs, seat_request, seats_requested, hooks)
-        |> run_on_booked(hooks.on_booked)
+        |> SeatWrites.take_seat(meeting_attrs, seat_request, seats_requested, hooks)
+        |> SeatWrites.run_on_booked(hooks.on_booked)
       end)
 
     retry = fn ->
@@ -370,98 +297,6 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     end
   end
 
-  # Joins `live_meeting`, or creates the slot when there is none, under the
-  # locks the caller has taken. Shared by `book_seat/3` and `convert_hold/2`.
-  defp take_seat(nil, _meeting_attrs, _seat_request, _seats_requested, %{join_only: true}),
-    do: Repo.rollback(:slot_full)
-
-  defp take_seat(nil, meeting_attrs, seat_request, seats_requested, hooks),
-    do: create_meeting_with_first_seat(meeting_attrs, seat_request, seats_requested, hooks)
-
-  defp take_seat(%Meeting{} = meeting, meeting_attrs, seat_request, seats_requested, hooks) do
-    meeting
-    |> join_meeting(seat_request, seats_requested, hooks.hold)
-    |> add_attendee_texts(meeting_attrs)
-  end
-
-  # A slot is created confirmed, or awaiting payment when a hold creates it
-  # (`MeetingSchema.group_changeset/2` honours no other status).
-  defp create_meeting_with_first_seat(meeting_attrs, seat_request, seats_requested, hooks) do
-    # Snapshotted once, at creation, onto the meeting row itself — see
-    # `Tymeslot.Meetings.group?/1`. Not re-read from the meeting type later.
-    attrs =
-      Map.merge(meeting_attrs, %{
-        capacity: seat_request.max_participants,
-        status: if(hooks.hold, do: :awaiting_payment, else: :confirmed)
-      })
-
-    case Scheduling.create_group_meeting_with_conflict_check(attrs,
-           exclude_uid: hooks.exclude_from_conflicts.()
-         ) do
-      {:ok, meeting} ->
-        meeting
-        |> insert_seat_or_rollback(seat_request, seats_requested, hooks.hold)
-        |> Map.merge(%{meeting: meeting, created_meeting?: true})
-
-      {:error, reason} ->
-        Repo.rollback(reason)
-    end
-  end
-
-  # Gates on the meeting's own capacity, not the caller's
-  # `seat_request.max_participants` (which is only the correct capacity for
-  # a meeting not yet created, see `create_meeting_with_first_seat/4`); the
-  # type keeps a group meeting's capacity in step with its limit. A planned
-  # session's registration close is re-read here, on the locked row, for the
-  # same reason the seats are: the caller's pre-check read it unlocked.
-  defp join_meeting(meeting, seat_request, seats_requested, hold_opts) do
-    if joinable?(meeting, seats_requested) and registration_open?(meeting) do
-      seat = insert_seat_or_rollback(meeting, seat_request, seats_requested, hold_opts)
-
-      {meeting, confirmed?} =
-        if hold_opts, do: {meeting, false}, else: confirm_if_awaiting_payment(meeting)
-
-      Map.merge(seat, %{meeting: meeting, created_meeting?: confirmed?})
-    else
-      Repo.rollback(:slot_full)
-    end
-  end
-
-  # A slot a hold created stays `:awaiting_payment` until its first real
-  # participant, a free seat joining it or a paid hold converting. That is
-  # when the slot comes into being for the seat's callers: it has no
-  # calendar event, reminders or video room yet, so the seat reports
-  # `created_meeting?: true` and they schedule them. Call with the meeting
-  # row locked. Returns the meeting and whether it was confirmed now.
-  defp confirm_if_awaiting_payment(%Meeting{status: :awaiting_payment} = meeting) do
-    case GroupMeetingQueries.confirm_awaiting_payment(meeting) do
-      {:ok, confirmed} -> {confirmed, true}
-      {:error, changeset} -> Repo.rollback(changeset)
-    end
-  end
-
-  defp confirm_if_awaiting_payment(%Meeting{} = meeting), do: {meeting, false}
-
-  # The joiner read the slot in their own language: their locale's copy of
-  # its texts joins the slot's (`AttendeeTexts.merge/2`), under the lock
-  # taken above, so two joiners in different languages cannot overwrite
-  # each other's copy.
-  defp add_attendee_texts(%{meeting: meeting} = booking, meeting_attrs) do
-    case AttendeeTexts.merge(meeting, meeting_attrs) do
-      texts when texts == meeting.attendee_texts ->
-        booking
-
-      texts ->
-        case GroupMeetingQueries.set_attendee_texts(meeting, texts) do
-          {:ok, updated} -> %{booking | meeting: updated}
-          {:error, changeset} -> Repo.rollback(changeset)
-        end
-    end
-  end
-
-  defp registration_open?(%Meeting{planned: true} = session), do: PlannedSessions.open?(session)
-  defp registration_open?(%Meeting{}), do: true
-
   # Without a second meeting to lock there is nothing to order: the target
   # row is locked by `get_live_for_update/2` as always. With one, both rows
   # are locked lowest id first; the target's id comes from an unlocked read,
@@ -478,168 +313,5 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     |> Enum.uniq()
     |> Enum.sort()
     |> Enum.each(&GroupMeetingQueries.lock_for_update/1)
-  end
-
-  # Checked under the meeting's row lock, before either insert: the seat's
-  # own unique index sees only its own table, so a held email booking a free
-  # seat (or the reverse) would otherwise pass it. The indexes stay the
-  # backstop within each table.
-  defp insert_seat_or_rollback(meeting, seat_request, seats_requested, hold_opts) do
-    if email_taken?(meeting.id, seat_request.participant.email),
-      do: Repo.rollback(:already_booked)
-
-    case hold_opts do
-      nil ->
-        %{participant: insert_participant_or_rollback(meeting, seat_request)}
-
-      %{expires_at: _expires_at} ->
-        %{seat_hold: insert_hold_or_rollback(meeting, seat_request, seats_requested, hold_opts)}
-    end
-  end
-
-  defp email_taken?(_meeting_id, nil), do: false
-
-  defp email_taken?(meeting_id, email),
-    do:
-      ParticipantQueries.live_email_taken?(meeting_id, email) or
-        SeatHoldQueries.held_email_taken?(meeting_id, email)
-
-  @hold_snapshot_fields ~w(name email phone company message timezone locale custom_field_answers)a
-
-  # The hold is read unlocked first only to find the organiser whose
-  # schedule lock comes before its meeting's row lock.
-  defp convert_locked(hold_id, hooks) do
-    with %SeatHoldSchema{} = unlocked <- SeatHoldQueries.get(hold_id),
-         {:ok, %Meeting{organizer_user_id: organizer_id}} when is_integer(organizer_id) <-
-           MeetingQueries.get_meeting(unlocked.meeting_id) do
-      :ok = MeetingConflictQueries.lock_organizer_schedule(organizer_id)
-      own = GroupMeetingQueries.lock_for_update(unlocked.meeting_id)
-      hold = SeatHoldQueries.get_for_update(hold_id)
-
-      with :ok <- convertible(hold, own),
-           {:ok, target} <- conversion_target(hold, own, hooks) do
-        convert_into(target, hold, hooks)
-      end
-    else
-      _gone -> {:error, :hold_not_convertible}
-    end
-  end
-
-  defp convertible(%SeatHoldSchema{status: :converted}, _own), do: {:error, :hold_not_convertible}
-
-  defp convertible(%SeatHoldSchema{released_reason: :meeting_cancelled}, _own),
-    do: {:error, :hold_not_convertible}
-
-  defp convertible(%SeatHoldSchema{}, %Meeting{status: :cancelled}),
-    do: {:error, :hold_not_convertible}
-
-  defp convertible(%SeatHoldSchema{}, %Meeting{}), do: :ok
-  defp convertible(_hold, _own), do: {:error, :hold_not_convertible}
-
-  # Decided by the rule `join_meeting/4` applies once the hold has stopped
-  # counting, so a slot found joinable here is joined without a rollback.
-  defp conversion_target(hold, own, hooks) do
-    if slot_live?(own) do
-      join_target_for(own, hold)
-    else
-      case hooks.new_slot.(hold, own) do
-        {:ok, build_attrs, max_participants} ->
-          case GroupMeetingQueries.get_live_for_update(own.meeting_type_id, own.start_time) do
-            nil -> create_target_for(build_attrs, max_participants, hold)
-            %Meeting{} = live -> join_target_for(live, hold)
-          end
-
-        :none ->
-          {:error, :slot_full}
-      end
-    end
-  end
-
-  defp join_target_for(meeting, hold) do
-    seats_left = meeting.capacity - Seats.seats_taken(meeting.id) + own_held_seats(meeting, hold)
-
-    if joinable?(meeting, hold.seats, seats_left) and registration_open?(meeting),
-      do: {:ok, {:join, meeting}},
-      else: {:error, :slot_full}
-  end
-
-  defp create_target_for(build_attrs, max_participants, hold) do
-    if max_participants >= 2 and hold.seats <= max_participants,
-      do: {:ok, {:create, build_attrs, max_participants}},
-      else: {:error, :slot_full}
-  end
-
-  defp own_held_seats(
-         %Meeting{id: meeting_id},
-         %SeatHoldSchema{status: :held, meeting_id: meeting_id} = hold
-       ),
-       do: hold.seats
-
-  defp own_held_seats(_meeting, _hold), do: 0
-
-  defp slot_live?(meeting),
-    do: meeting.status in MeetingState.occupying() and not MeetingState.slot_void?(meeting)
-
-  defp convert_into(target, hold, hooks) do
-    :ok = SeatHoldQueries.mark_converted(hold.id)
-
-    {live_meeting, meeting_attrs, max_participants} =
-      case target do
-        {:join, meeting} -> {meeting, %{}, meeting.capacity}
-        {:create, build_attrs, max_participants} -> {nil, build_attrs.(), max_participants}
-      end
-
-    seat_request = %{
-      participant: hold |> Map.from_struct() |> Map.take(@hold_snapshot_fields),
-      guest_emails: Enum.map(hold.guests, & &1["email"]),
-      max_participants: max_participants
-    }
-
-    booking = take_seat(live_meeting, meeting_attrs, seat_request, hold.seats, hooks)
-    :ok = SeatHoldQueries.link_participant(hold.id, booking.participant.id)
-    run_on_booked(booking, hooks.on_booked)
-  end
-
-  defp insert_hold_or_rollback(meeting, seat_request, seats_requested, %{expires_at: expires_at}) do
-    attrs =
-      seat_request.participant
-      |> Map.take(@hold_snapshot_fields)
-      |> Map.merge(%{
-        meeting_id: meeting.id,
-        meeting_type_id: meeting.meeting_type_id,
-        start_time: meeting.start_time,
-        seats: seats_requested,
-        guests: Enum.map(seat_request.guest_emails, &%{"name" => nil, "email" => &1}),
-        expires_at: expires_at
-      })
-
-    case SeatHoldQueries.insert(attrs) do
-      {:ok, hold} ->
-        hold
-
-      {:error, %Changeset{} = changeset} ->
-        if SeatHoldSchema.duplicate_hold?(changeset),
-          do: Repo.rollback(:already_booked),
-          else: Repo.rollback(changeset)
-    end
-  end
-
-  defp insert_participant_or_rollback(meeting, seat_request) do
-    attrs = Map.put(seat_request.participant, :meeting_id, meeting.id)
-
-    with {:ok, participant} <- ParticipantQueries.insert(attrs),
-         {:ok, _guests} <-
-           Guests.create_for_participant(meeting.id, participant.id, seat_request.guest_emails) do
-      participant
-    else
-      {:error, %Changeset{} = changeset} -> Repo.rollback(changeset)
-    end
-  end
-
-  defp run_on_booked(booking, on_booked) do
-    case on_booked.(booking) do
-      {:ok, result} -> Map.put(booking, :on_booked_result, result)
-      {:error, reason} -> Repo.rollback(reason)
-    end
   end
 end
