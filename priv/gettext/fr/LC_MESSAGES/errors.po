@@ -516,7 +516,7 @@ msgstr "n’est pas une langue prise en charge"
 
 #: lib/tymeslot/auth/user_schema.ex
 #: lib/tymeslot/meetings/guest_schema.ex
-#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/meeting_rules.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
@@ -856,12 +856,12 @@ msgstr "doit être dans le futur"
 msgid "invitation links"
 msgstr "liens d’invitation"
 
-#: lib/tymeslot/meeting_types/email_verification_rule.ex
-#, elixir-autogen, elixir-format
-msgid "email verification cannot be combined with payment"
-msgstr "la confirmation de l’adresse e-mail ne peut pas être combinée avec un paiement"
-
 #: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Ce créneau n’est plus disponible. Veuillez choisir un autre horaire."
+
+#: lib/tymeslot/meeting_types/email_verification_rule.ex
+#, elixir-autogen, elixir-format
+msgid "email confirmation cannot be combined with payment"
+msgstr "la confirmation de l’adresse e-mail n’est pas compatible avec le paiement"

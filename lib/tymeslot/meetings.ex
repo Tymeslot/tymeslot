@@ -427,12 +427,11 @@ defmodule Tymeslot.Meetings do
   Fetches a meeting by UID only if the given `organizer_user_id` owns it.
 
   Returns `{:ok, meeting}` when a matching meeting is found.
-  Returns `{:error, :not_found}` when no meeting exists with that UID, or when
-  the meeting exists but belongs to a different organizer.
-
-  Use this instead of `Tymeslot.Meetings.MeetingQueries.get_meeting_by_uid/1` on
-  any user-facing route that accepts a meeting UID from the URL, to prevent
-  IDOR attacks.
+  Returns `{:error, :not_found}` when no meeting exists with that UID, when it
+  belongs to a different organizer, or when it is a hold the organiser may not
+  see. For host-facing lookups; an attendee's manage link uses
+  `Tymeslot.Meetings.MeetingAccess.get_meeting_by_uid_for_attendee/2`, which
+  finds those holds so the attendee gets the policy's refusal.
   """
   @spec get_meeting_by_uid_for_organizer(String.t(), integer()) ::
           {:ok, MeetingSchema.t()} | {:error, :not_found}

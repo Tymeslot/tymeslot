@@ -52,6 +52,17 @@ defmodule Tymeslot.Meetings.EmailVerification.Resend do
     outcome(counted, hold, now)
   end
 
+  @doc """
+  How many more times the hold's verification email may be resent, by its
+  stored count alone. A count never written reads as the email sent with the
+  booking.
+  """
+  @spec resends_left(hold()) :: non_neg_integer()
+  def resends_left(%{verification_emails_sent: sent}) when is_integer(sent),
+    do: max(@max_resends + 1 - sent, 0)
+
+  def resends_left(%{verification_emails_sent: nil}), do: @max_resends
+
   defp count(%Meeting{id: id}, now),
     do: MeetingQueries.count_verification_email(id, now, @max_resends + 1)
 

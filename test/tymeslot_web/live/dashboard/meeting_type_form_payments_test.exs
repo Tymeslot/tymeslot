@@ -138,12 +138,19 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormPaymentsTest do
       view = open_editor(conn, meeting_type)
 
       assert has_element?(view, "input[phx-click='toggle_payment_required'][disabled]")
-      assert render(view) =~ "Turn off email verification to require payment."
+      assert render(view) =~ "Turn off email confirmation to require payment."
 
       view
       |> with_target("#meeting-type-form-wrapper-meeting-type-form-edit-#{meeting_type.id}")
       |> render_click("toggle_payment_required", %{})
 
+      # The changeset would refuse the save too; only the guard keeps the
+      # form's own state, so the toggle stays disabled and unchecked and the
+      # form never asks for a price.
+      assert has_element?(view, "input[phx-click='toggle_payment_required'][disabled]")
+      refute has_element?(view, "input[phx-click='toggle_payment_required'][checked]")
+      refute has_element?(view, "[aria-live='polite']", "Complete the form to save")
+      refute has_element?(view, "[aria-live='polite']", "Couldn't save changes")
       refute MeetingTypes.get_meeting_type(meeting_type.id, user.id).payment_required
     end
   end

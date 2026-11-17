@@ -30,6 +30,7 @@ defmodule TymeslotWeb.BookingVerificationLive do
   require Logger
 
   alias Tymeslot.Clock
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.EmailVerificationToken
@@ -54,7 +55,8 @@ defmodule TymeslotWeb.BookingVerificationLive do
        meeting: nil,
        seat: nil,
        token: nil,
-       rebook_path: nil
+       rebook_path: nil,
+       locale: nil
      )}
   end
 
@@ -92,7 +94,9 @@ defmodule TymeslotWeb.BookingVerificationLive do
     {meeting, seat} = split(held)
     rebook_path = if state == :expired, do: rebook_path(meeting)
 
-    assign(socket, meeting: meeting, seat: seat, state: state, rebook_path: rebook_path)
+    socket
+    |> put_attendee_locale(seat || meeting)
+    |> assign(meeting: meeting, seat: seat, state: state, rebook_path: rebook_path)
   end
 
   defp split({:seat, seat, slot}), do: {slot, seat}
@@ -130,6 +134,25 @@ defmodule TymeslotWeb.BookingVerificationLive do
       true -> :awaiting
     end
   end
+
+  # The page speaks the language the booking was made in, as the email that
+  # linked here does, rather than whatever the app surface would resolve:
+  # the booking pages keep their language choice apart from it. A seat
+  # carries its own booker's language.
+  defp put_attendee_locale(socket, nil), do: socket
+
+  defp put_attendee_locale(socket, held) do
+    locale = RecipientLocale.attendee_locale(locale_source(held))
+    Gettext.put_locale(locale)
+
+    assign(socket,
+      locale: locale,
+      page_title: dgettext("booking_manage", "Confirm your booking")
+    )
+  end
+
+  defp locale_source(%MeetingSchema{} = meeting), do: meeting
+  defp locale_source(seat), do: %{attendee_locale: seat.locale}
 
   defp deadline_passed?(held), do: EmailVerification.deadline_reached?(held, Clock.utc_now())
 

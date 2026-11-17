@@ -8,7 +8,10 @@ defmodule Tymeslot.Invitations.InvitationStatus do
   by an approval decline). A meeting holding a slot always counts, reopen or
   not: the database lets only one such meeting carry the invitation, and a
   reopen is refused while one does. Payment and approval timeouts record `:expired`, which
-  never consumes. Precedence is used, revoked, expired, available.
+  never consumes, and neither does a booking its attendee never verified once
+  it stops holding its slot (released, cancelled or lapsed): while held it
+  occupies the invitation like any other live booking, matching the database
+  index. Precedence is used, revoked, expired, available.
 
   The database index guarantees only one *live* booking per invitation. On a
   `release_on_cancel: false` link, the "spent after cancellation" state is
@@ -85,11 +88,16 @@ defmodule Tymeslot.Invitations.InvitationStatus do
   defp booked_since_reopen?(%InvitationSchema{reopened_at: reopened_at}, meeting),
     do: DateTime.compare(meeting.inserted_at, reopened_at) != :lt
 
-  # A finished meeting that still uses the invitation up.
+  # A finished meeting that still uses the invitation up. One its attendee
+  # never verified (`MeetingState.unverified?/1`, released or cancelled) never
+  # became a booking anyone agreed to, so it spends nothing, as the host's list
+  # never shows it either.
   defp spent?(_invitation, %MeetingSchema{status: :completed}), do: true
 
-  defp spent?(invitation, %MeetingSchema{status: :cancelled} = meeting),
-    do: not invitation.release_on_cancel and is_nil(meeting.approval_declined_at)
+  defp spent?(invitation, %MeetingSchema{status: :cancelled} = meeting) do
+    not invitation.release_on_cancel and is_nil(meeting.approval_declined_at) and
+      not MeetingState.unverified?(meeting)
+  end
 
   defp spent?(_invitation, _meeting), do: false
 end

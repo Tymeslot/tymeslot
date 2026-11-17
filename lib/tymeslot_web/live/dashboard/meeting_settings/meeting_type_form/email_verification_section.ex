@@ -15,6 +15,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.EmailVerificatio
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Meetings.EmailVerification
+
   attr :requires_email_verification, :boolean, required: true
   attr :payment_required, :boolean, default: false
   attr :errors, :list, default: []
@@ -40,9 +42,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.EmailVerificatio
         id="requires-email-verification-toggle"
         label={dgettext("dashboard_meeting_form", "Ask invitees to confirm their email")}
         description={
-          dgettext(
+          dngettext(
             "dashboard_meeting_form",
-            "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to 30 minutes, and you are not notified."
+            "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minute, and you are not notified.",
+            "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minutes, and you are not notified.",
+            EmailVerification.hold_minutes()
           )
         }
         checked={@requires_email_verification}

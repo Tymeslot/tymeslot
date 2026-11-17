@@ -157,7 +157,7 @@ defmodule Tymeslot.Meetings.QueriesTest do
     end
   end
 
-  describe "transition_from_awaiting_verification/2" do
+  describe "transition_from_awaiting_verification/3" do
     test "the verification transition moves only a held booking" do
       held = insert(:meeting, status: :awaiting_verification)
       confirmed = insert(:meeting, status: :confirmed)
@@ -185,34 +185,35 @@ defmodule Tymeslot.Meetings.QueriesTest do
       assert {:error, :not_awaiting_verification} in results
     end
 
-    test "returns {:error, :slot_taken} when the target slot is occupied" do
-      organizer = insert(:user)
-      taken = DateTime.add(DateTime.utc_now(:second), 1, :day)
+    test "with a deadline guard, refuses a booking whose deadline has passed" do
+      now = DateTime.utc_now(:second)
+      lapsed = insert(:meeting, status: :awaiting_verification, verification_deadline_at: now)
 
-      insert(:meeting,
-        organizer_user_id: organizer.id,
-        start_time: taken,
-        end_time: DateTime.add(taken, 3600, :second),
-        status: :confirmed
-      )
-
-      held_start = DateTime.add(taken, 7200, :second)
-
-      held =
+      open =
         insert(:meeting,
-          organizer_user_id: organizer.id,
-          start_time: held_start,
-          end_time: DateTime.add(held_start, 3600, :second),
-          status: :awaiting_verification
+          status: :awaiting_verification,
+          verification_deadline_at: DateTime.add(now, 60)
         )
 
-      assert {:error, :slot_taken} =
-               MeetingQueries.transition_from_awaiting_verification(held.id,
-                 status: :confirmed,
-                 start_time: taken
+      assert {:error, :not_awaiting_verification} =
+               MeetingQueries.transition_from_awaiting_verification(
+                 lapsed.id,
+                 [status: :confirmed],
+                 deadline_after: now
                )
 
-      assert Repo.reload!(held).status == :awaiting_verification
+      assert Repo.reload!(lapsed).status == :awaiting_verification
+
+      assert {:ok, %{status: :confirmed}} =
+               MeetingQueries.transition_from_awaiting_verification(
+                 open.id,
+                 [status: :confirmed],
+                 deadline_after: now
+               )
+
+      # Releases carry no deadline guard.
+      assert {:ok, %{status: :expired}} =
+               MeetingQueries.transition_from_awaiting_verification(lapsed.id, status: :expired)
     end
   end
 

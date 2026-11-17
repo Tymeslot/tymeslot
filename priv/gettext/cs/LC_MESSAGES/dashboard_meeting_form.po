@@ -919,11 +919,6 @@ msgstr "Žádat pozvané o potvrzení e-mailu"
 msgid "Email confirmation"
 msgstr "Potvrzení e-mailu"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off email verification to require payment."
-msgstr "Vypněte potvrzení e-mailu, chcete-li vyžadovat platbu."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
@@ -931,5 +926,13 @@ msgstr "Vypněte platby, chcete-li žádat pozvané o potvrzení e-mailu. Platba
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
-msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to 30 minutes, and you are not notified."
-msgstr "Rezervace platí, teprve až pozvaná osoba klikne na odkaz, který jí pošleme e-mailem. Do té doby je termín rezervován až 30 minut a vám nepřijde žádné oznámení."
+msgid "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minute, and you are not notified."
+msgid_plural "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minutes, and you are not notified."
+msgstr[0] "Rezervace platí, až když pozvaná osoba klikne na odkaz z našeho e-mailu. Do té doby zůstává termín rezervovaný nejvýše na %{count} minutu a nedostanete žádné upozornění."
+msgstr[1] "Rezervace platí, až když pozvaná osoba klikne na odkaz z našeho e-mailu. Do té doby zůstává termín rezervovaný nejvýše na %{count} minuty a nedostanete žádné upozornění."
+msgstr[2] "Rezervace platí, až když pozvaná osoba klikne na odkaz z našeho e-mailu. Do té doby zůstává termín rezervovaný nejvýše na %{count} minut a nedostanete žádné upozornění."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off email confirmation to require payment."
+msgstr "Vypněte potvrzení e-mailu, chcete-li vyžadovat platbu."

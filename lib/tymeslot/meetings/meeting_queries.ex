@@ -122,18 +122,43 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   Returns `{:error, :not_found}` when no meeting exists with that UID, or when
   the meeting exists but belongs to a different organizer, or is one the
   organiser may not see (`MeetingState.visible_to_organiser?/1`, an
-  unverified or unpaid hold). System callers that must reach such a meeting
-  use `get_meeting/1`.
+  unverified or unpaid hold). For the host's own lookups; the attendee's
+  manage links use `get_meeting_by_uid_for_attendee/2`, and system callers
+  that must reach such a meeting use `get_meeting/1`.
   """
   @spec get_meeting_by_uid_for_organizer(String.t(), integer()) ::
           {:ok, Meeting.t()} | {:error, :not_found}
   def get_meeting_by_uid_for_organizer(uid, organizer_user_id)
       when is_integer(organizer_user_id) do
-    query =
-      MeetingState.where_visible_to_organiser(
-        from(m in Meeting, where: m.uid == ^uid and m.organizer_user_id == ^organizer_user_id)
-      )
+    uid
+    |> by_uid_for_organizer(organizer_user_id)
+    |> MeetingState.where_visible_to_organiser()
+    |> one_or_not_found()
+  end
 
+  @doc """
+  Fetches a meeting by UID for whoever holds its manage link (the attendee),
+  scoped to the organiser whose booking page the link was opened on.
+
+  Unlike `get_meeting_by_uid_for_organizer/2` it also finds the holds the
+  organiser may not see (unverified or unpaid): the attendee made them, and
+  their manage pages answer with `Tymeslot.Bookings.Policy`'s refusal rather
+  than pretending the booking does not exist.
+  `{:error, :not_found}` when no meeting with that UID belongs to the organiser.
+  """
+  @spec get_meeting_by_uid_for_attendee(String.t(), integer()) ::
+          {:ok, Meeting.t()} | {:error, :not_found}
+  def get_meeting_by_uid_for_attendee(uid, organizer_user_id)
+      when is_integer(organizer_user_id) do
+    uid
+    |> by_uid_for_organizer(organizer_user_id)
+    |> one_or_not_found()
+  end
+
+  defp by_uid_for_organizer(uid, organizer_user_id),
+    do: from(m in Meeting, where: m.uid == ^uid and m.organizer_user_id == ^organizer_user_id)
+
+  defp one_or_not_found(query) do
     case Repo.one(query) do
       nil -> {:error, :not_found}
       meeting -> {:ok, meeting}
@@ -254,34 +279,41 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   One guarded `UPDATE ... WHERE id = $1 AND status = 'awaiting_verification'`,
   so of two callers (the attendee's link and the expiry sweep, say) only the
   first finds a row to change; the other gets `{:error, :not_awaiting_verification}`.
-  The unique index on confirmed-or-held slots has no `unique_constraint/3` to
-  translate it here, so a collision becomes `{:error, :slot_taken}`.
+
+  With `deadline_after: now` the guard also requires the verification
+  deadline to be ahead of `now`, which is how a verification is refused once
+  its window has closed; the same error is returned, and the caller reads the
+  row to say which guard failed. Releases pass no deadline: they apply at any
+  time.
+
+  The held row is already in the unique index on confirmed-or-held slots and
+  every transition out of the gate stays within or leaves its predicate, so
+  no unique violation can arise here.
   """
-  @spec transition_from_awaiting_verification(Ecto.UUID.t(), keyword()) ::
-          {:ok, Meeting.t()} | {:error, :not_awaiting_verification | :slot_taken}
-  def transition_from_awaiting_verification(meeting_id, changes) when is_list(changes) do
+  @spec transition_from_awaiting_verification(Ecto.UUID.t(), keyword(), keyword()) ::
+          {:ok, Meeting.t()} | {:error, :not_awaiting_verification}
+  def transition_from_awaiting_verification(meeting_id, changes, opts \\ [])
+      when is_list(changes) and is_list(opts) do
     now = DateTime.utc_now(:second)
 
-    query =
+    held =
       from(m in Meeting,
         where: m.id == ^meeting_id and m.status == :awaiting_verification,
         select: m
       )
 
+    query = where_deadline_after(held, Keyword.get(opts, :deadline_after))
+
     case Repo.update_all(query, set: Keyword.put_new(changes, :updated_at, now)) do
       {1, [meeting]} -> {:ok, meeting}
       {0, _none} -> {:error, :not_awaiting_verification}
     end
-  rescue
-    error in Postgrex.Error ->
-      case error.postgres do
-        %{code: :unique_violation, constraint: "unique_confirmed_meeting_per_organizer_at_time"} ->
-          {:error, :slot_taken}
-
-        _other ->
-          reraise error, __STACKTRACE__
-      end
   end
+
+  defp where_deadline_after(query, nil), do: query
+
+  defp where_deadline_after(query, %DateTime{} = now),
+    do: where(query, [m], m.verification_deadline_at > ^now)
 
   @doc """
   Counts one more verification email for a held booking, atomically, and

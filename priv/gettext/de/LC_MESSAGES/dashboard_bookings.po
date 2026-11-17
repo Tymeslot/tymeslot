@@ -839,11 +839,6 @@ msgstr "Der Termin wurde in Ihrem Kalender erneut verschoben. Prüfen Sie den ne
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
-msgid "Tymeslot could not move this booking. Another booking already starts at that time."
-msgstr "Tymeslot konnte diese Buchung nicht verschieben. Zu diesem Zeitpunkt beginnt bereits eine andere Buchung."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
-#, elixir-autogen, elixir-format
 msgid "Tymeslot could not move this booking. Please try again."
 msgstr "Tymeslot konnte diese Buchung nicht verschieben. Bitte versuchen Sie es erneut."
 
@@ -903,6 +898,7 @@ msgid "Managed by you"
 msgstr "Von Ihnen verwaltet"
 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
+#: lib/tymeslot_web/live/dashboard/bookings_management/calendar_move.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Diese Zeit ist nicht mehr verfügbar. Bitte wählen Sie eine andere."

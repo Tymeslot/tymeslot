@@ -231,12 +231,12 @@ defmodule TymeslotWeb.Live.Scheduling.EmailVerificationBookingJourneyTest do
     BookingDriver.book(view, date: tomorrow(), attendee: @attendee)
     held = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
 
-    # The page and the email name the deadline itself, in the attendee's
-    # timezone, rather than a fixed length of time.
+    # The page and the email name the deadline itself, date and time in the
+    # attendee's timezone, rather than a fixed length of time.
     deadline =
       held.verification_deadline_at
       |> DateTime.shift_zone!(held.attendee_timezone)
-      |> Calendar.strftime("%I:%M %p")
+      |> Calendar.strftime("%-d %B %Y at %I:%M %p")
 
     assert has_element?(view, "[data-testid='check-inbox']", "by #{deadline}")
 

@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormEmailVerificationTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.MeetingTypes
 
   setup :setup_dashboard_user
@@ -41,6 +42,16 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormEmailVerificationTest do
     |> render_click("toggle_requires_email_verification", %{})
   end
 
+  # What only the server-side guard controls: the changeset would reject the
+  # save as well, but without the guard the form flips its own state first,
+  # so the toggle renders checked and enabled and the autosave reports a
+  # failure.
+  defp assert_forged_toggle_ignored(view) do
+    assert has_element?(view, "[data-testid='requires-email-verification-toggle'][disabled]")
+    refute has_element?(view, "[data-testid='requires-email-verification-toggle'][checked]")
+    refute has_element?(view, "[aria-live='polite']", "Couldn't save changes")
+  end
+
   test "turning email verification on autosaves it", %{conn: conn, user: user} do
     meeting_type = insert(:meeting_type, user: user)
     view = open_form(conn, meeting_type)
@@ -57,10 +68,11 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormEmailVerificationTest do
 
   # The hold is capped at the meeting's start, so the hint promises no more
   # than its longest.
-  test "the hint says the time is held for up to 30 minutes", %{conn: conn, user: user} do
+  test "the hint says how long the time is held", %{conn: conn, user: user} do
     view = open_form(conn, insert(:meeting_type, user: user))
 
-    assert render(view) =~ "Until then the time is held for up to 30 minutes"
+    assert render(view) =~
+             "Until then the time is held for up to #{EmailVerification.hold_minutes()} minutes"
   end
 
   test "the toggle is disabled while payments are required", %{conn: conn, user: user} do
@@ -72,6 +84,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormEmailVerificationTest do
 
     forge_toggle(view, meeting_type)
 
+    assert_forged_toggle_ignored(view)
     refute saved(meeting_type).requires_email_verification
   end
 

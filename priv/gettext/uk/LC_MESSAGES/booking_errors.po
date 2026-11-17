@@ -263,11 +263,6 @@ msgstr "Цей тип зустрічі можна забронювати лиш�
 
 #: lib/tymeslot_web/live/scheduling/invitation_messages.ex
 #, elixir-autogen, elixir-format
-msgid "This invitation link has already been used to book an appointment. To change it, use the link in your confirmation email."
-msgstr "За цим посиланням із запрошенням уже забронювали зустріч. Щоб змінити її, скористайтеся посиланням у листі-підтвердженні."
-
-#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
-#, elixir-autogen, elixir-format
 msgid "This invitation link has expired. Please contact the host for a new one."
 msgstr "Термін дії цього посилання із запрошенням минув. Попросіть організатора надіслати нове."
 
@@ -285,3 +280,8 @@ msgstr "Це бронювання ще не підтверджено. Сперш
 #, elixir-autogen, elixir-format
 msgid "This booking is not confirmed yet. If you do not confirm it, it will be released on its own."
 msgstr "Це бронювання ще не підтверджено. Якщо ви його не підтвердите, слот звільниться автоматично."
+
+#: lib/tymeslot_web/live/scheduling/invitation_messages.ex
+#, elixir-autogen, elixir-format
+msgid "This invitation link has already been used to book an appointment. To change it, use the link in the email we sent you."
+msgstr "За цим посиланням із запрошенням уже забронювали зустріч. Щоб змінити її, скористайтеся посиланням у листі, який ми вам надіслали."

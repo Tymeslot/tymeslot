@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Live.Scheduling.VerificationPreviewTest do
       render_hook(view, "resend_verification_email", %{})
       assert reload(meeting).verification_emails_sent == 2
 
-      {_timer, token} = cooldown(view)
+      {_timer, token, _then} = cooldown(view)
       send(view.pid, {:verification_resend_ready, token})
       refute has_element?(view, "[data-testid='resend-verification'][disabled]")
 
@@ -162,7 +162,7 @@ defmodule TymeslotWeb.Live.Scheduling.VerificationPreviewTest do
     test "an earlier booking's cooldown never ends a later booking's",
          %{view: view} do
       resend(view)
-      {first_timer, first_token} = cooldown(view)
+      {first_timer, first_token, _then} = cooldown(view)
 
       view |> element("[data-testid='schedule-another']") |> render_click()
       refute cooldown(view)
@@ -186,6 +186,23 @@ defmodule TymeslotWeb.Live.Scheduling.VerificationPreviewTest do
       assert resend(view) =~ "cannot send the email again"
       refute has_element?(view, "[data-testid='resend-verification']")
       assert reload(meeting).verification_emails_sent == 4
+    end
+
+    @tag :capture_log
+    test "the last resend shows it was sent, then hides the button for good",
+         %{view: view, meeting: meeting} do
+      for send <- 2..4 do
+        assert resend(view) =~ "Sent again"
+        assert reload(meeting).verification_emails_sent == send
+
+        {_timer, token, _then} = cooldown(view)
+        send(view.pid, {:verification_resend_ready, token})
+      end
+
+      html = render(view)
+      assert html =~ "cannot send the email again"
+      refute html =~ "Sent again"
+      refute has_element?(view, "[data-testid='resend-verification']")
     end
 
     @tag :capture_log

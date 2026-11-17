@@ -139,6 +139,22 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
       refute_enqueued(worker: EmailWorker, args: %{"action" => "send_confirmation_emails"})
     end
 
+    # The booking pages keep their language apart from the app surface this
+    # route resolves, so the page follows the language the booking was made
+    # in, as the email that linked here does.
+    test "the page speaks the booking's language", %{conn: conn, user: user, type: type} do
+      meeting = held(user, type, attendee_locale: "de")
+
+      {:ok, view, _html} = live(conn, path(meeting))
+
+      assert render(view) =~ "Ihre Buchung ist bis"
+      refute render(view) =~ "Your booking is held until"
+      assert has_element?(view, "[data-testid='confirm-booking']", "Buchung bestätigen")
+      # Screen readers take the language from the markup, and the root
+      # layout's <html lang> is fixed before the token is read.
+      assert has_element?(view, "div[lang='de']")
+    end
+
     test "a tampered or stale token is invalid", %{conn: conn, user: user, type: type} do
       {:ok, view, _html} = live(conn, "/verify-booking/not-a-real-token")
       assert render(view) =~ "This link is not valid"

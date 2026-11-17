@@ -3,11 +3,16 @@ defmodule Tymeslot.Notifications.Email.BookingVerificationEmails do
   Handles the email that asks an attendee to verify their address before a
   booking counts.
 
-  The job is sent once per *send*: its args carry a `"send"` number (1 when
-  absent), which is part of both the job's uniqueness and the delivery claim,
-  so a later resend is a different send and is neither swallowed by the first
-  job's uniqueness nor by its claim, while a duplicate enqueue of the same
-  send still is.
+  Each send is its own job: its args carry a `"send"` number (1 when absent),
+  which is part of the job's Oban uniqueness, so a later resend is a different
+  job and is not swallowed by the first one's uniqueness, while a duplicate
+  enqueue of the same send within the uniqueness period is. The send number is
+  counted atomically on the booking
+  (`Tymeslot.Meetings.MeetingQueries.count_verification_email/3`), so two
+  resends never share a number. The delivery claim
+  (`Tymeslot.Workers.DeliveryClaims.once/3`) is keyed by the job's id, so it
+  only stops a retry of the same job from sending twice; it does nothing
+  across jobs.
   """
 
   require Logger

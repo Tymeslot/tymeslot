@@ -11,7 +11,7 @@ defmodule Tymeslot.MeetingTypes.EmailVerificationRuleTest do
 
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
-  @message "email verification cannot be combined with payment"
+  @message "email confirmation cannot be combined with payment"
   @payment_opts [host_charges_enabled: true, price_settable: true, currency: "eur"]
 
   defp changeset(struct, attrs) do

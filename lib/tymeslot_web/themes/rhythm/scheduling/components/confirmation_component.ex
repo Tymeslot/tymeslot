@@ -46,20 +46,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                 <div class="confirmation-title-row">
                   <div class={[
                     "success-badge",
-                    ApprovalDisplay.awaiting_approval?(assigns) && "success-badge--pending"
+                    ConfirmationText.pending?(assigns) && "success-badge--pending"
                   ]}>
                     <div class={[
                       "success-badge-inner",
-                      ApprovalDisplay.awaiting_approval?(assigns) && "success-badge-inner--pending"
+                      ConfirmationText.pending?(assigns) && "success-badge-inner--pending"
                     ]}>
                       <.icon
-                        :if={!ApprovalDisplay.awaiting_approval?(assigns)}
-                        name="hero-check"
-                        class="success-icon stroke-3"
-                      />
-                      <.icon
-                        :if={ApprovalDisplay.awaiting_approval?(assigns)}
-                        name="hero-clock"
+                        name={ConfirmationText.badge_icon(assigns)}
                         class="success-icon stroke-3"
                       />
                     </div>

@@ -59,22 +59,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       <div class="relative">
                         <div class={[
                           "confirmation-badge rounded-full flex items-center justify-center",
-                          ApprovalDisplay.awaiting_approval?(assigns) && "confirmation-badge--pending"
+                          ConfirmationText.pending?(assigns) && "confirmation-badge--pending"
                         ]}>
                           <.icon
-                            :if={!ApprovalDisplay.awaiting_approval?(assigns)}
-                            name="hero-check"
-                            class="confirmation-badge-icon stroke-3"
-                          />
-                          <.icon
-                            :if={ApprovalDisplay.awaiting_approval?(assigns)}
-                            name="hero-clock"
+                            name={ConfirmationText.badge_icon(assigns)}
                             class="confirmation-badge-icon stroke-3"
                           />
                         </div>
                         <div class={[
                           "confirmation-badge-dot absolute rounded-full flex items-center justify-center",
-                          ApprovalDisplay.awaiting_approval?(assigns) &&
+                          ConfirmationText.pending?(assigns) &&
                             "confirmation-badge-dot--pending"
                         ]}>
                           <.icon name="hero-bell-mini" class="confirmation-badge-dot-icon" />
@@ -157,7 +151,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           <.icon name="hero-envelope-mini" class="confirmation-email-link w-4 h-4" />
                         </div>
                         <p class="text-sm text-white">
-                          {if ApprovalDisplay.awaiting_approval?(assigns),
+                          {if ConfirmationText.pending?(assigns),
                             do: dgettext("booking_confirmation", "Sent to"),
                             else: dgettext("booking_confirmation", "Confirmation sent to")}
                           <span class="confirmation-email-link font-semibold">

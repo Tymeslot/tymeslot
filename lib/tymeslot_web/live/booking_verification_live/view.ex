@@ -23,10 +23,15 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   attr :seat, :map, default: nil
   attr :rebook_path, :string, default: nil
 
+  # The booking's language, set once the token is read. The token read waits
+  # for the connected render, by which time the root layout's `<html lang>`
+  # is already fixed, so the page declares its own language here.
+  attr :locale, :string, default: nil
+
   @spec page(map()) :: Phoenix.LiveView.Rendered.t()
   def page(assigns) do
     ~H"""
-    <div class="min-h-screen bg-tymeslot-50 px-4 py-12">
+    <div lang={@locale} class="min-h-screen bg-tymeslot-50 px-4 py-12">
       <div class="mx-auto w-full max-w-2xl">
         <.glass_morphism_card>
           <div class="p-6 sm:p-8">
@@ -91,7 +96,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
         <.action_button
           variant={:primary}
           phx-click="confirm"
-          phx-disable-with={dgettext("booking_manage", "Confirming...")}
+          phx-disable-with={dgettext("booking_manage", "Confirming…")}
           data-testid="confirm-booking"
         >
           {dgettext("booking_manage", "Confirm booking")}
@@ -100,7 +105,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
         <.action_button
           variant={:outline}
           phx-click="release"
-          phx-disable-with={dgettext("booking_manage", "Cancelling...")}
+          phx-disable-with={dgettext("booking_manage", "Cancelling…")}
           data-testid="release-booking"
         >
           {dgettext("booking_manage", "I didn't make this booking")}

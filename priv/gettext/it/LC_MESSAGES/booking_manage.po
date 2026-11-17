@@ -90,7 +90,6 @@ msgstr "Annulla appuntamento"
 msgid "Cancellation emails have been sent to all participants."
 msgstr "Le email di annullamento sono state inviate a tutti i partecipanti."
 
-#: lib/tymeslot_web/live/booking_verification_live/view.ex
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #: lib/tymeslot_web/themes/shared/components/meeting_page_bodies.ex
@@ -671,11 +670,6 @@ msgstr "Conferma la tua prenotazione"
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
-msgid "Confirming..."
-msgstr "Conferma in corso…"
-
-#: lib/tymeslot_web/live/booking_verification_live/view.ex
-#, elixir-autogen, elixir-format
 msgid "I didn't make this booking"
 msgstr "Non ho fatto io questa prenotazione"
 
@@ -753,3 +747,13 @@ msgstr "Questa prenotazione non è più disponibile, quindi l'orario è stato li
 #, elixir-autogen, elixir-format
 msgid "The booking was cancelled and your place released."
 msgstr "La prenotazione è stata annullata e il tuo posto liberato."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen
+msgid "Cancelling…"
+msgstr "Annullamento in corso…"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Confirming…"
+msgstr "Conferma in corso…"
