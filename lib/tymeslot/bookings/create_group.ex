@@ -209,6 +209,11 @@ defmodule Tymeslot.Bookings.CreateGroup do
   # it. An ungated seat on a held slot is the slot's first counting seat, so
   # `SlotActivation` confirms the slot and gives this seat the first-seat
   # effects.
+  #
+  # A held seat ignores `opts`, `:emails` included: it is never a series'
+  # seat, because a type asking invitees to confirm their email cannot offer
+  # a series (`Tymeslot.MeetingTypes.SeriesSettings.offered?/1`). Relaxing
+  # that rule needs a held series seat to be designed first.
   defp schedule_seat_jobs(%{meeting: meeting, participant: participant}, %DateTime{}, _opts) do
     with :ok <- EmailScheduler.schedule_seat_verification_email(meeting.id, participant.id) do
       :ok = EmailVerificationJobs.schedule_seat_expiry(participant)
