@@ -22,6 +22,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
+  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Payments.PaymentTransactionSchema
@@ -159,6 +160,20 @@ defmodule Tymeslot.Factory do
     |> merge_attributes(attrs)
     |> evaluate_lazy_attributes()
     |> put_token_hash(:management_token, :management_token_hash)
+  end
+
+  @doc "A live hold on one seat of a group meeting; pass `meeting`."
+  @spec seat_hold_factory() :: SeatHoldSchema.t()
+  def seat_hold_factory do
+    %SeatHoldSchema{
+      meeting: build(:group_meeting),
+      start_time: DateTime.utc_now(:second),
+      seats: 1,
+      expires_at: DateTime.add(DateTime.utc_now(:second), 30, :minute),
+      name: sequence(:seat_hold_name, &"Holder #{&1}"),
+      email: sequence(:seat_hold_email, &"holder#{&1}@test.com"),
+      timezone: "Europe/Zurich"
+    }
   end
 
   @doc "A weekly two-session booking series without its sessions; pass `organizer_user`."

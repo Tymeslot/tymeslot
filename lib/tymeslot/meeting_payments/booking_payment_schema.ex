@@ -17,6 +17,8 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
+  alias Tymeslot.Meetings.SeatHoldSchema
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -51,6 +53,10 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
           host_deleted_at: DateTime.t() | nil,
           meeting_id: Ecto.UUID.t() | nil,
           series_id: Ecto.UUID.t() | nil,
+          seat_hold_id: Ecto.UUID.t() | nil,
+          participant_id: Ecto.UUID.t() | nil,
+          seats: integer(),
+          seat_payment: boolean(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -86,9 +92,18 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     field :dispute_closed_at, :utc_datetime
     field :host_deleted_at, :utc_datetime
 
+    # Per-seat pricing on a group meeting: the booker pays `price × seats`.
+    # `seat_payment` is the immutable marker of a seat's payment (several may
+    # share one meeting); `seat_hold_id` is nilified when settled holds are
+    # deleted, so it cannot be that marker.
+    field :seats, :integer, default: 1
+    field :seat_payment, :boolean, default: false
+
     belongs_to :meeting, MeetingSchema, type: :binary_id
     # A paid series has one payment, owned by the series (`meeting_id` nil).
     belongs_to :series, Tymeslot.BookingSeries.SeriesSchema, type: :binary_id
+    belongs_to :seat_hold, SeatHoldSchema
+    belongs_to :participant, ParticipantSchema
 
     timestamps(type: :utc_datetime)
   end
@@ -110,13 +125,15 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
   @spec create_changeset(map()) :: Ecto.Changeset.t()
   def create_changeset(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:series_id | @castable])
+    |> cast(attrs, [:series_id, :seat_hold_id, :participant_id, :seats, :seat_payment | @castable])
     |> validate_required(@required_on_create)
     |> validate_number(:amount_cents, greater_than: 0)
     |> validate_number(:application_fee_cents, greater_than_or_equal_to: 0)
     |> validate_refunded_bounds()
     |> unique_constraint(:meeting_id)
     |> unique_constraint(:series_id)
+    |> unique_constraint(:seat_hold_id, name: :booking_payments_seat_hold_id_index)
+    |> check_constraint(:seats, name: :booking_payments_seats_positive)
     |> check_constraint(:series_id, name: :booking_payments_single_owner_check)
     |> unique_constraint(:stripe_checkout_session_id)
     |> unique_constraint(:stripe_payment_intent_id)
@@ -130,6 +147,18 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     |> cast(attrs, @castable -- @required_on_create)
     |> validate_refunded_bounds()
     |> check_constraint(:refunded_amount_cents, name: :refunded_amount_within_bounds)
+  end
+
+  @doc "Moves a seat payment to another meeting (a rescheduled seat) and its participant."
+  @spec move_seat_changeset(t(), map()) :: Ecto.Changeset.t()
+  def move_seat_changeset(schema, attrs) do
+    cast(schema, attrs, [:meeting_id, :participant_id])
+  end
+
+  @doc "Links a seat payment to the participant its hold became."
+  @spec convert_changeset(t(), map()) :: Ecto.Changeset.t()
+  def convert_changeset(schema, attrs) do
+    cast(schema, attrs, [:participant_id])
   end
 
   @spec valid_statuses() :: [status()]
