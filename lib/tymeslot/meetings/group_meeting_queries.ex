@@ -152,7 +152,15 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   A meeting never ends up with a capacity below the seats already taken on
   it (live participants plus their guests, including seats awaiting email
   verification: the count `ParticipantQueries.count_seats_held/1` makes): lowering the limit under
-  that leaves the slot exactly full, and nobody is cancelled. Solo meetings
+  that leaves the slot exactly full, and nobody is cancelled.
+
+  Counting held seats here is deliberate, though it lets the organiser infer
+  them: lowered to 3 on a slot with 2 counted and 2 held seats, the slot's
+  capacity becomes 4, and the dashboard reads "2/4 seats taken". Stretching
+  only to the counted seats would leave held seats over capacity, to be
+  confirmed into a slot already full. The inference reveals no more than the
+  public page does, which offers a held seat's place to nobody (a held seat
+  takes capacity by design), and nothing about who holds it. Solo meetings
   (`capacity == 1`) are never touched, so a one-to-one booking stays private
   whatever the type becomes.
   """
