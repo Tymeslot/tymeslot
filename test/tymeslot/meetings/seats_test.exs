@@ -246,11 +246,15 @@ defmodule Tymeslot.Meetings.SeatsTest do
              ) == %{}
     end
 
-    test "a hold on a cancelled meeting is not counted" do
+    test "seat_counts_for_range leaves out a hold on a cancelled meeting" do
       meeting = held_meeting(status: :cancelled)
       insert(:seat_hold, meeting: meeting, seats: 2, email: "ann@example.com")
 
-      assert Seats.seats_taken(meeting.id) == 0
+      assert Seats.seat_counts_for_range(
+               meeting.meeting_type_id,
+               DateTime.add(meeting.start_time, -1, :hour),
+               DateTime.add(meeting.start_time, 1, :hour)
+             ) == %{}
     end
   end
 end

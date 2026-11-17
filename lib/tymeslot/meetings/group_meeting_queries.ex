@@ -14,6 +14,7 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
+  alias Tymeslot.Meetings.UniqueSlot
   alias Tymeslot.Repo
 
   @doc """
@@ -141,6 +142,22 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   def set_attendee_texts(%Meeting{} = meeting, texts) do
     meeting
     |> Changeset.change(attendee_texts: texts)
+    |> Repo.update()
+  end
+
+  @doc """
+  Confirms a group meeting a seat hold created (`:awaiting_payment`, see
+  `MeetingSchema.group_changeset/2`) once it gains its first real
+  participant. That one transition only, as a plain change as
+  `set_attendee_texts/2` is; the meeting enters the confirmed-slot unique
+  index here, so its constraint is declared. Call with the meeting row
+  locked.
+  """
+  @spec confirm_awaiting_payment(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def confirm_awaiting_payment(%Meeting{status: :awaiting_payment} = meeting) do
+    meeting
+    |> Changeset.change(status: :confirmed)
+    |> UniqueSlot.constrain()
     |> Repo.update()
   end
 

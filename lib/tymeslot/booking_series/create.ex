@@ -348,9 +348,11 @@ defmodule Tymeslot.BookingSeries.Create do
     end
   end
 
-  # The booker's own seat already in the session, caught by the unique
-  # index. Postgres has aborted the transaction with it, so this reads the
-  # insert's changeset and asks the database nothing more.
+  # The booker's own seat already in the session. The seat transaction's
+  # pre-check refuses it as `:already_booked` first; the unique index stays
+  # the backstop for a seat that slips past it, and then Postgres has aborted
+  # the transaction, so this reads the insert's changeset and asks the
+  # database nothing more.
   defp seat_refusal(%Ecto.Changeset{} = changeset) do
     if ParticipantSchema.duplicate_seat?(changeset), do: :already_booked, else: changeset
   end

@@ -23,7 +23,11 @@ defmodule Tymeslot.Meetings.SeatHolds do
 
   @type broadcast_message :: {:paid, binary()} | :expired
 
-  @doc "Fetches a hold by id."
+  @doc """
+  Fetches a hold by id. Unscoped: for system callers (the payment webhook,
+  the expiry worker) and the booker's own payment page, which reaches the
+  hold through its payment, never for a host acting on their account.
+  """
   @spec get(binary()) :: SeatHoldSchema.t() | nil
   defdelegate get(id), to: SeatHoldQueries
 
@@ -55,6 +59,12 @@ defmodule Tymeslot.Meetings.SeatHolds do
   `{:ok, :unchanged}` returned. It neither locks the meeting nor changes its
   status, and broadcasts nothing: the caller announces the release once its
   transaction has committed.
+
+  The update locks the hold's row. A caller that will also lock the hold's
+  meeting must lock the meeting first and release after, so that every
+  writer takes the locks in one order: payment row, then the host's
+  schedule lock (`MeetingConflictQueries.lock_organizer_schedule/1`), then
+  the meeting row, then the hold.
   """
   @spec release(SeatHoldSchema.t(), SeatHoldSchema.release_reason()) ::
           {:ok, SeatHoldSchema.t()} | {:ok, :unchanged}
@@ -74,6 +84,6 @@ defmodule Tymeslot.Meetings.SeatHolds do
   def broadcast(hold_id, {:paid, participant_id} = message) when is_binary(participant_id),
     do: Phoenix.PubSub.broadcast(Tymeslot.PubSub, topic(hold_id), message)
 
-  def broadcast(hold_id, :expired),
-    do: Phoenix.PubSub.broadcast(Tymeslot.PubSub, topic(hold_id), :expired)
+  def broadcast(hold_id, :expired = message),
+    do: Phoenix.PubSub.broadcast(Tymeslot.PubSub, topic(hold_id), message)
 end

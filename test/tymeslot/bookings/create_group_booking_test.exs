@@ -116,6 +116,42 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
     )
   end
 
+  test "a free booker joining a slot only a payer holds confirms it and schedules its effects",
+       ctx do
+    start_time = DateTime.new!(ctx.meeting_params.date, ~T[10:00:00], "Etc/UTC")
+
+    held_slot =
+      insert(:group_meeting,
+        organizer_user: ctx.user,
+        meeting_type_ref: ctx.meeting_type,
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute),
+        capacity: 2,
+        status: :awaiting_payment
+      )
+
+    insert(:seat_hold, meeting: held_slot, seats: 1, email: "payer@example.com")
+
+    assert {:ok, meeting} = execute(ctx, "free@example.com")
+    assert meeting.id == held_slot.id
+    assert Repo.get!(MeetingSchema, held_slot.id).status == :confirmed
+
+    assert_enqueued(
+      worker: CalendarEventWorker,
+      args: %{"action" => "create", "meeting_id" => meeting.id}
+    )
+
+    refute_enqueued(
+      worker: CalendarEventWorker,
+      args: %{"action" => "update", "meeting_id" => meeting.id}
+    )
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+    )
+  end
+
   test "a full slot surfaces as :slot_taken", ctx do
     {:ok, _meeting} = execute(ctx, "one@example.com")
     {:ok, _joined} = execute(ctx, "two@example.com")

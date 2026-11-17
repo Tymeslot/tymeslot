@@ -2,18 +2,20 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
   @moduledoc """
   Database queries for the `seat_holds` table.
 
-  Pure data access only. The seat sums count `held` holds on meetings whose
-  slot is live (`MeetingState.where_slot_live/1`), whatever their
+  Pure data access only. The seat sums count `held` holds whatever their
   `expires_at`: a hold whose Checkout has lapsed keeps its seats until it is
   released, so a payment completing at the last moment still finds them.
+  They follow `ParticipantQueries`' seat counts: the sums for given meeting
+  ids look at the holds alone, and the range sum counts only meetings whose
+  slot is live (`MeetingState.where_slot_live/1`).
   """
 
   import Ecto.Query
 
   alias Ecto.Changeset
+  alias Tymeslot.Clock
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
-  alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Meetings.SeatHoldSchema, as: SeatHold
   alias Tymeslot.Repo
 
@@ -41,10 +43,15 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
   @doc """
   Releases the hold `id` if it is still `held`, in one conditional update.
   Returns the released hold, or `nil` when it was no longer held.
+
+  The update locks the hold's row. A caller that also locks the hold's
+  meeting must lock the meeting first and release after, keeping the order
+  every writer takes: payment row, then the host's schedule lock, then the
+  meeting row, then the hold.
   """
   @spec release(binary(), SeatHold.release_reason()) :: SeatHold.t() | nil
   def release(id, reason) when is_binary(id) do
-    now = DateTime.utc_now(:second)
+    now = DateTime.truncate(Clock.utc_now(), :second)
 
     {_count, rows} =
       SeatHold
@@ -58,9 +65,9 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
   @doc "Seats held on the meeting `meeting_id`."
   @spec seats_held(binary()) :: non_neg_integer()
   def seats_held(meeting_id) when is_binary(meeting_id) do
-    held_on_live_meetings()
-    |> where([m], m.id == ^meeting_id)
-    |> select([_m, h], coalesce(sum(h.seats), 0))
+    held()
+    |> where([h], h.meeting_id == ^meeting_id)
+    |> select([h], coalesce(sum(h.seats), 0))
     |> Repo.one()
   end
 
@@ -69,10 +76,10 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
   def seats_held_by_meeting([]), do: %{}
 
   def seats_held_by_meeting(meeting_ids) when is_list(meeting_ids) do
-    held_on_live_meetings()
-    |> where([m], m.id in ^meeting_ids)
-    |> group_by([m], m.id)
-    |> select([m, h], {m.id, sum(h.seats)})
+    held()
+    |> where([h], h.meeting_id in ^meeting_ids)
+    |> group_by([h], h.meeting_id)
+    |> select([h], {h.meeting_id, sum(h.seats)})
     |> Repo.all()
     |> Map.new()
   end
@@ -105,33 +112,18 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
   end
 
   @doc """
-  Whether `email` already has a seat on the meeting, matched
-  case-insensitively as the unique indexes match it: a live participant
-  (`meeting_participants_live_email_index`) or a `held` hold
-  (`seat_holds_live_email_index`).
+  Whether `email` holds seats on the meeting through a `held` hold, matched
+  case-insensitively as `seat_holds_live_email_index` matches it.
   """
-  @spec live_email_taken?(binary(), String.t() | nil) :: boolean()
-  def live_email_taken?(_meeting_id, nil), do: false
-
-  def live_email_taken?(meeting_id, email) when is_binary(meeting_id) and is_binary(email) do
-    email = String.downcase(email)
-
-    participant =
-      from(p in Participant,
-        where:
-          p.meeting_id == ^meeting_id and is_nil(p.cancelled_at) and
-            fragment("lower(?)", p.email) == ^email
-      )
-
-    hold =
-      from(h in SeatHold,
-        where:
-          h.meeting_id == ^meeting_id and h.status == :held and
-            fragment("lower(?)", h.email) == ^email
-      )
-
-    Repo.exists?(participant) or Repo.exists?(hold)
+  @spec held_email_taken?(binary(), String.t()) :: boolean()
+  def held_email_taken?(meeting_id, email) when is_binary(meeting_id) and is_binary(email) do
+    held()
+    |> where([h], h.meeting_id == ^meeting_id)
+    |> where([h], fragment("lower(?)", h.email) == fragment("lower(?)", ^email))
+    |> Repo.exists?()
   end
+
+  defp held, do: where(SeatHold, [h], h.status == :held)
 
   defp held_on_live_meetings do
     Meeting

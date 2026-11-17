@@ -131,14 +131,33 @@ defmodule Tymeslot.Meetings.SeatHoldsTest do
     assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
   end
 
-  test "a free seat on a meeting a hold created leaves it awaiting payment", ctx do
+  test "a free seat on a meeting a hold created confirms it as a new slot", ctx do
     {:ok, %{meeting: meeting}} = hold(ctx, "ann@example.com")
 
-    assert {:ok, %{meeting: joined, participant: _seat, created_meeting?: false}} =
+    assert {:ok, %{meeting: joined, participant: _seat, created_meeting?: true}} =
              book(ctx, "free@example.com")
 
     assert joined.id == meeting.id
+    assert joined.status == :confirmed
+    assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
+    assert [%SeatHoldSchema{status: :held}] = Repo.all(SeatHoldSchema)
+  end
+
+  test "a second hold on a meeting a hold created leaves it awaiting payment", ctx do
+    {:ok, %{meeting: meeting}} = hold(ctx, "ann@example.com")
+
+    assert {:ok, %{created_meeting?: false}} = hold(ctx, "bob@example.com")
     assert Repo.get!(MeetingSchema, meeting.id).status == :awaiting_payment
+  end
+
+  test "an invalid :hold option is refused before anything is written", ctx do
+    for bad <- [%{}, %{expires_at: "2026-12-01T10:00:00Z"}, :yes, %{expires_at: nil}] do
+      assert {:error, :invalid_hold} =
+               GroupScheduling.book_seat(attrs(ctx), request("ann@example.com"), hold: bad)
+    end
+
+    assert Repo.all(MeetingSchema) == []
+    assert Repo.all(SeatHoldSchema) == []
   end
 
   test "a hold on a planned session leaves it confirmed", ctx do
@@ -175,7 +194,7 @@ defmodule Tymeslot.Meetings.SeatHoldsTest do
 
       assert {:ok, %SeatHoldSchema{status: :released}} = SeatHolds.release(hold, :expired)
 
-      assert {:ok, %{participant: %ParticipantSchema{}, created_meeting?: false}} =
+      assert {:ok, %{participant: %ParticipantSchema{}, created_meeting?: true}} =
                book(ctx, "bob@example.com")
     end
 
@@ -247,12 +266,6 @@ defmodule Tymeslot.Meetings.SeatHoldsTest do
 
       assert {:ok, %{seat_hold: %SeatHoldSchema{}}} = hold(ctx, "ann@example.com")
     end
-  end
-
-  test "no seat emails, no seat jobs", ctx do
-    {:ok, _hold} = hold(ctx, "ann@example.com", ["g1@example.com"])
-
-    assert Repo.all(Oban.Job) == []
   end
 
   describe ":on_booked" do

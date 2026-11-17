@@ -70,6 +70,18 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   end
 
   @doc """
+  Whether `email` holds a live seat on the meeting, matched
+  case-insensitively as `meeting_participants_live_email_index` matches it.
+  """
+  @spec live_email_taken?(binary(), String.t()) :: boolean()
+  def live_email_taken?(meeting_id, email) when is_binary(meeting_id) and is_binary(email) do
+    Participant
+    |> where([p], p.meeting_id == ^meeting_id and is_nil(p.cancelled_at))
+    |> where([p], fragment("lower(?)", p.email) == fragment("lower(?)", ^email))
+    |> Repo.exists?()
+  end
+
+  @doc """
   Soft-cancels a participant by stamping `cancelled_at` (defaults to now).
   """
   @spec cancel(Participant.t(), DateTime.t()) ::

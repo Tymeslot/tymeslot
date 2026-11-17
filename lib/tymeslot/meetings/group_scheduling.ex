@@ -40,11 +40,15 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   the same locks and capacity check, the seats become a
   `Tymeslot.Meetings.SeatHoldSchema` row instead of a participant, counted
   by `Tymeslot.Meetings.Seats` but listed, emailed and synced nowhere. A slot
-  a hold creates is `:awaiting_payment` until its first paid seat confirms
-  it; a hold joining a live meeting leaves its status alone. Such a slot is
-  outside the confirmed-slot unique index, so for it the schedule lock is
-  the only guard against a second row. One email holds at most one seat on
-  a meeting, held or booked: both paths refuse a second as `:already_booked`.
+  a hold creates is `:awaiting_payment` until its first real participant (a
+  paid hold converting, or a free seat joining) confirms it; a hold joining
+  a live meeting leaves its status alone. Confirming such a slot is when it
+  comes into being for its callers, so the seat that does it reports
+  `created_meeting?: true` and they run the new-slot effects then. Until
+  then it is outside the confirmed-slot unique index, so for it the
+  schedule lock is the only guard against a second row. One email holds at
+  most one seat on a meeting, held or booked: both paths refuse a second as
+  `:already_booked`.
   """
 
   alias Ecto.Changeset
@@ -125,10 +129,13 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       who is paying for them, until `expires_at`, rather than book them. The
       booking then carries `:seat_hold` in place of `:participant` (also in
       what `:on_booked` receives), and a slot it creates is
-      `:awaiting_payment`.
+      `:awaiting_payment`. Any other value is refused as `:invalid_hold`.
+
+  A participant (no `:hold`) joining an `:awaiting_payment` meeting confirms
+  it and reports `created_meeting?: true`, as if it had created the slot.
 
   Returns `{:ok, booking}` or `{:error, :slot_full | :slot_taken |
-  :time_conflict | :organizer_required | :already_booked |
+  :time_conflict | :organizer_required | :already_booked | :invalid_hold |
   Ecto.Changeset.t() | term}`; a slot without an organiser is refused with
   `:organizer_required`, and an email already seated or holding seats on the
   meeting with `:already_booked`.
@@ -141,6 +148,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
              | :time_conflict
              | :organizer_required
              | :already_booked
+             | :invalid_hold
              | Changeset.t()
              | term()}
   def book_seat(meeting_attrs, seat_request, opts \\ []) do
@@ -156,6 +164,9 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     }
 
     cond do
+      not valid_hold?(hooks.hold) ->
+        {:error, :invalid_hold}
+
       # The schedule lock is keyed on the organiser, as in `Scheduling`.
       not is_integer(meeting_attrs.organizer_user_id) ->
         {:error, :organizer_required}
@@ -171,6 +182,10 @@ defmodule Tymeslot.Meetings.GroupScheduling do
         attempt_booking(meeting_attrs, seat_request, seats_requested, hooks, retries)
     end
   end
+
+  defp valid_hold?(nil), do: true
+  defp valid_hold?(%{expires_at: %DateTime{}}), do: true
+  defp valid_hold?(_hold), do: false
 
   @doc """
   The live group meeting at `(meeting_type_id, start_time)` that a booking of
@@ -268,7 +283,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
               Repo.rollback(:slot_full)
 
             nil ->
-              create_meeting_with_first_seat(meeting_attrs, seat_request, hooks)
+              create_meeting_with_first_seat(meeting_attrs, seat_request, seats_requested, hooks)
 
             %Meeting{} = meeting ->
               meeting
@@ -303,7 +318,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
 
   # A slot is created confirmed, or awaiting payment when a hold creates it
   # (`MeetingSchema.group_changeset/2` honours no other status).
-  defp create_meeting_with_first_seat(meeting_attrs, seat_request, hooks) do
+  defp create_meeting_with_first_seat(meeting_attrs, seat_request, seats_requested, hooks) do
     # Snapshotted once, at creation, onto the meeting row itself — see
     # `Tymeslot.Meetings.group?/1`. Not re-read from the meeting type later.
     attrs =
@@ -317,7 +332,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
          ) do
       {:ok, meeting} ->
         meeting
-        |> insert_seat_or_rollback(seat_request, hooks.hold)
+        |> insert_seat_or_rollback(seat_request, seats_requested, hooks.hold)
         |> Map.merge(%{meeting: meeting, created_meeting?: true})
 
       {:error, reason} ->
@@ -327,19 +342,37 @@ defmodule Tymeslot.Meetings.GroupScheduling do
 
   # Gates on the meeting's own capacity, not the caller's
   # `seat_request.max_participants` (which is only the correct capacity for
-  # a meeting not yet created, see `create_meeting_with_first_seat/2`); the
+  # a meeting not yet created, see `create_meeting_with_first_seat/4`); the
   # type keeps a group meeting's capacity in step with its limit. A planned
   # session's registration close is re-read here, on the locked row, for the
   # same reason the seats are: the caller's pre-check read it unlocked.
   defp join_meeting(meeting, seat_request, seats_requested, hold_opts) do
     if joinable?(meeting, seats_requested) and registration_open?(meeting) do
-      meeting
-      |> insert_seat_or_rollback(seat_request, hold_opts)
-      |> Map.merge(%{meeting: meeting, created_meeting?: false})
+      seat = insert_seat_or_rollback(meeting, seat_request, seats_requested, hold_opts)
+
+      {meeting, confirmed?} =
+        if hold_opts, do: {meeting, false}, else: confirm_if_awaiting_payment(meeting)
+
+      Map.merge(seat, %{meeting: meeting, created_meeting?: confirmed?})
     else
       Repo.rollback(:slot_full)
     end
   end
+
+  # A slot a hold created stays `:awaiting_payment` until its first real
+  # participant, a free seat joining it or a paid hold converting. That is
+  # when the slot comes into being for the seat's callers: it has no
+  # calendar event, reminders or video room yet, so the seat reports
+  # `created_meeting?: true` and they schedule them. Call with the meeting
+  # row locked. Returns the meeting and whether it was confirmed now.
+  defp confirm_if_awaiting_payment(%Meeting{status: :awaiting_payment} = meeting) do
+    case GroupMeetingQueries.confirm_awaiting_payment(meeting) do
+      {:ok, confirmed} -> {confirmed, true}
+      {:error, changeset} -> Repo.rollback(changeset)
+    end
+  end
+
+  defp confirm_if_awaiting_payment(%Meeting{} = meeting), do: {meeting, false}
 
   # The joiner read the slot in their own language: their locale's copy of
   # its texts joins the slot's (`AttendeeTexts.merge/2`), under the lock
@@ -383,8 +416,8 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   # own unique index sees only its own table, so a held email booking a free
   # seat (or the reverse) would otherwise pass it. The indexes stay the
   # backstop within each table.
-  defp insert_seat_or_rollback(meeting, seat_request, hold_opts) do
-    if SeatHoldQueries.live_email_taken?(meeting.id, seat_request.participant.email),
+  defp insert_seat_or_rollback(meeting, seat_request, seats_requested, hold_opts) do
+    if email_taken?(meeting.id, seat_request.participant.email),
       do: Repo.rollback(:already_booked)
 
     case hold_opts do
@@ -392,13 +425,20 @@ defmodule Tymeslot.Meetings.GroupScheduling do
         %{participant: insert_participant_or_rollback(meeting, seat_request)}
 
       %{expires_at: _expires_at} ->
-        %{seat_hold: insert_hold_or_rollback(meeting, seat_request, hold_opts)}
+        %{seat_hold: insert_hold_or_rollback(meeting, seat_request, seats_requested, hold_opts)}
     end
   end
 
+  defp email_taken?(_meeting_id, nil), do: false
+
+  defp email_taken?(meeting_id, email),
+    do:
+      ParticipantQueries.live_email_taken?(meeting_id, email) or
+        SeatHoldQueries.held_email_taken?(meeting_id, email)
+
   @hold_snapshot_fields ~w(name email phone company message timezone locale custom_field_answers)a
 
-  defp insert_hold_or_rollback(meeting, seat_request, %{expires_at: expires_at}) do
+  defp insert_hold_or_rollback(meeting, seat_request, seats_requested, %{expires_at: expires_at}) do
     attrs =
       seat_request.participant
       |> Map.take(@hold_snapshot_fields)
@@ -406,7 +446,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
         meeting_id: meeting.id,
         meeting_type_id: meeting.meeting_type_id,
         start_time: meeting.start_time,
-        seats: 1 + length(seat_request.guest_emails),
+        seats: seats_requested,
         guests: Enum.map(seat_request.guest_emails, &%{"name" => nil, "email" => &1}),
         expires_at: expires_at
       })
