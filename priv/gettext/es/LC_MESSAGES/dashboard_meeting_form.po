@@ -940,3 +940,8 @@ msgstr "Desactiva la confirmación del correo para exigir un pago."
 #, elixir-autogen, elixir-format
 msgid "Recurring bookings are not included in your current plan."
 msgstr "Las reservas periódicas no están incluidas en tu plan actual."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off series booking to ask invitees to confirm their email. A series confirms all its sessions at once."
+msgstr "Desactiva la reserva de series para pedir a quien reserve que confirme su correo. Una serie confirma todas sus sesiones a la vez."

@@ -946,3 +946,8 @@ msgstr "Vypněte potvrzení e-mailu, chcete-li vyžadovat platbu."
 #, elixir-autogen, elixir-format
 msgid "Recurring bookings are not included in your current plan."
 msgstr "Opakované rezervace nejsou součástí vašeho aktuálního tarifu."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off series booking to ask invitees to confirm their email. A series confirms all its sessions at once."
+msgstr "Vypněte rezervaci sérií, chcete-li žádat pozvané o potvrzení e-mailu. Série potvrdí všechny své termíny najednou."

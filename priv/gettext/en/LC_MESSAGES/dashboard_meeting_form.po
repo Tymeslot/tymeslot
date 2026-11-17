@@ -940,3 +940,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Recurring bookings are not included in your current plan."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off series booking to ask invitees to confirm their email. A series confirms all its sessions at once."
+msgstr ""

@@ -197,6 +197,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SeriesSectionTest do
     assert reload(meeting_type).series_mode == nil
   end
 
+  test "types that ask invitees to confirm their email cannot turn series on",
+       %{conn: conn, user: user} do
+    meeting_type = insert(:meeting_type, user: user, requires_email_verification: true)
+    view = edit(conn, meeting_type)
+
+    assert has_element?(view, "input[phx-value-series_action='toggle'][disabled]")
+
+    assert render(view) =~
+             "Meeting types that ask invitees to confirm their email cannot be booked as a series."
+
+    view
+    |> with_target(form_wrapper(meeting_type))
+    |> render_click("update_series", %{"series_action" => "toggle"})
+
+    assert reload(meeting_type).series_mode == nil
+  end
+
   test "a type with fixed dates offers only sessions the booker picks",
        %{conn: conn, user: user} do
     meeting_type = insert(:meeting_type, user: user, fixed_dates: true)

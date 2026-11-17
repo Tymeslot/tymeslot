@@ -946,3 +946,8 @@ msgstr "Вимкніть підтвердження електронної по�
 #, elixir-autogen, elixir-format
 msgid "Recurring bookings are not included in your current plan."
 msgstr "Повторювані бронювання не входять до вашого поточного тарифу."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off series booking to ask invitees to confirm their email. A series confirms all its sessions at once."
+msgstr "Вимкніть бронювання серій, щоб просити запрошених підтвердити електронну пошту. Серія підтверджує всі свої сесії одразу."

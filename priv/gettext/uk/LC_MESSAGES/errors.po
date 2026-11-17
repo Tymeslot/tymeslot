@@ -934,3 +934,8 @@ msgstr "дало б зарезервоване посилання для бро�
 #, elixir-autogen, elixir-format
 msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
 msgstr "має бути не більше %{max} за такого ритму, щоб кожна сесія припадала на проміжок до одного року"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
+msgstr "Типи зустрічей, які просять запрошених підтвердити електронну пошту, не можна бронювати як серію."

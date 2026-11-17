@@ -938,3 +938,8 @@ msgstr "z takiej nazwy powstałby zarezerwowany link do rezerwacji; wybierz inn�
 #, elixir-autogen, elixir-format
 msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
 msgstr "nie może być większe niż %{max} przy tym odstępie, aby każda sesja mieściła się w ciągu roku"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
+msgstr "Typów spotkań, które proszą zaproszonych o potwierdzenie adresu e-mail, nie można rezerwować jako serii."

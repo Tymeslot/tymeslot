@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.MeetingTypeFormEmailVerificationTest do
   @moduledoc """
-  The toggle that asks invitees to confirm their email. It excludes payments
-  and group bookings: the control renders disabled with the reason, and a
+  The toggle that asks invitees to confirm their email. It excludes payments,
+  group bookings and series: the control renders disabled with the reason, and a
   forged event must not get past the server-side guard either.
   """
 
@@ -94,6 +94,26 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormEmailVerificationTest do
 
     assert has_element?(view, "[data-testid='requires-email-verification-toggle'][disabled]")
     assert render(view) =~ "Turn off group bookings to ask invitees to confirm their email."
+
+    forge_toggle(view, meeting_type)
+
+    assert_forged_toggle_ignored(view)
+    refute saved(meeting_type).requires_email_verification
+  end
+
+  test "the toggle is disabled while a series is on", %{conn: conn, user: user} do
+    meeting_type =
+      insert(:meeting_type,
+        user: user,
+        series_mode: :flexible,
+        series_min_occurrences: 2,
+        series_max_occurrences: 4
+      )
+
+    view = open_form(conn, meeting_type)
+
+    assert has_element?(view, "[data-testid='requires-email-verification-toggle'][disabled]")
+    assert render(view) =~ "Turn off series booking to ask invitees to confirm their email."
 
     forge_toggle(view, meeting_type)
 

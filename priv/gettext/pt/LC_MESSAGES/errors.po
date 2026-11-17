@@ -923,3 +923,8 @@ msgstr "gera um link de agendamento reservado; escolha outro nome ou defina um l
 #, elixir-autogen, elixir-format
 msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
 msgstr "pode ser no máximo %{max} neste ritmo, para que todas as sessões fiquem dentro de um ano"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
+msgstr "Tipos de reunião que pedem que quem agenda confirme o e-mail não podem ser agendados como série."

@@ -918,3 +918,8 @@ msgstr "darebbe un link di prenotazione riservato; scegli un altro nome o impost
 #, elixir-autogen, elixir-format
 msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
 msgstr "non può superare %{max} con questa cadenza, in modo che ogni sessione cada entro un anno"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
+msgstr "I tipi di riunione che chiedono agli invitati di confermare la loro email non possono essere prenotati come serie."

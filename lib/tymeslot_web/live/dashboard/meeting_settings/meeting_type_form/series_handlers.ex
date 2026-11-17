@@ -159,7 +159,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesHandlers d
     %{
       one_off: Map.get(type, :one_off) == true,
       invitation_only: Map.get(type, :invitation_only) == true,
-      fixed_dates: Map.get(assigns, :fixed_dates) == true
+      fixed_dates: Map.get(assigns, :fixed_dates) == true,
+      requires_email_verification: Map.get(assigns, :requires_email_verification) == true
     }
   end
 

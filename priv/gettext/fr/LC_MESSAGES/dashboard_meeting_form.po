@@ -940,3 +940,8 @@ msgstr "Désactivez la confirmation de l’adresse e-mail pour exiger un paiemen
 #, elixir-autogen, elixir-format
 msgid "Recurring bookings are not included in your current plan."
 msgstr "Les réservations récurrentes ne sont pas incluses dans votre offre actuelle."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off series booking to ask invitees to confirm their email. A series confirms all its sessions at once."
+msgstr "Désactivez la réservation en série pour demander aux invités de confirmer leur adresse e-mail. Une série confirme toutes ses séances en une seule fois."

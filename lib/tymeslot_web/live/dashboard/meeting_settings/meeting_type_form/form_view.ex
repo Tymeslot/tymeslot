@@ -380,6 +380,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             allowed={@recurring_bookings_allowed}
             type={@type}
             fixed_dates={@fixed_dates}
+            requires_email_verification={@requires_email_verification}
             booking_window_days={
               SchedulingRulesSection.booking_window_days(
                 @scheduling_rules,
@@ -442,6 +443,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             requires_email_verification={@requires_email_verification}
             payment_required={@payment_required}
             group_bookings_enabled={@group_bookings_enabled}
+            series_enabled={@series.series_mode != nil}
             errors={
               @form_errors
               |> FormValidationHelpers.field_errors(:requires_email_verification)
