@@ -11,10 +11,19 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   the remaining balance under the payment's row lock. Its Stripe idempotency
   key is derived from the payment's refunded total and the amount, so an
   attempt whose refund Stripe accepted but whose transaction rolled back is
-  answered with that same refund on retry. An attempt that finds the
-  payment already refunded by at least `refunded_before_cents` plus the
-  amount treats the refund as made (an earlier attempt recorded it and
-  failed only afterwards).
+  answered with that same refund on retry.
+
+  Whether the refund is already made is the job's own record, never the
+  payment's running total: other refunds of the same payment (the host
+  refunding one session as they cancel it) can land between the
+  cancellation and the job, so a total grown past `refunded_before_cents`
+  says nothing about this job. The refund is claimed for the job
+  (`DeliveryClaims.claim/2`) in the transaction that records it, so the
+  claim commits with the refund or rolls back with it, and a run that
+  finds the claim held (an earlier attempt, or the same job rescued after
+  its node stopped, recorded the refund and failed only afterwards) treats
+  the refund as made. `refunded_before_cents` only names the refund for
+  the job's uniqueness and the host's failure email.
 
   A refund no retry can make (outside the refund window, under dispute,
   not paid, more than remains) is discarded at once; any other failure is
@@ -48,8 +57,12 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ChargeBackfill
   alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.Backoff
+  alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.SendSeriesRefundFailed
+
+  @claim "series_host_refund"
 
   @base_backoff_seconds 60
   @max_backoff_seconds 3_600
@@ -80,7 +93,7 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
-    case refund(args) do
+    case refund(job.id, args) do
       :ok ->
         :ok
 
@@ -129,17 +142,16 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   # is an attempt failing like any other, so the last one still tells the
   # host. The worker sets no Oban timeout, which would kill the attempt
   # past any rescue.
-  defp refund(%{
+  defp refund(job_id, %{
          "booking_payment_id" => id,
          "host_user_id" => host_user_id,
-         "amount_cents" => amount,
-         "refunded_before_cents" => before
+         "amount_cents" => amount
        }) do
     with %BookingPaymentSchema{} = payment <- MeetingPayments.get_payment(id),
-         false <- payment.refunded_amount_cents >= before + amount,
+         false <- DeliveryClaims.claimed?(job_id, @claim),
          :ok <- Refunds.refusal(payment),
          {:ok, _payment} <- ensure_charge(payment),
-         {:ok, _refunded} <- Refunds.issue_host_refund(id, host_user_id, amount) do
+         {:ok, _refunded} <- refund_once(job_id, id, host_user_id, amount) do
       :ok
     else
       nil -> {:error, :not_found}
@@ -150,6 +162,24 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
     exception -> {:error, exception}
   catch
     kind, reason when kind in [:exit, :throw] -> {:error, {kind, reason}}
+  end
+
+  # A job with no id (built by hand) cannot run twice, so has nothing to
+  # claim. Otherwise the claim and the refund commit together, and a run
+  # racing for the claim waits on it, then finds the refund made.
+  defp refund_once(nil, id, host_user_id, amount),
+    do: Refunds.issue_host_refund(id, host_user_id, amount)
+
+  defp refund_once(job_id, id, host_user_id, amount) do
+    Repo.transaction(fn ->
+      with :claimed <- DeliveryClaims.claim(job_id, @claim),
+           {:ok, refunded} <- Refunds.issue_host_refund(id, host_user_id, amount) do
+        refunded
+      else
+        :already_claimed -> :already_made
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   defp ensure_charge(%{stripe_charge_id: charge} = payment)
