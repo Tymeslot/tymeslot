@@ -11,7 +11,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   The sections are grouped into five panels behind a tab bar, one panel shown
   at a time. Inactive panels are hidden with CSS rather than conditionally
   rendered, preserving the custom-questions component's state across tab
-  switches.
+  switches. The Details panel's fields render from `DetailsPanel`, and the
+  tab strip's tabs (labels, error dots, disabled state) come from `FormTabs`.
 
   A new meeting type uses the same form. Auto-save needs a record to save
   into, so until it exists only the Details panel renders, the other tabs are
@@ -21,7 +22,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.Languages.TranslationStatus
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.PageVisibility
@@ -31,12 +31,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     Autosave,
     AvailabilitySection,
     CustomQuestionsSection,
+    DetailsPanel,
     EmailVerificationSection,
     FixedDatesSection,
+    FormTabs,
     GroupBookingsSection,
     GroupRules,
     GuestsSection,
-    LengthsField,
     LimitsSection,
     LocationEditorComponent,
     LocationsSection,
@@ -47,7 +48,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     SeriesSection,
     SessionHandlers,
     ShowAsFreeSection,
-    SlotIntervalField,
     VisibilitySection
   }
 
@@ -55,12 +55,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   import ApprovalSection, only: [approval_section: 1]
+  import DetailsPanel, only: [details_panel: 1]
   import EmailVerificationSection, only: [email_verification_section: 1]
   import AvailabilitySection, only: [availability_section: 1]
   import FixedDatesSection, only: [fixed_dates_section: 1]
   import GroupBookingsSection, only: [group_bookings_section: 1]
   import GuestsSection, only: [guests_section: 1]
-  import LengthsField, only: [lengths_field: 1]
   import LimitsSection, only: [limits_section: 1]
   import SchedulingRulesSection, only: [scheduling_rules_section: 1]
   import SeriesSection, only: [series_section: 1]
@@ -69,27 +69,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   import VisibilitySection, only: [visibility_section: 1]
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
   import TymeslotWeb.Components.Shared.ReminderPicker, only: [reminder_picker: 1]
-
-  # Which form-error fields surface an indicator on which tab. Errors on
-  # fields absent here (e.g. :base) render below the panels and need no dot.
-  @tab_error_fields %{
-    "details" => [:name, :duration, :extra_lengths, :slot_interval, :description, :icon],
-    "location" => [:locations, :video_integration, :calendar_integration, :target_calendar],
-    "booking" => [
-      :payment_required,
-      :price_cents,
-      :max_participants,
-      :last_spots_threshold,
-      :approval_window_hours,
-      :series_mode,
-      :series_frequency,
-      :series_interval,
-      :series_min_occurrences,
-      :series_max_occurrences,
-      :series_required
-    ],
-    "reminders" => [:reminder_config]
-  }
 
   @tabs_id "meeting-type-form-tabs"
 
@@ -135,7 +114,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             aria_label={dgettext("dashboard_meeting_form", "Meeting type settings")}
             active_tab={@active_tab}
             target={@myself}
-            tabs={form_tabs(@form_errors, @is_edit, @create_hint_id)}
+            tabs={FormTabs.tabs(@form_errors, @is_edit, @create_hint_id)}
           />
           <p
             :if={!@is_edit}
@@ -155,124 +134,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           hidden={@active_tab != "details"}
           class={panel_class(@active_tab, "details")}
         >
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <.input
-              name="meeting_type[name]"
-              label={dgettext("dashboard_meeting_form", "Name")}
-              value={Map.get(@form_data, "name", if(@type, do: @type.name, else: ""))}
-              required
-              maxlength={Constraints.name_length_opts()[:max]}
-              placeholder={dgettext("dashboard_meeting_form", "e.g., Quick Chat")}
-              phx-change="validate_meeting_type"
-              phx-debounce="500"
-              phx-target={@myself}
-              errors={
-                FormValidationHelpers.field_errors(@form_errors, :name)
-                |> Enum.map(&Helpers.format_errors/1)
-              }
-              icon="hero-tag"
-            >
-              <:label_suffix>
-                <TranslationStatus.mark status={@translation_status} path="name" />
-              </:label_suffix>
-            </.input>
-
-            <.lengths_field
-              form_data={@form_data}
-              form_errors={@form_errors}
-              type={@type}
-              group_bookings_enabled={@group_bookings_enabled}
-              myself={@myself}
-            />
-          </div>
-
-          <% extra_lengths = Map.get(@form_data, "extra_lengths", []) %>
-          <% slot_interval_value =
-            Map.get(
-              @form_data,
-              "slot_interval",
-              if(@type, do: @type.slot_interval_minutes, else: "")
-            ) %>
-          <% slot_interval_custom? = SlotIntervalField.custom?(assigns, slot_interval_value) %>
-          <div>
-            <.select
-              id="meeting-type-slot-interval"
-              name="meeting_type[slot_interval]"
-              label={dgettext("dashboard_meeting_form", "Booking slot interval")}
-              value={
-                if(slot_interval_custom?,
-                  do: SlotIntervalField.custom_interval_option(),
-                  else: slot_interval_value
-                )
-              }
-              options={SlotIntervalField.options(slot_interval_value, slot_interval_custom?)}
-              phx-change="validate_meeting_type"
-              phx-target={@myself}
-              errors={
-                if(slot_interval_custom?,
-                  do: [],
-                  else:
-                    FormValidationHelpers.field_errors(@form_errors, :slot_interval)
-                    |> Enum.map(&Helpers.format_errors/1)
-                )
-              }
-              icon="hero-adjustments-horizontal"
-            />
-            <%!-- The number input carries the same param name as the select, so
-                  whichever control is on screen is the one that posts the value
-                  and the two can never disagree about what is stored. --%>
-            <div :if={slot_interval_custom?} class="mt-2">
-              <.input
-                type="number"
-                id="meeting_type_slot_interval_custom"
-                name="meeting_type[slot_interval]"
-                label={dgettext("dashboard_meeting_form", "Custom interval (minutes)")}
-                value={slot_interval_value}
-                min={Constraints.slot_interval_minutes_range().first}
-                max={Constraints.slot_interval_minutes_range().last}
-                step="1"
-                phx-change="validate_meeting_type"
-                phx-debounce="500"
-                phx-target={@myself}
-                errors={
-                  FormValidationHelpers.field_errors(@form_errors, :slot_interval)
-                  |> Enum.map(&Helpers.format_errors/1)
-                }
-                icon="hero-adjustments-horizontal"
-              />
-            </div>
-            <p class="mt-1 text-token-sm text-tymeslot-600">
-              {SlotIntervalField.hint(
-                slot_interval_value,
-                Map.get(@form_data, "duration"),
-                extra_lengths
-              )}
-            </p>
-          </div>
-
-          <.input
-            name="meeting_type[description]"
-            label={dgettext("dashboard_meeting_form", "Description (optional)")}
-            value={Map.get(@form_data, "description", if(@type, do: @type.description, else: ""))}
-            maxlength={Constraints.description_max_length()}
-            placeholder={dgettext("dashboard_meeting_form", "Brief description of this meeting type")}
-            phx-change="validate_meeting_type"
-            phx-debounce="500"
-            phx-target={@myself}
-            errors={
-              FormValidationHelpers.field_errors(@form_errors, :description)
-              |> Enum.map(&Helpers.format_errors/1)
-            }
-            icon="hero-document-text"
-          >
-            <:label_suffix>
-              <TranslationStatus.mark status={@translation_status} path="description" />
-            </:label_suffix>
-          </.input>
-
-          <.icon_picker
-            selected_icon={@selected_icon}
+          <.details_panel
+            form_data={@form_data}
             form_errors={@form_errors}
+            type={@type}
+            group_bookings_enabled={@group_bookings_enabled}
+            custom_input_mode={@custom_input_mode}
+            selected_icon={@selected_icon}
+            translation_status={@translation_status}
             myself={@myself}
           />
         </.card>
@@ -610,54 +479,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
       <% end %>
     </div>
     """
-  end
-
-  # Until the meeting type exists only Details can be used; the others point
-  # at the hint saying why.
-  defp form_tabs(form_errors, is_edit, create_hint_id) do
-    tabs = [
-      %{
-        id: "details",
-        label: dgettext("dashboard_meeting_form", "Details"),
-        icon: "hero-pencil-square"
-      },
-      %{
-        id: "location",
-        label: dgettext("dashboard_meeting_form", "Location & Calendar"),
-        icon: "hero-map-pin"
-      },
-      %{
-        id: "booking",
-        label: dgettext("dashboard_meeting_form", "Booking Rules"),
-        icon: "hero-adjustments-horizontal"
-      },
-      %{
-        id: "questions",
-        label: dgettext("dashboard_meeting_form", "Questions"),
-        icon: "hero-chat-bubble-left-right"
-      },
-      %{
-        id: "reminders",
-        label: dgettext("dashboard_meeting_form", "Reminders"),
-        icon: "hero-bell"
-      }
-    ]
-
-    Enum.map(tabs, fn tab ->
-      disabled? = not is_edit and tab.id != "details"
-
-      Map.merge(tab, %{
-        error: tab_has_errors?(form_errors, tab.id),
-        disabled: disabled?,
-        describedby: if(disabled?, do: create_hint_id)
-      })
-    end)
-  end
-
-  defp tab_has_errors?(form_errors, tab_id) do
-    @tab_error_fields
-    |> Map.get(tab_id, [])
-    |> Enum.any?(&(FormValidationHelpers.field_errors(form_errors, &1) != []))
   end
 
   defp panel_class(active_tab, panel_id) do
