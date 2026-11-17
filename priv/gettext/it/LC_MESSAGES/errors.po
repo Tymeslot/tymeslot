@@ -523,9 +523,9 @@ msgid "is not a supported language"
 msgstr "non è una lingua supportata"
 
 #: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/booker_contact.ex
 #: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/meetings/meeting_schema.ex
-#: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
 msgstr "non è una lingua supportata"
