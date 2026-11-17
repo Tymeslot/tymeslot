@@ -226,7 +226,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
               <div class="confirmation-actions-section">
                 <a
-                  :if={@follow_ups && is_nil(@series_count) && PathHandlers.calendar_ics_path(assigns)}
+                  :if={
+                    @follow_ups && is_nil(@series_count) && PathHandlers.calendar_ics_path(assigns)
+                  }
                   href={PathHandlers.calendar_ics_path(assigns)}
                   download
                   class="action-button-primary calendar-download-button"

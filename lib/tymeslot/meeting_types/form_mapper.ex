@@ -55,10 +55,6 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         slot_interval_minutes: parse_optional_integer(params["slot_interval"]),
         description: params["description"],
         icon: ui_state.selected_icon,
-        is_active: params["is_active"] == "true",
-        allow_guests: params["allow_guests"] == "true",
-        requires_approval: params["requires_approval"] == "true",
-        requires_email_verification: params["requires_email_verification"] == "true",
         approval_window_hours: approval_window_hours,
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         availability_schedule_id: blank_to_nil(params["availability_schedule_id"]),
@@ -69,6 +65,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
       attrs =
         attrs
+        |> Map.merge(toggles(params))
         |> Map.merge(optional_integers(params))
         |> Map.merge(seat_display(params))
         |> maybe_put_custom_fields(params)
@@ -82,6 +79,11 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
       {:ok, attrs}
     end
   end
+
+  @toggles ~w(is_active allow_guests requires_approval requires_email_verification)a
+
+  defp toggles(params),
+    do: Map.new(@toggles, &{&1, params[Atom.to_string(&1)] == "true"})
 
   # Only a form that renders the fixed-dates toggle posts it, so an absent key
   # leaves the stored setting alone rather than turning it off.

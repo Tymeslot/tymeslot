@@ -198,7 +198,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
                   <div class="confirmation-actions">
                     <a
-                      :if={@follow_ups && is_nil(@series_count) && PathHandlers.calendar_ics_path(assigns)}
+                      :if={
+                        @follow_ups && is_nil(@series_count) &&
+                          PathHandlers.calendar_ics_path(assigns)
+                      }
                       href={PathHandlers.calendar_ics_path(assigns)}
                       download
                       class="action-button action-button--primary calendar-download-button"
