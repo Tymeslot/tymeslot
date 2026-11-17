@@ -63,6 +63,41 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
   end
 
   @doc """
+  Releases every hold still `held` on the meeting `meeting_id`, in one
+  conditional update, returning the released holds. The lock order is
+  `release/2`'s: lock the meeting first.
+  """
+  @spec release_held_for_meeting(binary(), SeatHold.release_reason()) :: [SeatHold.t()]
+  def release_held_for_meeting(meeting_id, reason) when is_binary(meeting_id) do
+    now = DateTime.truncate(Clock.utc_now(), :second)
+
+    {_count, rows} =
+      SeatHold
+      |> where([h], h.meeting_id == ^meeting_id and h.status == :held)
+      |> select([h], h)
+      |> Repo.update_all(set: [status: :released, released_reason: reason, updated_at: now])
+
+    rows
+  end
+
+  @doc """
+  Sets the snapshotted `start_time` of every hold still `held` on the
+  meeting `meeting_id`, for a meeting moved to `start_time`.
+  """
+  @spec restamp_held_for_meeting(binary(), DateTime.t()) :: non_neg_integer()
+  def restamp_held_for_meeting(meeting_id, %DateTime{} = start_time)
+      when is_binary(meeting_id) do
+    now = DateTime.truncate(Clock.utc_now(), :second)
+
+    {count, _rows} =
+      SeatHold
+      |> where([h], h.meeting_id == ^meeting_id and h.status == :held)
+      |> Repo.update_all(set: [start_time: start_time, updated_at: now])
+
+    count
+  end
+
+  @doc """
   Marks the hold `id` converted, from `held` or `released` (a late payment
   converts a lapsed hold), clearing any release reason. Call with the hold
   locked (`get_for_update/1`) and found not converted yet; a hold already

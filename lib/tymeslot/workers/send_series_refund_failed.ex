@@ -1,12 +1,13 @@
 defmodule Tymeslot.Workers.SendSeriesRefundFailed do
   @moduledoc """
-  Tells the host that the refund of a series payment, scheduled when they
-  cancelled the series' remaining sessions, could not be made
-  (`Tymeslot.Emails.Templates.SeriesRefundFailed`).
+  Tells the host that a refund their cancellation scheduled could not be
+  made (`Tymeslot.Emails.Templates.SeriesRefundFailed`): of a series
+  payment, when they cancelled the series' remaining sessions, or, with
+  `"context" => "group_meeting"`, of one paid seat, when they cancelled a
+  group session.
 
-  Enqueued by `Tymeslot.MeetingPayments.Workers.SeriesHostRefund` when it
-  gives up on a refund: discarded as one no retry can make, or out of
-  attempts. Loads a fresh booking-payment row inside `perform/1`, and sends
+  Enqueued by `Tymeslot.MeetingPayments.HostRefundAttempt` when it gives up
+  on a refund: discarded as one no retry can make, or out of attempts. Loads a fresh booking-payment row inside `perform/1`, and sends
   nothing once the payment is gone. The send is claimed through
   `Tymeslot.Workers.DeliveryClaims`, so a rescued job does not send it twice.
   """
@@ -39,6 +40,9 @@ defmodule Tymeslot.Workers.SendSeriesRefundFailed do
   # other reason reads as a refund Stripe kept refusing.
   @reasons %{"outside_refund_window" => :outside_refund_window, "under_dispute" => :under_dispute}
 
+  # What the refund was for, by its name in the job args; absent is a series.
+  @kinds %{"group_meeting" => :group_meeting}
+
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
     do: reason == @payment_gone or TransactionalEmailDelivery.recipient_rejected?(reason)
@@ -48,16 +52,25 @@ defmodule Tymeslot.Workers.SendSeriesRefundFailed do
   failed, for `reason` (an atom, or anything else for a failure no retry
   got past). `refunded_before_cents` names the refund attempt, as
   `SeriesHostRefund` does, so one failed refund sends one email.
+
+  `context: :group_meeting` words the email for a seat of a cancelled
+  group session; the default is a series.
   """
-  @spec new_for(binary(), pos_integer(), non_neg_integer(), term()) :: Oban.Job.changeset()
-  def new_for(booking_payment_id, amount_cents, refunded_before_cents, reason) do
-    new(%{
+  @spec new_for(binary(), pos_integer(), non_neg_integer(), term(), keyword()) ::
+          Oban.Job.changeset()
+  def new_for(booking_payment_id, amount_cents, refunded_before_cents, reason, opts \\ []) do
+    %{
       booking_payment_id: booking_payment_id,
       amount_cents: amount_cents,
       refunded_before_cents: refunded_before_cents,
       reason: reason_arg(reason)
-    })
+    }
+    |> Map.merge(context_arg(Keyword.get(opts, :context)))
+    |> new()
   end
+
+  defp context_arg(:group_meeting), do: %{context: "group_meeting"}
+  defp context_arg(nil), do: %{}
 
   defp reason_arg(reason) when reason in [:outside_refund_window, :under_dispute],
     do: Atom.to_string(reason)
@@ -90,10 +103,14 @@ defmodule Tymeslot.Workers.SendSeriesRefundFailed do
   end
 
   defp context(payment, args) do
-    # A series payment is named after its first session.
+    # A series payment is named after its first session; a seat payment
+    # after the session it paid for.
     meeting = payment |> BookingPayments.meetings_for_payment() |> List.first()
+    kind = Map.get(@kinds, args["context"], :series)
 
     %RefundContext{
+      kind: kind,
+      meeting_start: meeting_start(kind, meeting),
       host_email: payment.host_email,
       host_name: payment.host_name,
       host_user_id: payment.host_user_id,
@@ -101,12 +118,22 @@ defmodule Tymeslot.Workers.SendSeriesRefundFailed do
       currency: payment.currency,
       attendee_name: payment.attendee_name,
       attendee_email: payment.attendee_email,
-      meeting_title: meeting_title(meeting, payment),
+      meeting_title: meeting_title(kind, meeting, payment),
       reason: Map.get(@reasons, args["reason"])
     }
   end
 
-  defp meeting_title(%{title: title}, _payment) when is_binary(title) and title != "", do: title
-  defp meeting_title(_meeting, %{meeting_type_name: name}) when is_binary(name), do: name
-  defp meeting_title(_meeting, _payment), do: nil
+  defp meeting_start(:group_meeting, %{start_time: %DateTime{} = start_time}), do: start_time
+  defp meeting_start(_kind, _meeting), do: nil
+
+  # A group session is named by its meeting type, as its booker saw it.
+  defp meeting_title(:group_meeting, _meeting, %{meeting_type_name: name})
+       when is_binary(name) and name != "",
+       do: name
+
+  defp meeting_title(_kind, %{title: title}, _payment) when is_binary(title) and title != "",
+    do: title
+
+  defp meeting_title(_kind, _meeting, %{meeting_type_name: name}) when is_binary(name), do: name
+  defp meeting_title(_kind, _meeting, _payment), do: nil
 end

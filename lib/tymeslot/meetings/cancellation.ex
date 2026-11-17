@@ -39,12 +39,41 @@ defmodule Tymeslot.Meetings.Cancellation do
   booking, and it reads the payment when it is built: announced before the
   refund, it would report the full amount as outstanding for a refund that
   went through a moment later.
+
+  ## A group session
+
+  A group session has one payment per paid seat, not one for the meeting.
+  The host cancelling it refunds every paid seat in full by default, or
+  none, which again needs the acknowledgement (`resolve_seat_refund/2`); a
+  partial amount is a per-payment action on the payments page, not a
+  choice here. A participant leaving their own seat is refunded nothing
+  automatically.
+
+  The seats are settled in the cancellation's own transaction, once the
+  meeting row is cancelled and so locked (`Cancel.execute/2`'s
+  `:on_cancelled`): every seat hold still open is released as
+  `:meeting_cancelled`, and one `Workers.GroupCancelRefund` job is inserted
+  per paid seat. Read under that lock, the seats include one paid while the
+  cancellation waited for it. The Stripe calls run in the jobs, never under
+  the lock, so a refund that fails leaves the session cancelled, and the job
+  tells the host. Once committed, each released hold's checkout is expired
+  (a payment completing anyway is refunded, its hold having been released
+  for a cancelled meeting) and its booker's payment page told, and the
+  cancellation is announced.
   """
+
+  require Logger
 
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPayments
+  alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.Checkout
+  alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
+  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.SeatHolds
 
   @refusals [:not_paid, :outside_refund_window, :under_dispute]
 
@@ -52,10 +81,12 @@ defmodule Tymeslot.Meetings.Cancellation do
   @type refund_refusal :: :not_paid | :outside_refund_window | :under_dispute
 
   @typedoc """
-  What to refund: nothing, a positive amount in minor units, or nothing
-  because the payment can no longer be refunded (and why).
+  What to refund: nothing, a positive amount in minor units, nothing
+  because the payment can no longer be refunded (and why), or, for a group
+  session, every paid seat in full (`:refund_seats`).
   """
-  @type refund_action :: :none | {:refund, pos_integer()} | {:not_refunded, refund_refusal()}
+  @type refund_action ::
+          :none | {:refund, pos_integer()} | {:not_refunded, refund_refusal()} | :refund_seats
 
   @typedoc """
   Why a requested refund could not be turned into an action.
@@ -124,6 +155,25 @@ defmodule Tymeslot.Meetings.Cancellation do
   end
 
   @doc """
+  Works out what cancelling a group session refunds, from its paid seats
+  (`BookingPayments.seat_payments_for_meeting/2`) and the host's choice:
+  every seat in full (`:refund_seats`), unless the host chose no refund and
+  acknowledged it. A partial choice still refunds every seat in full: a
+  partial amount is a per-payment action. No paid seats refund nothing.
+  """
+  @spec resolve_seat_refund([BookingPaymentSchema.t()], map()) ::
+          {:ok, :refund_seats | :none} | {:error, :acknowledgement_required}
+  def resolve_seat_refund([], _params), do: {:ok, :none}
+
+  def resolve_seat_refund(_payments, %{"cancel_refund_choice" => "none"} = params) do
+    if params["cancel_refund_no_refund_ack"] == "true",
+      do: {:ok, :none},
+      else: {:error, :acknowledgement_required}
+  end
+
+  def resolve_seat_refund(_payments, _params), do: {:ok, :refund_seats}
+
+  @doc """
   Cancels the meeting, then issues the resolved refund.
 
   `acting_user_id` is whoever asked for the cancellation, and must be the
@@ -136,6 +186,12 @@ defmodule Tymeslot.Meetings.Cancellation do
 
   A refund failure is reported as `{:error, {:refund_failed, reason}}` and
   leaves the meeting cancelled; see the module docs on ordering.
+
+  A group session is settled seat by seat (see "A group session" above):
+  `:refund_seats` schedules a full refund of every paid seat, `:none`
+  refunds none, and either releases the seats still held for bookers
+  paying. Its refunds are made by jobs, so it never returns
+  `{:refund_failed, _}`.
   """
   @spec cancel(struct(), integer() | nil, refund_action()) ::
           {:ok, struct()}
@@ -157,8 +213,14 @@ defmodule Tymeslot.Meetings.Cancellation do
 
   def cancel(_meeting, _acting_user_id, _refund_action), do: {:error, :not_found}
 
-  defp cancel_as_organizer(meeting, _organizer_user_id, :none),
-    do: Cancel.execute(meeting, caller: :organizer)
+  defp cancel_as_organizer(meeting, organizer_user_id, :refund_seats),
+    do: cancel_group(meeting, organizer_user_id, true)
+
+  defp cancel_as_organizer(meeting, organizer_user_id, :none) do
+    if Meetings.group?(meeting),
+      do: cancel_group(meeting, organizer_user_id, false),
+      else: Cancel.execute(meeting, caller: :organizer)
+  end
 
   defp cancel_as_organizer(meeting, _organizer_user_id, {:not_refunded, _reason}),
     do: Cancel.execute(meeting, caller: :organizer)
@@ -197,4 +259,74 @@ defmodule Tymeslot.Meetings.Cancellation do
       end
     end
   end
+
+  defp cancel_group(meeting, organizer_user_id, refund?) do
+    settle = &settle_seats(&1, organizer_user_id, refund?)
+
+    case Cancel.execute(meeting, caller: :organizer, announce: false, on_cancelled: settle) do
+      {:ok, cancelled, settled} ->
+        Enum.each(settled.released_holds, &expire_released_hold/1)
+        Cancel.announce(cancelled, seat_refund_opts(settled, refund?))
+        {:ok, cancelled}
+
+      # A request still awaiting approval is withdrawn, not cancelled, and
+      # takes no `:on_cancelled`: nothing of it was paid for as a seat.
+      {:ok, withdrawn} ->
+        Cancel.announce(withdrawn)
+        {:ok, withdrawn}
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  # Inside the cancellation's transaction, the meeting row cancelled and
+  # locked: the holds are released before anything else, after the
+  # meeting (the lock order every writer of a hold keeps), and the paid
+  # seats are read under the lock, so one paid while the cancellation
+  # waited for the lock is among them. No pending payment is locked here.
+  defp settle_seats(cancelled, organizer_user_id, refund?) do
+    released = SeatHolds.release_open_for_meeting(cancelled.id, :meeting_cancelled)
+    payments = BookingPayments.seat_payments_for_meeting(cancelled.id, organizer_user_id)
+
+    with {:ok, scheduled} <- schedule_refunds(payments, organizer_user_id, refund?) do
+      {:ok,
+       %{released_holds: released, refunds_scheduled: scheduled, paid_seats: length(payments)}}
+    end
+  end
+
+  defp schedule_refunds(_payments, _organizer_user_id, false), do: {:ok, 0}
+
+  defp schedule_refunds(payments, organizer_user_id, true) do
+    Enum.reduce_while(payments, {:ok, 0}, fn payment, {:ok, count} ->
+      amount = MeetingPayments.refundable_remaining_cents(payment)
+
+      case Oban.insert(GroupCancelRefund.new_for(payment, organizer_user_id, amount)) do
+        {:ok, _job} -> {:cont, {:ok, count + 1}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  # Best effort: a checkout Stripe still completes after this is refunded
+  # in full, its hold having been released for a cancelled meeting.
+  defp expire_released_hold(hold) do
+    case Checkout.abandon_seat_checkout(hold.id) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Could not expire the checkout of a seat hold on a cancelled meeting",
+          seat_hold_id: hold.id,
+          reason: LogFormat.reason(reason)
+        )
+    end
+
+    SeatHolds.broadcast(hold.id, :expired)
+  end
+
+  # The emails say what happens to the money only when somebody paid.
+  defp seat_refund_opts(%{paid_seats: 0}, _refund?), do: []
+  defp seat_refund_opts(_settled, true), do: [seat_refund: :full]
+  defp seat_refund_opts(_settled, false), do: [seat_refund: :none]
 end

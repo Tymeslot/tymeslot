@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.HeldMeetings
+  alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
@@ -144,6 +145,18 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
       [] -> false
       meetings -> Enum.all?(meetings, &MeetingState.released_status?(&1.status))
     end
+  end
+
+  @doc """
+  The seat payments `host_user_id` took on the group meeting `meeting_id`
+  that still hold some of the attendee's money (`Refunds.refund_outstanding?/1`),
+  oldest first: what cancelling the meeting refunds.
+  """
+  @spec seat_payments_for_meeting(Ecto.UUID.t(), integer()) :: [BookingPaymentSchema.t()]
+  def seat_payments_for_meeting(meeting_id, host_user_id) when is_integer(host_user_id) do
+    meeting_id
+    |> BookingPaymentQueries.list_for_meeting_seats()
+    |> Enum.filter(&(&1.host_user_id == host_user_id and Refunds.refund_outstanding?(&1)))
   end
 
   @doc "Fetches the one booking payment of a paid series, or `nil`."

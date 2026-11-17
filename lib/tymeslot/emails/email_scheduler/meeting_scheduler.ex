@@ -444,10 +444,14 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
 
   @doc """
   Schedules cancellation emails to be sent immediately with high priority.
+
+  `seat_refund: :full | :none` is carried to the job as `"seat_refund"`,
+  for the emails of a group session the host cancelled.
   """
-  @spec schedule_cancellation_emails(term()) :: :ok | {:error, term()}
-  def schedule_cancellation_emails(meeting_id) do
+  @spec schedule_cancellation_emails(term(), keyword()) :: :ok | {:error, term()}
+  def schedule_cancellation_emails(meeting_id, opts \\ []) do
     %{"action" => "send_cancellation_emails", "meeting_id" => meeting_id}
+    |> Map.merge(seat_refund_arg(Keyword.get(opts, :seat_refund)))
     |> EmailWorker.new(
       queue: :emails,
       # Highest priority for cancellations
@@ -462,6 +466,11 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
     |> Helpers.insert(meeting_id: meeting_id)
     |> Helpers.ok()
   end
+
+  defp seat_refund_arg(seat_refund) when seat_refund in [:full, :none],
+    do: %{"seat_refund" => Atom.to_string(seat_refund)}
+
+  defp seat_refund_arg(nil), do: %{}
 
   @doc """
   Schedules reminder emails to be sent at a specific time with medium priority.

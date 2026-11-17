@@ -23,6 +23,7 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.PlannedSessions
+  alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
@@ -93,6 +94,26 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
     )
 
     assert_enqueued(worker: EmailWorker, args: seat_job_args(ctx.session, ada))
+  end
+
+  # A hold converting after the move must find the slot its session is at
+  # now; a hold already settled keeps the time it was settled at.
+  test "moves the open seat holds with the session", ctx do
+    held = insert(:seat_hold, meeting: ctx.session, email: "paying@example.com")
+
+    released =
+      insert(:seat_hold,
+        meeting: ctx.session,
+        email: "gone@example.com",
+        status: :released,
+        released_reason: :expired
+      )
+
+    assert {:ok, moved} =
+             PlannedSessions.move(ctx.session, ctx.user.id, at(12, ~T[09:30:00]), nil)
+
+    assert SeatHolds.get(held.id).start_time == moved.start_time
+    assert SeatHolds.get(released.id).start_time == ctx.session.start_time
   end
 
   test "asks the guests to answer for the new time, but a decline stands", ctx do

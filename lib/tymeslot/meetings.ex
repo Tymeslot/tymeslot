@@ -205,17 +205,17 @@ defmodule Tymeslot.Meetings do
     to: Cancellation,
     as: :resolve_refund
 
+  @doc "Works out what cancelling a group session refunds. See `Tymeslot.Meetings.Cancellation`."
+  @spec resolve_seat_refund([struct()], map()) ::
+          {:ok, :refund_seats | :none} | {:error, :acknowledgement_required}
+  defdelegate resolve_seat_refund(payments, params), to: Cancellation
+
   @doc """
-  Cancels a meeting and issues the resolved refund to the attendee.
-
-  Only the meeting's organiser (`acting_user_id` must be its
-  `organizer_user_id`) may cancel through here, and a refund additionally
-  needs the payment to be theirs; anyone else gets `{:error, :not_found}`
-  before the meeting is touched.
-
-  Returns `{:error, {:refund_failed, reason}}` when the meeting was cancelled
-  but the refund could not be issued, so callers can tell the host to settle it
-  manually rather than reporting a failed cancellation.
+  Cancels a meeting as its organiser (`acting_user_id`, else
+  `{:error, :not_found}`) and issues the resolved refund, or, for a group
+  session, schedules one per paid seat (`:refund_seats`). A refund that
+  failed after the cancellation is `{:error, {:refund_failed, reason}}`.
+  See `Tymeslot.Meetings.Cancellation`.
   """
   @spec cancel_meeting_with_refund(
           Ecto.Schema.t(),

@@ -14,6 +14,7 @@ defmodule Tymeslot.Bookings.SeatReleaseTest do
   # always valid, so there is no way to drive that branch through the
   # public API; :meck also replaces the module globally for every process.
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :bookings
 
@@ -23,8 +24,11 @@ defmodule Tymeslot.Bookings.SeatReleaseTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
+  alias Tymeslot.Bookings.CancelSeat
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Bookings.SeatRelease
+  alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
+  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
@@ -70,7 +74,7 @@ defmodule Tymeslot.Bookings.SeatReleaseTest do
     [participant] = ParticipantQueries.list_live_for_meeting(meeting.id)
     {:ok, _cancelled} = ParticipantQueries.cancel(participant)
 
-    %{meeting: meeting}
+    %{meeting: meeting, meeting_type: meeting_type, user: user}
   end
 
   test "cancels an emptied meeting", %{meeting: meeting} do
@@ -115,5 +119,51 @@ defmodule Tymeslot.Bookings.SeatReleaseTest do
 
     assert_receive {:send_alert, :group_meeting_release_failed, payload}
     assert payload.meeting_id == meeting.id
+  end
+
+  # A booker mid-checkout holds a seat on the meeting: it stays for them.
+  test "the last participant leaving keeps a meeting with an open hold", %{meeting: meeting} do
+    insert(:seat_hold, meeting: meeting, email: "payer@example.com")
+
+    assert {:ok, :seats_remain} = SeatRelease.release(meeting)
+    assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
+  end
+
+  test "the participant's own cancellation refunds nothing", ctx do
+    params = %{
+      date: Date.add(Date.utc_today(), 3),
+      time: "14:00",
+      duration: "30min",
+      user_timezone: "Etc/UTC",
+      organizer_user_id: ctx.user.id,
+      meeting_type_id: ctx.meeting_type.id
+    }
+
+    {:ok, meeting} = Create.execute(params, %{"name" => "Payer", "email" => "payer@example.com"})
+    {:ok, _joined} = Create.execute(params, %{"name" => "Stayer", "email" => "stay@example.com"})
+
+    payer =
+      meeting.id
+      |> ParticipantQueries.list_live_for_meeting()
+      |> Enum.find(&(&1.email == "payer@example.com"))
+
+    payment =
+      insert(:paid_booking_payment,
+        meeting_id: meeting.id,
+        participant_id: payer.id,
+        seat_payment: true,
+        amount_cents: 2000,
+        host_user_id: ctx.user.id
+      )
+
+    # No Stripe call is expected: `verify_on_exit!` fails any made.
+    assert {:ok, _result} = CancelSeat.execute(payer.management_token)
+
+    unchanged = Repo.reload!(payment)
+    assert unchanged.status == :paid
+    assert unchanged.refunded_amount_cents == 0
+    assert unchanged.participant_id == payer.id
+    refute_enqueued(worker: GroupCancelRefund)
+    refute_enqueued(worker: RefundLatePayment)
   end
 end

@@ -90,6 +90,29 @@ defmodule Tymeslot.Meetings.SeatHolds do
     end
   end
 
+  @doc """
+  Releases every hold still `held` on the meeting `meeting_id` for
+  `reason`, returning the holds it released. Inside the caller's
+  transaction, which must already hold the meeting's row lock (the lock
+  order of `release/2`). Broadcasts nothing; the caller announces each
+  release once committed.
+  """
+  @spec release_open_for_meeting(binary(), SeatHoldSchema.release_reason()) ::
+          [SeatHoldSchema.t()]
+  defdelegate release_open_for_meeting(meeting_id, reason),
+    to: SeatHoldQueries,
+    as: :release_held_for_meeting
+
+  @doc """
+  Moves the holds still `held` on the meeting `meeting_id` to its new
+  `start_time`, so a hold converting later finds the slot its meeting is
+  now at. Inside the transaction moving the meeting.
+  """
+  @spec follow_moved_meeting(binary(), DateTime.t()) :: non_neg_integer()
+  defdelegate follow_moved_meeting(meeting_id, start_time),
+    to: SeatHoldQueries,
+    as: :restamp_held_for_meeting
+
   @doc "The PubSub topic carrying a hold's payment outcome."
   @spec topic(binary()) :: String.t()
   def topic(hold_id) when is_binary(hold_id), do: "seat_hold_payment:" <> hold_id
