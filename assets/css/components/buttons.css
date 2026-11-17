@@ -192,7 +192,8 @@
     .icon-button::before,
     .action-button--sm::before,
     .status-toggle::before,
-    .check-toggle::before {
+    .check-toggle::before,
+    .modal-close::before {
       content: "";
       position: absolute;
       top: 50%;

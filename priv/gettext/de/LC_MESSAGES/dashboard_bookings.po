@@ -274,6 +274,7 @@ msgid "This meeting's event was deleted from your external calendar."
 msgstr "Das Ereignis dieses Termins wurde aus Ihrem externen Kalender gelöscht."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "Das Ereignis dieses Termins wurde in Ihrem externen Kalender verschoben."
@@ -346,6 +347,7 @@ msgid "Awaiting your approval"
 msgstr "Wartet auf Ihre Zusage"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Booking confirmed. The invitee has been told."
 msgstr "Buchung bestätigt. Der Gast wurde benachrichtigt."
@@ -391,6 +393,7 @@ msgid "Reason (optional)"
 msgstr "Grund (optional)"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Request declined. The slot is free again."
 msgstr "Anfrage abgelehnt. Der Termin ist wieder frei."
@@ -411,11 +414,13 @@ msgid "That meeting's start time has already passed."
 msgstr "Der Beginn dieses Termins liegt bereits in der Vergangenheit."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be approved."
 msgstr "Diese Anfrage konnte nicht angenommen werden."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/request_actions.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_actions.ex
 #, elixir-autogen, elixir-format
 msgid "That request could not be declined."
 msgstr "Diese Anfrage konnte nicht abgelehnt werden."
@@ -815,6 +820,7 @@ msgid "Move booking"
 msgstr "Buchung verschieben"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
+#: lib/tymeslot_web/live/dashboard/calendar/booking_preview.ex
 #, elixir-autogen, elixir-format
 msgid "Move booking to %{time}"
 msgstr "Buchung auf %{time} verschieben"

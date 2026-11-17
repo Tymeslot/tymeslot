@@ -570,10 +570,6 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
     end
   end
 
-  defp query_params(path) do
-    path |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
-  end
-
   defp demo_socket(assigns) do
     %Phoenix.LiveView.Socket{
       assigns:

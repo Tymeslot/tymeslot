@@ -29,10 +29,23 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
   alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntrySchema
   alias Tymeslot.Workers.EmailWorker
-  alias TymeslotWeb.RepeatSeriesFixtures
 
   @first ~U[2026-11-03 09:30:00.000000Z]
   @second ~U[2026-11-10 09:30:00.000000Z]
+
+  @weekly_standup_ics """
+  BEGIN:VCALENDAR
+  VERSION:2.0
+  BEGIN:VEVENT
+  UID:weekly-standup
+  DTSTAMP:20260901T090000Z
+  DTSTART:20260930T090000Z
+  DTEND:20260930T100000Z
+  RRULE:FREQ=WEEKLY;BYDAY=WE
+  SUMMARY:Weekly standup
+  END:VEVENT
+  END:VCALENDAR
+  """
 
   setup do
     Application.put_env(:tymeslot, :email_service_module, Tymeslot.Emails.EmailService)
@@ -483,17 +496,25 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntryEmailTest do
 
   describe "a CalDAV series" do
     test "its first occurrence is addressed by the resource's UID", %{user: user} do
-      integration = RepeatSeriesFixtures.caldav_integration(user)
+      integration = insert(:calendar_integration, user: user, provider: "caldav")
       first = ~U[2026-09-30 09:00:00.000000Z]
 
       event =
-        RepeatSeriesFixtures.caldav_occurrence(integration, %{
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider: "caldav",
+          provider_calendar_id: "/cal/",
+          provider_event_id: "/cal/weekly-standup.ics",
+          provider_metadata: %{"uid" => "weekly-standup"},
           uid: "weekly-standup_20260930T090000",
           start_at: first,
           end_at: DateTime.add(first, 1, :hour),
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=WE",
+          sync_state: "synced",
+          raw_ical: String.replace(@weekly_standup_ics, "\n", "\r\n"),
           attendees: [%{"email" => "guest@example.com"}],
           last_notified_state: baseline(first)
-        })
+        )
 
       email = run_update_to_delivery(moved(event))
 

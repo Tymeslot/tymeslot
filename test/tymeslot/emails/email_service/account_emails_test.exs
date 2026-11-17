@@ -15,6 +15,10 @@ defmodule Tymeslot.Emails.EmailService.AccountEmailsTest do
   import Swoosh.TestAssertions
   import Tymeslot.EmailTestHelpers
   import Tymeslot.Test.ClockHelpers
+  import Tymeslot.Test.DirectEmailSends
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   # Delivery runs inside the CircuitBreaker GenServer, so Swoosh's test adapter
   # would otherwise post {:email, _} to that process rather than to this one.

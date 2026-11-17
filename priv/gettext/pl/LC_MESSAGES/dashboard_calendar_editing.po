@@ -1,0 +1,754 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pl\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is already a guest."
+msgstr "%{email} jest już gościem."
+
+#: lib/tymeslot_web/live/dashboard/calendar/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "A change to this event is still saving. Please choose the calendar once it has saved."
+msgstr "Trwa zapisywanie zmiany w tym wydarzeniu. Wybierz kalendarz po jej zapisaniu."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Add"
+msgstr "Dodaj"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Add a guest"
+msgstr "Dodaj gościa"
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Add a place or room"
+msgstr "Dodaj miejsce lub salę"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_video_field.ex
+#, elixir-autogen, elixir-format
+msgid "Add video call"
+msgstr "Dodaj spotkanie wideo"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Added and invited %{count} guest"
+msgid_plural "Added and invited %{count} guests"
+msgstr[0] "Dodano i zaproszono %{count} gościa"
+msgstr[1] "Dodano i zaproszono %{count} gości"
+msgstr[2] "Dodano i zaproszono %{count} gości"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Added: %{when}"
+msgstr "Dodano: %{when}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Agenda, links, anything else"
+msgstr "Agenda, linki, wszystko inne"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
+#, elixir-autogen, elixir-format
+msgid "All day"
+msgstr "Cały dzień"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "An all-day event can last at most a year."
+msgstr "Wydarzenie całodniowe może trwać najwyżej rok."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
+#, elixir-autogen, elixir-format
+msgid "An all-day event can last up to %{count} days."
+msgstr "Wydarzenie całodniowe może trwać do %{count} dni."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "An event can have at most %{count} guest."
+msgid_plural "An event can have at most %{count} guests."
+msgstr[0] "Wydarzenie może mieć najwyżej %{count} gościa."
+msgstr[1] "Wydarzenie może mieć najwyżej %{count} gości."
+msgstr[2] "Wydarzenie może mieć najwyżej %{count} gości."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
+#, elixir-autogen, elixir-format
+msgid "An event can last up to 7 days."
+msgstr "Wydarzenie może trwać do 7 dni."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "An event with times can last at most 7 days."
+msgstr "Wydarzenie o określonej godzinie może trwać najwyżej 7 dni."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Busy"
+msgstr "Zajęty"
+
+#: lib/tymeslot_web/live/dashboard/calendar/free_busy.ex
+#, elixir-autogen, elixir-format
+msgid "Busy or free is set in the meeting type for bookings and their calendar copies."
+msgstr "Dla rezerwacji i ich kopii w kalendarzu status „Zajęty” lub „Wolny” ustawia się w typie spotkania."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar"
+msgstr "Kalendarz"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
+#: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar/series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_edits.ex
+#, elixir-autogen, elixir-format
+msgid "Change undone"
+msgstr "Cofnięto zmianę"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_status.ex
+#, elixir-autogen, elixir-format
+msgid "Changes save automatically"
+msgstr "Zmiany zapisują się automatycznie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_video_field.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a provider"
+msgstr "Wybierz dostawcę"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Choose one of your calendars."
+msgstr "Wybierz jeden ze swoich kalendarzy."
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Close details"
+msgstr "Zamknij szczegóły"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't add the event. Please try again."
+msgstr "Nie udało się dodać wydarzenia. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't add “%{title}”. %{reason}"
+msgstr "Nie udało się dodać wydarzenia „%{title}”. %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_status.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save. %{reason}"
+msgstr "Nie udało się zapisać. %{reason}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't tell guests. Your changes are saved."
+msgstr "Nie udało się powiadomić gości. Zmiany zapisano."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Create"
+msgstr "Utwórz"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Create and invite"
+msgstr "Utwórz i zaproś"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_video_field.ex
+#, elixir-autogen, elixir-format
+msgid "Creating the video call…"
+msgstr "Tworzenie spotkania wideo…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
+#, elixir-autogen, elixir-format
+msgid "Custom…"
+msgstr "Własny…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Date"
+msgstr "Data"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Usuń"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
+#, elixir-autogen, elixir-format
+msgid "Does not repeat"
+msgstr "Nie powtarza się"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Duplicate"
+msgstr "Duplikuj"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
+#, elixir-autogen, elixir-format
+msgid "Edit custom pattern"
+msgstr "Edytuj własny wzorzec"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
+#, elixir-autogen, elixir-format
+msgid "End time"
+msgstr "Godzina zakończenia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
+#, elixir-autogen, elixir-format
+msgid "Ends"
+msgstr "Koniec"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a valid email address."
+msgstr "Podaj prawidłowy adres e-mail."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Enter saves, Esc cancels. Type a day and time, /calendar, @email or ;place."
+msgstr "Enter zapisuje, Esc anuluje. Wpisz dzień i godzinę, /kalendarz, @e-mail lub ;miejsce."
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Event details"
+msgstr "Szczegóły wydarzenia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Events on that calendar can't repeat."
+msgstr "Wydarzenia w tym kalendarzu nie mogą się powtarzać."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
+#, elixir-autogen, elixir-format
+msgid "Every day"
+msgstr "Codziennie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
+#, elixir-autogen, elixir-format
+msgid "Every month %{on}"
+msgstr "Co miesiąc %{on}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
+#, elixir-autogen, elixir-format
+msgid "Every week on %{day}"
+msgstr "Co tydzień (%{day})"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
+#, elixir-autogen, elixir-format
+msgid "Every weekday"
+msgstr "W każdy dzień roboczy"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
+#, elixir-autogen, elixir-format
+msgid "Every year %{on}"
+msgstr "Co rok %{on}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Free"
+msgstr "Wolny"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Give the event a title."
+msgstr "Nadaj wydarzeniu tytuł."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Guests"
+msgstr "Goście"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can book this time"
+msgstr "Goście mogą zarezerwować ten termin"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can't book this time"
+msgstr "Goście nie mogą zarezerwować tego terminu"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Guests change for this event only."
+msgstr "Lista gości zmienia się tylko w tym wydarzeniu."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Guests haven't been told about these changes"
+msgstr "Goście nie zostali powiadomieni o tych zmianach"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Guests will get an update."
+msgstr "Goście dostaną aktualizację."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
+#, elixir-autogen, elixir-format
+msgid "Hide custom pattern"
+msgstr "Ukryj własny wzorzec"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Invite"
+msgstr "Zaproś"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Invite a guest"
+msgstr "Zaproś gościa"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Invite emails them now."
+msgstr "Przycisk „Zaproś” od razu wysyła zaproszenie e-mailem."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Invited %{email}."
+msgstr "Zaproszono: %{email}."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_video_field.ex
+#, elixir-autogen, elixir-format
+msgid "Join"
+msgstr "Dołącz"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "More options"
+msgstr "Więcej opcji"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move a repeating event"
+msgstr "Przenieś wydarzenie cykliczne"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move every event in this series to %{calendar}?"
+msgstr "Przenieść wszystkie wydarzenia z tej serii do kalendarza %{calendar}?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move series"
+msgstr "Przenieś serię"
+
+#: lib/tymeslot_web/live/dashboard/calendar/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "Moved back to %{calendar}"
+msgstr "Przeniesiono z powrotem do kalendarza %{calendar}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "Moved to %{calendar}"
+msgstr "Przeniesiono do kalendarza %{calendar}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/series_move_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "Moving a series can't be undone here."
+msgstr "Przeniesienia serii nie można tutaj cofnąć."
+
+#: lib/tymeslot_web/live/dashboard/calendar/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "Moving the series to %{calendar}…"
+msgstr "Przenoszenie serii do kalendarza %{calendar}…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#: lib/tymeslot_web/live/dashboard/calendar/phone_tabs.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "New event"
+msgstr "Nowe wydarzenie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_video_field.ex
+#, elixir-autogen, elixir-format
+msgid "No video call"
+msgstr "Bez spotkania wideo"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_video_field.ex
+#, elixir-autogen, elixir-format
+msgid "No video integration connected."
+msgstr "Nie podłączono żadnej integracji wideo."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
+#, elixir-autogen, elixir-format
+msgid "None"
+msgstr "Brak"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
+#, elixir-autogen, elixir-format
+msgid "Not on a listed calendar"
+msgstr "Kalendarz spoza listy"
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Notes"
+msgstr "Notatki"
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing is saved until you create it"
+msgstr "Nic nie zostanie zapisane, dopóki nie utworzysz wydarzenia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "One of the guest addresses isn't a valid email address."
+msgstr "Jeden z adresów e-mail gości jest nieprawidłowy."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Other reminders"
+msgstr "Inne przypomnienia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
+#, elixir-autogen, elixir-format
+msgid "Pick a date between 1900 and 2200."
+msgstr "Wybierz datę z lat 1900–2200."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Place"
+msgstr "Miejsce"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_status.ex
+#, elixir-autogen, elixir-format
+msgid "Read only"
+msgstr "Tylko do odczytu"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder"
+msgstr "Przypomnienie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Remove"
+msgstr "Usuń"
+
+#: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{email}?"
+msgstr "Usunąć gościa %{email}?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Remove %{guest}"
+msgstr "Usuń gościa %{guest}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Remove a guest"
+msgstr "Usuń gościa"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_video_field.ex
+#, elixir-autogen, elixir-format
+msgid "Remove link"
+msgstr "Usuń link"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Removed %{email}."
+msgstr "Usunięto: %{email}."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
+#, elixir-autogen, elixir-format
+msgid "Repeat"
+msgstr "Powtarzanie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
+#, elixir-autogen, elixir-format
+msgid "Repeats"
+msgstr "Powtarza się"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr "Zapisz"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Save and invite"
+msgstr "Zapisz i zaproś"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_status.ex
+#, elixir-autogen, elixir-format
+msgid "Saved"
+msgstr "Zapisano"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_status.ex
+#, elixir-autogen, elixir-format
+msgid "Saved here, waiting to reach %{account}"
+msgstr "Zapisano tutaj, czeka na synchronizację: %{account}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_status.ex
+#, elixir-autogen, elixir-format
+msgid "Saving…"
+msgstr "Zapisywanie…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Show as"
+msgstr "Pokaż jako"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Show me as"
+msgstr "Pokaż jako"
+
+#: lib/tymeslot_web/live/dashboard/calendar/free_busy.ex
+#, elixir-autogen, elixir-format
+msgid "Shown as busy."
+msgstr "Pokazane jako zajęte."
+
+#: lib/tymeslot_web/live/dashboard/calendar/free_busy.ex
+#, elixir-autogen, elixir-format
+msgid "Shown as busy. Guests can't book this time."
+msgstr "Pokazane jako zajęte. Goście nie mogą zarezerwować tego terminu."
+
+#: lib/tymeslot_web/live/dashboard/calendar/free_busy.ex
+#, elixir-autogen, elixir-format
+msgid "Shown as free."
+msgstr "Pokazane jako wolne."
+
+#: lib/tymeslot_web/live/dashboard/calendar/free_busy.ex
+#, elixir-autogen, elixir-format
+msgid "Shown as free. Guests can book this time."
+msgstr "Pokazane jako wolne. Goście mogą zarezerwować ten termin."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
+#, elixir-autogen, elixir-format
+msgid "Start time"
+msgstr "Godzina rozpoczęcia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
+#, elixir-autogen, elixir-format
+msgid "Starts"
+msgstr "Początek"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Still saving. Tell guests once it has saved."
+msgstr "Trwa zapisywanie. Powiadom gości po zapisaniu."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Tell guests"
+msgstr "Powiadom gości"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "That calendar is read-only. Choose another one."
+msgstr "Ten kalendarz jest tylko do odczytu. Wybierz inny."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_edits.ex
+#: lib/tymeslot_web/live/dashboard/calendar/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "That change can't be undone any more."
+msgstr "Tej zmiany nie można już cofnąć."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "That date or time can't be read."
+msgstr "Nie można odczytać tej daty lub godziny."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "That repeat rule can't be read."
+msgstr "Nie można odczytać tej reguły powtarzania."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "That text contains characters that can't be saved."
+msgstr "Ten tekst zawiera znaki, których nie można zapisać."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "That video call can't be added."
+msgstr "Nie można dodać tego spotkania wideo."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_status.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_video.ex
+#, elixir-autogen, elixir-format
+msgid "The change was put back."
+msgstr "Zmianę wycofano."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
+#, elixir-autogen, elixir-format
+msgid "The end is before the start. Pick a later end date."
+msgstr "Koniec wypada przed początkiem. Wybierz późniejszą datę zakończenia."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
+#, elixir-autogen, elixir-format
+msgid "The end is before the start. Pick a later end time."
+msgstr "Koniec wypada przed początkiem. Wybierz późniejszą godzinę zakończenia."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "The event must end after it starts."
+msgstr "Koniec wydarzenia musi wypadać po jego początku."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new.ex
+#, elixir-autogen, elixir-format
+msgid "The event wasn't created. Check it and try again."
+msgstr "Nie utworzono wydarzenia. Sprawdź dane i spróbuj ponownie."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "The notes are too long. Keep them under 5,000 characters."
+msgstr "Notatki są za długie. Maksymalna liczba znaków: 5000."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "The place is too long. Keep it under 1,000 characters."
+msgstr "Miejsce jest za długie. Maksymalna liczba znaków: 1000."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "The title contains characters that can't be saved."
+msgstr "Tytuł zawiera znaki, których nie można zapisać."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "The title is too long. Keep it under 500 characters."
+msgstr "Tytuł jest za długi. Maksymalna liczba znaków: 500."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_video_field.ex
+#, elixir-autogen, elixir-format
+msgid "The video call belongs to the booking."
+msgstr "Spotkanie wideo należy do rezerwacji."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "They'll be invited when you create the event."
+msgstr "Zaproszenia zostaną wysłane po utworzeniu wydarzenia."
+
+#: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
+#, elixir-autogen, elixir-format
+msgid "They'll get an email saying they're no longer invited."
+msgstr "Gość dostanie e-mail z informacją, że zaproszenie zostało cofnięte."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "This event is still saving. Undo once it has saved."
+msgstr "Trwa zapisywanie wydarzenia. Cofnij zmianę po zapisaniu."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Those reminders can't be saved."
+msgstr "Tych przypomnień nie można zapisać."
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr "Tytuł"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Title, or: lunch 13:00 /personal"
+msgstr "Tytuł lub: lunch 13:00 /osobisty"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_video_field.ex
+#, elixir-autogen, elixir-format
+msgid "Video call"
+msgstr "Spotkanie wideo"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "You can invite at most %{count} guests at once."
+msgstr "Jednorazowo możesz zaprosić najwyżej %{count} gości."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "You're the organiser, so there's no need to invite yourself."
+msgstr "To twój adres. Organizatora nie trzeba zapraszać."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "name@example.com"
+msgstr "jan.kowalski@example.com"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "to"
+msgstr "do"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_edits.ex
+#, elixir-autogen, elixir-format
+msgid "your calendar"
+msgstr "twój kalendarz"
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” is saved here and will reach your calendar at its next sync."
+msgstr "Wydarzenie „%{title}” zapisano tutaj. Trafi do kalendarza przy następnej synchronizacji."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Someone else organises this event, so only they can email its guests."
+msgstr "To wydarzenie organizuje ktoś inny, więc tylko ta osoba może wysyłać e-maile do gości."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Added “%{title}”."
+msgstr "Dodano wydarzenie „%{title}”."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't confirm the save. Check your calendar."
+msgstr "Nie udało się potwierdzić zapisu. Sprawdź swój kalendarz."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{email}. They will be invited once the change has synced to your calendar."
+msgstr "Dodano: %{email}. Zaproszenie zostanie wysłane po zsynchronizowaniu zmiany z kalendarzem."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Removed %{email}. They will be told once the change has synced to your calendar."
+msgstr "Usunięto: %{email}. Powiadomienie zostanie wysłane po zsynchronizowaniu zmiany z kalendarzem."

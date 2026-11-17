@@ -1,0 +1,473 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: pl\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "12-hour"
+msgstr "12-godzinny"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "24-hour"
+msgstr "24-godzinny"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "Before events with a reminder, while the calendar is open"
+msgstr "Przed wydarzeniami z przypomnieniem, gdy kalendarz jest otwarty"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "Clock"
+msgstr "Zegar"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop notifications"
+msgstr "Powiadomienia na pulpicie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Import an .ics file"
+msgstr "Importuj plik .ics"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "In the week view"
+msgstr "W widoku tygodnia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "Include weekends"
+msgstr "Uwzględniaj weekendy"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Show week numbers"
+msgstr "Pokazuj numery tygodni"
+
+#: lib/tymeslot_web/live/dashboard/calendar/mini_month.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Week %{number}"
+msgstr "Tydzień %{number}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#, elixir-autogen, elixir-format
+msgid "Week starts on"
+msgstr "Tydzień zaczyna się w"
+
+#: lib/tymeslot_web/live/dashboard/calendar/filter_chip.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} set"
+msgstr "Zestaw %{name}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/filter_chip.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} set · %{count} calendar hidden"
+msgid_plural "%{name} set · %{count} calendars hidden"
+msgstr[0] "Zestaw %{name} · %{count} ukryty kalendarz"
+msgstr[1] "Zestaw %{name} · %{count} ukryte kalendarze"
+msgstr[2] "Zestaw %{name} · %{count} ukrytych kalendarzy"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Anywhere"
+msgstr "Wszędzie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Apply calendar set 1 to 9"
+msgstr "Zastosuj zestaw kalendarzy od 1 do 9"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar set turned off"
+msgstr "Zestaw kalendarzy wyłączony"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar sets"
+msgstr "Zestawy kalendarzy"
+
+#: lib/tymeslot_web/live/dashboard/calendar_focus.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't change focus mode. Please try again."
+msgstr "Nie udało się zmienić trybu skupienia. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/dashboard/calendar/set_events.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save the set. Give it a name of up to 40 characters."
+msgstr "Nie udało się zapisać zestawu. Nadaj mu nazwę o długości do 40 znaków."
+
+#: lib/tymeslot_web/live/dashboard/calendar/set_events.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save the set. Please try again."
+msgstr "Nie udało się zapisać zestawu. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Create and change"
+msgstr "Tworzenie i zmiany"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Delete the focused event"
+msgstr "Usuń zaznaczone wydarzenie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Edit the focused event"
+msgstr "Edytuj zaznaczone wydarzenie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/display_options.ex
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Focus mode"
+msgstr "Tryb skupienia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Focus mode, on a wide screen"
+msgstr "Tryb skupienia, na szerokim ekranie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
+#, elixir-autogen, elixir-format
+msgid "For example, Work"
+msgstr "Na przykład Praca"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Leave focus mode"
+msgstr "Wyjdź z trybu skupienia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/filter_chip.ex
+#, elixir-autogen, elixir-format
+msgid "Leave the %{name} set"
+msgstr "Wyjdź z zestawu %{name}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Leave the calendar set"
+msgstr "Wyjdź z zestawu kalendarzy"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Move between events"
+msgstr "Przechodzenie między wydarzeniami"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Move the focused event"
+msgstr "Przenieś zaznaczone wydarzenie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Navigate"
+msgstr "Nawigacja"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "New event at the next free time"
+msgstr "Nowe wydarzenie w najbliższym wolnym terminie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
+#, elixir-autogen, elixir-format
+msgid "New set"
+msgstr "Nowy zestaw"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
+#, elixir-autogen, elixir-format
+msgid "No set"
+msgstr "Brak zestawu"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Open the focused event"
+msgstr "Otwórz zaznaczone wydarzenie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Press ? to see every keyboard shortcut."
+msgstr "Naciśnij ?, aby zobaczyć wszystkie skróty klawiszowe."
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Press T for today, J and K for the next and previous period, and D, X, W, M or A to change the view. Press 1 to 9 to apply a calendar set and 0 to leave it, F for focus mode on a wide screen, Ctrl K (Cmd K on a Mac) or / to search and run commands, and ? to see every shortcut."
+msgstr "Naciśnij T, aby przejść do dziś, J i K, aby przejść do następnego i poprzedniego okresu, oraz D, X, W, M lub A, aby zmienić widok. Naciśnij od 1 do 9, aby zastosować zestaw kalendarzy, i 0, aby go opuścić, F dla trybu skupienia na szerokim ekranie, Ctrl K (Cmd K na Macu) lub /, aby wyszukiwać i uruchamiać polecenia, oraz ?, aby zobaczyć wszystkie skróty."
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
+#, elixir-autogen, elixir-format
+msgid "Rename or delete %{name}"
+msgstr "Zmień nazwę lub usuń zestaw %{name}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
+#, elixir-autogen, elixir-format
+msgid "Save the calendars you show as a set, then press its number to switch to it."
+msgstr "Zapisz wyświetlane kalendarze jako zestaw, a potem naciśnij jego numer, aby go włączyć."
+
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
+#: lib/tymeslot_web/live/dashboard/calendar/phone_header.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#: lib/tymeslot_web/live/dashboard/calendar/toolbar.ex
+#, elixir-autogen, elixir-format
+msgid "Search and commands"
+msgstr "Wyszukiwanie i polecenia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Search and commands (Cmd K on a Mac)"
+msgstr "Wyszukiwanie i polecenia (Cmd K na Macu)"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
+#, elixir-autogen, elixir-format
+msgid "Set name"
+msgstr "Nazwa zestawu"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Show or hide bookable times"
+msgstr "Pokaż lub ukryj terminy do rezerwacji"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Showing the %{name} set"
+msgstr "Wyświetlany zestaw %{name}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "Undo (Cmd Z on a Mac)"
+msgstr "Cofnij (Cmd Z na Macu)"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "While moving: cancel"
+msgstr "Podczas przenoszenia: anuluj"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "While moving: change its length"
+msgstr "Podczas przenoszenia: zmień czas trwania"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "While moving: confirm"
+msgstr "Podczas przenoszenia: potwierdź"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgid "While moving: shift the event"
+msgstr "Podczas przenoszenia: przesuń wydarzenie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/set_events.ex
+#, elixir-autogen, elixir-format
+msgid "You can keep up to nine calendar sets."
+msgstr "Możesz mieć do dziewięciu zestawów kalendarzy."
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgctxt "key"
+msgid "Arrow keys"
+msgstr "Klawisze strzałek"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgctxt "key"
+msgid "Ctrl"
+msgstr "Ctrl"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgctxt "key"
+msgid "Delete"
+msgstr "Delete"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgctxt "key"
+msgid "Enter"
+msgstr "Enter"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgctxt "key"
+msgid "Esc"
+msgstr "Esc"
+
+#: lib/tymeslot_web/live/dashboard/calendar/shortcut_help.ex
+#, elixir-autogen, elixir-format
+msgctxt "key"
+msgid "Shift"
+msgstr "Shift"
+
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} booking"
+msgid_plural "%{count} bookings"
+msgstr[0] "%{count} rezerwacja"
+msgstr[1] "%{count} rezerwacje"
+msgstr[2] "%{count} rezerwacji"
+
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
+#, elixir-autogen, elixir-format
+msgid "%{events}, %{bookings}"
+msgstr "%{events}, %{bookings}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Add “%{title}”"
+msgstr "Dodaj „%{title}”"
+
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
+#, elixir-autogen, elixir-format
+msgid "Arrow keys move, Enter chooses, Esc closes."
+msgstr "Strzałki przesuwają, Enter wybiera, Esc zamyka."
+
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
+#, elixir-autogen, elixir-format
+msgid "Events"
+msgstr "Wydarzenia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Go to %{date}"
+msgstr "Przejdź do %{date}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Hide week numbers"
+msgstr "Ukryj numery tygodni"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Hide weekends in week view"
+msgstr "Ukryj weekendy w widoku tygodnia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
+#, elixir-autogen, elixir-format
+msgid "No matches"
+msgstr "Brak wyników"
+
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
+#, elixir-autogen, elixir-format
+msgid "Search failed. Try again."
+msgstr "Wyszukiwanie nie powiodło się. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
+#, elixir-autogen, elixir-format
+msgid "Search results"
+msgstr "Wyniki wyszukiwania"
+
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
+#, elixir-autogen, elixir-format
+msgid "Search, or type a date or a command"
+msgstr "Szukaj albo wpisz datę lub polecenie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
+#, elixir-autogen, elixir-format
+msgid "Searching…"
+msgstr "Wyszukiwanie…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Show weekends in week view"
+msgstr "Pokaż weekendy w widoku tygodnia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Start weeks on Monday"
+msgstr "Zaczynaj tydzień w poniedziałek"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Start weeks on Sunday"
+msgstr "Zaczynaj tydzień w niedzielę"
+
+#: lib/tymeslot_web/live/dashboard/calendar/command_bar.ex
+#, elixir-autogen, elixir-format
+msgid "Suggestions"
+msgstr "Podpowiedzi"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Switch to %{name}"
+msgstr "Przełącz na %{name}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "That event isn't in view any more."
+msgstr "To wydarzenie nie jest już widoczne."
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Turn off desktop notifications"
+msgstr "Wyłącz powiadomienia na pulpicie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Turn on desktop notifications"
+msgstr "Włącz powiadomienia na pulpicie"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Unfold early hours"
+msgstr "Rozwiń wczesne godziny"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Use comfortable density"
+msgstr "Użyj wygodnej gęstości"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Use compact density"
+msgstr "Użyj kompaktowej gęstości"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Use the 12-hour clock"
+msgstr "Użyj zegara 12-godzinnego"
+
+#: lib/tymeslot_web/live/dashboard/calendar/power_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Use the 24-hour clock"
+msgstr "Użyj zegara 24-godzinnego"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Send as a Tymeslot meeting"
+msgstr "Wyślij jako spotkanie Tymeslot"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "The note to the guest is too long. Keep it to 2,000 characters or fewer."
+msgstr "Notatka dla gościa jest zbyt długa. Użyj najwyżej 2000 znaków."
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} more guest"
+msgid_plural "%{count} more guests"
+msgstr[0] "jeszcze %{count} gość"
+msgstr[1] "jeszcze %{count} gości"
+msgstr[2] "jeszcze %{count} gości"
+
+#: lib/tymeslot_web/components/dashboard/meetings/guest_status_pill.ex
+#, elixir-autogen, elixir-format
+msgid "Maybe"
+msgstr "Może"

@@ -24,6 +24,22 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
+  The meeting types guests can book now: active and not archived, ordered as
+  `list_active_meeting_types/1` (which keeps archived types still marked active).
+  """
+  @spec get_bookable_meeting_types(integer()) :: [MeetingTypeSchema.t()]
+  def get_bookable_meeting_types(user_id) do
+    query =
+      from(mt in MeetingTypeSchema,
+        where: mt.user_id == ^user_id and mt.is_active == true and mt.is_archived == false,
+        order_by: [asc: mt.sort_order, asc: mt.name],
+        preload: [:video_integration, :calendar_integration]
+      )
+
+    Repo.all(query)
+  end
+
+  @doc """
   The longest booking window, in days, any of the user's active meeting types
   sets for itself. Nil when none overrides its schedule's window.
   """

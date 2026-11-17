@@ -207,3 +207,13 @@ msgstr "Agende um ciclo inteiro de sessões de uma só vez"
 #, elixir-autogen, elixir-format
 msgid "Clients can now book a series in one go: the same time every week or month, or a set of sessions at times they choose. Each session is a normal booking with its own reminders and links, and a series can be paid upfront. Turn it on for each meeting type, under Series."
 msgstr "Os clientes agora podem agendar uma série de uma só vez: no mesmo horário toda semana ou todo mês, ou várias sessões nos horários que escolherem. Cada sessão é um agendamento normal, com lembretes e links próprios, e a série pode ser paga antecipadamente. Ative-a em cada tipo de reunião, em Série."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Your dashboard calendar, redesigned"
+msgstr "O calendário do seu painel, redesenhado"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "We've redesigned the calendar from the ground up: a fresh look, a clearer layout with more room for your week, and quicker ways to plan, create and change your meetings. Have a look around, or read the docs for a tour of everything that's new."
+msgstr "Redesenhamos o calendário do zero: um visual novo, um layout mais claro com mais espaço para a sua semana e formas mais rápidas de planejar, criar e alterar suas reuniões. Dê uma olhada ou leia a documentação para conhecer todas as novidades."

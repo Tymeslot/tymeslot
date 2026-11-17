@@ -17,7 +17,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -157,9 +157,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
       serve_master(@google_master)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, an_hour_later(),
-                 recurrence_scope: :all
-               )
+               Changes.update_event(user.id, occurrence, an_hour_later(), recurrence_scope: :all)
 
       assert_received {:get, @master_url}
       assert_received {:patch, @master_url <> "?sendUpdates=none", body}
@@ -193,9 +191,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
       })
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, a_day_later(),
-                 recurrence_scope: :all
-               )
+               Changes.update_event(user.id, occurrence, a_day_later(), recurrence_scope: :all)
 
       assert_received {:patch, @master_url <> "?sendUpdates=none", body}
 
@@ -214,7 +210,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
       serve_master(@google_master)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :all
                )
 
@@ -244,7 +240,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
       serve_master(@google_master, {:error, 500})
 
       assert {:error, %{retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :all
                )
 
@@ -264,7 +260,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
       serve_master(%{@google_master | "recurrence" => ["RRULE:FREQ=MONTHLY;BYDAY=1MO"]})
 
       assert {:error, %{reason: :rule_pins_occurrences, retry: :not_queued}} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  occurrence,
                  %{
@@ -299,7 +295,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
         )
 
       assert {:error, %{reason: :unaddressable_occurrence, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, master_row, %{summary: "Standup"},
+               Changes.update_event(user.id, master_row, %{summary: "Standup"},
                  recurrence_scope: :all
                )
     end
@@ -334,9 +330,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
       serve_master(@outlook_master)
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, an_hour_later(),
-                 recurrence_scope: :all
-               )
+               Changes.update_event(user.id, occurrence, an_hour_later(), recurrence_scope: :all)
 
       assert_received {:get, @outlook_url}
       assert_received {:patch, @outlook_url, body}
@@ -376,9 +370,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
       )
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, a_day_later(),
-                 recurrence_scope: :all
-               )
+               Changes.update_event(user.id, occurrence, a_day_later(), recurrence_scope: :all)
 
       assert_received {:patch, @outlook_url, body}
 
@@ -397,7 +389,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
       serve_master(@outlook_master, {:error, 500})
 
       assert {:error, %{retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :all
                )
 

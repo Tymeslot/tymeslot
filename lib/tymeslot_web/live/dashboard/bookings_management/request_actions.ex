@@ -85,10 +85,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
 
   `opts` carries the `:success` and `:failure` flash messages, optionally
   `:series_success` (the success message for a series request, given its
-  session count), and the `:reload` function to refresh the list with. The transition itself, and its
-  calendar/video/notification fan-out, runs inside `start_async/3` so
-  `:answering_request` stays set across a render and the row's spinner and
-  disabled state actually paint; `handle_answer/3` reports the outcome once
+  session count), and the `:reload` function to refresh the list with. The
+  transition itself, and its calendar/video/notification fan-out, runs inside
+  `start_async/3` so the meeting's id stays in `:answering_request` (a
+  `MapSet` of the requests whose answer is in flight, so answers to two
+  requests never touch each other's buttons) across a render and the row's
+  spinner and disabled state actually paint; `handle_answer/3` reports the
+  outcome once
   the task completes.
   """
   @spec answer(socket(), map(), (map() -> {:ok, map()} | {:error, atom()}), keyword()) ::
@@ -96,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
   def answer(socket, params, action, opts) do
     case fetch_held_request(socket, params) do
       {:ok, meeting} -> {:noreply, start_answer(socket, meeting, action, opts)}
-      {:error, message} -> {:noreply, finish(flash_and_stay(socket, message), opts)}
+      {:error, message} -> {:noreply, finish(flash_and_stay(socket, message), nil, opts)}
     end
   end
 
@@ -111,7 +114,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
     opts = series_opts(opts, BookingSeries.request_sessions(meeting))
 
     socket
-    |> assign(:answering_request, meeting.id)
+    |> assign(:answering_request, MapSet.put(socket.assigns.answering_request, meeting.id))
     |> assign(:answering_opts, Map.put(socket.assigns.answering_opts, meeting.id, opts))
     |> start_async({:answer_request, meeting.id}, Tasks.with_context(fn -> action.(meeting) end))
   end
@@ -136,7 +139,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
     {:noreply,
      socket
      |> apply_answer_result(meeting_id, result, opts)
-     |> finish(opts)}
+     |> finish(meeting_id, opts)}
   end
 
   # Read before answering: once answered, the series is no request any more.
@@ -205,13 +208,17 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
     socket
   end
 
-  defp finish(socket, opts) do
+  defp finish(socket, meeting_id, opts) do
     reload = Keyword.fetch!(opts, :reload)
 
     socket
-    |> assign(:answering_request, nil)
+    |> assign(:answering_request, MapSet.delete(socket.assigns.answering_request, meeting_id))
     |> reload.()
   end
+
+  @doc "Whether the answer to request `meeting_id` is in flight."
+  @spec answering?(MapSet.t(), Ecto.UUID.t() | nil) :: boolean()
+  def answering?(answering, meeting_id), do: MapSet.member?(answering, meeting_id)
 
   @doc """
   Loads a request this host owns and has not yet answered.
@@ -257,4 +264,15 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
     Flash.error(message)
     socket
   end
+
+  @doc """
+  The host's decline note as `Approval.decline/2` may store it. A crafted
+  socket frame can send a non-binary `reason` (a `reason[x]=y` payload
+  arrives as a map) or one containing a null byte, which PostgreSQL rejects
+  even though it is valid UTF-8; anything but a clean string is no reason
+  given, rather than a crash.
+  """
+  @spec decline_reason(term()) :: String.t() | nil
+  def decline_reason(reason) when is_binary(reason), do: String.replace(reason, "\x00", "")
+  def decline_reason(_reason), do: nil
 end

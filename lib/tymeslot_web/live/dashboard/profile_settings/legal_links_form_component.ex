@@ -4,8 +4,9 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.LegalLinksFormComponent do
   Profile Settings, for the small footer on their booking pages and on the
   pages guests open from their emails.
 
-  Saved with a button, like the intro form, and validated as it is typed so a
-  link that would be refused shows its error before the organiser saves. A
+  Saved when the organiser leaves a field, like the intro form
+  (`TymeslotWeb.Components.Dashboard.Autosave`): a link that would be refused
+  shows its error in place and is not saved. A
   blank field shows the instance default as its placeholder when the host has
   configured one (`Tymeslot.Profiles.public_legal_links/1`).
 
@@ -22,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.LegalLinksFormComponent do
   alias Tymeslot.Profiles.InputValidation
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Validation.Constraints
+  alias TymeslotWeb.Components.Dashboard.Autosave
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -29,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.LegalLinksFormComponent do
       socket
       |> assign(assigns)
       |> assign(:defaults, Profiles.public_legal_links(nil))
+      |> assign_new(:save_status, fn -> :idle end)
       |> assign_new(:form, fn ->
         build_form(ProfileSchema.legal_links_changeset(assigns.profile, %{}))
       end)
@@ -37,40 +40,51 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.LegalLinksFormComponent do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("validate", %{"profile_legal_links" => params}, socket) do
+  def handle_event(event, %{"profile_legal_links" => params}, socket)
+      when event in ["validate", "save"] do
     profile = socket.assigns.profile
 
-    changeset =
-      case sanitize(params, socket) do
-        {:ok, sanitized} -> ProfileSchema.legal_links_changeset(profile, sanitized)
-        {:error, field_errors} -> refused(profile, params, field_errors)
-      end
+    with {:ok, sanitized} <- sanitize(params, socket),
+         %Changeset{valid?: true} = changeset <-
+           ProfileSchema.legal_links_changeset(profile, sanitized) do
+      {:noreply, persist(socket, changeset, sanitized)}
+    else
+      {:error, field_errors} ->
+        {:noreply, show_errors(socket, refused(profile, params, field_errors))}
 
-    {:noreply, assign(socket, :form, build_form(Map.put(changeset, :action, :validate)))}
+      %Changeset{} = changeset ->
+        {:noreply, show_errors(socket, changeset)}
+    end
   end
 
-  def handle_event("save", %{"profile_legal_links" => params}, socket) do
-    with {:ok, sanitized} <- sanitize(params, socket),
-         {:ok, profile} <- Profiles.update_legal_links(socket.assigns.profile, sanitized) do
-      send(self(), {:profile_updated, profile})
-      Flash.info(dgettext("dashboard_profile", "Legal links saved"))
+  defp persist(socket, %Changeset{changes: changes}, _sanitized) when changes == %{} do
+    Autosave.clean(socket, "legal-links-form")
+  end
 
-      {:noreply,
-       assign(socket,
-         profile: profile,
-         form: build_form(ProfileSchema.legal_links_changeset(profile, %{}))
-       )}
-    else
+  defp persist(socket, _changeset, sanitized) do
+    case Profiles.update_legal_links(socket.assigns.profile, sanitized) do
+      {:ok, profile} ->
+        send(self(), {:profile_updated, profile})
+
+        socket
+        |> assign(
+          profile: profile,
+          save_status: :saved,
+          form: build_form(ProfileSchema.legal_links_changeset(profile, %{}))
+        )
+        |> Autosave.clean("legal-links-form")
+
       {:error, %Changeset{} = changeset} ->
         Flash.error(dgettext("dashboard_profile", "Couldn't save your legal links"))
-        {:noreply, assign(socket, :form, build_form(Map.put(changeset, :action, :update)))}
-
-      {:error, field_errors} ->
-        Flash.error(dgettext("dashboard_profile", "Couldn't save your legal links"))
-        changeset = refused(socket.assigns.profile, params, field_errors)
-
-        {:noreply, assign(socket, :form, build_form(Map.put(changeset, :action, :update)))}
+        socket |> show_errors(changeset) |> assign(:save_status, :error)
     end
+  end
+
+  defp show_errors(socket, changeset) do
+    assign(socket,
+      form: build_form(Map.put(changeset, :action, :validate)),
+      save_status: :idle
+    )
   end
 
   @impl Phoenix.LiveComponent
@@ -84,6 +98,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.LegalLinksFormComponent do
         novalidate
         phx-change="validate"
         phx-submit="save"
+        phx-hook="UnsavedChanges"
         phx-target={@myself}
         class="space-y-6"
       >
@@ -103,11 +118,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.LegalLinksFormComponent do
           label={dgettext("dashboard_profile", "Privacy policy")}
           default={@defaults.privacy_policy_url}
         />
-        <div class="flex justify-end">
-          <.action_button type="submit" data-testid="save-legal-links">
-            {dgettext("dashboard_common", "Save changes")}
-          </.action_button>
-        </div>
+        <Autosave.status id="legal-links-form-status" status={@save_status} />
       </.form>
     </div>
     """
@@ -130,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.LegalLinksFormComponent do
         maxlength={Constraints.url_max_length()}
         inputmode="url"
         autocomplete="url"
-        phx-debounce="300"
+        phx-debounce="blur"
       />
       <p :if={@default_in_use?} class="mt-1 text-sm text-tymeslot-500">
         {dgettext("dashboard_profile", "Instance default in use: %{url}", url: @default)}

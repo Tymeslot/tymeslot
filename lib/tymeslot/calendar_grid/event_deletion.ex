@@ -74,13 +74,16 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   alias Tymeslot.CalendarGrid.UndeliveredUpdates
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
   alias Tymeslot.Integrations.Calendar.SeriesRules
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.SeriesEntries
+  alias Tymeslot.Meetings.MeetingState
 
   @type event :: %{
           required(:uid) => String.t(),
@@ -132,6 +135,112 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
       :unsupported -> {:error, :recurring_event}
       _family -> {:ok, :series}
     end
+  end
+
+  @doc """
+  Whether deleting `event` would tell anyone, asked before the calendar
+  offers a delete without a confirmation: `{:notifies, :booking}` when it is
+  the calendar copy of a live Tymeslot booking, whose meeting the delete
+  cancels; `{:notifies, {:attendees, count}}` when `user_id` organises it
+  and it has attendees with an address; `:silent` otherwise. The copy of a
+  meeting that is no longer live (cancelled, declined, expired or voided) is
+  always `:silent`: it deletes like a plain event, and its guests were told
+  when the booking ended, so the delete never offers to email them again.
+  """
+  @spec notice(pos_integer(), map()) ::
+          :silent | {:notifies, :booking | {:attendees, pos_integer()}}
+  def notice(user_id, event) do
+    case booking_link(event) do
+      :live ->
+        {:notifies, :booking}
+
+      :ended ->
+        :silent
+
+      :none ->
+        case AttendeeNotifications.event_deleted(event, addressed_attendees(event), user_id) do
+          {:needs_confirmation, count} -> {:notifies, {:attendees, count}}
+          {:ok, _nobody} -> :silent
+        end
+    end
+  end
+
+  # Whether the event is the copy of a meeting that still expects its
+  # calendar event (`:live`, deleting it cancels the meeting), of one that
+  # has ended (`:ended`), or of none.
+  defp booking_link(event) do
+    case Meetings.find_meeting_by_calendar_event(
+           event.calendar_integration_id,
+           Map.get(event, :provider_event_id),
+           event.uid
+         ) do
+      {:ok, meeting} ->
+        if MeetingState.expects_calendar_event?(meeting), do: :live, else: :ended
+
+      {:error, :not_found} ->
+        :none
+    end
+  end
+
+  @doc "Whether `event` is the synced calendar copy of a Tymeslot booking."
+  @spec booking_copy?(map()) :: boolean()
+  def booking_copy?(event) do
+    CalendarEvents.event_linked_to_booking?(
+      event.calendar_integration_id,
+      Map.get(event, :provider_event_id),
+      event.uid
+    )
+  end
+
+  @doc """
+  The events of `events` that are booking copies, by the rule `booking_copy?/1`
+  asks of one (a meeting on the same integration with the event's provider
+  event id, or with the event's uid as its `calendar_uid`), in one query for
+  them all.
+  """
+  @spec booking_copies([map()]) :: [map()]
+  def booking_copies([]), do: []
+
+  def booking_copies(events) do
+    links =
+      Meetings.list_calendar_links(
+        events |> Enum.map(& &1.calendar_integration_id) |> Enum.uniq(),
+        present(events, &Map.get(&1, :provider_event_id)),
+        present(events, & &1.uid)
+      )
+
+    keys =
+      links
+      |> Enum.flat_map(fn {integration_id, provider_event_id, calendar_uid} ->
+        [
+          {integration_id, :provider_event_id, provider_event_id},
+          {integration_id, :uid, calendar_uid}
+        ]
+      end)
+      |> MapSet.new()
+
+    Enum.filter(events, &linked?(&1, keys))
+  end
+
+  defp present(events, field),
+    do: events |> Enum.map(field) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+
+  # A nil identifier links nothing, as `booking_copy?/1` looks neither up.
+  defp linked?(event, keys) do
+    Enum.any?(
+      [provider_event_id: Map.get(event, :provider_event_id), uid: event.uid],
+      fn {field, value} ->
+        value != nil and MapSet.member?(keys, {event.calendar_integration_id, field, value})
+      end
+    )
+  end
+
+  defp addressed_attendees(event) do
+    event
+    |> Map.get(:attendees)
+    |> List.wrap()
+    |> Enum.map(&Attendee.normalise/1)
+    |> Enum.reject(&(is_nil(&1.email) or &1.email == ""))
   end
 
   @doc """

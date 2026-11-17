@@ -68,9 +68,9 @@ defmodule Tymeslot.Bookings.Create.Prepare do
   The duration comes from the resolved meeting type, never the request,
   whenever a type is known (the request only picks among the lengths the
   type offers, see `Offer.duration_minutes/3`), as Reschedule pins it to the
-  persisted meeting. Only an unresolvable type (ad-hoc booking, or one that
-  fails the active check a few steps later) falls back to the client-supplied
-  value, bounded exactly as the booking page bounds it. The resolved record
+  persisted meeting. Only an unresolvable type, which the active check
+  refuses a few steps later, falls back to the client-supplied value,
+  bounded exactly as the booking page bounds it. The resolved record
   is kept on the data for everything downstream, which then reads it from
   memory instead of each issuing the same query again.
   """
@@ -175,7 +175,14 @@ defmodule Tymeslot.Bookings.Create.Prepare do
 
   # A nil record with a meeting_type_id set means the type doesn't exist (or
   # belongs to another host).
-  defp validate_meeting_type_active(%{meeting_type_id: nil}), do: :ok
+  #
+  # A booking is always made under a meeting type: approval, email
+  # confirmation, payment, the type's schedule, buffers, limits and questions
+  # are all read from it, so one saved without it skips every one of them.
+  # An untyped meeting has routes of its own (`CreateAdHoc`, a confirmed
+  # poll), so a booking page reaching here without a type is refused rather
+  # than saved under nobody's rules.
+  defp validate_meeting_type_active(%{meeting_type_id: nil}), do: {:error, :meeting_type_missing}
   defp validate_meeting_type_active(%{meeting_type: %{is_active: true}}), do: :ok
 
   defp validate_meeting_type_active(%{meeting_type: %{is_active: false}}),

@@ -27,6 +27,13 @@
 @import "./components/misc.css";
 @import "./components/token-page.css";
 @import "./components/dashboard.css";
+@import "./components/calendar-surface.css";
+@import "./components/calendar-editing.css";
+@import "./components/calendar-booking.css";
+@import "./components/calendar-views.css";
+@import "./components/calendar-phone.css";
+@import "./components/calendar-touch.css";
+@import "./components/calendar-power.css";
 @import "./components/theme-customization.css";
 @import "./components/embed-cards.css";
 @import "./components/onboarding.css";

@@ -344,10 +344,26 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       |> form("#display-name-form", %{full_name: "New Display Name"})
       |> render_change()
 
-      assert render(view) =~ "Display name updated"
+      assert has_element?(
+               view,
+               "#display-name-form-status[data-autosave-status='saved']",
+               "Saved"
+             )
+
+      assert_push_event(view, "autosave:clean", %{id: "display-name-form"})
 
       updated_profile = Repo.reload!(profile)
       assert updated_profile.full_name == "New Display Name"
+    end
+
+    test "Enter in the field saves the name", %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      view
+      |> form("#display-name-form", %{full_name: "Entered Name"})
+      |> render_submit()
+
+      assert Repo.reload!(profile).full_name == "Entered Name"
     end
 
     test "shows error for invalid display name", %{conn: conn} do
@@ -361,9 +377,13 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       |> render_change()
 
       assert render(view) =~ "too long"
+      refute_push_event(view, "autosave:clean", %{id: "display-name-form"})
     end
 
-    test "does not flash when display name is unchanged", %{conn: conn, profile: profile} do
+    test "does not report a save when display name is unchanged", %{
+      conn: conn,
+      profile: profile
+    } do
       # Set a known name first
       profile = Repo.update!(Changeset.change(profile, full_name: "Existing Name"))
 
@@ -374,7 +394,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       |> form("#display-name-form", %{full_name: profile.full_name})
       |> render_change()
 
-      refute render(view) =~ "Display name updated"
+      refute has_element?(view, "#display-name-form-status[data-autosave-status='saved']")
+      assert_push_event(view, "autosave:clean", %{id: "display-name-form"})
     end
 
     test "clears display name when empty string is entered", %{conn: conn, profile: profile} do

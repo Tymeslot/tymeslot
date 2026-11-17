@@ -86,6 +86,33 @@ defmodule Tymeslot.CalendarGrid.ProviderPayload do
 
   def put_series_zone(payload, _zone), do: payload
 
+  @doc """
+  Gives the payload of an edit the provider's own free/busy state, as the
+  cached row `stored` last read it, when the edit leaves free/busy alone.
+
+  The cache keeps free/busy as `transparency`, opaque or transparent, but
+  Outlook has richer states that all block time (`tentative`, `oof`,
+  `workingElsewhere`), and its sync keeps the raw event in
+  `provider_metadata`, `showAs` included. Without this hint every edit of
+  such an event would write it back as plain `busy`. An edit that changes
+  `transparency` gets no hint, so it writes `free` or `busy` as chosen
+  (see `Outlook.EventMapper.format_event_data/1`). Any other payload is
+  returned unchanged.
+  """
+  @spec put_show_as(map(), map() | nil, map()) :: map()
+  def put_show_as(
+        payload,
+        %{provider_metadata: %{"showAs" => show_as}, transparency: transparency},
+        changes
+      )
+      when is_binary(show_as) do
+    if Map.get(changes, :transparency, transparency) == transparency,
+      do: Map.put(payload, :show_as, show_as),
+      else: payload
+  end
+
+  def put_show_as(payload, _stored, _changes), do: payload
+
   # Adapters read a `Date` as an all-day boundary and a `DateTime` as an
   # instant, so the type itself carries the distinction.
   defp timing(%{all_day: true, start_date: %Date{} = start_date, end_date: %Date{} = end_date}),

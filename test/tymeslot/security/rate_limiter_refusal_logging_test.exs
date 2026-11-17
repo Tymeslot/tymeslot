@@ -6,7 +6,8 @@ defmodule Tymeslot.Security.RateLimiterRefusalLoggingTest do
   limits whose refusal was never logged (form keystrokes, public poll voting,
   settings edits), the auth limits, whose refusal the auth flows log once
   as a security event, and the series rule read budget, whose refusal ends
-  the sync run's reads with one line of its own; a second line per refusal
+  the sync run's reads with one line of its own, and the integration OAuth
+  callbacks, whose callers log their own; a second line per refusal
   would bury the ones worth reading.
   """
 
@@ -24,12 +25,13 @@ defmodule Tymeslot.Security.RateLimiterRefusalLoggingTest do
     availability_update_hours calendar_push calendar_webhook freebusy healthcheck
     meeting_ics payment_initiation poll_link_request poll_register poll_vote stripe_webhook
     theme_upload
-    username_change username_check webhook webhook_form webhook_form_validate
+    telegram_webhook username_change username_check webhook_form webhook_form_validate
+    zoom_deauth
   )a
 
   # The auth flows log these refusals once themselves, as a security event.
   @audited_by_auth ~w(
-    email_change_verify invitation_accept oauth_callback oauth_completion oauth_initiation
+    email_change_verify invitation_accept oauth_signin_callback oauth_completion oauth_initiation
     password_reset_email password_reset_ip password_reset_submit
     signup_attempt_notice signup_email signup_ip social_signup_confirmation
     verification_ip verification_link verification_user
@@ -39,7 +41,10 @@ defmodule Tymeslot.Security.RateLimiterRefusalLoggingTest do
   # that once.
   @logged_by_sync ~w(series_rule_read)a
 
-  @silent @quiet ++ @audited_by_auth ++ @logged_by_sync
+  # The integration OAuth callbacks log their refusal themselves.
+  @logged_by_caller ~w(integration_oauth_callback)a
+
+  @silent @quiet ++ @audited_by_auth ++ @logged_by_sync ++ @logged_by_caller
 
   setup do
     RateLimiter.clear_all()

@@ -27,10 +27,18 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   its mirror is dropped before the conflict check runs.
   `Tymeslot.Meetings.CalendarEventLink` owns the rule for which event that is,
   because the identifier the two sides share differs by provider family.
+
+  ## Read-only all-day events
+
+  The fresh events go through the same bookability rule as the booking page
+  (`Tymeslot.Availability.Bookability.apply_to_busy/3`), so a holiday on a
+  read-only calendar refuses here exactly when the page leaves it out, and an
+  event the organiser treats as free is not a clash.
   """
 
   require Logger
 
+  alias Tymeslot.Availability.Bookability
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -265,7 +273,10 @@ defmodule Tymeslot.Bookings.CalendarCheck do
 
     case Task.yield(fetch, timeout_ms) || Task.shutdown(fetch) do
       {:ok, {:ok, events}} ->
-        {:ok, Meetings.reject_calendar_event_mirrors(events, Keyword.get(opts, :exclude))}
+        {:ok,
+         events
+         |> Bookability.apply_to_busy(organizer_user_id, {start_date, end_date})
+         |> Meetings.reject_calendar_event_mirrors(Keyword.get(opts, :exclude))}
 
       {:ok, {:error, reason}} ->
         {:error, reason}

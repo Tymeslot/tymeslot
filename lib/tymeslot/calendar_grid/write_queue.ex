@@ -13,11 +13,8 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
       back to `settle/3`;
     * `{:show, event}`: show `event` on the grid in place of its row;
     * `:reload`: reload the grid's events;
-    * `{:notify, notify, updated_event, scope}`: ask the organiser whether to
-      tell the event's attendees, once a write made with `notify` was
-      accepted in `scope` or saved to sync later;
     * `{:membership_changed, original_event, updated_event}`: tell the
-      attendees a write made with `:membership` added or removed, once
+      guests a write made with `:membership` added or removed, once
       accepted or saved to sync later, from the event as it found it and
       left it;
     * `{:dropped, :series_write | :series_move, count}`: tell the organiser
@@ -44,15 +41,13 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
 
   ## When a write fails
 
-  Only the failed write's change is taken back. When writes are still waiting
-  behind it, they still run, and the grid shows the confirmed event with the
-  waiting writes' changes on top of it. When nothing is waiting, the grid goes
-  back to the confirmed event. So once an event's queue drains, the grid
-  shows what the provider holds.
+  Only the failed write's change is taken back. Writes waiting behind it
+  still run, and the grid shows the confirmed event with their changes on
+  top; with nothing waiting, it goes back to the confirmed event. So once an
+  event's queue drains, the grid shows what the provider holds.
 
   An edit that could not reach the provider but was saved to sync later
-  (`:queued`) counts as accepted: the next write starts from it, as the
-  queued replay will.
+  (`:queued`) counts as accepted: the next write starts from it, as the replay will.
 
   ## After a write to a whole series
 
@@ -69,15 +64,13 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   copy of the event over the series-wide change, or to an occurrence the
   series has left. The organiser is told how many changes were not applied.
 
-  A series moved to another calendar is not one of these writes, but it
-  ends the same way (`series_moved/2`): every write held while it was
-  moving is dropped and counted, and the grid reloads.
+  A series moved to another calendar ends the same way (`series_moved/2`):
+  every write held while it moved is dropped and counted, and the grid reloads.
 
   ## While a whole series is written or moved
 
-  Queueing by event alone would let an edit of another occurrence of the
-  series run alongside a write to the whole of it, or its move, and land
-  on the series as it was.
+  Queueing by event alone would let an edit of another occurrence run beside
+  a write to the whole series, or its move, and land on the series as it was.
 
   So while such a write or move is running, the series is held, known by
   its integration and address (`Tymeslot.CalendarGrid.Occurrence.series_address/1`)
@@ -156,7 +149,6 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
           {:start, write(), map()}
           | {:show, map()}
           | :reload
-          | {:notify, map(), map(), atom()}
           | {:membership_changed, map(), map()}
           | {:dropped, :series_write | :series_move, pos_integer()}
 
@@ -185,22 +177,24 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
 
   @doc """
   Queues a write of `changes` to `event` through
-  `Tymeslot.CalendarGrid.update_event/4`. `notify`, when given, is
-  `%{original: event, saved_message: message}`, or `:membership` for a
-  change of who attends: once the write is accepted the queue asks the
-  driver to tell the attendees (`{:notify, ...}`, `{:membership_changed, ...}`).
+  `Tymeslot.CalendarGrid.Changes.update_event/4`. With `notify` set to
+  `:membership`, once it is accepted, the driver is asked to email the guests
+  the write added or removed (`{:membership_changed, original, updated}`).
   """
-  @spec update(t(), map(), map(), keyword(), map() | :membership | nil) :: {t(), [effect()]}
+  @spec update(t(), map(), map(), keyword(), :membership | nil) :: {t(), [effect()]}
   def update(queue, event, changes, opts, notify \\ nil),
-    do:
-      run(
-        queue,
-        &submit(&1, event, %{kind: :update, changes: changes, opts: opts, notify: notify})
-      )
+    do: queue |> update_ref(event, changes, opts, notify) |> Tuple.delete_at(2)
+
+  @doc "`update/5`, also answering the reference of the write it took."
+  @spec update_ref(t(), map(), map(), keyword(), :membership | nil) :: {t(), [effect()], ref()}
+  def update_ref(queue, event, changes, opts, notify \\ nil) do
+    write = %{kind: :update, changes: changes, opts: opts, notify: notify, ref: ref(event)}
+    queue |> run(&submit(&1, event, write)) |> Tuple.insert_at(2, write.ref)
+  end
 
   @doc """
   Queues a change of the video of `event` through
-  `Tymeslot.CalendarGrid.change_event_video/3`.
+  `Tymeslot.CalendarGrid.Changes.change_event_video/3`.
   """
   @spec change_video(t(), map(), pos_integer() | nil) :: {t(), [effect()]}
   def change_video(queue, event, video_integration_id),
@@ -408,8 +402,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
   defp submit({queue, effects}, event, write) do
     key = key(event)
     series = series_key(event)
-    seq = System.unique_integer([:positive, :monotonic])
-    write = write |> Map.put(:ref, {key, seq}) |> tag_series_wide(series)
+    write = write |> Map.put_new_lazy(:ref, fn -> ref(event) end) |> tag_series_wide(series)
     lent_series = {:series, series}
 
     case {queue.elsewhere, queue.holds} do
@@ -432,6 +425,8 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
         enqueue({hold_for(queue, write, event), effects}, key, series, event, write)
     end
   end
+
+  defp ref(event), do: {key(event), System.unique_integer([:positive, :monotonic])}
 
   defp put_waiting({queue, effects}, key, waiting),
     do: {%{queue | elsewhere: Map.put(queue.elsewhere, key, waiting)}, effects}
@@ -549,6 +544,7 @@ defmodule Tymeslot.CalendarGrid.WriteQueue do
     Enum.reduce(held, acc, fn {event, write}, acc -> submit(acc, event, write) end)
   end
 
+  # What a write made with `notify` asks of the driver (`update/5`).
   defp notified(acc, write, before, outcome) do
     case QueuedWrite.attendee_effect(write, before, outcome) do
       nil -> acc

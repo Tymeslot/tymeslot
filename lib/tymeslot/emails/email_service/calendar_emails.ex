@@ -5,7 +5,6 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
 
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.HostClock
-  alias Tymeslot.Infrastructure.AdminAlerts
 
   alias Tymeslot.Emails.Templates.{
     CalendarInvitation,
@@ -18,34 +17,19 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
   @doc """
   Sends a calendar sync error notification to the calendar owner.
 
-  Sent by `Tymeslot.Meetings.CalendarEventSync` when a booking's calendar
-  event cannot be written: at once when the calendar declines the create
-  (`:refused`, which no retry changes), and otherwise once the create, or an
-  update that cannot be applied, has spent its last attempt, including a
-  create given up on after waiting out an unreachable calendar. An
-  unauthorised write sends the integration's reconnection notice instead.
+  Sent from the email job `Tymeslot.Meetings.CalendarEventSync` schedules
+  when a booking's calendar event cannot be written: at once when the
+  calendar declines the create (`:refused`, which no retry changes), and
+  otherwise once the create, or an update that cannot be applied, has spent
+  its last attempt, including a create given up on after waiting out an
+  unreachable calendar. An unauthorised write sends the integration's
+  reconnection notice instead. The operator is alerted when the job is
+  scheduled, not here, so a retried send does not alert again.
   """
   @spec send_calendar_sync_error(map(), any()) :: {:ok, any()} | {:error, any()}
   def send_calendar_sync_error(meeting, error_reason) do
-    owner_email = CalendarSyncError.recipient_email(meeting)
+    Logger.info("Sending calendar sync error notification", meeting_id: meeting.id)
 
-    Logger.info("Sending calendar sync error notification",
-      meeting_id: meeting.id,
-      organizer_email: owner_email
-    )
-
-    AdminAlerts.report(:calendar_sync_error,
-      summary: "Calendar sync failed for meeting",
-      reason: error_reason,
-      context: %{
-        meeting_id: meeting.id,
-        owner_email: owner_email,
-        calendar_integration_id: Map.get(meeting, :calendar_integration_id)
-      }
-    )
-
-    # The operator is alerted before the email is rendered, so a template
-    # that fails to render cannot swallow the alert.
     meeting
     |> CalendarSyncError.render(error_reason)
     |> Delivery.deliver()

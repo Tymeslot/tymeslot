@@ -87,13 +87,19 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
 
   Blank identifiers are dropped — they cannot be keyed. Use this instead of
   `get_by_provider_event_id/2` in loops to avoid N+1 queries.
+
+  With `drawn_for: user_id` only that organiser's meetings the calendar
+  draws (`MeetingState.where_drawn/1`) are considered, so a cancelled
+  meeting sharing an identifier cannot take the place of a live one.
   """
-  @spec list_by_calendar_identifiers(integer(), [String.t() | nil]) :: %{
+  @spec list_by_calendar_identifiers(integer(), [String.t() | nil], keyword()) :: %{
           String.t() => Meeting.t()
         }
-  def list_by_calendar_identifiers(_calendar_integration_id, []), do: %{}
+  def list_by_calendar_identifiers(calendar_integration_id, identifiers, opts \\ [])
 
-  def list_by_calendar_identifiers(calendar_integration_id, identifiers)
+  def list_by_calendar_identifiers(_calendar_integration_id, [], _opts), do: %{}
+
+  def list_by_calendar_identifiers(calendar_integration_id, identifiers, opts)
       when is_list(identifiers) do
     case Enum.reject(identifiers, &CalendarEventLink.blank_identifier?/1) do
       [] ->
@@ -106,12 +112,46 @@ defmodule Tymeslot.Meetings.MeetingCalendarQueries do
           m.calendar_integration_id == ^calendar_integration_id and
             (m.provider_event_id in ^ids or m.calendar_uid in ^ids)
         )
+        |> only_drawn_for(Keyword.get(opts, :drawn_for))
         |> Repo.all()
         |> Enum.flat_map(fn meeting ->
           Enum.map(CalendarEventLink.identifiers(meeting), &{&1, meeting})
         end)
         |> Map.new()
     end
+  end
+
+  defp only_drawn_for(query, nil), do: query
+
+  defp only_drawn_for(query, organizer_user_id) do
+    query
+    |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> MeetingState.where_drawn()
+  end
+
+  @doc """
+  The calendar links of the meetings on any of `integration_ids` whose
+  provider event id is one of `provider_event_ids` or whose `calendar_uid` is
+  one of `uids`, as `{calendar_integration_id, provider_event_id,
+  calendar_uid}`: one query for what `get_by_provider_event_id/2` and
+  `get_by_calendar_uid_and_integration/2` answer one event at a time. The
+  caller pairs each link with its event by integration.
+  """
+  @spec list_calendar_links([integer()], [String.t()], [String.t()]) :: [
+          {integer(), String.t() | nil, String.t() | nil}
+        ]
+  def list_calendar_links([], _provider_event_ids, _uids), do: []
+  def list_calendar_links(_integration_ids, [], []), do: []
+
+  def list_calendar_links(integration_ids, provider_event_ids, uids) do
+    Meeting
+    |> where(
+      [m],
+      m.calendar_integration_id in ^integration_ids and
+        (m.provider_event_id in ^provider_event_ids or m.calendar_uid in ^uids)
+    )
+    |> select([m], {m.calendar_integration_id, m.provider_event_id, m.calendar_uid})
+    |> Repo.all()
   end
 
   @doc """

@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventMoveTest do
   @moduledoc """
-  `CalendarGrid.move_event/3` creates the whole event on the destination
+  `Changes.move_event/3` creates the whole event on the destination
   before deleting the original, so no failure along the way can lose it.
 
   Both provider writes are stubbed at the suite-wide `:calendar_module` seam
@@ -18,7 +18,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
   import Tymeslot.Test.CalendarGridHelpers
 
   alias Ecto.Changeset
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.ExchangeFixtures
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
@@ -168,7 +168,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
   end
 
   defp move(user, event, integration, calendar_id \\ nil) do
-    CalendarGrid.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
+    Changes.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
   end
 
   describe "move_event/3 when the destination accepts the event" do

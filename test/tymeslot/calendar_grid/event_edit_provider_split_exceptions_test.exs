@@ -20,7 +20,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
   import ExUnit.CaptureLog
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -211,7 +211,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
 
       # An hour later, from 09:00 to 10:00 Berlin, and renamed.
       assert {:ok, _updated} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  occurrence,
                  %{
@@ -251,7 +251,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
       log =
         capture_log(fn ->
           assert {:ok, _updated} =
-                   CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                   Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                      recurrence_scope: :following
                    )
         end)
@@ -399,7 +399,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
       serve(outlook())
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -428,7 +428,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
       serve(outlook(%{master: html, exception: html}))
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 
@@ -451,7 +451,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
       )
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+               Changes.update_event(user.id, occurrence, %{summary: "Standup"},
                  recurrence_scope: :following
                )
 

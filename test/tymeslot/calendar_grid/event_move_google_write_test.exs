@@ -18,7 +18,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveGoogleWriteTest do
   import Mox
 
   alias Ecto.Changeset
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
@@ -100,7 +100,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveGoogleWriteTest do
   end
 
   defp move(user, event, integration) do
-    CalendarGrid.move_event(user.id, event, %{integration: integration, calendar_id: "team"})
+    Changes.move_event(user.id, event, %{integration: integration, calendar_id: "team"})
   end
 
   describe "moving a synced Google event to another calendar" do

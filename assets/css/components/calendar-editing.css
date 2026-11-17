@@ -1,0 +1,499 @@
+/* Calendar editing: quick create, drafts and the event panel on the
+   organiser calendar. The quick-create popover
+   (assets/js/calendar/quick_create.js) and the draft blocks
+   (assets/js/calendar/render.js, hooks/calendar_canvas/draft.js) are drawn by
+   the CalendarCanvas hook as class strings, so their styles live here rather
+   than as Tailwind utilities a template scan would never see. The panel
+   (TymeslotWeb.Dashboard.Calendar.EventPanel) is Tailwind and core
+   components; only its column rule is here. Colours come from the --cal-*
+   tokens and the --color-calendar-* palette in base/variables.css. */
+
+/* Popover shell. Appended to <body>; the hook sets left, top and, when the
+   viewport is short, max-height. */
+.cal-qc {
+  position: fixed;
+  z-index: var(--cal-z-sheet);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 22rem;
+  max-width: calc(100vw - 16px);
+  padding: 12px;
+  overflow-y: auto;
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-2xl);
+  background: var(--cal-surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--cal-text);
+}
+
+.cal-qc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 16px, so iOS never zooms into the field. */
+.cal-qc-field {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--cal-line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--cal-surface);
+  color: var(--cal-text);
+  font-size: var(--font-size-base);
+}
+
+.cal-qc-field::placeholder {
+  color: var(--cal-text-muted);
+}
+
+.cal-qc-field:focus-visible {
+  border-color: var(--cal-line-strong);
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+/* Read only while the draft saves or the panel opens. */
+.cal-qc-field[readonly] {
+  color: var(--cal-text-muted);
+}
+
+.cal-qc-field[aria-invalid="true"] {
+  border-color: var(--color-error-strong);
+}
+
+.cal-qc-hint,
+.cal-qc-error {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 16px;
+}
+
+.cal-qc-hint {
+  color: var(--cal-text-muted);
+}
+
+.cal-qc-error {
+  color: var(--color-error-strong);
+}
+
+/* Chips: what the parser understood, each one a control. */
+.cal-qc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.cal-qc-chip,
+.cal-qc-native.is-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 2px 10px;
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-full);
+  background: var(--cal-chip);
+  color: var(--cal-text);
+  font-size: var(--font-size-xs);
+  line-height: 16px;
+  cursor: pointer;
+}
+
+/* Place and guests are shown, not edited, here. */
+/* A block, not a flex box: an ellipsis only shows on text in a block. */
+span.cal-qc-chip {
+  display: inline-block;
+  line-height: 22px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+}
+
+button.cal-qc-chip:hover,
+.cal-qc-calendar:hover {
+  background: var(--cal-hover);
+}
+
+.cal-qc-chip:focus-visible,
+.cal-qc-calendar:has(select:focus-visible),
+.cal-qc-native.is-open:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 1px;
+}
+
+.cal-qc-chip.is-parsed {
+  border-color: color-mix(in srgb, var(--cal-focus) 45%, var(--cal-line));
+  background: color-mix(in srgb, var(--cal-focus) 10%, var(--cal-surface));
+}
+
+/* The all-day toggle when on. */
+.cal-qc-chip[aria-pressed="true"] {
+  border-color: var(--cal-text);
+  background: var(--cal-text);
+  color: var(--cal-surface);
+}
+
+.cal-qc-chip[aria-invalid="true"] {
+  border-color: var(--color-error-strong);
+}
+
+/* The native date or time input lies over its chip, so a tap on the chip
+   opens the browser's picker. With a mouse the input takes no pointer
+   events, so the click reaches the chip, whose handler calls showPicker; on
+   touch it takes the tap itself (see the coarse block below). Where
+   showPicker is missing the hook hides the chip and shows the input itself
+   (.is-open), drawn as a chip. */
+.cal-qc-chip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.cal-qc-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cal-qc-native.is-open {
+  position: static;
+  width: auto;
+  height: auto;
+  opacity: 1;
+  box-shadow: none;
+  pointer-events: auto;
+}
+
+/* On touch the input over each date and time chip takes the tap itself, so
+   the browser's own picker opens on every touch browser, including those
+   where showPicker() is missing or refused; its change moves the draft as
+   the chip's would. 16px, so focusing it never zooms on iOS. */
+@media (pointer: coarse) {
+  .cal-qc-native {
+    font-size: var(--font-size-base);
+    pointer-events: auto;
+  }
+}
+
+/* 16px on iOS, so focusing the select or the shown input never zooms. */
+@supports (-webkit-touch-callout: none) {
+  .cal-qc-calendar select,
+  .cal-qc-native.is-open {
+    font-size: var(--font-size-base);
+  }
+}
+
+.cal-qc-sep {
+  padding: 0 4px;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* Calendar chip: a select inside the pill, with the calendar's swatch. */
+.cal-qc-calendar {
+  position: relative;
+  padding-right: 24px;
+}
+
+.cal-qc-calendar::after {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  content: "";
+  pointer-events: none;
+  transform: translateY(-70%) rotate(45deg);
+}
+
+.cal-qc-calendar select {
+  min-width: 0;
+  max-width: 12rem;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  appearance: none;
+}
+
+.cal-qc-calendar select:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.cal-qc-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--cal-ev);
+}
+
+/* Show as: Busy / Free. */
+.cal-qc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cal-qc-label {
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.cal-qc-seg {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--cal-line-strong);
+  border-radius: var(--radius-lg);
+}
+
+.cal-qc-seg button {
+  min-height: 28px;
+  padding: 2px 10px;
+  border: 0;
+  background: var(--cal-surface);
+  color: var(--cal-text);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.cal-qc-seg button + button {
+  border-left: 1px solid var(--cal-line-strong);
+}
+
+.cal-qc-seg button:hover {
+  background: var(--cal-hover);
+}
+
+.cal-qc-seg button[aria-pressed="true"] {
+  background: var(--cal-text);
+  color: var(--cal-surface);
+}
+
+.cal-qc-seg button:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: -2px;
+}
+
+/* Footer: More options, and Save (the shared primary button). */
+.cal-qc-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cal-qc-more {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.cal-qc-more:hover:not(:disabled) {
+  color: var(--cal-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cal-qc-more:focus-visible {
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 2px;
+}
+
+.cal-qc-more:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.cal-qc-save:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* The surface's toast sits above everything: sheets, popovers and core
+   modals (which hold two of the phone's sheets). The layer is the same at
+   every width; calendar-phone.css moves its placement on a phone. */
+.cal-toast-region {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 1rem;
+  z-index: var(--cal-z-toast);
+}
+
+/* The hook's own notice (a save it could not confirm), shaped like the
+   surface's toast (TymeslotWeb.Dashboard.Calendar.Toast) and in its place. */
+.cal-notice {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  z-index: var(--cal-z-toast);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: min(32rem, calc(100vw - 32px));
+  padding: 10px 8px 10px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--color-tymeslot-900);
+  box-shadow: var(--shadow-lg);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  transform: translateX(-50%);
+}
+
+.cal-notice-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.cal-notice-close {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  color: var(--color-tymeslot-300);
+}
+
+.cal-notice-close:hover {
+  color: #fff;
+}
+
+.cal-notice-close:focus-visible {
+  outline: 2px solid var(--color-turquoise-400);
+  outline-offset: 0;
+}
+
+.cal-notice-icon {
+  width: 16px;
+  height: 16px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cal-qc,
+  .cal-notice {
+    animation: fadeIn 120ms ease-out;
+  }
+}
+
+/* Drafts. Solid in the calendar's colour so they read as new; the fill is
+   mixed towards --cal-ink so white text holds 4.5:1 for every palette colour.
+   The block in drawing (hooks/calendar_canvas/draft.js) has no calendar yet
+   and falls back to the focus colour. Both sit just above the column's
+   "+N" chip (--cal-lift, as render.js does) and below the sticky header.
+   A pending draft keeps full contrast: its "Saving…" label and a dashed
+   inset outline say it is waiting. The grid redraws on every keystroke, so
+   a draft never animates in. */
+.cal-ev.is-draft {
+  z-index: var(--z, calc(var(--cal-lift) + 2));
+  border-color: transparent;
+  background: color-mix(in srgb, var(--cal-ev, var(--cal-focus)) 55%, var(--cal-ink));
+  box-shadow: var(--shadow-md);
+  color: var(--cal-on-booking);
+  cursor: default;
+}
+
+.cal-ev.is-draft.is-pending,
+.cal-adbar.is-draft.is-pending {
+  outline: 1px dashed var(--cal-on-booking);
+  outline-offset: -4px;
+  cursor: progress;
+}
+
+.cal-ev.is-drawing {
+  z-index: calc(var(--cal-lift) + 2);
+  box-shadow: none;
+  opacity: 0.85;
+}
+
+.cal-ev.is-draft.is-free {
+  border: 1.5px dashed var(--cal-ev);
+  background: var(--cal-surface);
+  color: color-mix(in srgb, var(--cal-ev) 45%, var(--cal-ink));
+}
+
+.cal-ev.is-draft.is-free.is-pending {
+  outline-color: var(--cal-ev);
+}
+
+.cal-ev-saving {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.cal-adbar.is-draft {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--cal-ev) 55%, var(--cal-ink));
+  box-shadow: var(--shadow-md);
+  color: var(--cal-on-booking);
+  cursor: default;
+}
+
+/* The event panel: a 22rem column beside the grid, which narrows. Its body
+   scrolls inside it. Below 1024px a column leaves too little grid, so the
+   panel lies over the grid from the right (the surface's row is relative). */
+.cal-panel {
+  flex: 0 0 22rem;
+  width: 22rem;
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--cal-line);
+  background: var(--cal-surface);
+  color: var(--cal-text);
+}
+
+@media (width < 64rem) {
+  .cal-panel {
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: 60;
+    max-width: 100%;
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+/* Quick create's kind switch: Event / Open for booking, across the popover. */
+.cal-qc-head {
+  margin-bottom: 8px;
+}
+
+.cal-qc-head:empty {
+  display: none;
+}
+
+.cal-qc-kind {
+  display: flex;
+}
+
+.cal-qc-kind button {
+  flex: 1;
+}
+
+/* Why an event can't be saved here (no calendar connected). */
+.cal-qc-note {
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+}

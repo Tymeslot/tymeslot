@@ -183,6 +183,15 @@ defmodule Tymeslot.Security.RateLimiter.DashboardLimits do
       operation: "reschedule request",
       action: dgettext_noop("errors", "meeting moves")
     ],
+    # The dashboard's answer to a booking request; the emailed link's answer is
+    # `:meeting_approval`, keyed on the client.
+    dashboard_meeting_approval: [
+      prefix: "dashboard_meeting_approval",
+      scope: :user,
+      limit: 20,
+      window_ms: 10 * @minute,
+      operation: "booking request answer"
+    ],
     dashboard_add_guests: [
       prefix: "dashboard_add_guests",
       scope: :user,

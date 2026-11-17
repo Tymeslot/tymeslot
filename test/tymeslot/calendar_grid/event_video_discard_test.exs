@@ -23,7 +23,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
   import Mox
   import Tymeslot.Test.CalendarGridHelpers
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CreatedEvent
@@ -130,7 +130,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
       event = insert_event(ctx.caldav, @design_review, video(ctx.zoom, @zoom_url))
       expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
-      assert {:ok, _deleted} = CalendarGrid.delete_event(ctx.user.id, address(event))
+      assert {:ok, _deleted} = Changes.delete_event(ctx.user.id, address(event))
 
       assert_enqueued(
         worker: VideoSyncWorker,
@@ -145,7 +145,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
         {:error, :network_error}
       end)
 
-      assert {:error, %{retry: :queued}} = CalendarGrid.delete_event(ctx.user.id, address(event))
+      assert {:error, %{retry: :queued}} = Changes.delete_event(ctx.user.id, address(event))
       refute_enqueued(worker: VideoSyncWorker)
     end
   end
@@ -177,17 +177,17 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
       end)
 
       assert {:ok, %{uid: moved_uid, source: :left_behind}} =
-               CalendarGrid.move_event(ctx.user.id, original, %{integration: ctx.destination})
+               Changes.move_event(ctx.user.id, original, %{integration: ctx.destination})
 
       expect(Tymeslot.CalendarMock, :delete_event, 2, fn _uid, _context, _opts -> :ok end)
 
-      assert {:ok, _deleted} = CalendarGrid.delete_event(ctx.user.id, address(original))
+      assert {:ok, _deleted} = Changes.delete_event(ctx.user.id, address(original))
       refute_enqueued(worker: VideoSyncWorker)
 
       {:ok, moved} = ProviderCalendarEventQueries.get_by_uid(ctx.destination.id, moved_uid)
       assert moved.video_link == @zoom_url
 
-      assert {:ok, _deleted} = CalendarGrid.delete_event(ctx.user.id, address(moved))
+      assert {:ok, _deleted} = Changes.delete_event(ctx.user.id, address(moved))
 
       assert_enqueued(
         worker: VideoSyncWorker,
@@ -244,7 +244,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
 
     expect(Tymeslot.CalendarMock, :update_event, fn _uid, _payload, _context -> :ok end)
 
-    assert {:ok, @new_url} = CalendarGrid.change_event_video(ctx.user.id, event, ctx.mirotalk.id)
+    assert {:ok, @new_url} = Changes.change_event_video(ctx.user.id, event, ctx.mirotalk.id)
   end
 
   defp expect_zoom_delete(status) do

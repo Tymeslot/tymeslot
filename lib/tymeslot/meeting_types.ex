@@ -88,6 +88,10 @@ defmodule Tymeslot.MeetingTypes do
   def get_active_meeting_types(user_id),
     do: MeetingTypeQueries.list_active_meeting_types(user_id)
 
+  @doc "The host's types guests can book now: active, not archived, in the host's order."
+  @spec get_bookable_meeting_types(integer()) :: [Ecto.Schema.t()]
+  defdelegate get_bookable_meeting_types(user_id), to: MeetingTypeQueries
+
   @doc """
   The longest booking window, in days, any of the user's active meeting types
   sets for itself, or nil when every one uses its schedule's window. Callers
@@ -280,12 +284,11 @@ defmodule Tymeslot.MeetingTypes do
   @doc """
   Deletes a meeting type.
 
-  A fixed-date type's upcoming dates are cancelled first, through the host's
-  own cancel path, which tells everyone booked on them
-  (`Tymeslot.Meetings.PlannedSessions.cancel/2`): deleted with the type, they
-  would stay on the calendar and in people's diaries with nothing left to
-  manage them from. Should a cancellation fail, the type is kept, so the
-  host can try again. `upcoming_sign_ups/1` is what the confirmation shows.
+  A fixed-date type's upcoming dates are cancelled first, through the host's own
+  cancel path, which tells everyone booked on them (`PlannedSessions.cancel/2`):
+  deleted with the type, they would stay on the calendar with nothing left to
+  manage them from. Should a cancellation fail, the type is kept, so the host can
+  try again. `upcoming_sign_ups/1` is what the confirmation shows.
   """
   @spec delete_meeting_type(Ecto.Schema.t()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t() | term()}

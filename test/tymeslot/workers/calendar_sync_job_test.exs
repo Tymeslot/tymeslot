@@ -168,4 +168,34 @@ defmodule Tymeslot.Workers.CalendarSyncJobTest do
     assert :ok = CalendarSyncJob.run(job(integration.id), fn _integration -> :ok end)
     assert failures(integration) == 0
   end
+
+  describe "telling the organiser's open calendars" do
+    setup do
+      integration = insert(:calendar_integration, provider: "caldav")
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{integration.user_id}")
+      %{integration: integration}
+    end
+
+    test "a failed cycle is broadcast", %{integration: integration} do
+      CalendarSyncJob.run(job(integration.id), fn _integration -> {:error, :unreachable} end)
+
+      user_id = integration.user_id
+      integration_id = integration.id
+      assert_receive {:calendar_sync_failed, ^user_id, ^integration_id}
+    end
+
+    test "a discarded cycle is broadcast", %{integration: integration} do
+      CalendarSyncJob.run(job(integration.id), fn _integration -> {:discard, "No calendars"} end)
+
+      integration_id = integration.id
+      assert_receive {:calendar_sync_failed, _user_id, ^integration_id}
+    end
+
+    test "a cycle that succeeds or waits is not", %{integration: integration} do
+      CalendarSyncJob.run(job(integration.id), fn _integration -> :ok end)
+      CalendarSyncJob.run(job(integration.id), fn _integration -> {:snooze, 60} end, @bound)
+
+      refute_received {:calendar_sync_failed, _user_id, _integration_id}
+    end
+  end
 end

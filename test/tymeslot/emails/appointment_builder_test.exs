@@ -280,8 +280,6 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
       result = AppointmentBuilder.from_meeting(meeting)
 
       assert result.organizer_contact_info == "reply to this email"
-      assert result.contact_info == "reply to this email"
-      assert result.allow_contact == true
     end
 
     test "includes reminder time from meeting reminders" do

@@ -116,8 +116,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   are read before anything is written and carried to the new series once
   it is (`Recurrence.SplitExceptions`): each keeps what it had of its own,
   moved with the series, and a cancelled one stays cancelled. Only one
-  whose place a new repeat rule no longer has cannot be carried, which the
-  organiser is told before choosing the scope (`following_notes/2`). A
+  whose place a new repeat rule no longer has cannot be carried. A
   write that fails after the split is logged, and the edit still succeeds.
 
   The series' rows are then deleted and a sync requested, as for an edit of
@@ -152,7 +151,15 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   # The fields of a series member an edit can change, in the cache's
   # vocabulary, which the payload shares for these; timing is written when
   # the edit changed it (`changed_fields/3`).
-  @override_fields [:summary, :description, :location, :colour, :reminders, :attendees]
+  @override_fields [
+    :summary,
+    :description,
+    :location,
+    :colour,
+    :reminders,
+    :attendees,
+    :transparency
+  ]
 
   # The cache fields an edit moves an occurrence or resizes it by.
   @timing_fields [:start_at, :end_at, :start_date, :end_date]
@@ -164,37 +171,12 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   # as `ProviderPayload.put_series_zone/2` adds it only for one.
   @series_only_fields [:recurrence_rule, :recurrence_exceptions, :series_timezone, :timezone]
 
-  @typedoc """
-  Something an edit of this and every following occurrence does not carry,
-  which the organiser is told before choosing that scope:
-
-    * `:unmatched_changes_reset` - occurrences from the edited one on that
-      were changed or cancelled on their own keep that only where the
-      series' new repeat rule still has them (Google and Outlook, for a
-      change of rule; a CalDAV split keeps every override and exclusion).
-  """
-  @type following_note :: :unmatched_changes_reset
-
   @doc """
   The fields of a series member an edit writes as they are, beside its
   timing and repeat rule, in the vocabulary the cache and the payload share.
   """
   @spec override_fields() :: [atom()]
   def override_fields, do: @override_fields
-
-  @doc """
-  What an edit of `event` and every following occurrence by `changes` will
-  not carry (`t:following_note/0`), in the order the organiser should read
-  them. Reads the cached row, as `EventEdit.update_event/4` does.
-  """
-  @spec following_notes(map(), map()) :: [following_note()]
-  def following_notes(event, changes) do
-    stored = Occurrence.cached_row(event)
-
-    if Occurrence.series_family(stored) == :provider_ids and rule_changed?(stored, changes),
-      do: [:unmatched_changes_reset],
-      else: []
-  end
 
   @doc """
   How a series member whose provider is in `family` may be edited from the

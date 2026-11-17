@@ -11,7 +11,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
   grid event itself must never be deleted as a room, since its id is the grid
   event's own.
 
-  Every scenario is set up through `CalendarGrid.change_event_video/3`, so
+  Every scenario is set up through `Changes.change_event_video/3`, so
   whatever that path records about the room is what the later action sees.
   The calendar is stubbed at `Tymeslot.CalendarMock`; the Teams provider runs
   for real against Microsoft Graph stubbed at `Tymeslot.HTTPClientMock`. Room
@@ -34,7 +34,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
   import Tymeslot.Test.CalendarGridHelpers
 
   alias Ecto.Changeset
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
@@ -96,7 +96,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
     test "deleting the grid event deletes the separate Teams event", ctx do
       expect_calendar_delete()
 
-      assert {:ok, _deleted} = CalendarGrid.delete_event(ctx.user.id, ctx.event)
+      assert {:ok, _deleted} = Changes.delete_event(ctx.user.id, ctx.event)
       drain_room_jobs()
 
       assert {:delete, own_event_url(1)} in graph_calls()
@@ -106,7 +106,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
     test "switching to no video deletes the separate Teams event", ctx do
       expect_calendar_update()
 
-      assert {:ok, nil} = CalendarGrid.change_event_video(ctx.user.id, ctx.event, nil)
+      assert {:ok, nil} = Changes.change_event_video(ctx.user.id, ctx.event, nil)
       drain_room_jobs()
 
       assert {:delete, own_event_url(1)} in graph_calls()
@@ -118,7 +118,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
       expect_calendar_update()
 
       assert {:ok, @mirotalk_url} =
-               CalendarGrid.change_event_video(ctx.user.id, ctx.event, mirotalk.id)
+               Changes.change_event_video(ctx.user.id, ctx.event, mirotalk.id)
 
       drain_room_jobs()
 
@@ -130,7 +130,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
       third = insert_teams(ctx.user, "entra-oid-third")
       expect_calendar_update()
 
-      assert {:ok, url} = CalendarGrid.change_event_video(ctx.user.id, ctx.event, third.id)
+      assert {:ok, url} = Changes.change_event_video(ctx.user.id, ctx.event, third.id)
       assert url == join_url("AAMk-own-event-2")
 
       drain_room_jobs()
@@ -145,7 +145,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
       expect_calendar_update()
 
       assert {:ok, url} =
-               CalendarGrid.change_event_video(ctx.user.id, ctx.event, ctx.own_teams.id)
+               Changes.change_event_video(ctx.user.id, ctx.event, ctx.own_teams.id)
 
       assert url == join_url(@grid_event_id)
 
@@ -159,7 +159,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
       expect_calendar_update()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(ctx.user.id, ctx.event, %{
+               Changes.update_event(ctx.user.id, ctx.event, %{
                  start_at: ~U[2030-06-02 14:00:00.000000Z],
                  end_at: ~U[2030-06-02 15:00:00.000000Z]
                })
@@ -182,7 +182,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
       expect_calendar_update()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(ctx.user.id, ctx.event, %{
+               Changes.update_event(ctx.user.id, ctx.event, %{
                  end_at: ~U[2030-06-01 11:30:00.000000Z]
                })
 
@@ -216,7 +216,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
       event = with_separate_teams(ctx, event, ctx.own_teams)
       expect_calendar_delete()
 
-      assert {:ok, _deleted} = CalendarGrid.delete_event(ctx.user.id, event)
+      assert {:ok, _deleted} = Changes.delete_event(ctx.user.id, event)
       drain_room_jobs()
 
       assert {:delete, own_event_url(1)} in graph_calls()
@@ -303,7 +303,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
     setup ctx do
       event = insert_event(ctx.calendar, @planning)
 
-      assert {:ok, url} = CalendarGrid.change_event_video(ctx.user.id, event, ctx.own_teams.id)
+      assert {:ok, url} = Changes.change_event_video(ctx.user.id, event, ctx.own_teams.id)
       assert url == join_url(@grid_event_id)
       assert [{:patch, _attach_url}] = graph_calls()
       flush_graph()
@@ -314,14 +314,14 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
     test "deleting it deletes the event only through the calendar", ctx do
       expect_calendar_delete()
 
-      assert {:ok, _deleted} = CalendarGrid.delete_event(ctx.user.id, ctx.event)
+      assert {:ok, _deleted} = Changes.delete_event(ctx.user.id, ctx.event)
       drain_room_jobs()
 
       assert graph_calls() == []
     end
 
     test "switching to no video leaves the Outlook event on Graph", ctx do
-      assert {:ok, nil} = CalendarGrid.change_event_video(ctx.user.id, ctx.event, nil)
+      assert {:ok, nil} = Changes.change_event_video(ctx.user.id, ctx.event, nil)
       drain_room_jobs()
 
       assert graph_calls() == []
@@ -333,7 +333,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
       expect_calendar_update()
 
       assert {:ok, @mirotalk_url} =
-               CalendarGrid.change_event_video(ctx.user.id, ctx.event, mirotalk.id)
+               Changes.change_event_video(ctx.user.id, ctx.event, mirotalk.id)
 
       drain_room_jobs()
 
@@ -344,7 +344,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
       expect_calendar_update()
 
       assert {:ok, url} =
-               CalendarGrid.change_event_video(ctx.user.id, ctx.event, ctx.other_teams.id)
+               Changes.change_event_video(ctx.user.id, ctx.event, ctx.other_teams.id)
 
       assert url == join_url("AAMk-own-event-1")
       drain_room_jobs()
@@ -358,7 +358,7 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
   defp with_separate_teams(ctx, event, teams) do
     expect_calendar_update()
 
-    assert {:ok, url} = CalendarGrid.change_event_video(ctx.user.id, event, teams.id)
+    assert {:ok, url} = Changes.change_event_video(ctx.user.id, event, teams.id)
     assert url == join_url("AAMk-own-event-1")
     assert [{:post, "#{@graph}/me/events"}] = graph_calls()
     flush_graph()

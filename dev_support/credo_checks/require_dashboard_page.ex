@@ -84,7 +84,6 @@ defmodule CredoChecks.RequireDashboardPage do
   @helper_paths [
     "/automation/",
     "/availability/",
-    "/calendar_grid/",
     "/calendar_settings/",
     "/meeting_settings/",
     "/profile_settings/",
@@ -92,7 +91,6 @@ defmodule CredoChecks.RequireDashboardPage do
     "/subscription/",
     "/theme_customization/",
     "/theme_settings/",
-    "calendar_grid_component",
     "calendar_settings_component",
     "dashboard_overview_component",
     "email_preferences_component",

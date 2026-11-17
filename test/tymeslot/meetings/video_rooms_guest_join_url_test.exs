@@ -28,6 +28,7 @@ defmodule Tymeslot.Meetings.VideoRoomsGuestJoinUrlTest do
 
   import Mox
   import Tymeslot.Factory
+  import Tymeslot.Test.DirectEmailSends
 
   alias Ecto.UUID
   alias Joken.Signer
@@ -49,6 +50,9 @@ defmodule Tymeslot.Meetings.VideoRoomsGuestJoinUrlTest do
   # link apart from the two the meeting already stores.
   @organizer_url "https://stored.example.com/organiser-link"
   @attendee_url "https://stored.example.com/attendee-link"
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   setup :verify_on_exit!
 

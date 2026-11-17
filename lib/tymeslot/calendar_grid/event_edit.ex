@@ -73,6 +73,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.AllDay
+  alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.ProviderPayload
@@ -88,7 +89,10 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   require Logger
 
-  @editable_fields ~w(summary description location start_at end_at all_day start_date end_date reminders recurrence_rule colour attendees)a
+  @editable_fields ~w(summary description location start_at end_at all_day start_date end_date reminders recurrence_rule colour attendees transparency)a
+
+  # Whether the event blocks the organiser's time, in the cache's vocabulary.
+  @transparencies ~w(opaque transparent)
 
   @typedoc "An allowlisted map of cache fields to their new values."
   @type changes :: %{optional(atom()) => term()}
@@ -109,9 +113,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   provider, and records the edit on the cached row.
 
   `changes` may only carry #{Enum.map_join(@editable_fields, ", ", &"`#{&1}`")};
-  any other key raises `ArgumentError`. Timing follows the event's resulting `all_day`
-  flag: an all-day event keeps its dates and drops its timestamps, a timed
-  event the reverse. A change that flips `all_day` also refits the `UNTIL` of
+  any other key raises `ArgumentError`, as does a `transparency` other than
+  `"opaque"` (busy) or `"transparent"` (free). A change of `transparency` to
+  a booking or a booking's calendar copy is refused with `:booking` before
+  anything is written (`EditGuard.free_busy_change/1`). Timing follows the
+  event's resulting `all_day` flag: an all-day event keeps its dates and
+  drops its timestamps, a timed event the reverse. A change that flips `all_day` also refits the `UNTIL` of
   a recurring event's rule to the value type its new `DTSTART` calls for.
 
   ## Options
@@ -150,17 +157,30 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     ensure_known_fields!(changes)
     scope = recurrence_scope!(opts)
 
-    # The cache row, read once and used throughout: it is what says whether
-    # the event belongs to a series, since the caller's copy may be an
-    # optimistic one built from a form, and it carries the document the CalDAV
-    # adapters patch.
-    stored = stored_row(event)
+    with :ok <- free_busy_change(event, changes) do
+      # The cache row, read once and used throughout: it is what says whether
+      # the event belongs to a series, since the caller's copy may be an
+      # optimistic one built from a form, and it carries the document the
+      # CalDAV adapters patch.
+      stored = stored_row(event)
 
-    case Occurrence.series_family(stored || event) do
-      :single -> update_single(user_id, event, stored, scope, changes, opts)
-      family -> SeriesEdit.update_event(user_id, event, stored, family, scope, changes, opts)
+      case Occurrence.series_family(stored || event) do
+        :single -> update_single(user_id, event, stored, scope, changes, opts)
+        family -> SeriesEdit.update_event(user_id, event, stored, family, scope, changes, opts)
+      end
     end
   end
+
+  # A booking and a booking's calendar copy follow their meeting type's
+  # "show as free" setting, whatever the caller offered.
+  defp free_busy_change(event, %{transparency: _transparency}) do
+    case EditGuard.free_busy_change(event) do
+      :ok -> :ok
+      {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
+    end
+  end
+
+  defp free_busy_change(_event, _changes), do: :ok
 
   # A change of repeat rule for this and the following events was chosen
   # for a member of a series, with a `COUNT` given for the whole series. A
@@ -208,7 +228,11 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     with :single <- Occurrence.series_family(stored || event),
          {:ok, updated} <- apply_changes(event, changes, opts),
          {:ok, payload} <- ProviderPayload.from_event(updated),
-         payload = payload |> put_stored_document(stored) |> scope_merged_fields(event, changes),
+         payload =
+           payload
+           |> ProviderPayload.put_show_as(stored, changes)
+           |> put_stored_document(stored)
+           |> scope_merged_fields(event, changes),
          :queued <- queue_retry(:queue_recoverable, user_id, updated, payload, :not_written) do
       {:ok, updated}
     else
@@ -271,6 +295,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
            payload
            |> maybe_put_conference(Keyword.get(opts, :conference_data))
            |> ProviderPayload.put_series_zone(Keyword.get(opts, :timezone))
+           |> ProviderPayload.put_show_as(stored, changes)
            |> put_stored_document(stored)
            |> scope_merged_fields(event, changes)
            |> address.() do
@@ -437,7 +462,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   defp ensure_known_fields!(changes) do
     case Map.keys(changes) -- @editable_fields do
       [] ->
-        :ok
+        ensure_transparency!(changes)
 
       unknown ->
         raise ArgumentError,
@@ -445,6 +470,14 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
                 "editable fields are #{inspect(@editable_fields)}"
     end
   end
+
+  defp ensure_transparency!(%{transparency: transparency})
+       when transparency not in @transparencies do
+    raise ArgumentError,
+          "transparency must be one of #{inspect(@transparencies)}, got: #{inspect(transparency)}"
+  end
+
+  defp ensure_transparency!(_changes), do: :ok
 
   defp apply_changes(event, changes, opts) do
     event

@@ -6,13 +6,13 @@ defmodule Tymeslot.CalendarGrid.QueuedWrite do
   process drives the queue.
 
   A write is a map with a `:ref` and a `:kind`: `:update` carries `:changes`
-  and `:opts` for `Tymeslot.CalendarGrid.update_event/4`, `:video` a
-  `:video_integration_id` for `Tymeslot.CalendarGrid.change_event_video/3`.
+  and `:opts` for `Tymeslot.CalendarGrid.Changes.update_event/4`, `:video` a
+  `:video_integration_id` for `Tymeslot.CalendarGrid.Changes.change_event_video/3`.
   """
 
   require Logger
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.WriteQueue
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
@@ -77,14 +77,14 @@ defmodule Tymeslot.CalendarGrid.QueuedWrite do
   def crash_result(%{kind: :video, ref: ref}, event), do: video_failure(ref, event, :crashed)
 
   defp do_perform(user_id, %{kind: :update, ref: ref} = write, event) do
-    case CalendarGrid.update_event(user_id, event, write.changes, write.opts) do
+    case Changes.update_event(user_id, event, write.changes, write.opts) do
       {:ok, updated} -> {:ok, write: ref, updated_event: updated}
       {:error, %{reason: reason, retry: retry}} -> update_failure(ref, event, reason, retry)
     end
   end
 
   defp do_perform(user_id, %{kind: :video, ref: ref, video_integration_id: video_id}, event) do
-    case CalendarGrid.change_event_video(user_id, event, video_id) do
+    case Changes.change_event_video(user_id, event, video_id) do
       {:ok, :unchanged} ->
         {:unchanged, write: ref}
 
@@ -95,7 +95,7 @@ defmodule Tymeslot.CalendarGrid.QueuedWrite do
         {:ok,
          write: ref,
          original_event: event,
-         updated_event: CalendarGrid.changed_event(user_id, event, video_id, url)}
+         updated_event: Changes.changed_event(user_id, event, video_id, url)}
 
       {:error, reason} ->
         video_failure(ref, event, reason)
@@ -127,30 +127,17 @@ defmodule Tymeslot.CalendarGrid.QueuedWrite do
 
   @doc """
   What the driver must do about the event's attendees once `write`, made
-  onto `before`, has answered `outcome`: `{:notify, ...}` or
-  `{:membership_changed, ...}` (see `WriteQueue`), or nil for nothing. See
-  "Telling the attendees" in `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`.
+  onto `before`, has answered `outcome`: `{:membership_changed, ...}` (see
+  `WriteQueue`), or nil for nothing.
 
   An edit saved to sync later is told about as an accepted one is, from the
   event as the replay will leave it; `AttendeeNotifications` holds the
-  emails until the replay has reached the calendar. A queued edit is never
-  of a series member, so its scope is the event alone, and the organiser
-  has already been told the change is saved and will sync.
+  emails until the replay has reached the calendar.
   """
   @spec attendee_effect(WriteQueue.write(), map(), WriteQueue.outcome()) ::
           WriteQueue.effect() | nil
-  def attendee_effect(
-        %{kind: :update, notify: %{} = notify, opts: opts},
-        _before,
-        {:ok, updated}
-      ),
-      do: {:notify, notify, updated, Keyword.get(opts, :recurrence_scope, :this_only)}
-
   def attendee_effect(%{kind: :update, notify: :membership}, before, {:ok, updated}),
     do: {:membership_changed, before, updated}
-
-  def attendee_effect(%{kind: :update, notify: %{} = notify} = write, before, :queued),
-    do: {:notify, %{notify | saved_message: nil}, applied(before, write), :this_only}
 
   def attendee_effect(%{kind: :update, notify: :membership} = write, before, :queued),
     do: {:membership_changed, before, applied(before, write)}

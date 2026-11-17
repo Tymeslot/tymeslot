@@ -11,7 +11,7 @@ defmodule Tymeslot.CalendarGrid.SeriesStartTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.SeriesStart
   alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
 
@@ -43,7 +43,7 @@ defmodule Tymeslot.CalendarGrid.SeriesStartTest do
         raw_ical: ical
       )
 
-    assert CalendarGrid.series_start(event) == ~U[2026-09-30 07:00:00Z]
+    assert Changes.series_start(event) == ~U[2026-09-30 07:00:00Z]
   end
 
   test "a Google or Outlook occurrence starts where its master read does" do
@@ -65,10 +65,10 @@ defmodule Tymeslot.CalendarGrid.SeriesStartTest do
         recurrence_rule: "FREQ=WEEKLY"
       )
 
-    assert CalendarGrid.series_start(event) == ~U[2026-09-30 09:00:00Z]
+    assert Changes.series_start(event) == ~U[2026-09-30 09:00:00Z]
 
     unread = %{event | recurring_event_id: "series2"}
-    assert CalendarGrid.series_start(unread) == nil
+    assert Changes.series_start(unread) == nil
   end
 
   test "an all-day series starts on a day, and an event of no series on its own start" do
@@ -97,8 +97,8 @@ defmodule Tymeslot.CalendarGrid.SeriesStartTest do
         start_at: ~U[2026-10-14 09:00:00Z]
       )
 
-    assert CalendarGrid.series_start(all_day) == ~D[2026-09-30]
-    assert DateTime.compare(CalendarGrid.series_start(one_off), ~U[2026-10-14 09:00:00Z]) == :eq
+    assert Changes.series_start(all_day) == ~D[2026-09-30]
+    assert DateTime.compare(Changes.series_start(one_off), ~U[2026-10-14 09:00:00Z]) == :eq
   end
 
   # By 30 April a series on the 31st has been on 31 January, 28 February and
@@ -112,13 +112,13 @@ defmodule Tymeslot.CalendarGrid.SeriesStartTest do
   end
 
   test "only Outlook refuses a rule, for a day some months lack" do
-    assert CalendarGrid.repeat_refusal("outlook", "FREQ=MONTHLY", ~D[2026-12-31], "Etc/UTC") ==
+    assert Changes.repeat_refusal("outlook", "FREQ=MONTHLY", ~D[2026-12-31], "Etc/UTC") ==
              :day_missing_in_some_months
 
-    assert CalendarGrid.repeat_refusal("outlook", "FREQ=MONTHLY", ~D[2026-12-28], "Etc/UTC") ==
+    assert Changes.repeat_refusal("outlook", "FREQ=MONTHLY", ~D[2026-12-28], "Etc/UTC") ==
              nil
 
-    assert CalendarGrid.repeat_refusal("google", "FREQ=MONTHLY", ~D[2026-12-31], "Etc/UTC") ==
+    assert Changes.repeat_refusal("google", "FREQ=MONTHLY", ~D[2026-12-31], "Etc/UTC") ==
              nil
   end
 end

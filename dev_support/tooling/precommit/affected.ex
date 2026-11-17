@@ -2,16 +2,18 @@ defmodule Tymeslot.Precommit.Affected do
   @moduledoc """
   Narrows the gate to the steps a diff can affect, for `mix precommit --affected`.
 
-  The full gate is the push-time check. Before a commit, most of its steps
-  cannot be affected by most diffs, and the suite is the only step that costs
+  The full gate is for large changes, main and releases. For everything else,
+  most of its steps cannot be affected by most diffs, and the suite is the only step that costs
   real time, so this keeps the gate's shape and drops what the diff cannot
   reach:
 
-    * **format, both compiles, credo, gettext, xref and dialyzer** run whenever
-      anything that can reach the Elixir build changed. They are seconds when
-      nothing relevant moved (gettext and dialyzer skip their own work), and
-      xref's input, a new `alias`, `import` or struct reference, is not visible
-      from paths alone.
+    * **both compiles, gettext, xref and dialyzer** run whenever anything
+      that can reach the Elixir build changed. They are seconds when nothing
+      relevant moved (gettext and dialyzer skip their own work), and xref's
+      input, a new `alias`, `import` or struct reference, is not visible from
+      paths alone.
+    * **format and credo** check only the changed files they would check in a
+      full run (see *Format and Credo*), and are skipped when there are none.
     * **deps.unlock, deps.audit, sobelow, migrations, workflows, css tokens
       and the JavaScript suite** run only when the diff touches the files
       they read.
@@ -31,6 +33,29 @@ defmodule Tymeslot.Precommit.Affected do
   suite takes what `Tymeslot.TestAffected.Selection` carries over: this
   repository's tests in the domains the Core change reaches, the directory
   named by `:upstream_tests`, or the full suite when the Core change widens.
+
+  ## Format and Credo
+
+  Repo-wide, `credo --strict` costs around 80 seconds against 11 on a couple of
+  files, so under `--affected` both run on the changed files alone, filtered
+  to the ones the full run would read (the formatter's `inputs`, Credo's
+  `included` minus `excluded`). They fall back to the whole repository when a
+  file that changes their verdict on *unchanged* files moved:
+
+    * **format**: a `.formatter.exs`, or `mix.exs`/`mix.lock`, which decide
+      the plugins and the `import_deps` rules.
+    * **credo**: `.credo.exs`, `mix.exs`/`mix.lock`, `config/` (read by
+      `ObanQueueDeclared`), the custom checks and the modules `.credo.exs`
+      requires (`dev_support/credo_checks/`, `tag_taxonomy.ex`,
+      `global_config_templates.ex`), or a component declaring a `:global`
+      attribute, which decides what `NoNativeTitle` flags in its callers. The
+      same Core files count from the consuming repository, which loads them,
+      along with Core's `config/config.exs`.
+
+  A Core change with none of those leaves the consuming repository's format
+  and Credo unrun, since neither reads Core's code. One cross-file check is
+  not covered: `DuplicatedCode` compares the files it is given, so a new
+  duplicate of an unchanged file is caught by the full gate and CI only.
 
   `select/4` is pure; `narrow/2` reads git and the disk through
   `Tymeslot.TestAffected.Workspace` and prints the plan it arrived at.
@@ -68,6 +93,24 @@ defmodule Tymeslot.Precommit.Affected do
   @security_prefixes ~w[config/ .sobelow-conf]
   @security_names ~r/_web\/|auth|upload|security|webhook|plug|session|token/
 
+  # What makes format or Credo's verdict on an unchanged file move, here and
+  # (for Credo) in the path dependency this repository loads its checks from.
+  @format_wide_files ~w[mix.exs mix.lock]
+  @credo_wide_files ~w[.credo.exs mix.exs mix.lock]
+  @credo_wide_prefixes ~w[
+    config/
+    dev_support/credo_checks/
+    test/support/tag_taxonomy.ex
+    test/support/global_config_templates.ex
+  ]
+  @upstream_credo_wide_prefixes ~w[
+    config/config.exs
+    dev_support/credo_checks/
+    test/support/tag_taxonomy.ex
+    test/support/global_config_templates.ex
+  ]
+  @global_attr ~r/\battr\s+:\w+,\s*:global\b/
+
   # Keyed off the command rather than the step's display name, matching
   # `Tymeslot.Precommit.Runner`: the name is a label, the command is the
   # contract.
@@ -101,7 +144,8 @@ defmodule Tymeslot.Precommit.Affected do
       select(steps, changed, Workspace.index(),
         upstream: upstream,
         upstream_index: upstream_index,
-        upstream_tests: Keyword.get(opts, :upstream_tests)
+        upstream_tests: Keyword.get(opts, :upstream_tests),
+        lint_inputs: Workspace.lint_inputs()
       )
 
     report(changed, upstream, narrowed.suite)
@@ -154,24 +198,34 @@ defmodule Tymeslot.Precommit.Affected do
   @spec select([Runner.step()], [String.t()], Selection.index(), keyword()) :: t()
   def select(steps, changed, index, opts \\ []) do
     upstream = Keyword.get(opts, :upstream, [])
-    build_changed? = Enum.any?(changed ++ upstream, &reaches_build?/1)
-    suite = suite(changed, index, opts)
+
+    ctx = %{
+      changed: changed,
+      upstream: upstream,
+      index: index,
+      upstream_index: Keyword.get(opts, :upstream_index),
+      lint_inputs: Keyword.get(opts, :lint_inputs),
+      build_changed?: Enum.any?(changed ++ upstream, &reaches_build?/1),
+      suite: suite(changed, index, opts)
+    }
 
     {kept, skipped} =
       Enum.reduce(steps, {[], []}, fn step, {kept, skipped} ->
-        case decide(step, changed, build_changed?, suite) do
+        case decide(step, ctx) do
           {:run, step} -> {[step | kept], skipped}
           {:skip, reason} -> {kept, [{step_name(step), reason} | skipped]}
         end
       end)
 
-    %{steps: Enum.reverse(kept), skipped: Enum.reverse(skipped), suite: suite}
+    %{steps: Enum.reverse(kept), skipped: Enum.reverse(skipped), suite: ctx.suite}
   end
 
-  defp decide({_name, [command | _rest], _env} = step, changed, build_changed?, suite) do
-    if Runner.suite?(step),
-      do: test_step(step, suite),
-      else: decide_static(step, command, changed, build_changed?)
+  defp decide({_name, [command | _rest], _env} = step, ctx) do
+    cond do
+      Runner.suite?(step) -> test_step(step, ctx.suite)
+      command in ["format", "credo"] and ctx.lint_inputs != nil -> lint_step(step, command, ctx)
+      true -> decide_static(step, command, ctx.changed, ctx.build_changed?)
+    end
   end
 
   defp decide_static(step, command, changed, build_changed?) do
@@ -183,6 +237,38 @@ defmodule Tymeslot.Precommit.Affected do
         if build_changed?, do: {:run, step}, else: {:skip, "no Elixir-relevant file changed"}
     end
   end
+
+  # Format and Credo on the changed files they read, or on the whole
+  # repository when something that moves their verdict on other files changed.
+  defp lint_step({name, args, env} = step, tool, ctx) do
+    files = Enum.filter(ctx.changed, &MapSet.member?(Map.fetch!(ctx.lint_inputs, tool), &1))
+
+    cond do
+      lint_wide?(tool, ctx) -> {:run, step}
+      files == [] -> {:skip, "no file it checks changed"}
+      true -> {:run, {name, args ++ files, env}}
+    end
+  end
+
+  defp lint_wide?("format", ctx),
+    do:
+      Enum.any?(ctx.changed, &(&1 in @format_wide_files or Path.basename(&1) == ".formatter.exs"))
+
+  defp lint_wide?("credo", ctx) do
+    Enum.any?(ctx.changed, fn path ->
+      path in @credo_wide_files or String.starts_with?(path, @credo_wide_prefixes) or
+        declares_global?(path, ctx.index)
+    end) or
+      Enum.any?(ctx.upstream, fn path ->
+        String.starts_with?(path, @upstream_credo_wide_prefixes) or
+          declares_global?(path, ctx.upstream_index)
+      end)
+  end
+
+  defp declares_global?(_path, nil), do: false
+
+  defp declares_global?(path, index),
+    do: String.starts_with?(path, "lib/") and Map.get(index.sources, path, "") =~ @global_attr
 
   defp test_step(_step, %{scope: :nothing}),
     do: {:skip, "no change reaches the Elixir suite"}

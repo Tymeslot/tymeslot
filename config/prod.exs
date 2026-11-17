@@ -27,3 +27,8 @@ config :swoosh, local: false
 # Analytics contract validation logs-and-drops in prod instead of raising, so a
 # malformed event never crashes a live user flow (it raises in dev/test).
 config :tymeslot, :analytics_strict, false
+
+# An email sent outside an email job (see `Tymeslot.Emails.Delivery`) is
+# reported and still sent in production while the guard is new; everywhere
+# else the default, `:raise`, refuses it.
+config :tymeslot, :email_delivery_outside_job, :report

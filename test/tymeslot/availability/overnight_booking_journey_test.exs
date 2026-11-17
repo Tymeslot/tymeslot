@@ -24,15 +24,17 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
     :ok
   end
 
-  defp book(host, date, time, duration, timezone) do
+  # The meeting's length is the type's, so each host books under a type of the
+  # length its slots are offered at.
+  defp book(host, meeting_type, date, time, timezone) do
     Create.execute(
       %{
         date: date,
         time: time,
-        duration: "#{duration}min",
+        duration: "#{meeting_type.duration_minutes}min",
         user_timezone: timezone,
         organizer_user_id: host.user.id,
-        meeting_type_id: nil
+        meeting_type_id: meeting_type.id
       },
       %{
         "name" => "Night Owl",
@@ -55,11 +57,13 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
         }
       )
 
+    type = insert(:meeting_type, user: host.user, duration_minutes: 1440)
+
     date = next_bookable_weekday()
 
     assert offered(host.profile, date, 1440) == ["12:00 AM"]
 
-    assert {:ok, %MeetingSchema{} = meeting} = book(host, date, "12:00 AM", 1440, "Europe/Berlin")
+    assert {:ok, %MeetingSchema{} = meeting} = book(host, type, date, "12:00 AM", "Europe/Berlin")
     assert DateTime.diff(meeting.end_time, meeting.start_time, :minute) == 1440
 
     assert DateTime.shift_zone!(meeting.start_time, "Europe/Berlin") ==
@@ -85,18 +89,20 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
         }
       )
 
+    type = insert(:meeting_type, user: host.user, duration_minutes: 60)
+
     next_day = Date.add(weekday, 1)
 
     assert offered(host.profile, weekday, 60) == ["10:00 PM", "11:00 PM"]
     assert offered(host.profile, next_day, 60) == ["12:00 AM", "1:00 AM"]
 
-    assert {:ok, meeting} = book(host, next_day, "1:00 AM", 60, "Europe/London")
+    assert {:ok, meeting} = book(host, type, next_day, "1:00 AM", "Europe/London")
 
     assert DateTime.shift_zone!(meeting.start_time, "Europe/London") ==
              DateTime.new!(next_day, ~T[01:00:00], "Europe/London")
 
     # The same label under the previous date is not on offer and is refused.
-    assert {:error, :slot_taken} = book(host, weekday, "1:00 AM", 60, "Europe/London")
+    assert {:error, :slot_taken} = book(host, type, weekday, "1:00 AM", "Europe/London")
 
     # Rescheduling back across midnight goes through the same rule, and lands
     # on the evening before.
@@ -139,10 +145,12 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
         }
       )
 
+    type = insert(:meeting_type, user: host.user, duration_minutes: 60)
+
     assert offered(host.profile, sunday, 60) == ["12:00 AM", "1:00 AM", "2:00 AM"]
 
     # The label means the first pass, in summer time, and runs a real hour.
-    assert {:ok, meeting} = book(host, sunday, "1:00 AM", 60, "Europe/London")
+    assert {:ok, meeting} = book(host, type, sunday, "1:00 AM", "Europe/London")
     assert meeting.start_time == ~U[2026-10-25 00:00:00Z]
     assert DateTime.diff(meeting.end_time, meeting.start_time, :minute) == 60
 
@@ -150,9 +158,9 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
     # the booking starts. 2:00 AM survives: the repeated hour, 01:00 GMT, sits
     # between it and the booking, and is not a second chance at the label.
     assert offered(host.profile, sunday, 60) == ["2:00 AM"]
-    assert {:error, :slot_taken} = book(host, sunday, "1:00 AM", 60, "Europe/London")
+    assert {:error, :slot_taken} = book(host, type, sunday, "1:00 AM", "Europe/London")
 
-    assert {:ok, last} = book(host, sunday, "2:00 AM", 60, "Europe/London")
+    assert {:ok, last} = book(host, type, sunday, "2:00 AM", "Europe/London")
     assert last.start_time == ~U[2026-10-25 02:00:00Z]
     assert last.end_time == ~U[2026-10-25 03:00:00Z]
   end
@@ -167,9 +175,11 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
         hours: %{is_available: true, start_time: ~T[09:00:00], end_time: ~T[17:00:00]}
       )
 
+    type = insert(:meeting_type, user: host.user, duration_minutes: 60)
+
     tokyo_date = weekday
     assert "11:00 PM" in offered(host.profile, tokyo_date, 60, timezone: "Asia/Tokyo")
-    assert {:ok, _meeting} = book(host, tokyo_date, "11:00 PM", 60, "Asia/Tokyo")
+    assert {:ok, _meeting} = book(host, type, tokyo_date, "11:00 PM", "Asia/Tokyo")
   end
 
   # Meeting types run up to a whole day, so a long meeting late in the host's
@@ -189,11 +199,13 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
         }
       )
 
+    type = insert(:meeting_type, user: host.user, duration_minutes: 300)
+
     # Five-hour slots on the host's grid from 18:00; the second one runs
     # 23:00 to 04:00.
     assert offered(host.profile, weekday, 300) == ["6:00 PM", "11:00 PM"]
 
-    assert {:ok, meeting} = book(host, weekday, "11:00 PM", 300, "Europe/London")
+    assert {:ok, meeting} = book(host, type, weekday, "11:00 PM", "Europe/London")
 
     assert DateTime.shift_zone!(meeting.start_time, "Europe/London") ==
              DateTime.new!(weekday, ~T[23:00:00], "Europe/London")
@@ -216,11 +228,13 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
         hours: %{is_available: true, start_time: ~T[09:00:00], end_time: ~T[17:00:00]}
       )
 
+    type = insert(:meeting_type, user: host.user, duration_minutes: 60)
+
     # 09:00 and 10:00 in Kolkata; the second runs 23:30 to 00:30 in New York.
     assert offered(host.profile, sunday, 60, timezone: "America/New_York") ==
              ["10:30 PM", "11:30 PM"]
 
-    assert {:ok, meeting} = book(host, sunday, "11:30 PM", 60, "America/New_York")
+    assert {:ok, meeting} = book(host, type, sunday, "11:30 PM", "America/New_York")
     assert meeting.start_time == ~U[2026-11-16 04:30:00Z]
     assert meeting.end_time == ~U[2026-11-16 05:30:00Z]
   end
@@ -237,6 +251,7 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
 
     test "the host's opening on the second pass is not offered and its label is refused", ctx do
       host = berlin_host(~T[07:00:00], ~T[10:00:00])
+      type = insert(:meeting_type, user: host.user, duration_minutes: 60)
 
       # 07:00 CET is 1:00 AM EST, the repeated hour's second pass.
       assert offered(host.profile, ctx.sunday, 60, timezone: "America/New_York") ==
@@ -244,16 +259,17 @@ defmodule Tymeslot.Availability.OvernightBookingJourneyTest do
 
       # A stale page still holding "1:00 AM" is refused, not booked an hour
       # before the host opens.
-      assert {:error, :slot_taken} = book(host, ctx.sunday, "1:00 AM", 60, "America/New_York")
+      assert {:error, :slot_taken} = book(host, type, ctx.sunday, "1:00 AM", "America/New_York")
     end
 
     test "with both passes open, 1:00 AM is offered once and books the first", ctx do
       host = berlin_host(~T[06:00:00], ~T[10:00:00])
+      type = insert(:meeting_type, user: host.user, duration_minutes: 60)
 
       assert offered(host.profile, ctx.sunday, 60, timezone: "America/New_York") ==
                ["1:00 AM", "2:00 AM", "3:00 AM"]
 
-      assert {:ok, meeting} = book(host, ctx.sunday, "1:00 AM", 60, "America/New_York")
+      assert {:ok, meeting} = book(host, type, ctx.sunday, "1:00 AM", "America/New_York")
       assert meeting.start_time == ~U[2026-11-01 05:00:00Z]
     end
   end

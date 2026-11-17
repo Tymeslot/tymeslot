@@ -35,11 +35,22 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
         on_toggle="toggle_user_dropdown"
         on_close="hide_user_dropdown"
         target={@myself}
-        trigger_class="flex items-center space-x-3 bg-white border-2 border-tymeslot-50 rounded-2xl px-3 py-2 shadow-sm hover:border-turquoise-100 hover:shadow-md transition-all focus:outline-hidden focus:ring-2 focus:ring-turquoise-500"
+        trigger_class={
+          Enum.join(
+            [
+              "flex items-center space-x-3 bg-white border-2 border-tymeslot-50 rounded-2xl px-3 shadow-sm hover:border-turquoise-100 hover:shadow-md transition-all focus:outline-hidden focus:ring-2 focus:ring-turquoise-500",
+              if(Map.get(assigns, :compact, false), do: "py-0.5 min-h-11", else: "py-2")
+            ],
+            " "
+          )
+        }
         class="w-56 bg-white rounded-2xl shadow-2xl ring-1 ring-tymeslot-200 border-2 border-tymeslot-50 overflow-hidden"
       >
         <:trigger>
-          <div class="w-10 h-10 rounded-xl overflow-hidden bg-tymeslot-100 border-2 border-white shadow-sm shrink-0">
+          <div class={[
+            "rounded-xl overflow-hidden bg-tymeslot-100 border-2 border-white shadow-sm shrink-0",
+            if(Map.get(assigns, :compact, false), do: "w-8 h-8", else: "w-10 h-10")
+          ]}>
             <img
               src={Profiles.avatar_url(@profile, :thumb)}
               alt={Profiles.avatar_alt_text(@profile)}

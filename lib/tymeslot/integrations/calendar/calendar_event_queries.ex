@@ -95,6 +95,31 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueries do
   end
 
   @doc """
+  The all-day rows of `in_range/3` over a date range: the cached events the
+  bookability rule weighs (`Tymeslot.Availability.Bookability`), as
+  `CalendarEvent` structs. `blocking_rules` as for `in_range/3`.
+  """
+  @spec all_day_in_range(
+          [integer()],
+          {Date.t(), Date.t()},
+          %{integer() => Selection.visibility_rule()}
+        ) :: [CalendarEvent.t()]
+  def all_day_in_range([], _range, _blocking_rules), do: []
+
+  def all_day_in_range(integration_ids, {%Date{} = range_start, %Date{} = range_end}, rules) do
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id in ^integration_ids)
+    |> where([e], e.role != ^@role_display_only)
+    |> where([e], ^Visibility.dynamic_for(rules))
+    |> where(
+      [e],
+      e.all_day == true and e.start_date <= ^range_end and e.end_date > ^range_start
+    )
+    |> Repo.all()
+    |> Enum.map(&ProviderCalendarEventSchema.to_calendar_event/1)
+  end
+
+  @doc """
   Returns the cached rows for the given integration IDs that overlap the range
   and are allowed to block availability.
 

@@ -44,12 +44,16 @@ defmodule Tymeslot.Announcements.Catalog do
   @recurring_bookings_published_at ~U[2026-11-16 00:00:00Z]
   @recurring_bookings_expires_at ~U[2026-12-16 00:00:00Z]
 
+  @calendar_redesign_published_at ~U[2026-11-13 00:00:00Z]
+  @calendar_redesign_expires_at ~U[2026-12-13 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
     # entry's translatable copy readable in isolation.
     [
       recurring_bookings(),
+      calendar_redesign(),
       spanish(),
       new_themes(),
       meeting_polls(),
@@ -77,6 +81,25 @@ defmodule Tymeslot.Announcements.Catalog do
       cta_docs_slug: "recurring-bookings",
       published_at: @recurring_bookings_published_at,
       expires_at: @recurring_bookings_expires_at
+    }
+  end
+
+  defp calendar_redesign do
+    %Announcement{
+      key: "calendar_redesign",
+      title: dgettext("onboarding", "Your dashboard calendar, redesigned"),
+      body:
+        dgettext(
+          "onboarding",
+          "We've redesigned the calendar from the ground up: a fresh look, a clearer layout " <>
+            "with more room for your week, and quicker ways to plan, create and change your " <>
+            "meetings. Have a look around, or read the docs for a tour of everything that's new."
+        ),
+      image_path: "/images/announcements/calendar-redesign.svg",
+      cta_label: dgettext("onboarding", "Read the docs"),
+      cta_docs_slug: "dashboard-calendar",
+      published_at: @calendar_redesign_published_at,
+      expires_at: @calendar_redesign_expires_at
     }
   end
 

@@ -109,6 +109,29 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarPubSubTest do
     end
 
     @tag :capture_log
+    test "ignores the dashboard calendar's own messages on the same topic", %{conn: conn} do
+      {user, profile} = create_organiser()
+
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=America/New_York")
+
+      AvailabilityCache.clear_all()
+
+      for message <- [
+            {:calendar_sync_failed, user.id, 1},
+            {:calendar_delete_result, user.id, 7, :deleted},
+            {:calendar_delete_result, user.id, 8, {:failed, :forbidden}}
+          ] do
+        Phoenix.PubSub.broadcast(Tymeslot.PubSub, "calendar_events:#{user.id}", message)
+      end
+
+      # A failed sync or a finished delete changes nothing a visitor can book,
+      # so the page does not re-fetch availability.
+      html = render(view)
+      assert html =~ "Quick Chat"
+      assert :ets.info(:availability_cache, :size) == 0
+    end
+
+    @tag :capture_log
     test "ignores calendar events for other users", %{conn: conn} do
       {_user, profile} = create_organiser()
 

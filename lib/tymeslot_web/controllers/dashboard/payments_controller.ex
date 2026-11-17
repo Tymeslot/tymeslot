@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
       when is_binary(code) and is_binary(state) do
     user = conn.assigns.current_user
 
-    with :ok <- RateLimiter.check(:oauth_callback, ClientIP.get(conn)),
+    with :ok <- RateLimiter.check(:integration_oauth_callback, ClientIP.get(conn)),
          {:ok, _account} <- MeetingPayments.complete_oauth_callback(user, code, state) do
       # `return=1` makes the dashboard resync the account straight away.
       conn

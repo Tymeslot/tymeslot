@@ -121,13 +121,15 @@ defmodule Tymeslot.Bookings.CreateUtmTest do
     # Tracking params are the subject here, so the host offers every hour of
     # every day and the schedule never refuses the booking.
     %{user: user} = create_always_bookable_profile(timezone: "America/New_York")
+    meeting_type = insert(:meeting_type, user: user, duration_minutes: 60)
 
     meeting_params = %{
       date: Date.add(Date.utc_today(), 1),
       time: "14:00",
       duration: "60min",
       user_timezone: "America/New_York",
-      organizer_user_id: user.id
+      organizer_user_id: user.id,
+      meeting_type_id: meeting_type.id
     }
 
     form_data = %{

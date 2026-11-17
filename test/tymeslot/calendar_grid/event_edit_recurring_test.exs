@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
   @moduledoc """
-  `CalendarGrid.update_event/4` against an event that belongs to a repeating
+  `Changes.update_event/4` against an event that belongs to a repeating
   series on the CalDAV family.
 
   The sync never stores such a series' master: it expands it into one cached
@@ -28,7 +28,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
   import Mox
   import Tymeslot.Test.CalendarGridHelpers
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
   setup :verify_on_exit!
@@ -65,7 +65,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
       event = insert_occurrence(caldav, %{})
       expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       assert_received {:provider_update, uid, payload}
       assert uid == event.uid
@@ -94,7 +94,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
       expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{
+               Changes.update_event(user.id, event, %{
                  start_at: ~U[2026-06-01 11:00:00Z],
                  end_at: ~U[2026-06-01 12:00:00Z]
                })
@@ -120,7 +120,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
 
       expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{colour: "grape"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{colour: "grape"})
 
       assert_received {:provider_update, _uid, %{occurrence: occurrence}}
       assert occurrence.key == "20260615T110000"
@@ -137,7 +137,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
       # What a LiveView holds mid-drag, or what a caller outside the grid
       # could construct: the repeat rule edited away.
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, %{event | recurrence_rule: nil}, %{
+               Changes.update_event(user.id, %{event | recurrence_rule: nil}, %{
                  summary: "Renamed"
                })
 
@@ -164,7 +164,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
         event = insert_occurrence(caldav, %{})
 
         assert {:error, %{reason: unquote(reason), retry: :not_queued}} =
-                 CalendarGrid.update_event(user.id, event, unquote(changes))
+                 Changes.update_event(user.id, event, unquote(changes))
 
         {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
         assert {row.all_day, row.recurrence_rule} == {false, @rrule}
@@ -176,7 +176,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
       event = insert_occurrence(caldav, %{provider_metadata: %{}})
 
       assert {:error, %{reason: :unaddressable_occurrence, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+               Changes.update_event(user.id, event, %{summary: "Renamed"})
     end
 
     test "a failed write is not queued and leaves the row as it was", %{
@@ -187,7 +187,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
       expect_provider_update({:error, :network_error})
 
       assert {:error, %{reason: :network_error, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+               Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
       assert {row.summary, row.sync_state} == {"Weekly sync", "synced"}
@@ -202,7 +202,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
       event = insert_event(caldav, @weekly_sync, %{})
       expect_provider_update()
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
       assert row.summary == "Renamed"
@@ -222,7 +222,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
       expect_provider_update()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{
+               Changes.update_event(user.id, event, %{
                  start_at: ~U[2026-06-01 11:00:00Z],
                  end_at: ~U[2026-06-01 12:00:00Z]
                })

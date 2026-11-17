@@ -28,6 +28,38 @@ defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
              ) == nil
     end
 
+    test "upsert_override/1 inserts a date's override, then replaces it in place" do
+      schedule = insert(:availability_schedule)
+      date = Date.add(Date.utc_today(), 5)
+
+      assert {:ok, %{id: id, override_type: :unavailable}} =
+               AvailabilityOverrideQueries.upsert_override(%{
+                 schedule_id: schedule.id,
+                 date: date,
+                 override_type: :unavailable,
+                 reason: "Away"
+               })
+
+      assert {:ok, %{id: ^id}} =
+               AvailabilityOverrideQueries.upsert_override(%{
+                 schedule_id: schedule.id,
+                 date: date,
+                 override_type: :custom_hours,
+                 start_time: ~T[09:00:00],
+                 end_time: ~T[12:00:00],
+                 ends_next_day: false,
+                 reason: nil
+               })
+
+      assert %{
+               id: ^id,
+               override_type: :custom_hours,
+               start_time: ~T[09:00:00],
+               end_time: ~T[12:00:00],
+               reason: nil
+             } = AvailabilityOverrideQueries.get_override_by_schedule_and_date(schedule.id, date)
+    end
+
     test "get_overrides_by_schedule_and_date_range/3 returns overrides in range" do
       schedule = insert(:availability_schedule)
       today = Date.utc_today()

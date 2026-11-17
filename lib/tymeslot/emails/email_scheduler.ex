@@ -102,6 +102,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_approval_nudge(meeting_id, send_at), to: MeetingScheduler
   defdelegate schedule_request_outcome(meeting_id, variant), to: MeetingScheduler
   defdelegate schedule_reschedule_request_expired(meeting_id), to: MeetingScheduler
+  defdelegate schedule_released_guest_cancellations(meeting_id), to: MeetingScheduler
   defdelegate cancel_approval_emails(meeting_id), to: MeetingScheduler
 
   # Auth emails
@@ -137,6 +138,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
 
   defdelegate schedule_calendar_invitation(params), to: CalendarScheduler
   defdelegate schedule_event_update_notification(params), to: CalendarScheduler
+  defdelegate schedule_external_booking_change(meeting_id, discrepancy), to: CalendarScheduler
+  defdelegate schedule_calendar_sync_error(meeting_id, error_reason), to: CalendarScheduler
 
   # Planned sessions
 

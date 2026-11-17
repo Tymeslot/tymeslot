@@ -240,7 +240,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
     test "handles rate limited callback", %{conn: conn} do
       conn = with_own_address(conn)
-      exhaust_limit!(:oauth_callback, ClientIP.get(conn))
+      exhaust_limit!(:oauth_signin_callback, ClientIP.get(conn))
 
       conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
       assert redirected_to(conn) == "/auth/login"
@@ -318,7 +318,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
       # With the callback budget spent, only a provider check made first can
       # answer with the unsupported-provider error rather than the refusal.
       conn = with_own_address(conn)
-      exhaust_limit!(:oauth_callback, ClientIP.get(conn))
+      exhaust_limit!(:oauth_signin_callback, ClientIP.get(conn))
 
       conn =
         get(conn, "/auth/unsupported/callback", %{"code" => "code", "state" => "state"})

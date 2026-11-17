@@ -1,0 +1,299 @@
+/* The calendar's power layer (plan 6): the command bar and its rows, the
+   keys shown in <kbd>, week numbers, the month and mini-month gutters, the
+   calendar sets in the rail and the .ics drop overlay. Colours through
+   tokens only; every motion respects prefers-reduced-motion. */
+
+/* Week numbers (Task 5): the time grid's head corner, the month's gutter
+   and the mini month's column. The month keeps its seven grid columns: the
+   number sits in the row's left padding, so no chip changes column. */
+
+.cal-weeknum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-head-corner .cal-weeknum {
+  height: 100%;
+  font-weight: var(--font-weight-semibold);
+}
+
+.cal-month.has-weeknums .cal-month-head,
+.cal-month.has-weeknums .cal-mweek {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.cal-month.has-weeknums .cal-mweek > .cal-weeknum {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2rem;
+  align-items: flex-start;
+  padding-top: 6px;
+  border-right: 1px solid var(--cal-line);
+}
+
+.cal-month.has-weeknums .cal-mweek.is-phone > .cal-weeknum {
+  align-items: center;
+  padding-top: 0;
+}
+
+/* The .ics drop overlay (Task 8), shown by `phx-drop-target-active` on
+   #calendar-surface while a file is dragged over the calendar. */
+
+#calendar-drop-overlay {
+  z-index: var(--cal-z-drop);
+}
+
+/* A key as the rail's sets, the shortcut help and the command bar show it. */
+.cal-kbd {
+  display: inline-flex;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.25rem;
+  border: 1px solid var(--color-neutral-200);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-neutral-50);
+  color: var(--color-neutral-600);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+}
+
+/* The command bar (CommandBar, hooks/calendar_canvas/command.js): always in
+   the page, shown only with [data-open]. A centred panel near the top on
+   desktop, a full-height sheet on a phone. */
+.cal-command {
+  position: fixed;
+  inset: 0;
+  z-index: var(--cal-z-command);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12dvh var(--spacing-4) var(--spacing-4);
+}
+
+.cal-command:not([data-open]) {
+  display: none;
+}
+
+.cal-command-scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--cal-ink) 30%, transparent);
+}
+
+.cal-command-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(36rem, 100%);
+  max-height: min(32rem, 76dvh);
+  overflow: hidden;
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-xl);
+  background: var(--cal-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.cal-command-form {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-1) var(--spacing-1) var(--spacing-1) var(--spacing-3);
+  border-bottom: 1px solid var(--cal-line);
+}
+
+.cal-command-form:focus-within {
+  box-shadow: inset 0 -2px 0 var(--cal-focus);
+}
+
+/* 16px text: iOS zooms into anything smaller. */
+#calendar-command-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--cal-text);
+  font-size: var(--font-size-base);
+  outline: none;
+}
+
+.cal-command-close {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--cal-text-muted);
+  cursor: pointer;
+}
+
+.cal-command-close:hover,
+.cal-command-close:focus-visible {
+  background: var(--cal-hover);
+  outline: 2px solid var(--cal-focus);
+  outline-offset: -2px;
+}
+
+.cal-command-list {
+  flex: 1 1 auto;
+  padding: var(--spacing-1);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.cal-command-heading {
+  padding: var(--spacing-2) var(--spacing-2) var(--spacing-1);
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.cal-command-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--cal-text);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cal-command-row:hover,
+.cal-command-row[aria-selected="true"] {
+  background: var(--cal-hover);
+}
+
+.cal-command-row[aria-selected="true"] {
+  box-shadow: inset 3px 0 0 var(--cal-focus);
+}
+
+.cal-command-swatch {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--cal-ev);
+}
+
+.cal-command-row-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cal-command-row-title,
+.cal-command-row-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-command-row-title {
+  font-weight: var(--font-weight-semibold);
+}
+
+.cal-command-row-meta {
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.cal-command-badge {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--cal-chip);
+  box-shadow: inset 0 0 0 1px var(--cal-line-strong);
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 18px;
+}
+
+.cal-command kbd {
+  flex: 0 0 auto;
+  min-width: 1.5rem;
+  padding: 0 4px;
+  border: 1px solid var(--cal-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--cal-chip);
+  color: var(--cal-text-muted);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+.cal-command-hint {
+  padding: var(--spacing-2) var(--spacing-3);
+  border-top: 1px solid var(--cal-line);
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+@media (pointer: coarse) {
+  .cal-command-row {
+    min-height: 44px;
+  }
+
+  .cal-command-hint {
+    display: none;
+  }
+}
+
+@media (width < 40rem) {
+  .cal-command {
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .cal-command-scrim,
+  .cal-command-hint {
+    display: none;
+  }
+
+  .cal-command-panel {
+    width: 100%;
+    max-height: none;
+    height: calc(100dvh - var(--cal-kb-inset, 0px));
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cal-command[data-open] .cal-command-panel {
+    animation: cal-command-in 120ms ease-out;
+  }
+}
+
+@keyframes cal-command-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

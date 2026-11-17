@@ -11,42 +11,42 @@ msgstr ""
 "Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "After"
 msgstr "Skončí po"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Daily"
 msgstr "Denně"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Does not repeat"
 msgstr "Neopakuje se"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Every"
 msgstr "Opakovat po"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Monthly"
 msgstr "Měsíčně"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Never ends"
 msgstr "Nikdy nekončí"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "On date"
 msgstr "Skončí dne"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Repeat"
 msgstr "Opakování"
@@ -103,12 +103,12 @@ msgstr "Opakuje se týdně"
 msgid "Repeats yearly"
 msgstr "Opakuje se ročně"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Weekly"
 msgstr "Týdně"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Yearly"
 msgstr "Ročně"
@@ -121,7 +121,7 @@ msgstr[0] "celkem %{count} opakování"
 msgstr[1] "celkem %{count} opakování"
 msgstr[2] "celkem %{count} opakování"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "occurrence"
 msgid_plural "occurrences"
@@ -139,7 +139,7 @@ msgstr "v %{days}"
 msgid "until %{date}"
 msgstr "do %{date}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Repeats on"
 msgstr "Den opakování"
@@ -149,12 +149,12 @@ msgstr "Den opakování"
 msgid "Repeats on a custom pattern"
 msgstr "Opakuje se podle vlastního vzoru"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Replace repeat rule"
 msgstr "Nahradit pravidlo opakování"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "To repeat on another day, move the event to that day."
 msgstr "Má-li se událost opakovat v jiný den, přesuňte ji na tento den."
@@ -514,7 +514,7 @@ msgstr "ve třetí pracovní den"
 msgid "on the third weekend day"
 msgstr "ve třetí víkendový den"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "day"
 msgid_plural "days"
@@ -522,7 +522,7 @@ msgstr[0] "dni"
 msgstr[1] "dnech"
 msgstr[2] "dnech"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "month"
 msgid_plural "months"
@@ -530,7 +530,7 @@ msgstr[0] "měsíci"
 msgstr[1] "měsících"
 msgstr[2] "měsících"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "week"
 msgid_plural "weeks"
@@ -538,7 +538,7 @@ msgstr[0] "týdnu"
 msgstr[1] "týdnech"
 msgstr[2] "týdnech"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "year"
 msgid_plural "years"
@@ -546,32 +546,32 @@ msgstr[0] "roce"
 msgstr[1] "letech"
 msgstr[2] "letech"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Discard changes"
 msgstr "Zahodit změny"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Save repeat"
 msgstr "Uložit opakování"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/recurrence_edit.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Not available: the new end comes before this event, so there are no following events to change."
 msgstr "Není k dispozici: nový konec je před touto událostí, takže nejsou žádné následující události ke změně."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/recurrence_edit.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This series' first event hasn't been read from your calendar yet, so the events left in it can't be counted. Refresh the calendar and try again."
 msgstr "První událost této série se z vašeho kalendáře ještě nenačetla, takže nelze spočítat, kolik událostí v ní zbývá. Obnovte kalendář a zkuste to znovu."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Ends"
 msgstr "Konec"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Repeat until"
 msgstr "Opakovat do"

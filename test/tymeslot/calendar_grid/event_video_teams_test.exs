@@ -26,15 +26,13 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
 
   import Mox
   import Tymeslot.Test.CalendarGridHelpers
-  import TymeslotWeb.Test.SocketHelpers
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoSyncWorker
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution
 
   setup :verify_on_exit!
 
@@ -110,10 +108,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
     test "caches the Teams link on the grid event", ctx do
       expect_create()
 
-      assert {:ok, result} = EventCreation.run_create_event(create_payload(ctx, ctx.teams))
-      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, build_socket())
+      assert {:ok, %{event: event}} =
+               Changes.create_event(ctx.user.id, create_payload(ctx, ctx.teams))
 
-      {:ok, cached} = ProviderCalendarEventQueries.get_by_uid(ctx.calendar.id, result.uid)
+      {:ok, cached} = ProviderCalendarEventQueries.get_by_uid(ctx.calendar.id, event.uid)
 
       assert {cached.video_link, cached.video_integration_id} ==
                {join_url(@grid_event_id), ctx.teams.id}
@@ -154,7 +152,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
       event = insert_event(ctx.calendar, @planning)
       expect(Tymeslot.CalendarMock, :update_event, 0, fn _uid, _payload, _context -> :ok end)
 
-      assert {:ok, url} = CalendarGrid.change_event_video(ctx.user.id, event, ctx.teams.id)
+      assert {:ok, url} = Changes.change_event_video(ctx.user.id, event, ctx.teams.id)
       assert url == join_url(@grid_event_id)
 
       assert [{:patch, patched, _body}] = graph_requests()
@@ -176,7 +174,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
 
       expect_update()
 
-      assert {:ok, url} = CalendarGrid.change_event_video(ctx.user.id, event, ctx.teams.id)
+      assert {:ok, url} = Changes.change_event_video(ctx.user.id, event, ctx.teams.id)
 
       # The description write comes before the attach, so it cannot overwrite
       # the join details Outlook adds to the event with the meeting.
@@ -184,7 +182,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
       assert payload.description == "Agenda"
       refute Map.has_key?(payload, :conference_data)
 
-      assert CalendarGrid.changed_event(ctx.user.id, event, ctx.teams.id, url).description ==
+      assert Changes.changed_event(ctx.user.id, event, ctx.teams.id, url).description ==
                "Agenda"
 
       assert_enqueued(worker: VideoSyncWorker, args: %{"room_id" => "86360699337"})
@@ -211,7 +209,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
       end)
 
       assert {:error, {:http_error, 403, _message}} =
-               CalendarGrid.change_event_video(ctx.user.id, event, ctx.teams.id)
+               Changes.change_event_video(ctx.user.id, event, ctx.teams.id)
 
       row = reload(event)
       assert {row.video_link, row.video_integration_id} == {nil, nil}
@@ -222,7 +220,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
       event = insert_event(ctx.calendar, @planning, %{provider_event_id: nil})
       expect_update()
 
-      assert {:ok, url} = CalendarGrid.change_event_video(ctx.user.id, event, ctx.teams.id)
+      assert {:ok, url} = Changes.change_event_video(ctx.user.id, event, ctx.teams.id)
       assert url == join_url(@own_event_id)
 
       assert [{:graph, :post, "#{@graph}/me/events", _body}, {:update, payload}] = mailbox()
@@ -236,7 +234,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
       event = insert_event(ctx.calendar, @planning)
       expect_update()
 
-      assert {:ok, url} = CalendarGrid.change_event_video(ctx.user.id, event, other.id)
+      assert {:ok, url} = Changes.change_event_video(ctx.user.id, event, other.id)
 
       assert [{:graph, :post, "#{@graph}/me/events", _body}, {:update, payload}] = mailbox()
       assert payload.description == "Agenda\n\nJoin video call: #{url}"
@@ -257,7 +255,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
     end
 
     test "moving it to None deletes nothing on Graph and queues no room delete", ctx do
-      assert {:ok, nil} = CalendarGrid.change_event_video(ctx.user.id, ctx.event, nil)
+      assert {:ok, nil} = Changes.change_event_video(ctx.user.id, ctx.event, nil)
 
       assert graph_requests() == []
       refute_enqueued(worker: VideoSyncWorker)
@@ -278,7 +276,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
       expect_update()
 
       assert {:ok, ^new_url} =
-               CalendarGrid.change_event_video(ctx.user.id, ctx.event, mirotalk.id)
+               Changes.change_event_video(ctx.user.id, ctx.event, mirotalk.id)
 
       assert [{:update, payload}] = mailbox()
       assert payload.description == "Agenda\n\nJoin video call: #{new_url}"
@@ -293,7 +291,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
         :ok
       end)
 
-      assert {:ok, _deleted} = CalendarGrid.delete_event(ctx.user.id, ctx.event)
+      assert {:ok, _deleted} = Changes.delete_event(ctx.user.id, ctx.event)
 
       assert_received {:deleted, _uid}
       assert graph_requests() == []

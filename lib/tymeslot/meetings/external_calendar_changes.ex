@@ -20,7 +20,6 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Emails.EmailScheduler
-  alias Tymeslot.Emails.EmailService
   alias Tymeslot.Jobs
   alias Tymeslot.Meetings.MeetingCalendarQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -423,24 +422,11 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
     end
   end
 
+  # Scheduled rather than sent, so a failed send is retried by the email job.
+  # A failed insert is logged by the scheduler and does not undo the change.
   @spec notify_host(Meeting.t(), signal()) :: :ok
   defp notify_host(meeting, signal) do
-    case EmailService.send_external_booking_change(meeting, meeting.organizer_email, signal) do
-      {:ok, _result} ->
-        Logger.info("External booking change notification sent",
-          meeting_id: meeting.id,
-          signal: signal
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to send external booking change notification",
-          meeting_id: meeting.id,
-          reason: reason
-        )
-
-        :ok
-    end
+    _scheduled = EmailScheduler.schedule_external_booking_change(meeting.id, signal)
+    :ok
   end
 end

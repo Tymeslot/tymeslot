@@ -148,6 +148,14 @@ Settled while translating; reuse rather than re-coining.
 | glassmorphism | **Glasmorphismus** (*im Glasmorphismus-Stil*); *frosted glass* stays **Milchglas** |
 | booking approval / approval (per meeting type) | **Buchungsfreigabe** / **Freigabe** (*Freigabe vor der Bestätigung*, *Freigabe nötig*, *mit Freigabe*); approve / decline → **annehmen** / **ablehnen**. Never *Genehmigung*. |
 | an unanswered request expires | **die Anfrage verfällt** / **Anfragen verfallen**. Never *wird freigegeben*, which reads as the opposite. |
+| bookable times / bookable (the calendar layer guests can book) | **buchbare Zeiten** / **Buchbar** (label); never *verfügbar* (availability) or *frei* (the opposite of busy) |
+| Layers (calendar rail heading) | **Ebenen** |
+| open for booking (organiser opens extra time) | **für Buchungen öffnen** / **für %{name} geöffnet**; never *freigeben*, reserved for booking approval |
+| just this once / every week (open-for-booking repeat) | **Nur dieses Mal** / **Jede Woche** |
+| treat as busy / free (local setting on a read-only event) | **Behandeln als** + **Beschäftigt** / **Frei**; *als beschäftigt behandelt*, matching the calendar's *Als beschäftigt angezeigt* |
+| block this time / Blocked / unblock | **Diese Zeit blockieren** / **Blockiert** / **Blockierung aufgehoben** |
+| request (calendar pill) / Expired (expired-request pill) | **Anfrage** / **Verfallen** (per the expiry term above) |
+| hatched (bookable layer) | **schraffiert** |
 | time off | **Abwesenheit** (*als Abwesenheit eintragen*); holidays inside it stay *Urlaub* |
 | rescheduling terms (a host's own policy) | **Bedingungen zur Terminverschiebung**, per *reschedule* above; never *Umbuchung* |
 | starter setup (the /for page section) | **Starter-Einrichtung** |

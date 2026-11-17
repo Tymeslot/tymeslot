@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Dashboard.TimeFormatConsistencyTest do
 
     * the availability editor's list view, whose break times and time dropdowns
       predated the preference and rendered a fixed 24-hour clock
-    * the calendar's own settings modal, which writes the same column as the
+    * the calendar's display options, which write the same column as the
       profile control but left the rest of the dashboard rendering the old clock
       until a full page load, since the sidebar patches rather than remounts
   """
@@ -100,21 +100,14 @@ defmodule TymeslotWeb.Dashboard.TimeFormatConsistencyTest do
     end
   end
 
-  describe "changing the clock in the calendar settings modal" do
-    # Without a connected calendar the grid renders its empty state instead of
-    # the header, so the settings button the organiser clicks is not there.
-    setup %{user: user} do
-      insert(:calendar_integration, user: user, is_active: true)
-      :ok
-    end
-
+  describe "changing the clock in the calendar display options" do
     test "carries to the availability editor without a page reload", %{conn: conn, user: user} do
       CalendarGrid.save_preferences(user.id, %{time_format: "12h"})
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar")
 
-      view |> element("button[phx-click='toggle_settings']") |> render_click()
-      view |> element("#time-format-toggle-24h") |> render_click()
+      view |> element("#calendar-display-options > button") |> render_click()
+      view |> element("#calendar-time-format-24h") |> render_click()
 
       # Patching, not re-mounting: the sidebar navigates with patch, so this is
       # the journey an organiser actually takes between the two settings.
@@ -129,8 +122,8 @@ defmodule TymeslotWeb.Dashboard.TimeFormatConsistencyTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar")
 
-      view |> element("button[phx-click='toggle_settings']") |> render_click()
-      view |> element("#time-format-toggle-24h") |> render_click()
+      view |> element("#calendar-display-options > button") |> render_click()
+      view |> element("#calendar-time-format-24h") |> render_click()
 
       assert CalendarGrid.get_user_time_format(user.id, "en") == "24h"
     end

@@ -107,6 +107,10 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
               action: dgettext_noop("errors", "signup attempts"),
               log: false
             ],
+            # Deliberately shared by the verification send and resend, signup with
+            # an address that is already taken, and OAuth signup confirmation. The
+            # taken-address path must spend the same budget as a real send, or the
+            # difference in what is left would reveal whether the account exists.
             verification_ip: [
               prefix: "email_verification:ip",
               scope: :source,
@@ -203,12 +207,25 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
               operation: "OAuth initiation",
               log: false
             ],
-            oauth_callback: [
-              prefix: "oauth_callback",
+            oauth_signin_callback: [
+              prefix: "oauth_signin_callback",
               scope: :source,
               limit: 20,
               window_ms: 2 * @minute,
               operation: "OAuth callback",
+              log: false
+            ],
+            # The OAuth return from connecting a calendar, video, Slack or payments
+            # account. Kept apart from `:oauth_signin_callback` so that a team behind
+            # one address connecting integrations cannot lock its members out of
+            # signing in. The calendar, video and Slack callbacks log their own
+            # refusals.
+            integration_oauth_callback: [
+              prefix: "integration_oauth_callback",
+              scope: :source,
+              limit: 20,
+              window_ms: 2 * @minute,
+              operation: "integration OAuth callback",
               log: false
             ],
             oauth_completion: [
@@ -252,9 +269,10 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
               window_ms: 10 * @minute,
               operation: "meeting keep"
             ],
-            # Keyed on the client rather than the meeting: the token already binds a
-            # link to one request, so what is worth bounding is somebody working
-            # through guessed or harvested links.
+            # The emailed link's answer. Keyed on the client rather than the meeting:
+            # the token already binds a link to one request, so what is worth
+            # bounding is somebody working through guessed or harvested links. The
+            # dashboard's answer has its own `:dashboard_meeting_approval`.
             meeting_approval: [
               prefix: "meeting_approval",
               scope: :source,
@@ -337,16 +355,26 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
             ],
 
             # Machine-to-machine endpoints
-            webhook: [
-              prefix: "webhook",
+            # One bucket per provider, so a burst from one cannot refuse another's
+            # deliveries: Zoom deauthorisation is a compliance obligation.
+            telegram_webhook: [
+              prefix: "telegram_webhook",
               scope: :source,
               limit: 100,
               window_ms: 10 * @minute,
-              operation: "webhook",
+              operation: "Telegram webhook",
+              log: false
+            ],
+            zoom_deauth: [
+              prefix: "zoom_deauth",
+              scope: :source,
+              limit: 100,
+              window_ms: 10 * @minute,
+              operation: "Zoom deauthorisation webhook",
               log: false
             ],
             # Stripe delivers every event from a small published pool of addresses,
-            # so a bucket as tight as `:webhook` would refuse a burst and delay the
+            # so a bucket as tight as `:telegram_webhook` would refuse a burst and delay the
             # event a paid booking is waiting on. Signatures are verified after this,
             # so it only bounds unsigned floods.
             stripe_webhook: [

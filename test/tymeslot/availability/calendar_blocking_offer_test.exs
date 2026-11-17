@@ -21,6 +21,7 @@ defmodule Tymeslot.Availability.CalendarBlockingOfferTest do
   alias Tymeslot.Availability.Offer
   alias Tymeslot.Bookings.CalendarCheck
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.EffectiveVisibility
   alias Tymeslot.CalendarMock
   alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.TestMocks
@@ -129,8 +130,16 @@ defmodule Tymeslot.Availability.CalendarBlockingOfferTest do
         summary: "Bank holiday"
       )
 
-      assert [%{summary: "Bank holiday"}] =
-               CalendarGrid.search_events(user.id, "Bank holiday", [integration])
+      %{events: events} =
+        CalendarGrid.search_calendar(
+          user.id,
+          "Bank holiday",
+          [integration],
+          %EffectiveVisibility{},
+          now: DateTime.utc_now()
+        )
+
+      assert Enum.map(events, & &1.title) == ["Bank holiday"]
     end
   end
 

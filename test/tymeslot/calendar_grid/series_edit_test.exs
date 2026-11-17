@@ -1,8 +1,8 @@
 defmodule Tymeslot.CalendarGrid.SeriesEditTest do
   @moduledoc """
   An edit of a member of a recurring series goes through
-  `CalendarGrid.update_event/4` with a `RecurrenceScope`, and
-  `CalendarGrid.edit_scopes/1` says whether an event takes one. The provider
+  `Changes.update_event/4` with a `RecurrenceScope`, and
+  `Changes.edit_scopes/1` says whether an event takes one. The provider
   write is stubbed at the suite-wide `:calendar_module` seam
   (`Tymeslot.CalendarMock`), as in `Tymeslot.CalendarGrid.EventEditTest`.
   """
@@ -16,7 +16,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
   import Tymeslot.Test.CalendarGridHelpers
 
   alias Ecto.Changeset
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
 
@@ -68,7 +68,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       expect_provider_update()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
+               Changes.update_event(user.id, event, %{summary: "Renamed"},
                  recurrence_scope: :this_only
                )
 
@@ -90,7 +90,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
 
       expect_provider_update()
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
       assert captured_payload().provider_event_id == "series-1_20260601T090000Z"
     end
 
@@ -110,7 +110,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       expect_provider_update()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
+               Changes.update_event(user.id, event, %{summary: "Renamed"},
                  recurrence_scope: :following
                )
 
@@ -129,7 +129,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       event = insert_event(integration, @weekly_sync, %{})
 
       assert {:error, %{reason: :unaddressable_occurrence, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
+               Changes.update_event(user.id, event, %{summary: "Renamed"},
                  recurrence_scope: :following
                )
 
@@ -146,7 +146,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
         insert_event(integration, @weekly_sync, %{provider_event_id: "series-1_20260601T090000Z"})
 
       assert {:error, %{reason: :unsupported_scope, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{recurrence_rule: nil},
+               Changes.update_event(user.id, event, %{recurrence_rule: nil},
                  recurrence_scope: :following
                )
 
@@ -163,9 +163,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       expect_provider_update()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
-                 recurrence_scope: :all
-               )
+               Changes.update_event(user.id, event, %{summary: "Renamed"}, recurrence_scope: :all)
 
       assert %{
                scope: :all,
@@ -186,9 +184,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       event = insert_event(integration, @weekly_sync, %{})
 
       assert_raise ArgumentError, ~r/:recurrence_scope/, fn ->
-        CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
-          recurrence_scope: "this_only"
-        )
+        Changes.update_event(user.id, event, %{summary: "Renamed"}, recurrence_scope: "this_only")
       end
     end
 
@@ -200,7 +196,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       expect_provider_update({:error, :server_error})
 
       assert {:error, %{reason: :server_error, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+               Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
       assert row.sync_state == "synced"
@@ -217,7 +213,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
+               Changes.update_event(user.id, event, %{summary: "Renamed"},
                  recurrence_scope: :this_only
                )
 
@@ -240,7 +236,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  event,
                  %{summary: "Renamed", recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"},
@@ -261,7 +257,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
         insert_event(caldav, @weekly_sync, Map.merge(caldav_occurrence(), %{provider: "caldav"}))
 
       assert {:error, %{reason: :unsupported_scope, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{recurrence_rule: nil},
+               Changes.update_event(user.id, event, %{recurrence_rule: nil},
                  recurrence_scope: :following
                )
 
@@ -280,7 +276,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  event,
                  %{summary: "Renamed", recurrence_rule: "FREQ=WEEKLY;BYDAY=MO;COUNT=4"},
@@ -306,7 +302,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
 
       # The same start as the cache's, which moves nothing, and a later end.
       assert {:ok, _updated} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  event,
                  %{start_at: event.start_at, end_at: DateTime.add(event.end_at, 30, :minute)},
@@ -326,7 +322,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
         insert_event(caldav, @weekly_sync, Map.merge(caldav_occurrence(), %{provider: "caldav"}))
 
       assert {:error, %{reason: :unsupported_scope, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{recurrence_rule: nil},
+               Changes.update_event(user.id, event, %{recurrence_rule: nil},
                  recurrence_scope: :all
                )
 
@@ -338,7 +334,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       event = insert_event(exchange, @weekly_sync, exchange_occurrence())
       expect_provider_update()
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
       assert captured_payload().provider_event_id == "AAMkAD-occurrence"
     end
 
@@ -347,9 +343,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       event = insert_event(exchange, @weekly_sync, exchange_occurrence())
 
       assert {:error, %{reason: :unsupported_scope, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
-                 recurrence_scope: :all
-               )
+               Changes.update_event(user.id, event, %{summary: "Renamed"}, recurrence_scope: :all)
 
       refute_received {:provider_update, _uid, _payload, _context}
     end
@@ -390,7 +384,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
     } do
       cache_master_start(integration, ~U[2026-06-01 09:00:00Z])
 
-      assert CalendarGrid.following_rule(event, @every_two_weeks, "Etc/UTC") ==
+      assert Changes.following_rule(event, @every_two_weeks, "Etc/UTC") ==
                {:ok, "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO;COUNT=8"}
     end
 
@@ -400,18 +394,18 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
     } do
       cache_master_start(integration, ~U[2026-06-01 09:00:00Z])
 
-      assert CalendarGrid.following_rule(event, "FREQ=WEEKLY;BYDAY=MO;COUNT=2", "Etc/UTC") ==
+      assert Changes.following_rule(event, "FREQ=WEEKLY;BYDAY=MO;COUNT=2", "Etc/UTC") ==
                {:error, :ends_before}
     end
 
     test "cannot count a series whose first start was never read", %{event: event} do
-      assert CalendarGrid.following_rule(event, @every_two_weeks, "Etc/UTC") ==
+      assert Changes.following_rule(event, @every_two_weeks, "Etc/UTC") ==
                {:error, :start_unknown}
     end
 
     test "leaves a rule without a count as it is", %{event: event} do
       rule = "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO;UNTIL=20261231T235959Z"
-      assert CalendarGrid.following_rule(event, rule, "Etc/UTC") == {:ok, rule}
+      assert Changes.following_rule(event, rule, "Etc/UTC") == {:ok, rule}
     end
 
     test "keeps the whole count when the split is at the first occurrence", %{
@@ -426,7 +420,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
           recurrence_rule: @series_rule
         })
 
-      assert CalendarGrid.following_rule(first, @every_two_weeks, "Etc/UTC") ==
+      assert Changes.following_rule(first, @every_two_weeks, "Etc/UTC") ==
                {:ok, @every_two_weeks}
     end
 
@@ -446,10 +440,10 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
           recurrence_rule: @series_rule
         })
 
-      assert CalendarGrid.following_rule(after_the_change, @series_rule, "Europe/Berlin") ==
+      assert Changes.following_rule(after_the_change, @series_rule, "Europe/Berlin") ==
                {:ok, "FREQ=WEEKLY;BYDAY=MO;COUNT=8"}
 
-      assert CalendarGrid.following_rule(after_the_change, @series_rule, "Etc/UTC") ==
+      assert Changes.following_rule(after_the_change, @series_rule, "Etc/UTC") ==
                {:ok, "FREQ=WEEKLY;BYDAY=MO;COUNT=7"}
     end
   end
@@ -470,7 +464,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       expect_provider_update()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{recurrence_rule: @every_two_weeks},
+               Changes.update_event(user.id, event, %{recurrence_rule: @every_two_weeks},
                  recurrence_scope: :following,
                  until_timezone: "Etc/UTC"
                )
@@ -488,7 +482,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       cache_master_start(integration, ~U[2026-06-01 09:00:00Z])
 
       assert {:error, %{reason: :ends_before, retry: :not_queued}} =
-               CalendarGrid.update_event(
+               Changes.update_event(
                  user.id,
                  event,
                  %{recurrence_rule: "FREQ=WEEKLY;BYDAY=MO;COUNT=2"},
@@ -503,7 +497,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       event: event
     } do
       assert {:error, %{reason: :start_unknown, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{recurrence_rule: @every_two_weeks},
+               Changes.update_event(user.id, event, %{recurrence_rule: @every_two_weeks},
                  recurrence_scope: :following
                )
 
@@ -525,7 +519,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       |> Repo.update!()
 
       assert {:error, %{reason: :ends_before, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{recurrence_rule: @every_two_weeks},
+               Changes.update_event(user.id, event, %{recurrence_rule: @every_two_weeks},
                  recurrence_scope: :following
                )
 
@@ -544,7 +538,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       expect_provider_update()
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{recurrence_rule: @every_two_weeks},
+               Changes.update_event(user.id, event, %{recurrence_rule: @every_two_weeks},
                  recurrence_scope: :all
                )
 
@@ -557,12 +551,11 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       event =
         insert_event(integration, @weekly_sync, %{recurrence_rule: nil, recurring_event_id: nil})
 
-      assert CalendarGrid.edit_scopes(event) == {:ok, :single}
+      assert Changes.edit_scopes(event) == {:ok, :single}
     end
 
     test "an occurrence of a Google series takes a scope", %{integration: integration} do
-      assert CalendarGrid.edit_scopes(insert_event(integration, @weekly_sync, %{})) ==
-               {:ok, :series}
+      assert Changes.edit_scopes(insert_event(integration, @weekly_sync, %{})) == {:ok, :series}
     end
 
     test "an occurrence of a CalDAV series takes a scope", %{user: user} do
@@ -571,14 +564,14 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       event =
         insert_event(caldav, @weekly_sync, Map.merge(caldav_occurrence(), %{provider: "caldav"}))
 
-      assert CalendarGrid.edit_scopes(event) == {:ok, :series}
+      assert Changes.edit_scopes(event) == {:ok, :series}
     end
 
     test "an occurrence of an Exchange series is edited as that event only", %{user: user} do
       exchange = insert(:calendar_integration, user: user, provider: "exchange")
       event = insert_event(exchange, @weekly_sync, exchange_occurrence())
 
-      assert CalendarGrid.edit_scopes(event) == {:ok, :this_only}
+      assert Changes.edit_scopes(event) == {:ok, :this_only}
     end
 
     test "reads the series from the cached row when handed only the address", %{
@@ -587,7 +580,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       event = insert_event(integration, @weekly_sync, %{})
       address = %{uid: event.uid, calendar_integration_id: integration.id}
 
-      assert CalendarGrid.edit_scopes(address) == {:ok, :series}
+      assert Changes.edit_scopes(address) == {:ok, :series}
     end
   end
 

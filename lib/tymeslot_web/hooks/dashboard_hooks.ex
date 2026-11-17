@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Hooks.DashboardHooks do
   single hook that runs the others in turn.
   """
 
+  alias Phoenix.Component
   alias Phoenix.LiveView.Socket
   alias TymeslotWeb.Hooks.AnnouncementsHook
   alias TymeslotWeb.Hooks.AppLocaleHook
@@ -37,6 +38,10 @@ defmodule TymeslotWeb.Hooks.DashboardHooks do
   @spec on_mount(:dashboard | :onboarding, map(), map(), Socket.t()) ::
           {:cont, Socket.t()} | {:halt, Socket.t()}
   def on_mount(:dashboard, params, session, socket) do
+    # Live navigation keeps the first page's root layout and viewport meta, so
+    # every page here agrees on `cover` and pads its own safe areas.
+    socket = Component.assign(socket, :viewport_fit, :cover)
+
     hooks =
       @dashboard_hooks ++
         dashboard_additional_hooks() ++

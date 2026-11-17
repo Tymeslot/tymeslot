@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventEditTest do
   @moduledoc """
-  `CalendarGrid.update_event/4` applies one change to the whole event, writes
+  `Changes.update_event/4` applies one change to the whole event, writes
   that whole event to the provider, and records the edit on the cached row
   without touching the columns the provider owns.
 
@@ -19,7 +19,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
   import Mox
   import Tymeslot.Test.CalendarGridHelpers
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Google.EventMapper, as: GoogleMapper
   alias Tymeslot.Integrations.Calendar.ICalBuilder
@@ -124,7 +124,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
         event = insert_event(integration, @weekly_sync, %{})
         expect_provider_update()
 
-        assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, changes)
+        assert {:ok, _updated} = Changes.update_event(user.id, event, changes)
 
         assert_received {:provider_update, uid, payload, context}
         assert uid == event.uid
@@ -173,7 +173,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       event = insert_event(integration, @weekly_sync, %{raw_ical: nil, etag: nil})
       expect_provider_update()
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       payload = captured_payload()
       refute Map.has_key?(payload, :raw_ical)
@@ -194,7 +194,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       optimistic = %{event | raw_ical: nil, etag: nil}
 
       assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, optimistic, %{summary: "Renamed"})
+               Changes.update_event(user.id, optimistic, %{summary: "Renamed"})
 
       payload = captured_payload()
       assert payload.raw_ical == @raw_ical
@@ -210,7 +210,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
 
       changes = %{all_day: true, start_date: ~D[2026-06-01], end_date: ~D[2026-06-02]}
 
-      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, changes)
+      assert {:ok, updated} = Changes.update_event(user.id, event, changes)
       assert {updated.start_at, updated.end_at} == {nil, nil}
 
       payload = captured_payload()
@@ -239,7 +239,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
         end_at: ~U[2026-06-01 10:00:00Z]
       }
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, changes)
+      assert {:ok, _updated} = Changes.update_event(user.id, event, changes)
 
       payload = captured_payload()
       assert payload.start_time == ~U[2026-06-01 09:00:00Z]
@@ -259,7 +259,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       expect_provider_update()
 
       attendees = @attendees ++ [%{"email" => "late@example.com", "name" => nil}]
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{attendees: attendees})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{attendees: attendees})
 
       payload = captured_payload()
       assert payload.start_time == ~D[2026-06-01]
@@ -273,7 +273,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       event = insert_event(integration, @weekly_sync, %{provider_calendar_id: "primary"})
       expect_provider_update()
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
       assert captured_payload().calendar_id == nil
     end
 
@@ -284,7 +284,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       event = insert_event(integration, @weekly_sync, %{status: "declined"})
       expect_provider_update()
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
       assert captured_payload().status == nil
     end
   end
@@ -299,7 +299,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
 
       changes = %{all_day: true, start_date: ~D[2026-06-01], end_date: ~D[2026-06-02]}
 
-      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, changes)
+      assert {:ok, updated} = Changes.update_event(user.id, event, changes)
       assert updated.recurrence_rule == @all_day_rrule
       assert captured_payload().recurrence_rule == @all_day_rrule
 
@@ -320,7 +320,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
         end_at: ~U[2026-06-01 10:00:00Z]
       }
 
-      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, changes)
+      assert {:ok, updated} = Changes.update_event(user.id, event, changes)
       assert updated.recurrence_rule == @timed_rrule
       assert captured_payload().recurrence_rule == @timed_rrule
 
@@ -342,7 +342,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       }
 
       assert {:ok, updated} =
-               CalendarGrid.update_event(user.id, event, changes, timezone: "America/Los_Angeles")
+               Changes.update_event(user.id, event, changes, timezone: "America/Los_Angeles")
 
       # 31 Dec 23:59:59 in Los Angeles is 1 Jan 07:59:59 UTC, so the final
       # occurrence on 31 December local is still inside the bound.
@@ -363,7 +363,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       changes = %{all_day: true, start_date: ~D[2026-06-01], end_date: ~D[2026-06-02]}
 
       assert {:ok, updated} =
-               CalendarGrid.update_event(user.id, event, changes, timezone: "America/Los_Angeles")
+               Changes.update_event(user.id, event, changes, timezone: "America/Los_Angeles")
 
       assert updated.recurrence_rule == @all_day_rrule
     end
@@ -382,7 +382,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       }
 
       assert {:error, %{reason: :until_before_start, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, changes)
+               Changes.update_event(user.id, event, changes)
 
       refute_received {:provider_update, _uid, _payload, _context}
 
@@ -403,7 +403,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       event = insert_event(integration, @weekly_sync, %{recurrence_rule: odd_rule})
       expect_provider_update()
 
-      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
       assert updated.recurrence_rule == odd_rule
       assert captured_payload().recurrence_rule == odd_rule
     end
@@ -417,10 +417,10 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       timed = insert_event(integration, @weekly_sync, %{})
       all_day = insert_all_day_event(integration)
 
-      {:ok, _updated} = CalendarGrid.update_event(user.id, timed, %{summary: "Renamed"})
+      {:ok, _updated} = Changes.update_event(user.id, timed, %{summary: "Renamed"})
       timed_payload = captured_payload()
 
-      {:ok, _updated} = CalendarGrid.update_event(user.id, all_day, %{summary: "Renamed"})
+      {:ok, _updated} = Changes.update_event(user.id, all_day, %{summary: "Renamed"})
       all_day_payload = captured_payload()
 
       %{timed_payload: timed_payload, all_day_payload: all_day_payload}
@@ -490,7 +490,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       event = insert_event(integration, @weekly_sync, %{recurring_event_id: "series-1"})
       expect_provider_update()
 
-      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
       assert updated.summary == "Renamed"
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
@@ -514,7 +514,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       key = AvailabilityCache.booking_window_events_key(user.id)
       :ok = AvailabilityCache.put(key, :stale)
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
       assert AvailabilityCache.get_or_compute(key, fn -> :recomputed end) == :recomputed
     end
   end
@@ -544,7 +544,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       }
 
       assert {:error, %{reason: :server_error, retry: :queued}} =
-               CalendarGrid.update_event(user.id, event, changes)
+               Changes.update_event(user.id, event, changes)
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
       assert row.sync_state == "locally_modified"
@@ -561,7 +561,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       expect_provider_update({:error, :unauthorized})
 
       assert {:error, %{reason: :unauthorized, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+               Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
       assert row.sync_state == "synced"
@@ -576,7 +576,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       expect_provider_update({:error, :server_error})
 
       assert {:error, %{reason: :server_error, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+               Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(google.id, event.uid)
       assert row.sync_state == "synced"
@@ -592,7 +592,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       event = insert_event(integration, @weekly_sync, %{})
 
       assert_raise ArgumentError, ~r/:etag/, fn ->
-        CalendarGrid.update_event(user.id, event, %{summary: "Renamed", etag: "forged"})
+        Changes.update_event(user.id, event, %{summary: "Renamed", etag: "forged"})
       end
     end
 
@@ -603,7 +603,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       event = insert_event(integration, @weekly_sync, %{})
 
       assert {:error, %{reason: :invalid_timing, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{all_day: true})
+               Changes.update_event(user.id, event, %{all_day: true})
     end
   end
 

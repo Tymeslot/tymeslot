@@ -11,42 +11,42 @@ msgstr ""
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n>1);\n"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "After"
 msgstr "Après"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Daily"
 msgstr "Quotidien"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Does not repeat"
 msgstr "Ne se répète pas"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Every"
 msgstr "Intervalle :"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Monthly"
 msgstr "Mensuel"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Never ends"
 msgstr "Ne se termine jamais"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "On date"
 msgstr "À une date"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Repeat"
 msgstr "Répétition"
@@ -99,12 +99,12 @@ msgstr "Se répète chaque semaine"
 msgid "Repeats yearly"
 msgstr "Se répète chaque année"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Weekly"
 msgstr "Hebdomadaire"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Yearly"
 msgstr "Annuel"
@@ -116,7 +116,7 @@ msgid_plural "for %{count} occurrences"
 msgstr[0] "%{count} fois"
 msgstr[1] "%{count} fois"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "occurrence"
 msgid_plural "occurrences"
@@ -133,7 +133,7 @@ msgstr "les %{days}"
 msgid "until %{date}"
 msgstr "jusqu’au %{date}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Repeats on"
 msgstr "Jour de répétition"
@@ -143,12 +143,12 @@ msgstr "Jour de répétition"
 msgid "Repeats on a custom pattern"
 msgstr "Se répète selon un modèle personnalisé"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Replace repeat rule"
 msgstr "Remplacer la règle de répétition"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "To repeat on another day, move the event to that day."
 msgstr "Pour que l’événement se répète un autre jour, déplacez-le sur ce jour."
@@ -508,60 +508,60 @@ msgstr "le troisième jour ouvré"
 msgid "on the third weekend day"
 msgstr "le troisième jour de week-end"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "day"
 msgid_plural "days"
 msgstr[0] "jour"
 msgstr[1] "jours"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "month"
 msgid_plural "months"
 msgstr[0] "mois"
 msgstr[1] "mois"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "week"
 msgid_plural "weeks"
 msgstr[0] "semaine"
 msgstr[1] "semaines"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "year"
 msgid_plural "years"
 msgstr[0] "an"
 msgstr[1] "ans"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Discard changes"
 msgstr "Abandonner les modifications"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Save repeat"
 msgstr "Enregistrer la répétition"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/recurrence_edit.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "Not available: the new end comes before this event, so there are no following events to change."
 msgstr "Non disponible : la nouvelle fin précède cet événement, il n’y a donc aucun événement suivant à modifier."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/recurrence_edit.ex
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This series' first event hasn't been read from your calendar yet, so the events left in it can't be counted. Refresh the calendar and try again."
 msgstr "Le premier événement de cette série n’a pas encore été lu depuis votre calendrier, les événements restants ne peuvent donc pas être comptés. Actualisez le calendrier et réessayez."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Ends"
 msgstr "Se termine"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Repeat until"
 msgstr "Répéter jusqu'au"

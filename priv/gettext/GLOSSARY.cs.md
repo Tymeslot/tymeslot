@@ -105,6 +105,13 @@ Genitive singular and genitive plural are given wherever a translator will need 
 | break (in the availability grid) | **přestávka** (f., gen. pl. přestávek), kept distinct from *časová rezerva* |
 | booking page / link / flow | **rezervační stránka** / **rezervační odkaz** / **průběh rezervace** |
 | available times | **Volné termíny** |
+| bookable times (the hatched calendar layer for one meeting type) | **termíny k rezervaci**; the pill *Bookable* → **K rezervaci**. Never *volné termíny* here: *free* is the opposite of *busy* |
+| Layers (calendar rail heading) | **Vrstvy** |
+| open for booking (organiser opens extra time) | **otevřít pro rezervace** (button and kind label); the draft title and toasts use a colon frame: *Open for %{name}* → **Otevřeno pro: %{name}**. *Just this once* → **Jen tentokrát**, *Every week* → **Každý týden** |
+| Treat as (Busy / Free on a read-only all-day event) | **Považovat za** + **Obsazeno** / **Volno**; *Treated as busy for bookings* → **Pro rezervace se počítá jako obsazeno** |
+| block this time / Blocked | **zablokovat tento čas** (button, toasts *Zablokováno*); the default event title *Blocked* → **Blokováno**; *Unblocked* → **Odblokováno** |
+| Request / Expired (pills on a booking request) | **Žádost** / **Vypršeno** (as in *dashboard_bookings*); screen-reader fragments: **žádost čeká na vaši odpověď**, **žádost vypršela bez odpovědi** |
+| hatched (times on the calendar) | **vyšrafovaný**: *ve vyšrafovaných časech* |
 | Available / Unavailable (a day or slot badge) | **K dispozici** / **Není k dispozici**: gender-neutral, so it is safe on *den*, *termín* and *schůzka* alike |
 | Unlisted | **Neveřejné** |
 | Default (badge / option label) | **Výchozí** |

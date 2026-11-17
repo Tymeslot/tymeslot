@@ -321,6 +321,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     |> assign_rescheduling(params)
     |> ChosenLength.from_params(params)
     |> pin_reschedule_meeting_type()
+    |> resolve_named_meeting_type()
     |> handle_confirmation_params(params)
     |> SeatMoveLink.leave_if_spent(seat_token)
     |> ReschedulePin.leave_if_refused()
@@ -371,6 +372,17 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
         socket |> StepEntry.assign_meeting_type(meeting_type) |> ReschedulePin.pin(meeting_type)
     end
   end
+
+  # The type a `?duration=` names, resolved as soon as the URL is applied,
+  # whichever navigator the theme uses and whatever moment the page opens on.
+  # Carried only as `:selected_duration`, it lets the journey move past the
+  # offer while the submit has no type to book under. A reschedule's pin
+  # (above) and a type's own link (`StepEntry`) are resolved already; only
+  # a type this page offers is taken (`StepEntry.maybe_assign_meeting_type/2`).
+  defp resolve_named_meeting_type(%{assigns: %{meeting_type: %{}}} = socket), do: socket
+
+  defp resolve_named_meeting_type(socket),
+    do: StepEntry.maybe_assign_meeting_type(socket, socket.assigns[:selected_duration])
 
   defp handle_confirmation_params(socket, params) do
     if socket.assigns[:live_action] == :confirmation do

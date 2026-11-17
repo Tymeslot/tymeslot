@@ -84,7 +84,7 @@ defmodule Tymeslot.Meetings.CalendarEventCache do
   # identifier, within a single integration. Going through it rather than
   # hand-rolling a lookup order matters here specifically, because the grid
   # dedup this write-through exists to correct
-  # (`CalendarGrid.BookingEvents.list_for_range/4`) links the two sides by that
+  # (`CalendarGrid.BookingEvents.list_for_range/5`) links the two sides by that
   # same rule — so any narrower rule here would silently fail to update exactly
   # the rows the grid had already decided were linked.
   defp find_cached_event(meeting) do

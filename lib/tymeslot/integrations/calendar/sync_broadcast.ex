@@ -23,6 +23,40 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcast do
     do_broadcast(user_id, {:calendar_sync_complete, user_id, integration_id})
   end
 
+  @doc """
+  Broadcasts that an integration's sync cycle failed or was discarded, so a
+  calendar showing it as syncing stops and can say what that means.
+  """
+  @spec broadcast_sync_failed(integer(), integer()) :: :ok
+  def broadcast_sync_failed(user_id, integration_id) do
+    do_broadcast(user_id, {:calendar_sync_failed, user_id, integration_id})
+  end
+
+  @doc """
+  Broadcasts how a delete scheduled from the calendar ended (see
+  `Tymeslot.CalendarGrid.ScheduledDelete`): `token` names the delete,
+  `outcome` is `:deleted`, `{:queued, reason}` or `{:failed, reason}`.
+  """
+  @spec broadcast_delete_result(integer(), pos_integer(), term()) :: :ok
+  def broadcast_delete_result(user_id, token, outcome) do
+    do_broadcast(user_id, {:calendar_delete_result, user_id, token, outcome})
+  end
+
+  @doc """
+  Broadcasts that a delete was scheduled from the calendar, with the address
+  it was scheduled with, so the organiser's other calendars hide the event.
+  """
+  @spec broadcast_delete_scheduled(integer(), pos_integer(), map(), atom()) :: :ok
+  def broadcast_delete_scheduled(user_id, token, address, scope) do
+    do_broadcast(user_id, {:calendar_delete_scheduled, user_id, token, address, scope})
+  end
+
+  @doc "Broadcasts that Undo cancelled the scheduled delete `token`."
+  @spec broadcast_delete_cancelled(integer(), pos_integer()) :: :ok
+  def broadcast_delete_cancelled(user_id, token) do
+    do_broadcast(user_id, {:calendar_delete_cancelled, user_id, token})
+  end
+
   defp do_broadcast(user_id, message) do
     case Phoenix.PubSub.broadcast(Tymeslot.PubSub, "calendar_events:#{user_id}", message) do
       :ok ->

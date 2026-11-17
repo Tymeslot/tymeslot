@@ -28,10 +28,11 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
   end
 
   describe "calendar as the landing page" do
-    test "/dashboard renders the calendar grid with the Calendar item active", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/dashboard")
+    test "/dashboard renders the calendar with the Calendar item active", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/dashboard")
 
-      assert html =~ "calendar-grid"
+      assert has_element?(lv, "#calendar-surface")
+      refute html =~ "calendar-grid"
 
       assert [{"a", attrs, _children}] =
                html
@@ -40,6 +41,12 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
 
       assert {"class", class} = List.keyfind(attrs, "class", 0)
       assert class =~ "dashboard-nav-link--active"
+    end
+
+    test "the calendar has the compact top bar for every organiser", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      assert has_element?(lv, "#dashboard-top-nav[data-compact='true'] nav.brand-nav-compact")
     end
 
     test "the calendar keeps the standard sidebar rather than a rail", %{conn: conn} do
@@ -123,10 +130,10 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
       refute html =~ "data-testid=\"up-next-strip\""
     end
 
-    test "drops an event from the strip as soon as it is deleted", %{conn: conn, user: user} do
-      # The strip runs its own query rather than reading the grid's events, so a
-      # deletion that empties the grid used to leave the strip advertising the
-      # event until the next 60s agenda tick.
+    test "drops an event from the strip once a scheduled delete has run", %{
+      conn: conn,
+      user: user
+    } do
       integration = insert(:calendar_integration, user: user, is_active: true)
       start_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
@@ -142,15 +149,10 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
       {:ok, lv, html} = live(conn, ~p"/dashboard")
       assert strip_html(html) =~ "Dentist"
 
-      # The delete itself removes the cached row before reporting back.
+      # The delete job removes the cached row before it broadcasts how it ended
+      # (`Tymeslot.CalendarGrid.ScheduledDelete`).
       {:ok, :deleted} = ProviderCalendarEventQueries.delete_by_uid(integration.id, event.uid)
-
-      send(
-        lv.pid,
-        {:delete_event_result,
-         {:ok, %{uid: event.uid, integration_id: integration.id, linked_meeting: :none}}}
-      )
-
+      send(lv.pid, {:calendar_delete_result, user.id, 1, :deleted})
       :sys.get_state(lv.pid)
 
       refute strip_html(render(lv)) =~ "Dentist"
@@ -225,6 +227,47 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
       refute html2 =~ "data-tour=\"quick-actions\""
       _user = user
     end
+  end
+
+  describe "integration lifecycle messages" do
+    # Both messages exist to invalidate the cached integration status and
+    # reassign it. The setup checklist above the calendar is where that
+    # status surfaces: its "done of total" badge counts "Connect a calendar"
+    # as done exactly when the host has an active calendar integration.
+    test "integration_added re-reads the status a stale cache would have hidden", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      assert ["0", total] = checklist_progress(lv)
+
+      insert(:calendar_integration, user: user, is_active: true)
+      send(lv.pid, {:integration_added, :calendar})
+
+      assert ["1", ^total] = checklist_progress(lv)
+    end
+
+    test "integration_removed re-reads the status after the calendar is deleted", %{
+      conn: conn,
+      user: user
+    } do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      assert ["1", total] = checklist_progress(lv)
+
+      Repo.delete!(integration)
+      send(lv.pid, {:integration_removed, :calendar})
+
+      assert ["0", ^total] = checklist_progress(lv)
+    end
+  end
+
+  defp checklist_progress(lv) do
+    lv
+    |> element("[data-testid='onboarding-checklist']")
+    |> render()
+    |> then(&Regex.run(~r{(\d+)/(\d+)}, &1, capture: :all_but_first))
   end
 
   defp strip_html(html) do

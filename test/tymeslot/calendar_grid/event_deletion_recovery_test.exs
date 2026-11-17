@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventDeletionRecoveryTest do
   @moduledoc """
-  `CalendarGrid.delete_event/2` once the provider has already removed the
+  `Changes.delete_event/2` once the provider has already removed the
   event. Everything after that point is local tidying: the linked meeting,
   the cached row the grid reads, and the organiser's cached availability.
   None of it can put the event back, so none of it may be reported as a
@@ -21,7 +21,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionRecoveryTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.MeetingCalendarQueries
@@ -77,7 +77,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionRecoveryTest do
         raise "database unavailable"
       end)
 
-      assert {:ok, result} = CalendarGrid.delete_event(user.id, event)
+      assert {:ok, result} = Changes.delete_event(user.id, event)
 
       assert result == %{
                uid: event.uid,
@@ -99,7 +99,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionRecoveryTest do
       key = AvailabilityCache.booking_window_events_key(user.id)
       :ok = AvailabilityCache.put(key, :stale)
 
-      assert {:ok, _result} = CalendarGrid.delete_event(user.id, event)
+      assert {:ok, _result} = Changes.delete_event(user.id, event)
       assert AvailabilityCache.get_or_compute(key, fn -> :recomputed end) == :recomputed
     end
   end
@@ -118,7 +118,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionRecoveryTest do
         {:error, :not_found}
       end)
 
-      assert {:ok, %{linked_meeting: :cancel_failed}} = CalendarGrid.delete_event(user.id, event)
+      assert {:ok, %{linked_meeting: :cancel_failed}} = Changes.delete_event(user.id, event)
       assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
 
       {:ok, untouched} = MeetingQueries.get_meeting(meeting.id)
@@ -137,7 +137,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionRecoveryTest do
         raise "database unavailable"
       end)
 
-      assert {:ok, %{linked_meeting: :cancel_failed}} = CalendarGrid.delete_event(user.id, event)
+      assert {:ok, %{linked_meeting: :cancel_failed}} = Changes.delete_event(user.id, event)
       assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
     end
   end

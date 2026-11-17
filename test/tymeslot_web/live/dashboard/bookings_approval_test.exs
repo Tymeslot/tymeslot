@@ -378,7 +378,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       view = open_requests(conn)
 
       for _i <- 1..20 do
-        assert :ok = RateLimiter.check(:meeting_approval, "dashboard:#{user.id}")
+        assert :ok = RateLimiter.check(:dashboard_meeting_approval, user.id)
       end
 
       view |> element("[data-testid='approve-request']") |> render_click()
@@ -394,7 +394,7 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
       view |> element("[data-testid='decline-request']") |> render_click()
 
       for _i <- 1..20 do
-        assert :ok = RateLimiter.check(:meeting_approval, "dashboard:#{user.id}")
+        assert :ok = RateLimiter.check(:dashboard_meeting_approval, user.id)
       end
 
       view

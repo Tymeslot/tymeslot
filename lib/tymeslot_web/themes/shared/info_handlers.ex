@@ -40,6 +40,18 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   def route({:calendar_sync_complete, _user_id, _integration_id}, socket),
     do: handle_calendar_events_updated(socket)
 
+  # The organiser's dashboard calendar hears these on the same topic; a
+  # booking page has nothing to redraw for either.
+  def route({:calendar_sync_failed, _user_id, _integration_id}, socket), do: {:noreply, socket}
+
+  def route({:calendar_delete_result, _user_id, _token, _outcome}, socket),
+    do: {:noreply, socket}
+
+  def route({:calendar_delete_scheduled, _user_id, _token, _address, _scope}, socket),
+    do: {:noreply, socket}
+
+  def route({:calendar_delete_cancelled, _user_id, _token}, socket), do: {:noreply, socket}
+
   def route(:close_dropdown, socket), do: handle_close_dropdown(socket)
 
   def route({:fetch_available_slots, date, duration, timezone}, socket),

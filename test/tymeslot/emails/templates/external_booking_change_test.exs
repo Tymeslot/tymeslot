@@ -3,12 +3,17 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
 
   @moduletag :emails
 
+  import Tymeslot.Test.DirectEmailSends
+
   alias Ecto.UUID
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailService
   alias Tymeslot.Emails.Templates.ExternalBookingChange
   alias Tymeslot.Meetings.MeetingSchema
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   defp build_meeting(overrides \\ %{}) do
     defaults = %{

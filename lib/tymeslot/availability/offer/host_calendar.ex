@@ -28,14 +28,24 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   how fresh they are.
 
   A range (`for_range/3`) is read fresh, as the booking page's week view
-  needs, unless the request asks for the cached entry with
-  `cached_calendar: true`, as the setup preview of the host's week does, so
-  that reloading it costs no provider round trip. A request reaching past
-  the booking window (`window_until:`, a series' later sessions) is read
-  fresh over the range itself, padded as the busy set is, since the window
-  fetch stops short of it.
+  needs, unless the caller asks for the cached entry: with `:cached`, as the
+  calendar's bookable layer does so that it agrees with the day and month
+  views, or with `cached_calendar: true` on the request, as the setup preview
+  of the host's week does, so that reloading it costs no provider round trip.
+
+  A request reaching past the booking window (`window_until:`, a series'
+  later sessions) is read fresh over the range itself, padded as the busy
+  set is, since the window fetch stops short of it (`for_window/2` is the
+  same for the reads the cache otherwise serves).
+
+  Either way the events come back with the bookability rule applied
+  (`Tymeslot.Availability.Bookability`): a read-only all-day event blocks the
+  host's time unless they treat it as free. The cached entry is stored with
+  the rule already applied; an override and a calendar's settings both call
+  `Tymeslot.Availability.changed/1`, which drops it.
   """
 
+  alias Tymeslot.Availability.Bookability
   alias Tymeslot.Availability.Reach
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -45,45 +55,50 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   def booking_window(%{profile: %{user_id: user_id}} = request, date) do
     AvailabilityCache.get_or_compute_events(
       AvailabilityCache.booking_window_events_key(user_id),
-      fn -> fresh(request, date) end
+      fn ->
+        with {:ok, events} <- fresh(request, date) do
+          {:ok, Bookability.apply_to_window(events, user_id)}
+        end
+      end
     )
   end
 
   @doc """
-  The host's events for a read of `start_date..end_date`: across the range
-  for a request reaching past the window, else the window's, fresh or
-  cached when asked.
+  The host's events for a read of `first_date..last_date`: fresh (`source`
+  `:fresh`, the default), or the cached booking-window entry when `source` is
+  `:cached` or the request sets `cached_calendar: true`.
   """
-  @spec for_range(map(), Date.t(), Date.t()) :: {:ok, list()} | {:error, any()}
+  @spec for_range(map(), {Date.t(), Date.t()}, :fresh | :cached) ::
+          {:ok, list()} | {:error, any()}
+  def for_range(request, dates, source \\ :fresh)
+
+  def for_range(%{window_until: %Date{}} = request, dates, _source),
+    do: beyond_window(request, dates)
+
+  def for_range(%{cached_calendar: true} = request, {first_date, _last_date}, _source),
+    do: booking_window(request, first_date)
+
+  def for_range(request, {first_date, _last_date}, :cached),
+    do: booking_window(request, first_date)
+
   def for_range(
-        %{window_until: %Date{}, profile: %{user_id: user_id}},
-        %Date{} = start_date,
-        %Date{} = end_date
+        %{profile: %{user_id: user_id}} = request,
+        {first_date, _last_date} = dates,
+        :fresh
       ) do
-    padding = Reach.utc_padding_days()
-
-    CalendarEvents.get_events_for_range_fresh(
-      user_id,
-      Date.add(start_date, -padding),
-      Date.add(end_date, 1 + padding)
-    )
+    with {:ok, events} <- fresh(request, first_date) do
+      {:ok, Bookability.apply_to_dates(events, user_id, dates)}
+    end
   end
 
-  def for_range(%{cached_calendar: true} = request, date, _end_date),
-    do: booking_window(request, date)
-
-  def for_range(request, date, _end_date), do: fresh(request, date)
-
   @doc """
-  The host's events for a read of `start_date..end_date` that the cache
-  serves while it stays inside the booking window: across the range for a
-  request reaching past the window, else the window's, through the cache.
+  The host's events for a read of `first_date..last_date` that the
+  booking-window cache serves: the cached window entry, or, for a request
+  reaching past the window, the range itself read fresh.
   """
-  @spec for_window(map(), Date.t(), Date.t()) :: {:ok, list()} | {:error, any()}
-  def for_window(%{window_until: %Date{}} = request, start_date, end_date),
-    do: for_range(request, start_date, end_date)
-
-  def for_window(request, start_date, _end_date), do: booking_window(request, start_date)
+  @spec for_window(map(), {Date.t(), Date.t()}) :: {:ok, list()} | {:error, any()}
+  def for_window(%{window_until: %Date{}} = request, dates), do: beyond_window(request, dates)
+  def for_window(request, {first_date, _last_date}), do: booking_window(request, first_date)
 
   @doc """
   The context map the calendar fetch reads. Its contract names this one key
@@ -91,6 +106,19 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   """
   @spec context(map()) :: map()
   def context(%{profile: profile}), do: %{organizer_profile: profile}
+
+  defp beyond_window(%{profile: %{user_id: user_id}}, {first_date, last_date} = dates) do
+    padding = Reach.utc_padding_days()
+
+    with {:ok, events} <-
+           CalendarEvents.get_events_for_range_fresh(
+             user_id,
+             Date.add(first_date, -padding),
+             Date.add(last_date, 1 + padding)
+           ) do
+      {:ok, Bookability.apply_to_dates(events, user_id, dates)}
+    end
+  end
 
   defp fresh(%{profile: %{user_id: user_id}} = request, date),
     do: CalendarEvents.get_calendar_events_from_context(date, user_id, context(request))

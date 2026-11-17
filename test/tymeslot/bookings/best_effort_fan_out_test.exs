@@ -52,27 +52,40 @@ defmodule Tymeslot.Bookings.BestEffortFanOutTest do
 
     %{user: user} = create_always_bookable_profile(timezone: "America/New_York")
     insert(:slack_integration, user: user, events: ["meeting.created", "meeting.requested"])
+    meeting_type = insert(:meeting_type, user: user, duration_minutes: 60)
 
-    %{user: user}
+    %{user: user, meeting_type: meeting_type}
   end
 
   describe "a failure in the fan-out after commit" do
-    test "a Slack read the database fails does not cost the booking", %{user: user} do
+    test "a Slack read the database fails does not cost the booking", %{
+      user: user,
+      meeting_type: meeting_type
+    } do
       with_config(:error_tracker, enabled: true)
       Repo.query!("ALTER TABLE slack_integrations RENAME TO slack_integrations_hidden")
 
       assert {:ok, %MeetingSchema{} = meeting} =
-               Create.execute(build_meeting_params(user), build_form_data())
+               Create.execute(
+                 build_meeting_params(user, %{meeting_type_id: meeting_type.id}),
+                 build_form_data()
+               )
 
       assert_booking_stands(meeting)
       assert reported?("Elixir.Postgrex.Error")
     end
 
-    test "a Slack job the database refuses does not cost the booking", %{user: user} do
+    test "a Slack job the database refuses does not cost the booking", %{
+      user: user,
+      meeting_type: meeting_type
+    } do
       refuse_slack_jobs!()
 
       assert {:ok, %MeetingSchema{} = meeting} =
-               Create.execute(build_meeting_params(user), build_form_data())
+               Create.execute(
+                 build_meeting_params(user, %{meeting_type_id: meeting_type.id}),
+                 build_form_data()
+               )
 
       assert_booking_stands(meeting)
       refute_enqueued(worker: SlackWorker)
@@ -159,14 +172,18 @@ defmodule Tymeslot.Bookings.BestEffortFanOutTest do
   end
 
   describe "the fan-out runs once, and only for a booking that commits" do
-    test "a committed booking sends one Slack notice", %{user: user} do
-      assert {:ok, meeting} = Create.execute(build_meeting_params(user), build_form_data())
+    test "a committed booking sends one Slack notice", %{user: user, meeting_type: meeting_type} do
+      assert {:ok, meeting} =
+               Create.execute(
+                 build_meeting_params(user, %{meeting_type_id: meeting_type.id}),
+                 build_form_data()
+               )
 
       assert [_one] = all_enqueued(worker: SlackWorker, args: %{"meeting_id" => meeting.id})
     end
 
-    test "a booking that loses its slot sends none", %{user: user} do
-      params = build_meeting_params(user)
+    test "a booking that loses its slot sends none", %{user: user, meeting_type: meeting_type} do
+      params = build_meeting_params(user, %{meeting_type_id: meeting_type.id})
       assert {:ok, winner} = Create.execute(params, build_form_data())
 
       assert {:error, :slot_taken} = Create.execute(params, build_form_data())
