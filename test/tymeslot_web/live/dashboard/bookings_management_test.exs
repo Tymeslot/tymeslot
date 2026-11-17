@@ -365,12 +365,14 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
         insert(:meeting,
           organizer_user: user,
           organizer_email: user.email,
-          attendee_name: "To Reschedule"
+          attendee_name: "To Reschedule",
+          meeting_url: "https://tymeslot.com/join/to-reschedule"
         )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 
       assert render(view) =~ "To Reschedule"
+      assert has_element?(view, "a[href='https://tymeslot.com/join/to-reschedule']")
 
       # Open reschedule modal
       view |> element("button", "Reschedule") |> render_click()
@@ -386,6 +388,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       # lifecycle status alone, so it survives the round trip to rebooking.
       assert updated_meeting.status == :confirmed
       assert %DateTime{} = updated_meeting.reschedule_requested_at
+
+      # The slot is void until the attendee rebooks, so the card stops
+      # offering its call; the room stays on the row for the rebooking.
+      refute has_element?(view, "a[href='https://tymeslot.com/join/to-reschedule']")
+      assert updated_meeting.meeting_url == "https://tymeslot.com/join/to-reschedule"
     end
 
     test "dismissing the reschedule modal does not send a request", %{conn: conn, user: user} do

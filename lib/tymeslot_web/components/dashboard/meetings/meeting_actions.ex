@@ -80,8 +80,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
       >
         <%!-- Wraps rather than overflowing the 160px desktop column: most
               translations of "Join meeting" are wider than it. --%>
+        <%!-- A pending reschedule request has voided the slot and the
+              attendee has been told it is off, so there is no call to join.
+              The room itself stays on the row: the rebooked meeting may reuse
+              it. --%>
         <JoinLink.join_link
-          :if={@join_url}
+          :if={@join_url && !MeetingState.awaiting_new_time?(@meeting)}
           url={@join_url}
           size={:sm}
           class="w-full whitespace-normal text-center"
