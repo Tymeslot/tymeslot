@@ -170,9 +170,9 @@ defmodule Tymeslot.InviteeData do
       Repo.transaction(fn ->
         Queries.scrub_participants({:meetings, meeting_ids}, now)
         Queries.scrub_guests({:meetings, meeting_ids}, now)
-        Queries.scrub_booking_payments({:meetings, meeting_ids}, now)
         Queries.delete_deliveries(meeting_ids)
         scrubbed = count(Queries.scrub_meetings(meeting_ids, now, erased_at: now))
+        Queries.scrub_booking_payments({:meetings, meeting_ids}, now)
         Queries.scrub_finished_series(meeting_ids, now)
         scrubbed
       end)

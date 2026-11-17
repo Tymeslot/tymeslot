@@ -242,7 +242,12 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   session to age out takes its series with it.
   """
   @spec scrub_finished_series([binary()], DateTime.t()) :: {non_neg_integer(), nil}
-  def scrub_finished_series(meeting_ids, %DateTime{} = now) do
+  def scrub_finished_series(meeting_ids, %DateTime{} = now),
+    do: meeting_ids |> finished_series() |> scrub_series(now)
+
+  # The series the meetings `ids` (or seats on them) belong to whose every
+  # session is erased.
+  defp finished_series(meeting_ids) do
     booked =
       from(m in Meeting,
         where: m.id in ^meeting_ids and not is_nil(m.series_id),
@@ -268,14 +273,11 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
         select: 1
       )
 
-    finished =
-      from(s in Series,
-        as: :series,
-        where: s.id in subquery(booked) or s.id in subquery(seated),
-        where: not exists(unerased_meeting) and not exists(unerased_seat)
-      )
-
-    scrub_series(finished, now)
+    from(s in Series,
+      as: :series,
+      where: s.id in subquery(booked) or s.id in subquery(seated),
+      where: not exists(unerased_meeting) and not exists(unerased_seat)
+    )
   end
 
   # The name and email cannot be null, so they take the placeholder a seat's
@@ -358,6 +360,10 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   Clears the attendee's name and email on booking payments, selected by the
   meetings they paid for or by `email` within `scope`. The payment itself is
   kept for its statutory period (`Tymeslot.MeetingPayments.DataRetention`).
+
+  Selected by meetings, a series payment is cleared only once every session
+  of its series is erased, as its series is (`scrub_finished_series/2`): run
+  it after the meetings are scrubbed, in the same transaction.
   """
   @spec scrub_booking_payments(
           {:meetings, [binary()]} | {:email, String.t(), scope()},
@@ -489,13 +495,11 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   defp select_rows(query, {:ids, ids}), do: where(query, [r], r.id in ^ids)
   defp select_rows(query, {:meetings, ids}), do: where(query, [r], r.meeting_id in ^ids)
 
-  # A paid series' one payment paid for each of its sessions.
+  # A paid series' one payment paid for each of its sessions, so it keeps
+  # the booker's details as long as its series does: until every session
+  # is erased (`scrub_finished_series/2`).
   defp select_payments(query, {:meetings, ids}) do
-    series_ids =
-      from(m in Meeting,
-        where: m.id in ^ids and not is_nil(m.series_id),
-        select: m.series_id
-      )
+    series_ids = ids |> finished_series() |> select([s], s.id)
 
     where(query, [b], b.meeting_id in ^ids or b.series_id in subquery(series_ids))
   end

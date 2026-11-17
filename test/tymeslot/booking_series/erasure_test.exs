@@ -16,6 +16,7 @@ defmodule Tymeslot.BookingSeries.ErasureTest do
   alias Ecto.Changeset
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.InviteeData
+  alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.MeetingSchema
 
   @email "ada@example.com"
@@ -57,6 +58,15 @@ defmodule Tymeslot.BookingSeries.ErasureTest do
     {series, sessions}
   end
 
+  defp series_payment(host, series),
+    do:
+      insert(:paid_booking_payment,
+        host_user_id: host.id,
+        series_id: series.id,
+        attendee_email: @email,
+        attendee_name: "Ada"
+      )
+
   describe "erasure by request" do
     test "erasing the invitee erases the series" do
       host = insert(:user)
@@ -77,6 +87,17 @@ defmodule Tymeslot.BookingSeries.ErasureTest do
       untouched = Repo.get!(SeriesSchema, other.id)
       assert untouched.attendee_email == "bob@example.com"
       assert untouched.invitee_data_erased_at == nil
+    end
+
+    test "erasing the invitee clears the series payment at once, sessions still in the window" do
+      host = insert(:user)
+      {series, _sessions} = series_with_sessions(host, [20, 13])
+      payment = series_payment(host, series)
+
+      assert {:ok, %{booking_payments: 1}} = InviteeData.erase(@email)
+
+      assert %{attendee_email: nil, attendee_name: nil} =
+               Repo.get!(BookingPaymentSchema, payment.id)
     end
 
     test "an erasure for one host leaves another host's series alone" do
@@ -123,6 +144,23 @@ defmodule Tymeslot.BookingSeries.ErasureTest do
 
       assert %{attendee_name: "", invitee_data_erased_at: %DateTime{}} =
                Repo.get!(SeriesSchema, series.id)
+    end
+
+    test "a series payment keeps its booker until the series' last session ages out" do
+      host = insert(:user)
+      {series, [_old, recent]} = series_with_sessions(host, [@window_days + 20, 10])
+      payment = series_payment(host, series)
+
+      InviteeData.anonymise_expired(@window_days)
+
+      assert %{attendee_email: @email, attendee_name: "Ada"} =
+               Repo.get!(BookingPaymentSchema, payment.id)
+
+      recent |> Changeset.change(ended(@window_days + 1)) |> Repo.update!()
+      InviteeData.anonymise_expired(@window_days)
+
+      assert %{attendee_email: nil, attendee_name: nil} =
+               Repo.get!(BookingPaymentSchema, payment.id)
     end
 
     test "a group series is erased once every seat's session has aged out" do
