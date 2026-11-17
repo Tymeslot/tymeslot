@@ -49,34 +49,28 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
   choice from it (`refresh/1`, which makes a choice forgotten with its slot
   again too), as entering the moment again does on a paged journey.
 
-  Every change to the choice checks it again with
-  `Tymeslot.BookingSeries.preview/3` in a `start_async/3` task under
-  `:series_preview`, cancelling the one in flight first, and the result is
-  applied only when it answers the choice still on screen
-  (`handle_async/3`). Changing the slot forgets the choice (`clear/1`, and on
-  a paged journey `enter/2` finding a different first session).
+  Every change to the choice is checked again (`Series.Preview`, which
+  also charges each fresh read of the host's calendars to the visitor).
+  Changing the slot forgets the choice (`clear/1`, and on a paged journey
+  `enter/2` finding a different first session). The choice rides in the
+  page's URL as `series`, so a reconnect or a language switch keeps it
+  (`Series.CarriedChoice`).
   """
 
   use TymeslotWeb.Themes.Shared.Journey.Fact
 
   import Phoenix.Component, only: [assign: 2, assign: 3]
-  import Phoenix.LiveView, only: [cancel_async: 2, start_async: 3]
 
   alias Phoenix.LiveView.Socket
-  alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Occurrence
-  alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Utils.DateTimeUtils
-  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Themes.Shared.Journey.Fact
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series.CarriedChoice
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series.Preview
   alias TymeslotWeb.Themes.Shared.Journey.Progress
-  alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.SeriesPicker
-
-  require Logger
 
   @type choice ::
           nil
@@ -145,7 +139,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
   def handle(socket, :series_single, _data) do
     if socket.assigns[:series_single_allowed?] == true,
       do:
-        {:noreply, socket |> cancel_check() |> assign(series_choice: :single, series_error: nil)},
+        {:noreply,
+         socket |> Preview.cancel() |> assign(series_choice: :single, series_error: nil)},
       else: {:noreply, socket}
   end
 
@@ -154,7 +149,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
 
   def handle(socket, :series_add_start, value), do: {:noreply, add_start(socket, value)}
   def handle(socket, :series_remove_start, value), do: {:noreply, remove_start(socket, value)}
-  def handle(socket, :series_retry, _data), do: {:noreply, check(socket)}
+  def handle(socket, :series_retry, _data), do: {:noreply, Preview.check(socket)}
   def handle(socket, :series_picker_open, _data), do: {:noreply, SeriesPicker.open(socket)}
   def handle(socket, :series_picker_close, _data), do: {:noreply, SeriesPicker.close(socket)}
   def handle(socket, :series_picker_week, dir), do: {:noreply, SeriesPicker.move(socket, dir)}
@@ -169,7 +164,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
       {_choice, nil} -> socket
       {:single, _first} -> socket
       {%{starts: [first | _rest]}, first} -> socket
-      _no_or_stale_choice -> choose_default(socket)
+      {_no_or_stale_choice, first} -> restore_or_default(socket, first)
     end
   end
 
@@ -208,7 +203,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
       series_rechecking?: false,
       series_error: nil,
       series_picker: nil,
-      series_refocus: false
+      series_refocus: false,
+      series_restoring: nil
     )
     |> forget_booked()
   end
@@ -233,6 +229,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
       series_error: nil,
       series_picker: nil,
       series_refocus: false,
+      series_restoring: nil,
+      carried_series: nil,
       series: nil,
       series_meetings: [],
       series_offered?: false,
@@ -288,6 +286,22 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
     end
   end
 
+  @doc "The choice as the page's URL carries it (`series`), or nil (`CarriedChoice.to_param/1`)."
+  @spec to_param(map()) :: String.t() | nil
+  defdelegate to_param(assigns), to: CarriedChoice
+
+  @doc "Keeps the `series` value a page arrived with (`CarriedChoice.carry/2`)."
+  @spec carry(Socket.t(), term()) :: Socket.t()
+  defdelegate carry(socket, value), to: CarriedChoice
+
+  @doc "Charges one fresh read of the host's calendars to the visitor (`Preview.charge_read/1`)."
+  @spec charge_read(Socket.t()) :: :ok | {:error, :rate_limited}
+  defdelegate charge_read(socket), to: Preview
+
+  @doc "What names a choice's check (`Preview.key/1`)."
+  @spec key(map()) :: tuple()
+  defdelegate key(choice), to: Preview
+
   @doc "The number of sessions chosen, or nil when the booking is a single session."
   @spec count(map()) :: pos_integer() | nil
   def count(assigns) do
@@ -318,7 +332,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
   """
   @spec rows(map()) :: [%{position: pos_integer(), start: DateTime.t(), status: term()}]
   def rows(%{series_choice: %{} = choice} = assigns) do
-    if preview_answers?(assigns, choice) do
+    if Preview.answers?(assigns, choice) do
       Enum.map(
         assigns.series_preview,
         &%{position: &1.position, start: &1.start, status: &1.status}
@@ -338,7 +352,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
   @doc "The sessions the last check found unavailable for the choice on screen."
   @spec unavailable(map()) :: [Occurrence.t()]
   def unavailable(%{series_choice: %{} = choice} = assigns) do
-    if preview_answers?(assigns, choice),
+    if Preview.answers?(assigns, choice),
       do: Enum.filter(assigns.series_preview, &match?({:unavailable, _reason}, &1.status)),
       else: []
   end
@@ -356,13 +370,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
     lost = Map.new(occurrences, &{&1.position, &1})
 
     preview =
-      if preview_answers?(socket.assigns, choice),
+      if Preview.answers?(socket.assigns, choice),
         do: Enum.map(socket.assigns.series_preview, &Map.get(lost, &1.position, &1)),
         else: lay_over_rows(rows(socket.assigns), lost)
 
     socket
-    |> assign(series_preview: preview, series_preview_key: key(choice))
-    |> check()
+    |> assign(series_preview: preview, series_preview_key: Preview.key(choice))
+    |> Preview.check()
   end
 
   def merge_lost(socket, _occurrences), do: socket
@@ -389,52 +403,37 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
   details beside it, `Runtime.enter_ready/1`) and lets the navigator settle.
   """
   @spec handle_async(term(), term(), Socket.t()) :: {:noreply, Socket.t()} | :unhandled
-  def handle_async(:series_preview, {:ok, {key, result}}, socket) do
-    if socket.assigns[:series_checking?] and key == current_key(socket.assigns),
-      do: {:noreply, socket |> apply_check(key, result) |> settle()},
-      else: {:noreply, socket}
-  end
-
-  # A cancelled check is replaced by the one cancelling it.
-  def handle_async(:series_preview, {:exit, {:shutdown, :cancel}}, socket), do: {:noreply, socket}
-
-  # A check no longer waited for (forgotten by `clear/1`) changes nothing
-  # when it fails.
-  def handle_async(:series_preview, {:exit, reason}, socket) do
-    if socket.assigns[:series_checking?] do
-      Logger.warning("Series check failed", reason: LogFormat.reason(reason))
-
-      {:noreply,
-       socket
-       |> assign(
-         series_checking?: false,
-         series_rechecking?: false,
-         series_error: :availability_unverifiable
-       )
-       |> settle()}
-    else
-      {:noreply, socket}
-    end
-  end
+  def handle_async(:series_preview, result, socket), do: Preview.handle_async(result, socket)
 
   def handle_async({:series_week, _week} = name, result, socket),
     do: SeriesPicker.handle_async(name, result, socket)
 
   def handle_async(_name, _result, _socket), do: :unhandled
 
-  # What the answer changes on the page: the facts waiting on the series are
-  # entered and the navigator settles. A moment the answer makes current
-  # takes no focus: the booker is still at the control that asked.
-  defp settle(socket) do
-    before = socket.assigns[:current_state]
-    socket = socket |> Runtime.enter_ready() |> Runtime.settle()
-
-    if socket.assigns[:current_state] != before,
-      do: assign(socket, :journey_focus, nil),
-      else: socket
-  end
-
   # Choosing
+
+  # The choice the URL carried for this slot, else the default. Taken once:
+  # the moment opening again later makes its choice afresh.
+  defp restore_or_default(socket, first) do
+    carried = socket.assigns[:carried_series]
+    socket = assign(socket, carried_series: nil, series_restoring: nil)
+
+    case CarriedChoice.restore(carried, socket.assigns, first) do
+      {:ok, :single} ->
+        socket
+        |> Preview.cancel()
+        |> assign(series_choice: :single, series_error: nil, series_picker: nil)
+
+      {:ok, %{mode: mode} = choice} ->
+        socket
+        |> assign(series_choice: choice, series_picker: nil)
+        |> Preview.check()
+        |> assign(:series_restoring, if(mode == :flexible, do: Preview.key(choice)))
+
+      :error ->
+        choose_default(socket)
+    end
+  end
 
   defp choose_default(socket) do
     case {first_start(socket.assigns), socket.assigns[:meeting_type]} do
@@ -442,13 +441,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
         socket
         |> assign(series_choice: %{mode: :recurring, starts: [first], count: min})
         |> assign(series_picker: nil)
-        |> check()
+        |> Preview.check()
 
       {%DateTime{} = first, %{series_mode: :flexible}} ->
         socket
         |> assign(series_choice: %{mode: :flexible, starts: [first], count: 1})
         |> assign(series_picker: nil)
-        |> check()
+        |> Preview.check()
 
       _no_first_or_series ->
         socket
@@ -459,7 +458,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
     with {count, ""} <- parse_integer(value),
          true <- count in SeriesSettings.count_range(socket.assigns.meeting_type),
          true <- count != choice.count do
-      recheck(socket, %{choice | count: count})
+      Preview.recheck(socket, %{choice | count: count})
     else
       _invalid_or_same -> socket
     end
@@ -483,7 +482,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
 
       socket
       |> assign(series_picker: nil, series_refocus: true)
-      |> recheck(%{choice | starts: starts, count: length(starts)})
+      |> Preview.recheck(%{choice | starts: starts, count: length(starts)})
     else
       _not_offered -> socket
     end
@@ -505,107 +504,13 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
 
       socket
       |> assign(:series_refocus, false)
-      |> recheck(%{choice | starts: starts, count: length(starts)})
+      |> Preview.recheck(%{choice | starts: starts, count: length(starts)})
     else
       _not_chosen -> socket
     end
   end
 
   defp remove_start(socket, _value), do: socket
-
-  # Checking
-
-  # The booker changed the choice: it is checked again, and a choice known
-  # before the change stays known while that check runs (`rechecking?/1`).
-  defp recheck(socket, choice) do
-    was_known = known?(socket.assigns)
-
-    socket = socket |> assign(:series_choice, choice) |> check()
-    assign(socket, :series_rechecking?, was_known and socket.assigns.series_checking?)
-  end
-
-  # Runs the check for the choice on screen, cancelling one in flight. A
-  # flexible series with fewer sessions than the type needs is not checked
-  # yet: nothing could book it.
-  # A check started before, even one no longer waited for (`clear/1`), is
-  # cancelled first.
-  defp check(%{assigns: %{series_choice: %{} = choice}} = socket) do
-    socket =
-      socket
-      |> cancel_async(:series_preview)
-      |> assign(series_checking?: false, series_rechecking?: false)
-
-    if checkable?(socket.assigns, choice) do
-      key = key(choice)
-      meeting_type = socket.assigns.meeting_type
-      first_or_starts = if choice.mode == :recurring, do: hd(choice.starts), else: choice.starts
-
-      # Strict, as the booking is: a calendar out of reach is said to be,
-      # rather than read as free and refused only on submit.
-      opts = [
-        count: choice.count,
-        booker_tz: timezone(socket.assigns),
-        duration_minutes: AvailabilityHelpers.duration_minutes(socket),
-        strict_calendar: true
-      ]
-
-      socket
-      |> assign(series_checking?: true, series_error: nil)
-      |> start_async(
-        :series_preview,
-        Tasks.with_context(fn ->
-          {key, BookingSeries.preview(meeting_type, first_or_starts, opts)}
-        end)
-      )
-    else
-      assign(socket, series_checking?: false, series_error: nil)
-    end
-  end
-
-  defp check(socket), do: socket
-
-  defp cancel_check(socket) do
-    if socket.assigns[:series_checking?],
-      do:
-        socket
-        |> cancel_async(:series_preview)
-        |> assign(series_checking?: false, series_rechecking?: false),
-      else: socket
-  end
-
-  defp checkable?(_assigns, %{mode: :recurring}), do: true
-
-  defp checkable?(assigns, %{mode: :flexible, count: count}),
-    do: count >= assigns.meeting_type.series_min_occurrences
-
-  defp apply_check(socket, key, {:ok, occurrences}),
-    do:
-      assign(socket,
-        series_preview: occurrences,
-        series_preview_key: key,
-        series_checking?: false,
-        series_rechecking?: false,
-        series_error: nil
-      )
-
-  defp apply_check(socket, _key, {:error, reason}),
-    do: assign(socket, series_checking?: false, series_rechecking?: false, series_error: reason)
-
-  @doc """
-  What names a choice's check: `:series_preview_key` holds the key of the
-  choice the preview on screen answers.
-  """
-  @spec key(map()) :: tuple()
-  def key(%{mode: :recurring, starts: [first | _rest], count: count}),
-    do: {:recurring, first, count}
-
-  def key(%{mode: :flexible, starts: starts}), do: {:flexible, starts}
-
-  defp current_key(%{series_choice: %{} = choice}), do: key(choice)
-  defp current_key(_assigns), do: nil
-
-  defp preview_answers?(assigns, choice),
-    do: is_list(assigns[:series_preview]) and assigns[:series_preview_key] == key(choice)
 
   defp fresh?(assigns, %{starts: [first | _rest]}) do
     case first_start(assigns) do
@@ -619,11 +524,11 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Series do
   defp settled?(assigns, choice),
     do:
       checked_available?(assigns, choice) or
-        (rechecking?(assigns) and checkable?(assigns, choice))
+        (rechecking?(assigns) and Preview.checkable?(assigns, choice))
 
   defp checked_available?(assigns, choice) do
-    not assigns[:series_checking?] and preview_answers?(assigns, choice) and
-      checkable?(assigns, choice) and
+    not assigns[:series_checking?] and Preview.answers?(assigns, choice) and
+      Preview.checkable?(assigns, choice) and
       Enum.all?(assigns.series_preview, &(&1.status == :available))
   end
 

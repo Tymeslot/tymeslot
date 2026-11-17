@@ -57,6 +57,7 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
     integration_oauth_callback: {@ip, ["integration_oauth_callback:203.0.113.9"]},
     oauth_completion: {@ip, ["oauth_completion:203.0.113.9"]},
     booking_submit: {@ipv6, ["booking_submit:2001:db8:1:2::/64"]},
+    booking_series_check: {@ip, ["booking_series_check:203.0.113.9"]},
     booking_recipient:
       {@email, ["booking_recipient:ada@example.com:1h", "booking_recipient:ada@example.com:1d"]},
     meeting_cancel: {@ip, ["meeting_cancel:203.0.113.9"]},

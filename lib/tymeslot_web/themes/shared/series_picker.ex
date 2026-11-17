@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
 
   alias Phoenix.LiveView.Socket
   alias Tymeslot.Availability.Offer
+  alias Tymeslot.BookingSeries.Check
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Utils.DateTimeUtils
@@ -28,8 +29,6 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
 
   require Logger
-
-  @series_span_days 365
 
   @doc """
   The flexible picker's offered sessions on the week it shows, by day, as
@@ -42,7 +41,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
         %{series_picker: %{days: %{} = days}, series_choice: %{starts: [first | _rest]} = choice} =
           assigns
       ) do
-    last = DateTime.add(first, @series_span_days, :day)
+    last = DateTime.add(first, Check.span_days(), :day)
     tz = timezone(assigns)
 
     days
@@ -83,7 +82,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
         false
 
       first ->
-        Date.compare(Date.add(week, 7), Date.add(DateTime.to_date(first), @series_span_days)) !=
+        Date.compare(Date.add(week, 7), Date.add(DateTime.to_date(first), Check.span_days())) !=
           :gt
     end
   end
@@ -171,7 +170,20 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
   # The request and the duration are built before the task, so it captures
   # plain values and never the socket. The booking window binds the first
   # session only: the week may reach a year past it (`window_until:`).
+  # Each week reads the host's calendars afresh, so it is charged to the
+  # visitor (`Series.charge_read/1`); past the limit the week is not read
+  # and the picker says so, with a retry.
   defp fetch_week(socket, week_start) do
+    case Series.charge_read(socket) do
+      :ok -> start_week(socket, week_start)
+      {:error, :rate_limited} -> assign(socket, :series_picker, week_refused(week_start))
+    end
+  end
+
+  defp week_refused(week_start),
+    do: %{week_start: week_start, days: %{}, loading?: false, error: :rate_limited, day: nil}
+
+  defp start_week(socket, week_start) do
     request =
       socket
       |> AvailabilityHelpers.request()
@@ -222,7 +234,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesPicker do
   defp window_until(assigns) do
     case Series.first_start(assigns) do
       nil -> nil
-      first -> first |> DateTime.add(@series_span_days, :day) |> DateTime.to_date()
+      first -> first |> DateTime.add(Check.span_days(), :day) |> DateTime.to_date()
     end
   end
 

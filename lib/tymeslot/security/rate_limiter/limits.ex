@@ -255,6 +255,19 @@ defmodule Tymeslot.Security.RateLimiter.Limits do
               operation: "booking",
               action: dgettext_noop("errors", "bookings")
             ],
+            # A series' sessions are checked against the host's calendars afresh, up
+            # to a year of them, on every change to the choice (its count, a
+            # session added) and every week of the flexible picker. Charged per
+            # read, so an anonymous visitor cannot spend the host's provider quota.
+            # Generous enough for a booker stepping a count from its least to its
+            # most and paging the picker through a year.
+            booking_series_check: [
+              prefix: "booking_series_check",
+              scope: :source,
+              limit: 60,
+              window_ms: 10 * @minute,
+              operation: "booking series check"
+            ],
             meeting_cancel: [
               prefix: "meeting_cancel",
               scope: :source,

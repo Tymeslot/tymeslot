@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Themes.Shared.ChoicesInUrl
   alias TymeslotWeb.Themes.Shared.ChosenLength
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -316,6 +317,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     |> StepEntry.maybe_assign_from_params(:selected_time, params["time"])
     # Checked against the day's times once they arrive (`InfoHandlers`).
     |> assign(:carried_time, if(is_binary(params["time"]), do: params["time"]))
+    # For the slot just applied; checked again when the series opens.
+    |> Series.carry(params["series"])
     |> assign_reschedule_uid(params)
     |> reload_reschedule(seat_token)
     |> assign_rescheduling(params)

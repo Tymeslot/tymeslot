@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   alias Tymeslot.MeetingTypes
   alias TymeslotWeb.Live.Scheduling.EntryRefusal
   alias TymeslotWeb.Themes.Shared.Journey
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
 
   # The route's own segments, which arrive in `params` beside the query.
@@ -25,7 +26,16 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # What a page carries of the visitor's choices: the deep-link parameters
   # `put_choices/2` writes, the chosen length, and a facts address's mark of
   # a visit that came through the overview (`facts_address/1`).
-  @choice_params ["duration", "date", "time", "minutes", "visitor_timezone", "step", "via"]
+  @choice_params [
+    "duration",
+    "date",
+    "time",
+    "minutes",
+    "visitor_timezone",
+    "step",
+    "via",
+    "series"
+  ]
 
   @doc """
   Builds a path with locale and theme query parameters.
@@ -264,7 +274,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   # What a fresh booking forgets of them: everything built on the meeting
   # type, which a restart keeps (`Journey.Runtime.restart/1`).
-  @slot_params ["date", "time", "minutes", "step"]
+  @slot_params ["date", "time", "minutes", "step", "series"]
 
   @doc """
   The query string that carries the visitor's choices on the page's own URL
@@ -310,7 +320,9 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # left out, since every browser reports its own again on connect.
   # A paged journey shows one moment at a time and does not move on by
   # itself, so the moment on screen goes as `step` (`Navigators.Paged`
-  # resumes on it). The answers and the details are not carried: the
+  # resumes on it). The series chosen for the slot goes as `series`
+  # (`Journey.Facts.Series.to_param/1`), which the page checks again on
+  # arrival. The answers and the details are not carried: the
   # details form is recovered by LiveView's form recovery. Nor is anything
   # on an outcome, whose choices are a booking already made (carried, a
   # reload of the confirmation would land on the details for the slot just
@@ -325,6 +337,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
       |> maybe_put_query_param("time", assigns[:selected_date] && assigns[:selected_time])
       |> maybe_put_query_param("visitor_timezone", chosen_timezone(assigns))
       |> maybe_put_query_param("step", paged_moment(assigns))
+      |> maybe_put_query_param("series", Series.to_param(assigns))
     end
   end
 

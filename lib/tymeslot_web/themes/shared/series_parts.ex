@@ -311,7 +311,8 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
 
   @doc """
   Why the series could not be checked: the host's calendar out of reach,
-  with a retry, or sessions that overlap.
+  or too many checks in a short while, with a retry; or sessions that
+  overlap.
   """
   @spec check_error(map()) :: Phoenix.LiveView.Rendered.t()
   def check_error(assigns) do
@@ -321,7 +322,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
       <div class="series-notice-body">
         <p class="series-notice-text">{check_error_text(@reason)}</p>
         <button
-          :if={@reason == :availability_unverifiable}
+          :if={@reason in [:availability_unverifiable, :rate_limited]}
           type="button"
           class="series-notice-action"
           phx-click={@retry_event}
@@ -335,7 +336,10 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
     """
   end
 
-  defp check_error_text(:availability_unverifiable),
+  # A visitor past the series check limit (`Series.charge_read/1`) is told
+  # what a booker can act on, the same as for a calendar out of reach:
+  # wait a moment and try again.
+  defp check_error_text(reason) when reason in [:availability_unverifiable, :rate_limited],
     do:
       dgettext(
         "booking_series",
