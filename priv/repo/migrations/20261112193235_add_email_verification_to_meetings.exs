@@ -6,27 +6,43 @@ defmodule Tymeslot.Repo.Migrations.AddEmailVerificationToMeetings do
   # excellent_migrations:safety-assured-for-this-file column_removed
   # Widening the status vocabulary: every row the old constraint admitted is
   # admitted by the new one, so validation cannot fail and nothing needs repair.
-  # Migrations run offline (start.sh), so the brief lock blocks no traffic.
+  # Railway migrates in the new container while the old one still serves, so
+  # `up/0` runs outside a DDL transaction: the widened check is added
+  # `NOT VALID` under a temporary name (a brief lock, no scan), validated
+  # (a scan that lets reads and writes through), and only then swapped in for
+  # the old one. The old check stays in force until the new one holds, and
+  # every step is idempotent, so a run interrupted part-way can be re-run.
   # The only columns removed are this migration's own, in `down/0`, and the
-  # only raw SQL besides the constraints is `down/0`'s delete of bookings
-  # that were never verified (see there).
+  # only raw SQL besides the constraints is the swap and `down/0`'s delete of
+  # bookings that were never verified (see there).
+  @disable_ddl_transaction true
+
   @known_before "'pending', 'awaiting_payment', 'awaiting_approval', 'confirmed', 'cancelled', 'completed', 'expired', 'reschedule_requested'"
   @known_after @known_before <> ", 'awaiting_verification'"
 
   def up do
     # Both NULL means "never gated", which is true of every existing row.
     alter table(:meetings) do
-      add(:verification_deadline_at, :utc_datetime)
-      add(:email_verified_at, :utc_datetime)
+      add_if_not_exists(:verification_deadline_at, :utc_datetime)
+      add_if_not_exists(:email_verified_at, :utc_datetime)
     end
 
-    drop_if_exists(constraint(:meetings, :meetings_status_must_be_known))
+    drop_if_exists(constraint(:meetings, :meetings_status_must_be_known_widened))
 
     create(
-      constraint(:meetings, :meetings_status_must_be_known,
-        check: "status IN (#{@known_after})"
+      constraint(:meetings, :meetings_status_must_be_known_widened,
+        check: "status IN (#{@known_after})",
+        validate: false
       )
     )
+
+    execute("ALTER TABLE meetings VALIDATE CONSTRAINT meetings_status_must_be_known_widened")
+    drop_if_exists(constraint(:meetings, :meetings_status_must_be_known))
+
+    execute("""
+    ALTER TABLE meetings RENAME CONSTRAINT meetings_status_must_be_known_widened
+      TO meetings_status_must_be_known
+    """)
   end
 
   def down do
