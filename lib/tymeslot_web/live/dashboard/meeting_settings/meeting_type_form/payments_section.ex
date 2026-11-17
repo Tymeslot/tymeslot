@@ -11,8 +11,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
   checkout still charges it (`Tymeslot.MeetingPayments.currency_support/1`),
   and is told why. A type that is already paid keeps its price in those
   states, so the stored amount is stated in words, in the account's currency,
-  where the price input cannot be rendered. Payments and group bookings are mutually exclusive:
-  while group bookings is enabled the toggle renders disabled with a hint.
+  where the price input cannot be rendered. A group type charges the price
+  per seat: each booker pays it for every seat they take, guests included.
 
   The toggle and price input dispatch `toggle_payment_required` and
   `change_payment_price` events back to the parent form component
@@ -52,14 +52,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
         id="payment-required-toggle"
         label={dgettext("dashboard_meeting_form", "Require payment for this meeting type")}
         checked={@payment_required}
-        disabled={not @charges_enabled or @group_bookings_enabled}
+        disabled={not @charges_enabled}
         on_change="toggle_payment_required"
         target={@myself}
       >
         <:disabled_reason>
           <%= cond do %>
-            <% @charges_enabled -> %>
-              {dgettext("dashboard_meeting_form", "Turn off group bookings to require payment.")}
             <% @currency_support == :legacy -> %>
               {raw(
                 dgettext(
@@ -105,11 +103,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
         <.input
           type="number"
           name="meeting_type[price_input]"
-          label={
-            dgettext("dashboard_meeting_form", "Price (%{currency})",
-              currency: String.upcase(@currency)
-            )
-          }
+          label={price_label(@group_bookings_enabled, @currency)}
           value={@payment_price}
           min="0"
           step="0.01"
@@ -139,6 +133,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
             amount: Money.format(@currency_minimum_cents, @currency)
           )}
         </p>
+        <p :if={@group_bookings_enabled} class="mt-1 text-token-sm text-tymeslot-600">
+          {dgettext(
+            "dashboard_meeting_form",
+            "Each booker pays this for every seat they take, guests included."
+          )}
+        </p>
       </div>
 
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :payment_required) do %>
@@ -146,6 +146,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
       <% end %>
     </section>
     """
+  end
+
+  defp price_label(true = _group, currency) do
+    dgettext("dashboard_meeting_form", "Price per seat (%{currency})",
+      currency: String.upcase(currency)
+    )
+  end
+
+  defp price_label(false = _group, currency) do
+    dgettext("dashboard_meeting_form", "Price (%{currency})", currency: String.upcase(currency))
   end
 
   defp stored_price_note(support, amount) when support in [:legacy, :unsupported] do

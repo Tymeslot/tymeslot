@@ -374,11 +374,6 @@ msgstr "la videochiamata di un tipo di riunione di gruppo deve usare esattamente
 msgid "group bookings cannot require approval"
 msgstr "le prenotazioni di gruppo non possono richiedere l'approvazione"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require payment"
-msgstr "le prenotazioni di gruppo non possono richiedere un pagamento"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
@@ -903,3 +898,8 @@ msgstr "non è una lingua di traduzione"
 #, elixir-autogen, elixir-format
 msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
 msgstr "non può superare %{max} con questa cadenza, in modo che ogni sessione cada entro un anno"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Paid group meeting types cannot be booked as a series."
+msgstr ""

@@ -530,16 +530,6 @@ msgstr "Ліміт учасників має бути дійсним число�
 msgid "Participant limit must be at least %{min}"
 msgstr "Ліміт учасників має бути щонайменше %{min}"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off group bookings to require payment."
-msgstr "Вимкніть групові бронювання, щоб вимагати оплату."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off payments to enable group bookings."
-msgstr "Вимкніть оплату, щоб увімкнути групові бронювання."
-
 #: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Group bookings are not included in your current plan."
@@ -908,3 +898,13 @@ msgstr "Бронювати можуть лише люди з посилання�
 #, elixir-autogen, elixir-format
 msgid "Recurring bookings are not included in your current plan."
 msgstr "Повторювані бронювання не входять до вашого поточного тарифу."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Each booker pays this for every seat they take, guests included."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Price per seat (%{currency})"
+msgstr "Ціна (%{currency})"

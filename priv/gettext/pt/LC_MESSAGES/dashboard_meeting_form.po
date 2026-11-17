@@ -528,16 +528,6 @@ msgstr "O limite de participantes deve ser um número válido"
 msgid "Participant limit must be at least %{min}"
 msgstr "O limite de participantes deve ser de pelo menos %{min}"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off group bookings to require payment."
-msgstr "Desative os agendamentos em grupo para exigir pagamento."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off payments to enable group bookings."
-msgstr "Desative os pagamentos para ativar os agendamentos em grupo."
-
 #: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Group bookings are not included in your current plan."
@@ -903,3 +893,13 @@ msgstr "Só pessoas com um link de convite podem agendar"
 #, elixir-autogen, elixir-format
 msgid "Recurring bookings are not included in your current plan."
 msgstr "Agendamentos recorrentes não estão incluídos no seu plano atual."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Each booker pays this for every seat they take, guests included."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Price per seat (%{currency})"
+msgstr "Preço (%{currency})"

@@ -5,8 +5,8 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
   slot and sets the participant limit.
 
   Edit mode auto-saves every change. A new type is created from its Details
-  tab first, so group bookings are set up once it exists. Group bookings and
-  payments are mutually exclusive (covered in the dedicated describe below).
+  tab first, so group bookings are set up once it exists. A group type may
+  charge per seat (covered in the dedicated describe below).
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -261,7 +261,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
     end
   end
 
-  describe "Mutual exclusion with payments" do
+  describe "Group bookings and payments" do
     setup %{user: user} do
       # Force the Core default checker so the runtime feature flag drives
       # access regardless of any SaaS overlay, then restore afterwards.
@@ -285,8 +285,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       :ok
     end
 
-    test "requiring payment disables the group toggle and blocks the event",
-         %{conn: conn, user: user} do
+    test "a paid type can turn group bookings on", %{conn: conn, user: user} do
       meeting_type = insert_type(user)
       view = edit(conn, meeting_type)
 
@@ -294,22 +293,19 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       |> element("input[phx-click='toggle_payment_required']")
       |> render_click()
 
-      assert has_element?(view, "input[phx-click='toggle_group_bookings'][disabled]")
-      assert render(view) =~ "Turn off payments to enable group bookings."
-
-      # A stale/forged click must not flip the toggle server-side. The
-      # control is disabled, so we drive the component event directly
-      # (mirroring the pattern in payments_settings_test.exs) rather than
-      # clicking the disabled DOM element, which LiveViewTest itself refuses.
       view
-      |> with_target("#meeting-type-form-wrapper-meeting-type-form-edit-#{meeting_type.id}")
-      |> render_click("toggle_group_bookings", %{})
+      |> element("input[phx-click='toggle_group_bookings']")
+      |> render_click()
 
-      refute render(view) =~ "Participant limit"
+      html = render(view)
+      assert html =~ "Participant limit"
+      assert html =~ "Price per seat (USD)"
+      assert html =~ "Each booker pays this for every seat they take, guests included."
+      refute has_element?(view, "input[phx-click='toggle_payment_required'][disabled]")
+      refute has_element?(view, "input[phx-click='toggle_group_bookings'][disabled]")
     end
 
-    test "enabling group bookings disables the payments toggle and blocks the event",
-         %{conn: conn, user: user} do
+    test "a group type can require payment", %{conn: conn, user: user} do
       meeting_type = insert_type(user)
       view = edit(conn, meeting_type)
 
@@ -317,18 +313,44 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       |> element("input[phx-click='toggle_group_bookings']")
       |> render_click()
 
-      assert has_element?(view, "input[phx-click='toggle_payment_required'][disabled]")
-      assert render(view) =~ "Turn off group bookings to require payment."
+      refute has_element?(view, "input[phx-click='toggle_payment_required'][disabled]")
 
-      # A stale/forged click must not flip the toggle server-side. The
-      # control is disabled, so we drive the component event directly
-      # (mirroring the pattern in payments_settings_test.exs) rather than
-      # clicking the disabled DOM element, which LiveViewTest itself refuses.
       view
-      |> with_target("#meeting-type-form-wrapper-meeting-type-form-edit-#{meeting_type.id}")
-      |> render_click("toggle_payment_required", %{})
+      |> element("input[phx-click='toggle_payment_required']")
+      |> render_click()
 
-      refute render(view) =~ "Price (USD)"
+      assert has_element?(view, "input[phx-click='toggle_payment_required'][checked]")
+      assert has_element?(view, "input[name='meeting_type[price_input]']")
+      assert render(view) =~ "Price per seat (USD)"
+    end
+
+    test "a one-to-one paid type keeps the plain price label", %{conn: conn, user: user} do
+      meeting_type = insert_type(user)
+      view = edit(conn, meeting_type)
+
+      view
+      |> element("input[phx-click='toggle_payment_required']")
+      |> render_click()
+
+      html = render(view)
+      assert html =~ "Price (USD)"
+      refute html =~ "Price per seat"
+    end
+
+    test "a paid group type cannot pick a series mode", %{conn: conn, user: user} do
+      meeting_type = insert_type(user)
+      view = edit(conn, meeting_type)
+
+      view
+      |> element("input[phx-click='toggle_group_bookings']")
+      |> render_click()
+
+      view
+      |> element("input[phx-click='toggle_payment_required']")
+      |> render_click()
+
+      assert has_element?(view, "input[phx-value-series_action='toggle'][disabled]")
+      assert render(view) =~ "Paid group meeting types cannot be booked as a series."
     end
   end
 
@@ -357,8 +379,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       :ok
     end
 
-    test "the group bookings toggle stays reachable and clears payment_required",
-         %{conn: conn, user: user} do
+    test "enabling groups without charges keeps the stored price", %{conn: conn, user: user} do
       meeting_type = Enum.find(MeetingTypes.get_all_meeting_types(user.id), & &1.payment_required)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
@@ -367,9 +388,6 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       |> element("button[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
       |> render_click()
 
-      # The payments toggle is unreachable (charges not enabled), so unlike
-      # the normal mutual-exclusion case the group toggle must not be
-      # disabled too — otherwise there would be no way out.
       refute has_element?(view, "input[phx-click='toggle_group_bookings'][disabled]")
 
       view
@@ -379,7 +397,8 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
       assert render(view) =~ "Participant limit"
 
       updated = reload_type(user, meeting_type.id)
-      refute updated.payment_required
+      assert updated.payment_required
+      assert updated.price_cents == 1000
       assert updated.max_participants == 10
     end
   end

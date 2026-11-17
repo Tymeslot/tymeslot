@@ -344,13 +344,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             max_participants={@max_participants}
             show_seat_availability={@show_seat_availability}
             last_spots_threshold={@last_spots_threshold}
-            payment_required={@payment_required}
             blocker={
               GroupRules.enable_blocker(%{
                 type: @type,
                 group_bookings_allowed: @group_bookings_allowed,
-                payment_required: @payment_required,
-                payments_charges_enabled: @payments_charges_enabled,
                 requires_approval: @requires_approval,
                 extra_lengths: Map.get(@form_data, "extra_lengths", []),
                 locations: @locations,

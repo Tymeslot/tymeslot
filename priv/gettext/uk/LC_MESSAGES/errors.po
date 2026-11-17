@@ -388,11 +388,6 @@ msgstr "відеодзвінок групового типу зустрічі м
 msgid "group bookings cannot require approval"
 msgstr "групові бронювання не можуть вимагати підтвердження"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require payment"
-msgstr "групові бронювання не можуть вимагати оплати"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
@@ -919,3 +914,8 @@ msgstr "не є мовою перекладу"
 #, elixir-autogen, elixir-format
 msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
 msgstr "має бути не більше %{max} за такого ритму, щоб кожна сесія припадала на проміжок до одного року"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Paid group meeting types cannot be booked as a series."
+msgstr ""

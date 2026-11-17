@@ -372,11 +372,6 @@ msgstr ""
 msgid "group bookings cannot require approval"
 msgstr ""
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require payment"
-msgstr ""
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
@@ -900,4 +895,9 @@ msgstr ""
 #: lib/tymeslot/meeting_types/series_settings.ex
 #, elixir-autogen, elixir-format
 msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Paid group meeting types cannot be booked as a series."
 msgstr ""

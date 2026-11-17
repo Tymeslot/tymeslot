@@ -119,7 +119,8 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
 
   @doc """
   The settings of a type (a map with `:series_mode`, `:one_off`,
-  `:invitation_only` and `:fixed_dates`) that cannot go with a series, as
+  `:invitation_only`, `:fixed_dates`, `:payment_required` and
+  `:max_participants`) that cannot go with a series, as
   `{culprit_field, message}`. The culprit is the field that, were it not set,
   would lift the conflict. Empty when there is no series.
   """
@@ -136,7 +137,11 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
        dgettext_noop(
          "errors",
          "Meeting types with fixed dates can offer a series only as sessions the booker picks."
-       )}
+       )},
+      {:payment_required,
+       settings[:payment_required] == true and is_integer(settings[:max_participants]) and
+         settings[:max_participants] > 1,
+       dgettext_noop("errors", "Paid group meeting types cannot be booked as a series.")}
     ]
     |> Enum.filter(fn {_field, conflict?, _message} -> conflict? end)
     |> Enum.map(fn {field, _conflict?, message} -> {field, message} end)
@@ -380,7 +385,9 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
       series_mode: get_field(changeset, :series_mode),
       one_off: get_field(changeset, :one_off),
       invitation_only: get_field(changeset, :invitation_only),
-      fixed_dates: get_field(changeset, :fixed_dates)
+      fixed_dates: get_field(changeset, :fixed_dates),
+      payment_required: get_field(changeset, :payment_required),
+      max_participants: get_field(changeset, :max_participants)
     }
 
     series_changed? = fetch_change(changeset, :series_mode) != :error
