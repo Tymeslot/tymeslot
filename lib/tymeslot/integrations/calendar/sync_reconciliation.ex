@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
 
   The meeting-side consequences of a detected change (sync-status updates,
   auto-cancellation, host notifications) belong to the Meetings context and
-  are delegated to `Tymeslot.Meetings.apply_external_calendar_change/5`.
+  are delegated to `Tymeslot.Meetings.ExternalCalendar.apply_external_calendar_change/5`.
   """
 
   require Logger
@@ -23,7 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.Calendar.TimingChange
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.ExternalCalendar
   alias Tymeslot.Profiles
 
   @typep integration_id :: integer()
@@ -67,11 +67,11 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
     # CalDAV integration and silently never reconciled a time change.
     identifiers =
       calendar_events
-      |> Meetings.calendar_identifier_set()
+      |> ExternalCalendar.calendar_identifier_set()
       |> MapSet.to_list()
 
     meetings_by_identifier =
-      Meetings.list_meetings_by_calendar_identifiers(integration.id, identifiers)
+      ExternalCalendar.list_meetings_by_calendar_identifiers(integration.id, identifiers)
 
     # Read once for the batch, and only when an all-day event needs it.
     host_zone =
@@ -117,20 +117,20 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
             )
 
           {:end_moved, end_time} ->
-            Meetings.apply_external_end_change(meeting, end_time)
+            ExternalCalendar.apply_external_end_change(meeting, end_time)
 
           :none ->
             # Agreement is a signal too. This pass cannot know whether an earlier
             # one flagged the meeting, and nothing else retires the flag, so a
             # divergence that has since resolved would otherwise leave the host
             # with a badge and a notification that was never withdrawn.
-            Meetings.resolve_external_calendar_change(meeting)
+            ExternalCalendar.resolve_external_calendar_change(meeting)
 
             # In step, or a difference already accepted: what the calendar
             # shows now is what a later end change is measured against. Not
             # recorded when the end moved, since a followed end records itself
             # and one that was refused must be seen as moved again next pass.
-            Meetings.record_seen_calendar_end(meeting, TimingChange.seen_end(cal_event))
+            ExternalCalendar.record_seen_calendar_end(meeting, TimingChange.seen_end(cal_event))
         end
     end
   end
@@ -139,7 +139,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
   # the upsert path, a `deletion_ref()` from the deletion path.
   defp linked_meeting(record, meetings_by_identifier) when is_map(record) do
     record
-    |> Meetings.calendar_event_identifiers()
+    |> ExternalCalendar.calendar_event_identifiers()
     |> Enum.find_value(&Map.get(meetings_by_identifier, &1))
   end
 
@@ -224,10 +224,10 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
     # feeds the shared identity rule directly: no conversion, and the uid
     # fallback a CalDAV deletion depends on comes with it. See
     # `Tymeslot.Meetings.CalendarEventLink`.
-    identifiers = refs |> Meetings.calendar_identifier_set() |> MapSet.to_list()
+    identifiers = refs |> ExternalCalendar.calendar_identifier_set() |> MapSet.to_list()
 
     meetings_by_identifier =
-      Meetings.list_meetings_by_calendar_identifiers(integration.id, identifiers)
+      ExternalCalendar.list_meetings_by_calendar_identifiers(integration.id, identifiers)
 
     refs
     |> Enum.map(&linked_meeting(&1, meetings_by_identifier))
@@ -242,7 +242,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
   end
 
   defp reconcile_deleted_meeting(integration, meeting) do
-    case Meetings.apply_external_calendar_change_to_meeting(meeting, :deleted) do
+    case ExternalCalendar.apply_external_calendar_change_to_meeting(meeting, :deleted) do
       :ok ->
         :ok
 
@@ -267,7 +267,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
   - `uid` — the iCal UID of the event (may be `nil` for Outlook deleted events)
   - `signal` — `:deleted` or `:modified`
 
-  `opts` are passed through (see `Tymeslot.Meetings.apply_external_calendar_change/5`).
+  `opts` are passed through (see `Tymeslot.Meetings.ExternalCalendar.apply_external_calendar_change/5`).
 
   Returns `:ok` when no action was needed (no linked meeting, already up-to-date)
   or when the status was successfully updated.
@@ -275,7 +275,13 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
   @spec reconcile(integration_id(), String.t() | nil, String.t() | nil, signal(), keyword()) ::
           :ok | {:error, term()}
   def reconcile(integration_id, provider_event_id, uid, signal, opts \\ []) do
-    Meetings.apply_external_calendar_change(integration_id, provider_event_id, uid, signal, opts)
+    ExternalCalendar.apply_external_calendar_change(
+      integration_id,
+      provider_event_id,
+      uid,
+      signal,
+      opts
+    )
   end
 
   @doc """
@@ -287,6 +293,6 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
   @spec find_meeting(integration_id(), String.t() | nil, String.t() | nil) ::
           {:ok, term()} | {:error, :not_found}
   def find_meeting(integration_id, provider_event_id, uid) do
-    Meetings.find_meeting_by_calendar_event(integration_id, provider_event_id, uid)
+    ExternalCalendar.find_meeting_by_calendar_event(integration_id, provider_event_id, uid)
   end
 end

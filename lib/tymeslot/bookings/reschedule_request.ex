@@ -71,6 +71,27 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
     end
   end
 
+  @doc """
+  The host's request for a new time: `send_reschedule_request/1`, with the
+  outcome logged.
+  """
+  @spec request(MeetingSchema.t()) :: :ok | {:error, term()}
+  def request(meeting) do
+    case send_reschedule_request(meeting) do
+      :ok ->
+        Logger.info("Reschedule request processed", meeting_id: meeting.id)
+        :ok
+
+      {:error, reason} = error ->
+        Logger.warning("Reschedule request failed",
+          meeting_id: meeting.id,
+          reason: LogFormat.reason(reason)
+        )
+
+        error
+    end
+  end
+
   # =====================================
   # Private Helper Functions
   # =====================================

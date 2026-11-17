@@ -59,7 +59,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CacheSweep do
   alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.ExternalCalendar
 
   @edge_inset_days 1
 
@@ -143,16 +143,16 @@ defmodule Tymeslot.Integrations.Calendar.Google.CacheSweep do
   defp reject_booking_rows([], _integration), do: []
 
   defp reject_booking_rows(candidates, integration) do
-    identifiers = candidates |> Meetings.calendar_identifier_set() |> MapSet.to_list()
+    identifiers = candidates |> ExternalCalendar.calendar_identifier_set() |> MapSet.to_list()
 
-    case Meetings.list_meetings_by_calendar_identifiers(integration.id, identifiers) do
+    case ExternalCalendar.list_meetings_by_calendar_identifiers(integration.id, identifiers) do
       none when map_size(none) == 0 ->
         candidates
 
       meetings_by_identifier ->
         Enum.reject(candidates, fn candidate ->
           candidate
-          |> Meetings.calendar_event_identifiers()
+          |> ExternalCalendar.calendar_event_identifiers()
           |> Enum.any?(&Map.has_key?(meetings_by_identifier, &1))
         end)
     end
