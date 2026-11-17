@@ -7,11 +7,15 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   The cancellation inserts this job in its own transaction, so the refund is
   recorded with the sessions it pays back for, or not at all, and the Stripe
   call never runs inside that transaction. Each attempt refunds through
-  `Refunds.issue_host_refund/4`, which re-checks ownership, the refusals and
+  `Refunds.issue_host_refund/5`, which re-checks ownership, the refusals and
   the remaining balance under the payment's row lock. Its Stripe idempotency
-  key is derived from the payment's refunded total and the amount, so an
-  attempt whose refund Stripe accepted but whose transaction rolled back is
-  answered with that same refund on retry.
+  key is the job's own (`series_refund:<job id>`), the same on every
+  attempt, so an attempt whose refund Stripe accepted but whose transaction
+  rolled back is answered with that same refund on retry, and recorded
+  then, even when another refund of the payment landed in between (a key
+  derived from the payment's refunded total would have changed with it,
+  and refunded twice). The retries end within about four hours
+  (`backoff/1`), well inside the 24 hours Stripe keeps a key.
 
   Whether the refund is already made is the job's own record, never the
   payment's running total: other refunds of the same payment (the host
@@ -165,15 +169,19 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   end
 
   # A job with no id (built by hand) cannot run twice, so has nothing to
-  # claim. Otherwise the claim and the refund commit together, and a run
-  # racing for the claim waits on it, then finds the refund made.
+  # claim and no key of its own: it refunds under the derived key.
+  # Otherwise the claim and the refund commit together, and a run racing
+  # for the claim waits on it, then finds the refund made.
   defp refund_once(nil, id, host_user_id, amount),
     do: Refunds.issue_host_refund(id, host_user_id, amount)
 
   defp refund_once(job_id, id, host_user_id, amount) do
     Repo.transaction(fn ->
       with :claimed <- DeliveryClaims.claim(job_id, @claim),
-           {:ok, refunded} <- Refunds.issue_host_refund(id, host_user_id, amount) do
+           {:ok, refunded} <-
+             Refunds.issue_host_refund(id, host_user_id, amount, nil,
+               idempotency_key: "series_refund:#{job_id}"
+             ) do
         refunded
       else
         :already_claimed -> :already_made

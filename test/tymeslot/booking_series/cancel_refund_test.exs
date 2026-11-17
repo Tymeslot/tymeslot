@@ -176,6 +176,46 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert Repo.reload!(payment).refunded_amount_cents == 7_000
     end
 
+    test "a refund Stripe made but the job failed to record is replayed, not made again", %{
+      host: host,
+      series: series,
+      payment: payment
+    } do
+      pay(series, 4)
+      [first | _rest] = meetings()
+      into_the_past!(first)
+
+      assert {:ok, %{refund: {:scheduled, 15_000}}} = cancel_as_host(series, host)
+      assert [%{id: job_id}] = refund_jobs()
+
+      # Stripe makes the refund, but its answer never comes back: the
+      # attempt fails and nothing of it is recorded.
+      expect(StripeAdapterMock, :create_refund, 1, fn %{amount: 15_000}, opts ->
+        send(self(), {:refund_key, opts[:idempotency_key]})
+        exit({:timeout, {GenServer, :call, []}})
+      end)
+
+      assert {:error, {:exit, _timeout}} = run_refund_job()
+      assert_received {:refund_key, first_key}
+      assert first_key == "series_refund:#{job_id}"
+      assert Repo.reload!(payment).refunded_amount_cents == 0
+
+      # The host refunds the past session before the job runs again.
+      expect_refund(5_000)
+      assert {:ok, _refunded} = Refunds.issue_host_refund(payment.id, host.user.id, 5_000)
+
+      # The retry asks under the same key, so Stripe answers with the refund
+      # it already made, which is now recorded once.
+      expect(StripeAdapterMock, :create_refund, 1, fn %{amount: 15_000}, opts ->
+        assert opts[:idempotency_key] == first_key
+        {:ok, %{id: "re_SERIES"}}
+      end)
+
+      assert :ok = run_refund_job(attempt: 2)
+
+      assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
+    end
+
     test "a custom amount", %{host: host, series: series, payment: payment} do
       pay(series, 4)
 
