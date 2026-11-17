@@ -12,11 +12,11 @@ defmodule Tymeslot.Auth.AccountDeletion.Runner do
        `:account_deletion_held_last_admin` alert, and the job snoozes until then. A
        release-shell deletion forced past the rule (`force: true`) skips this;
 
-  then, through `AccountDeletion.erase_account/2`:
+  then, through `Purge.erase_account/2`:
 
     1. third-party cleanup (`ExternalCleanup`), while its credentials exist;
     2. the meeting ids, read before the cascade removes the meetings;
-    3. `AccountDeletion.delete_account/2` with `only_if_pending: true`: the
+    3. `Purge.delete_account/2` with `only_if_pending: true`: the
        deletion hook (whose refusal makes the job retry), then one
        transaction that re-checks under a row lock that the account is still
        pending and due, deletes it and, in that same transaction, every
@@ -37,7 +37,7 @@ defmodule Tymeslot.Auth.AccountDeletion.Runner do
 
   require Logger
 
-  alias Tymeslot.Auth.AccountDeletion
+  alias Tymeslot.Auth.AccountDeletion.Purge
   alias Tymeslot.Auth.{AdminRoles, AdminUserQueries, UserQueries, UserSchema}
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Repo
@@ -127,7 +127,7 @@ defmodule Tymeslot.Auth.AccountDeletion.Runner do
   end
 
   defp hard_delete(user) do
-    case AccountDeletion.erase_account(user, only_if_pending: true) do
+    case Purge.erase_account(user, only_if_pending: true) do
       {:ok, _deleted} ->
         Logger.info("Account deleted", user_id: user.id)
         {:ok, :deleted}

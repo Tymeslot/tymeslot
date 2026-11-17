@@ -175,7 +175,8 @@ defmodule Tymeslot.Auth.UserQueries do
 
   Bare single-table delete. Callers needing the anonymise-then-delete
   transaction (required for tax-record retention, see
-  `Tymeslot.Auth.AccountDeletion`) must use `Tymeslot.Auth.delete_account/1`
+  `Tymeslot.Auth.AccountDeletion.Purge`) must use
+  `Tymeslot.Auth.AccountDeletion.delete_account/1`
   rather than calling this directly.
   """
   @spec delete_user_row(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}

@@ -1,6 +1,6 @@
 defmodule Tymeslot.Auth.AccountDeletionHookTest do
   @moduledoc """
-  Auth.delete_account/1 runs the configured account-deletion hook before
+  AccountDeletion.delete_account/1 runs the configured account-deletion hook before
   touching the database. A failing hook must abort the deletion so a user is
   never destroyed while external state that keeps billing them (a live
   subscription) could not be torn down.
@@ -13,7 +13,7 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
   import Tymeslot.Factory
 
   alias Phoenix.Socket.Broadcast
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Auth.{UserSchema, UserSessionQueries}
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
@@ -53,7 +53,7 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
     Application.put_env(:tymeslot, :account_deletion_hook, nil)
     user = insert(:user)
 
-    assert {:ok, _deleted} = Auth.delete_account(user)
+    assert {:ok, _deleted} = AccountDeletion.delete_account(user)
     refute Repo.get(UserSchema, user.id)
   end
 
@@ -61,7 +61,7 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
     Application.put_env(:tymeslot, :account_deletion_hook, OkHook)
     user = insert(:user)
 
-    assert {:ok, _deleted} = Auth.delete_account(user)
+    assert {:ok, _deleted} = AccountDeletion.delete_account(user)
     refute Repo.get(UserSchema, user.id)
   end
 
@@ -69,7 +69,7 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
     Application.put_env(:tymeslot, :account_deletion_hook, FailingHook)
     user = insert(:user)
 
-    assert {:error, :subscription_cancel_failed} = Auth.delete_account(user)
+    assert {:error, :subscription_cancel_failed} = AccountDeletion.delete_account(user)
     assert Repo.get(UserSchema, user.id), "user must survive when external cleanup fails"
   end
 
@@ -80,7 +80,7 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
     insert(:user_session, user: user, token_hash: Token.hash_token(token))
     Endpoint.subscribe("users_sessions:#{Base.url_encode64(Token.hash_token(token))}")
 
-    assert {:error, :subscription_cancel_failed} = Auth.delete_account(user)
+    assert {:error, :subscription_cancel_failed} = AccountDeletion.delete_account(user)
 
     refute_receive %Broadcast{event: "disconnect"}
     assert UserSessionQueries.get_user_by_session_token(token)

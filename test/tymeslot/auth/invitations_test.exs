@@ -6,6 +6,7 @@ defmodule Tymeslot.Auth.InvitationsTest do
   @moduletag :auth
 
   alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Auth.{AccountTokens, Invitations, UserSchema}
   alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Profiles
@@ -245,7 +246,7 @@ defmodule Tymeslot.Auth.InvitationsTest do
       set: [inserted_at: long_ago, invitation_sent_at: long_ago]
     )
 
-    assert {0, nil} = Auth.purge_unverified_accounts(7)
+    assert {0, nil} = AccountDeletion.purge_unverified_accounts(7)
     assert Repo.get(UserSchema, user.id)
   end
 

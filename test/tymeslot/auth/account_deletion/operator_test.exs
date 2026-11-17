@@ -8,7 +8,7 @@ defmodule Tymeslot.Auth.AccountDeletion.OperatorTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Auth.UserSessionQueries
   alias Tymeslot.Repo
@@ -25,7 +25,7 @@ defmodule Tymeslot.Auth.AccountDeletion.OperatorTest do
     target = insert(:user)
     target_id = target.id
 
-    assert {:ok, pending} = Auth.delete_account_now(admin, target.id)
+    assert {:ok, pending} = AccountDeletion.delete_account_now(admin, target.id)
 
     assert DateTime.diff(DateTime.utc_now(), pending.deletion_scheduled_at) in 0..5
     assert [%{args: %{"user_id" => ^target_id}}] = all_enqueued(worker: AccountDeletionWorker)
@@ -43,7 +43,7 @@ defmodule Tymeslot.Auth.AccountDeletion.OperatorTest do
 
     {:ok, _job} = AccountDeletionWorker.schedule(target.id, later)
 
-    assert {:ok, pending} = Auth.delete_account_now(admin, target.id)
+    assert {:ok, pending} = AccountDeletion.delete_account_now(admin, target.id)
 
     assert DateTime.compare(pending.deletion_scheduled_at, later) == :lt
     assert [job] = all_enqueued(worker: AccountDeletionWorker)
@@ -57,7 +57,7 @@ defmodule Tymeslot.Auth.AccountDeletion.OperatorTest do
     insert(:user_session, user: target, token_hash: Token.hash_token("target-token"))
     insert(:user_session, user: bystander, token_hash: Token.hash_token("bystander-token"))
 
-    assert {:ok, _pending} = Auth.delete_account_now(admin, target.id)
+    assert {:ok, _pending} = AccountDeletion.delete_account_now(admin, target.id)
 
     refute UserSessionQueries.get_user_by_session_token("target-token")
     assert UserSessionQueries.get_user_by_session_token("bystander-token")
@@ -70,7 +70,7 @@ defmodule Tymeslot.Auth.AccountDeletion.OperatorTest do
 
     stale_admin |> Changeset.change(is_admin: false) |> Repo.update!()
 
-    assert Auth.delete_account_now(stale_admin, target.id) == {:error, :forbidden}
+    assert AccountDeletion.delete_account_now(stale_admin, target.id) == {:error, :forbidden}
     refute Repo.get!(UserSchema, target.id).deletion_scheduled_at
   end
 
@@ -78,11 +78,12 @@ defmodule Tymeslot.Auth.AccountDeletion.OperatorTest do
     admin = insert(:user, is_admin: true)
     insert(:user, is_admin: true)
 
-    assert Auth.delete_account_now(admin, admin.id) == {:error, :self}
+    assert AccountDeletion.delete_account_now(admin, admin.id) == {:error, :self}
   end
 
   test "a non-admin cannot delete anyone" do
-    assert Auth.delete_account_now(insert(:user), insert(:user).id) == {:error, :forbidden}
+    assert AccountDeletion.delete_account_now(insert(:user), insert(:user).id) ==
+             {:error, :forbidden}
   end
 
   test "the admin UI switch gates admin actors but not the release shell" do
@@ -90,22 +91,22 @@ defmodule Tymeslot.Auth.AccountDeletion.OperatorTest do
     admin = insert(:user, is_admin: true)
     target = insert(:user)
 
-    assert Auth.delete_account_now(admin, target.id) == {:error, :admin_ui_disabled}
-    assert {:ok, _pending} = Auth.delete_account_now(:cli, target.id)
+    assert AccountDeletion.delete_account_now(admin, target.id) == {:error, :admin_ui_disabled}
+    assert {:ok, _pending} = AccountDeletion.delete_account_now(:cli, target.id)
   end
 
   test "the release shell needs force to delete the last admin" do
     only_admin = insert(:user, is_admin: true)
 
-    assert Auth.delete_account_now(:cli, only_admin.id) == {:error, :last_admin}
-    assert {:ok, _pending} = Auth.delete_account_now(:cli, only_admin.id, force: true)
+    assert AccountDeletion.delete_account_now(:cli, only_admin.id) == {:error, :last_admin}
+    assert {:ok, _pending} = AccountDeletion.delete_account_now(:cli, only_admin.id, force: true)
   end
 
   test "an admin nobody can sign in with does not count towards the last admin" do
     target = insert(:user, is_admin: true)
     _unverified = insert(:unverified_user, is_admin: true)
 
-    assert Auth.delete_account_now(:cli, target.id) == {:error, :last_admin}
+    assert AccountDeletion.delete_account_now(:cli, target.id) == {:error, :last_admin}
     refute Repo.reload!(target).deletion_scheduled_at
   end
 
@@ -113,7 +114,9 @@ defmodule Tymeslot.Auth.AccountDeletion.OperatorTest do
     actor = insert(:unverified_user, is_admin: true)
     target = insert(:user, is_admin: true)
 
-    assert Auth.delete_account_now(actor, target.id, force: true) == {:error, :last_admin}
+    assert AccountDeletion.delete_account_now(actor, target.id, force: true) ==
+             {:error, :last_admin}
+
     refute Repo.reload!(target).deletion_scheduled_at
   end
 
@@ -122,7 +125,7 @@ defmodule Tymeslot.Auth.AccountDeletion.OperatorTest do
     later = DateTime.add(DateTime.utc_now(:second), 5, :minute)
 
     assert {:ok, _pending} =
-             Auth.delete_account_now(:cli, only_admin.id, force: true, job_at: later)
+             AccountDeletion.delete_account_now(:cli, only_admin.id, force: true, job_at: later)
 
     assert [%{args: %{"force" => true} = args}] = all_enqueued(worker: AccountDeletionWorker)
 
@@ -136,7 +139,7 @@ defmodule Tymeslot.Auth.AccountDeletion.OperatorTest do
     _other_admin = insert(:user, is_admin: true)
     target = insert(:user)
 
-    assert {:ok, _pending} = Auth.delete_account_now(actor, target.id, force: true)
+    assert {:ok, _pending} = AccountDeletion.delete_account_now(actor, target.id, force: true)
     assert [%{args: args}] = all_enqueued(worker: AccountDeletionWorker)
     refute Map.has_key?(args, "force")
   end
@@ -145,7 +148,7 @@ defmodule Tymeslot.Auth.AccountDeletion.OperatorTest do
     target = insert(:user)
     _admin = insert(:user, is_admin: true)
 
-    assert {:ok, _pending} = Auth.delete_account_now(:cli, target.id)
+    assert {:ok, _pending} = AccountDeletion.delete_account_now(:cli, target.id)
     assert [%{args: args}] = all_enqueued(worker: AccountDeletionWorker)
     refute Map.has_key?(args, "force")
   end
