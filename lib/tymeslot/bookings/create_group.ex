@@ -17,23 +17,21 @@ defmodule Tymeslot.Bookings.CreateGroup do
   alias Tymeslot.Bookings.Errors
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.SeatEffects
+  alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.Bookings.Telemetry
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.Checkout
-  alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
-  alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.SeatHoldSchema
-  alias Tymeslot.Meetings.Seats, as: SeatCount
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.GroupAccess
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.Events.Seats
-  alias Tymeslot.Repo
 
   @doc "True when the booking's meeting type holds more than one seat."
   @spec applicable?(map()) :: boolean()
@@ -170,36 +168,17 @@ defmodule Tymeslot.Bookings.CreateGroup do
     end
   end
 
-  # Frees the seats of a hold whose checkout never opened, fails the payment
-  # opened for it (Stripe may have created the session even though the call
-  # failed), and expires the meeting when the hold was all it had: a slot it
-  # created, still awaiting payment with nobody else on it. Locks follow the
-  # order every payment path takes: the payment row, then the meeting, so a
-  # booker joining it meanwhile is counted before the decision, then the
-  # hold (`SeatHolds.release/2`). A meeting that cannot be expired is
-  # logged and left, as the booking has already failed; a database error,
-  # or a payment that cannot be failed, raises out of the transaction and
-  # propagates, leaving everything as it was for the hold to lapse. B3
-  # replaces this with its shared hold-release helper.
+  # Frees the seats of a hold whose checkout never opened and fails the
+  # payment opened for it (Stripe may have created the session even though
+  # the call failed), settling its meeting as every lapsed hold's is
+  # (`SeatRelease.release_unpaid_hold/1`): a slot the hold alone created is
+  # expired. A release that fails is logged and left, as the booking has
+  # already failed; the hold then lapses and the sweeper releases it.
   defp release_failed_hold(meeting, hold, reason) do
-    result =
-      Repo.transaction(fn ->
-        {:ok, _payment} = Checkout.fail_seat_payment(hold.id)
-        _locked = GroupMeetingQueries.lock_for_update(meeting.id)
-        {:ok, _released} = SeatHolds.release(hold, :failed)
-
-        if SeatCount.seats_taken(meeting.id) == 0,
-          do: Checkout.expire_held_meeting(meeting.id),
-          else: {:ok, :unchanged}
-      end)
-
-    case result do
-      {:ok, {:ok, :expired, expired}} -> Checkout.announce_expired(expired)
-      {:ok, {:ok, :unchanged}} -> :ok
+    case SeatRelease.release_unpaid_hold(hold) do
+      {:ok, _released} -> :ok
       failed -> log_release_failure(meeting, reason, failed)
     end
-
-    SeatEffects.broadcast_and_invalidate(meeting)
   end
 
   defp log_release_failure(meeting, reason, failed) do
@@ -241,6 +220,55 @@ defmodule Tymeslot.Bookings.CreateGroup do
       join_only: FixedDates.sessions?(meeting_type),
       in_outer_transaction: Keyword.get(opts, :in_outer_transaction, false)
     )
+  end
+
+  @doc """
+  Turns the paid seat hold `hold_id` into its booker's seat
+  (`GroupScheduling.convert_hold/2`), inside the payment webhook's
+  transaction, with every job the seat owes enqueued as for a free seat:
+  its calendar job, its confirmation emails and, for the seat that
+  confirms its slot, the slot's reminders and video room. The integration
+  fan-out is the booking's `:on_booked_result`, for the caller to run once
+  committed (`Activation.after_commit/1`).
+
+  A hold whose meeting lapsed before the payment landed takes the slot
+  again where it still has room, on a new meeting when nobody holds it,
+  except on a fixed-date type, whose sessions only its host plans.
+
+  Options are those of `book_seat/3` that schedule jobs (`:with_video_room`).
+  """
+  @spec complete_paid_hold(Ecto.UUID.t(), keyword()) ::
+          {:ok, GroupScheduling.seat_booking()} | {:error, term()}
+  def complete_paid_hold(hold_id, opts \\ []) do
+    GroupScheduling.convert_hold(hold_id,
+      on_booked: &schedule_seat_jobs(&1, opts),
+      new_slot: &late_slot/2
+    )
+  end
+
+  # The type as it stands now decides whether it takes a new meeting, and
+  # its limit is the new meeting's capacity.
+  defp late_slot(hold, meeting) do
+    case meeting.meeting_type_id &&
+           MeetingTypes.get_meeting_type(meeting.meeting_type_id, meeting.organizer_user_id) do
+      %MeetingTypeSchema{} = type ->
+        if FixedDates.sessions?(type),
+          do: :none,
+          else: {:ok, fn -> late_slot_attrs(meeting, hold) end, type.max_participants}
+
+      _deleted ->
+        :none
+    end
+  end
+
+  defp late_slot_attrs(meeting, hold) do
+    times = %{
+      start_time: meeting.start_time,
+      end_time: meeting.end_time,
+      duration_minutes: div(DateTime.diff(meeting.end_time, meeting.start_time), 60)
+    }
+
+    SeatEffects.rebuilt_slot_attrs(meeting, times, hold)
   end
 
   defp map_result({:ok, %{meeting: meeting, on_booked_result: pending}}, _booking_data) do

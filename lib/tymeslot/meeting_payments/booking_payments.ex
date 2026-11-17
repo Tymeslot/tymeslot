@@ -90,6 +90,13 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   def get_payment(id), do: BookingPaymentQueries.get(id)
 
   @doc """
+  The payment opened for the seat hold `hold_id`, or `nil`. Unscoped, as
+  `get_payment/1`: for workers and system rules only.
+  """
+  @spec payment_for_seat_hold(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
+  def payment_for_seat_hold(hold_id), do: BookingPaymentQueries.by_seat_hold_id(hold_id)
+
+  @doc """
   Fetches a booking payment by ID only if `host_user_id` took it.
 
   Another host's payment, an unknown id and a malformed id all return

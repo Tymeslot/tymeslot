@@ -429,6 +429,15 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     |> Repo.update()
   end
 
+  @doc "Links a converted seat payment to its participant and meeting (`BookingPaymentSchema.convert_changeset/2`)."
+  @spec link_seat(BookingPaymentSchema.t(), map()) ::
+          {:ok, BookingPaymentSchema.t()} | {:error, Ecto.Changeset.t()}
+  def link_seat(schema, attrs) do
+    schema
+    |> BookingPaymentSchema.convert_changeset(attrs)
+    |> Repo.update()
+  end
+
   @doc """
   Atomically marks a booking payment as `failed` only when its current status is
   `pending`.

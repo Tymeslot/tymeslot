@@ -22,6 +22,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   `ReconcileAwaitingPayments.dispatch/2` applies when it replays this
   same event.
 
+  The payment of a paid series is handed to `Webhooks.SeriesCheckoutCompleted`,
+  and that of a held group seat to `Webhooks.SeatCheckoutCompleted`, once
+  the amount and the paid status have been checked here.
+
   A host whose account is pending deletion takes no booking: a checkout
   completed for one leaves the meeting expired and its payment refunded in
   full by the same job. So is a payment whose meeting no longer exists,
@@ -46,6 +50,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentCompletion
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
+  alias Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompleted
   alias Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Meetings.MeetingQueries
@@ -129,6 +134,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   defp complete_payment(%BookingPaymentSchema{series_id: series_id} = payment, event_id, object)
        when is_binary(series_id),
        do: SeriesCheckoutCompleted.run(payment, event_id, object)
+
+  # A held group seat's payment books the seat (or refunds it).
+  defp complete_payment(%BookingPaymentSchema{seat_hold_id: hold_id} = payment, event_id, object)
+       when is_binary(hold_id),
+       do: SeatCheckoutCompleted.run(payment, event_id, object)
 
   defp complete_payment(payment, event_id, object), do: run(payment, event_id, object)
 

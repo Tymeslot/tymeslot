@@ -62,6 +62,49 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
     List.first(rows)
   end
 
+  @doc """
+  Marks the hold `id` converted, from `held` or `released` (a late payment
+  converts a lapsed hold), clearing any release reason. Call with the hold
+  locked (`get_for_update/1`); a hold already converted is left as it is.
+  """
+  @spec mark_converted(binary()) :: :ok | {:error, :not_convertible}
+  def mark_converted(id) when is_binary(id) do
+    now = DateTime.truncate(Clock.utc_now(), :second)
+
+    {count, _rows} =
+      SeatHold
+      |> where([h], h.id == ^id and h.status != :converted)
+      |> Repo.update_all(set: [status: :converted, released_reason: nil, updated_at: now])
+
+    if count == 1, do: :ok, else: {:error, :not_convertible}
+  end
+
+  @doc "Links the converted hold `id` to the participant it became."
+  @spec link_participant(binary(), binary()) :: :ok
+  def link_participant(id, participant_id) when is_binary(id) and is_binary(participant_id) do
+    now = DateTime.truncate(Clock.utc_now(), :second)
+
+    {1, _rows} =
+      SeatHold
+      |> where([h], h.id == ^id and h.status == :converted)
+      |> Repo.update_all(set: [participant_id: participant_id, updated_at: now])
+
+    :ok
+  end
+
+  @doc """
+  Up to `limit` holds still `held` whose `expires_at` is before `cutoff`,
+  the longest overdue first.
+  """
+  @spec list_overdue(DateTime.t(), pos_integer()) :: [SeatHold.t()]
+  def list_overdue(%DateTime{} = cutoff, limit) when is_integer(limit) and limit > 0 do
+    held()
+    |> where([h], h.expires_at < ^cutoff)
+    |> order_by([h], asc: h.expires_at, asc: h.id)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
   @doc "Seats held on the meeting `meeting_id`."
   @spec seats_held(binary()) :: non_neg_integer()
   def seats_held(meeting_id) when is_binary(meeting_id) do

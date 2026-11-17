@@ -165,13 +165,18 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
       else: add_error(changeset, :seat_payment, "is not a seat payment")
   end
 
-  @doc "Links a seat payment to the participant its hold became."
+  @doc """
+  Links a seat payment to the participant its hold became, and to that
+  participant's meeting: a hold whose meeting lapsed before its payment
+  landed can convert onto another one.
+  """
   @spec convert_changeset(t(), map()) :: Ecto.Changeset.t()
   def convert_changeset(schema, attrs) do
     schema
-    |> cast(attrs, [:participant_id])
-    |> validate_required([:participant_id])
+    |> cast(attrs, [:participant_id, :meeting_id])
+    |> validate_required([:participant_id, :meeting_id])
     |> foreign_key_constraint(:participant_id)
+    |> foreign_key_constraint(:meeting_id)
   end
 
   @spec valid_statuses() :: [status()]

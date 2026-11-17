@@ -16,9 +16,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
 
     1. the session id, once `CheckoutSessions` has attached it to the row.
        Only the platform's own session creation can produce that value.
-    2. `client_reference_id` (the meeting id, or `series:<series id>` for a
-       paid series), but only for a row with no session attached yet; a row
-       whose stored session differs is someone else's session.
+    2. `client_reference_id` (the meeting id, `series:<series id>` for a
+       paid series, or `seat_hold:<hold id>` for a held group seat), but only
+       for a row with no session attached yet; a row whose stored session
+       differs is someone else's session.
 
   Charge events (`charge.refunded`, `charge.dispute.*`) resolve by, cheapest
   first:
@@ -28,7 +29,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
        after the booking is paid.
     2. `stripe_payment_intent_id`, written at checkout creation and by the
        completed handler, so it survives a failed charge-id backfill.
-    3. `meeting_id` (or `series_id`) read from the PaymentIntent's metadata, the last resort
+    3. `seat_hold_id`, `series_id` or `meeting_id` read from the PaymentIntent's
+       metadata, in that order (a seat's intent names its meeting too), the last resort
        for an event that races ahead of `checkout.session.completed`. It costs
        one Stripe API call and needs the connected-account id from the event.
   """
@@ -137,9 +139,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
 
   defp by_metadata(_intent_id, _connect_account), do: nil
 
-  # A reference names the meeting a payment is for, or, prefixed, the series.
-  # Strict on the owner: a meeting's own payment only, never its series'.
+  # A reference names the meeting a payment is for, or, prefixed, the series
+  # or the seat hold. Strict on the owner: a meeting's own payment only,
+  # never its series' or a seat's.
   defp by_reference("series:" <> series_id), do: BookingPaymentQueries.by_series_id(series_id)
+
+  defp by_reference("seat_hold:" <> hold_id),
+    do: BookingPaymentQueries.by_seat_hold_id(hold_id)
 
   defp by_reference(meeting_id) when is_binary(meeting_id) do
     case UUID.cast(meeting_id) do
@@ -156,6 +162,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
   defp reference_from_metadata(%{"metadata" => metadata}), do: metadata_reference(metadata)
   defp reference_from_metadata(_intent), do: nil
 
+  defp metadata_reference(%{"seat_hold_id" => id}) when is_binary(id), do: "seat_hold:" <> id
   defp metadata_reference(%{"series_id" => id}) when is_binary(id), do: "series:" <> id
   defp metadata_reference(%{"meeting_id" => id}) when is_binary(id), do: id
   defp metadata_reference(_metadata), do: nil

@@ -54,11 +54,9 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   alias Tymeslot.Auth
   alias Tymeslot.Availability.Schedules
-  alias Tymeslot.Bookings.BuildParams
   alias Tymeslot.Bookings.CalendarCheck
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Bookings.Cancel
-  alias Tymeslot.Bookings.MeetingAttributes
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.SeatRelease
@@ -79,7 +77,6 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.Events.Seats
-  alias UUID
 
   @typedoc "New-slot parameters, same shape as `Bookings.Reschedule`."
   @type reschedule_params :: %{
@@ -312,7 +309,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     %{max_participants: max_participants} = meeting_type
 
     old_meeting
-    |> new_slot_attrs(new_times, participant)
+    |> SeatEffects.rebuilt_slot_attrs(new_times, participant)
     |> GroupScheduling.book_seat(seat_request(participant, guest_emails, max_participants),
       also_lock: old_meeting.id,
       exclude_from_conflicts: fn ->
@@ -419,41 +416,6 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     )
 
     {:error, error}
-  end
-
-  # Builds the meeting-creation attrs `book_seat/3` passes to `Scheduling`
-  # when no live group meeting exists at the target slot yet, routed through
-  # the same `MeetingAttributes.build/1` builder `CreateGroup` uses
-  # rather than a second hand-built map — so a slot created by a seat move
-  # carries the same video integration, description, location, locale,
-  # attachments and reminder configuration a fresh booking would give it.
-  # `old_meeting.title` (already just the type's name — group meetings are
-  # never titled after a single booker) replaces the booker-addressed title
-  # the builder produces, exactly as `SeatEffects.slot_attrs/2` does for
-  # `CreateGroup`.
-  defp new_slot_attrs(old_meeting, new_times, participant) do
-    %BuildParams{
-      meeting_uid: UUID.uuid4(),
-      form_data: %{
-        "name" => participant.name,
-        "email" => participant.email,
-        "message" => participant.message
-      },
-      start_datetime: new_times.start_time,
-      end_datetime: new_times.end_time,
-      duration_minutes: new_times.duration_minutes,
-      user_timezone: participant.timezone,
-      organizer_user_id: old_meeting.organizer_user_id,
-      meeting_type_id: old_meeting.meeting_type_id,
-      attendee_locale: participant.locale,
-      # The questions the participant's answers belong to: the slot they
-      # leave, as the booking keeps them, so a slot this move creates shows
-      # them and the participant's copy of them names the same questions.
-      custom_fields_snapshot: old_meeting.custom_fields_snapshot,
-      custom_field_answers: participant.custom_field_answers
-    }
-    |> MeetingAttributes.build()
-    |> SeatEffects.slot_attrs(old_meeting.title)
   end
 
   # Matches Section B's seat_request() contract:

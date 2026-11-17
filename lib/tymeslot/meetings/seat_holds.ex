@@ -52,6 +52,13 @@ defmodule Tymeslot.Meetings.SeatHolds do
   defdelegate list_held_for_meeting(meeting_id), to: SeatHoldQueries
 
   @doc """
+  Up to `limit` holds still `held` past `cutoff`, the longest overdue
+  first: holds whose payment outcome never reached them.
+  """
+  @spec list_overdue(DateTime.t(), pos_integer()) :: [SeatHoldSchema.t()]
+  defdelegate list_overdue(cutoff, limit), to: SeatHoldQueries
+
+  @doc """
   Releases a hold that is still `held`, freeing its seats.
 
   One conditional update, so of two racing callers (an expiry and a
