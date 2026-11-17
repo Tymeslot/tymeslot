@@ -156,7 +156,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
         transparency: map_transparency(raw[:transparency]),
         status: map_status(raw[:status]),
         organiser: map_organiser(raw[:organizer]),
-        attendees: map_attendees(raw[:attendee] || raw[:attendees]),
+        attendees: attendees(raw),
         reminders: map_reminders(raw[:valarm]),
         recurrence_rule: raw[:rrule] || raw[:recurrence_rule],
         recurrence_exceptions: exdates_as_dates(raw[:exdate] || raw[:exdates] || []),
@@ -350,6 +350,20 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   end
 
   defp map_organiser(_other), do: nil
+
+  # An event Tymeslot wrote on a server that would invite an `ATTENDEE`
+  # itself carries its guests as `CONTACT` lines instead (`CalDAV.Scheduling`'s
+  # `:contact` mode), and the event is no less theirs to be told about:
+  # without them here, the sync left it guestless, and deleting or moving it
+  # told nobody. Taken only from an event of Tymeslot's own (its UID) that
+  # names no `ATTENDEE`, which is the block `Patcher` treats as Tymeslot's
+  # too; a `CONTACT` on anyone else's event is not a guest.
+  defp attendees(raw) do
+    case map_attendees(raw[:attendee] || raw[:attendees]) do
+      [] -> if tymeslot_origin?(raw), do: map_attendees(raw[:contacts]), else: []
+      attendees -> attendees
+    end
+  end
 
   defp map_attendees(nil), do: []
   defp map_attendees(attendees) when is_list(attendees), do: Enum.map(attendees, &map_attendee/1)
