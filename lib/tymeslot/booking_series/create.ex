@@ -37,7 +37,7 @@ defmodule Tymeslot.BookingSeries.Create do
 
   On a type requiring approval (one-to-one only: a group type cannot be
   approval-gated) every session is held `awaiting_approval`, all with the
-  first session's deadline (`MeetingAttributes.share_series_approval_clock/1`),
+  first session's deadline (`MeetingAttributes.build_series/2`),
   and the series is requested once, for all of them, in place of its
   confirmation (`Notifications.schedule_series_request/1`). The host answers
   for the whole series (`Tymeslot.BookingSeries.Approval`). A paid one is
@@ -210,29 +210,28 @@ defmodule Tymeslot.BookingSeries.Create do
   # Booking
 
   # The meeting attributes read the host's profile, schedule and
-  # integrations, so they are built before the schedule lock is taken.
+  # integrations, so they are built before the schedule lock is taken, and
+  # once for the whole series.
   defp book(plan, occurrences, booking_data, opts) do
-    attrs =
+    sessions =
       occurrences
       |> Enum.sort_by(& &1.position)
-      |> Enum.map(&occurrence_attrs(&1, booking_data))
-      |> MeetingAttributes.share_series_approval_clock()
+      |> Enum.map(&session/1)
+
+    attrs = booking_data |> BuildParams.new() |> MeetingAttributes.build_series(sessions)
 
     plan
     |> run_transaction(attrs, booking_data, opts)
     |> map_result(occurrences, booking_data)
   end
 
-  defp occurrence_attrs(%Occurrence{} = occurrence, booking_data) do
-    booking_data
-    |> Map.merge(%{
+  defp session(%Occurrence{} = occurrence) do
+    %{
       meeting_uid: UUID.uuid4(),
       start_datetime: occurrence.start,
       end_datetime: occurrence.end,
       series_position: occurrence.position
-    })
-    |> BuildParams.new()
-    |> MeetingAttributes.build()
+    }
   end
 
   defp run_transaction(plan, attrs, booking_data, opts) do
