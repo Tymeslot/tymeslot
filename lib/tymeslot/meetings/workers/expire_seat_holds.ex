@@ -16,6 +16,8 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHolds do
       opened), or a failed one: the payment, if pending, is failed and the
       hold released as `:failed`, its meeting settled
       (`SeatRelease.release_unpaid_hold/1`);
+    * a payment disputed before its completion reached the hold (no
+      `paid_at`) with a Checkout session: reconciled as a pending one is;
     * a payment paid, disputed or refunded beside a hold still held: a
       hold converts with its payment, so this is a broken invariant. It is
       logged as an error and counted, never released, so a paid seat is
@@ -100,6 +102,17 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHolds do
        do: release(hold)
 
   defp settle_payment(hold, %BookingPaymentSchema{status: :failed}), do: release(hold)
+
+  # Disputed before its completion reached the hold: Stripe took the
+  # payment, so its session is replayed as for a pending one, and the
+  # completion handler books the seat or refunds it.
+  defp settle_payment(
+         _hold,
+         %BookingPaymentSchema{status: :disputed, paid_at: nil, stripe_checkout_session_id: id} =
+           payment
+       )
+       when is_binary(id),
+       do: reconcile_tally(ReconcileAwaitingPayments.reconcile(payment))
 
   # Read unlocked, so the hold may have converted with its payment since it
   # was listed; only one still held beside a settled payment is wrong.

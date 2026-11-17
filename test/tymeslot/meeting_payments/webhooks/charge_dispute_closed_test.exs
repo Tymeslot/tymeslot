@@ -1,5 +1,6 @@
 defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :payments
   @moduletag :integration
@@ -11,6 +12,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
   import Tymeslot.Factory
 
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
+  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Repo
 
   describe "handle/1 — won outcomes" do
@@ -343,6 +345,65 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       assert reloaded.status == :paid
       assert reloaded.stripe_dispute_id == "dp_evt_LEGACY"
       assert %DateTime{} = reloaded.dispute_closed_at
+    end
+  end
+
+  describe "handle/1 — a paid seat" do
+    # The seat's completion was refused (its slot had filled), its hold
+    # released and its refund left to the dispute: the meeting it was held
+    # on goes ahead with other seats, but this seat never happened.
+    test "a disputed seat refused for a full slot is refunded once the dispute is won" do
+      meeting = insert(:group_meeting, status: :confirmed)
+      hold = insert(:seat_hold, meeting: meeting, status: :released, released_reason: :failed)
+
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          meeting_id: meeting.id,
+          seat_hold_id: hold.id,
+          seat_payment: true,
+          status: :disputed,
+          amount_cents: 2500,
+          refunded_amount_cents: 0,
+          stripe_charge_id: "ch_SEAT_REFUSED"
+        )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_closed_event("evt_SEAT_WON", "ch_SEAT_REFUSED", "won", 2500)
+               )
+
+      assert Repo.reload!(bp).status == :paid
+
+      assert_enqueued(
+        worker: RefundLatePayment,
+        args: %{"booking_payment_id" => bp.id, "reason" => "after_dispute"}
+      )
+    end
+
+    test "a booked seat is not refunded when the dispute is won" do
+      meeting = insert(:group_meeting, status: :confirmed)
+      participant = insert(:participant, meeting: meeting)
+      hold = insert(:seat_hold, meeting: meeting, status: :converted)
+
+      insert(:booking_payment,
+        stripe_account_id: @account,
+        meeting_id: meeting.id,
+        participant_id: participant.id,
+        seat_hold_id: hold.id,
+        seat_payment: true,
+        status: :disputed,
+        amount_cents: 2500,
+        refunded_amount_cents: 0,
+        stripe_charge_id: "ch_SEAT_BOOKED"
+      )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_closed_event("evt_SEAT_BOOKED_WON", "ch_SEAT_BOOKED", "won", 2500)
+               )
+
+      refute_enqueued(worker: RefundLatePayment)
     end
   end
 

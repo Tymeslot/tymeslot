@@ -63,6 +63,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.BookingSeries
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.GroupScheduling
@@ -72,6 +73,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.PlannedSessions
+  alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.SeatLookup
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
@@ -315,7 +317,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       exclude_from_conflicts: fn ->
         if last_live_seat?(old_meeting, participant), do: old_meeting.uid
       end,
-      on_booked: fn _booking -> vacate_old_seat(old_meeting, participant) end,
+      on_booked: &vacate_old_seat(old_meeting, participant, &1),
       join_only: FixedDates.sessions?(meeting_type)
     )
     |> handle_move(old_meeting, participant)
@@ -327,22 +329,29 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   # the old meeting before the move commits, so the old meeting is left out
   # of the conflict check only when `vacate_old_seat/2` does cancel it.
   # A planned session is never vacated: it stays when its last participant
-  # moves away (`SeatRelease.cancel_if_emptied/1`).
+  # moves away (`SeatRelease.cancel_if_emptied/1`), as does a meeting with
+  # a seat held for a booker still paying.
   defp last_live_seat?(%{planned: true}, _participant), do: false
 
   defp last_live_seat?(old_meeting, participant) do
     ParticipantQueries.count_live_for_meeting(old_meeting.id) == 1 and
+      SeatHolds.seats_held(old_meeting.id) == 0 and
       match?({:ok, %{cancelled_at: nil}}, ParticipantQueries.get(participant.id))
   end
 
   # Runs inside the seat transaction: cancels the old seat, then the old
-  # meeting if that seat was its last. The outcome reaches `after_commit/3`
-  # as the booking's `:on_booked_result`. A failure to cancel an emptied old
-  # meeting rolls the whole move back: its time may already have been
-  # treated as free.
-  defp vacate_old_seat(old_meeting, participant) do
-    with {:ok, _cancelled_seat} <- cancel_old_seat(old_meeting, participant) do
-      SeatRelease.cancel_if_emptied(old_meeting)
+  # meeting if that seat was its last, and moves the seat's payment, if it
+  # has one, to the new seat (no price difference is charged or refunded).
+  # The outcome reaches `after_commit/3` as the booking's
+  # `:on_booked_result`. A failure to cancel an emptied old meeting rolls
+  # the whole move back: its time may already have been treated as free.
+  defp vacate_old_seat(old_meeting, participant, booking) do
+    with {:ok, _cancelled_seat} <- cancel_old_seat(old_meeting, participant),
+         {:ok, _outcome} = vacated <- SeatRelease.cancel_if_emptied(old_meeting) do
+      :ok =
+        MeetingPayments.move_seat_payment(participant.id, booking.participant, booking.meeting)
+
+      vacated
     end
   end
 

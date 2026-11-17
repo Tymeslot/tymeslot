@@ -118,6 +118,28 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     |> Repo.all()
   end
 
+  @doc """
+  Points the seat payment of the participant `old_participant_id` at
+  `new_participant` on `new_meeting`, in one update, returning how many
+  rows it moved (0 for a free seat).
+  """
+  @spec move_to_participant(binary(), %{id: binary()}, %{id: binary()}) :: non_neg_integer()
+  def move_to_participant(old_participant_id, %{id: participant_id}, %{id: meeting_id})
+      when is_binary(old_participant_id) do
+    {count, _rows} =
+      BookingPaymentSchema
+      |> where([b], b.participant_id == ^old_participant_id and b.seat_payment)
+      |> Repo.update_all(
+        set: [
+          participant_id: participant_id,
+          meeting_id: meeting_id,
+          updated_at: DateTime.utc_now(:second)
+        ]
+      )
+
+    count
+  end
+
   defp own_payment(meeting_id),
     do: where(BookingPaymentSchema, [b], b.meeting_id == ^meeting_id and not b.seat_payment)
 

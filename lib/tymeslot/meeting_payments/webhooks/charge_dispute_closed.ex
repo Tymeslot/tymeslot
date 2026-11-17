@@ -22,8 +22,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
       live dispute, which a replayed or mis-routed event must not clear:
       the booking stays `disputed`.
 
-  Whichever way a final dispute goes, a payment whose booking expired is
-  refunded whatever is left of it with the host: all of it after a won
+  Whichever way a final dispute goes, a payment whose booking expired, or
+  a seat payment whose hold never became a booked seat, is refunded
+  whatever is left of it with the host: all of it after a won
   dispute, the part a lost one did not take back after a partial loss
   (`partially_refunded`). The attendee paid for a booking that never
   happened, so nothing of it is the host's to keep.
@@ -56,6 +57,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
+  alias Tymeslot.Meetings.SeatHolds
+  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Payments.Behaviours.WebhookHandler
 
   @event_type "charge.dispute.closed"
@@ -161,12 +164,29 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   # and after a partly lost one, for the part the dispute did not take. A
   # series never happened when every one of its sessions expired.
   defp maybe_schedule_refund(payment) do
-    with true <- payment.status in BookingPaymentSchema.refundable_statuses(),
-         [_first | _rest] = meetings <- HeldMeetings.meetings_for(payment),
-         true <- Enum.all?(meetings, &match?(%{status: :expired}, &1)) do
-      Oban.insert(RefundLatePayment.new_after_dispute(payment.id))
-    else
-      _not_owed -> {:ok, :none}
+    if payment.status in BookingPaymentSchema.refundable_statuses() and never_booked?(payment),
+      do: Oban.insert(RefundLatePayment.new_after_dispute(payment.id)),
+      else: {:ok, :none}
+  end
+
+  # A paid seat never happened when its hold never became a participant
+  # (refused for a full slot, say), whatever became of the meeting it was
+  # held on, which other seats may keep going ahead.
+  defp never_booked?(%BookingPaymentSchema{seat_hold_id: hold_id, participant_id: nil})
+       when is_binary(hold_id),
+       do: true
+
+  defp never_booked?(%BookingPaymentSchema{seat_hold_id: hold_id}) when is_binary(hold_id) do
+    case SeatHolds.get(hold_id) do
+      %SeatHoldSchema{status: status} -> status != :converted
+      nil -> false
+    end
+  end
+
+  defp never_booked?(payment) do
+    case HeldMeetings.meetings_for(payment) do
+      [] -> false
+      meetings -> Enum.all?(meetings, &match?(%{status: :expired}, &1))
     end
   end
 

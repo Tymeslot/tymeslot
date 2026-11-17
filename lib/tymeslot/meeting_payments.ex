@@ -36,6 +36,7 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.AccountCurrency
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountRetirement
@@ -327,6 +328,21 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate refund_payment_for_host(payment_id, host_user_id, amount_cents, reason \\ nil),
     to: Refunds,
     as: :issue_host_refund
+
+  @doc """
+  Moves the payment of the seat `old_participant_id` to the seat it was
+  moved to (`new_participant` on `new_meeting`), keeping its status,
+  amount and refunds: a moved seat keeps its payment, and no price
+  difference is charged or refunded. A free seat has no payment, and
+  nothing changes. Inside the move's transaction, under its meeting locks.
+  """
+  @spec move_seat_payment(binary(), %{id: binary()}, %{id: binary()}) :: :ok
+  def move_seat_payment(old_participant_id, new_participant, new_meeting) do
+    _moved =
+      BookingPaymentQueries.move_to_participant(old_participant_id, new_participant, new_meeting)
+
+    :ok
+  end
 
   # ---------------------------------------------------------------------------
   # Currency

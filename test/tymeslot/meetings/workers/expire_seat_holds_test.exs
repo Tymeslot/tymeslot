@@ -172,6 +172,30 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHoldsTest do
     refute_received :expired
   end
 
+  # The dispute reached the payment before its completion reached the
+  # hold: Stripe took the money, so the session is replayed and the seat
+  # booked, rather than the hold reported as broken.
+  test "a hold whose payment was disputed before its completion is reconciled", ctx do
+    {hold, payment} =
+      overdue_hold(ctx, 10, status: :disputed, stripe_checkout_session_id: "cs_sweep_disputed")
+
+    stripe_reports(%{
+      "status" => "complete",
+      "payment_status" => "paid",
+      "amount_total" => 2500,
+      "currency" => payment.currency,
+      "payment_intent" => "pi_sweep_disputed"
+    })
+
+    assert {:ok, %{reconciled: 1, errors: 0}} = perform_job(ExpireSeatHolds, %{})
+
+    assert SeatHolds.get(hold.id).status == :converted
+    assert Repo.reload!(payment).status == :disputed
+
+    assert [%{email: "payer@example.com"}] =
+             ParticipantQueries.list_live_for_meeting(ctx.meeting.id)
+  end
+
   test "a hold left open goes behind the holds a sweep has not looked at", ctx do
     long_ago = DateTime.add(DateTime.utc_now(:second), -3600, :second)
     {open, _payment} = overdue_hold(ctx, 20, stripe_checkout_session_id: "cs_sweep_still_open")

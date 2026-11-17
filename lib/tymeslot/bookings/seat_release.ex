@@ -63,7 +63,8 @@ defmodule Tymeslot.Bookings.SeatRelease do
         }
 
   @doc """
-  Cancels `meeting` when no live participant remains on it.
+  Cancels `meeting` when no live participant remains on it and no seat is
+  held for a booker paying for one (`Tymeslot.Meetings.SeatHolds`).
 
   Returns `{:ok, :meeting_cancelled}` when it cancelled the meeting (having
   run the cancellation side effects), `{:ok, :seats_remain}` when someone is
@@ -148,6 +149,12 @@ defmodule Tymeslot.Bookings.SeatRelease do
         {:ok, :seats_remain}
 
       ParticipantQueries.count_live_for_meeting(meeting.id) > 0 ->
+        {:ok, :seats_remain}
+
+      # A booker mid-checkout holds a seat as a participant does: the
+      # meeting stays for them, and settles once the hold converts or is
+      # released (`settle_after_hold/1`).
+      SeatHolds.seats_held(meeting.id) > 0 ->
         {:ok, :seats_remain}
 
       true ->
