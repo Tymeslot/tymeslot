@@ -13,6 +13,7 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
@@ -51,7 +52,7 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   """
   @spec refund_unapproved_request(Meeting.t()) :: :ok
   def refund_unapproved_request(meeting) do
-    case MeetingPayments.payment_for_meeting(meeting.id) do
+    case BookingPayments.payment_for_meeting(meeting.id) do
       # One payment paid for every session of a series, so releasing one
       # session must never refund it whole. A series is released whole, and
       # refunded once, by `refund_unapproved_series/2`.
@@ -74,7 +75,7 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   """
   @spec refund_unapproved_series(SeriesSchema.t(), [Meeting.t()]) :: :ok
   def refund_unapproved_series(%SeriesSchema{id: series_id}, [first | _rest] = released) do
-    case MeetingPayments.payment_for_series(series_id) do
+    case BookingPayments.payment_for_series(series_id) do
       %{paid_at: %DateTime{}} = payment ->
         case Enum.reject(released, &Approval.refunds_on_release?/1) do
           [] -> refund_remaining(payment, first)

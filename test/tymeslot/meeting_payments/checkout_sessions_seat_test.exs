@@ -11,8 +11,8 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
 
   alias Ecto.Changeset
   alias Ecto.UUID
-  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Profiles
@@ -75,7 +75,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
       end)
 
       assert {:ok, %{checkout_url: "https://checkout.stripe.com/cs_SEAT", booking_payment: bp}} =
-               MeetingPayments.create_seat_checkout_session(hold)
+               Checkout.create_seat_checkout_session(hold)
 
       assert bp.amount_cents == 7500
       assert bp.seats == 3
@@ -106,7 +106,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
         stripe_session()
       end)
 
-      assert {:ok, %{booking_payment: bp}} = MeetingPayments.create_seat_checkout_session(hold)
+      assert {:ok, %{booking_payment: bp}} = Checkout.create_seat_checkout_session(hold)
       assert bp.amount_cents == 999
       assert bp.application_fee_cents == 5
     end
@@ -141,7 +141,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
         stripe_session()
       end)
 
-      assert {:ok, %{booking_payment: bp}} = MeetingPayments.create_seat_checkout_session(hold)
+      assert {:ok, %{booking_payment: bp}} = Checkout.create_seat_checkout_session(hold)
       assert bp.attendee_email == "b@example.com"
       assert bp.attendee_name == "Bea"
     end
@@ -160,7 +160,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
         stripe_session()
       end)
 
-      assert {:ok, _result} = MeetingPayments.create_seat_checkout_session(hold)
+      assert {:ok, _result} = Checkout.create_seat_checkout_session(hold)
     end
 
     test "the idempotency key and return pages come from the hold", %{meeting: meeting} do
@@ -177,13 +177,13 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
         assert %URI{path: path, query: query} = URI.parse(params.cancel_url)
         assert path == "/themes/quill/payment-cancelled/seat/#{hold.id}"
         assert %{"return_token" => token} = URI.decode_query(query)
-        assert MeetingPayments.returned_from_seat_checkout?(hold.id, token)
-        refute MeetingPayments.returned_from_checkout?(hold.id, token)
+        assert Checkout.returned_from_seat_checkout?(hold.id, token)
+        refute Checkout.returned_from_checkout?(hold.id, token)
 
         stripe_session()
       end)
 
-      assert {:ok, _result} = MeetingPayments.create_seat_checkout_session(hold)
+      assert {:ok, _result} = Checkout.create_seat_checkout_session(hold)
     end
 
     test "a hold that would lapse before its session is refused", %{meeting: meeting} do
@@ -195,7 +195,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
         )
 
       # Mox raises on any call to the adapter here.
-      assert {:error, :hold_expired} = MeetingPayments.create_seat_checkout_session(hold)
+      assert {:error, :hold_expired} = Checkout.create_seat_checkout_session(hold)
       assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
     end
 
@@ -208,7 +208,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
           released_reason: :abandoned
         )
 
-      assert {:error, :hold_expired} = MeetingPayments.create_seat_checkout_session(hold)
+      assert {:error, :hold_expired} = Checkout.create_seat_checkout_session(hold)
       assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
     end
 
@@ -223,7 +223,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
           participant_id: participant.id
         )
 
-      assert {:error, :hold_expired} = MeetingPayments.create_seat_checkout_session(hold)
+      assert {:error, :hold_expired} = Checkout.create_seat_checkout_session(hold)
       assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
     end
 
@@ -231,7 +231,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
       Application.put_env(:tymeslot, :meeting_payments_enabled, false)
       hold = insert(:seat_hold, meeting: meeting, email: "a@example.com")
 
-      assert {:error, :payments_unavailable} = MeetingPayments.create_seat_checkout_session(hold)
+      assert {:error, :payments_unavailable} = Checkout.create_seat_checkout_session(hold)
       assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
     end
 
@@ -239,7 +239,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
       mt |> Changeset.change(payment_required: false) |> Repo.update!()
       hold = insert(:seat_hold, meeting: meeting, email: "a@example.com")
 
-      assert {:error, :payment_not_required} = MeetingPayments.create_seat_checkout_session(hold)
+      assert {:error, :payment_not_required} = Checkout.create_seat_checkout_session(hold)
       assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
     end
   end
@@ -248,22 +248,22 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
     test "accepts only a token signed for that hold's checkout" do
       hold_id = UUID.generate()
 
-      assert MeetingPayments.returned_from_seat_checkout?(
+      assert Checkout.returned_from_seat_checkout?(
                hold_id,
                SignedToken.sign(:seat_checkout_return, hold_id)
              )
 
-      refute MeetingPayments.returned_from_seat_checkout?(
+      refute Checkout.returned_from_seat_checkout?(
                hold_id,
                SignedToken.sign(:seat_checkout_return, UUID.generate())
              )
 
-      refute MeetingPayments.returned_from_seat_checkout?(
+      refute Checkout.returned_from_seat_checkout?(
                hold_id,
                SignedToken.sign(:checkout_return, hold_id)
              )
 
-      refute MeetingPayments.returned_from_seat_checkout?(hold_id, nil)
+      refute Checkout.returned_from_seat_checkout?(hold_id, nil)
     end
   end
 
@@ -285,7 +285,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
         {:ok, %{id: "cs_OPEN", status: "expired"}}
       end)
 
-      assert :ok = MeetingPayments.abandon_seat_checkout(hold.id)
+      assert :ok = Checkout.abandon_seat_checkout(hold.id)
 
       # The hold is released by the `checkout.session.expired` webhook.
       assert SeatHolds.get(hold.id).status == :held
@@ -295,11 +295,11 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
     test "is :ok for a hold with no payment", %{meeting: meeting} do
       hold = insert(:seat_hold, meeting: meeting, email: "a@example.com")
 
-      assert :ok = MeetingPayments.abandon_seat_checkout(hold.id)
+      assert :ok = Checkout.abandon_seat_checkout(hold.id)
     end
 
     test "is :ok for a malformed hold id" do
-      assert :ok = MeetingPayments.abandon_seat_checkout("not-a-uuid")
+      assert :ok = Checkout.abandon_seat_checkout("not-a-uuid")
     end
 
     test "is :ok for a hold whose payment is settled", %{user: user, meeting: meeting} do
@@ -314,7 +314,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
         stripe_checkout_session_id: "cs_PAID"
       )
 
-      assert :ok = MeetingPayments.abandon_seat_checkout(hold.id)
+      assert :ok = Checkout.abandon_seat_checkout(hold.id)
     end
   end
 end

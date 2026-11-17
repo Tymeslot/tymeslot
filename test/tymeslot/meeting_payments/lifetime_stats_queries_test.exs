@@ -14,7 +14,7 @@ defmodule Tymeslot.MeetingPayments.LifetimeStatsQueriesTest do
   @moduletag :payments
   @moduletag :queries
 
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
 
   test "totals each currency separately" do
     insert(:paid_booking_payment,
@@ -40,7 +40,7 @@ defmodule Tymeslot.MeetingPayments.LifetimeStatsQueriesTest do
       application_fee_cents: 25
     )
 
-    assert MeetingPayments.lifetime_stats_for_host(7) == [
+    assert BookingPayments.lifetime_stats_for_host(7) == [
              %{currency: "chf", received: 5_000, refunded: 0, platform_fee: 25},
              %{currency: "eur", received: 12_000, refunded: 500, platform_fee: 60}
            ]
@@ -50,6 +50,6 @@ defmodule Tymeslot.MeetingPayments.LifetimeStatsQueriesTest do
     insert(:booking_payment, host_user_id: 7, status: :pending)
     insert(:paid_booking_payment, host_user_id: 8)
 
-    assert MeetingPayments.lifetime_stats_for_host(7) == []
+    assert BookingPayments.lifetime_stats_for_host(7) == []
   end
 end

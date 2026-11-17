@@ -17,8 +17,8 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
   @moduletag :bookings
 
   alias Ecto.Changeset
-  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.FailAndExpire
   alias Tymeslot.Meetings.Approval
@@ -60,7 +60,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
   end
 
   defp outcome(meeting) do
-    MeetingPayments.checkout_outcome(
+    Checkout.checkout_outcome(
       BookingPaymentQueries.by_meeting_id(meeting.id),
       Repo.get!(MeetingSchema, meeting.id)
     )
@@ -79,7 +79,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
     end
 
     test "nothing loaded yet is processing" do
-      assert MeetingPayments.checkout_outcome(nil, nil) == :processing
+      assert Checkout.checkout_outcome(nil, nil) == :processing
     end
 
     test "an asynchronous payment failure is failed, not processing" do

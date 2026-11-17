@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
 
   alias Phoenix.LiveView.Socket
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
@@ -419,7 +419,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   # What the payment took, for the confirmation to say the booking is paid,
   # in the locale the confirmation is shown in (`MeetingPrice.paid_price/2`).
   defp paid_payment(meeting),
-    do: MeetingPayments.payment_for_meeting(meeting.id, meeting.organizer_user_id)
+    do: BookingPayments.payment_for_meeting(meeting.id, meeting.organizer_user_id)
 
   @doc """
   Handles the `:expired` PubSub broadcast for an embedded paid booking.

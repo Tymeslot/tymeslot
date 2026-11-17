@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.BookingsManagement.Cancellation
   alias TymeslotWeb.Dashboard.BookingsManagement.ModalMeeting
@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
         |> assign(
           preview: nil,
           # Scoped to the signed-in host: only a payment they took offers refunds.
-          cancel_booking_payment: MeetingPayments.payment_for_meeting(meeting.id, user_id)
+          cancel_booking_payment: BookingPayments.payment_for_meeting(meeting.id, user_id)
         )
         |> ModalHook.show_modal(:cancel_meeting, meeting)
 

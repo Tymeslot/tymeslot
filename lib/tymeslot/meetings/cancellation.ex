@@ -44,6 +44,7 @@ defmodule Tymeslot.Meetings.Cancellation do
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
 
   @refusals [:not_paid, :outside_refund_window, :under_dispute]
 
@@ -167,7 +168,7 @@ defmodule Tymeslot.Meetings.Cancellation do
          organizer_user_id,
          {:refund, amount_cents}
        ) do
-    case MeetingPayments.payment_for_meeting(meeting_id, organizer_user_id) do
+    case BookingPayments.payment_for_meeting(meeting_id, organizer_user_id) do
       nil -> {:error, :not_found}
       payment -> cancel_and_refund(meeting, payment, organizer_user_id, amount_cents)
     end

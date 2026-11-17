@@ -12,6 +12,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
   alias Ecto.UUID
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.CheckoutSessions
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
@@ -370,7 +371,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
           # so the cancel URL carries the guest's proof of its own.
           assert %{"return_token" => token} = URI.decode_query(cancel.query)
           assert map_size(URI.decode_query(cancel.query)) == 1
-          assert MeetingPayments.returned_from_checkout?(meeting.id, token)
+          assert Checkout.returned_from_checkout?(meeting.id, token)
 
           {:ok, %{id: "cs_URL", url: "https://checkout.stripe.com/cs_URL"}}
         end)

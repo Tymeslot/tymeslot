@@ -28,7 +28,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Stack, Styles, Text}
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
 
   require Logger
 
@@ -306,7 +306,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   defp receipt_url_for(%{stripe_charge_id: charge_id, stripe_account_id: account_id})
        when is_binary(charge_id) and charge_id != "" and is_binary(account_id) and
               account_id != "" do
-    case MeetingPayments.retrieve_charge_receipt_url(charge_id, account_id) do
+    case BookingPayments.retrieve_charge_receipt_url(charge_id, account_id) do
       {:ok, url} ->
         url
 

@@ -51,7 +51,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   import Phoenix.Component, only: [assign: 2, assign: 3]
 
   alias Phoenix.LiveView.Socket
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias TymeslotWeb.Themes.Shared.ChoicesInUrl
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey
@@ -310,7 +310,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   @spec forget_payment_wait(Socket.t()) :: Socket.t()
   def forget_payment_wait(socket) do
     case socket.assigns[:awaiting_payment_meeting] do
-      %{id: id} -> Phoenix.PubSub.unsubscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(id))
+      %{id: id} -> Phoenix.PubSub.unsubscribe(Tymeslot.PubSub, Checkout.payment_topic(id))
       _none -> :ok
     end
 

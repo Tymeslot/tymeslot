@@ -30,6 +30,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Tymeslot.Demo
   alias Tymeslot.Invitations
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.MeetingTypes
@@ -70,7 +72,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   when the host has no public username); see `rebook/3` for a meeting
   booked through an invitation, which `guest?` decides: whether the visitor
   proved they came back from this meeting's checkout
-  (`MeetingPayments.returned_from_checkout?/2`).
+  (`Checkout.returned_from_checkout?/2`).
   """
   @spec lookup_for_cancel(meeting_id :: String.t(), theme_slug :: String.t(), guest? :: boolean()) ::
           {:ok,
@@ -345,7 +347,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
       )
 
     if LiveView.connected?(socket) do
-      PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(meeting_id))
+      PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(meeting_id))
 
       case authorize(meeting_id, theme_slug, params["session_id"]) do
         {:ok, %{meeting: meeting, payment: payment, profile: profile}} ->
@@ -395,7 +397,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   """
   @spec refresh(LiveView.Socket.t()) :: LiveView.Socket.t()
   def refresh(socket) do
-    payment = MeetingPayments.payment_for_meeting(socket.assigns.meeting.id)
+    payment = BookingPayments.payment_for_meeting(socket.assigns.meeting.id)
 
     socket =
       case Meetings.get_meeting(socket.assigns.meeting.id) do
@@ -425,7 +427,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   @doc """
   Classifies the return page's state for a themed `render/1` `case`.
 
-  The booking outcome is the domain's (`MeetingPayments.checkout_outcome/2`);
+  The booking outcome is the domain's (`Checkout.checkout_outcome/2`);
   this only adds `:loading` for the disconnected render and shows a checkout
   still being processed the same way.
   """
@@ -434,7 +436,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   def outcome(true, _payment, _meeting), do: :loading
 
   def outcome(false, payment, meeting) do
-    case MeetingPayments.checkout_outcome(payment, meeting) do
+    case Checkout.checkout_outcome(payment, meeting) do
       :processing -> :loading
       outcome -> outcome
     end
@@ -507,7 +509,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   defp profile_theme_key(_profile), do: ThemeRegistry.default_theme_key()
 
   defp get_payment(meeting_id) do
-    case MeetingPayments.payment_for_meeting(meeting_id) do
+    case BookingPayments.payment_for_meeting(meeting_id) do
       nil -> {:error, :payment_not_found}
       payment -> {:ok, payment}
     end

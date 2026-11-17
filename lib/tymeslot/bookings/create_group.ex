@@ -20,7 +20,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   alias Tymeslot.Bookings.Telemetry
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.Guests
@@ -149,7 +149,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
     expires_at =
       Clock.utc_now()
       |> DateTime.truncate(:second)
-      |> DateTime.add(MeetingPayments.hold_expiry_seconds())
+      |> DateTime.add(Checkout.hold_expiry_seconds())
 
     meeting_attrs
     |> SeatEffects.slot_attrs(meeting_type.name)
@@ -160,7 +160,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   end
 
   defp checkout_or_release(meeting, hold) do
-    case MeetingPayments.create_seat_checkout_session(hold) do
+    case Checkout.create_seat_checkout_session(hold) do
       {:ok, %{checkout_url: url}} ->
         {:ok, url}
 
@@ -184,17 +184,17 @@ defmodule Tymeslot.Bookings.CreateGroup do
   defp release_failed_hold(meeting, hold, reason) do
     result =
       Repo.transaction(fn ->
-        {:ok, _payment} = MeetingPayments.fail_seat_payment(hold.id)
+        {:ok, _payment} = Checkout.fail_seat_payment(hold.id)
         _locked = GroupMeetingQueries.lock_for_update(meeting.id)
         {:ok, _released} = SeatHolds.release(hold, :failed)
 
         if SeatCount.seats_taken(meeting.id) == 0,
-          do: MeetingPayments.expire_held_meeting(meeting.id),
+          do: Checkout.expire_held_meeting(meeting.id),
           else: {:ok, :unchanged}
       end)
 
     case result do
-      {:ok, {:ok, :expired, expired}} -> MeetingPayments.announce_expired(expired)
+      {:ok, {:ok, :expired, expired}} -> Checkout.announce_expired(expired)
       {:ok, {:ok, :unchanged}} -> :ok
       failed -> log_release_failure(meeting, reason, failed)
     end

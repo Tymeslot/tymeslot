@@ -25,6 +25,7 @@ defmodule Tymeslot.MeetingPayments.HeldBookingReleaseTest do
   alias Tymeslot.Availability.Offer
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingQueries
@@ -58,7 +59,7 @@ defmodule Tymeslot.MeetingPayments.HeldBookingReleaseTest do
     date = next_bookable_weekday()
     meeting = hold_slot(host, date, ~T[11:00:00])
 
-    Phoenix.PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(meeting.id))
+    Phoenix.PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(meeting.id))
 
     # The booking page has already read, and cached, its month view with the
     # slot held.

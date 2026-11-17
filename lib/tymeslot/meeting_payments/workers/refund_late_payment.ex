@@ -62,7 +62,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ChargeBackfill
   alias Tymeslot.MeetingPayments.Refunds
@@ -134,7 +134,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   # A raise (a dropped connection, say) is an attempt failing like any other,
   # so it is returned rather than raised, and the last one is alerted on.
   defp refund(id) do
-    with %BookingPaymentSchema{} = payment <- MeetingPayments.get_payment(id),
+    with %BookingPaymentSchema{} = payment <- BookingPayments.get_payment(id),
          :ok <- Refunds.refusal(payment),
          {:ok, payment} <- ensure_charge(payment) do
       Refunds.issue_refund(payment, Refunds.refundable_remaining_cents(payment))

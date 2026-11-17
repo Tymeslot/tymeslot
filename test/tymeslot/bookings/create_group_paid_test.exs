@@ -15,8 +15,8 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Create
-  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
@@ -96,7 +96,7 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
       :ok =
         Phoenix.PubSub.subscribe(
           Tymeslot.PubSub,
-          MeetingPayments.payment_topic(params.payment_intent_data.metadata.meeting_id)
+          Checkout.payment_topic(params.payment_intent_data.metadata.meeting_id)
         )
 
       {:error, %{message: "Stripe is down"}}

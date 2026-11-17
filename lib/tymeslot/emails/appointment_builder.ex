@@ -13,7 +13,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Emails.Shared.Formatting
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingSchema
@@ -235,9 +235,9 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   # recorded per session). Once none goes ahead, what is left is owed back
   # as for any released booking.
   defp booking_payment_for(%{id: meeting_id}) when is_binary(meeting_id) do
-    case MeetingPayments.payment_for_meeting(meeting_id) do
+    case BookingPayments.payment_for_meeting(meeting_id) do
       %{series_id: series_id} = payment when is_binary(series_id) ->
-        if MeetingPayments.series_released?(payment), do: payment
+        if BookingPayments.series_released?(payment), do: payment
 
       payment ->
         payment

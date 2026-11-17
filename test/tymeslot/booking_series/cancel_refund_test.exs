@@ -21,7 +21,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
   alias Ecto.Changeset
   alias Tymeslot.BookingSeries
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
@@ -77,7 +77,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
   # The payment was taken outside the refund window.
   defp paid_long_ago!(series) do
     series.id
-    |> MeetingPayments.payment_for_series()
+    |> BookingPayments.payment_for_series()
     |> Changeset.change(paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day))
     |> Repo.update!()
   end
@@ -100,7 +100,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert {:ok, :payment_required, %{series: series}} =
                Paid.book(host, Paid.paid_series_type(host), 4)
 
-      %{host: host, series: series, payment: MeetingPayments.payment_for_series(series.id)}
+      %{host: host, series: series, payment: BookingPayments.payment_for_series(series.id)}
     end
 
     test "the host's default refund for a paid series is the remaining sessions' share", %{

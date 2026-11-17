@@ -64,6 +64,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Workers.SeriesHostRefund
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingConflictQueries
@@ -195,7 +196,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   defp authorise(series, :organizer, opts) do
     with :ok <- owned_by(series, Keyword.get(opts, :acting_user)) do
       series.id
-      |> MeetingPayments.payment_for_series()
+      |> BookingPayments.payment_for_series()
       |> plan_refund(Keyword.get(opts, :refund, :remaining))
     end
   end
@@ -275,7 +276,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   end
 
   defp refunded_cents(series) do
-    case MeetingPayments.payment_for_series(series.id) do
+    case BookingPayments.payment_for_series(series.id) do
       nil -> 0
       payment -> payment.refunded_amount_cents
     end
@@ -396,7 +397,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   # The remaining sessions' share, read in this transaction; the job reads
   # the payment again under its lock and refuses more than remains then.
   defp schedule_refund(series, cancelled, {:remaining, payment}) do
-    case MeetingPayments.get_payment(payment.id) do
+    case BookingPayments.get_payment(payment.id) do
       nil ->
         {:ok, :none}
 
@@ -410,7 +411,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   end
 
   defp schedule_refund(series, _cancelled, {:amount, payment, cents}),
-    do: insert_refund(series, MeetingPayments.get_payment(payment.id) || payment, cents)
+    do: insert_refund(series, BookingPayments.get_payment(payment.id) || payment, cents)
 
   @doc """
   The host's default refund for cancelling `count` sessions of a paid

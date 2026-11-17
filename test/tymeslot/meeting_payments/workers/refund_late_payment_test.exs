@@ -20,7 +20,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
@@ -86,7 +86,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
     assert is_integer(alert.oban_job_id)
     assert Repo.reload!(payment).status == :paid
     assert refund_emails(payment) == 0
-    assert [%{id: ^payment_id}] = MeetingPayments.list_outstanding_refunds_for_host(host.id)
+    assert [%{id: ^payment_id}] = BookingPayments.list_outstanding_refunds_for_host(host.id)
   end
 
   # The webhook commits the payment and this job even when it could not
@@ -144,7 +144,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
     assert {:discard, :outside_refund_window} = perform(payment)
 
     payment_id = payment.id
-    assert [%{id: ^payment_id}] = MeetingPayments.list_outstanding_refunds_for_host(host.id)
+    assert [%{id: ^payment_id}] = BookingPayments.list_outstanding_refunds_for_host(host.id)
     refute_received {:send_alert, _type, _payload}
   end
 
@@ -155,7 +155,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
     assert {:discard, :not_paid} = perform(payment)
 
     payment_id = payment.id
-    assert [%{id: ^payment_id}] = MeetingPayments.list_outstanding_refunds_for_host(host.id)
+    assert [%{id: ^payment_id}] = BookingPayments.list_outstanding_refunds_for_host(host.id)
     refute_received {:send_alert, _type, _payload}
   end
 

@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
 
   alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias TymeslotWeb.Dashboard.BookingsManagement.ModalMeeting
@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
 
         # Scoped to the signed-in host: only a payment they took offers
         # refund options.
-        booking_payment = MeetingPayments.payment_for_meeting(meeting.id, user_id)
+        booking_payment = BookingPayments.payment_for_meeting(meeting.id, user_id)
 
         socket
         |> assign(:cancel_booking_payment, booking_payment)

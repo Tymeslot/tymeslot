@@ -57,7 +57,7 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ChargeBackfill
   alias Tymeslot.MeetingPayments.Refunds
@@ -151,7 +151,7 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
          "host_user_id" => host_user_id,
          "amount_cents" => amount
        }) do
-    with %BookingPaymentSchema{} = payment <- MeetingPayments.get_payment(id),
+    with %BookingPaymentSchema{} = payment <- BookingPayments.get_payment(id),
          false <- DeliveryClaims.claimed?(job_id, @claim),
          :ok <- Refunds.refusal(payment),
          {:ok, _payment} <- ensure_charge(payment),
