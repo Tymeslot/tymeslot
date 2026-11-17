@@ -899,9 +899,9 @@ msgstr "Rezerwacje cykliczne nie są dostępne w Twoim obecnym planie."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Each booker pays this for every seat they take, guests included."
-msgstr ""
+msgstr "Każda osoba rezerwująca płaci tę kwotę za każde zajęte miejsce, także za miejsca swoich gości."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Price per seat (%{currency})"
-msgstr "Cena (%{currency})"
+msgstr "Cena za miejsce (%{currency})"

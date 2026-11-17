@@ -897,9 +897,9 @@ msgstr "Le prenotazioni ricorrenti non sono incluse nel tuo piano attuale."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Each booker pays this for every seat they take, guests included."
-msgstr ""
+msgstr "Chi prenota paga questo importo per ogni posto che occupa, ospiti inclusi."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Price per seat (%{currency})"
-msgstr "Prezzo (%{currency})"
+msgstr "Prezzo per posto (%{currency})"

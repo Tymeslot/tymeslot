@@ -902,9 +902,9 @@ msgstr "Повторювані бронювання не входять до в�
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "Each booker pays this for every seat they take, guests included."
-msgstr ""
+msgstr "Кожен, хто бронює, сплачує цю суму за кожне місце, яке займає, зокрема й за гостей."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Price per seat (%{currency})"
-msgstr "Ціна (%{currency})"
+msgstr "Ціна за місце (%{currency})"

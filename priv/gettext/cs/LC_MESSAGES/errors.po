@@ -925,4 +925,4 @@ msgstr "smí být při tomto opakování nejvýše %{max}, aby každý termín s
 #: lib/tymeslot/meeting_types/series_settings.ex
 #, elixir-autogen, elixir-format
 msgid "Paid group meeting types cannot be booked as a series."
-msgstr ""
+msgstr "Placené skupinové typy schůzek nelze rezervovat jako sérii."

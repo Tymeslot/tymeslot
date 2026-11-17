@@ -922,4 +922,4 @@ msgstr "nie może być większe niż %{max} przy tym odstępie, aby każda sesja
 #: lib/tymeslot/meeting_types/series_settings.ex
 #, elixir-autogen, elixir-format
 msgid "Paid group meeting types cannot be booked as a series."
-msgstr ""
+msgstr "Płatnych grupowych typów spotkań nie można rezerwować jako serii."

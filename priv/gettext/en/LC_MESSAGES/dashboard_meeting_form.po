@@ -900,6 +900,6 @@ msgid "Each booker pays this for every seat they take, guests included."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Price per seat (%{currency})"
 msgstr ""

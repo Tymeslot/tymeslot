@@ -900,4 +900,4 @@ msgstr "darf bei diesem Rhythmus höchstens %{max} betragen, damit jeder Termin 
 #: lib/tymeslot/meeting_types/series_settings.ex
 #, elixir-autogen, elixir-format
 msgid "Paid group meeting types cannot be booked as a series."
-msgstr ""
+msgstr "Kostenpflichtige Gruppen-Termintypen können nicht als Serie gebucht werden."
