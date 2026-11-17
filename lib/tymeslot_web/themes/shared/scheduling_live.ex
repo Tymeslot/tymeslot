@@ -79,8 +79,10 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
   @steps [:overview, :schedule, :questions, :booking, :confirmation]
   # A theme without `length` books a meeting type offering several lengths for
-  # its primary one (`Journey.Facts.Length`); one without `series` books single
-  # sessions (`Journey.Facts.Series`).
+  # its primary one (`Journey.Facts.Length`); one without `series` offers single
+  # sessions only (`Journey.Facts.Series`), so a meeting type that requires a
+  # series cannot be booked in it: submitting is refused with
+  # `:series_required`. Every shipped theme declares `series`.
   @optional_steps [:length, :series]
 
   # The generated code names every module in full rather than through an

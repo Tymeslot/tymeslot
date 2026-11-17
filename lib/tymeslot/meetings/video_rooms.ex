@@ -44,6 +44,8 @@ defmodule Tymeslot.Meetings.VideoRooms do
     :video_integration_inactive
   ]
 
+  # Why a room could not be attached that the organiser fixes in their
+  # integration settings, logged as expected rather than as a fault.
   @owner_fixable_video_refusals [:video_integration_needs_reauth, :video_integration_inactive]
 
   # Get Video module dynamically to avoid compile-time warnings with mocks
