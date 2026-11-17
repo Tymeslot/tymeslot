@@ -941,3 +941,8 @@ msgstr "Вимкніть підтвердження електронної по�
 #, elixir-autogen, elixir-format
 msgid "Turn off email confirmation to require payment."
 msgstr "Вимкніть підтвердження електронної пошти, щоб вимагати оплату."
+
+#: lib/tymeslot_web/helpers/context_errors.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring bookings are not included in your current plan."
+msgstr "Повторювані бронювання не входять до вашого поточного тарифу."

@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.BookingSeries
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.CoreComponents.Modal
@@ -34,6 +35,13 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
 
   @spec decline_request_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def decline_request_modal(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :sessions,
+        assigns.meeting && BookingSeries.request_sessions(assigns.meeting)
+      )
+
     ~H"""
     <Modal.confirm_modal
       id={@id}
@@ -54,7 +62,24 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
         class="space-y-4"
         novalidate
       >
-        <p>
+        <%!-- A session of a series request declines the whole series. --%>
+        <div :if={@sessions} class="space-y-2" data-testid="decline-series-sessions">
+          <p>
+            {dngettext(
+              "dashboard_booking_series",
+              "Decline the request from %{name} for %{count} session?",
+              "Decline the request from %{name} for all %{count} sessions?",
+              length(@sessions),
+              name: @meeting.attendee_name
+            )}
+          </p>
+          <ol class="text-token-sm text-tymeslot-600 space-y-1">
+            <li :for={session <- @sessions}>
+              {Helpers.format_move_time(session, @timezone, @time_format)}
+            </li>
+          </ol>
+        </div>
+        <p :if={!@sessions}>
           {dgettext(
             "dashboard_bookings",
             "Decline the request from %{name} for %{when}?",
@@ -77,7 +102,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.DeclineRequestModal do
           maxlength={Constraints.decline_reason_max_length()}
         />
 
-        <p class="text-tymeslot-500">
+        <p :if={@sessions} class="text-tymeslot-500">
+          {dgettext(
+            "dashboard_booking_series",
+            "Every session is released immediately and %{name} is told none was confirmed.",
+            name: @meeting.attendee_name
+          )}
+        </p>
+        <p :if={!@sessions} class="text-tymeslot-500">
           {dgettext(
             "dashboard_bookings",
             "The slot is released immediately and %{name} is told it wasn't confirmed.",

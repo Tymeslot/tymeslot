@@ -217,7 +217,8 @@ defmodule Tymeslot.Notifications.ChannelFanoutTest do
     @behaviour Tymeslot.Notifications.Channel
 
     @impl Tymeslot.Notifications.Channel
-    def schedule_for_event(_user_id, _event_type, _meeting), do: raise("scheduling failed")
+    def schedule_for_event(_user_id, _event_type, _meeting, _series),
+      do: raise("scheduling failed")
   end
 
   defmodule FailingChannel do
@@ -225,7 +226,8 @@ defmodule Tymeslot.Notifications.ChannelFanoutTest do
     @behaviour Tymeslot.Notifications.Channel
 
     @impl Tymeslot.Notifications.Channel
-    def schedule_for_event(_user_id, _event_type, _meeting), do: [{4242, {:error, :boom}}]
+    def schedule_for_event(_user_id, _event_type, _meeting, _series),
+      do: [{4242, {:error, :boom}}]
   end
 
   defmodule CountsChecks do

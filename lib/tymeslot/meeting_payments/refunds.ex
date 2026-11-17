@@ -15,7 +15,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     * Calls Stripe with an idempotency key keyed on the payment id,
       cumulative refunded total after this refund, and the requested
       amount — so a true retry collapses while a fresh attempt at a
-      different amount produces a fresh Stripe call.
+      different amount produces a fresh Stripe call. A host refund may be
+      given the caller's own key instead (`issue_host_refund/5`).
     * Conditionally passes `refund_application_fee: true` only when
       the original charge had a non-zero application fee. Stripe
       errors if asked to refund a fee that was never collected.
@@ -66,6 +67,26 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   def refundable_remaining_cents(%{amount_cents: amount, refunded_amount_cents: refunded})
       when is_integer(amount) and is_integer(refunded),
       do: max(amount - refunded, 0)
+
+  @doc """
+  What a host's cancellation of one booking refunds by default: the
+  remaining balance, or, when the payment paid for a whole series, one
+  session's price (`unit_price_cents` snapshotted on the series), capped at
+  what remains. A series payment whose series is gone falls back to the
+  remaining balance.
+  """
+  @spec default_cancellation_refund_cents(BookingPaymentSchema.t()) :: non_neg_integer()
+  def default_cancellation_refund_cents(%BookingPaymentSchema{series_id: id} = payment)
+      when is_binary(id) do
+    remaining = refundable_remaining_cents(payment)
+
+    case Repo.preload(payment, :series).series do
+      %{unit_price_cents: unit} when is_integer(unit) and unit > 0 -> min(unit, remaining)
+      _gone -> remaining
+    end
+  end
+
+  def default_cancellation_refund_cents(payment), do: refundable_remaining_cents(payment)
 
   @doc """
   Returns `true` when the host still holds money the attendee has not been
@@ -175,7 +196,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     refund_locked(
       fn -> BookingPaymentQueries.get_for_update(payment.id) end,
       amount_cents,
-      reason
+      reason,
+      nil
     )
   end
 
@@ -188,15 +210,25 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   the refund. Another host's payment, an unknown id and a malformed id all
   return `{:error, :not_found}`, so the answer reveals nothing about payments
   the caller does not own.
+
+  `opts` takes `:idempotency_key`, the Stripe key to refund under instead
+  of the one derived from the payment's refunded total. For a caller that
+  retries one refund across transactions while other refunds of the same
+  payment may land in between (a job, keyed on its id): the derived key
+  changes with the total, so a retry after Stripe accepted the refund but
+  the transaction recording it rolled back would refund again, where the
+  caller's own key gets that same refund back. Stripe keeps a key for at
+  least 24 hours, so the caller's retries must end inside that.
   """
-  @spec issue_host_refund(term(), integer(), pos_integer(), String.t() | nil) ::
+  @spec issue_host_refund(term(), integer(), pos_integer(), String.t() | nil, keyword()) ::
           {:ok, BookingPaymentSchema.t()} | {:error, :not_found | refund_error()}
-  def issue_host_refund(payment_id, host_user_id, amount_cents, reason \\ nil)
+  def issue_host_refund(payment_id, host_user_id, amount_cents, reason \\ nil, opts \\ [])
       when is_integer(host_user_id) do
     refund_locked(
       fn -> BookingPaymentQueries.get_for_update(payment_id, host_user_id) end,
       amount_cents,
-      reason
+      reason,
+      Keyword.get(opts, :idempotency_key)
     )
   end
 
@@ -212,13 +244,14 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   #
   # `lock_payment` decides which row may be locked at all: the unscoped
   # lookup for system refunds, or the host-scoped one for a host's own.
-  defp refund_locked(lock_payment, amount_cents, reason) do
+  # `key` is the caller's Stripe idempotency key, or nil for the derived one.
+  defp refund_locked(lock_payment, amount_cents, reason, key) do
     Repo.transaction(fn ->
       with {:ok, locked} <- lock_payment.(),
            :ok <- refusal(locked),
            :ok <- validate_amount(locked, amount_cents),
            :ok <- validate_charge(locked),
-           {:ok, _stripe_refund} <- create_stripe_refund(locked, amount_cents, reason),
+           {:ok, _stripe_refund} <- create_stripe_refund(locked, amount_cents, reason, key),
            {:ok, updated_payment} <- update_payment_after_refund(locked, amount_cents) do
         enqueue_refund_email(updated_payment)
         updated_payment
@@ -245,28 +278,35 @@ defmodule Tymeslot.MeetingPayments.Refunds do
 
   defp validate_charge(_payment), do: {:error, :missing_charge}
 
-  defp create_stripe_refund(payment, amount_cents, reason) do
-    cumulative_after = payment.refunded_amount_cents + amount_cents
-
+  defp create_stripe_refund(payment, amount_cents, reason, key) do
     params =
       %{
         charge: payment.stripe_charge_id,
         amount: amount_cents,
-        metadata: %{
-          meeting_id: payment.meeting_id,
-          booking_payment_id: payment.id
-        }
+        metadata: refund_metadata(payment)
       }
       |> maybe_put_reason(reason)
       |> maybe_refund_application_fee(payment)
 
     StripeAdapter.create_refund(params,
       connect_account: payment.stripe_account_id,
-      idempotency_key: "refund:#{payment.id}:#{cumulative_after}:#{amount_cents}",
+      idempotency_key: key || derived_idempotency_key(payment, amount_cents),
       connect_timeout: @stripe_connect_timeout_ms,
       recv_timeout: @stripe_recv_timeout_ms
     )
   end
+
+  defp derived_idempotency_key(payment, amount_cents) do
+    cumulative_after = payment.refunded_amount_cents + amount_cents
+    "refund:#{payment.id}:#{cumulative_after}:#{amount_cents}"
+  end
+
+  # A series payment names its series instead of a meeting.
+  defp refund_metadata(%{series_id: series_id} = payment) when is_binary(series_id),
+    do: %{series_id: series_id, booking_payment_id: payment.id}
+
+  defp refund_metadata(payment),
+    do: %{meeting_id: payment.meeting_id, booking_payment_id: payment.id}
 
   # Stripe rejects a blank `reason` ("cannot be unset") — only include it when
   # the caller supplies a non-empty value, otherwise omit the param entirely.

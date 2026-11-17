@@ -16,9 +16,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
 
     1. the session id, once `CheckoutSessions` has attached it to the row.
        Only the platform's own session creation can produce that value.
-    2. `client_reference_id` (the meeting id), but only for a row with no
-       session attached yet; a row whose stored session differs is someone
-       else's session.
+    2. `client_reference_id` (the meeting id, or `series:<series id>` for a
+       paid series), but only for a row with no session attached yet; a row
+       whose stored session differs is someone else's session.
 
   Charge events (`charge.refunded`, `charge.dispute.*`) resolve by, cheapest
   first:
@@ -28,13 +28,14 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
        after the booking is paid.
     2. `stripe_payment_intent_id`, written at checkout creation and by the
        completed handler, so it survives a failed charge-id backfill.
-    3. `meeting_id` read from the PaymentIntent's metadata, the last resort
+    3. `meeting_id` (or `series_id`) read from the PaymentIntent's metadata, the last resort
        for an event that races ahead of `checkout.session.completed`. It costs
        one Stripe API call and needs the connected-account id from the event.
   """
 
   require Logger
 
+  alias Ecto.UUID
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -98,9 +99,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
 
   defp session_payment(object), do: unattached_by_reference(object)
 
-  defp unattached_by_reference(%{"client_reference_id" => meeting_id})
-       when is_binary(meeting_id) do
-    case BookingPaymentQueries.by_meeting_id(meeting_id) do
+  defp unattached_by_reference(%{"client_reference_id" => reference})
+       when is_binary(reference) do
+    case by_reference(reference) do
       %BookingPaymentSchema{stripe_checkout_session_id: nil} = payment -> payment
       _attached_or_nil -> nil
     end
@@ -122,10 +123,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
        when is_binary(intent_id) and is_binary(connect_account) do
     case StripeAdapter.retrieve_payment_intent(intent_id, connect_account: connect_account) do
       {:ok, intent} ->
-        case meeting_id_from_metadata(intent) do
-          nil -> nil
-          meeting_id -> BookingPaymentQueries.by_meeting_id(meeting_id)
-        end
+        intent |> reference_from_metadata() |> by_reference()
 
       {:error, reason} ->
         Logger.warning("payment lookup: could not retrieve payment intent for metadata match",
@@ -139,9 +137,26 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
 
   defp by_metadata(_intent_id, _connect_account), do: nil
 
+  # A reference names the meeting a payment is for, or, prefixed, the series.
+  # Strict on the owner: a meeting's own payment only, never its series'.
+  defp by_reference("series:" <> series_id), do: BookingPaymentQueries.by_series_id(series_id)
+
+  defp by_reference(meeting_id) when is_binary(meeting_id) do
+    case UUID.cast(meeting_id) do
+      {:ok, uuid} -> BookingPaymentQueries.by_meeting_id(uuid)
+      :error -> nil
+    end
+  end
+
+  defp by_reference(nil), do: nil
+
   # Stripe metadata keys are always strings; the PaymentIntent itself may be an
   # atom-keyed Stripity struct (real adapter) or a string-keyed map (mock).
-  defp meeting_id_from_metadata(%{metadata: %{"meeting_id" => id}}) when is_binary(id), do: id
-  defp meeting_id_from_metadata(%{"metadata" => %{"meeting_id" => id}}) when is_binary(id), do: id
-  defp meeting_id_from_metadata(_intent), do: nil
+  defp reference_from_metadata(%{metadata: metadata}), do: metadata_reference(metadata)
+  defp reference_from_metadata(%{"metadata" => metadata}), do: metadata_reference(metadata)
+  defp reference_from_metadata(_intent), do: nil
+
+  defp metadata_reference(%{"series_id" => id}) when is_binary(id), do: "series:" <> id
+  defp metadata_reference(%{"meeting_id" => id}) when is_binary(id), do: id
+  defp metadata_reference(_metadata), do: nil
 end

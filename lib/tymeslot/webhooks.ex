@@ -326,28 +326,31 @@ defmodule Tymeslot.Webhooks do
   # ============================================================================
 
   @impl Channel
-  def schedule_for_event(user_id, event_type, meeting) do
+  def schedule_for_event(user_id, event_type, meeting, series \\ nil) do
     user_id
     |> WebhookQueries.list_active_webhooks_for_event(event_type)
-    |> Enum.map(&{&1.id, schedule_delivery(&1, event_type, meeting)})
+    |> Enum.map(&{&1.id, schedule_delivery(&1, event_type, meeting, series)})
   end
 
   # The list query does not see the failure threshold, so a webhook that has
   # reached it but is not yet marked disabled is skipped here.
-  defp schedule_delivery(webhook, event_type, meeting) do
+  defp schedule_delivery(webhook, event_type, meeting, series) do
     if WebhookSchema.should_be_active?(webhook) and
          WebhookSchema.subscribed_to?(webhook, event_type) do
       # The snapshot pins the status and approval fields as they stand *now*, so
       # a retried delivery replays what this event asserted rather than whatever
       # the meeting has become since. Without it a retried `meeting.requested`
       # would report `status: "confirmed"` under a request envelope once the
-      # host had answered. Everything not snapshotted (guests, join links) is
-      # still read fresh at delivery, which is what you want for those.
+      # host had answered. Everything else about the meeting (guests, its
+      # join link) is still read fresh at delivery, which is what you want for
+      # those. The event's `series` object rides in the snapshot instead, so
+      # a series event's sessions, their join links included, are as they
+      # stood when the event was announced.
       WebhookWorker.schedule_delivery(
         webhook.id,
         event_type,
         meeting.id,
-        MeetingSnapshot.snapshot(meeting),
+        meeting |> MeetingSnapshot.snapshot() |> MeetingSnapshot.put_series(series),
         SeatView.participant_id(meeting)
       )
     else

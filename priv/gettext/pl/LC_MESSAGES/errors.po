@@ -879,6 +879,31 @@ msgstr "musi być w przyszłości"
 msgid "invitation links"
 msgstr "linków z zaproszeniem"
 
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation-only meeting types cannot be booked as a series."
+msgstr "Typów spotkań dostępnych tylko na zaproszenie nie można rezerwować jako serii."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types with fixed dates can offer a series only as sessions the booker picks."
+msgstr "Typy spotkań ze stałymi terminami mogą oferować serię tylko jako terminy wybierane przez osobę rezerwującą."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "One-off meeting types cannot be booked as a series."
+msgstr "Typów spotkań jednorazowych nie można rezerwować jako serii."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be between %{min} and %{max}"
+msgstr "musi mieścić się w zakresie od %{min} do %{max}"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must not be less than the minimum"
+msgstr "nie może być mniejsze niż minimum"
+
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "cannot list a language twice"
@@ -908,3 +933,8 @@ msgstr "rezerwacje grupowe nie mogą wymagać potwierdzenia adresu e-mail"
 #, elixir-autogen, elixir-format
 msgid "would give a reserved booking link; choose another name or set a custom link"
 msgstr "z takiej nazwy powstałby zarezerwowany link do rezerwacji; wybierz inną nazwę lub ustaw własny link"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
+msgstr "nie może być większe niż %{max} przy tym odstępie, aby każda sesja mieściła się w ciągu roku"

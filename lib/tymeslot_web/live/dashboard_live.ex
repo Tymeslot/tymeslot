@@ -320,6 +320,7 @@ defmodule TymeslotWeb.DashboardLive do
               params={@params}
               custom_questions_allowed={@custom_questions_allowed}
               group_bookings_allowed={@group_bookings_allowed}
+              recurring_bookings_allowed={@recurring_bookings_allowed}
               payments_allowed={@payments_allowed}
               automations_allowed={@automations_allowed}
               feature_placeholder_components={@feature_placeholder_components}
@@ -401,8 +402,7 @@ defmodule TymeslotWeb.DashboardLive do
     end
   end
 
-  # Form-related messages forwarded from MeetingTypeForm and its child components
-  # are delegated to TymeslotWeb.Dashboard.MeetingFormMessages.
+  # Messages from MeetingTypeForm and its children go to `MeetingFormMessages`.
 
   @impl Phoenix.LiveView
   def handle_info({:clear_reminder_confirmation, form_id}, socket),

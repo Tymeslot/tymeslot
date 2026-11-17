@@ -203,6 +203,15 @@ are until the two are decided together.
 | intro call (the seeded meeting type) | **Conversa inicial** | Matches *discovery call* above. |
 | pick / book a time with me (the host's own casual message) | **marcar um horário comigo** | *Oi, %{name}! Você pode marcar um horário comigo aqui: %{url}*. The signature line keeps *Agende um horário comigo*. |
 
+### Booking series
+
+A **series** is several sessions of one meeting type that a booker books with a host in one go; each **session** is one meeting of that series. The terms below are the ones `emails_booking_series` uses; keep them in every series string.
+
+| English | pt |
+|---|---|
+| session (one meeting within a booking series) | **sessão** (`Sessão %{position} de %{count}`, `Gerenciar todas as sessões`); feminine, so eyebrows agree: `Confirmadas`, `Canceladas` |
+| series (a booking series) | **série** (`Nova série`) |
+
 ### Booking pages (a host's extra pages)
 
 A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.

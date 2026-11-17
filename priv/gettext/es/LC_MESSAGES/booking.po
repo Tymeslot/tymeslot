@@ -321,9 +321,11 @@ msgstr "Nombre"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/series_component.ex
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr "Siguiente"
@@ -503,10 +505,12 @@ msgstr "%{organizer} todavía tiene que aceptar este horario. Te avisaremos por 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/series_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/series_component.ex
 #, elixir-autogen, elixir-format
 msgid "Back"
 msgstr "Atrás"
@@ -722,6 +726,7 @@ msgstr "No se pudo completar tu última acción. Inténtalo de nuevo."
 #: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
 #: lib/tymeslot_web/themes/shared/blocks/next_slots.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Next week"
 msgstr "Semana siguiente"
@@ -738,6 +743,7 @@ msgstr "No hay horarios disponibles"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/shared/blocks/agenda_index.ex
 #: lib/tymeslot_web/themes/shared/components/week_grid.ex
+#: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Previous week"
 msgstr "Semana anterior"

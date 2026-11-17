@@ -6,7 +6,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
   require Logger
 
-  alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.ApprovalJobs
@@ -104,20 +103,12 @@ defmodule Tymeslot.Notifications.Orchestrator do
     end
   end
 
-  # Halfway through the window, so a host who missed the first email still has
-  # as long again to act. A request whose deadline has already passed, or which
-  # has no deadline recorded, gets no nudge: there is nothing left to save.
-  defp schedule_approval_nudge(%{approval_deadline_at: nil}), do: :ok
-
+  # Halfway through the window (`ApprovalJobs.nudge_at/1`); a request whose
+  # deadline has already passed, or which has none, gets no nudge.
   defp schedule_approval_nudge(meeting) do
-    requested_at = meeting.approval_requested_at || Clock.utc_now()
-    seconds_remaining = DateTime.diff(meeting.approval_deadline_at, requested_at)
-
-    if seconds_remaining > 0 do
-      send_at = DateTime.add(requested_at, div(seconds_remaining, 2), :second)
-      EmailScheduler.schedule_approval_nudge(meeting.id, send_at)
-    else
-      :ok
+    case ApprovalJobs.nudge_at(meeting) do
+      nil -> :ok
+      send_at -> EmailScheduler.schedule_approval_nudge(meeting.id, send_at)
     end
   end
 

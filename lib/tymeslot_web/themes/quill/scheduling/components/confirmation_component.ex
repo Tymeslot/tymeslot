@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
+  alias TymeslotWeb.Themes.Shared.SeriesSummary
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   use TymeslotWeb.Components.CoreComponents
@@ -36,7 +37,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       assign(assigns,
         navigable_steps: Runtime.navigable_steps(assigns),
         step_numbers: Runtime.step_numbers(assigns),
-        follow_ups: ConfirmationText.follow_ups?(assigns)
+        follow_ups: ConfirmationText.follow_ups?(assigns),
+        series_count: SeriesSummary.booked_count(assigns)
       )
 
     ~H"""
@@ -104,7 +106,17 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                   <GroupSession.confirmation_line meeting_type={@meeting_type} class="mt-4" />
 
                   <.meeting_details_card title={@meeting_type && @meeting_type.name}>
+                    <SeriesSummary.booked
+                      :if={@series_count}
+                      series={@series}
+                      meetings={@series_meetings}
+                      timezone={@user_timezone}
+                      organizer_profile={@organizer_profile}
+                      duration={BookingText.duration_label(assigns)}
+                      label_class="booking-detail-label"
+                    />
                     <.booking_details
+                      :if={is_nil(@series_count)}
                       date={@selected_date}
                       time={@selected_time}
                       duration={BookingText.duration_label(assigns)}
@@ -186,7 +198,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
                   <div class="confirmation-actions">
                     <a
-                      :if={@follow_ups && PathHandlers.calendar_ics_path(assigns)}
+                      :if={@follow_ups && is_nil(@series_count) && PathHandlers.calendar_ics_path(assigns)}
                       href={PathHandlers.calendar_ics_path(assigns)}
                       download
                       class="action-button action-button--primary calendar-download-button"
@@ -339,6 +351,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   # an invitee sees before the emails arrive, so the heading changes too, not
   # just a note underneath it. Which status applies is decided in
   # ConfirmationText; only the wording is Quill's.
+  defp headline(%{series_count: count} = assigns) when is_integer(count),
+    do: SeriesSummary.headline(assigns, count)
+
   defp headline(assigns) do
     case ConfirmationText.status(assigns) do
       :check_inbox -> ConfirmationText.check_inbox_headline(:quill)
@@ -347,6 +362,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       :confirmed -> dgettext("booking_confirmation", "Meeting Confirmed!")
     end
   end
+
+  defp subtitle(%{series_count: count} = assigns) when is_integer(count),
+    do: SeriesSummary.message(assigns, :quill)
 
   defp subtitle(assigns) do
     case ConfirmationText.status(assigns) do

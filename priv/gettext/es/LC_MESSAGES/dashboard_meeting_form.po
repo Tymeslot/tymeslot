@@ -935,3 +935,8 @@ msgstr "Desactiva la confirmación del correo para activar las reservas de grupo
 #, elixir-autogen, elixir-format
 msgid "Turn off email confirmation to require payment."
 msgstr "Desactiva la confirmación del correo para exigir un pago."
+
+#: lib/tymeslot_web/helpers/context_errors.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring bookings are not included in your current plan."
+msgstr "Las reservas periódicas no están incluidas en tu plan actual."

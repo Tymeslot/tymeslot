@@ -1,0 +1,513 @@
+/* ==========================================================================
+   Series: the series moment and the series confirmation
+
+   Matches TymeslotWeb.Themes.Shared.SeriesParts and the parts each theme's
+   series moment draws around it: the rhythm, the session count, the list of
+   sessions with how each stands, the notices, the flexible picker and the
+   booked sessions with their links.
+
+   Theme-neutral: reads the token contract only (the palette, the surfaces,
+   the notice and status inks), so each theme's own colours carry it. The
+   picker's day and time buttons take the theme's slot styling through
+   .slot-list__slot.
+   ========================================================================== */
+
+.series-rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  margin: var(--space-xs) 0 0;
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.series-rule-icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex-shrink: 0;
+}
+
+.series-hint,
+.series-zone {
+  margin: var(--space-2xs) 0 0;
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-xs);
+  text-align: center;
+}
+
+/* The stepper: one fewer, the count, one more. */
+.series-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0 0;
+}
+
+.series-count--fixed {
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.series-count__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--min-touch-target);
+  height: var(--min-touch-target);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-full);
+  background: var(--surface-light);
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.series-count__step:hover:not(:disabled) {
+  background: var(--surface-medium);
+}
+
+.series-count__step:focus-visible,
+.series-list__remove:focus-visible,
+.series-link:focus-visible,
+.series-add:focus-visible,
+.series-notice-action:focus-visible,
+.series-picker__close:focus-visible,
+.series-manage-link:focus-visible,
+.series-list__link:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
+.series-count__step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.series-count__icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.series-count__value {
+  min-width: 7rem;
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+}
+
+/* The sessions: position, date and time, status. */
+.series-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  margin: var(--space-sm) 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.series-list__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-2xs) var(--space-xs);
+  border: var(--border-width-thin) solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface-subtle);
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-sm);
+}
+
+.series-list__item--unavailable {
+  border-color: var(--notice-warning-border);
+  background: var(--notice-warning-surface);
+}
+
+.series-list__position {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-light);
+  font-size: var(--theme-font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.series-list__when {
+  flex: 1;
+  min-width: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+.series-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  flex-shrink: 0;
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-align: right;
+}
+
+.series-status--available {
+  color: var(--theme-success);
+}
+
+.series-status--unavailable {
+  color: var(--notice-warning);
+}
+
+.series-status--pending {
+  color: var(--theme-text-secondary);
+}
+
+.series-status-icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex-shrink: 0;
+}
+
+.series-list__remove,
+.series-picker__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: var(--min-touch-target);
+  min-height: var(--min-touch-target);
+  margin: calc(var(--space-2xs) * -1) calc(var(--space-xs) * -1) calc(var(--space-2xs) * -1) 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+}
+
+.series-list__remove:hover,
+.series-picker__close:hover {
+  color: var(--theme-text);
+}
+
+.series-list__remove-icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+/* Checking, and loading the picker's week. */
+.series-checking {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  margin: var(--space-xs) 0 0;
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-xs);
+}
+
+.series-checking-dot {
+  width: var(--space-2xs);
+  height: var(--space-2xs);
+  border-radius: var(--radius-full);
+  background: var(--theme-primary);
+  animation: series-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes series-pulse {
+  from {
+    opacity: 0.3;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .series-checking-dot {
+    animation: none;
+  }
+}
+
+/* A notice: sessions unavailable, or the check could not be made. */
+.series-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  margin: var(--space-sm) 0 0;
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--border-width-thin) solid var(--notice-warning-border);
+  border-radius: var(--radius-control);
+  background: var(--notice-warning-surface);
+  text-align: left;
+}
+
+.series-notice-icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex-shrink: 0;
+  margin-top: var(--space-hairline);
+  color: var(--notice-warning);
+}
+
+.series-notice-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.series-notice-text {
+  margin: 0;
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-sm);
+  line-height: var(--theme-line-height-relaxed);
+}
+
+.series-notice-action {
+  margin-top: var(--space-2xs);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--notice-warning);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.series-total {
+  margin: var(--space-sm) 0 0;
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-base);
+  font-weight: var(--font-weight-bold);
+  text-align: right;
+}
+
+/* The secondary ways: just this session, back to a series. */
+.series-link {
+  display: block;
+  margin: var(--space-sm) auto 0;
+  padding: var(--space-2xs);
+  border: 0;
+  background: transparent;
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-sm);
+  text-decoration: underline;
+  text-underline-offset: var(--space-3xs);
+  cursor: pointer;
+}
+
+.series-single {
+  margin: var(--space-sm) 0 0;
+  padding: var(--space-sm);
+  border: var(--border-width-thin) solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface-subtle);
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-sm);
+}
+
+.series-single-text {
+  margin: 0;
+}
+
+/* The flexible series' picker of further sessions. */
+.series-picker-area {
+  margin: var(--space-sm) 0 0;
+}
+
+.series-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  width: 100%;
+  min-height: var(--min-touch-target);
+  padding: var(--space-2xs) var(--space-sm);
+  border: var(--border-width-thin) dashed var(--border-medium);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.series-add:hover {
+  background: var(--surface-subtle);
+}
+
+.series-add-icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.series-picker {
+  padding: var(--space-xs);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-control);
+  background: var(--surface-subtle);
+}
+
+.series-picker__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.series-picker__week {
+  flex: 1;
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
+.series-picker__arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.series-picker__body {
+  margin-top: var(--space-xs);
+}
+
+.series-picker__days,
+.series-picker__times {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  gap: var(--space-3xs);
+}
+
+.series-picker__times {
+  margin-top: var(--space-xs);
+}
+
+.series-picker__empty {
+  margin: 0;
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-xs);
+  text-align: center;
+}
+
+/* Why the way on waits: under it, or under the sessions on a page that
+   opens what follows by itself. */
+.series-next-hint {
+  margin: var(--space-xs) 0 0;
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-xs);
+  text-align: center;
+}
+
+/* The confirmation: the booked sessions, their links, the series page. */
+.series-confirmation {
+  text-align: left;
+}
+
+.series-confirmation__label {
+  margin: 0;
+}
+
+/* The date on its own line, the session's links under it, so a narrow
+   card never squeezes the date into a column. */
+.series-list__body {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3xs) var(--space-xs);
+  min-width: 0;
+}
+
+.series-list--booked .series-list__when {
+  flex: 0 1 auto;
+}
+
+.series-list__links {
+  display: inline-flex;
+  gap: var(--space-xs);
+}
+
+.series-list__link {
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-xs);
+  text-decoration: underline;
+  text-underline-offset: var(--space-3xs);
+}
+
+.series-manage-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin-top: var(--space-sm);
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: var(--space-3xs);
+}
+
+.series-manage-icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+/* The series page (Shared.Components.SeriesPage): each session's status
+   beside its date, in the session list above. A session that will not take
+   place, or has, steps back. */
+.manage-page--series .series-confirmation__label {
+  margin-bottom: var(--space-xs);
+}
+
+.manage-page--series .series-list__body {
+  justify-content: flex-start;
+}
+
+/* The status at the row's end, the links after it. */
+.manage-page--series .series-status {
+  margin-left: auto;
+}
+
+.series-status--upcoming {
+  color: var(--theme-success);
+}
+
+.series-status--past,
+.series-status--cancelled {
+  color: var(--theme-text-secondary);
+}
+
+.series-status--awaiting_approval,
+.series-status--awaiting_payment {
+  color: var(--notice-warning);
+}
+
+.series-list__item--past,
+.series-list__item--cancelled {
+  background: transparent;
+}
+
+.series-list__item--cancelled .series-list__when {
+  text-decoration: line-through;
+}
+
+.series-page__confirm,
+.series-page__refund {
+  margin: 0;
+}
+
+.series-page__refund {
+  margin-top: var(--space-2xs);
+}
+
+/* Embeds are height-constrained: the list keeps its rows tight. */
+html.scheduling-app[data-embedded] .series-list__item {
+  padding: var(--space-3xs) var(--space-xs);
+}

@@ -10,6 +10,7 @@ defmodule Tymeslot.Bookings.Policy do
   `Tymeslot.Bookings.MeetingAttributes`, and its links by
   `Tymeslot.Bookings.MeetingLinks`.
   """
+  alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.Clock
   alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingState
@@ -49,6 +50,8 @@ defmodule Tymeslot.Bookings.Policy do
           | :past
           | :planned
           | :already_requested
+          | :held_for_series_payment
+          | :held_for_series_approval
   @type cancel_refusal :: :already_cancelled | {:not_cancellable, meeting_state()}
   @type reschedule_refusal :: {:not_reschedulable, meeting_state()}
   @type booker_move_refusal :: :managed_by_host
@@ -85,6 +88,13 @@ defmodule Tymeslot.Bookings.Policy do
       meeting.status == :awaiting_verification ->
         {:error, {:not_cancellable, :awaiting_verification}}
 
+      # A session of a paid series still awaiting payment is held with its
+      # whole series on one checkout. Cancelling it alone would leave the
+      # payment unable to confirm the rest, so a held series is released only
+      # whole, when its checkout expires or is abandoned.
+      held_for_series_payment?(meeting) ->
+        {:error, {:not_cancellable, :held_for_series_payment}}
+
       meeting_is_current?(meeting) ->
         Logger.info("Blocked cancellation: meeting has already started",
           meeting_id: Map.get(meeting, :id)
@@ -103,6 +113,21 @@ defmodule Tymeslot.Bookings.Policy do
         :ok
     end
   end
+
+  defp held_for_series_payment?(%{status: :awaiting_payment, series_id: series_id})
+       when is_binary(series_id),
+       do: true
+
+  defp held_for_series_payment?(_meeting), do: false
+
+  # Only an open series request: a confirmed session the booker moved back
+  # into the approval gate is a request of its own, moved like any single
+  # booking awaiting approval.
+  defp held_for_series_approval?(%{status: :awaiting_approval, series_id: series_id} = meeting)
+       when is_binary(series_id),
+       do: SeriesApproval.series_request?(meeting)
+
+  defp held_for_series_approval?(_meeting), do: false
 
   @doc """
   Determines if a meeting can be rescheduled.
@@ -129,6 +154,13 @@ defmodule Tymeslot.Bookings.Policy do
       # and the host cannot see it to ask for a new time either.
       meeting.status == :awaiting_verification ->
         {:error, {:not_reschedulable, :awaiting_verification}}
+
+      # A session of a series held for approval is one part of a request the
+      # host answers whole (`Tymeslot.BookingSeries.Approval`). Moving it
+      # alone would leave that request asking for a time the booker no
+      # longer wants, so it stays put until the host has answered.
+      held_for_series_approval?(meeting) ->
+        {:error, {:not_reschedulable, :held_for_series_approval}}
 
       meeting_is_current?(meeting) ->
         Logger.info("Blocked reschedule: meeting has already started",

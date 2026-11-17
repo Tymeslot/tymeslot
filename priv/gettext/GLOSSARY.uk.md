@@ -118,6 +118,15 @@ Instructions and prompts take the **2nd-person-plural imperative** (`Вибер�
 | Translated (status) | **Перекладено** |
 | Review (the link to a language's review page) | **Перевірити** |
 
+### Booking series
+
+A **series** is several sessions of one meeting type that a booker books with a host in one go; each **session** is one meeting of that series. The terms below are the ones `emails_booking_series` uses; keep them in every series string.
+
+| English | uk |
+|---|---|
+| session (one meeting within a booking series) | **сесія** (`Сесія %{position} з %{count}`, `Керувати всіма сесіями`); this is the product term for a session of a booking series, separate from the marketing uses listed under *Sessions, lessons, no-shows* |
+| series (a booking series) | **серія** (`Нова серія`) |
+
 ### Booking pages (a host's extra pages)
 
 A host has one **main page** at `/<username>` and may add extra **booking pages**, each at `/<username>/<page>` with its own theme and meeting types. An extra page is still a booking page, so it uses the same noun as the generic entry; the main page is told apart by its name, never by a different noun.

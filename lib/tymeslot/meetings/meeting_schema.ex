@@ -38,7 +38,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
             %{
               participant_id: binary(),
               seats_taken: non_neg_integer(),
-              previous: %{seat_id: binary(), meeting_id: binary(), start_time: DateTime.t()} | nil
+              previous:
+                %{seat_id: binary(), meeting_id: binary(), start_time: DateTime.t()} | nil,
+              series_id: binary() | nil,
+              series_position: pos_integer() | nil
             }
             | nil,
           organizer_name: String.t() | nil,
@@ -109,6 +112,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           tracking_params: map(),
           visitor_hash: String.t() | nil,
           invitee_data_erased_at: DateTime.t() | nil,
+          series_id: Ecto.UUID.t() | nil,
+          series_position: integer() | nil,
           booking_page_id: integer() | nil,
           invitation_id: integer() | nil,
           booking_page: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -168,7 +173,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # (`Tymeslot.Meetings.SeatView`), never on a row read from the database:
     # which seat the view is of, the seats taken on the slot when the event
     # about it fired, and the seat a move replaced. Integrations read it to
-    # address that seat.
+    # address that seat, and the seat's place in a booking series, which the
+    # group meeting row does not carry.
     field(:seat, :map, virtual: true)
 
     # Organizer details
@@ -376,6 +382,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # `Tymeslot.InviteeData`.
     field(:invitee_data_erased_at, :utc_datetime)
 
+    # Read `series_position` only with `series_id`: a nilified series leaves it.
+    belongs_to(:series, Tymeslot.BookingSeries.SeriesSchema, type: :binary_id)
+    field(:series_position, :integer)
+
     timestamps(type: :utc_datetime)
   end
 
@@ -551,8 +561,19 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> UniqueInvitation.cast_on_insert(attrs)
+    |> cast_series_on_insert(attrs)
     |> MeetingRules.validate(required_fields)
   end
+
+  # A booking joins its series when it is made, and nothing later moves it to
+  # another series or another place in one.
+  defp cast_series_on_insert(%Ecto.Changeset{data: %{__meta__: %{state: :built}}} = cs, attrs) do
+    cs
+    |> cast(attrs, [:series_id, :series_position])
+    |> foreign_key_constraint(:series_id)
+  end
+
+  defp cast_series_on_insert(changeset, _attrs), do: changeset
 
   @doc "Whether a write lost the race for its slot; see `Tymeslot.Meetings.UniqueSlot`."
   defdelegate unique_slot_violation?(changeset), to: UniqueSlot, as: :violation?

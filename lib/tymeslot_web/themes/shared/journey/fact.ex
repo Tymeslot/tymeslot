@@ -32,13 +32,22 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Fact do
       collecting it;
     * `default/2` and `default_strategies/0` (optional): settle the fact
       without asking, by a named strategy, and the strategies it takes;
-    * `clear/1` (optional): forget the fact again.
+    * `clear/1` (optional): forget the fact again;
+    * `refresh/1` (optional): bring what the fact holds up to date with the
+      facts it requires, after an event while a moment collecting it is
+      shown and entered (the series' sessions follow another time picked
+      above them on the same page);
+    * `keeps_dependents?/2` (optional): whether an event that changed the
+      fact, on a moment already answered, keeps what was built on it
+      (given the assigns before and after), where the runtime would
+      otherwise forget the facts depending on it.
 
   A fact `use`s this module, which defines every optional callback except
   `default/2` (`enter/2` returns the socket, `continue/1` is
   `{:done, socket}` once `known?/1` and `{:error, :incomplete}` before,
   `back/1` leaves, `revisitable?/1` is true, `default_strategies/0` is
-  empty, `clear/1` returns the socket unchanged), each overridable. The engine calls them without checking, so a
+  empty, `clear/1` and `refresh/1` return the socket unchanged,
+  `keeps_dependents?/2` is false), each overridable. The engine calls them without checking, so a
   fact that only declares `@behaviour` is incomplete. `default/2` has no
   default: it is only called with a strategy listed in
   `default_strategies/0`, which `Journey.build!/2` checks.
@@ -90,13 +99,32 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Fact do
   """
   @callback clear(Socket.t()) :: Socket.t()
 
+  @doc """
+  Brings the fact up to date with the facts it requires. The runtime calls
+  it after every step event for each required fact a shown, entered moment
+  collects (`Journey.Runtime.refresh_shown/1`), so it must leave a fact
+  that is up to date unchanged. Optional; `use Fact` makes it return the
+  socket unchanged.
+  """
+  @callback refresh(Socket.t()) :: Socket.t()
+
+  @doc """
+  Whether an event that changed the fact on an answered moment keeps the
+  facts depending on it, given the assigns before and after the event.
+  False forgets them (`Journey.Runtime`), as a changed fact normally does.
+  Optional; `use Fact` makes it false.
+  """
+  @callback keeps_dependents?(before :: map(), after_event :: map()) :: boolean()
+
   @optional_callbacks enter: 2,
                       continue: 1,
                       back: 1,
                       revisitable?: 1,
                       default: 2,
                       default_strategies: 0,
-                      clear: 1
+                      clear: 1,
+                      refresh: 1,
+                      keeps_dependents?: 2
 
   @doc false
   defmacro __using__(_opts) do
@@ -123,12 +151,20 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Fact do
       @impl unquote(__MODULE__)
       def clear(socket), do: socket
 
+      @impl unquote(__MODULE__)
+      def refresh(socket), do: socket
+
+      @impl unquote(__MODULE__)
+      def keeps_dependents?(_before, _after_event), do: false
+
       defoverridable enter: 2,
                      continue: 1,
                      back: 1,
                      revisitable?: 1,
                      default_strategies: 0,
-                     clear: 1
+                     clear: 1,
+                     refresh: 1,
+                     keeps_dependents?: 2
     end
   end
 end

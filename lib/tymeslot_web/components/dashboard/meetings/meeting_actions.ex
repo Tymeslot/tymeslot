@@ -18,6 +18,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
 
   attr :meeting, :map, required: true
+  attr :series?, :boolean, default: false, doc: "a session of a one-to-one series"
+
+  attr :request_count, :integer,
+    default: nil,
+    doc: "how many sessions the open series request it belongs to holds"
+
   attr :target, :any, required: true
 
   attr :answering_request, :any,
@@ -53,7 +59,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
           icon="hero-check"
           class="w-full"
         >
-          {dgettext("dashboard_bookings", "Approve")}
+          {approve_label(@request_count)}
         </.loading_button>
 
         <.action_button
@@ -67,9 +73,24 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
           icon="hero-x-mark"
           class="w-full"
         >
-          {dgettext("dashboard_bookings", "Decline")}
+          {decline_label(@request_count)}
         </.action_button>
       </div>
+
+      <.action_button
+        :if={@series?}
+        id={"view-series-#{@meeting.id}"}
+        phx-click="series:show"
+        phx-value-series={@meeting.series_id}
+        phx-target={@target}
+        data-testid="view-series"
+        variant={:outline}
+        size={:sm}
+        icon="hero-queue-list"
+        class="w-full"
+      >
+        {dgettext("dashboard_booking_series", "View series")}
+      </.action_button>
 
       <div
         :if={
@@ -173,4 +194,17 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
           name: meeting.attendee_name
         )
   end
+
+  # A session of a series request is answered with the whole request.
+  defp approve_label(nil), do: dgettext("dashboard_bookings", "Approve")
+
+  defp approve_label(count),
+    do:
+      dngettext("dashboard_booking_series", "Approve all %{count}", "Approve all %{count}", count)
+
+  defp decline_label(nil), do: dgettext("dashboard_bookings", "Decline")
+
+  defp decline_label(count),
+    do:
+      dngettext("dashboard_booking_series", "Decline all %{count}", "Decline all %{count}", count)
 end

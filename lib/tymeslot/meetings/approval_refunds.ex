@@ -1,13 +1,16 @@
 defmodule Tymeslot.Meetings.ApprovalRefunds do
   @moduledoc """
   The refund owed when a held booking request ends without becoming a
-  meeting (declined, expired or withdrawn): `refund_unapproved_request/1`.
-  Split from `Tymeslot.Meetings.Approval`, which resolves the requests and
-  calls in here once a release has committed.
+  meeting (declined, expired or withdrawn): `refund_unapproved_request/1`
+  for a single booking, `refund_unapproved_series/2` for a series, whose
+  one payment is refunded once, whole. Split from
+  `Tymeslot.Meetings.Approval` and `Tymeslot.BookingSeries.Approval`, which
+  resolve the requests and call in here once a release has committed.
   """
 
   require Logger
 
+  alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.Approval
@@ -49,8 +52,37 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   @spec refund_unapproved_request(Meeting.t()) :: :ok
   def refund_unapproved_request(meeting) do
     case MeetingPayments.payment_for_meeting(meeting.id) do
+      # One payment paid for every session of a series, so releasing one
+      # session must never refund it whole. A series is released whole, and
+      # refunded once, by `refund_unapproved_series/2`.
+      %{series_id: series_id} when is_binary(series_id) -> :ok
       %{paid_at: %DateTime{}} = payment -> refund_or_defer(payment, meeting)
       _unpaid_or_missing -> :ok
+    end
+  end
+
+  @doc """
+  Refunds in full the one payment of a series held for approval that ended
+  without becoming a booking (declined, expired or withdrawn), once, after
+  its sessions' release has committed. `released` are the sessions that
+  release took.
+
+  The same rule as `refund_unapproved_request/1`: nothing is refunded
+  automatically when a released session had been a confirmed meeting before
+  (a reschedule sent it back through the gate), and a payment never paid is
+  skipped. A failed refund is reported, never raised.
+  """
+  @spec refund_unapproved_series(SeriesSchema.t(), [Meeting.t()]) :: :ok
+  def refund_unapproved_series(%SeriesSchema{id: series_id}, [first | _rest] = released) do
+    case MeetingPayments.payment_for_series(series_id) do
+      %{paid_at: %DateTime{}} = payment ->
+        case Enum.reject(released, &Approval.refunds_on_release?/1) do
+          [] -> refund_remaining(payment, first)
+          [announced | _rest] -> refund_or_defer(payment, announced)
+        end
+
+      _unpaid_or_missing ->
+        :ok
     end
   end
 

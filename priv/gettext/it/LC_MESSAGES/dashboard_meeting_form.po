@@ -935,3 +935,8 @@ msgstr "Disattiva la conferma dell'email per attivare le prenotazioni di gruppo.
 #, elixir-autogen, elixir-format
 msgid "Turn off email confirmation to require payment."
 msgstr "Disattiva la conferma dell'email per richiedere il pagamento."
+
+#: lib/tymeslot_web/helpers/context_errors.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring bookings are not included in your current plan."
+msgstr "Le prenotazioni ricorrenti non sono incluse nel tuo piano attuale."

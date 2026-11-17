@@ -27,6 +27,8 @@ defmodule Tymeslot.Emails.EmailActionsTest do
     send_poll_new_times send_poll_cancelled
     send_seat_session_moved
     send_registration_closed send_booking_link_email
+    send_series_confirmation send_series_cancellation send_series_request
+    send_series_request_outcome send_series_request_nudge
     send_released_guest_cancellations send_external_booking_change send_calendar_sync_error
   )
 

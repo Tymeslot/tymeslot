@@ -125,3 +125,17 @@ msgstr "Seu agendamento não está confirmado. Seu convite fica reservado para e
 #, elixir-autogen, elixir-format
 msgid "Your booking is not confirmed. To try again, open the invitation link you were sent."
 msgstr "A sua reserva não está confirmada. Para tentar novamente, abra o link de convite que recebeu."
+
+#: lib/tymeslot/meeting_payments/checkout_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}, %{count} session"
+msgid_plural "%{name}, %{count} sessions"
+msgstr[0] "%{name}, %{count} sessão"
+msgstr[1] "%{name}, %{count} sessões"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Thank you, your %{count} session is confirmed, the first on %{date}."
+msgid_plural "Thank you, your %{count} sessions are confirmed, the first on %{date}."
+msgstr[0] "Obrigado, sua %{count} sessão está confirmada, a primeira em %{date}."
+msgstr[1] "Obrigado, suas %{count} sessões estão confirmadas, a primeira em %{date}."

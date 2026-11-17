@@ -102,6 +102,41 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     )
   end
 
+  def message(:series_not_offered) do
+    dgettext("booking_errors", "This meeting type can't be booked as a series at the moment.")
+  end
+
+  def message(:series_required) do
+    dgettext(
+      "booking_errors",
+      "This meeting type is booked as a series. Please choose your sessions."
+    )
+  end
+
+  def message(:overlapping_starts) do
+    dgettext("booking_errors", "Two of your sessions overlap. Please choose different times.")
+  end
+
+  def message(:invalid_count) do
+    dgettext("booking_errors", "Please choose a number of sessions this meeting type offers.")
+  end
+
+  def message(:guests_not_allowed_on_series) do
+    dgettext(
+      "booking_errors",
+      "Guests can only be added to a single booking. Please remove your guests to book a series."
+    )
+  end
+
+  # The booking page shows which sessions are taken; this is the fallback for
+  # a surface that can only flash a message.
+  def message({:occurrences_unavailable, _occurrences}) do
+    dgettext(
+      "booking_errors",
+      "Some of your sessions are no longer available. Please review them."
+    )
+  end
+
   def message(:failed_to_update_meeting) do
     dgettext("booking_errors", "Failed to process booking. Please try again.")
   end
@@ -193,6 +228,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   def message({:not_cancellable, :past}),
     do: dgettext("booking_errors", "Cannot cancel a meeting that has already occurred")
 
+  def message({:not_cancellable, :held_for_series_payment}),
+    do:
+      dgettext(
+        "booking_errors",
+        "This session is waiting for its series to be paid for. Until then the series can only be released as a whole."
+      )
+
   def message({:not_reschedulable, :cancelled}),
     do: dgettext("booking_errors", "Cannot reschedule a cancelled meeting")
 
@@ -218,6 +260,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   def message({:not_reschedulable, :awaiting_approval}),
     do:
       dgettext("booking_errors", "Cannot request a reschedule while the booking awaits approval")
+
+  def message({:not_reschedulable, :held_for_series_approval}),
+    do:
+      dgettext(
+        "booking_errors",
+        "This session is part of a request that is waiting for the host's answer, so it can't be moved yet."
+      )
 
   def message({:not_reschedulable, :planned}),
     do:

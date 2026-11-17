@@ -27,7 +27,7 @@ defmodule Tymeslot.Availability.Offer do
   """
 
   alias Tymeslot.Availability.{BusyIntervals, Calculate, GroupSlots, Schedules, SessionSlots}
-  alias Tymeslot.Availability.Offer.{HostCalendar, Range, Request}
+  alias Tymeslot.Availability.Offer.{HostCalendar, Moving, Range, Request}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingTypes.FixedDates
@@ -65,6 +65,12 @@ defmodule Tymeslot.Availability.Offer do
       fetch, provided it is the seat that token names; whether the move
       vacates its meeting is still decided afresh.
     * `:demo_mode?` - whether the page is running as a demo.
+    * `:window_until` - a `Date` the slots may reach past the schedule's
+      booking window: a series' later sessions, which the window does not
+      bind once the first lies inside it (`Tymeslot.BookingSeries.Check`).
+      The notice still applies, and the host's calendar is read over the
+      range itself. A reschedule of a series session reaches as far as its
+      context says (`Offer.Moving.with_reach/1`) without naming it here.
     * `:cached_calendar` - read a range's calendar through the cache
       (`Offer.HostCalendar`), as a preview may; a booking page reads it fresh.
   """
@@ -77,7 +83,8 @@ defmodule Tymeslot.Availability.Offer do
           optional(:reschedule_seat_token) => String.t() | nil,
           optional(:seat_move) => SeatMoveContext.t() | nil,
           optional(:demo_mode?) => boolean() | nil,
-          optional(:cached_calendar) => boolean()
+          optional(:cached_calendar) => boolean(),
+          optional(:window_until) => Date.t()
         }
 
   @doc """
@@ -288,18 +295,20 @@ defmodule Tymeslot.Availability.Offer do
   defdelegate config(schedule, meeting_type, limit_checker, duration_minutes), to: Request
 
   defp free_slots(%{profile: %{user_id: user_id} = profile} = request, date, duration) do
-    moving = Request.moving_meeting(request)
+    request = Moving.with_reach(request)
+    moving = Moving.meeting(request)
 
-    with {:ok, events} <- HostCalendar.booking_window(request, date) do
+    with {:ok, events} <- HostCalendar.for_window(request, {date, date}) do
       duration_minutes = Request.bounded_duration(duration)
       meeting_type = request[:meeting_type]
 
-      limit_checker = Request.limit_checker(request, Request.moving_uid(moving), date, date)
+      limit_checker = Request.limit_checker(request, Moving.uid(moving), date, date)
 
       config =
         meeting_type
         |> Schedules.resolve_for(profile)
         |> Request.config(meeting_type, limit_checker, duration_minutes)
+        |> Request.reach_until(request)
 
       busy = Request.busy_periods(events, user_id, date, date, moving)
 
@@ -329,9 +338,10 @@ defmodule Tymeslot.Availability.Offer do
          end_date,
          duration_minutes
        ) do
+    request = Moving.with_reach(request)
     meeting_type = request[:meeting_type]
-    moving = Request.moving_meeting(request)
-    moving_uid = Request.moving_uid(moving)
+    moving = Moving.meeting(request)
+    moving_uid = Moving.uid(moving)
 
     # Keyed on the proven uid only, so a mover's view is never served to
     # anyone else and an arbitrary link value cannot mint an entry of its own.
@@ -347,7 +357,7 @@ defmodule Tymeslot.Availability.Offer do
       )
 
     AvailabilityCache.get_or_compute_events(cache_key, fn ->
-      with {:ok, events} <- HostCalendar.booking_window(request, start_date) do
+      with {:ok, events} <- HostCalendar.for_window(request, {start_date, end_date}) do
         config =
           meeting_type
           |> Schedules.resolve_for(profile)
@@ -356,6 +366,7 @@ defmodule Tymeslot.Availability.Offer do
             Request.limit_checker(request, moving_uid, start_date, end_date),
             duration_minutes || Request.default_duration_minutes()
           )
+          |> Request.reach_until(request)
 
         busy = Request.busy_periods(events, user_id, start_date, end_date, moving)
 

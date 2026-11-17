@@ -941,3 +941,8 @@ msgstr "Vypněte potvrzení e-mailu, chcete-li zapnout skupinové rezervace."
 #, elixir-autogen, elixir-format
 msgid "Turn off email confirmation to require payment."
 msgstr "Vypněte potvrzení e-mailu, chcete-li vyžadovat platbu."
+
+#: lib/tymeslot_web/helpers/context_errors.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring bookings are not included in your current plan."
+msgstr "Opakované rezervace nejsou součástí vašeho aktuálního tarifu."

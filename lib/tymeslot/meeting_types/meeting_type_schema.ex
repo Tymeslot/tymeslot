@@ -17,6 +17,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.MeetingTypes.PaymentValidation
   alias Tymeslot.MeetingTypes.ReminderValidation
+  alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Validation.Constraints
 
@@ -43,6 +44,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           max_participants: integer(),
           fixed_dates: boolean(),
           one_off: boolean(),
+          series_mode: :recurring | :flexible | nil,
+          series_frequency: :daily | :weekly | :monthly | nil,
+          series_interval: pos_integer(),
+          series_min_occurrences: pos_integer() | nil,
+          series_max_occurrences: pos_integer() | nil,
+          series_required: boolean(),
           show_seat_availability: boolean(),
           last_spots_threshold: pos_integer() | nil,
           max_guests_per_booking: pos_integer() | nil,
@@ -95,6 +102,13 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     # See `Tymeslot.MeetingTypes.FixedDates` and `Tymeslot.MeetingTypes.OneOffEvents`.
     field(:fixed_dates, :boolean, default: false)
     field(:one_off, :boolean, default: false)
+    # See `Tymeslot.MeetingTypes.SeriesSettings`; nil mode is no series.
+    field(:series_mode, Ecto.Enum, values: [:recurring, :flexible])
+    field(:series_frequency, Ecto.Enum, values: [:daily, :weekly, :monthly])
+    field(:series_interval, :integer, default: 1)
+    field(:series_min_occurrences, :integer)
+    field(:series_max_occurrences, :integer)
+    field(:series_required, :boolean, default: true)
     field(:show_seat_availability, :boolean, default: true)
     field(:last_spots_threshold, :integer)
     # Guests one booking may bring; nil is the public page's default (`Guests.limit_for/1`).
@@ -175,12 +189,13 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   @reserved_slug_format ~r/^\d+min$/
   # Reserved because a fixed route would shadow the type's address:
   # `/:username/poll/:token` (the public poll voting page) shadows
-  # `/:username/poll/book`, and `/:username/thank-you` (and a page's
+  # `/:username/poll/book`, `/:username/series/:series_uid` (a booking
+  # series' page) `/:username/series/book`, and `/:username/thank-you` (and a page's
   # `/:username/:page/thank-you`) the type's own page. "book" is free: a
   # name-derived slug can be "book" anyway, and
   # `TymeslotWeb.Live.Scheduling.PageAddress` reads a page's
   # `/:username/:page/book` as its type slugged "book".
-  @reserved_slugs ~w(poll thank-you)
+  @reserved_slugs ~w(poll series thank-you)
   @slug_max_length 80
 
   @doc """
@@ -231,6 +246,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :max_participants,
       :fixed_dates,
       :one_off,
+      :series_mode,
+      :series_frequency,
+      :series_interval,
+      :series_min_occurrences,
+      :series_max_occurrences,
+      :series_required,
       :show_seat_availability,
       :last_spots_threshold,
       :max_guests_per_booking,
@@ -269,6 +290,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> PaymentValidation.validate_changeset(opts)
     |> EmailVerificationRule.validate_changeset()
     |> GroupValidation.validate_changeset()
+    |> SeriesSettings.validate_changeset()
+    |> check_constraint(:series_mode, name: :meeting_types_series_check)
     |> unique_constraint([:user_id, :name],
       error_key: :name,
       message: dgettext_noop("errors", "You already have a meeting type with this name")
@@ -354,14 +377,15 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   @doc """
   Focused changeset for changing a meeting type's visibility (`is_private`
   and `invitation_only`), without re-validating unrelated fields (e.g. video
-  integration). An invitation-only type must stay one-to-one, which is the one
-  rule checked here.
+  integration). An invitation-only type must stay one-to-one and cannot be a
+  series; those are the rules checked here.
   """
   @spec visibility_changeset(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
   def visibility_changeset(meeting_type, attrs) do
     meeting_type
     |> cast(attrs, [:is_private, :invitation_only])
     |> GroupValidation.validate_invitation_only_not_group()
+    |> SeriesSettings.validate_conflicts()
   end
 
   @doc """

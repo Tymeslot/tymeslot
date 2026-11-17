@@ -44,7 +44,7 @@ defmodule Tymeslot.BookingPages.BookingPageSchema do
 
   # The literal second segments the router serves under `/:username/`
   # (`TymeslotWeb.Router`): a page there would never be reached.
-  @reserved_slugs ~w(book meeting poll thank-you)
+  @reserved_slugs ~w(book meeting poll series thank-you)
   # The legacy duration links: the URL layer reads `/:username/30min` as the
   # meeting type `30-minutes`, so a page there would take over a link the
   # host may already have shared.

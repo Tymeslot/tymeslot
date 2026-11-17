@@ -1,0 +1,143 @@
+/* ==========================================================================
+   Paper: the series part of the schedule screen and the series on the
+   confirmation
+
+   The shared series parts (shared/components/series.css) in Paper's flat
+   language: everything starts at the left edge, as the details part does,
+   the sessions are rows on Paper's hairlines, and the controls take
+   Paper's control line and corners. The part is a .paper-book of its own,
+   so it lays out as the details part does (book.css); the details below it
+   keep their rule when both take the picker's place.
+   ========================================================================== */
+
+.paper-series .series-chooser {
+  display: flex;
+  flex-direction: column;
+}
+
+.paper-series .series-rule,
+.paper-series .series-count,
+.paper-series .series-checking {
+  justify-content: flex-start;
+}
+
+.paper-series .series-rule,
+.paper-series .series-hint,
+.paper-series .series-zone,
+.paper-series .series-next-hint,
+.paper-series .series-total {
+  text-align: start;
+}
+
+.paper-series .series-rule {
+  color: var(--ink-1);
+}
+
+.paper-series .series-count__step,
+.paper-series .series-add,
+.paper-series .series-picker__arrow,
+.paper-series .series-picker__close {
+  border-color: var(--paper-control-line);
+  border-radius: var(--radius-control);
+}
+
+.paper-series .series-count__step {
+  background: var(--theme-surface);
+}
+
+.paper-series .series-count__step:hover:not(:disabled),
+.paper-series .series-add:hover {
+  background: var(--paper-tint);
+}
+
+.paper-series .series-picker__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--min-touch-target);
+  min-height: var(--min-touch-target);
+  border: var(--border-width-thin) solid var(--paper-control-line);
+  background: var(--theme-surface);
+  color: var(--ink-1);
+  cursor: pointer;
+}
+
+.paper-series .series-picker__arrow:focus-visible,
+.paper-series .series-count__step:focus-visible,
+.paper-series .series-add:focus-visible {
+  outline: var(--paper-focus-outline);
+  outline-offset: var(--space-3xs);
+}
+
+/* Sessions as rows on Paper's hairlines, not boxes. */
+.paper-series .series-list,
+.paper-series-booked .series-list {
+  gap: 0;
+  border-top: var(--border-width-thin) solid var(--line-1);
+}
+
+.paper-series .series-list__item,
+.paper-series-booked .series-list__item {
+  padding-inline: var(--space-2xs);
+  border: 0;
+  border-bottom: var(--border-width-thin) solid var(--line-1);
+  border-radius: 0;
+  background: transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+.paper-series .series-list__item--unavailable {
+  background: var(--notice-warning-surface);
+}
+
+.paper-series .series-list__position,
+.paper-series-booked .series-list__position {
+  background: var(--paper-tint);
+  color: var(--ink-1);
+}
+
+.paper-series .series-picker {
+  border-color: var(--line-1);
+  background: var(--theme-surface);
+}
+
+.paper-series .series-link {
+  align-self: flex-start;
+  margin-inline: 0;
+  padding-inline: 0;
+  color: var(--theme-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Both parts in the picker's place on a wide card: the details keep the
+   rule that separates them from the series above. */
+@container scheduling (min-width: 52rem) {
+  .paper-card--booking .paper-schedule:not(.paper-schedule--week) > .paper-series + .paper-book {
+    margin-top: var(--space-lg);
+    padding-top: var(--space-lg);
+    border-top: var(--border-width-thin) solid var(--line-1);
+  }
+}
+
+/* The confirmation's quiet box: the sessions above its facts. */
+.paper-series-booked {
+  margin-bottom: var(--space-sm);
+}
+
+.paper-series-booked .series-confirmation__label {
+  color: var(--ink-2);
+  font-size: var(--theme-font-size-xs);
+}
+
+/* The picker's days and times keep their labels on one line, each button
+   as wide as its label. */
+.paper-series .series-picker__days,
+.paper-series .series-picker__times {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.paper-series .series-picker__day,
+.paper-series .series-picker__time {
+  white-space: nowrap;
+}

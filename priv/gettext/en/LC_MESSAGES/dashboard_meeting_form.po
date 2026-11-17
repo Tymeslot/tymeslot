@@ -935,3 +935,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Turn off email confirmation to require payment."
 msgstr ""
+
+#: lib/tymeslot_web/helpers/context_errors.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring bookings are not included in your current plan."
+msgstr ""

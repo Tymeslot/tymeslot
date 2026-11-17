@@ -24,6 +24,10 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
   attr :meeting, :any, required: true
   attr :rebook_path, :string, default: nil
 
+  attr :series_count, :integer,
+    default: nil,
+    doc: "how many sessions the meeting's series has, nil for a meeting of its own"
+
   @doc """
   The processing page body: one of the seven outcomes of
   `PaymentReturn.outcome/3`.
@@ -149,11 +153,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
                 @meeting.attendee_timezone
               )
             }
-            text={
-              dgettext("booking_payments", "Thank you, your booking is confirmed for %{date}.",
-                date: date_marker()
-              )
-            }
+            text={confirmed_text(@series_count)}
           />
         </p>
         <.paid_line payment={@payment} />
@@ -210,6 +210,23 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
       {dgettext("booking_payments", "Return to booking")}
     </a>
     """
+  end
+
+  # A series is paid and confirmed whole; the date is its first session's.
+  defp confirmed_text(count) when is_integer(count) and count > 1 do
+    dngettext(
+      "booking_payments",
+      "Thank you, your %{count} session is confirmed, the first on %{date}.",
+      "Thank you, your %{count} sessions are confirmed, the first on %{date}.",
+      count,
+      date: date_marker()
+    )
+  end
+
+  defp confirmed_text(_count) do
+    dgettext("booking_payments", "Thank you, your booking is confirmed for %{date}.",
+      date: date_marker()
+    )
   end
 
   attr :payment, :any, required: true

@@ -16,12 +16,20 @@ defmodule Tymeslot.MeetingPayments.HeldMeetings do
 
   `topic/1` is the PubSub topic every payment status broadcast and every
   subscriber uses. Subscribers receive the bare atoms `:paid` and `:expired`.
+
+  A paid series holds every session on its one payment, and releases them
+  together (`expire_series/1`). Its pages wait on the first session's topic
+  (the checkout returns there), so a series is announced once, through its
+  first session.
   """
 
   alias Tymeslot.Availability
+  alias Tymeslot.BookingSeries.SeriesQueries
+  alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Repo
 
   @type status_message :: :paid | :expired
 
@@ -79,5 +87,89 @@ defmodule Tymeslot.MeetingPayments.HeldMeetings do
     Availability.changed(organizer_user_id)
     broadcast(meeting_id, :expired)
     :ok
+  end
+
+  @doc """
+  Expires every session of a paid series still awaiting payment.
+
+  Locks the series row, then its meetings in series order
+  (`SeriesQueries.lock_meetings/1`), the order every writer of a series
+  takes them in, after the booking payment where the caller holds it.
+  Joins the caller's transaction, or opens its own.
+
+  Returns `{:ok, :expired, first}` with the series' first session (as it
+  now stands), to be passed to `announce_expired/1` once committed, which
+  releases the organiser's availability once and tells the page waiting on
+  that session; `{:ok, :unchanged, first_id}` when no session was awaiting
+  payment (`first_id` nil for a series with no meetings left); or
+  `{:error, reason}` when a write fails.
+  """
+  @spec expire_series(SeriesSchema.t() | binary() | nil) ::
+          {:ok, :expired, MeetingSchema.t()}
+          | {:ok, :unchanged, String.t() | nil}
+          | {:error, term()}
+  def expire_series(nil), do: {:ok, :unchanged, nil}
+  def expire_series(%SeriesSchema{id: id}), do: expire_series(id)
+
+  def expire_series(series_id) when is_binary(series_id) do
+    result =
+      Repo.transaction(fn ->
+        {_series, meetings} = lock_series(series_id)
+        Enum.map_reduce(meetings, false, &expire_member/2)
+      end)
+
+    case result do
+      {:ok, {[first | _rest], true}} -> {:ok, :expired, first}
+      {:ok, {[first | _rest], false}} -> {:ok, :unchanged, first.id}
+      {:ok, {[], _expired?}} -> {:ok, :unchanged, nil}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  @doc """
+  The meetings a booking payment paid for, unlocked: its own meeting, or
+  every session of its series in series order; `[]` when they are gone (the
+  host's account deleted). The first is the one a payment's emails name
+  and whose topic its pages wait on.
+  """
+  @spec meetings_for(map()) :: [MeetingSchema.t()]
+  def meetings_for(%{series_id: series_id}) when is_binary(series_id),
+    do: SeriesQueries.list_meetings(series_id)
+
+  def meetings_for(%{meeting_id: meeting_id}) when is_binary(meeting_id) do
+    case MeetingQueries.get_meeting(meeting_id) do
+      {:ok, meeting} -> [meeting]
+      {:error, _not_found} -> []
+    end
+  end
+
+  def meetings_for(_payment), do: []
+
+  @doc """
+  Locks a series row, then its meetings in series order, and returns both
+  (`{nil, []}` for a series that is gone). The one order every writer of a
+  paid series takes its locks in, after the booking payment: two writers
+  of one series then wait on each other instead of deadlocking. Call inside
+  a transaction.
+  """
+  @spec lock_series(binary() | nil) :: {SeriesSchema.t() | nil, [MeetingSchema.t()]}
+  def lock_series(nil), do: {nil, []}
+
+  def lock_series(series_id) when is_binary(series_id) do
+    case SeriesQueries.lock(series_id) do
+      nil -> {nil, []}
+      series -> {series, SeriesQueries.lock_meetings(series)}
+    end
+  end
+
+  defp expire_member(meeting, expired?) do
+    if MeetingState.awaiting_payment?(meeting) do
+      case MeetingQueries.update_meeting_status(meeting, %{status: :expired}) do
+        {:ok, expired} -> {expired, true}
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    else
+      {meeting, expired?}
+    end
   end
 end

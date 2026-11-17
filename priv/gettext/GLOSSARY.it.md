@@ -122,6 +122,15 @@ One term, in Core and in marketing alike. Do not fall back on the English loanwo
 
 `data-theme`, `data-primary-color`, `data-locale`, `data-embed-mode` and every other attribute name stay verbatim.
 
+### Booking series
+
+A **series** is several sessions of one meeting type that a booker books with a host in one go; each **session** is one meeting of that series. The terms below are the ones `emails_booking_series` uses; keep them in every series string.
+
+| English | Italian |
+|---|---|
+| session (one meeting within a booking series) | **sessione** (`Sessione %{position} di %{count}`, `Gestisci tutte le sessioni`); feminine, so eyebrows agree: `Confermate`, `Annullate`. Not `riunione` for one session of a series |
+| series (a booking series) | **serie** (`Nuova serie`) |
+
 ### Extended termbase
 
 Settled while translating; reuse rather than re-coining.

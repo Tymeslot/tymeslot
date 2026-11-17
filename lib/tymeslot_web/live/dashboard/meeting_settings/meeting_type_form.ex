@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     Init,
     LengthsField,
     LengthsHandlers,
+    SeriesHandlers,
     SessionHandlers,
     SlotIntervalField,
     Validation
@@ -92,6 +93,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        editing_location_mode: :add,
        custom_questions_allowed: true,
        group_bookings_allowed: true,
+       recurring_bookings_allowed: true,
+       series: SeriesHandlers.initial(nil),
        payments_feature_enabled: false,
        payments_charges_enabled: false,
        payment_currency: "usd",
@@ -394,6 +397,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:booking_limits, limits)
      |> Autosave.maybe_run()}
   end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_series", params, socket),
+    do: {:noreply, SeriesHandlers.apply_event(params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event("update_scheduling_rules", params, socket) do

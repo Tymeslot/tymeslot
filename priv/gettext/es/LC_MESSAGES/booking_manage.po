@@ -752,3 +752,43 @@ msgstr "Cancelando…"
 #, elixir-autogen, elixir-format
 msgid "Confirming…"
 msgstr "Confirmando…"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session"
+msgid_plural "%{count} sessions"
+msgstr[0] "%{count} sesión"
+msgstr[1] "%{count} sesiones"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has been sent the confirmation for all %{count} session."
+msgid_plural "%{name} has been sent the confirmation for all %{count} sessions."
+msgstr[0] "Se envió a %{name} la confirmación de %{count} sesión."
+msgstr[1] "Se envió a %{name} la confirmación de las %{count} sesiones."
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "All %{count} session is free again and %{name} has been told."
+msgid_plural "All %{count} sessions are free again and %{name} has been told."
+msgstr[0] "%{count} sesión vuelve a estar libre y ya se avisó a %{name}."
+msgstr[1] "Las %{count} sesiones vuelven a estar libres y ya se avisó a %{name}."
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Approve all %{count} session"
+msgid_plural "Approve all %{count} sessions"
+msgstr[0] "Aprobar %{count} sesión"
+msgstr[1] "Aprobar las %{count} sesiones"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Decline all %{count} session"
+msgid_plural "Decline all %{count} sessions"
+msgstr[0] "Rechazar %{count} sesión"
+msgstr[1] "Rechazar las %{count} sesiones"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
+msgstr "Si no respondes antes del %{deadline}, esta solicitud expira y todas las sesiones quedan libres."

@@ -752,3 +752,48 @@ msgstr "Odwoływanie…"
 #, elixir-autogen, elixir-format
 msgid "Confirming…"
 msgstr "Potwierdzanie…"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session"
+msgid_plural "%{count} sessions"
+msgstr[0] "%{count} sesja"
+msgstr[1] "%{count} sesje"
+msgstr[2] "%{count} sesji"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has been sent the confirmation for all %{count} session."
+msgid_plural "%{name} has been sent the confirmation for all %{count} sessions."
+msgstr[0] "%{name} ma już potwierdzenie %{count} sesji."
+msgstr[1] "%{name} ma już potwierdzenie wszystkich %{count} sesji."
+msgstr[2] "%{name} ma już potwierdzenie wszystkich %{count} sesji."
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "All %{count} session is free again and %{name} has been told."
+msgid_plural "All %{count} sessions are free again and %{name} has been told."
+msgstr[0] "%{count} sesja jest znów wolna, a %{name} już o tym wie."
+msgstr[1] "Wszystkie %{count} sesje są znów wolne, a %{name} już o tym wie."
+msgstr[2] "Zwolniono wszystkie %{count} sesji, a %{name} już o tym wie."
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Approve all %{count} session"
+msgid_plural "Approve all %{count} sessions"
+msgstr[0] "Zatwierdź %{count} sesję"
+msgstr[1] "Zatwierdź wszystkie %{count} sesje"
+msgstr[2] "Zatwierdź wszystkie %{count} sesji"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Decline all %{count} session"
+msgid_plural "Decline all %{count} sessions"
+msgstr[0] "Odrzuć %{count} sesję"
+msgstr[1] "Odrzuć wszystkie %{count} sesje"
+msgstr[2] "Odrzuć wszystkie %{count} sesji"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
+msgstr "Czas na odpowiedź mija: %{deadline}. Jeśli do tego czasu nie odpowiesz, prośba wygaśnie, a wszystkie sesje zostaną zwolnione."

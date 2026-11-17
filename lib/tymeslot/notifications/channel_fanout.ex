@@ -13,6 +13,7 @@ defmodule Tymeslot.Notifications.ChannelFanout do
 
   require Logger
 
+  alias Tymeslot.BookingSeries.Automation
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -33,6 +34,9 @@ defmodule Tymeslot.Notifications.ChannelFanout do
     * `:channels` — the `{name, context}` pairs to fan out to, each context
       implementing `Tymeslot.Notifications.Channel`. Defaults to webhooks,
       Telegram and Slack, in that order.
+    * `:series` — the `series` object a series event carries
+      (`Tymeslot.BookingSeries.Automation`). Without it, the event carries
+      the meeting's place in its series, or nil for a booking outside one.
   """
   @spec dispatch(atom() | String.t(), MeetingSchema.t() | term(), keyword()) ::
           :ok | {:error, :no_organizer | :not_a_meeting | term()}
@@ -50,10 +54,12 @@ defmodule Tymeslot.Notifications.ChannelFanout do
   def dispatch(event, %MeetingSchema{organizer_user_id: user_id} = meeting, opts) do
     with {:ok, event_type} <- wire_name(event, meeting),
          :ok <- check_access(user_id, event_type) do
+      series = Keyword.get_lazy(opts, :series, fn -> series_place(meeting, event_type) end)
+
       opts
       |> Keyword.get(:channels, @channels)
       |> Enum.each(fn {channel, context} ->
-        dispatch_channel(channel, context, user_id, event_type, meeting)
+        dispatch_channel(channel, context, user_id, event_type, {meeting, series})
       end)
     end
   end
@@ -106,9 +112,24 @@ defmodule Tymeslot.Notifications.ChannelFanout do
     end
   end
 
-  defp dispatch_channel(channel, context, user_id, event_type, meeting) do
+  # Reading the series is as best-effort as the channels: an event that
+  # cannot say where its session sits in a series still goes out.
+  defp series_place(meeting, event_type) do
+    Automation.place(meeting)
+  rescue
+    exception ->
+      ErrorTracking.report_error(exception, __STACKTRACE__, %{
+        channel: :all,
+        event: event_type,
+        meeting_id: meeting.id
+      })
+
+      nil
+  end
+
+  defp dispatch_channel(channel, context, user_id, event_type, {meeting, series}) do
     user_id
-    |> context.schedule_for_event(event_type, meeting)
+    |> context.schedule_for_event(event_type, meeting, series)
     |> Enum.each(&log_outcome(&1, channel, event_type))
   rescue
     exception ->

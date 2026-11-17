@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Payment.Processing do
     >
       <PaymentReturnComponents.processing_body
         loading={@loading}
+        series_count={assigns[:series_count]}
         payment={@payment}
         meeting={@meeting}
         rebook_path={assigns[:rebook_path]}

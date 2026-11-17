@@ -15,6 +15,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.BookingPages.BookingPageMeetingTypeSchema
   alias Tymeslot.BookingPages.BookingPageSchema
+  alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -172,6 +173,23 @@ defmodule Tymeslot.Factory do
     |> merge_attributes(attrs)
     |> evaluate_lazy_attributes()
     |> put_token_hash(:management_token, :management_token_hash)
+  end
+
+  @doc "A weekly two-session booking series without its sessions; pass `organizer_user`."
+  @spec booking_series_factory() :: SeriesSchema.t()
+  def booking_series_factory do
+    %SeriesSchema{
+      uid: UUID.generate(),
+      organizer_user: build(:user),
+      mode: :recurring,
+      frequency: :weekly,
+      interval: 1,
+      occurrences_count: 2,
+      attendee_name: "Ada Lovelace",
+      attendee_email: "ada@example.com",
+      attendee_timezone: "Etc/UTC",
+      attendee_locale: "en"
+    }
   end
 
   @spec user_factory() :: Tymeslot.Auth.UserSchema.t()

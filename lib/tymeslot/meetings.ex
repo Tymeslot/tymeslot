@@ -308,8 +308,8 @@ defmodule Tymeslot.Meetings do
     as: :list_ids_for_organizer
 
   @doc """
-  How many booking requests this organiser has not yet answered; drives the
-  dashboard's Requests tab badge.
+  How many booking requests this organiser has not yet answered, a series
+  request counted once; drives the dashboard's Requests tab badge.
   """
   @spec count_awaiting_approval_for_organizer(integer()) :: non_neg_integer()
   defdelegate count_awaiting_approval_for_organizer(organizer_user_id), to: MeetingQueries

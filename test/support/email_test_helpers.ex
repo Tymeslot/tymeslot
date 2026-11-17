@@ -105,6 +105,73 @@ defmodule Tymeslot.EmailTestHelpers do
   end
 
   @doc """
+  Builds the payload the series emails render (`Tymeslot.Emails.SeriesBuilder`'s
+  shape): a weekly series of `count` sessions a week apart, each session a
+  `build_appointment_details/1` map. `overrides` are merged into the payload;
+  `:session` overrides are merged into every session.
+  """
+  @spec build_series_details(pos_integer(), map()) :: map()
+  def build_series_details(count \\ 3, overrides \\ %{}) do
+    {session_overrides, overrides} = Map.pop(overrides, :session, %{})
+    series_uid = "9a1b2c3d-0000-4000-8000-#{String.pad_leading("#{count}", 12, "0")}"
+
+    sessions =
+      for position <- 1..count do
+        shift = &DateTime.add(&1, 7 * (position - 1), :day)
+        uid = "series-session-#{position}"
+
+        %{uid: uid}
+        |> build_appointment_details()
+        |> then(fn details ->
+          Map.merge(details, %{
+            start_time: shift.(details.start_time),
+            end_time: shift.(details.end_time),
+            start_time_owner_tz: shift.(details.start_time_owner_tz),
+            end_time_owner_tz: shift.(details.end_time_owner_tz),
+            start_time_attendee_tz: shift.(details.start_time_attendee_tz),
+            end_time_attendee_tz: shift.(details.end_time_attendee_tz),
+            location_type: :video,
+            position: position,
+            series_count: count,
+            dashboard_url:
+              "https://tymeslot.example.com/dashboard/meetings?meeting=m-#{position}",
+            video_pending: false
+          })
+        end)
+        |> Map.merge(session_overrides)
+      end
+
+    first = hd(sessions)
+
+    Map.merge(
+      %{
+        series: %Tymeslot.BookingSeries.SeriesSchema{
+          uid: series_uid,
+          mode: :recurring,
+          frequency: :weekly,
+          interval: 1,
+          occurrences_count: count
+        },
+        sessions: sessions,
+        count: count,
+        meeting_type: first.meeting_type,
+        duration: first.duration,
+        attendee_name: first.attendee_name,
+        attendee_email: first.attendee_email,
+        attendee_locale: "en",
+        organizer_name: first.organizer_name,
+        organizer_email: first.organizer_email,
+        organizer_title: first.organizer_title,
+        organizer_avatar_url: nil,
+        organizer_locale: "en",
+        series_url: "https://tymeslot.example.com/johndoe/series/#{series_uid}",
+        total: nil
+      },
+      overrides
+    )
+  end
+
+  @doc """
   Builds minimal appointment details for simpler tests.
   """
   @spec build_minimal_appointment_details(map()) :: map()

@@ -142,6 +142,7 @@ defmodule Tymeslot.InviteeDataTest do
                draft_polls: 1,
                invitations: 0,
                booking_payments: 1,
+               series: 0,
                deliveries: 1
              }
 

@@ -34,7 +34,15 @@ defmodule Tymeslot.Meetings.SeatViewTest do
       view = SeatView.at_event(meeting, seat)
 
       assert %MeetingSchema{attendee_name: "Ada", attendee_email: "ada@example.com"} = view
-      assert view.seat == %{participant_id: seat.id, seats_taken: 2, previous: nil}
+
+      assert view.seat == %{
+               participant_id: seat.id,
+               seats_taken: 2,
+               previous: nil,
+               series_id: nil,
+               series_position: nil
+             }
+
       assert SeatView.participant_id(view) == seat.id
       assert SeatView.seats_taken(view) == 2
     end
@@ -65,7 +73,14 @@ defmodule Tymeslot.Meetings.SeatViewTest do
          %{meeting: meeting, seat: seat} do
       assert {:ok, view} = SeatView.load(meeting, seat.id, 7)
       assert view.attendee_email == "ada@example.com"
-      assert view.seat == %{participant_id: seat.id, seats_taken: 7, previous: nil}
+
+      assert view.seat == %{
+               participant_id: seat.id,
+               seats_taken: 7,
+               previous: nil,
+               series_id: nil,
+               series_position: nil
+             }
     end
 
     test "carries the seat a move replaced, as the event recorded it",

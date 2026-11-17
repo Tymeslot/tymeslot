@@ -938,3 +938,8 @@ msgstr "Wyłącz potwierdzenie adresu e-mail, aby włączyć rezerwacje grupowe.
 #, elixir-autogen, elixir-format
 msgid "Turn off email confirmation to require payment."
 msgstr "Wyłącz potwierdzenie adresu e-mail, aby wymagać płatności."
+
+#: lib/tymeslot_web/helpers/context_errors.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring bookings are not included in your current plan."
+msgstr "Rezerwacje cykliczne nie są dostępne w Twoim obecnym planie."

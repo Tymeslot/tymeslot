@@ -290,3 +290,43 @@ msgstr "Tento odkaz na pozvání už byl použit k rezervaci schůzky. Pokud ji 
 #, elixir-autogen, elixir-format
 msgid "A reschedule request is already waiting for an answer"
 msgstr "Žádost o přesunutí už čeká na odpověď"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Please choose a number of sessions this meeting type offers."
+msgstr "Vyberte prosím počet termínů, který tento typ schůzky nabízí."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Some of your sessions are no longer available. Please review them."
+msgstr "Některé z vašich termínů už nejsou k dispozici. Zkontrolujte je prosím."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type is booked as a series. Please choose your sessions."
+msgstr "Tento typ schůzky se rezervuje jako série. Vyberte prosím své termíny."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Two of your sessions overlap. Please choose different times."
+msgstr "Dva z vašich termínů se překrývají. Vyberte prosím jiné časy."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type can't be booked as a series at the moment."
+msgstr "Tento typ schůzky teď nelze rezervovat jako sérii."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This session is waiting for its series to be paid for. Until then the series can only be released as a whole."
+msgstr "Tento termín čeká na zaplacení své série. Do té doby lze sérii uvolnit pouze celou."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "This session is part of a request that is waiting for the host's answer, so it can't be moved yet."
+msgstr "Tento termín patří k žádosti, která čeká na odpověď hostitele, proto ho zatím nelze přesunout."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "Guests can only be added to a single booking. Please remove your guests to book a series."
+msgstr "Hosty lze přidat jen k jednotlivé rezervaci. Chcete-li rezervovat sérii, odeberte prosím své hosty."
