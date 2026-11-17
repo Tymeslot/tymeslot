@@ -26,6 +26,7 @@ defmodule Tymeslot.Bookings.SlotActivation do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.Events.Seats
 
   # As the booking page books a seat: a slot's first seat makes its room for
   # any configured video provider.
@@ -78,15 +79,25 @@ defmodule Tymeslot.Bookings.SlotActivation do
   the transaction has committed; any error is the caller's cue to roll back.
 
   `opts` are passed to `SeatEffects.schedule_new_slot_effects/2`
-  (`:with_video_room`).
+  (`:with_video_room`), besides `:emails`: `false` sends no confirmation for
+  the seat, to the booker or the host, and returns no fan-out, as for a seat
+  of a booking series, which is announced whole
+  (`Tymeslot.BookingSeries.Automation`). A slot such a seat brings to life
+  still gets its reminders and video room, the room holding nothing back.
   """
   @spec schedule_seat_effects(Meeting.t(), Participant.t(), boolean(), keyword()) ::
           {:ok, Events.pending()} | {:error, term()}
   def schedule_seat_effects(meeting, participant, first_seat?, opts) do
+    emails? = Keyword.get(opts, :emails, true)
+
     with {:ok, _job} <- SeatEffects.schedule_calendar_job(meeting, first_seat?),
-         {:ok, defer_emails?} <- schedule_new_slot_effects(first_seat?, meeting, opts),
+         {:ok, defer_emails?} <- schedule_new_slot_effects(first_seat?, meeting, emails?, opts),
          {{:ok, _scheduled}, pending} <-
-           Events.seat_booked_deferred(meeting, participant, defer_emails?: defer_emails?) do
+           Seats.seat_booked_deferred(meeting, participant,
+             defer_emails?: defer_emails?,
+             emails: emails?,
+             integrations: emails?
+           ) do
       {:ok, pending}
     else
       {{:error, reason}, _pending} -> {:error, reason}
@@ -94,8 +105,8 @@ defmodule Tymeslot.Bookings.SlotActivation do
     end
   end
 
-  defp schedule_new_slot_effects(false, _meeting, _opts), do: {:ok, false}
+  defp schedule_new_slot_effects(false, _meeting, _emails?, _opts), do: {:ok, false}
 
-  defp schedule_new_slot_effects(true, meeting, opts),
-    do: SeatEffects.schedule_new_slot_effects(meeting, Keyword.put(opts, :announce, true))
+  defp schedule_new_slot_effects(true, meeting, emails?, opts),
+    do: SeatEffects.schedule_new_slot_effects(meeting, Keyword.put(opts, :announce, emails?))
 end

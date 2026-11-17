@@ -16,7 +16,7 @@ defmodule Tymeslot.CalendarGrid.OccurrenceWriteRuleTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
@@ -45,7 +45,7 @@ defmodule Tymeslot.CalendarGrid.OccurrenceWriteRuleTest do
     serve(%{"id" => "master1_20261019T070000Z", "status" => "confirmed"})
 
     assert {:ok, _updated} =
-             CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
+             Changes.update_event(user.id, event, %{summary: "Renamed"},
                recurrence_scope: :this_only
              )
 
@@ -67,7 +67,7 @@ defmodule Tymeslot.CalendarGrid.OccurrenceWriteRuleTest do
     serve(%{"id" => "AAMkOccurrence", "type" => "occurrence"})
 
     assert {:ok, _updated} =
-             CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
+             Changes.update_event(user.id, event, %{summary: "Renamed"},
                recurrence_scope: :this_only
              )
 
@@ -99,7 +99,7 @@ defmodule Tymeslot.CalendarGrid.OccurrenceWriteRuleTest do
     serve(master)
 
     assert {:ok, _updated} =
-             CalendarGrid.update_event(
+             Changes.update_event(
                user.id,
                event,
                %{recurrence_rule: "FREQ=WEEKLY;BYDAY=MO;COUNT=10"},

@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
   alias Ecto.Changeset
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.ExternalCalendar
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.EmailHandlers
@@ -198,7 +198,12 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
       {:ok, updated} = MeetingQueries.get_meeting(ctx.meeting.id)
       assert updated.calendar_sync_status == :externally_modified
       assert updated.end_time == ctx.meeting.end_time
-      refute_enqueued(worker: EmailWorker)
+      refute_enqueued(worker: EmailWorker, args: %{"action" => "send_end_change_emails"})
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_external_booking_change", "discrepancy" => "modified"}
+      )
     end
   end
 
@@ -247,7 +252,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
       with_video_room(moved)
 
       assert :ok =
-               Meetings.apply_external_end_change(
+               ExternalCalendar.apply_external_end_change(
                  read,
                  DateTime.add(read.start_time, 90, :minute)
                )
@@ -261,7 +266,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeTest do
       with_video_room(cancelled)
 
       assert :ok =
-               Meetings.apply_external_end_change(
+               ExternalCalendar.apply_external_end_change(
                  read,
                  DateTime.add(read.start_time, 90, :minute)
                )

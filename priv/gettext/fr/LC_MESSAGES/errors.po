@@ -510,6 +510,7 @@ msgid "is not a palette colour"
 msgstr "ne fait pas partie de la palette de couleurs"
 
 #: lib/tymeslot/app_settings/app_settings_schema.ex
+#: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported language"
 msgstr "n’est pas une langue prise en charge"
@@ -856,6 +857,41 @@ msgstr "doit être dans le futur"
 msgid "invitation links"
 msgstr "liens d’invitation"
 
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation-only meeting types cannot be booked as a series."
+msgstr "Les types de réunion sur invitation uniquement ne peuvent pas être réservés en série."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types with fixed dates can offer a series only as sessions the booker picks."
+msgstr "Les types de réunion à dates fixes ne peuvent proposer une série que sous forme de séances choisies par la personne qui réserve."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "One-off meeting types cannot be booked as a series."
+msgstr "Les types de réunion ponctuels ne peuvent pas être réservés en série."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be between %{min} and %{max}"
+msgstr "doit être compris entre %{min} et %{max}"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must not be less than the minimum"
+msgstr "ne peut pas être inférieur au minimum"
+
+#: lib/tymeslot/profiles/profile_schema.ex
+#, elixir-autogen, elixir-format
+msgid "cannot list a language twice"
+msgstr "ne peut pas contenir deux fois la même langue"
+
+#: lib/tymeslot/content_translations/catalogue.ex
+#, elixir-autogen, elixir-format
+msgid "is not a translation language"
+msgstr "n’est pas une langue de traduction"
+
 #: lib/tymeslot/meetings/unique_slot.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
@@ -865,3 +901,18 @@ msgstr "Ce créneau n’est plus disponible. Veuillez choisir un autre horaire."
 #, elixir-autogen, elixir-format
 msgid "email confirmation cannot be combined with payment"
 msgstr "la confirmation de l’adresse e-mail n’est pas compatible avec le paiement"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "would give a reserved booking link; choose another name or set a custom link"
+msgstr "donnerait un lien de réservation réservé ; choisissez un autre nom ou définissez un lien personnalisé"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
+msgstr "ne peut pas dépasser %{max} à ce rythme, afin que chaque séance tombe dans l'année"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
+msgstr "Les types de réunion qui demandent aux invités de confirmer leur adresse e-mail ne peuvent pas être réservés en série."

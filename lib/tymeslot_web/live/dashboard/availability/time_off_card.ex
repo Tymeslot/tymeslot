@@ -19,19 +19,14 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Profiles
-  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
-  alias Tymeslot.Validation.Constraints
 
-  alias TymeslotWeb.Components.Dashboard.Availability.{DeleteTimeOffModal, TimeOffFormModal}
-  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Components.Dashboard.Availability.{
+    DeleteTimeOffModal,
+    TimeOffFormModal,
+    TimeOffPeriodRow
+  }
 
-  # Fields the form renders an inline error under. Anything else the changeset
-  # can complain about has no home in the form and becomes a flash instead.
-  @form_fields [:starts_on, :ends_on, :start_time, :end_time, :label]
-
-  # The fields that decide which bookings the period swallows. The note does
-  # not, so typing one must not send the overlap query off again.
-  @schedule_fields [:starts_on, :ends_on, :start_time, :end_time]
+  alias TymeslotWeb.Dashboard.Availability.TimeOffForm
 
   @impl Phoenix.LiveComponent
   @spec mount(Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
@@ -58,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
          ModalHook.show_modal(
            socket,
            :time_off_form,
-           edit_data(period, TimeOff.today(socket.assigns.profile.timezone))
+           TimeOffForm.edit(period, TimeOff.today(socket.assigns.profile.timezone))
          )}
 
       {:error, _reason} ->
@@ -73,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
        ModalHook.show_modal(
          socket,
          :time_off_form,
-         blank_data(TimeOff.today(socket.assigns.profile.timezone))
+         TimeOffForm.blank(TimeOff.today(socket.assigns.profile.timezone))
        )}
     else
       Flash.error(
@@ -100,14 +95,19 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
        ModalHook.show_modal(
          socket,
          :time_off_form,
-         validated_data(socket, data, attrs_from(params))
+         TimeOffForm.validate(
+           data,
+           TimeOffForm.attrs_from(params),
+           profile_id(socket),
+           TimeOff.today(socket.assigns.profile.timezone)
+         )
        )}
     end)
   end
 
   def handle_event("save_time_off", params, socket) do
     ModalHook.with_modal_data(socket, :time_off_form, fn data ->
-      {:noreply, save(socket, data, attrs_from(params))}
+      {:noreply, save(socket, data, TimeOffForm.attrs_from(params))}
     end)
   end
 
@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
         {:noreply,
          ModalHook.show_modal(socket, :delete_time_off, %{
            id: period.id,
-           summary: range_summary(period, socket.assigns.time_format)
+           summary: TimeOffPeriodRow.range_summary(period, socket.assigns.time_format)
          })}
 
       {:error, _reason} ->
@@ -137,14 +137,13 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
 
   # A finished period is removed in place, without the confirmation dialog: it
   # no longer affects availability, so there is nothing for the dialog to
-  # protect. The row crosses itself out and fades on the client; the check here
+  # protect. The row crosses itself out and fades on the client; the context
   # keeps a period that has not ended from being removed this way.
   def handle_event("delete_past_time_off", %{"id" => id}, socket) do
     today = TimeOff.today(socket.assigns.profile.timezone)
 
-    with {:ok, period} <- fetch_period(socket, id),
-         true <- TimeOff.ended?(period, today),
-         {:ok, _deleted} <- TimeOff.delete(period) do
+    with {:ok, id} <- parse_id(id),
+         {:ok, _deleted} <- TimeOff.delete_ended(profile_id(socket), id, today) do
       :ok
     else
       _other ->
@@ -209,7 +208,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     data =
       data
       |> Map.merge(attrs)
-      |> Map.put(:errors, form_errors(changeset))
+      |> Map.put(:errors, TimeOffForm.errors(changeset))
 
     if map_size(data.errors) == 0 do
       Flash.error(dgettext("dashboard_availability_time_off", "Could not save your time off"))
@@ -252,55 +251,20 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     |> load_periods()
   end
 
-  # Only fields that hold a value report while the form is being filled in: a
-  # last day not chosen yet is not an error until the form is submitted.
-  #
-  # The rules themselves read nothing from the database: the period being
-  # edited was loaded when the form opened, and today comes from the profile
-  # already assigned. Saving re-reads both. Only the overlap panel below costs
-  # a query, and only when a date or a time has moved.
-  defp validated_data(socket, data, attrs) do
-    changeset =
-      data
-      |> validation_target(socket)
-      |> TimeOff.validate(attrs, today: TimeOff.today(socket.assigns.profile.timezone))
-
-    errors =
-      changeset
-      |> form_errors()
-      |> Map.reject(fn {field, _message} -> Map.fetch!(attrs, field) == "" end)
-
-    data
-    |> Map.merge(attrs)
-    |> Map.put(:errors, errors)
-    |> Map.put(:conflicts, conflicts(data, attrs, changeset))
+  defp fetch_period(socket, id) do
+    with {:ok, id} <- parse_id(id), do: TimeOff.fetch(profile_id(socket), id)
   end
 
-  # The bookings already inside the period, so the modal can name them while
-  # the dates are still being chosen rather than only once the row is written.
-  # Reading them is a query, so it runs only when a date or a time actually
-  # moved: every other change leaves the answer as it was.
-  defp conflicts(data, attrs, changeset) do
-    if Map.take(data, @schedule_fields) == Map.take(attrs, @schedule_fields) do
-      Map.get(data, :conflicts, [])
-    else
-      TimeOff.conflicting_meetings(changeset)
-    end
-  end
+  defp parse_id(id) when is_integer(id), do: {:ok, id}
 
-  defp validation_target(%{mode: :edit, period: period}, _socket), do: period
-  defp validation_target(_create, socket), do: profile_id(socket)
-
-  defp fetch_period(socket, id) when is_integer(id), do: TimeOff.fetch(profile_id(socket), id)
-
-  defp fetch_period(socket, id) when is_binary(id) do
+  defp parse_id(id) when is_binary(id) do
     case Integer.parse(id) do
-      {parsed, ""} -> fetch_period(socket, parsed)
+      {parsed, ""} -> {:ok, parsed}
       _other -> {:error, :not_found}
     end
   end
 
-  defp fetch_period(_socket, _id), do: {:error, :not_found}
+  defp parse_id(_id), do: {:error, :not_found}
 
   defp load_periods(socket) do
     %{current: current, past: past} = TimeOff.list_by_status(profile_id(socket))
@@ -308,84 +272,6 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   end
 
   defp profile_id(socket), do: socket.assigns.profile.id
-
-  # Anything but a string, which only a hand-built event can send, reads as
-  # blank rather than crashing the component.
-  defp attrs_from(params) do
-    Map.new(@form_fields, fn field ->
-      case Map.get(params, to_string(field)) do
-        value when is_binary(value) -> {field, String.trim(value)}
-        _missing_or_malformed -> {field, ""}
-      end
-    end)
-  end
-
-  # The `min_*` dates keep the date pickers from offering days already gone,
-  # and the `max_*` ones the years a mistyped date lands in. On an edit both
-  # reach out to the stored date when it falls outside them, or the browser
-  # would refuse to submit a period already under way, or one already reaching
-  # further ahead than the bound allows, at all.
-  defp blank_data(today) do
-    last_day = today |> Constraints.time_off_last_end_date() |> Date.to_iso8601()
-
-    @form_fields
-    |> Map.new(&{&1, ""})
-    |> Map.merge(%{
-      mode: :create,
-      id: nil,
-      errors: %{},
-      conflicts: [],
-      today: Date.to_iso8601(today),
-      min_starts_on: Date.to_iso8601(today),
-      min_ends_on: Date.to_iso8601(today),
-      max_starts_on: last_day,
-      max_ends_on: last_day
-    })
-  end
-
-  # A stored period is read for overlaps as the form opens: an edit is the
-  # likelier way to swallow a booking, because the row is one the host already
-  # trusts, and the panel has to be there before anything is changed.
-  defp edit_data(period, today) do
-    last_end_date = Constraints.time_off_last_end_date(today)
-
-    %{
-      mode: :edit,
-      id: period.id,
-      period: period,
-      errors: %{},
-      conflicts: TimeOff.conflicting_meetings(period),
-      today: Date.to_iso8601(today),
-      min_starts_on: earliest_iso8601(period.starts_on, today),
-      min_ends_on: earliest_iso8601(period.ends_on, today),
-      max_starts_on: latest_iso8601(period.starts_on, last_end_date),
-      max_ends_on: latest_iso8601(period.ends_on, last_end_date),
-      starts_on: Date.to_iso8601(period.starts_on),
-      ends_on: Date.to_iso8601(period.ends_on),
-      start_time: wire_time(period.start_time),
-      end_time: wire_time(period.end_time),
-      label: period.label || ""
-    }
-  end
-
-  defp earliest_iso8601(date, today), do: [date, today] |> Enum.min(Date) |> Date.to_iso8601()
-
-  defp latest_iso8601(date, bound), do: [date, bound] |> Enum.max(Date) |> Date.to_iso8601()
-
-  # Kept as `{message, opts}` rather than flattened to a string: the form input
-  # translates that shape through the `errors` domain, interpolating counts, in
-  # whatever language the dashboard is in.
-  defp form_errors(changeset) do
-    changeset
-    |> Changeset.traverse_errors(& &1)
-    |> Map.take(@form_fields)
-    |> Map.new(fn {field, messages} -> {field, List.first(messages)} end)
-  end
-
-  # The wire format the time dropdown submits, which is 24h whatever clock the
-  # organiser reads; `TimeFormat.format/2` is for showing a time to someone.
-  defp wire_time(nil), do: ""
-  defp wire_time(%Time{} = time), do: Calendar.strftime(time, "%H:%M")
 
   @impl Phoenix.LiveComponent
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
@@ -434,7 +320,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
           />
 
           <ul :if={@periods != []} class="space-y-3" data-testid="time-off-list">
-            <.period_row
+            <TimeOffPeriodRow.period_row
               :for={period <- @periods}
               period={period}
               time_format={@time_format}
@@ -470,7 +356,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
           </p>
 
           <ul class="space-y-3" data-testid="time-off-past-list">
-            <.period_row
+            <TimeOffPeriodRow.period_row
               :for={period <- @past_periods}
               period={period}
               time_format={@time_format}
@@ -517,121 +403,5 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
       {dgettext("dashboard_availability_time_off", "Add time off")}
     </.action_button>
     """
-  end
-
-  attr :period, :any, required: true
-  attr :time_format, :string, required: true
-  attr :myself, :any, required: true
-  attr :past, :boolean, default: false
-
-  # A finished period has no edit button: there is nothing left to move, since
-  # neither of its dates may be placed in the past again.
-  defp period_row(assigns) do
-    ~H"""
-    <li
-      id={row_id(@period, @past)}
-      phx-remove={@past && row_removal()}
-      class={[
-        "flex flex-wrap items-center justify-between gap-3 rounded-token-xl border border-tymeslot-100 px-4 py-3",
-        if(@past, do: "bg-white", else: "bg-tymeslot-50")
-      ]}
-    >
-      <div class="min-w-0" data-strike>
-        <p class={["font-bold", if(@past, do: "text-tymeslot-500", else: "text-tymeslot-700")]}>
-          {range_summary(@period, @time_format)}
-        </p>
-        <p :if={@period.label} class="text-token-sm text-tymeslot-500 font-medium truncate">
-          {@period.label}
-        </p>
-      </div>
-
-      <div class="flex items-center gap-2 shrink-0">
-        <.icon_button
-          :if={not @past}
-          icon="hero-pencil-square"
-          label={dgettext("dashboard_availability_time_off", "Edit time off")}
-          phx-click="show_time_off_form"
-          phx-value-id={@period.id}
-          phx-target={@myself}
-        />
-        <.icon_button
-          icon="hero-trash"
-          variant={:danger}
-          label={dgettext("dashboard_availability_time_off", "Remove time off")}
-          phx-click={
-            if @past,
-              do: remove_past(@period, @myself),
-              else: JS.push("show_delete_time_off", value: %{id: @period.id}, target: @myself)
-          }
-        />
-      </div>
-    </li>
-    """
-  end
-
-  defp row_id(period, true), do: "time-off-past-#{period.id}"
-  defp row_id(period, false), do: "time-off-#{period.id}"
-
-  # Crossed out at once, then removed by the server: the row's `phx-remove`
-  # fades it once the re-render drops it, after a short pause so the line
-  # through it registers first.
-  defp remove_past(period, myself) do
-    row = "#" <> row_id(period, true)
-
-    "line-through decoration-2 decoration-tymeslot-400"
-    |> JS.add_class(to: "#{row} [data-strike]")
-    |> JS.add_class("pointer-events-none", to: row)
-    |> JS.push("delete_past_time_off", value: %{id: period.id}, target: myself)
-  end
-
-  defp row_removal do
-    JS.hide(
-      transition:
-        {"transition-all duration-700 delay-500 ease-in", "opacity-100 translate-x-0",
-         "opacity-0 translate-x-6"},
-      time: 1200
-    )
-  end
-
-  @doc """
-  One line describing when a period runs, as the list row and the delete
-  confirmation both show it.
-
-  A whole-day period reads as dates alone; the times appear only where they
-  actually trim a day, so a plain holiday is not dressed up as "00:00 to
-  23:59".
-  """
-  @spec range_summary(TimeOff.period(), String.t()) :: String.t()
-  def range_summary(period, time_format) do
-    period
-    |> dates_summary()
-    |> append_time(period.start_time, time_format, :from)
-    |> append_time(period.end_time, time_format, :until)
-  end
-
-  defp dates_summary(%{starts_on: same, ends_on: same}),
-    do: LocalizationHelpers.format_date(same)
-
-  defp dates_summary(%{starts_on: starts_on, ends_on: ends_on}) do
-    dgettext("dashboard_availability_time_off", "%{from} to %{to}",
-      from: LocalizationHelpers.format_date(starts_on),
-      to: LocalizationHelpers.format_date(ends_on)
-    )
-  end
-
-  defp append_time(summary, nil, _time_format, _position), do: summary
-
-  defp append_time(summary, %Time{} = time, time_format, :from) do
-    dgettext("dashboard_availability_time_off", "%{range}, from %{time}",
-      range: summary,
-      time: TimeFormat.format(time, time_format)
-    )
-  end
-
-  defp append_time(summary, %Time{} = time, time_format, :until) do
-    dgettext("dashboard_availability_time_off", "%{range}, until %{time}",
-      range: summary,
-      time: TimeFormat.format(time, time_format)
-    )
   end
 end

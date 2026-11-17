@@ -3,6 +3,7 @@ defmodule Tymeslot.TestAffected.SelectionTest do
 
   @moduletag :dev_support
 
+  alias Tymeslot.TestAffected.Mirror
   alias Tymeslot.TestAffected.Selection
 
   # A miniature suite: two auth tests (one of which lives in the web layer, so
@@ -103,7 +104,11 @@ defmodule Tymeslot.TestAffected.SelectionTest do
                {:test, "test/tymeslot/auth/session_test.exs"}
 
       assert Selection.classify("config/runtime.exs") == {:widen, "config/runtime.exs"}
-      assert Selection.classify("test/support/factory.ex") == {:widen, "test/support/factory.ex"}
+
+      assert Selection.classify("test/support/factory.ex") ==
+               {:support, "test/support/factory.ex"}
+
+      assert Selection.classify("test/test_helper.exs") == {:widen, "test/test_helper.exs"}
       assert Selection.classify("mix.lock") == {:widen, "mix.lock"}
 
       assert Selection.classify("priv/repo/migrations/20240101_add_users.exs") ==
@@ -132,7 +137,12 @@ defmodule Tymeslot.TestAffected.SelectionTest do
     end
 
     test "a test file under test/support is support code, not a test to run" do
-      assert {:widen, _path} = Selection.classify("test/support/conn_case.ex")
+      assert {:support, _path} = Selection.classify("test/support/conn_case.ex")
+    end
+
+    test "anything else under test/support is data the suite reads, whatever its extension" do
+      assert {:data, _path} = Selection.classify("test/support/fixtures/event.json")
+      assert {:data, _path} = Selection.classify("test/support/migration_dirty_seed.sql")
     end
   end
 
@@ -307,10 +317,21 @@ defmodule Tymeslot.TestAffected.SelectionTest do
     end
 
     test "an upstream change that widens there widens here" do
-      plan = downstream_plan(["test/support/factory.ex"])
+      plan = downstream_plan(["config/runtime.exs"])
 
       assert plan.scope == :full_suite
-      assert Enum.any?(plan.reasons, &(&1 =~ "upstream test/support/factory.ex"))
+      assert Enum.any?(plan.reasons, &(&1 =~ "upstream config/runtime.exs"))
+    end
+
+    test "an upstream test-support module widens here, where this suite compiles it too" do
+      # Upstream, it resolves to the one test using it; this suite's own users
+      # are invisible to the upstream index.
+      assert Selection.plan(["test/support/fixture_helper.ex"], named_index()).scope == :selection
+
+      plan = downstream_plan(["test/support/fixture_helper.ex"])
+
+      assert plan.scope == :full_suite
+      assert Enum.any?(plan.reasons, &(&1 =~ "test support this suite compiles"))
     end
 
     test "an upstream test file reaches only the cross-checks" do
@@ -343,6 +364,166 @@ defmodule Tymeslot.TestAffected.SelectionTest do
 
     test "upstream changes that cannot reach the build leave nothing to run" do
       assert downstream_plan(["README.md"]).scope == :nothing
+    end
+  end
+
+  # A dashboard directory holding tests of two domains, the shape that once
+  # turned any component in it into the full suite, plus modules naming
+  # others: a mirrored caller, and tests.
+  defp code_index do
+    tags = %{
+      "test/tymeslot/auth/session_test.exs" => [:auth],
+      "test/tymeslot/auth/oauth/google_test.exs" => [:auth],
+      "test/tymeslot/payments/stripe_test.exs" => [:payments],
+      "test/tymeslot/payments/refund_test.exs" => [:payments],
+      "test/tymeslot/analytics/report_test.exs" => [:analytics],
+      "test/tymeslot/analytics/funnel_test.exs" => [:analytics],
+      "test/tymeslot_web/live/dashboard/auth_panel_test.exs" => [:auth],
+      "test/tymeslot_web/live/dashboard/billing_panel_test.exs" => [:payments],
+      "test/tymeslot/locale/de_test.exs" => [:i18n],
+      "test/tymeslot/locale/fr_test.exs" => [:i18n],
+      "test/tymeslot/locale/es_test.exs" => [:i18n],
+      "test/tymeslot/locale/it_test.exs" => [:i18n]
+    }
+
+    sources = %{
+      "lib/tymeslot_web/live/dashboard/widget.ex" =>
+        "defmodule TymeslotWeb.Dashboard.Widget do\nend",
+      "lib/tymeslot_web/live/dashboard/chart.ex" =>
+        "defmodule TymeslotWeb.Dashboard.Chart do\nend",
+      "lib/tymeslot/analytics/report.ex" =>
+        "defmodule Tymeslot.Analytics.Report do\n  TymeslotWeb.Dashboard.Chart.render()\nend",
+      "lib/tymeslot_web/live/dashboard/badge.ex" =>
+        "defmodule TymeslotWeb.Dashboard.Badge do\nend",
+      "test/tymeslot/auth/oauth/google_test.exs" => "alias TymeslotWeb.Dashboard.Badge",
+      "lib/tymeslot/payments/stripe.ex" => "defmodule Tymeslot.Payments.Stripe do\nend",
+      "test/tymeslot/analytics/funnel_test.exs" => "Tymeslot.Payments.Stripe.charge()"
+    }
+
+    %{
+      test_files: tags |> Map.keys() |> MapSet.new(),
+      tags: Map.new(tags, fn {file, list} -> {file, MapSet.new(list)} end),
+      domain_tags: MapSet.new([:auth, :payments, :analytics, :i18n]),
+      sources: Map.merge(Map.new(tags, fn {file, _tags} -> {file, ""} end), sources),
+      config: %{}
+    }
+  end
+
+  describe "plan/3 code with no mirror test file" do
+    test "nothing naming it runs its mirror directory, without sweeping the directory's domains" do
+      plan = Selection.plan(["lib/tymeslot_web/live/dashboard/widget.ex"], code_index())
+
+      assert plan.scope == :selection
+
+      assert plan.files == [
+               "test/tymeslot_web/live/dashboard/auth_panel_test.exs",
+               "test/tymeslot_web/live/dashboard/billing_panel_test.exs"
+             ]
+    end
+
+    test "a mirrored caller seeds the selection and sweeps its own domain" do
+      plan = Selection.plan(["lib/tymeslot_web/live/dashboard/chart.ex"], code_index())
+
+      assert plan.tags == [:analytics]
+      assert "test/tymeslot/analytics/report_test.exs" in plan.files
+      assert "test/tymeslot/analytics/funnel_test.exs" in plan.files
+      assert "test/tymeslot_web/live/dashboard/billing_panel_test.exs" in plan.files
+      refute "test/tymeslot/payments/stripe_test.exs" in plan.files
+      refute "test/tymeslot/auth/session_test.exs" in plan.files
+    end
+
+    test "a test naming it seeds the selection and sweeps that test's domain" do
+      plan = Selection.plan(["lib/tymeslot_web/live/dashboard/badge.ex"], code_index())
+
+      assert plan.tags == [:auth]
+      assert "test/tymeslot/auth/oauth/google_test.exs" in plan.files
+      assert "test/tymeslot/auth/session_test.exs" in plan.files
+      refute "test/tymeslot/payments/stripe_test.exs" in plan.files
+    end
+  end
+
+  describe "plan/3 code with a mirror test file" do
+    test "also runs the tests naming the module, without sweeping their domains" do
+      plan = Selection.plan(["lib/tymeslot/payments/stripe.ex"], code_index())
+
+      assert plan.tags == [:payments]
+      assert "test/tymeslot/analytics/funnel_test.exs" in plan.files
+      refute "test/tymeslot/analytics/report_test.exs" in plan.files
+    end
+  end
+
+  # Test support reached directly, through another support module, through
+  # the suite's configuration, and from application code.
+  defp support_index do
+    tags = %{
+      "test/tymeslot/auth/session_test.exs" => [:auth],
+      "test/tymeslot/payments/stripe_test.exs" => [:payments],
+      "test/tymeslot/payments/refund_test.exs" => [:payments],
+      "test/tymeslot/analytics/report_test.exs" => [:analytics],
+      "test/tymeslot/analytics/funnel_test.exs" => [:analytics]
+    }
+
+    sources = %{
+      "test/tymeslot/auth/session_test.exs" => "import Tymeslot.Test.AuthHelpers",
+      "test/tymeslot/payments/stripe_test.exs" => "alias Tymeslot.Test.Wrapper",
+      "test/support/auth_helpers.ex" => "defmodule Tymeslot.Test.AuthHelpers do\nend",
+      "test/support/wrapper.ex" =>
+        "defmodule Tymeslot.Test.Wrapper do\n  Tymeslot.Test.Inner.go()\nend",
+      "test/support/inner.ex" =>
+        ~s|defmodule Tymeslot.Test.Inner do\n  @json "test/support/fixtures/charge.json"\nend|,
+      "test/support/calendar_mock.ex" => "defmodule Tymeslot.CalendarMock do\nend",
+      "test/support/leaky.ex" => "defmodule Tymeslot.Test.Leaky do\nend",
+      "lib/tymeslot/leak.ex" => "Tymeslot.Test.Leaky.run()"
+    }
+
+    %{
+      test_files: tags |> Map.keys() |> MapSet.new(),
+      tags: Map.new(tags, fn {file, list} -> {file, MapSet.new(list)} end),
+      domain_tags: MapSet.new([:auth, :payments, :analytics]),
+      sources: Map.merge(Map.new(tags, fn {file, _tags} -> {file, ""} end), sources),
+      config: %{"config/test.exs" => "config :tymeslot, calendar: Tymeslot.CalendarMock"}
+    }
+  end
+
+  describe "plan/3 test support" do
+    test "a support module runs the tests that use it, not the whole suite" do
+      plan = Selection.plan(["test/support/auth_helpers.ex"], support_index())
+
+      assert plan.scope == :selection
+      assert plan.files == ["test/tymeslot/auth/session_test.exs"]
+    end
+
+    test "a support module reaches the tests using it through other support modules" do
+      plan = Selection.plan(["test/support/inner.ex"], support_index())
+
+      assert plan.files == ["test/tymeslot/payments/stripe_test.exs"]
+    end
+
+    test "a fixture file reaches the tests through the support module reading it" do
+      plan = Selection.plan(["test/support/fixtures/charge.json"], support_index())
+
+      assert plan.files == ["test/tymeslot/payments/stripe_test.exs"]
+    end
+
+    test "a support module the suite's configuration names widens" do
+      plan = Selection.plan(["test/support/calendar_mock.ex"], support_index())
+
+      assert plan.scope == :full_suite
+      assert Enum.any?(plan.reasons, &(&1 =~ "named by config/test.exs"))
+    end
+
+    test "a support module application code names widens" do
+      plan = Selection.plan(["test/support/leaky.ex"], support_index())
+
+      assert plan.scope == :full_suite
+      assert Enum.any?(plan.reasons, &(&1 =~ "named by lib/tymeslot/leak.ex"))
+    end
+
+    test "a deleted support module widens, since nothing says who used it" do
+      plan = Selection.plan(["test/support/gone.ex"], support_index())
+
+      assert plan.scope == :full_suite
+      assert Enum.any?(plan.reasons, &(&1 =~ "defines no module"))
     end
   end
 
@@ -397,19 +578,19 @@ defmodule Tymeslot.TestAffected.SelectionTest do
 
   describe "mirror resolution" do
     test "prefers the mirror file, and falls back to the directory without one" do
-      assert Selection.mirror_file("lib/tymeslot/auth/session.ex", index()) ==
+      assert Mirror.mirror_file("lib/tymeslot/auth/session.ex", index()) ==
                "test/tymeslot/auth/session_test.exs"
 
-      assert Selection.mirror_file("lib/tymeslot/auth/no_test_for_this.ex", index()) == nil
+      assert Mirror.mirror_file("lib/tymeslot/auth/no_test_for_this.ex", index()) == nil
 
       assert {[_first | _rest], "test/tymeslot/auth/"} =
-               Selection.mirror("lib/tymeslot/auth/no_test_for_this.ex", index())
+               Mirror.mirror("lib/tymeslot/auth/no_test_for_this.ex", index())
     end
 
     test "refuses to treat a top-level test root as a mirror directory" do
       # `lib/tymeslot/announcements.ex` would otherwise mirror to `test/tymeslot`,
       # which is most of the suite wearing a targeted run's clothes.
-      assert Selection.mirror("lib/tymeslot/announcements.ex", index()) == nil
+      assert Mirror.mirror("lib/tymeslot/announcements.ex", index()) == nil
     end
 
     test "dev tooling and Credo checks mirror into test/dev_support" do
@@ -425,19 +606,19 @@ defmodule Tymeslot.TestAffected.SelectionTest do
       assert Selection.classify("dev_support/tooling/precommit/runner.ex") ==
                {:lib, "dev_support/tooling/precommit/runner.ex"}
 
-      assert Selection.mirror_file("dev_support/tooling/precommit/runner.ex", index) ==
+      assert Mirror.mirror_file("dev_support/tooling/precommit/runner.ex", index) ==
                "test/dev_support/tooling/precommit/runner_test.exs"
 
-      assert Selection.mirror_file("dev_support/credo_checks/repo_call_boundary.ex", index) ==
+      assert Mirror.mirror_file("dev_support/credo_checks/repo_call_boundary.ex", index) ==
                "test/dev_support/credo_checks/repo_call_boundary_test.exs"
 
       assert {["test/dev_support/tooling/precommit/runner_test.exs"],
               "test/dev_support/tooling/precommit/"} =
-               Selection.mirror("dev_support/tooling/precommit/guard.ex", index)
+               Mirror.mirror("dev_support/tooling/precommit/guard.ex", index)
     end
 
     test "a colocated template resolves to its module's test, not one named after itself" do
-      assert Selection.mirror_file("lib/tymeslot/auth/session.html.heex", index()) ==
+      assert Mirror.mirror_file("lib/tymeslot/auth/session.html.heex", index()) ==
                "test/tymeslot/auth/session_test.exs"
     end
   end

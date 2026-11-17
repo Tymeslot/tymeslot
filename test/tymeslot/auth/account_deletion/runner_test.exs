@@ -11,9 +11,8 @@ defmodule Tymeslot.Auth.AccountDeletion.RunnerTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
-  alias Tymeslot.Auth
   alias Tymeslot.Auth.AccountDeletion
-  alias Tymeslot.Auth.AccountDeletion.Runner
+  alias Tymeslot.Auth.AccountDeletion.{Purge, Runner}
   alias Tymeslot.Auth.{UserQueries, UserSchema}
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -156,16 +155,16 @@ defmodule Tymeslot.Auth.AccountDeletion.RunnerTest do
     end
   end
 
-  describe "AccountDeletion.delete_account/2 with only_if_pending" do
+  describe "Purge.delete_account/2 with only_if_pending" do
     test "refuses an account that is no longer pending" do
       user = insert(:user)
 
-      assert AccountDeletion.delete_account(user, only_if_pending: true) == {:error, :not_pending}
+      assert Purge.delete_account(user, only_if_pending: true) == {:error, :not_pending}
       assert Repo.get(UserSchema, user.id)
     end
   end
 
-  describe "AccountDeletion.delete_account/2 with a future deletion date" do
+  describe "Purge.delete_account/2 with a future deletion date" do
     test "does not delete an account whose grace period is not over" do
       stale = pending_user(past())
 
@@ -173,7 +172,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RunnerTest do
         set: [deletion_scheduled_at: DateTime.add(DateTime.utc_now(:second), 14, :day)]
       )
 
-      assert AccountDeletion.delete_account(stale, only_if_pending: true) ==
+      assert Purge.delete_account(stale, only_if_pending: true) ==
                {:error, :not_pending}
 
       assert Repo.get(UserSchema, stale.id)
@@ -183,7 +182,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RunnerTest do
       user = pending_user(past())
       Repo.delete!(user)
 
-      assert AccountDeletion.delete_account(user, only_if_pending: true) == {:error, :not_found}
+      assert Purge.delete_account(user, only_if_pending: true) == {:error, :not_found}
     end
   end
 
@@ -193,9 +192,9 @@ defmodule Tymeslot.Auth.AccountDeletion.RunnerTest do
       _not_yet = pending_user(future())
       _active = insert(:user)
 
-      assert Auth.enqueue_overdue_account_deletions() == 1
+      assert AccountDeletion.enqueue_overdue_account_deletions() == 1
       assert_enqueued(worker: AccountDeletionWorker, args: %{"user_id" => overdue.id})
-      assert Auth.enqueue_overdue_account_deletions() == 0
+      assert AccountDeletion.enqueue_overdue_account_deletions() == 0
     end
   end
 
@@ -222,7 +221,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RunnerTest do
       assert payload.user_id == admin.id
       refute_received {:send_alert, :account_deletion_stalled, _payload}
 
-      assert {:ok, restored} = Auth.restore_account(held)
+      assert {:ok, restored} = AccountDeletion.restore_account(held)
       refute restored.deletion_scheduled_at
     end
 

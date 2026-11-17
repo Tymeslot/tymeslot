@@ -78,7 +78,7 @@ defmodule Tymeslot.Workers.SlackWorker do
          :ok <- check_active(integration),
          {:ok, meeting} <- MeetingNotificationJob.load_meeting(meeting_id, args["participant_id"]) do
       timezone = Recipients.get_organizer_timezone(meeting)
-      blocks = MessageBuilder.build_blocks(event_type, meeting, timezone)
+      blocks = MessageBuilder.build_blocks(event_type, meeting, timezone, args["series"])
 
       DeliveryClaims.once(job, "slack_message", fn ->
         result = deliver(integration, blocks)
@@ -112,17 +112,30 @@ defmodule Tymeslot.Workers.SlackWorker do
   key; a solo meeting passes `nil`, which is stored and keyed as well, so a
   seat's message and the meeting's own are never taken for duplicates (see
   `Tymeslot.Workers.MeetingNotificationJob.schedule/5`).
+
+  `series` is the event's `series` object
+  (`Tymeslot.BookingSeries.Automation`), stored with the job for the
+  message of a series event.
   """
-  @spec schedule_delivery(integer(), String.t(), binary(), binary() | nil) ::
+  @spec schedule_delivery(integer(), String.t(), binary(), binary() | nil, map() | nil) ::
           :ok | {:error, term()}
-  def schedule_delivery(integration_id, event_type, meeting_id, participant_id \\ nil) do
+  def schedule_delivery(
+        integration_id,
+        event_type,
+        meeting_id,
+        participant_id \\ nil,
+        series \\ nil
+      ) do
     MeetingNotificationJob.schedule(
       __MODULE__,
-      %{
-        "integration_id" => integration_id,
-        "event_type" => event_type,
-        "meeting_id" => meeting_id
-      },
+      put_series(
+        %{
+          "integration_id" => integration_id,
+          "event_type" => event_type,
+          "meeting_id" => meeting_id
+        },
+        series
+      ),
       participant_id,
       [:integration_id, :event_type, :meeting_id],
       queue: :slack_messages
@@ -131,6 +144,11 @@ defmodule Tymeslot.Workers.SlackWorker do
 
   @impl Oban.Worker
   defdelegate backoff(job), to: MeetingNotificationJob, as: :chat_backoff
+
+  # The event's `series` object (`Tymeslot.BookingSeries.Automation`), which
+  # a series event's message counts its sessions from.
+  defp put_series(args, nil), do: args
+  defp put_series(args, series) when is_map(series), do: Map.put(args, "series", series)
 
   # ============================================================================
   # Private helpers

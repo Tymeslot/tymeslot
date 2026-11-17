@@ -10,7 +10,6 @@ defmodule Tymeslot.Meetings.GuestQueries do
 
   alias Ecto.Changeset
   alias Tymeslot.Meetings.GuestSchema, as: Guest
-  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Repo
@@ -339,42 +338,6 @@ defmodule Tymeslot.Meetings.GuestQueries do
       %{"value" => v, "unit" => u} -> v == value and u == unit
       %{value: v, unit: u} -> v == value and u == unit
       _other -> false
-    end)
-  end
-
-  @doc """
-  Returns a map of `meeting_uid => RSVP summary` for every meeting the given
-  user organises that has at least one guest. One grouped query for the whole
-  dashboard, keyed by `uid` so both the bookings list and the calendar grid
-  (whose events carry the meeting `uid`) can look up a summary directly.
-  """
-  @spec rsvp_summaries_for_user(integer()) :: %{String.t() => Guest.summary()}
-  def rsvp_summaries_for_user(user_id) do
-    # The meeting is not filtered for organiser visibility: callers look
-    # summaries up by the uids of cards that already are. Its guests are,
-    # since a visible group slot may still carry a seat held for email
-    # verification, whose guests the organiser must not count.
-    query =
-      from(g in Guest,
-        join: m in Meeting,
-        on: m.id == g.meeting_id,
-        where: m.organizer_user_id == ^user_id,
-        where: is_nil(g.participant_id) or g.participant_id in subquery(live_visible_seat_ids()),
-        group_by: [m.uid, g.status],
-        select: {m.uid, g.status, count(g.id)}
-      )
-
-    query
-    |> Repo.all()
-    |> Enum.reduce(%{}, fn {uid, status, count}, acc ->
-      summary = Map.get(acc, uid, Guest.empty_summary())
-
-      summary =
-        summary
-        |> Map.update!(:total, &(&1 + count))
-        |> Map.update!(status, &(&1 + count))
-
-      Map.put(acc, uid, summary)
     end)
   end
 end

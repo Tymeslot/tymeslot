@@ -280,6 +280,34 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
       assert reload(meeting).status == :expired
     end
 
+    # The page that held the slot is not the one that books it now, so the
+    # attendee is told the time was released and sent back to book a series.
+    test "a confirmation after the type became series-only releases the slot", %{
+      conn: conn,
+      user: user,
+      type: type
+    } do
+      meeting = held(user, type)
+      {:ok, view, _html} = live(conn, path(meeting))
+
+      type
+      |> Changeset.change(
+        series_mode: :recurring,
+        series_frequency: :weekly,
+        series_interval: 1,
+        series_min_occurrences: 2,
+        series_max_occurrences: 12,
+        series_required: true
+      )
+      |> Repo.update!()
+
+      html = confirm(view)
+
+      assert html =~ "This booking is no longer available, so the time was released."
+      assert has_element?(view, "[data-testid='rebook-link'][href='/verify-host/intro']")
+      assert %{status: :expired, email_verified_at: nil} = reload(meeting)
+    end
+
     test "a confirmation that could not be scheduled can be tried again", %{
       conn: conn,
       user: user,

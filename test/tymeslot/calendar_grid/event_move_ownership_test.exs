@@ -17,7 +17,8 @@ defmodule Tymeslot.CalendarGrid.EventMoveOwnershipTest do
   import Mox
   import Tymeslot.Test.CalendarGridHelpers
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
+  alias Tymeslot.CalendarGrid.NewEvent
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -55,7 +56,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveOwnershipTest do
   end
 
   defp move(user, event, destination),
-    do: CalendarGrid.move_event(user.id, event, %{integration: destination, calendar_id: nil})
+    do: Changes.move_event(user.id, event, %{integration: destination, calendar_id: nil})
 
   # The destination's next sync reading back the resource the move wrote.
   defp sync_destination(destination, uid) do
@@ -132,7 +133,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveOwnershipTest do
     destination: destination
   } do
     :ok =
-      CalendarGrid.cache_created_event(%{
+      NewEvent.cache(%{
         uid: "fresh@tymeslot.com",
         calendar_integration_id: source.id,
         provider: source.provider,

@@ -1,8 +1,9 @@
 defmodule TymeslotWeb.Dashboard.MeetingTypeFormEmailVerificationTest do
   @moduledoc """
-  The toggle that asks invitees to confirm their email. It excludes payments:
-  the control renders disabled with the reason, and a forged event must not
-  get past the server-side guard either. Group types may use it.
+  The toggle that asks invitees to confirm their email. It excludes payments
+  and series: the control renders disabled with the reason, and a forged
+  event must not get past the server-side guard either. Group types may use
+  it.
   """
 
   use TymeslotWeb.LiveCase, async: false

@@ -27,7 +27,9 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   """
 
   alias Ecto.UUID
-  alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Emails.Templates.CalendarSyncError
+  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
@@ -571,26 +573,25 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     end
   end
 
+  # The operator is alerted here, where the failure is known, with the reason
+  # as it is; the owner's email goes out from a job, so a failed send is
+  # retried, and the alert is not repeated with it.
   defp send_calendar_error_notification(meeting, error_reason) do
-    Logger.info("Sending calendar sync error notification to owner",
+    Logger.info("Scheduling calendar sync error notification to owner",
       meeting_id: meeting.id,
-      error: error_reason
+      error: LogFormat.reason(error_reason)
     )
 
-    # Send error notification email to calendar owner only
-    # This helps identify persistent CalDAV issues
-    case Config.email_service_module().send_calendar_sync_error(meeting, error_reason) do
-      :ok ->
-        :ok
+    AdminAlerts.report(:calendar_sync_error,
+      summary: "Calendar sync failed for meeting",
+      reason: error_reason,
+      context: %{
+        meeting_id: meeting.id,
+        owner_email: CalendarSyncError.recipient_email(meeting),
+        calendar_integration_id: Map.get(meeting, :calendar_integration_id)
+      }
+    )
 
-      {:ok, _email} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to send calendar sync error notification",
-          meeting_id: meeting.id,
-          error: LogFormat.reason(reason)
-        )
-    end
+    EmailScheduler.schedule_calendar_sync_error(meeting.id, error_reason)
   end
 end

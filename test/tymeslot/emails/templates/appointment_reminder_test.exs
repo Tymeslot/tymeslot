@@ -314,7 +314,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       end
     end
 
-    test "the organiser's prep line treats a host link alone as a video meeting" do
+    test "a host link alone still gives the organiser a call to start" do
       details =
         build_appointment_details(%{
           meeting_url: nil,
@@ -324,7 +324,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
 
       email = AppointmentReminder.render(:organizer, "organizer@example.com", details)
 
-      assert email.text_body =~ "Camera & mic ready"
+      assert email.html_body =~ "Start Meeting"
       assert email.text_body =~ "jwt=HOST-TOKEN"
     end
   end

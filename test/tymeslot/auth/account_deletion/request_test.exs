@@ -10,6 +10,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
 
   alias Phoenix.Socket.Broadcast
   alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Auth.{UserSchema, UserSessionQueries}
   alias Tymeslot.Repo
   alias Tymeslot.Security.{RateLimiter, Token}
@@ -67,7 +68,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
       "comment" => "Too dear"
     }
 
-    assert {:ok, pending} = Auth.request_account_deletion(user, params, @opts)
+    assert {:ok, pending} = AccountDeletion.request_account_deletion(user, params, @opts)
 
     assert DateTime.diff(pending.deletion_scheduled_at, pending.deletion_requested_at, :day) == 14
 
@@ -96,7 +97,11 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
     insert(:profile, user: user, timezone: "Pacific/Kiritimati")
 
     assert {:ok, _pending} =
-             Auth.request_account_deletion(user, %{"current_password" => @password}, @opts)
+             AccountDeletion.request_account_deletion(
+               user,
+               %{"current_password" => @password},
+               @opts
+             )
 
     assert_enqueued(
       worker: EmailWorker,
@@ -108,7 +113,11 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
     user = insert(:user)
 
     assert {:error, %{current_password: _message}} =
-             Auth.request_account_deletion(user, %{"current_password" => "nope"}, @opts)
+             AccountDeletion.request_account_deletion(
+               user,
+               %{"current_password" => "nope"},
+               @opts
+             )
 
     assert Repo.get(UserSchema, user.id).deletion_scheduled_at == nil
     refute_enqueued(worker: AccountDeletionWorker)
@@ -118,10 +127,14 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
     user = insert(:user, provider: "google", password_hash: nil, email: "sam@example.com")
 
     assert {:error, %{confirm_email: _message}} =
-             Auth.request_account_deletion(user, %{"confirm_email" => "other@example.com"}, @opts)
+             AccountDeletion.request_account_deletion(
+               user,
+               %{"confirm_email" => "other@example.com"},
+               @opts
+             )
 
     assert {:ok, _pending} =
-             Auth.request_account_deletion(
+             AccountDeletion.request_account_deletion(
                user,
                %{"confirm_email" => "  SAM@example.com "},
                @opts
@@ -133,7 +146,11 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
     user = insert(:user)
 
     assert {:ok, pending} =
-             Auth.request_account_deletion(user, %{"current_password" => @password}, @opts)
+             AccountDeletion.request_account_deletion(
+               user,
+               %{"current_password" => @password},
+               @opts
+             )
 
     assert pending.deletion_scheduled_at == pending.deletion_requested_at
 
@@ -149,8 +166,8 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
     params = %{"current_password" => @password}
     :ok = Auth.subscribe_to_account(user_id)
 
-    assert {:ok, first} = Auth.request_account_deletion(user, params, @opts)
-    assert {:ok, second} = Auth.request_account_deletion(first, params, @opts)
+    assert {:ok, first} = AccountDeletion.request_account_deletion(user, params, @opts)
+    assert {:ok, second} = AccountDeletion.request_account_deletion(first, params, @opts)
 
     assert second.deletion_scheduled_at == first.deletion_scheduled_at
     assert length(all_enqueued(worker: AccountDeletionWorker)) == 1
@@ -172,7 +189,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
     Endpoint.subscribe(other_topic)
 
     assert {:ok, _pending} =
-             Auth.request_account_deletion(
+             AccountDeletion.request_account_deletion(
                user,
                %{"current_password" => @password},
                [current_session_token: current] ++ @opts
@@ -189,7 +206,11 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
     session = session_for(user)
 
     assert {:error, _reason} =
-             Auth.request_account_deletion(user, %{"current_password" => "nope"}, @opts)
+             AccountDeletion.request_account_deletion(
+               user,
+               %{"current_password" => "nope"},
+               @opts
+             )
 
     assert UserSessionQueries.get_user_by_session_token(session)
   end
@@ -198,10 +219,18 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
     user = insert(:user, provider: "google")
 
     assert {:error, %{current_password: _message}} =
-             Auth.request_account_deletion(user, %{"confirm_email" => user.email}, @opts)
+             AccountDeletion.request_account_deletion(
+               user,
+               %{"confirm_email" => user.email},
+               @opts
+             )
 
     assert {:ok, _pending} =
-             Auth.request_account_deletion(user, %{"current_password" => @password}, @opts)
+             AccountDeletion.request_account_deletion(
+               user,
+               %{"current_password" => @password},
+               @opts
+             )
   end
 
   test "no feedback reaches the hook while collection is off" do
@@ -210,7 +239,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
     user_id = user.id
 
     assert {:ok, _pending} =
-             Auth.request_account_deletion(
+             AccountDeletion.request_account_deletion(
                user,
                %{"current_password" => @password, "reason" => "too_expensive"},
                @opts
@@ -224,7 +253,11 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
 
     message =
       Enum.find_value(1..30, fn _attempt ->
-        case Auth.request_account_deletion(user, %{"current_password" => "nope"}, @opts) do
+        case AccountDeletion.request_account_deletion(
+               user,
+               %{"current_password" => "nope"},
+               @opts
+             ) do
           {:error, :rate_limited, message} -> message
           _other -> nil
         end
@@ -238,7 +271,11 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
     {:ok, _job} = AccountDeletionWorker.schedule(user.id, DateTime.utc_now())
 
     assert {:ok, _pending} =
-             Auth.request_account_deletion(user, %{"current_password" => @password}, @opts)
+             AccountDeletion.request_account_deletion(
+               user,
+               %{"current_password" => @password},
+               @opts
+             )
 
     assert length(all_enqueued(worker: AccountDeletionWorker)) == 1
     assert length(all_enqueued(worker: EmailWorker)) == 1
@@ -249,7 +286,11 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
       admin = insert(:user, is_admin: true)
 
       assert {:error, %{base: message}} =
-               Auth.request_account_deletion(admin, %{"current_password" => @password}, @opts)
+               AccountDeletion.request_account_deletion(
+                 admin,
+                 %{"current_password" => @password},
+                 @opts
+               )
 
       assert message =~ "only admin who can sign in"
       refute Repo.reload!(admin).deletion_scheduled_at
@@ -261,7 +302,11 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
       _other_admin = insert(:user, is_admin: true)
 
       assert {:ok, %UserSchema{deletion_scheduled_at: %DateTime{}}} =
-               Auth.request_account_deletion(admin, %{"current_password" => @password}, @opts)
+               AccountDeletion.request_account_deletion(
+                 admin,
+                 %{"current_password" => @password},
+                 @opts
+               )
     end
 
     test "is refused when the other admin is already pending deletion" do
@@ -275,7 +320,11 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestTest do
         )
 
       assert {:error, %{base: _message}} =
-               Auth.request_account_deletion(admin, %{"current_password" => @password}, @opts)
+               AccountDeletion.request_account_deletion(
+                 admin,
+                 %{"current_password" => @password},
+                 @opts
+               )
 
       refute Repo.reload!(admin).deletion_scheduled_at
     end

@@ -56,7 +56,10 @@
   );
 }
 
-.paper-slots .slot-list__slot {
+/* The series part's picker of further sessions draws its days and times
+   as the day's times are drawn (series.css). */
+.paper-slots .slot-list__slot,
+.paper-series .slot-list__slot {
   box-sizing: border-box;
   min-height: var(--paper-control-height);
   padding: 0 var(--space-sm);
@@ -71,13 +74,15 @@
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.paper-slots .slot-list__slot:hover {
+.paper-slots .slot-list__slot:hover,
+.paper-series .slot-list__slot:hover {
   transform: none;
   background: var(--paper-tint);
   color: var(--paper-accent-ink);
 }
 
-.paper-slots .slot-list__slot.slot-list__slot--selected {
+.paper-slots .slot-list__slot.slot-list__slot--selected,
+.paper-series .slot-list__slot.slot-list__slot--selected {
   border-color: var(--theme-primary-solid);
   background: var(--theme-primary-solid);
   color: var(--theme-on-primary);

@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
   @moduledoc """
-  `CalendarGrid.delete_event/4` with `notify_attendees: true` sends each
+  `Changes.delete_event/4` with `notify_attendees: true` sends each
   attendee a cancellation, and only once the calendar has deleted the event:
   never for a delete that failed or was queued for the next sync, and never
   for a booking, whose cancelled meeting tells its attendee itself.
@@ -20,7 +20,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
   import Mox
   import Tymeslot.Test.CalendarGridHelpers
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.UndeliveredUpdates
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.SeriesRuleQueries
@@ -58,7 +58,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       expect_delete(:ok)
 
       assert {:ok, %{attendees_notified: :sent}} =
-               CalendarGrid.delete_event(user.id, event, :occurrence, notify_attendees: true)
+               Changes.delete_event(user.id, event, :occurrence, notify_attendees: true)
 
       assert Enum.sort(cancelled_to()) == ["guest@example.com", "other@example.com"]
       assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
@@ -68,7 +68,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       event = insert_event(caldav, @design_review, %{attendees: @attendees})
       expect_delete(:ok)
 
-      assert {:ok, %{attendees_notified: :none}} = CalendarGrid.delete_event(user.id, event)
+      assert {:ok, %{attendees_notified: :none}} = Changes.delete_event(user.id, event)
       assert cancelled_to() == []
     end
 
@@ -77,7 +77,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       expect_delete({:error, :network_error})
 
       assert {:error, %{retry: :queued}} =
-               CalendarGrid.delete_event(user.id, event, :occurrence, notify_attendees: true)
+               Changes.delete_event(user.id, event, :occurrence, notify_attendees: true)
 
       assert cancelled_to() == []
     end
@@ -87,7 +87,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       expect_delete({:error, :unauthorized})
 
       assert {:error, %{retry: :not_queued}} =
-               CalendarGrid.delete_event(user.id, event, :occurrence, notify_attendees: true)
+               Changes.delete_event(user.id, event, :occurrence, notify_attendees: true)
 
       assert cancelled_to() == []
     end
@@ -109,7 +109,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       expect_delete(:ok)
 
       assert {:ok, %{linked_meeting: :cancelled, attendees_notified: :none}} =
-               CalendarGrid.delete_event(user.id, event, :occurrence, notify_attendees: true)
+               Changes.delete_event(user.id, event, :occurrence, notify_attendees: true)
 
       assert cancelled_to() == []
     end
@@ -130,7 +130,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       expect_delete(:ok)
 
       assert {:ok, %{attendees_notified: :sent}} =
-               CalendarGrid.delete_event(user.id, first, :series, notify_attendees: true)
+               Changes.delete_event(user.id, first, :series, notify_attendees: true)
 
       jobs = cancellation_jobs()
       assert length(jobs) == 2
@@ -183,7 +183,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       expect_delete(:ok)
 
       assert {:ok, %{attendees_notified: :sent}} =
-               CalendarGrid.delete_event(user.id, deleted, :series, notify_attendees: true)
+               Changes.delete_event(user.id, deleted, :series, notify_attendees: true)
 
       assert [job | _other_attendees] = cancellation_jobs()
       assert job.args["event_uid"] == deleted.uid
@@ -207,7 +207,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       expect_delete(:ok)
 
       assert {:ok, %{attendees_notified: :sent}} =
-               CalendarGrid.delete_event(user.id, first, :occurrence, notify_attendees: true)
+               Changes.delete_event(user.id, first, :occurrence, notify_attendees: true)
 
       jobs = cancellation_jobs()
       assert length(jobs) == 2
@@ -230,7 +230,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       expect_delete(:ok)
 
       assert {:ok, %{attendees_notified: :none}} =
-               CalendarGrid.delete_event(user.id, event, :occurrence, notify_attendees: true)
+               Changes.delete_event(user.id, event, :occurrence, notify_attendees: true)
 
       assert cancelled_to() == []
       assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
@@ -261,7 +261,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       log_event =
         LogCapture.with_capture(fn ->
           assert {:ok, %{attendees_notified: :failed}} =
-                   CalendarGrid.delete_event(user.id, event, :occurrence, notify_attendees: true)
+                   Changes.delete_event(user.id, event, :occurrence, notify_attendees: true)
 
           LogCapture.await_log("could not enqueue the attendees' cancellation")
         end)
@@ -287,7 +287,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       missed(caldav, other.uid)
       expect_delete(:ok)
 
-      assert {:ok, _deleted} = CalendarGrid.delete_event(user.id, event)
+      assert {:ok, _deleted} = Changes.delete_event(user.id, event)
 
       assert UndeliveredUpdates.list_for_event(user.id, caldav.id, event.uid) == []
 
@@ -308,7 +308,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
       missed(google, second.uid)
       expect_delete(:ok)
 
-      assert {:ok, _deleted} = CalendarGrid.delete_event(user.id, first, :series)
+      assert {:ok, _deleted} = Changes.delete_event(user.id, first, :series)
 
       for event <- [first, second] do
         assert UndeliveredUpdates.list_for_event(user.id, google.id, event.uid) == []

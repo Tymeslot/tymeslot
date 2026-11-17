@@ -284,7 +284,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
   defp cancel_pending_booking(payment, now) do
     case BookingPaymentQueries.cancel_if_pending(payment.id, now) do
       {:ok, :cancelled} ->
-        {:ok, expire_held_meeting(payment.meeting_id)}
+        {:ok, expire_held(payment)}
 
       {:ok, :skipped} ->
         :skipped
@@ -299,22 +299,29 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
   # payment's own `checkout.session.expired` event later expires a meeting
   # still awaiting payment behind a cancelled payment
   # (`Webhooks.FailAndExpire`).
-  defp expire_held_meeting(meeting_id) do
-    case HeldMeetings.expire(meeting_id) do
-      {:ok, :expired, meeting} ->
-        meeting
-
-      {:ok, :unchanged} ->
-        nil
-
-      {:error, reason} ->
-        Logger.warning("Failed to expire the meeting of a cancelled checkout",
-          meeting_id: meeting_id,
-          reason: LogFormat.reason(reason)
-        )
-
-        nil
+  defp expire_held(%{series_id: series_id}) when is_binary(series_id) do
+    case HeldMeetings.expire_series(series_id) do
+      {:ok, :expired, first} -> first
+      {:ok, :unchanged, _first_id} -> nil
+      {:error, reason} -> log_meeting_expire_failure(reason, series_id: series_id)
     end
+  end
+
+  defp expire_held(%{meeting_id: meeting_id}) do
+    case HeldMeetings.expire(meeting_id) do
+      {:ok, :expired, meeting} -> meeting
+      {:ok, :unchanged} -> nil
+      {:error, reason} -> log_meeting_expire_failure(reason, meeting_id: meeting_id)
+    end
+  end
+
+  defp log_meeting_expire_failure(reason, ids) do
+    Logger.warning(
+      "Failed to expire the meeting of a cancelled checkout",
+      [reason: LogFormat.reason(reason)] ++ ids
+    )
+
+    nil
   end
 
   defp expire_stripe_sessions(pending, account) do

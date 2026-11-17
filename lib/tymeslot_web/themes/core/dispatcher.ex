@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     MountHelpers,
     PollVoting,
     Registry,
+    SeriesManagement,
     ThemeInfo
   }
 
@@ -84,20 +85,23 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     # on the static (crawler) render, where no conn is available.
     socket = assign(socket, :request_path, URI.parse(url).path || "/")
 
-    # Sync locale from params if present
-    socket =
-      if locale = params["locale"] do
-        LocaleHandler.handle_locale_change(socket, locale)
-      else
-        socket
-      end
+    # Sync locale from params if present. A change on a page showing the
+    # organiser's texts reloads it, as does a pick the organiser does not
+    # offer, and nothing else is handled then.
+    case LocaleHandler.handle_locale_change(socket, params["locale"], url) do
+      {:reload, socket} -> {:noreply, socket}
+      {:cont, socket} -> handle_page_params(params, url, socket)
+    end
+  end
 
+  defp handle_page_params(params, url, socket) do
     # Check if this is a meeting management action
     action = socket.assigns[:live_action]
 
     cond do
-      # Meeting management and poll voting have no scheduling params to delegate.
-      action in [:reschedule, :cancel, :cancel_confirmed, :poll_voting] ->
+      # Meeting management, the series page and poll voting have no
+      # scheduling params to delegate.
+      action in [:reschedule, :cancel, :cancel_confirmed, :series, :poll_voting] ->
         {:noreply, socket}
 
       # A page refused for setup (no calendar yet) was mounted without the
@@ -129,6 +133,10 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   def handle_event("keep_meeting" = event, params, socket),
     do: MeetingManagement.handle_meeting_event(event, params, socket)
+
+  def handle_event(event, params, socket)
+      when event in ~w(manage_series_confirm manage_series_back manage_series_cancel_all manage_series_withdraw),
+      do: SeriesManagement.handle_event(event, params, socket)
 
   def handle_event("register_participant" = event, params, socket),
     do: PollVoting.handle_poll_event(event, params, socket)
@@ -190,7 +198,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
       true ->
         case assigns[:live_action] do
-          action when action in [:reschedule, :cancel, :cancel_confirmed] ->
+          action when action in [:reschedule, :cancel, :cancel_confirmed, :series] ->
             render_theme(
               assigns,
               ErrorBoundary.load_failed_message(),

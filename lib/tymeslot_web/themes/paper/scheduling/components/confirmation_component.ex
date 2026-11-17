@@ -3,8 +3,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   Paper's confirmation: a check in a success-tinted circle (a clock on the
   warning tint for a request the organiser still has to accept), the
   headline and message, for a group type the line saying the booking is one
-  of its spots, the meeting's details in a quiet box (with the day it ends
-  on, when that is the next, and a note when the address is still to be
+  of its spots, the meeting's details in a quiet box (every session of a series,
+  with its links and the link to manage them all, in place of the day and
+  time; with the day it ends on, when that is the next, and a note when the address is still to be
   arranged), where the
   confirmation went, the guest's answers, and the calendar file and a new
   booking. Which status applies is `ConfirmationText`'s; the wording
@@ -19,6 +20,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Paper.Components
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.BookingText
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
@@ -27,6 +29,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
+  alias TymeslotWeb.Themes.Shared.SeriesSummary
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   @impl Phoenix.LiveComponent
@@ -37,6 +40,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    series_count = SeriesSummary.booked_count(assigns)
+
     assigns =
       assign(assigns,
         held: ApprovalDisplay.awaiting_approval?(assigns),
@@ -44,7 +49,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
         badge_icon: ConfirmationText.badge_icon(assigns),
         follow_ups: ConfirmationText.follow_ups?(assigns),
         location: BookingLocation.chosen_display(assigns),
-        calendar_path: PathHandlers.calendar_ics_path(assigns),
+        series_count: series_count,
+        # The calendar file holds one session: a series offers none.
+        calendar_path: if(is_nil(series_count), do: PathHandlers.calendar_ics_path(assigns)),
         minutes: Offer.duration_minutes(assigns.meeting_type, assigns.duration),
         next_day_end: LocalizationHelpers.booking_next_day_end(assigns)
       )
@@ -80,11 +87,20 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
             minutes: @minutes
           )}</span>
         </p>
+        <SeriesSummary.booked
+          :if={@series_count}
+          series={@series}
+          meetings={@series_meetings}
+          timezone={@user_timezone}
+          organizer_profile={@organizer_profile}
+          duration={BookingText.duration_label(assigns)}
+          class="paper-series-booked"
+        />
         <ul class="paper-facts" role="list">
-          <Components.fact icon="hero-calendar">
+          <Components.fact :if={is_nil(@series_count)} icon="hero-calendar">
             {LocalizationHelpers.format_date(@selected_date)}
           </Components.fact>
-          <Components.fact icon="hero-clock">
+          <Components.fact :if={is_nil(@series_count)} icon="hero-clock">
             {LocalizationHelpers.format_slot_label(@selected_time)}, {LocalizationHelpers.format_zone_label(
               @selected_date,
               @selected_time,
@@ -168,6 +184,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
     """
   end
 
+  defp headline(%{series_count: count} = assigns) when is_integer(count),
+    do: SeriesSummary.headline(assigns, count)
+
   defp headline(assigns) do
     case ConfirmationText.status(assigns) do
       :check_inbox -> ConfirmationText.check_inbox_headline(:paper)
@@ -179,6 +198,9 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Components.ConfirmationComponent d
 
   # Paper addresses nobody: the message names the organiser, never the guest,
   # and a profile with no name to give drops the organiser too.
+  defp message(%{series_count: count} = assigns) when is_integer(count),
+    do: SeriesSummary.message(assigns, :paper)
+
   defp message(assigns) do
     case ConfirmationText.status(assigns) do
       :check_inbox ->

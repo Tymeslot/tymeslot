@@ -16,26 +16,36 @@ defmodule Tymeslot.Integrations.Calendar.Appearance do
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceQueries
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
+  alias Tymeslot.Repo
 
   @type result ::
           {:ok, CalendarAppearanceSchema.t()} | {:error, :not_found | Ecto.Changeset.t()}
-
-  @doc """
-  Sets one calendar's colour, or clears it back to the integration's colour when
-  `colour` is `nil`.
-  """
-  @spec set_colour(integer(), integer(), String.t(), String.t() | nil) :: result()
-  def set_colour(user_id, integration_id, provider_calendar_id, colour) do
-    with_owned_integration(user_id, integration_id, fn ->
-      CalendarAppearanceQueries.upsert(integration_id, provider_calendar_id, %{colour: colour})
-    end)
-  end
 
   @doc "Shows or hides one calendar's events in the organiser's grid."
   @spec set_hidden(integer(), integer(), String.t(), boolean()) :: result()
   def set_hidden(user_id, integration_id, provider_calendar_id, hidden) do
     with_owned_integration(user_id, integration_id, fn ->
       CalendarAppearanceQueries.upsert(integration_id, provider_calendar_id, %{hidden: hidden})
+    end)
+  end
+
+  @doc """
+  Shows every account and calendar the organiser has hidden: clears each
+  stored calendar choice and the hidden-account list together, or neither.
+  """
+  @spec show_all(integer()) :: {:ok, term()} | {:error, term()}
+  def show_all(user_id) do
+    Repo.transaction(fn ->
+      user_id
+      |> CalendarIntegrationQueries.list_active_for_user()
+      |> Enum.map(& &1.id)
+      |> CalendarAppearanceQueries.unhide_all()
+
+      case CalendarPreferencesQueries.upsert(user_id, %{hidden_integration_ids: []}) do
+        {:ok, preferences} -> preferences
+        {:error, reason} -> Repo.rollback(reason)
+      end
     end)
   end
 
@@ -64,21 +74,6 @@ defmodule Tymeslot.Integrations.Calendar.Appearance do
     appearances
     |> Enum.filter(& &1.hidden)
     |> MapSet.new(&{&1.calendar_integration_id, &1.provider_calendar_id})
-  end
-
-  @doc """
-  The stored palette key per calendar, for the swatch picker to mark one pressed.
-
-  Distinct from `Tymeslot.CalendarGrid.calendar_colour_classes/1`, which returns
-  the resolved Tailwind classes the grid paints with. The picker compares keys,
-  so inverting a class back to its key would be a second copy of the palette
-  mapping and a second thing to keep in step.
-  """
-  @spec colour_keys([CalendarAppearanceSchema.t()]) :: %{{integer(), String.t()} => String.t()}
-  def colour_keys(appearances) do
-    appearances
-    |> Enum.filter(&chosen?/1)
-    |> Map.new(&{{&1.calendar_integration_id, &1.provider_calendar_id}, &1.colour})
   end
 
   @doc "Whether this row carries a colour choice, as opposed to only a visibility one."

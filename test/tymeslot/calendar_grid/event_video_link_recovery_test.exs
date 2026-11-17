@@ -1,6 +1,6 @@
 defmodule Tymeslot.CalendarGrid.EventVideoLinkRecoveryTest do
   @moduledoc """
-  `CalendarGrid.change_event_video/3`: the link a provider whose room URL
+  `Changes.change_event_video/3`: the link a provider whose room URL
   carries an access token publishes, and a series recovering the video room
   it already has after its cached row lost the link; plus `put_join_link/3`,
   the helper that writes and removes the join line in an event's
@@ -26,7 +26,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoLinkRecoveryTest do
   import Tymeslot.Test.CalendarGridHelpers
 
   alias Joken.Signer
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
@@ -87,7 +87,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoLinkRecoveryTest do
       jitsi = insert_jitsi_integration(user)
       expect_provider_update(:ok)
 
-      assert {:ok, url} = CalendarGrid.change_event_video(user.id, event, jitsi.id)
+      assert {:ok, url} = Changes.change_event_video(user.id, event, jitsi.id)
 
       {:ok, room_id} = LinkRoom.slug(event.uid)
       assert String.starts_with?(url, @jitsi_server <> "/" <> room_id <> "?jwt=")
@@ -106,7 +106,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoLinkRecoveryTest do
       jitsi = insert_jitsi_integration(user)
       expect_provider_update(:ok)
 
-      assert {:ok, url} = CalendarGrid.change_event_video(user.id, event, jitsi.id)
+      assert {:ok, url} = Changes.change_event_video(user.id, event, jitsi.id)
 
       {:ok, room_id} = LinkRoom.slug(event.uid)
       claims = verified_claims(url)
@@ -154,7 +154,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoLinkRecoveryTest do
           description: "Agenda\n\nJoin video call: #{@talk_url}"
         })
 
-      assert {:ok, :unchanged} = CalendarGrid.change_event_video(user.id, event, talk.id)
+      assert {:ok, :unchanged} = Changes.change_event_video(user.id, event, talk.id)
 
       row = reload(event)
       assert {row.video_integration_id, row.video_link} == {talk.id, @talk_url}
@@ -193,7 +193,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoLinkRecoveryTest do
       expect_provider_update(:ok)
 
       assert {:ok, @new_url} =
-               CalendarGrid.change_event_video(user.id, event, video_integration.id)
+               Changes.change_event_video(user.id, event, video_integration.id)
 
       assert_received {:provider_update, _uid, payload}
       assert payload.description == "Agenda\n\nJoin video call: #{@new_url}"

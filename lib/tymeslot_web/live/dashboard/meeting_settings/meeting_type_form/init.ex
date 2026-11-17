@@ -13,11 +13,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Profiles
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.OfferedTimeHandlers
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesHandlers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers
 
   @doc """
@@ -43,6 +45,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:custom_fields, get_custom_fields(type))
     |> assign_booking_rules(type)
     |> assign_group_bookings_state(type)
+    |> Component.assign(:series, SeriesHandlers.initial(type))
     |> Component.assign(
       :week_start,
       assigns |> Map.get(:current_user) |> user_id() |> Management.get_week_start()
@@ -358,7 +361,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     %LocationOption{
       id: UUID.generate(),
       kind: :in_person,
-      label: dgettext("dashboard_meeting_form", "In person"),
+      label: LocationSelection.default_label(:in_person),
       position: 0
     }
   end

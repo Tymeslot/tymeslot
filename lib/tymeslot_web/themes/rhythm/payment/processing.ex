@@ -26,12 +26,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Payment.Processing do
       theme_tokens={assigns[:theme_tokens]}
       locale={assigns[:locale]}
       language_dropdown_open={assigns[:language_dropdown_open]}
+      offered_locales={assigns[:offered_locales]}
       legal_links={assigns[:legal_links]}
       testid="rhythm-payment-processing"
       status={@status}
     >
       <PaymentReturnComponents.processing_body
         loading={@loading}
+        series_count={assigns[:series_count]}
         payment={@payment}
         meeting={@meeting}
         rebook_path={assigns[:rebook_path]}

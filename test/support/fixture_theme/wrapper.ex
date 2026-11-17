@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.Wrapper do
   attr :theme_tokens, :any, default: nil
   attr :locale, :string, default: nil
   attr :current_state, :atom, default: nil
+  attr :offered_locales, :list, default: nil, doc: "the locale codes the organiser offers"
   attr :language_dropdown_open, :boolean, default: nil
   attr :organizer_user_id, :integer, default: nil
   attr :should_show_branding, :boolean, default: false
@@ -50,6 +51,7 @@ defmodule TymeslotWeb.Test.FixtureTheme.Scheduling.Wrapper do
       theme_tokens={@theme_tokens}
     >
       <ThemeShell.chrome
+        locales={@language_locales}
         language_class="fixture-theme-language"
         locale={@locale}
         language_dropdown_open={@language_dropdown_open}

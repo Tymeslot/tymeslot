@@ -17,6 +17,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
@@ -92,7 +93,11 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
 
   defp request_deletion(host) do
     assert {:ok, pending} =
-             Auth.request_account_deletion(host, %{"current_password" => @password}, @opts)
+             AccountDeletion.request_account_deletion(
+               host,
+               %{"current_password" => @password},
+               @opts
+             )
 
     pending
   end
@@ -140,7 +145,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
     {meeting, payment} = open_checkout(host, "RESTORED")
 
     pending = request_deletion(host)
-    assert {:ok, _restored} = Auth.restore_account(pending)
+    assert {:ok, _restored} = AccountDeletion.restore_account(pending)
 
     # Mox fails on any call to the adapter that is not expected.
     assert %{success: 1} = Oban.drain_queue(queue: :payments)

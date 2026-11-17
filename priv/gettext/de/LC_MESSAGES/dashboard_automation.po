@@ -371,19 +371,16 @@ msgid "Total"
 msgstr "Gesamt"
 
 #: lib/tymeslot/notifications/event_options.ex
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
 msgstr "Wird ausgelöst, wenn eine Buchungszeit geändert wird"
 
 #: lib/tymeslot/notifications/event_options.ex
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
 msgstr "Wird ausgelöst, wenn eine neue Buchung erfolgreich erstellt wird"
 
 #: lib/tymeslot/notifications/event_options.ex
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
 msgstr "Wird ausgelöst, wenn eine bestehende Buchung abgesagt wird"
@@ -709,3 +706,53 @@ msgstr "Pausiert"
 #, elixir-autogen, elixir-format
 msgid "Paused: your plan doesn't include automations. Upgrading resumes it."
 msgstr "Pausiert: Ihr Tarif umfasst keine Automatisierungen. Nach einem Upgrade läuft der Webhook automatisch weiter."
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Booked"
+msgstr "Serie gebucht"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Cancelled"
+msgstr "Serie abgesagt"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when someone books a series of sessions, instead of Meeting Created for each session"
+msgstr "Wird einmal ausgelöst, wenn jemand eine Serie von Terminen bucht, statt „Termin erstellt“ für jeden einzelnen Termin"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when the remaining sessions of a series are cancelled together, instead of Meeting Cancelled for each session"
+msgstr "Wird einmal ausgelöst, wenn die restlichen Termine einer Serie zusammen abgesagt werden, statt „Termin abgesagt“ für jeden einzelnen Termin"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Declined"
+msgstr "Serie abgelehnt"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Request Expired"
+msgstr "Serienanfrage abgelaufen"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Requested"
+msgstr "Serie angefragt"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when nobody answers a series request before its deadline, instead of Booking Request Expired for each session"
+msgstr "Wird einmal ausgelöst, wenn niemand innerhalb der Frist auf eine Serienanfrage antwortet, statt „Buchungsanfrage abgelaufen“ für jeden einzelnen Termin"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when someone requests a series of sessions that needs your approval, instead of Booking Requested for each session"
+msgstr "Wird einmal ausgelöst, wenn jemand eine Serie von Terminen anfragt, die Ihre Bestätigung braucht, statt „Buchung angefragt“ für jeden einzelnen Termin"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when you decline a series request, instead of Booking Declined for each session"
+msgstr "Wird einmal ausgelöst, wenn Sie eine Serienanfrage ablehnen, statt „Buchung abgelehnt“ für jeden einzelnen Termin"

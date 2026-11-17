@@ -22,7 +22,7 @@ defmodule Tymeslot.CalendarGrid.EventEditAttendeesTest do
   import Mox
   import Tymeslot.Test.CalendarGridHelpers
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.Outlook.EventMapper, as: OutlookMapper
 
   setup :verify_on_exit!
@@ -71,7 +71,7 @@ defmodule Tymeslot.CalendarGrid.EventEditAttendeesTest do
       event = insert_event_on(user, "outlook")
       expect_provider_update()
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       payload = captured_payload()
       assert payload.summary == "Renamed"
@@ -86,7 +86,7 @@ defmodule Tymeslot.CalendarGrid.EventEditAttendeesTest do
       event = insert_event_on(user, "outlook", %{attendees: []})
       expect_provider_update()
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       {:ok, body} = OutlookMapper.format_event_data(captured_payload())
       assert body["subject"] == "Renamed"
@@ -97,7 +97,7 @@ defmodule Tymeslot.CalendarGrid.EventEditAttendeesTest do
       event = insert_event_on(user, "outlook")
       expect_provider_update()
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{attendees: []})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{attendees: []})
 
       assert {:ok, %{"attendees" => []}} = OutlookMapper.format_event_data(captured_payload())
     end
@@ -108,7 +108,7 @@ defmodule Tymeslot.CalendarGrid.EventEditAttendeesTest do
       event = insert_event_on(user, "caldav")
       expect_provider_update()
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       payload = captured_payload()
       assert payload.raw_ical == @raw_ical
@@ -121,7 +121,7 @@ defmodule Tymeslot.CalendarGrid.EventEditAttendeesTest do
       event = insert_event_on(user, "caldav", %{raw_ical: nil, etag: nil})
       expect_provider_update()
 
-      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
 
       assert captured_payload().attendees == @attendees
     end
@@ -131,7 +131,7 @@ defmodule Tymeslot.CalendarGrid.EventEditAttendeesTest do
     event = insert_event_on(user, "google")
     expect_provider_update()
 
-    assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+    assert {:ok, _updated} = Changes.update_event(user.id, event, %{summary: "Renamed"})
 
     assert captured_payload().attendees == @attendees
   end

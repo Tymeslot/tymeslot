@@ -1,0 +1,123 @@
+/* ==========================================================================
+   Folio: the series section and the series on the confirmation
+
+   The shared series parts (shared/components/series.css) in Folio's
+   editorial language: no boxes, the column's left edge, the sessions as
+   ruled entries like the ways to work, numbered in the heading face and
+   the accent, and the controls on Folio's hairlines.
+   ========================================================================== */
+
+.folio-series .series-chooser {
+  display: flex;
+  flex-direction: column;
+}
+
+.folio-series .series-rule,
+.folio-series .series-count,
+.folio-series .series-checking {
+  justify-content: flex-start;
+}
+
+.folio-series .series-rule,
+.folio-series .series-hint,
+.folio-series .series-zone,
+.folio-series .series-next-hint,
+.folio-series .series-total {
+  text-align: start;
+}
+
+.folio-series .series-rule {
+  color: var(--ink-1);
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-base);
+}
+
+.folio-series .series-count__step,
+.folio-series .series-picker__arrow {
+  border: var(--border-width-thin) solid var(--folio-line);
+  background: transparent;
+  color: var(--ink-1);
+}
+
+.folio-series .series-count__step:hover:not(:disabled),
+.folio-series .series-add:hover {
+  background: var(--folio-tint);
+}
+
+.folio-series .series-picker__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--min-touch-target);
+  min-height: var(--min-touch-target);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.folio-series .series-count__value {
+  font-family: var(--theme-font-heading);
+  text-align: start;
+}
+
+/* Sessions as ruled entries, as the ways to work are. */
+.folio-series .series-list,
+.folio-series-booked .series-list {
+  gap: 0;
+  border-top: var(--border-width-thin) solid var(--folio-line);
+}
+
+.folio-series .series-list__item,
+.folio-series-booked .series-list__item {
+  padding: var(--space-xs) var(--space-2xs);
+  border: 0;
+  border-bottom: var(--border-width-thin) solid var(--folio-line);
+  border-radius: 0;
+  background: transparent;
+  font-size: var(--theme-font-size-base);
+}
+
+.folio-series .series-list__item--unavailable {
+  background: var(--notice-warning-surface);
+}
+
+.folio-series .series-list__position,
+.folio-series-booked .series-list__position {
+  background: transparent;
+  color: var(--theme-accent);
+  font-family: var(--theme-font-heading);
+  font-size: var(--theme-font-size-sm);
+}
+
+.folio-series .series-add {
+  border-color: var(--folio-line);
+  border-radius: var(--radius-control);
+}
+
+.folio-series .series-picker {
+  border-color: var(--folio-line);
+  background: transparent;
+}
+
+.folio-series .series-link {
+  align-self: flex-start;
+  margin-inline: 0;
+  padding-inline: 0;
+  color: var(--theme-accent);
+}
+
+.folio-series-booked {
+  margin-bottom: var(--space-md);
+}
+
+/* The picker's days and times keep their labels on one line, each button
+   as wide as its label. */
+.folio-series .series-picker__days,
+.folio-series .series-picker__times {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.folio-series .series-picker__day,
+.folio-series .series-picker__time {
+  white-space: nowrap;
+}

@@ -183,6 +183,17 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
   end
 
+  describe "format_reminder_label/2" do
+    # The label follows a preposition ("за 1 годину до початку"), so a case
+    # language takes the accusative, not a bare duration's nominative.
+    test "inflects the lead time for the sentence it goes into" do
+      assert Formatting.format_reminder_label(%{value: 1, unit: "hours"}, "uk") == "1 годину"
+      assert Formatting.format_duration(60, "uk") != "1 годину"
+      assert Formatting.format_reminder_label(%{value: 1, unit: "days"}, "uk") == "1 день"
+      assert Formatting.format_reminder_label(%{value: 30, unit: "minutes"}, "en") == "30 minutes"
+    end
+  end
+
   describe "format_duration/2" do
     test "formats durations in English" do
       assert Formatting.format_duration(1, "en") == "1 minute"
@@ -365,8 +376,8 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
 
     test "formats zero-decimal currencies without division" do
-      assert Formatting.format_currency(1500, "jpy") == "¥1500"
-      assert Formatting.format_currency(1000, "krw") == "₩1000"
+      assert Formatting.format_currency(1500, "jpy") == "¥1,500"
+      assert Formatting.format_currency(1000, "krw") == "₩1,000"
     end
 
     test "defaults to EUR when currency is nil" do
@@ -404,7 +415,7 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
 
     test "9_999_999 cents formats without floating-point rounding errors" do
-      assert Formatting.format_currency(9_999_999, "eur") == "€99999.99"
+      assert Formatting.format_currency(9_999_999, "eur") == "€99,999.99"
     end
 
     test "-50 cents (partial refund display) formats with leading sign" do

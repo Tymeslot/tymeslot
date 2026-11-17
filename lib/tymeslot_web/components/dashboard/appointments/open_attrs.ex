@@ -4,8 +4,7 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.OpenAttrs do
   open something on click, and how a keyboard reaches it.
 
   Every surface that opens an appointment builds its attributes here, so the
-  overview, the calendar grid and the agenda list agree on what "clickable"
-  means.
+  overview and the agenda list agree on what "clickable" means.
   """
 
   @typedoc """
@@ -13,13 +12,10 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.OpenAttrs do
 
     * `:own` (default): focusable as a button; Enter and Space click it through
       the dashboard's `data-keyboard-click` listener (`assets/js/keyboard_click.js`).
-    * `:hook`: focusable as a button, inside a surface whose hook already turns
-      Enter and Space on a `role="button"` into a click (the calendar grid's
-      `CalendarDrag`); a second handler there would open it twice.
     * `:none`: the click only, for a real `<button>` or a surface with its own
       keyboard route.
   """
-  @type keys :: :own | :hook | :none
+  @type keys :: :own | :none
 
   @doc """
   `phx-click` pushing `event`, with each of `values` as a `phx-value-*`.
@@ -41,6 +37,5 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.OpenAttrs do
   defp key_attrs(:own),
     do: %{"data-keyboard-click" => true, "role" => "button", "tabindex" => "0"}
 
-  defp key_attrs(:hook), do: %{"role" => "button", "tabindex" => "0"}
   defp key_attrs(:none), do: %{}
 end

@@ -1,7 +1,12 @@
 defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
-  @moduledoc "Schedules calendar invitation and event update notification emails via Oban."
+  @moduledoc """
+  Schedules the calendar emails via Oban: invitations and update notices for
+  dashboard events, and the host's notices about what their calendar did to
+  a booking.
+  """
 
   alias Tymeslot.Emails.EmailScheduler.Helpers
+  alias Tymeslot.Emails.Templates.CalendarSyncError
   alias Tymeslot.Workers.EmailWorker
 
   @doc """
@@ -116,6 +121,54 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
     |> Map.merge(snapshot_args(params))
     |> EmailWorker.new(queue: :emails, priority: 1)
     |> Helpers.insert(event_uid: params.event_uid)
+    |> Helpers.ok()
+  end
+
+  @doc """
+  Schedules the host's notice that a booking was changed in their external
+  calendar (`discrepancy` is `:deleted` or `:modified`). Unique per meeting
+  and discrepancy for five minutes, so sync runs that see the same change
+  again do not tell the host twice.
+  """
+  @spec schedule_external_booking_change(term(), :deleted | :modified) :: :ok | {:error, term()}
+  def schedule_external_booking_change(meeting_id, discrepancy)
+      when discrepancy in [:deleted, :modified] do
+    %{
+      "action" => "send_external_booking_change",
+      "meeting_id" => meeting_id,
+      "discrepancy" => Atom.to_string(discrepancy)
+    }
+    |> EmailWorker.new(
+      queue: :emails,
+      priority: 1,
+      unique: [period: 300, fields: [:args, :queue], keys: [:action, :meeting_id, :discrepancy]]
+    )
+    |> Helpers.insert(meeting_id: meeting_id, discrepancy: discrepancy)
+    |> Helpers.ok()
+  end
+
+  @doc """
+  Schedules the owner's notice that a booking's calendar event could not be
+  written. The job carries `error_reason` in its stored form
+  (`CalendarSyncError.storable_reason/1`), since an arbitrary term does not
+  survive the job's JSON args and a provider's error can quote credentials or
+  addresses that have no place in `oban_jobs`. Unique per meeting
+  for five minutes, so the two ways a create can be given up on cannot both
+  send it.
+  """
+  @spec schedule_calendar_sync_error(term(), term()) :: :ok | {:error, term()}
+  def schedule_calendar_sync_error(meeting_id, error_reason) do
+    %{
+      "action" => "send_calendar_sync_error",
+      "meeting_id" => meeting_id,
+      "error_reason" => CalendarSyncError.storable_reason(error_reason)
+    }
+    |> EmailWorker.new(
+      queue: :emails,
+      priority: 1,
+      unique: [period: 300, fields: [:args, :queue], keys: [:action, :meeting_id]]
+    )
+    |> Helpers.insert(meeting_id: meeting_id)
     |> Helpers.ok()
   end
 

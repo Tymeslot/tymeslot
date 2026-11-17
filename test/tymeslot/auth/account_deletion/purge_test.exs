@@ -11,6 +11,7 @@ defmodule Tymeslot.Auth.AccountDeletion.PurgeTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth.AccountDeletion
+  alias Tymeslot.Auth.AccountDeletion.Purge
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
@@ -120,7 +121,7 @@ defmodule Tymeslot.Auth.AccountDeletion.PurgeTest do
         {:ok, %Req.Response{status: 200, body: ""}}
       end)
 
-      assert AccountDeletion.erase_account(user, only_if_purgeable: cutoff()) ==
+      assert Purge.erase_account(user, only_if_purgeable: cutoff()) ==
                {:error, :not_purgeable}
 
       assert Repo.get(UserSchema, user.id)
@@ -138,7 +139,7 @@ defmodule Tymeslot.Auth.AccountDeletion.PurgeTest do
         user |> Changeset.change(verified_at: DateTime.utc_now(:second)) |> Repo.update!()
       end)
 
-      assert AccountDeletion.delete_account(user, only_if_purgeable: cutoff()) ==
+      assert Purge.delete_account(user, only_if_purgeable: cutoff()) ==
                {:error, :not_purgeable}
 
       user_id = user.id
@@ -153,7 +154,7 @@ defmodule Tymeslot.Auth.AccountDeletion.PurgeTest do
         user |> Changeset.change(is_admin: true) |> Repo.update!()
       end)
 
-      assert AccountDeletion.delete_account(user, only_if_purgeable: cutoff()) ==
+      assert Purge.delete_account(user, only_if_purgeable: cutoff()) ==
                {:error, :not_purgeable}
 
       assert Repo.get(UserSchema, user.id)
@@ -173,7 +174,7 @@ defmodule Tymeslot.Auth.AccountDeletion.PurgeTest do
         )
       end)
 
-      assert AccountDeletion.delete_account(user, only_if_purgeable: cutoff()) ==
+      assert Purge.delete_account(user, only_if_purgeable: cutoff()) ==
                {:error, :not_purgeable}
 
       assert Repo.get(UserSchema, user.id)
@@ -182,7 +183,7 @@ defmodule Tymeslot.Auth.AccountDeletion.PurgeTest do
     test "does not run the hook for an account already ineligible" do
       user = insert(:unverified_user, inserted_at: days_ago(400), is_admin: true)
 
-      assert AccountDeletion.delete_account(user, only_if_purgeable: cutoff()) ==
+      assert Purge.delete_account(user, only_if_purgeable: cutoff()) ==
                {:error, :not_purgeable}
 
       refute_received {:hook_deleted, _id}
@@ -191,7 +192,7 @@ defmodule Tymeslot.Auth.AccountDeletion.PurgeTest do
     test "deletes an account still purgeable" do
       user = insert(:unverified_user, inserted_at: days_ago(400))
 
-      assert {:ok, _deleted} = AccountDeletion.delete_account(user, only_if_purgeable: cutoff())
+      assert {:ok, _deleted} = Purge.delete_account(user, only_if_purgeable: cutoff())
       refute Repo.get(UserSchema, user.id)
     end
   end

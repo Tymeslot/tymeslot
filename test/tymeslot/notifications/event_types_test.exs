@@ -63,7 +63,12 @@ defmodule Tymeslot.Notifications.EventTypesTest do
                  "meeting.declined",
                  "meeting.request_expired",
                  "meeting.requested",
-                 "meeting.rescheduled"
+                 "meeting.rescheduled",
+                 "meeting.series_cancelled",
+                 "meeting.series_created",
+                 "meeting.series_declined",
+                 "meeting.series_request_expired",
+                 "meeting.series_requested"
                ])
     end
   end

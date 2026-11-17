@@ -53,6 +53,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Themes.Catalog
   alias Tymeslot.Validation.Constraints
+  alias TymeslotWeb.Dashboard.Languages.TranslationStatus
   alias TymeslotWeb.Dashboard.ThemeSettingsComponent
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Scheduling.PreviewMode
@@ -87,6 +88,19 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :translation_status,
+        TranslationStatus.build(
+          assigns.profile,
+          :booking_texts,
+          translation_kind(assigns.profile),
+          translation_record(assigns.profile),
+          paths: text_paths()
+        )
+      )
+
     ~H"""
     <div id={@id} class="mt-16">
       <.section_header
@@ -117,6 +131,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
             class="space-y-6"
             novalidate
           >
+            <TranslationStatus.strip status={@translation_status} />
+
             <.setting_row
               id={"#{@id}-enabled"}
               control={:switch}
@@ -133,7 +149,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
             />
 
             <%!-- The switch is a button, not a form control, so the flag needs
-                 a field of its own to travel with the submitted form. --%>
+               a field of its own to travel with the submitted form. --%>
             <input
               type="hidden"
               name={@form[:booking_text_enabled].name}
@@ -141,10 +157,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
             />
 
             <%!-- Disabled rather than hidden, so the section keeps its shape
-                 and the organiser can still read what the switch controls. A
-                 disabled input submits nothing, which is what stops the empty
-                 fields from being validated as missing while the
-                 customisation is off. --%>
+               and the organiser can still read what the switch controls. A
+               disabled input submits nothing, which is what stops the empty
+               fields from being validated as missing while the
+               customisation is off. --%>
             <div class={["space-y-6", not enabled?(@form) && "opacity-60"]}>
               <.input
                 field={@form[:booking_heading]}
@@ -155,7 +171,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
                 maxlength={Constraints.booking_heading_max_length()}
                 label={dgettext("dashboard_appearance", "Heading")}
                 placeholder={BookingText.default_heading(current_theme_key(@profile), name(@profile))}
-              />
+              >
+                <:label_suffix>
+                  <TranslationStatus.mark status={@translation_status} path="booking_heading" />
+                </:label_suffix>
+              </.input>
 
               <.input
                 field={@form[:booking_greeting]}
@@ -165,7 +185,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
                 maxlength={Constraints.booking_welcome_line_max_length()}
                 label={dgettext("dashboard_appearance", "Greeting")}
                 placeholder={placeholder_for(:booking_greeting, @profile)}
-              />
+              >
+                <:label_suffix>
+                  <TranslationStatus.mark status={@translation_status} path="booking_greeting" />
+                </:label_suffix>
+              </.input>
 
               <.input
                 field={@form[:booking_instruction]}
@@ -175,7 +199,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
                 maxlength={Constraints.booking_welcome_line_max_length()}
                 label={dgettext("dashboard_appearance", "Instruction")}
                 placeholder={placeholder_for(:booking_instruction, @profile)}
-              />
+              >
+                <:label_suffix>
+                  <TranslationStatus.mark status={@translation_status} path="booking_instruction" />
+                </:label_suffix>
+              </.input>
 
               <.info_box variant={:info}>
                 <p class="font-bold mb-2">
@@ -197,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
               <p class="text-token-sm text-tymeslot-500">
                 {dgettext(
                   "dashboard_appearance",
-                  "Your own wording is shown to everyone, in whatever language they pick. Only the built-in text is translated."
+                  "Your own wording is shown in every language unless you translate it under Languages. The built-in text is always translated."
                 )}
               </p>
             </div>
@@ -240,6 +268,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.BookingTextForm do
     </div>
     """
   end
+
+  defp text_paths, do: Enum.map(@text_fields, &Atom.to_string/1)
+
+  # On a booking page's tab the texts are the page's, so are their
+  # translations.
+  defp translation_kind(%{booking_page: %BookingPageSchema{}}), do: :booking_page
+  defp translation_kind(_profile), do: :profile
+
+  defp translation_record(%{booking_page: %BookingPageSchema{} = page}), do: page
+  defp translation_record(profile), do: profile
 
   attr :status, :atom, required: true
 

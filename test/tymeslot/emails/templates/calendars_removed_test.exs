@@ -6,9 +6,14 @@ defmodule Tymeslot.Emails.Templates.CalendarsRemovedTest do
   @moduletag :emails
   @moduletag :calendar
 
+  import Tymeslot.Test.DirectEmailSends
+
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailService.IntegrationEmails
   alias Tymeslot.Emails.Templates.CalendarsRemoved
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   @integration %{id: 1, name: "Work Nextcloud"}
   @user %{id: 1, email: "owner@example.com", name: "Olivia"}

@@ -104,6 +104,20 @@ defmodule Tymeslot.Workers.DeliveryClaims do
     do: DeliveryClaimQueries.claimed?(job_id, key)
 
   @doc """
+  Claims `key` for the job and keeps it, answering `:already_claimed` when
+  an earlier run holds it.
+
+  For an effect recorded in this database: call it in the transaction that
+  records the effect, so the claim commits with the effect or rolls back
+  with it, and closes both windows `once/3` describes. A run racing for the
+  same claim waits on the unique index until the first commits or rolls
+  back.
+  """
+  @spec claim(integer(), String.t()) :: :claimed | :already_claimed
+  def claim(job_id, key) when is_integer(job_id) and is_binary(key),
+    do: DeliveryClaimQueries.claim(job_id, key)
+
+  @doc """
   Runs `effect` unless an earlier execution of the same job already claimed
   `key`, in which case it returns `:ok` without running it: from the job's
   point of view that effect is done.

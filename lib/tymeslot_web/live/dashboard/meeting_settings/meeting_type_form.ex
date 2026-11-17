@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     Init,
     LengthsField,
     LengthsHandlers,
+    SeriesHandlers,
     SessionHandlers,
     SlotIntervalField,
     Validation
@@ -53,6 +54,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # - page_memberships: `BookingPages.memberships/1`, which pages list which type
   # - pages_editable: `BookingPages.editable?/1`, whether the booking pages'
   #   switches may be flipped
+  # - profile: the booking languages, for the translation status the form
+  #   shows (`Languages.TranslationStatus`)
 
   # The further lengths' events, all handled by `LengthsHandlers`.
   @lengths_events LengthsHandlers.events()
@@ -90,6 +93,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        editing_location_mode: :add,
        custom_questions_allowed: true,
        group_bookings_allowed: true,
+       recurring_bookings_allowed: true,
+       series: SeriesHandlers.initial(nil),
        payments_feature_enabled: false,
        payments_charges_enabled: false,
        payment_currency: "usd",
@@ -116,6 +121,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        booking_pages: [],
        page_memberships: %{},
        pages_editable: true,
+       profile: nil,
        __initialized__: false
      )}
   end
@@ -313,12 +319,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_requires_email_verification", _params, socket) do
-    # Guard: verification excludes payments. The control renders disabled
-    # while they are on, so a stale or forged event must not turn it on;
-    # turning it off is always allowed.
-    %{requires_email_verification: on?} = socket.assigns
+    # Guard: verification excludes payments and series. The control renders
+    # disabled while either is on, so a stale or forged event must not turn
+    # it on; turning it off is always allowed.
+    %{requires_email_verification: on?, series: series} = socket.assigns
 
-    if not on? and socket.assigns.payment_required do
+    if not on? and (socket.assigns.payment_required or series.series_mode != nil) do
       {:noreply, socket}
     else
       {:noreply,
@@ -391,6 +397,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:booking_limits, limits)
      |> Autosave.maybe_run()}
   end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_series", params, socket),
+    do: {:noreply, SeriesHandlers.apply_event(params, socket)}
 
   @impl Phoenix.LiveComponent
   def handle_event("update_scheduling_rules", params, socket) do

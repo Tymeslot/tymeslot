@@ -3,6 +3,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   Database queries for meeting types.
   """
   import Ecto.Query, warn: false
+  alias Tymeslot.ContentTranslations
   alias Tymeslot.Invitations.InvitationSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
@@ -15,6 +16,22 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
     query =
       from(mt in MeetingTypeSchema,
         where: mt.user_id == ^user_id and mt.is_active == true,
+        order_by: [asc: mt.sort_order, asc: mt.name],
+        preload: [:video_integration, :calendar_integration]
+      )
+
+    Repo.all(query)
+  end
+
+  @doc """
+  The meeting types guests can book now: active and not archived, ordered as
+  `list_active_meeting_types/1` (which keeps archived types still marked active).
+  """
+  @spec get_bookable_meeting_types(integer()) :: [MeetingTypeSchema.t()]
+  def get_bookable_meeting_types(user_id) do
+    query =
+      from(mt in MeetingTypeSchema,
+        where: mt.user_id == ^user_id and mt.is_active == true and mt.is_archived == false,
         order_by: [asc: mt.sort_order, asc: mt.name],
         preload: [:video_integration, :calendar_integration]
       )
@@ -123,12 +140,21 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   `opts` are forwarded to `MeetingTypeSchema.changeset/3` so callers can
   thread payment-validation context (`:price_settable`,
   `:host_charges_enabled`, `:currency_minimum_cents`) into the changeset.
+
+  The changeset never casts `translations`, which only
+  `Tymeslot.ContentTranslations` writes. A copy carries its source's in the
+  `:translations` option (`Tymeslot.MeetingTypes.Duplication.translations/1`),
+  pruned to the copy's own texts and checked
+  (`Tymeslot.ContentTranslations.put_copied/2`).
   """
   @spec create_meeting_type(map(), keyword()) ::
           {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
   def create_meeting_type(attrs, opts \\ []) do
+    {translations, opts} = Keyword.pop(opts, :translations)
+
     %MeetingTypeSchema{}
     |> MeetingTypeSchema.changeset(attrs, opts)
+    |> ContentTranslations.put_copied(translations)
     |> Repo.insert()
   end
 

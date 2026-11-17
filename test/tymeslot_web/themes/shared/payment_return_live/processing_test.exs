@@ -573,7 +573,10 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     assert html =~ "Confirming your payment"
   end
 
-  test "dead render does not load page data", %{conn: conn, user: user} do
+  # The dead render reads the meeting and its organiser for the page's
+  # language alone (`PaymentReturn.assign_dead_render_language/3`); the
+  # payment is the connected mount's, once the visitor is authorised.
+  test "dead render does not load the payment", %{conn: conn, user: user} do
     meeting = insert(:meeting, organizer_user_id: user.id, status: :awaiting_payment)
 
     insert(:booking_payment,
@@ -585,7 +588,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.ProcessingTest do
     ref = make_ref()
     parent = self()
     handler_id = "quill-payment-processing-dead-render-#{inspect(ref)}"
-    data_sources = ~w(meetings booking_payments)
+    data_sources = ~w(booking_payments)
 
     :telemetry.attach(
       handler_id,

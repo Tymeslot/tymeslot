@@ -224,6 +224,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatchTest do
                {:ok, %{"subject" => "Standup", "location" => %{"displayName" => "Room 2"}}}
     end
 
+    test "free and busy are sent as Graph's showAs" do
+      assert SeriesPatch.build(@master, edit(%{transparency: "transparent"})) ==
+               {:ok, %{"showAs" => "free"}}
+
+      assert SeriesPatch.build(@master, edit(%{transparency: "opaque"})) ==
+               {:ok, %{"showAs" => "busy"}}
+    end
+
     test "cleared reminders turn the reminder off" do
       assert SeriesPatch.build(@master, edit(%{reminders: []})) ==
                {:ok, %{"isReminderOn" => false}}

@@ -123,23 +123,32 @@ defmodule Tymeslot.Meetings.BookingLimits do
   """
   @spec build_context(limits(), String.t(), WeekStart.t(), [booking_row()]) :: context()
   def build_context(limits, host_timezone, week_start, rows) do
-    bump = fn row, acc -> bump_periods(acc, row.start_time, host_timezone, week_start) end
-    account_counts = Enum.reduce(rows, %{}, bump)
-
-    type_counts =
-      rows
-      |> Enum.filter(
-        &(&1.meeting_type_id == limits.meeting_type_id and not is_nil(limits.meeting_type_id))
-      )
-      |> Enum.reduce(%{}, bump)
-
-    %{
+    empty = %{
       limits: limits,
       host_timezone: host_timezone,
       week_start: week_start,
-      account_counts: account_counts,
-      type_counts: type_counts
+      account_counts: %{},
+      type_counts: %{}
     }
+
+    Enum.reduce(rows, empty, &count_booking(&2, &1))
+  end
+
+  @doc """
+  `context` with one more booking counted, as though `row` had been among
+  the rows it was built from. For a caller weighing several bookings that
+  are not yet made, such as the sessions of a series, each against the ones
+  before it.
+  """
+  @spec count_booking(context(), booking_row()) :: context()
+  def count_booking(context, %{start_time: start_time, meeting_type_id: meeting_type_id}) do
+    %{limits: limits, host_timezone: host_timezone, week_start: week_start} = context
+    bump = &bump_periods(&1, start_time, host_timezone, week_start)
+    context = Map.update!(context, :account_counts, bump)
+
+    if meeting_type_id == limits.meeting_type_id and not is_nil(meeting_type_id),
+      do: Map.update!(context, :type_counts, bump),
+      else: context
   end
 
   @doc """

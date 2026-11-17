@@ -17,9 +17,11 @@ defmodule Tymeslot.InviteeData do
       years by default). It clears every meeting that ended before the window,
       with its seats, guests and booking payments, and the participants of
       every poll whose last proposed time did. A draft poll last saved before
-      the window loses the invitees it held, and an invitation link last
-      changed before it, whose meetings all ended before it, loses the name
-      and email it was addressed to; the link itself is kept.
+      the window loses the invitees it held, a booking series loses its
+      booker's name and email once its last session is cleared, and an
+      invitation link last changed before it, whose meetings all ended
+      before it, loses the name and email it was addressed to; the link
+      itself is kept.
 
   A draft poll's invitees are not yet participants, so an erasure takes the
   person off the draft's list rather than anonymising them. An invitation
@@ -34,6 +36,10 @@ defmodule Tymeslot.InviteeData do
   Upcoming bookings are refused rather than erased: a confirmed meeting with
   its invitee's address removed could no longer be cancelled, moved or
   reminded about. Cancel them first, then erase.
+
+  A booking series holds its booker's name and email too. An erasure clears
+  the series booked under the address, and the purge clears a series with
+  the last of its sessions; either marks it `invitee_data_erased_at`.
 
   Booking payments keep their amounts for the statutory period
   (`Tymeslot.FinancialRetention`); only the attendee's name and
@@ -56,6 +62,7 @@ defmodule Tymeslot.InviteeData do
           draft_polls: non_neg_integer(),
           invitations: non_neg_integer(),
           booking_payments: non_neg_integer(),
+          series: non_neg_integer(),
           deliveries: non_neg_integer()
         }
 
@@ -153,6 +160,7 @@ defmodule Tymeslot.InviteeData do
       draft_polls: count(Queries.remove_draft_invitee(email, scope)),
       invitations: count(Queries.scrub_invitations(email, meeting_ids, scope, now)),
       booking_payments: count(Queries.scrub_booking_payments({:email, email, scope}, now)),
+      series: count(Queries.scrub_series_for_email(email, scope, now)),
       deliveries: Queries.delete_deliveries(touched_meetings)
     }
   end
@@ -162,9 +170,11 @@ defmodule Tymeslot.InviteeData do
       Repo.transaction(fn ->
         Queries.scrub_participants({:meetings, meeting_ids}, now)
         Queries.scrub_guests({:meetings, meeting_ids}, now)
-        Queries.scrub_booking_payments({:meetings, meeting_ids}, now)
         Queries.delete_deliveries(meeting_ids)
-        count(Queries.scrub_meetings(meeting_ids, now, erased_at: now))
+        scrubbed = count(Queries.scrub_meetings(meeting_ids, now, erased_at: now))
+        Queries.scrub_booking_payments({:meetings, meeting_ids}, now)
+        Queries.scrub_finished_series(meeting_ids, now)
+        scrubbed
       end)
 
     count

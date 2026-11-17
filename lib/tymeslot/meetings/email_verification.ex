@@ -68,6 +68,7 @@ defmodule Tymeslot.Meetings.EmailVerification do
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
+  alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Repo
 
   # Fixed rather than per meeting type: the verification email promises this
@@ -139,9 +140,11 @@ defmodule Tymeslot.Meetings.EmailVerification do
   (`{:error, :expired}`) rather than confirmed: one whose meeting type has
   since been deleted, since without the type nobody can say whether the host
   must approve it; one whose type has since become paid, since its bookings
-  are confirmed by payment, or a group type, whose bookings take seats; and one
-  made through an invitation link the host has since revoked. An archived
-  type is still read and its settings apply. `{:error, :not_scheduled}` means
+  are confirmed by payment, or a group type, whose bookings take seats; one
+  whose type has since been deactivated or made series-only, since a fresh
+  booking would be refused there too; and one made through an invitation
+  link the host has since revoked. An archived type is still read and its
+  settings apply. `{:error, :not_scheduled}` means
   that work could not be queued; the booking is still held and the attendee
   may try again.
 
@@ -198,16 +201,21 @@ defmodule Tymeslot.Meetings.EmailVerification do
   # become paid cannot carry the gate (the type's rules refuse both), and one
   # that has become a group type books seats, not one-to-one meetings:
   # confirming here would skip the payment or the seats, so the hold is
-  # released. The host never sees a held booking, so
-  # may revoke the invitation link it came through meanwhile; the revocation
-  # stands and the hold is released.
+  # released. A type the host has since deactivated, or since made
+  # series-only, would refuse the booking were it submitted now
+  # (`Tymeslot.Bookings.Create`), so it is not confirmed either; the series
+  # rule is read through the same `SeriesSettings.single_allowed?/1` the
+  # booking path asks. The host never sees a held booking, so may revoke the
+  # invitation link it came through meanwhile; the revocation stands and the
+  # hold is released.
   defp still_wanted(meeting) do
-    with %MeetingType{} = meeting_type <- meeting_type(meeting),
+    with %MeetingType{is_active: true} = meeting_type <- meeting_type(meeting),
          false <- confirmed_by_other_means?(meeting_type),
+         true <- SeriesSettings.single_allowed?(meeting_type),
          false <- invitation_revoked?(meeting) do
       {:ok, meeting_type}
     else
-      _type_gone_changed_or_invitation_revoked -> {:error, :no_longer_wanted}
+      _type_gone_inactive_changed_or_invitation_revoked -> {:error, :no_longer_wanted}
     end
   end
 

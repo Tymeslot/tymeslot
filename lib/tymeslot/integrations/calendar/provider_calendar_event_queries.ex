@@ -4,11 +4,23 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
   Provides read and write operations for the provider_calendar_events table, which stores
   events fetched from external calendar providers keyed by (calendar_integration_id, uid).
+
+  ## Deleting rows
+
+  The deletes here (`delete_by_uid/2`, `delete_by_uids/2`,
+  `delete_by_provider_event_ids/2`, `delete_by_recurring_event_ids/2`) are
+  for events confirmed gone: deleted here, reported deleted by a sync, or
+  missing from a complete listing of their calendar. Each also deletes the
+  organiser's bookability choices (`event_bookability_overrides`) that no
+  remaining row of the integration carries, since the table has no foreign
+  key to the event. A row that is only temporarily absent (a failed read,
+  a deselected calendar) must not go through them.
   """
 
   import Ecto.Query, warn: false
 
   alias Ecto.Changeset
+  alias Tymeslot.Availability.BookabilityOverrideQueries
   alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries.Visibility
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -23,9 +35,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   @sync_state_locally_deleted "locally_deleted"
 
   # The columns a dashboard edit may change on a cached row: what a user can
-  # edit on an event, plus the video room an edit can attach to it.
+  # edit on an event (free/busy included), plus the video room an edit can
+  # attach to it.
   @local_edit_fields ~w(summary description location start_at end_at all_day start_date end_date
-                        reminders recurrence_rule colour attendees video_link video_integration_id)a
+                        reminders recurrence_rule colour attendees transparency video_link
+                        video_integration_id)a
 
   @doc """
   Returns all cached events for the given integration IDs within a time range.
@@ -121,75 +135,6 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     |> order_by([e], asc: e.start_at, asc: e.id)
     |> limit(^limit)
     |> Repo.all()
-  end
-
-  @default_search_limit 50
-
-  @doc """
-  Searches a user's cached calendar events by a free-text term.
-
-  Performs a case-insensitive `ILIKE` match against the event `summary`,
-  `description`, and `location`. Results are scoped to the user's active
-  calendar integrations and exclude any integration whose id appears in
-  `:hidden_integration_ids`. Matches are ordered by start time ascending
-  (timed events by `start_at`, all-day events by `start_date`) and capped
-  at `:limit` (default #{@default_search_limit}).
-
-  A blank or whitespace-only term returns `[]` without touching the database.
-
-  ## Options
-
-  - `:hidden_integration_ids` — list of integration ids to exclude (default `[]`).
-  - `:limit` — maximum number of rows to return (default #{@default_search_limit}).
-  - `:visibility_rules`: a map of `integration_id => Selection.visibility_rule/0`
-    (see `Tymeslot.Integrations.Calendar.Selection.visibility_rules/1`), applied
-    as a `where` clause so a deselected calendar's rows never occupy a limit
-    slot a real match could have used. Omitted or `%{}` returns every row
-    regardless of selection, matching the pre-selection behaviour.
-  """
-  @spec search(integer(), String.t(), keyword()) :: [ProviderCalendarEventSchema.t()]
-  def search(user_id, term, opts \\ []) when is_integer(user_id) do
-    trimmed = String.trim(to_string(term))
-
-    if trimmed == "" do
-      []
-    else
-      hidden_ids = Keyword.get(opts, :hidden_integration_ids, [])
-      limit = Keyword.get(opts, :limit, @default_search_limit)
-      rules = Keyword.get(opts, :visibility_rules, %{})
-      pattern = "%" <> escape_like(trimmed) <> "%"
-
-      ProviderCalendarEventSchema
-      |> join(:inner, [e], i in assoc(e, :calendar_integration))
-      |> where([_e, i], i.user_id == ^user_id and i.is_active == true)
-      |> where([e, _i], e.calendar_integration_id not in ^hidden_ids)
-      |> where(
-        [e, _i],
-        ilike(e.summary, ^pattern) or ilike(e.description, ^pattern) or
-          ilike(e.location, ^pattern)
-      )
-      |> where([e, _i], ^Visibility.dynamic_for(rules))
-      # A row with half its timing (stored before the cache's writers checked
-      # it) has nowhere to be shown; leaving it out here, rather than after
-      # the limit, keeps a page of results full.
-      |> where(
-        [e, _i],
-        (e.all_day == true and not is_nil(e.start_date) and not is_nil(e.end_date)) or
-          (e.all_day == false and not is_nil(e.start_at) and not is_nil(e.end_at))
-      )
-      |> order_by([e, _i],
-        asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)),
-        asc: e.id
-      )
-      |> limit(^limit)
-      |> Repo.all()
-    end
-  end
-
-  # Escapes LIKE/ILIKE wildcard metacharacters so a user-typed term is matched
-  # literally rather than as a pattern.
-  defp escape_like(term) do
-    String.replace(term, ~r/[\\%_]/, "\\\\\\0")
   end
 
   @doc """
@@ -494,26 +439,44 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
       |> Changeset.cast(attrs, @local_edit_fields)
       |> ProviderCalendarEventSchema.validate_timing()
       |> Changeset.foreign_key_constraint(:video_integration_id)
+      |> put_written_show_as(event)
       |> Repo.update()
     end
   end
+
+  # A changed free/busy replaces the provider's own state kept in the row's
+  # `provider_metadata["showAs"]` (Outlook), so a later edit does not write the
+  # old one back (`Tymeslot.CalendarGrid.ProviderPayload.put_show_as/3`).
+  defp put_written_show_as(changeset, %{provider_metadata: %{"showAs" => _show_as} = metadata}) do
+    case Changeset.get_change(changeset, :transparency) do
+      "transparent" ->
+        Changeset.put_change(changeset, :provider_metadata, %{metadata | "showAs" => "free"})
+
+      "opaque" ->
+        Changeset.put_change(changeset, :provider_metadata, %{metadata | "showAs" => "busy"})
+
+      _unchanged ->
+        changeset
+    end
+  end
+
+  defp put_written_show_as(changeset, _event), do: changeset
 
   @doc """
   Deletes a single event identified by its integration and uid.
 
   Returns `{:ok, :deleted}` if a row was removed, `{:ok, :not_found}` if nothing matched.
+
+  Like every delete in this module, it is for an event that is gone (see
+  "Deleting rows" in the moduledoc), so it takes the event's bookability
+  choice with it.
   """
   @spec delete_by_uid(integer(), String.t()) :: {:ok, :deleted | :not_found}
   def delete_by_uid(calendar_integration_id, uid) do
-    {count, _rows} =
-      ProviderCalendarEventSchema
-      |> where(
-        [e],
-        e.calendar_integration_id == ^calendar_integration_id and e.uid == ^uid
-      )
-      |> Repo.delete_all()
-
-    if count > 0, do: {:ok, :deleted}, else: {:ok, :not_found}
+    case delete_rows(calendar_integration_id, dynamic([e], e.uid == ^uid)) do
+      0 -> {:ok, :not_found}
+      _count -> {:ok, :deleted}
+    end
   end
 
   @doc """
@@ -548,17 +511,25 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   defp delete_where_in(calendar_integration_id, field, values) do
     values
     |> Enum.chunk_every(@upsert_chunk_size)
-    |> Enum.reduce(0, fn chunk, acc ->
-      {count, _rows} =
-        ProviderCalendarEventSchema
-        |> where(
-          [e],
-          e.calendar_integration_id == ^calendar_integration_id and field(e, ^field) in ^chunk
-        )
-        |> Repo.delete_all()
-
-      acc + count
+    |> Enum.reduce(0, fn chunk, total ->
+      total + delete_rows(calendar_integration_id, dynamic([e], field(e, ^field) in ^chunk))
     end)
+  end
+
+  # Deletes the integration's rows matching `condition`, then the
+  # bookability choices that no remaining row carries, and returns the
+  # number of rows deleted. In the caller's transaction when there is one,
+  # so a sync that rolls back keeps the choices too.
+  defp delete_rows(calendar_integration_id, condition) do
+    {count, uids} =
+      ProviderCalendarEventSchema
+      |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+      |> where(^condition)
+      |> select([e], e.uid)
+      |> Repo.delete_all()
+
+    BookabilityOverrideQueries.delete_orphaned(calendar_integration_id, uids)
+    count
   end
 
   # Fields updated on conflict — everything except the surrogate key, inserted_at,

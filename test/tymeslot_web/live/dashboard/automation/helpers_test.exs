@@ -20,6 +20,26 @@ defmodule TymeslotWeb.Dashboard.Automation.HelpersTest do
       refute "event1" in updated["events"]
     end
 
+    test "ticking an event a series replaces ticks the series event too" do
+      updated = Helpers.toggle_event(%{"events" => []}, "meeting.created")
+      assert Enum.sort(updated["events"]) == ["meeting.created", "meeting.series_created"]
+
+      updated = Helpers.toggle_event(updated, "meeting.requested")
+      assert "meeting.series_requested" in updated["events"]
+    end
+
+    test "unticking leaves the series event as chosen" do
+      form_values = %{"events" => ["meeting.created", "meeting.series_created"]}
+
+      assert Helpers.toggle_event(form_values, "meeting.created")["events"] == [
+               "meeting.series_created"
+             ]
+    end
+
+    test "an event a series sends as it is ticks nothing else" do
+      assert Helpers.toggle_event(%{}, "meeting.rescheduled")["events"] == ["meeting.rescheduled"]
+    end
+
     test "initializes events list if missing" do
       form_values = %{}
       updated = Helpers.toggle_event(form_values, "event1")

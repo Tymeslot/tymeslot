@@ -6,14 +6,14 @@ defmodule Mix.Tasks.Precommit do
 
       $ mix precommit
       $ mix precommit --fail-fast
-      $ mix precommit --affected               # before a commit
+      $ mix precommit --affected               # the working tree
       $ mix precommit --affected --base main   # the whole branch
 
   `--affected` runs only the steps the diff can reach, and narrows the suite
   the way `mix test.affected` does; `Tymeslot.Precommit.Affected` has the
-  rules. It is the pre-commit check. The full gate, without it, is what runs
-  before a push or a release, because the narrowed suite misses cross-domain
-  coupling that only the whole suite catches.
+  rules. It is the everyday gate. The full gate, without it, runs for large or
+  wide-reaching changes, on main and before a release, because the narrowed
+  suite misses cross-domain coupling that only the whole suite catches.
 
   Every step remains individually runnable (`mix credo --strict`, `mix test`,
   and so on); this only removes the chance of applying the gate by halves.
@@ -85,7 +85,9 @@ defmodule Mix.Tasks.Precommit do
   alias Tymeslot.Precommit.Affected
   alias Tymeslot.Precommit.CpuBudget
   alias Tymeslot.Precommit.Guard
+  alias Tymeslot.Precommit.PassRecord
   alias Tymeslot.Precommit.Runner
+  alias Tymeslot.Precommit.Timings
 
   @steps [
     {"format", ~w[format --check-formatted], :dev},
@@ -145,16 +147,33 @@ defmodule Mix.Tasks.Precommit do
 
     fail_fast? = Keyword.get(opts, :fail_fast, false)
 
+    timings = Timings.start(argv)
+    record = PassRecord.open()
+
     if opts[:affected] do
       narrowed = Affected.narrow(@steps, base: opts[:base])
+      {steps, passed} = PassRecord.split(record, narrowed.steps)
 
-      Runner.run(narrowed.steps, fail_fast?,
-        skipped: narrowed.skipped,
-        suite_plan: CpuBudget.planner(narrowed.suite)
+      Runner.run(
+        steps,
+        fail_fast?,
+        Timings.instrument(timings, steps,
+          skipped: passed ++ narrowed.skipped,
+          suite_plan: CpuBudget.planner(narrowed.suite),
+          on_results: &PassRecord.save(record, steps, &1)
+        )
       )
     else
       if opts[:base], do: Mix.raise("--base only applies together with --affected")
-      Runner.run(@steps, fail_fast?, suite_plan: CpuBudget.planner(nil))
+
+      Runner.run(
+        @steps,
+        fail_fast?,
+        Timings.instrument(timings, @steps,
+          suite_plan: CpuBudget.planner(nil),
+          on_results: &PassRecord.save(record, @steps, &1)
+        )
+      )
     end
   end
 end

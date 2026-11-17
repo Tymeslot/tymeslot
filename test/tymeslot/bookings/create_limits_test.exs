@@ -33,14 +33,17 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
 
   defp target_date, do: Date.add(Date.utc_today(), @target_offset_days)
 
-  defp booking_params(user, overrides \\ %{}) do
+  # Every booking is made under a type of the host's; the account-wide caps
+  # live on the profile, so a plain type adds no limit of its own.
+  defp booking_params(meeting_type, overrides \\ %{}) do
     Map.merge(
       %{
         date: target_date(),
         time: "2:00 PM",
         duration: "60min",
         user_timezone: "Etc/UTC",
-        organizer_user_id: user.id
+        organizer_user_id: meeting_type.user_id,
+        meeting_type_id: meeting_type.id
       },
       overrides
     )
@@ -71,25 +74,31 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
       %{user: user} =
         create_always_bookable_profile(timezone: "Etc/UTC", profile: %{max_bookings_per_day: 1})
 
+      type = insert(:meeting_type, user: user, duration_minutes: 60)
+
       other_type = insert(:meeting_type, user: user)
       existing_booking(user, target_date(), ~T[10:00:00], %{meeting_type_id: other_type.id})
 
       assert {:error, :booking_limit_reached} =
-               Create.execute(booking_params(user), form_data())
+               Create.execute(booking_params(type), form_data())
     end
 
     test "a different day is unaffected by the daily cap" do
       %{user: user} =
         create_always_bookable_profile(timezone: "Etc/UTC", profile: %{max_bookings_per_day: 1})
 
+      type = insert(:meeting_type, user: user, duration_minutes: 60)
+
       existing_booking(user, Date.add(target_date(), 1), ~T[10:00:00])
 
-      assert {:ok, _meeting} = Create.execute(booking_params(user), form_data())
+      assert {:ok, _meeting} = Create.execute(booking_params(type), form_data())
     end
 
     test "weekly cap blocks any other day of the same Monday-week" do
       %{user: user} =
         create_always_bookable_profile(timezone: "Etc/UTC", profile: %{max_bookings_per_week: 1})
+
+      type = insert(:meeting_type, user: user, duration_minutes: 60)
 
       # A Monday at least 3 days out, so the whole week is bookable.
       days_to_monday = rem(8 - Date.day_of_week(Date.utc_today()), 7)
@@ -100,13 +109,13 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
 
       assert {:error, :booking_limit_reached} =
                Create.execute(
-                 booking_params(user, %{date: Date.add(monday, 2)}),
+                 booking_params(type, %{date: Date.add(monday, 2)}),
                  form_data()
                )
 
       assert {:ok, _meeting} =
                Create.execute(
-                 booking_params(user, %{date: Date.add(monday, 7)}),
+                 booking_params(type, %{date: Date.add(monday, 7)}),
                  form_data()
                )
     end
@@ -115,6 +124,8 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
       %{user: user} =
         create_always_bookable_profile(timezone: "Etc/UTC", profile: %{max_bookings_per_month: 1})
 
+      type = insert(:meeting_type, user: user, duration_minutes: 60)
+
       next_month_first =
         Date.utc_today() |> Date.end_of_month() |> Date.add(1)
 
@@ -122,7 +133,7 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
 
       assert {:error, :booking_limit_reached} =
                Create.execute(
-                 booking_params(user, %{date: Date.add(next_month_first, 14)}),
+                 booking_params(type, %{date: Date.add(next_month_first, 14)}),
                  form_data()
                )
     end
@@ -136,7 +147,7 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
 
       assert {:error, :booking_limit_reached} =
                Create.execute(
-                 booking_params(user, %{meeting_type_id: type.id}),
+                 booking_params(type),
                  form_data()
                )
     end
@@ -149,7 +160,7 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
 
       assert {:ok, _meeting} =
                Create.execute(
-                 booking_params(user, %{meeting_type_id: type.id}),
+                 booking_params(type),
                  form_data()
                )
     end
@@ -160,28 +171,28 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
       %{user: user} =
         create_always_bookable_profile(timezone: "Etc/UTC", profile: %{max_bookings_per_day: 1})
 
-      %{user: user}
+      %{user: user, type: insert(:meeting_type, user: user, duration_minutes: 60)}
     end
 
-    test "cancelled bookings free their capacity", %{user: user} do
+    test "cancelled bookings free their capacity", %{user: user, type: type} do
       existing_booking(user, target_date(), ~T[10:00:00], %{status: :cancelled})
 
-      assert {:ok, _meeting} = Create.execute(booking_params(user), form_data())
+      assert {:ok, _meeting} = Create.execute(booking_params(type), form_data())
     end
 
-    test "awaiting_payment bookings hold their slot and count", %{user: user} do
+    test "awaiting_payment bookings hold their slot and count", %{user: user, type: type} do
       existing_booking(user, target_date(), ~T[10:00:00], %{status: :awaiting_payment})
 
       assert {:error, :booking_limit_reached} =
-               Create.execute(booking_params(user), form_data())
+               Create.execute(booking_params(type), form_data())
     end
 
-    test "a booking under a pending reschedule request doesn't count", %{user: user} do
+    test "a booking under a pending reschedule request doesn't count", %{user: user, type: type} do
       existing_booking(user, target_date(), ~T[10:00:00], %{
         reschedule_requested_at: DateTime.utc_now(:second)
       })
 
-      assert {:ok, _meeting} = Create.execute(booking_params(user), form_data())
+      assert {:ok, _meeting} = Create.execute(booking_params(type), form_data())
     end
   end
 
@@ -195,13 +206,15 @@ defmodule Tymeslot.Bookings.CreateLimitsTest do
           profile: %{max_bookings_per_day: 1}
         )
 
+      type = insert(:meeting_type, user: user, duration_minutes: 60)
+
       existing_booking(user, target_date(), ~T[20:00:00])
 
       assert {:ok, _meeting} =
-               Create.execute(booking_params(user, %{time: "10:00 AM"}), form_data())
+               Create.execute(booking_params(type, %{time: "10:00 AM"}), form_data())
 
       assert {:error, :booking_limit_reached} =
-               Create.execute(booking_params(user, %{time: "9:00 PM"}), form_data())
+               Create.execute(booking_params(type, %{time: "9:00 PM"}), form_data())
     end
   end
 

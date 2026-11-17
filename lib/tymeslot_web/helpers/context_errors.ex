@@ -93,6 +93,10 @@ defmodule TymeslotWeb.Helpers.ContextErrors do
     %{max_participants: [group_bookings_not_allowed_message()]}
   end
 
+  def format_context_error(:recurring_bookings_not_allowed) do
+    %{series_mode: [recurring_bookings_not_allowed_message()]}
+  end
+
   def format_context_error(:invalid_approval_window) do
     %{
       approval_window_hours: [
@@ -131,6 +135,17 @@ defmodule TymeslotWeb.Helpers.ContextErrors do
   @spec group_bookings_not_allowed_message() :: String.t()
   def group_bookings_not_allowed_message do
     dgettext("dashboard_meeting_form", "Group bookings are not included in your current plan.")
+  end
+
+  @doc """
+  Why a host may not switch on a series (recurring bookings).
+  """
+  @spec recurring_bookings_not_allowed_message() :: String.t()
+  def recurring_bookings_not_allowed_message do
+    dgettext(
+      "dashboard_meeting_form",
+      "Recurring bookings are not included in your current plan."
+    )
   end
 
   defp format_generic_error(error) when is_atom(error) do

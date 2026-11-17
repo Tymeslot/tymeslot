@@ -4,7 +4,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
 
   When a calendar sync worker detects that a provider event linked to a
   Tymeslot meeting was deleted or modified externally, the Calendar context
-  delegates here (via `Tymeslot.Meetings.apply_external_calendar_change/4`).
+  delegates here (via `Tymeslot.Meetings.ExternalCalendar.apply_external_calendar_change/5`).
   This module owns the meeting-side consequences: updating the
   `calendar_sync_status`, auto-cancelling the meeting on external deletion
   (with status revert if cancellation fails, so the next sync retries the
@@ -20,7 +20,6 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Emails.EmailScheduler
-  alias Tymeslot.Emails.EmailService
   alias Tymeslot.Jobs
   alias Tymeslot.Meetings.MeetingCalendarQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -69,7 +68,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   The same work `apply_change/4` does once it has resolved its identifiers,
   for callers that resolved the meeting themselves. A batch reconciling many
   deletions matches them all in one query (see
-  `Tymeslot.Meetings.list_meetings_by_calendar_identifiers/2`) rather than
+  `Tymeslot.Meetings.ExternalCalendar.list_meetings_by_calendar_identifiers/3`) rather than
   paying two lookups per event to learn that most of them link to nothing.
   """
   @spec apply_change_to_meeting(Meeting.t(), signal()) :: :ok | {:error, term()}
@@ -423,24 +422,11 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
     end
   end
 
+  # Scheduled rather than sent, so a failed send is retried by the email job.
+  # A failed insert is logged by the scheduler and does not undo the change.
   @spec notify_host(Meeting.t(), signal()) :: :ok
   defp notify_host(meeting, signal) do
-    case EmailService.send_external_booking_change(meeting, meeting.organizer_email, signal) do
-      {:ok, _result} ->
-        Logger.info("External booking change notification sent",
-          meeting_id: meeting.id,
-          signal: signal
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to send external booking change notification",
-          meeting_id: meeting.id,
-          reason: reason
-        )
-
-        :ok
-    end
+    _scheduled = EmailScheduler.schedule_external_booking_change(meeting.id, signal)
+    :ok
   end
 end

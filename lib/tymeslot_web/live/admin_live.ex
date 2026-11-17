@@ -22,7 +22,7 @@ defmodule TymeslotWeb.AdminLive do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.AppSettings
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AdminRoles
   alias Tymeslot.Auth.Invitations
   alias Tymeslot.Emails.Branding
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -442,10 +442,10 @@ defmodule TymeslotWeb.AdminLive do
     |> assign(:stock_accent, Branding.stock_accent())
     |> assign(:accent_preview, Branding.accent_preview(accent))
     |> assign(:accent_draft, nil)
-    |> assign(:users, Auth.list_users())
-    |> assign(:user_count, Auth.count_users())
-    |> assign(:admin_count, Auth.count_admins())
-    |> assign(:self_demote_blocked?, not Auth.remaining_signin_capable_admins?(user))
+    |> assign(:users, AdminRoles.list_users())
+    |> assign(:user_count, AdminRoles.count_users())
+    |> assign(:admin_count, AdminRoles.count_admins())
+    |> assign(:self_demote_blocked?, not AdminRoles.remaining_signin_capable_admins?(user))
     |> assign(:invitations_available?, Invitations.available?())
   end
 

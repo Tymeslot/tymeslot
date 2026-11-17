@@ -7,6 +7,7 @@ defmodule Tymeslot.Polls.SlotHealthTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Availability.Bookability
   alias Tymeslot.Polls.SlotHealth
   alias Tymeslot.TestMocks
 
@@ -181,6 +182,29 @@ defmodule Tymeslot.Polls.SlotHealthTest do
       assert SlotHealth.check(%{poll | time_slots: [slot]}) == %{slot.id => :conflict}
     end
 
+    test "the organiser's Treat as Busy makes a free all-day event a conflict" do
+      %{poll: poll, slot: slot, integration: integration, row: row} =
+        treat_as_setup("transparent")
+
+      TestMocks.setup_calendar_mocks(events: [live(row)])
+      assert SlotHealth.check(poll) == %{slot.id => :ok}
+
+      :ok = Bookability.set(poll.user_id, integration.id, row.uid, true)
+
+      assert SlotHealth.check(poll) == %{slot.id => :conflict}
+    end
+
+    test "the organiser's Treat as Free clears a busy all-day event's conflict" do
+      %{poll: poll, slot: slot, integration: integration, row: row} = treat_as_setup("opaque")
+
+      TestMocks.setup_calendar_mocks(events: [live(row)])
+      assert SlotHealth.check(poll) == %{slot.id => :conflict}
+
+      :ok = Bookability.set(poll.user_id, integration.id, row.uid, false)
+
+      assert SlotHealth.check(poll) == %{slot.id => :ok}
+    end
+
     test "returns an empty map for a poll with no slots" do
       assert SlotHealth.check(%{time_slots: []}) == %{}
     end
@@ -217,4 +241,42 @@ defmodule Tymeslot.Polls.SlotHealthTest do
       assert_received :fetch_started
     end
   end
+
+  # A poll with one slot on an all-day event the host's calendar caches, and
+  # the live fetch hands out under the same uid.
+  defp treat_as_setup(transparency) do
+    profile = insert(:profile, timezone: "Etc/UTC")
+    poll = insert(:poll, user: profile.user)
+    integration = insert(:calendar_integration, user: profile.user, is_active: true)
+    day = Date.add(Date.utc_today(), 1)
+
+    row =
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        all_day: true,
+        start_date: day,
+        end_date: Date.add(day, 1),
+        start_at: nil,
+        end_at: nil,
+        transparency: transparency
+      )
+
+    slot =
+      insert(:poll_time_slot,
+        poll: poll,
+        start_time: DateTime.new!(day, ~T[10:00:00], "Etc/UTC"),
+        end_time: DateTime.new!(day, ~T[11:00:00], "Etc/UTC"),
+        position: 0
+      )
+
+    %{poll: %{poll | time_slots: [slot]}, slot: slot, integration: integration, row: row}
+  end
+
+  defp live(row),
+    do:
+      event(row.start_date, row.end_date, %{
+        uid: row.uid,
+        all_day: true,
+        transparency: row.transparency
+      })
 end

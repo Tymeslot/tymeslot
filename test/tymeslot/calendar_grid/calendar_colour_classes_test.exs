@@ -21,31 +21,31 @@ defmodule Tymeslot.CalendarGrid.CalendarColourClassesTest do
     }
   end
 
-  describe "calendar_colour_classes/1" do
+  describe "calendar_colour_classes/2" do
     # The expected classes are spelled out rather than read back from
     # `EventColour.tailwind_class/1`, which is the lookup the code under test
     # performs and so can never disagree with it.
     test "resolves a chosen colour to its palette class" do
-      classes = CalendarGrid.calendar_colour_classes([appearance(1, "cal-a", "banana")])
+      classes = CalendarGrid.calendar_colour_classes([], [appearance(1, "cal-a", "banana")])
 
       assert classes == %{{1, "cal-a"} => "bg-calendar-banana"}
     end
 
     test "omits a calendar with no colour of its own, so the caller falls through" do
-      classes = CalendarGrid.calendar_colour_classes([appearance(1, "cal-a", nil)])
+      classes = CalendarGrid.calendar_colour_classes([], [appearance(1, "cal-a", nil)])
 
       assert classes == %{}
     end
 
     test "omits a blank colour rather than painting it neutral" do
-      classes = CalendarGrid.calendar_colour_classes([appearance(1, "cal-a", "")])
+      classes = CalendarGrid.calendar_colour_classes([], [appearance(1, "cal-a", "")])
 
       assert classes == %{}
     end
 
     test "keys two calendars in one integration separately" do
       classes =
-        CalendarGrid.calendar_colour_classes([
+        CalendarGrid.calendar_colour_classes([], [
           appearance(1, "cal-a", "banana"),
           appearance(1, "cal-b", "grape")
         ])
@@ -58,7 +58,7 @@ defmodule Tymeslot.CalendarGrid.CalendarColourClassesTest do
       # provider_calendar_id is unique only within an integration, so "primary"
       # from two Google accounts must not collide into one entry.
       classes =
-        CalendarGrid.calendar_colour_classes([
+        CalendarGrid.calendar_colour_classes([], [
           appearance(1, "primary", "banana"),
           appearance(2, "primary", "sage")
         ])
@@ -68,7 +68,22 @@ defmodule Tymeslot.CalendarGrid.CalendarColourClassesTest do
     end
 
     test "is empty when the organiser has chosen nothing" do
-      assert CalendarGrid.calendar_colour_classes([]) == %{}
+      assert CalendarGrid.calendar_colour_classes([], []) == %{}
+    end
+
+    test "gives an account's further calendars a spare rotation class" do
+      integration = %{
+        id: 1,
+        colour: nil,
+        calendar_list: [
+          %{"id" => "work", "selected" => true},
+          %{"id" => "family", "selected" => true}
+        ]
+      }
+
+      assert CalendarGrid.calendar_colour_classes([integration], []) == %{
+               {1, "family"} => "bg-calendar-2"
+             }
     end
   end
 

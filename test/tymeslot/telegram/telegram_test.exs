@@ -367,7 +367,8 @@ defmodule Tymeslot.TelegramTest do
       assert stub.link_token =~ ~r/\A[A-Za-z0-9_-]{32}\z/
       assert %DateTime{} = stub.link_token_issued_at
       assert %{bot_mode: :shared, chat_id: nil, linked_at: nil} = stub
-      assert stub.events == ["meeting.created"]
+      # New bookings, single and series alike: a series sends its own event.
+      assert stub.events == ["meeting.created", "meeting.series_created"]
       assert [%{id: id}] = Telegram.list_integrations(user.id)
       assert id == stub.id
     end

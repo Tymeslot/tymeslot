@@ -31,9 +31,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   # A confirmation email announces a positive outcome — the booking is set.
   @intent :confirmed
 
-  # The organiser reminder line's lead time when the payload names none.
-  @default_organizer_reminder %{value: 15, unit: "minutes"}
-
   @spec render(
           :attendee | :organizer | :guest,
           String.t(),
@@ -62,6 +59,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       #{if line = GroupSession.line(appointment_details), do: Text.centered_text(line, font_size: "14px", padding: "0 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
+
+      #{MeetingComponents.description_section(appointment_details)}
 
       #{MeetingComponents.organizer_note_box(@intent, appointment_details[:organizer_note])}
 
@@ -145,6 +144,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
+      #{MeetingComponents.description_section(appointment_details)}
+
       #{MeetingComponents.organizer_note_box(@intent, appointment_details[:organizer_note])}
 
       #{if guest_video_url do
@@ -213,6 +214,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       #{MeetingComponents.meeting_details_table(meeting_details, organizer_locale(appointment_details))}
 
+      #{MeetingComponents.description_section(appointment_details)}
+
       #{if organizer_video_url do
         MeetingComponents.video_meeting_section(@intent, organizer_video_url,
         title: dgettext("emails_booking", "Host video call"),
@@ -221,9 +224,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       #{MeetingComponents.custom_answers_section(appointment_details)}
       #{if organiser_payment, do: PaymentBlocks.organizer_summary_html(organiser_payment)}
-
-      #{Text.section_title(dgettext("emails_booking", "Preparation reminders"))}
-      #{Text.bullet_list(organizer_prep_items(appointment_details))}
 
       #{MeetingComponents.actions_section(@intent, dgettext("emails_booking", "Need to make changes?"), [%{text: dgettext("emails_booking", "Open in dashboard"), url: Map.get(appointment_details, :dashboard_url), style: :primary}, %{text: dgettext("emails_booking", "Reschedule"), url: Map.get(appointment_details, :reschedule_url), style: :secondary}, %{text: dgettext("emails_booking", "Cancel Appointment"), url: Map.get(appointment_details, :cancel_url), style: :danger}])}
       """
@@ -287,7 +287,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     #{dgettext("emails_booking", "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you.")}
 
     #{GroupSession.text(appointment_details)}#{dgettext("emails_booking", "MEETING DETAILS:")}
-    #{meeting_details}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{custom_answers}
+    #{meeting_details}#{MeetingComponents.description_text(appointment_details)}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{custom_answers}
     #{action_links}#{payment_section}
     #{if appointment_details.organizer_contact_info, do: "\n#{dgettext("emails_booking", "QUESTIONS?")}\n#{appointment_details.organizer_contact_info}\n"}
     #{if appointment_details.reminders_summary, do: "\n#{appointment_details.reminders_summary}\n", else: ""}
@@ -348,7 +348,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     #{guest_invited_line(appointment_details)}
 
     #{dgettext("emails_booking", "MEETING DETAILS:")}
-    #{meeting_details}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{TextBodyHelper.format_guest_answers(appointment_details, dgettext("emails_booking", "WILL YOU BE THERE?"), dgettext("emails_booking", "You can change your response any time using the links above."))}
+    #{meeting_details}#{MeetingComponents.description_text(appointment_details)}#{TextBodyHelper.format_organizer_note(appointment_details, locale)}#{video_section}#{TextBodyHelper.format_guest_answers(appointment_details, dgettext("emails_booking", "WILL YOU BE THERE?"), dgettext("emails_booking", "You can change your response any time using the links above."))}
     """
   end
 
@@ -397,10 +397,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     #{stage[:stage_subtitle]}#{attendee_info}
 
     #{dgettext("emails_booking", "MEETING DETAILS:")}
-    #{meeting_details}#{video_section}#{custom_answers}#{action_links}#{payment_section}
-
-    #{dgettext("emails_booking", "PREPARATION REMINDERS:")}
-    #{TextBodyHelper.format_bullets(organizer_prep_items(appointment_details))}
+    #{meeting_details}#{MeetingComponents.description_text(appointment_details)}#{video_section}#{custom_answers}#{action_links}#{payment_section}
 
     #{dgettext("emails_booking", "Best,")}
     #{appointment_details.organizer_name}
@@ -443,47 +440,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       name: appointment_details.attendee_name,
       date: date
     )
-  end
-
-  @doc """
-  The organiser's preparation reminders, in their locale: the one list both
-  the HTML and the plain-text body of their confirmation render.
-  """
-  @spec organizer_prep_items(Tymeslot.Emails.EmailService.appointment_details()) :: [
-          String.t()
-        ]
-  def organizer_prep_items(appointment_details) do
-    Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(appointment_details), fn ->
-      [
-        dgettext("emails_booking", "Review any relevant materials"),
-        dgettext("emails_booking", "Prepare an agenda if needed"),
-        dgettext("emails_booking", "Test video/audio setup if virtual"),
-        organizer_reminder_item(appointment_details)
-      ]
-    end)
-  end
-
-  defp organizer_reminder_item(appointment_details) do
-    if Map.get(appointment_details, :reminders_enabled) != false do
-      reminder_time = format_reminder_for_organizer(appointment_details)
-      dgettext("emails_booking", "Set a reminder %{time} before", time: reminder_time)
-    else
-      dgettext("emails_booking", "No reminder emails are scheduled for this appointment")
-    end
-  end
-
-  # The reminder's lead time in the organiser's locale, in the form the
-  # "before" sentence takes ("1 Tag", "1 годину"), not a duration's ("24
-  # Stunden", "1 година"), and never the attendee's pre-localised string. A
-  # payload without one reads as the 15 minutes it always has.
-  defp format_reminder_for_organizer(appointment_details) do
-    raw =
-      case Map.get(appointment_details, :reminder_raw) do
-        %{value: _value, unit: _unit} = raw -> raw
-        _other -> @default_organizer_reminder
-      end
-
-    Formatting.format_reminder_label(raw, organizer_locale(appointment_details))
   end
 
   defp organizer_locale(appointment_details),

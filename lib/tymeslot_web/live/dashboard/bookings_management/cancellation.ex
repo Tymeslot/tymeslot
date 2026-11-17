@@ -81,7 +81,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   closed and the list refreshed once the meeting is cancelled (even if only the
   refund failed), closed without a refresh when the domain refused, and left
   open for a retry on any other failure. A refund choice that does not
-  validate leaves everything as it was.
+  validate keeps the dialog open with the error beside its field.
   """
   @spec confirm(Phoenix.LiveView.Socket.t(), MeetingSchema.t(), map(), reload()) ::
           Phoenix.LiveView.Socket.t()
@@ -92,12 +92,16 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     socket = assign(socket, :cancel_refund_form, refund_form(params))
 
     case Meetings.resolve_cancellation_refund(booking_payment, params) do
-      {:ok, refund_action} ->
-        socket
-        |> assign(:cancelling_meeting, meeting.id)
-        |> assign(:cancel_refund_error, %{})
-        |> run_cancellation(meeting, refund_action, reload)
+      {:ok, _refund_action} ->
+        {outcome, type, message} =
+          cancel(socket.assigns.current_user.id, meeting, booking_payment, params)
 
+        socket
+        |> assign(:cancel_refund_error, %{})
+        |> Flash.put_flash(type, message)
+        |> settle(outcome, reload)
+
+      # Shown beside the field it is about, rather than as a flash.
       {:error, reason} ->
         assign(socket, :cancel_refund_error, %{
           refund_error_field(reason) => refund_error_message(reason)
@@ -105,73 +109,68 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     end
   end
 
-  defp run_cancellation(socket, meeting, refund_action, reload) do
-    result =
-      Meetings.cancel_meeting_with_refund(
-        meeting,
-        socket.assigns.current_user.id,
-        refund_action
-      )
+  @doc """
+  Cancels `meeting` for the host `user_id`, with the refund the cancel form's
+  `params` choose against `booking_payment` (nil for a free booking), and
+  says how it went as `{outcome, flash_type, message}`, so the Meetings page
+  and the calendar's preview (`Calendar.BookingActions`) act and speak alike:
 
-    emit_confirm(socket.assigns.current_user.id, meeting.id, result)
-    handle_cancellation(socket, meeting, refund_action, result, reload)
+    * `:closed`: the booking is cancelled (the refund may still have failed,
+      or someone else cancelled it first; the message says which), so the
+      dialog closes and the list reloads.
+    * `:refused`: the meeting started or ended meanwhile; nothing changed and
+      the dialog closes.
+    * `:invalid` (a refund choice that does not add up) and `:failed`: the
+      dialog stays open for another try.
+  """
+  @spec cancel(integer(), map(), map() | nil, map()) ::
+          {:closed | :refused | :invalid | :failed, :info | :error, String.t()}
+  def cancel(user_id, meeting, booking_payment, params) do
+    case Meetings.resolve_cancellation_refund(booking_payment, params) do
+      {:ok, refund_action} ->
+        result = Meetings.cancel_meeting_with_refund(meeting, user_id, refund_action)
+        emit_confirm(user_id, meeting.id, result)
+        outcome(meeting, refund_action, result)
+
+      {:error, reason} ->
+        {:invalid, :error, refund_error_message(reason)}
+    end
   end
 
-  defp handle_cancellation(socket, _meeting, refund_action, {:ok, _cancelled}, reload) do
-    Flash.info(success_message(refund_action))
-    close(socket, reload)
-  end
+  defp outcome(_meeting, refund_action, {:ok, _cancelled}),
+    do: {:closed, :info, success_message(refund_action)}
 
-  # The meeting is cancelled; only the money is outstanding. The modal closes
-  # and the list refreshes as on success, because the cancellation itself did
-  # happen and leaving the dialog open would suggest otherwise.
-  defp handle_cancellation(
-         socket,
-         _meeting,
-         _refund_action,
-         {:error, {:refund_failed, _reason}},
-         reload
-       ) do
-    Flash.error(
-      dgettext(
-        "dashboard_bookings",
-        "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
-      )
-    )
+  # The meeting is cancelled; only the money is outstanding.
+  defp outcome(_meeting, _refund_action, {:error, {:refund_failed, _reason}}),
+    do:
+      {:closed, :error,
+       dgettext(
+         "dashboard_bookings",
+         "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
+       )}
 
-    close(socket, reload)
-  end
+  # The attendee (or a calendar sync) cancelled it while the dialog was open,
+  # before the refund step, so no refund came from this action.
+  defp outcome(_meeting, refund_action, {:error, :already_cancelled}),
+    do: {:closed, :info, already_cancelled_message(refund_action)}
 
-  # The attendee (or a calendar sync) cancelled the meeting while the modal
-  # was open. Nothing is left to do: the cancellation stopped before the
-  # refund step, so the host is told no refund came from this action.
-  defp handle_cancellation(socket, _meeting, refund_action, {:error, :already_cancelled}, reload) do
-    Flash.info(already_cancelled_message(refund_action))
-    close(socket, reload)
-  end
+  defp outcome(_meeting, _refund_action, {:error, reason}) when Refusal.is_refusal(reason),
+    do: {:refused, :error, ModalMeeting.refusal_message(reason)}
 
-  # The meeting started or ended while the modal was open: retrying cannot
-  # help, so the host is told why. Nothing changed, so the list stands.
-  defp handle_cancellation(socket, _meeting, _refund_action, {:error, reason}, _reload)
-       when Refusal.is_refusal(reason) do
-    Flash.error(ModalMeeting.refusal_message(reason))
-
-    socket
-    |> assign(cancelling_meeting: nil, cancel_booking_payment: nil)
-    |> ModalHook.hide_modal(:cancel_meeting)
-  end
-
-  defp handle_cancellation(socket, meeting, _refund_action, {:error, reason}, _reload) do
+  defp outcome(meeting, _refund_action, {:error, reason}) do
     Logger.error("cancel_meeting_failed",
       reason: LogFormat.reason(reason),
       meeting_id: meeting.id
     )
 
-    Flash.error(dgettext("dashboard_bookings", "Failed to cancel meeting. Please try again."))
-    assign(socket, :cancelling_meeting, nil)
+    {:failed, :error,
+     dgettext("dashboard_bookings", "Failed to cancel meeting. Please try again.")}
   end
 
-  defp close(socket, reload) do
+  # Cancelled: close and reload, because the cancellation did happen even if
+  # the refund did not. Refused: close, nothing changed. Otherwise the dialog
+  # stays for another try.
+  defp settle(socket, :closed, reload) do
     socket
     |> assign(:cancelling_meeting, nil)
     |> assign(:cancel_booking_payment, nil)
@@ -179,8 +178,17 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     |> ModalHook.hide_modal(:cancel_meeting)
   end
 
-  # Records that the host opened the cancel dialog.
-  defp emit_open(user_id, meeting_id) do
+  defp settle(socket, :refused, _reload) do
+    socket
+    |> assign(cancelling_meeting: nil, cancel_booking_payment: nil)
+    |> ModalHook.hide_modal(:cancel_meeting)
+  end
+
+  defp settle(socket, _kept_open, _reload), do: assign(socket, :cancelling_meeting, nil)
+
+  @doc "Records that the host opened the cancel dialog."
+  @spec emit_open(integer(), binary()) :: :ok
+  def emit_open(user_id, meeting_id) do
     :telemetry.execute(
       @event_prefix ++ [:open],
       %{},
@@ -240,6 +248,23 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   defp refund_error_message(:exceeds_remaining),
     do: dgettext("dashboard_bookings", "Refund amount exceeds the remaining refundable balance.")
 
+  defp refund_error_message(:outside_refund_window),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "No refund can be made: the payment is older than the 60-day refund window. You can refund it from Stripe."
+      )
+
+  defp refund_error_message(:under_dispute),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
+      )
+
+  defp refund_error_message(:not_paid),
+    do: dgettext("dashboard_bookings", "No refund can be made: the booking was not paid.")
+
   defp refund_error_message(_reason),
     do: dgettext("dashboard_bookings", "Enter a valid partial refund amount.")
 
@@ -250,6 +275,23 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   defp success_message(:none),
     do: dgettext("dashboard_bookings", "Meeting cancelled successfully")
 
+  defp success_message({:not_refunded, :outside_refund_window}),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "Cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe."
+      )
+
+  defp success_message({:not_refunded, :under_dispute}),
+    do:
+      dgettext(
+        "dashboard_bookings",
+        "Cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first."
+      )
+
+  defp success_message({:not_refunded, :not_paid}),
+    do: dgettext("dashboard_bookings", "Cancelled without a refund: the booking was not paid.")
+
   # The message shown when the meeting had been cancelled elsewhere before the
   # host confirmed. A refund the host chose was not issued, so it says so.
   defp already_cancelled_message({:refund, _cents}),
@@ -259,6 +301,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
         "This booking was already cancelled, so no refund was issued."
       )
 
-  defp already_cancelled_message(:none),
+  defp already_cancelled_message(_no_refund),
     do: dgettext("dashboard_bookings", "This booking was already cancelled.")
 end

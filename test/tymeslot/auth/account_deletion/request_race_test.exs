@@ -19,7 +19,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestRaceTest do
   import Tymeslot.Factory
   import Tymeslot.Test.RaceConductor, only: [race: 1, unboxed: 1]
 
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -57,7 +57,12 @@ defmodule Tymeslot.Auth.AccountDeletion.RequestRaceTest do
         for admin <- [first, second] do
           fn hold ->
             RaceConductor.arm(hold, RaceConductor.lock_of("users"))
-            Auth.request_account_deletion(admin, %{"current_password" => "Password123!"}, @opts)
+
+            AccountDeletion.request_account_deletion(
+              admin,
+              %{"current_password" => "Password123!"},
+              @opts
+            )
           end
         end
       )

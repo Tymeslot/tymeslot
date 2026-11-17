@@ -11,10 +11,19 @@ defmodule Tymeslot.Meetings.Cancellation do
   ## The refund rule
 
   Cancelling a paid meeting refunds the full remaining balance by default: the
-  attendee paid for a meeting that is not going to happen. The host can
+  attendee paid for a meeting that is not going to happen. A session of a
+  paid series refunds one session's price by default, as its one payment
+  paid for the sessions that still go ahead too. The host can
   override that with a partial amount, or with no refund at all — but declining
   to refund is the one choice that requires an explicit acknowledgement, since
   it is the only one that leaves the attendee out of pocket.
+
+  A payment Tymeslot can no longer refund (`MeetingPayments.refund_refusal/1`:
+  past the refund window, under dispute, never paid) is settled up front:
+  the default resolves to cancelling without a refund, with the reason
+  (`{:not_refunded, reason}`), so the host is told why rather than seeing a
+  refund fail after the meeting is already cancelled; an explicit amount is
+  refused with that reason before anything is cancelled.
 
   ## Ordering
 
@@ -33,10 +42,19 @@ defmodule Tymeslot.Meetings.Cancellation do
   """
 
   alias Tymeslot.Bookings.Cancel
+  alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.MeetingPayments
 
-  @typedoc "What to refund: nothing, or a positive amount in minor units."
-  @type refund_action :: :none | {:refund, pos_integer()}
+  @refusals [:not_paid, :outside_refund_window, :under_dispute]
+
+  @typedoc "Why a payment can no longer be refunded (`MeetingPayments.refund_refusal/1`)."
+  @type refund_refusal :: :not_paid | :outside_refund_window | :under_dispute
+
+  @typedoc """
+  What to refund: nothing, a positive amount in minor units, or nothing
+  because the payment can no longer be refunded (and why).
+  """
+  @type refund_action :: :none | {:refund, pos_integer()} | {:not_refunded, refund_refusal()}
 
   @typedoc """
   Why a requested refund could not be turned into an action.
@@ -45,8 +63,11 @@ defmodule Tymeslot.Meetings.Cancellation do
       not acknowledged.
     * `:exceeds_remaining` — more than the refundable balance was requested.
     * `:invalid_amount` — the amount could not be read as money.
+    * a `t:refund_refusal/0` — an amount was asked of a payment that can no
+      longer be refunded.
   """
-  @type refund_error :: :acknowledgement_required | :exceeds_remaining | :invalid_amount
+  @type refund_error ::
+          :acknowledgement_required | :exceeds_remaining | :invalid_amount | refund_refusal()
 
   @doc """
   Works out which refund the host's choice implies.
@@ -73,19 +94,31 @@ defmodule Tymeslot.Meetings.Cancellation do
         "amount" => params["cancel_refund_amount"]
       })
 
-    case parsed do
-      {:ok, cents} -> {:ok, {:refund, cents}}
-      {:error, :exceeds_remaining} -> {:error, :exceeds_remaining}
+    with {:ok, cents} <- parsed,
+         :ok <- MeetingPayments.refund_refusal(payment) do
+      {:ok, {:refund, cents}}
+    else
+      {:error, reason} when reason in [:exceeds_remaining | @refusals] -> {:error, reason}
       {:error, _reason} -> {:error, :invalid_amount}
     end
   end
 
   # No explicit choice: refund whatever is left, or nothing if the balance has
-  # already been refunded in full.
+  # already been refunded in full. A session of a paid series refunds one
+  # session's price: the payment paid for every session, and the others go
+  # ahead. A payment that can no longer be refunded cancels without one,
+  # and says why.
   def resolve_refund(payment, _params) do
-    case MeetingPayments.refundable_remaining_cents(payment) do
-      remaining when remaining > 0 -> {:ok, {:refund, remaining}}
+    case MeetingPayments.default_cancellation_refund_cents(payment) do
+      remaining when remaining > 0 -> default_refund(payment, remaining)
       _zero -> {:ok, :none}
+    end
+  end
+
+  defp default_refund(payment, cents) do
+    case MeetingPayments.refund_refusal(payment) do
+      :ok -> {:ok, {:refund, cents}}
+      {:error, reason} -> {:ok, {:not_refunded, reason}}
     end
   end
 
@@ -108,13 +141,25 @@ defmodule Tymeslot.Meetings.Cancellation do
           | {:error, :not_found}
           | {:error, {:refund_failed, term()}}
           | {:error, term()}
+  # A session of an open series request is answered with its series
+  # (decline, from the request), never cancelled on its own: the dashboard
+  # offers no cancel for it, and a crafted event is refused here. A
+  # confirmed session the booker moved back into the approval gate is a
+  # request of its own (`SeriesApproval.series_request?/1` is false for it),
+  # cancelled like any single booking awaiting approval.
   def cancel(%{organizer_user_id: owner_id} = meeting, acting_user_id, refund_action)
-      when is_integer(owner_id) and owner_id == acting_user_id,
-      do: cancel_as_organizer(meeting, acting_user_id, refund_action)
+      when is_integer(owner_id) and owner_id == acting_user_id do
+    if SeriesApproval.series_request?(meeting),
+      do: {:error, {:not_cancellable, :held_for_series_approval}},
+      else: cancel_as_organizer(meeting, acting_user_id, refund_action)
+  end
 
   def cancel(_meeting, _acting_user_id, _refund_action), do: {:error, :not_found}
 
   defp cancel_as_organizer(meeting, _organizer_user_id, :none),
+    do: Cancel.execute(meeting, caller: :organizer)
+
+  defp cancel_as_organizer(meeting, _organizer_user_id, {:not_refunded, _reason}),
     do: Cancel.execute(meeting, caller: :organizer)
 
   defp cancel_as_organizer(

@@ -41,6 +41,21 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
     ])
   end
 
+  # Raw SQL, as the rest of this file: the table is as this migration left
+  # it, without the columns later migrations add to the schema.
+  defp insert_raw_venue(user, name) do
+    %{rows: [[id]]} =
+      Repo.query!(
+        """
+        INSERT INTO venues (user_id, name, position, inserted_at, updated_at)
+        VALUES ($1, $2, 0, now(), now()) RETURNING id
+        """,
+        [user.id, name]
+      )
+
+    id
+  end
+
   defp locations(meeting_type) do
     %{rows: [[locations]]} =
       Repo.query!("SELECT locations FROM meeting_types WHERE id = $1", [meeting_type.id])
@@ -491,14 +506,14 @@ defmodule Tymeslot.Migrations.CreateVenuesTest do
 
     # Saved after the migration, as the Locations page allows: a name and
     # no description.
-    studio = insert(:venue, user: user, name: "Studio", description: nil)
+    studio_id = insert_raw_venue(user, "Studio")
 
     put_raw_locations(meeting_type, [
       %{
         "id" => "loc-studio",
         "kind" => "in_person",
         "label" => "Our studio",
-        "venue_ids" => [studio.id],
+        "venue_ids" => [studio_id],
         "position" => 0
       }
     ])

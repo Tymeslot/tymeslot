@@ -16,6 +16,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
@@ -42,9 +43,13 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
 
   @typedoc """
   Where the meeting is held, as the organiser chose it: one of their saved
-  venues (`Tymeslot.Venues`), or a place they typed in.
+  venues (`Tymeslot.Venues`), a place they typed in, or a place one of their
+  meeting types names, with its kind (a poll inheriting its type's location).
   """
-  @type location :: {:venue, pos_integer()} | {:custom, String.t()}
+  @type location ::
+          {:venue, pos_integer()}
+          | {:custom, String.t()}
+          | {:meeting_type, LocationOption.kind(), String.t()}
 
   # As long as the details of a custom location on a meeting type
   # (`Tymeslot.MeetingTypes.LocationOption`).
@@ -140,6 +145,25 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           do: {:ok, %{location: place, location_kind: :custom, venue_id: nil}},
           else: {:error, :invalid_location}
     end
+  end
+
+  # A meeting type's place is stored as a booking on that type stores it
+  # (`LocationSelection.display/2`): its whole line, label and details, whose
+  # lengths the type's own location already bounds, and its kind. An
+  # in-person place without a venue leaves the address to arrange, as such a
+  # booking does.
+  defp resolve_location({:meeting_type, kind, text}, _organizer_user_id)
+       when is_binary(text) and kind in [:in_person, :phone, :custom] do
+    if String.trim(text) == "",
+      do: {:ok, @no_location},
+      else:
+        {:ok,
+         %{
+           location: text,
+           location_kind: kind,
+           venue_id: nil,
+           address_to_arrange: kind == :in_person
+         }}
   end
 
   defp resolve_location(_location, _organizer_user_id), do: {:error, :invalid_location}

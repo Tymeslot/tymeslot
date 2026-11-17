@@ -188,4 +188,44 @@ defmodule Tymeslot.Meetings.BookingLimitsTest do
       assert BookingLimits.check_booking_allowed(ctx, ~U[2026-07-21 15:00:00Z]) == :ok
     end
   end
+
+  describe "count_booking/2" do
+    test "counts a booking as though it had been among the rows" do
+      limits =
+        BookingLimits.limits_for(%{max_bookings_per_day: 2}, %{id: 7, max_bookings_per_day: 1})
+
+      ctx = BookingLimits.build_context(limits, "Etc/UTC", :monday, [])
+      booking = %{start_time: ~U[2026-07-20 09:00:00Z], meeting_type_id: 7}
+
+      refute BookingLimits.slot_blocked?(ctx, ~U[2026-07-20 15:00:00Z])
+
+      counted = BookingLimits.count_booking(ctx, booking)
+
+      assert counted == BookingLimits.build_context(limits, "Etc/UTC", :monday, [booking])
+      assert BookingLimits.slot_blocked?(counted, ~U[2026-07-20 15:00:00Z])
+    end
+
+    test "a booking of another type counts only towards the account caps" do
+      limits =
+        BookingLimits.limits_for(%{max_bookings_per_day: 2}, %{id: 7, max_bookings_per_day: 1})
+
+      ctx = BookingLimits.build_context(limits, "Etc/UTC", :monday, [])
+
+      counted =
+        BookingLimits.count_booking(ctx, %{
+          start_time: ~U[2026-07-20 09:00:00Z],
+          meeting_type_id: 99
+        })
+
+      refute BookingLimits.slot_blocked?(counted, ~U[2026-07-20 15:00:00Z])
+
+      counted =
+        BookingLimits.count_booking(counted, %{
+          start_time: ~U[2026-07-20 10:00:00Z],
+          meeting_type_id: 99
+        })
+
+      assert BookingLimits.slot_blocked?(counted, ~U[2026-07-20 15:00:00Z])
+    end
+  end
 end

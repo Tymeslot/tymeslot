@@ -139,6 +139,7 @@ msgid "Type:"
 msgstr "Tipo:"
 
 #: lib/tymeslot/emails/shared/formatting.ex
+#: lib/tymeslot/emails/shared/series_sessions.ex
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Video Call"
@@ -159,11 +160,6 @@ msgstr "participante"
 #, elixir-autogen, elixir-format
 msgid "in %{label}"
 msgstr "em %{label}"
-
-#: lib/tymeslot/emails/appointment_builder.ex
-#, elixir-autogen, elixir-format
-msgid "in 30 minutes"
-msgstr "em 30 minutos"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -553,11 +549,12 @@ msgid "%{name} has removed you from an event."
 msgstr "%{name} removeu você de um evento."
 
 #: lib/tymeslot/emails/shared/calendar_event_content.ex
+#: lib/tymeslot/emails/shared/meeting/description.ex
 #, elixir-autogen, elixir-format
 msgid "DESCRIPTION:"
 msgstr "DESCRIÇÃO:"
 
-#: lib/tymeslot/emails/shared/calendar_event_content.ex
+#: lib/tymeslot/emails/shared/meeting/description.ex
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr "Descrição"

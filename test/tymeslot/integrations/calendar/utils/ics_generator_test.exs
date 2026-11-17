@@ -63,6 +63,25 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       assert ics_content =~ "Jane Doe"
     end
 
+    # A meeting the host manages names its first guest by their address; a
+    # CN repeating the address only shows it twice in the guest's calendar.
+    test "gives the attendee no name when the name is only their address" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com",
+        attendee_email: "guest@example.com",
+        attendee_name: "Guest@Example.com"
+      }
+
+      ics_content = IcsGenerator.generate_ics(meeting_details)
+
+      assert ics_content =~ "ATTENDEE;SCHEDULE-AGENT=CLIENT:mailto:guest@example.com"
+      refute ics_content =~ ~s(CN="Guest@Example.com")
+    end
+
     test "handles missing optional attendee information" do
       meeting_details = %{
         title: "Meeting",
@@ -479,6 +498,80 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
 
       assert ics =~ "DTSTART:20261025T013000Z"
       assert ics =~ "DTEND:20261025T023000Z"
+    end
+  end
+
+  describe "series attachments" do
+    defp session(n, attrs \\ %{}) do
+      Map.merge(
+        %{
+          title: "Mentoring",
+          uid: "session-#{n}",
+          start_time: DateTime.add(~U[2026-01-15 14:00:00Z], 7 * (n - 1), :day),
+          end_time: DateTime.add(~U[2026-01-15 14:30:00Z], 7 * (n - 1), :day),
+          organizer_email: "organizer@example.com",
+          organizer_name: "Grace Hopper",
+          attendee_email: "ada@example.com",
+          attendee_name: "Ada Lovelace",
+          meeting_url: "https://video.example.com/room-#{n}"
+        },
+        attrs
+      )
+    end
+
+    defp vevents(data) do
+      ~r/BEGIN:VEVENT\r\n(.*?)END:VEVENT/s
+      |> Regex.scan(data)
+      |> Enum.map(fn [_whole, body] -> body end)
+    end
+
+    test "one calendar holds one event per session, each its own, with no rule" do
+      domain = Application.get_env(:tymeslot, :email)[:domain]
+
+      attachment =
+        IcsGenerator.generate_series_attachment(
+          [session(1), session(2, %{ical_sequence: 2}), session(3)],
+          "en",
+          "series-abc.ics"
+        )
+
+      assert attachment.filename == "series-abc.ics"
+      assert attachment.content_type == "text/calendar"
+      assert length(Regex.scan(~r/^BEGIN:VCALENDAR/m, attachment.data)) == 1
+      assert attachment.data =~ "METHOD:PUBLISH"
+      refute attachment.data =~ "RRULE"
+
+      assert [first, second, third] = vevents(attachment.data)
+      assert first =~ "UID:session-1@#{domain}"
+      assert first =~ "DTSTART:20260115T140000Z"
+      assert first =~ "SEQUENCE:0"
+      assert first =~ "room-1"
+      assert second =~ "UID:session-2@#{domain}"
+      assert second =~ "DTSTART:20260122T140000Z"
+      assert second =~ "SEQUENCE:2"
+      assert second =~ "room-2"
+      refute second =~ "room-1"
+      assert third =~ "UID:session-3@#{domain}"
+      assert Enum.all?([first, second, third], &(&1 =~ "STATUS:CONFIRMED"))
+    end
+
+    test "a cancellation cancels each session one revision above its invitation" do
+      attachment =
+        IcsGenerator.generate_series_cancel_attachment(
+          [session(1), session(2, %{ical_sequence: 3})],
+          "en",
+          "series-abc.ics"
+        )
+
+      # Never iTIP's METHOD:CANCEL on the wire (see `render_vcalendar/2`).
+      assert attachment.data =~ "METHOD:PUBLISH"
+      refute attachment.data =~ "METHOD:CANCEL"
+
+      assert [first, second] = vevents(attachment.data)
+      assert first =~ "SEQUENCE:1"
+      assert first =~ "STATUS:CANCELLED"
+      assert second =~ "SEQUENCE:4"
+      assert second =~ "STATUS:CANCELLED"
     end
   end
 end

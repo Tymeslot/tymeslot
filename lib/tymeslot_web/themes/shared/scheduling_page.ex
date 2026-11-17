@@ -51,6 +51,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
       wrapper={@page_wrapper}
       theme_tokens={assigns[:theme_tokens]}
       locale={assigns[:locale]}
+      offered_locales={assigns[:offered_locales]}
       language_dropdown_open={assigns[:language_dropdown_open]}
       current_state={assigns[:current_state]}
       journey={assigns[:journey]}

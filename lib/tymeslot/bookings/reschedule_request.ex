@@ -30,7 +30,6 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
 
@@ -38,8 +37,8 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   Sends a reschedule request email for a meeting.
 
   This function:
-  1. Checks if the meeting is eligible for rescheduling via Policy, and that
-     no reschedule request is already pending
+  1. Checks the meeting is eligible via `Policy.can_request_reschedule?/1`,
+     which also refuses one already awaiting a new time
   2. Marks the meeting as awaiting a new time (`reschedule_requested_at`)
   3. Deletes pending reminder email jobs and queues a high-priority email
      job to notify the attendee, atomically — either both happen or neither
@@ -62,13 +61,34 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
       {:error, :cannot_reschedule_cancelled}
 
       iex> send_reschedule_request(%Meeting{id: 123, reschedule_requested_at: ~U[...]})
-      {:error, :already_requested}
+      {:error, {:not_reschedulable, :already_requested}}
   """
   @spec send_reschedule_request(MeetingSchema.t()) ::
-          :ok | {:error, Policy.reschedule_refusal() | :already_requested | :not_found | term()}
+          :ok | {:error, Policy.reschedule_refusal() | :not_found | term()}
   def send_reschedule_request(meeting) do
     with :ok <- check_requestable(meeting) do
       update_and_send_reschedule_request(meeting)
+    end
+  end
+
+  @doc """
+  The host's request for a new time: `send_reschedule_request/1`, with the
+  outcome logged.
+  """
+  @spec request(MeetingSchema.t()) :: :ok | {:error, term()}
+  def request(meeting) do
+    case send_reschedule_request(meeting) do
+      :ok ->
+        Logger.info("Reschedule request processed", meeting_id: meeting.id)
+        :ok
+
+      {:error, reason} = error ->
+        Logger.warning("Reschedule request failed",
+          meeting_id: meeting.id,
+          reason: LogFormat.reason(reason)
+        )
+
+        error
     end
   end
 
@@ -77,10 +97,10 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   # =====================================
 
   defp check_requestable(meeting) do
-    with :ok <- check_not_already_requested(meeting),
-         :ok <- Policy.can_request_reschedule?(meeting) do
-      :ok
-    else
+    case Policy.can_request_reschedule?(meeting) do
+      :ok ->
+        :ok
+
       {:error, reason} ->
         Logger.warning("Reschedule request blocked by policy",
           meeting_id: meeting.id,
@@ -88,17 +108,6 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
         )
 
         {:error, reason}
-    end
-  end
-
-  # A meeting already awaiting a new time must reject a second request
-  # outright — re-stamping `reschedule_requested_at` here would re-run the
-  # slot-voiding side effects and queue a duplicate attendee email.
-  defp check_not_already_requested(meeting) do
-    if MeetingState.awaiting_new_time?(meeting) do
-      {:error, :already_requested}
-    else
-      :ok
     end
   end
 
@@ -167,7 +176,7 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
       reason
     else
       {:error, :not_found} -> :not_found
-      :ok -> :already_requested
+      :ok -> {:not_reschedulable, :already_requested}
     end
   end
 

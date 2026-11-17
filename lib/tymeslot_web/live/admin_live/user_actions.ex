@@ -12,7 +12,8 @@ defmodule TymeslotWeb.AdminLive.UserActions do
   import Phoenix.Component, only: [assign: 3, to_form: 2]
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3, redirect: 2]
 
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
+  alias Tymeslot.Auth.AdminRoles
   alias Tymeslot.Auth.Invitations
 
   @type socket :: Phoenix.LiveView.Socket.t()
@@ -201,7 +202,7 @@ defmodule TymeslotWeb.AdminLive.UserActions do
   defp parse_user_id(_id), do: :error
 
   defp handle_promote(user_id, socket) do
-    case Auth.promote_admin(socket.assigns.current_user, user_id) do
+    case AdminRoles.promote(socket.assigns.current_user, user_id) do
       {:ok, _user} ->
         {:noreply,
          socket
@@ -220,7 +221,7 @@ defmodule TymeslotWeb.AdminLive.UserActions do
   defp handle_demote(user_id, socket) do
     self_demote? = user_id == socket.assigns.current_user.id
 
-    case Auth.demote_admin(socket.assigns.current_user, user_id) do
+    case AdminRoles.demote(socket.assigns.current_user, user_id) do
       {:ok, _user} when self_demote? ->
         # Self-demote: force a full reload of /dashboard so the new request
         # runs through the plug pipeline with the now-demoted user, dropping
@@ -272,7 +273,7 @@ defmodule TymeslotWeb.AdminLive.UserActions do
     do: dgettext("dashboard_admin_users", "Could not demote user.")
 
   defp handle_delete(user_id, socket) do
-    case Auth.delete_account_now(socket.assigns.current_user, user_id) do
+    case AccountDeletion.delete_account_now(socket.assigns.current_user, user_id) do
       {:ok, pending} ->
         {:noreply,
          socket

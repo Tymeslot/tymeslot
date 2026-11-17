@@ -22,6 +22,25 @@ defmodule Tymeslot.CustomFields.AnswerRenderer do
 
   alias Tymeslot.Emails.Shared.Formatting
 
+  @doc """
+  The answers a booking carries, as `{label, rendered}` pairs in the order
+  the snapshot lists its questions. A question whose answer renders empty (one
+  left blank, or a note the booker did not tick) is left out, as every surface
+  showing the answers leaves it out.
+
+  `details` is anything carrying `:custom_fields_snapshot` (the field
+  definitions captured at booking time) and `:custom_field_answers` (answers
+  keyed by question id): a meeting, or an email's appointment details.
+  """
+  @spec labelled_answers(map()) :: [{String.t(), String.t()}]
+  def labelled_answers(details) do
+    answers = Map.get(details, :custom_field_answers) || %{}
+
+    (Map.get(details, :custom_fields_snapshot) || [])
+    |> Enum.map(&{&1["label"] || "", render(&1, answers[&1["id"]])})
+    |> Enum.reject(fn {_label, rendered} -> rendered == "" end)
+  end
+
   @spec render(map(), any()) :: String.t()
   def render(%{"type" => "yes_no"}, true), do: dgettext("common", "Yes")
   def render(%{"type" => "yes_no"}, _other), do: dgettext("common", "No")

@@ -63,6 +63,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.Bookings.Validation
+  alias Tymeslot.BookingSeries
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GroupMeetingQueries
@@ -77,7 +78,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.Events.Seats
   alias UUID
 
   @typedoc "New-slot parameters, same shape as `Bookings.Reschedule`."
@@ -99,7 +100,12 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
          :ok <- ensure_same_organizer(old_meeting, organizer_user_id),
          :ok <- Policy.can_reschedule_meeting?(old_meeting) do
       meeting_type = resolve_meeting_type(old_meeting)
-      config = Schedules.booking_config(old_meeting.organizer_user_id, meeting_type)
+      # A series seat may move as far as the series reaches, past the window.
+      config =
+        old_meeting.organizer_user_id
+        |> Schedules.booking_config(meeting_type)
+        |> BookingSeries.widen_window(participant)
+
       guest_emails = guest_emails(participant)
 
       with :ok <- ensure_group_type(meeting_type),
@@ -396,7 +402,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       # second tab), which trips the same unique index `CreateGroup` maps to
       # `:already_booked` — that has user-facing copy already; the generic
       # "failed to update" does not.
-      duplicate_seat?(changeset) ->
+      ParticipantSchema.duplicate_seat?(changeset) ->
         log_and_bounce(old_meeting, participant, changeset, :already_booked)
 
       true ->
@@ -406,12 +412,6 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   defp handle_move({:error, reason}, old_meeting, participant),
     do: log_and_bounce(old_meeting, participant, reason, :failed_to_update_meeting)
-
-  defp duplicate_seat?(%Ecto.Changeset{errors: errors}) do
-    Enum.any?(errors, fn {_field, {_message, opts}} ->
-      to_string(opts[:constraint_name] || "") == "meeting_participants_live_email_index"
-    end)
-  end
 
   defp log_and_bounce(old_meeting, participant, reason, error) do
     Logger.error("Failed to reschedule seat",
@@ -448,6 +448,10 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       organizer_user_id: old_meeting.organizer_user_id,
       meeting_type_id: old_meeting.meeting_type_id,
       attendee_locale: participant.locale,
+      # The questions the participant's answers belong to: the slot they
+      # leave, as the booking keeps them, so a slot this move creates shows
+      # them and the participant's copy of them names the same questions.
+      custom_fields_snapshot: old_meeting.custom_fields_snapshot,
       custom_field_answers: participant.custom_field_answers
     }
     |> MeetingAttributes.build()
@@ -456,6 +460,9 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   # Matches Section B's seat_request() contract:
   # %{participant: map, guest_emails: [String.t()], max_participants: pos_integer}
+  # A series' seat stays in its series, at its place, when it moves: the new
+  # row is the same occurrence, so the series still confirms it and a room
+  # job releasing held seat confirmations still leaves it out.
   defp seat_request(participant, guest_emails, max_participants) do
     %{
       participant: %{
@@ -466,7 +473,9 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
         message: participant.message,
         timezone: participant.timezone,
         locale: participant.locale,
-        custom_field_answers: participant.custom_field_answers
+        custom_field_answers: participant.custom_field_answers,
+        series_id: participant.series_id,
+        series_position: participant.series_position
       },
       guest_emails: guest_emails,
       max_participants: max_participants
@@ -491,7 +500,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     # still worth having ready, quietly, for whoever opens the new event.
     if booked.created_meeting?, do: SeatEffects.schedule_new_slot_effects(booked.meeting)
 
-    Events.seat_rescheduled(booked.meeting, booked.participant, old_meeting, old_participant,
+    Seats.seat_rescheduled(booked.meeting, booked.participant, old_meeting, old_participant,
       old_slot_freed: old_slot_freed?
     )
 

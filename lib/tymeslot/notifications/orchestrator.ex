@@ -6,7 +6,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
   require Logger
 
-  alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.ApprovalJobs
@@ -104,20 +103,12 @@ defmodule Tymeslot.Notifications.Orchestrator do
     end
   end
 
-  # Halfway through the window, so a host who missed the first email still has
-  # as long again to act. A request whose deadline has already passed, or which
-  # has no deadline recorded, gets no nudge: there is nothing left to save.
-  defp schedule_approval_nudge(%{approval_deadline_at: nil}), do: :ok
-
+  # Halfway through the window (`ApprovalJobs.nudge_at/1`); a request whose
+  # deadline has already passed, or which has none, gets no nudge.
   defp schedule_approval_nudge(meeting) do
-    requested_at = meeting.approval_requested_at || Clock.utc_now()
-    seconds_remaining = DateTime.diff(meeting.approval_deadline_at, requested_at)
-
-    if seconds_remaining > 0 do
-      send_at = DateTime.add(requested_at, div(seconds_remaining, 2), :second)
-      EmailScheduler.schedule_approval_nudge(meeting.id, send_at)
-    else
-      :ok
+    case ApprovalJobs.nudge_at(meeting) do
+      nil -> :ok
+      send_at -> EmailScheduler.schedule_approval_nudge(meeting.id, send_at)
     end
   end
 
@@ -127,12 +118,18 @@ defmodule Tymeslot.Notifications.Orchestrator do
   When the request was a reschedule of a confirmed booking that lapsed, the
   booking itself is gone, and the host is told as well: nobody declined
   anything, so nothing else would tell them.
+
+  A request a reschedule sent back into the gate had already invited its
+  guests, so they are sent the cancellation, from a job of their own: the
+  booker and the host have just been given the outcome above, and the
+  meeting's ordinary cancellation would tell them a second time.
   """
   @spec send_request_outcome_notifications(%{atom() => term()}, :declined | :expired) ::
           {:ok, :notifications_scheduled} | {:error, term()}
   def send_request_outcome_notifications(meeting, variant) do
     with :ok <- EmailScheduler.schedule_request_outcome(meeting.id, variant),
-         :ok <- maybe_schedule_host_expiry_notice(meeting, variant) do
+         :ok <- maybe_schedule_host_expiry_notice(meeting, variant),
+         :ok <- maybe_schedule_guest_cancellations(meeting) do
       {:ok, :notifications_scheduled}
     end
   end
@@ -141,6 +138,11 @@ defmodule Tymeslot.Notifications.Orchestrator do
     do: EmailScheduler.schedule_reschedule_request_expired(meeting.id)
 
   defp maybe_schedule_host_expiry_notice(_meeting, _variant), do: :ok
+
+  defp maybe_schedule_guest_cancellations(%{first_announced_at: %DateTime{}} = meeting),
+    do: EmailScheduler.schedule_released_guest_cancellations(meeting.id)
+
+  defp maybe_schedule_guest_cancellations(_meeting), do: :ok
 
   @doc """
   Cancels every pending job for a booking request that has been answered.

@@ -1,6 +1,6 @@
 defmodule Tymeslot.Auth.AccountDeletionFilesTest do
   @moduledoc """
-  `Auth.delete_account/1` removes rows by foreign-key cascade, and a cascade
+  `AccountDeletion.delete_account/1` removes rows by foreign-key cascade, and a cascade
   never touches the filesystem. An avatar is usually a photo of the person, so
   the files the deleted rows pointed at are personal data that must go with
   them. `account_deletion_cascade_test.exs` pins the rows; this pins the files.
@@ -16,7 +16,7 @@ defmodule Tymeslot.Auth.AccountDeletionFilesTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
 
   defp upload_path(parts) do
     Path.join([Application.fetch_env!(:tymeslot, :upload_directory) | parts])
@@ -65,7 +65,7 @@ defmodule Tymeslot.Auth.AccountDeletionFilesTest do
   test "removes the deleted profile's avatars and theme backgrounds from disk" do
     {profile, files} = profile_with_uploads()
 
-    assert {:ok, _deleted} = Auth.delete_account(profile.user)
+    assert {:ok, _deleted} = AccountDeletion.delete_account(profile.user)
 
     assert Enum.filter(files, &File.exists?/1) == []
     refute File.exists?(upload_path(["avatars", Integer.to_string(profile.id)]))
@@ -76,7 +76,7 @@ defmodule Tymeslot.Auth.AccountDeletionFilesTest do
     {deleted_profile, _files} = profile_with_uploads()
     {_kept_profile, kept_files} = profile_with_uploads()
 
-    assert {:ok, _deleted} = Auth.delete_account(deleted_profile.user)
+    assert {:ok, _deleted} = AccountDeletion.delete_account(deleted_profile.user)
 
     assert Enum.reject(kept_files, &File.exists?/1) == []
   end
@@ -84,6 +84,6 @@ defmodule Tymeslot.Auth.AccountDeletionFilesTest do
   test "deletes an account that never had a profile" do
     user = insert(:user)
 
-    assert {:ok, _deleted} = Auth.delete_account(user)
+    assert {:ok, _deleted} = AccountDeletion.delete_account(user)
   end
 end

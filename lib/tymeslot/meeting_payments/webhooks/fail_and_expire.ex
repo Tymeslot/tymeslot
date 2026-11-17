@@ -10,6 +10,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
   telemetry reason they stamp, so the whole flow lives here and each handler is
   a thin wrapper supplying those two values.
 
+  A paid series' one payment releases every session of the series still
+  awaiting payment (`HeldMeetings.expire_series/1`), announced once, on its
+  first session's topic.
+
   Idempotent on `last_event_id`; safe to invoke again on Stripe retry.
   """
 
@@ -72,14 +76,14 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
       LockedPayment.run(payment, event_id, fn
         %BookingPaymentSchema{status: :pending} = locked ->
           with {:ok, _bp} <- mark_failed(locked, event_id, reason),
-               {:ok, outcome} <- expire_meeting(locked.meeting_id) do
-            {:ok, {:failed, failed_outcome(outcome, locked.meeting_id)}}
+               {:ok, outcome} <- release(locked) do
+            {:ok, {:failed, outcome}}
           end
 
         %BookingPaymentSchema{status: :failed} = locked ->
-          case expire_meeting(locked.meeting_id) do
+          case release(locked) do
             {:ok, %MeetingSchema{} = meeting} -> {:ok, {:failed, meeting}}
-            {:ok, :unchanged} -> {:ok, {:not_pending, :failed}}
+            {:ok, _unchanged} -> {:ok, {:not_pending, :failed}}
             {:error, _reason} = error -> error
           end
 
@@ -122,9 +126,28 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
     end
   end
 
-  defp failed_outcome(%MeetingSchema{} = meeting, _meeting_id), do: meeting
-  defp failed_outcome(:unchanged, nil), do: :unchanged
-  defp failed_outcome(:unchanged, meeting_id), do: {:moved_on, meeting_id}
+  # Releases what the payment held: its meeting, or every session of its
+  # series (locked after the payment, series row first). Returns the meeting
+  # to announce (a series' first session), `{:moved_on, meeting_id}` when
+  # nothing was held any more, or `:unchanged` when there is no meeting.
+  defp release(%BookingPaymentSchema{series_id: series_id}) when is_binary(series_id) do
+    case HeldMeetings.expire_series(series_id) do
+      {:ok, :expired, first} -> {:ok, first}
+      {:ok, :unchanged, first_id} -> {:ok, moved_on(first_id)}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  defp release(%BookingPaymentSchema{meeting_id: meeting_id}) do
+    case HeldMeetings.expire(meeting_id) do
+      {:ok, :expired, meeting} -> {:ok, meeting}
+      {:ok, :unchanged} -> {:ok, moved_on(meeting_id)}
+      {:error, _changeset} = error -> error
+    end
+  end
+
+  defp moved_on(nil), do: :unchanged
+  defp moved_on(meeting_id), do: {:moved_on, meeting_id}
 
   defp mark_failed(payment, event_id, reason) do
     case BookingPaymentQueries.update(payment, %{status: :failed, last_event_id: event_id}) do
@@ -134,14 +157,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
 
       {:error, _changeset} = err ->
         err
-    end
-  end
-
-  defp expire_meeting(meeting_id) do
-    case HeldMeetings.expire(meeting_id) do
-      {:ok, :expired, meeting} -> {:ok, meeting}
-      {:ok, :unchanged} -> {:ok, :unchanged}
-      {:error, _changeset} = error -> error
     end
   end
 end

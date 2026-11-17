@@ -36,11 +36,30 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.MeetingTypeTest do
   end
 
   describe "known?/1 and continue/1" do
-    test "a duration among the organiser's types is known and lets the booker on" do
+    test "with no organiser to resolve a type for, a duration on offer is known and lets the booker on" do
       socket = socket(%{meeting_types: [@intro, @quick], selected_duration: "quick-chat"})
 
       assert MeetingType.known?(socket.assigns)
       assert MeetingType.continue(socket) == {:done, socket}
+    end
+
+    # The submit books under `:meeting_type`; a page that moved on with only
+    # the duration saved the booking under none of the type's rules.
+    test "on an organiser's page a listed duration alone is not known, and does not let the booker on" do
+      socket =
+        socket(%{
+          username_context: "host",
+          organizer_user_id: 1,
+          meeting_types: [@intro, @quick],
+          selected_duration: "quick-chat"
+        })
+
+      refute MeetingType.known?(socket.assigns)
+      assert MeetingType.continue(socket) == {:error, :duration_invalid}
+
+      resolved = socket(Map.put(socket.assigns, :meeting_type, @quick))
+      assert MeetingType.known?(resolved.assigns)
+      assert MeetingType.continue(resolved) == {:done, resolved}
     end
 
     test "no choice yet is not known, and says why the booker cannot go on" do

@@ -1,0 +1,967 @@
+/* Calendar surface: the organiser calendar
+   (TymeslotWeb.Dashboard.Calendar.*). The time grid is drawn by the
+   CalendarCanvas hook from assets/js/calendar/render.js, which emits these
+   classes as strings, so they live here rather than as Tailwind utilities a
+   template scan would never see. Colours come from the --cal-* tokens and
+   the --color-calendar-* palette in base/variables.css. */
+
+.cal-canvas {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--cal-surface);
+}
+
+.cal-grid {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.cal-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Header and all-day lane share one sticky block and the columns' grid. */
+.cal-top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--cal-surface);
+  border-bottom: 1px solid var(--cal-line);
+}
+
+.cal-head,
+.cal-allday {
+  display: grid;
+  grid-template-columns: var(--cal-axis) repeat(var(--cal-days), minmax(0, 1fr));
+}
+
+.cal-head {
+  height: 36px;
+}
+
+.cal-head-corner {
+  border-right: 1px solid var(--cal-line);
+}
+
+.cal-dayhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 6px;
+  border: 0;
+  border-left: 1px solid var(--cal-line);
+  background: none;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cal-dayhead:hover {
+  background: var(--cal-hover);
+}
+
+/* A column too narrow for the weekday and the date (a week beside the side
+   panel) keeps the date; the button's label still names the day. */
+.cal-dayhead {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+@container (max-width: 64px) {
+  .cal-dayhead-name {
+    display: none;
+  }
+}
+
+.cal-dayhead-num {
+  color: var(--cal-text);
+  font-size: var(--font-size-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-dayhead.is-today .cal-dayhead-num {
+  color: var(--cal-today);
+}
+
+.cal-allday {
+  min-height: 8px;
+  padding: 2px 0;
+  row-gap: 2px;
+}
+
+.cal-allday-label {
+  grid-column: 1;
+  align-self: center;
+  padding-right: 6px;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-2xs);
+  text-align: right;
+}
+
+.cal-adbar,
+.cal-admore {
+  height: 22px;
+  min-width: 0;
+  margin: 0 4px;
+  padding: 0 8px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cal-adbar {
+  border: 1px solid color-mix(in srgb, var(--cal-ev) 40%, transparent);
+  background: color-mix(in srgb, var(--cal-ev) 16%, var(--cal-surface));
+  color: color-mix(in srgb, var(--cal-ev) 45%, var(--cal-ink));
+}
+
+.cal-adbar.cut-start {
+  margin-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.cal-adbar.cut-end {
+  margin-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.cal-adbar.is-free {
+  border: 1.5px dashed var(--cal-ev);
+  background: var(--cal-surface);
+}
+
+.cal-adbar.is-booking {
+  border-color: transparent;
+  background: var(--cal-booking);
+  color: var(--cal-on-booking);
+}
+
+.cal-adbar.is-past {
+  background: color-mix(in srgb, var(--cal-ev) 8%, var(--cal-surface));
+  color: var(--cal-text-past);
+}
+
+.cal-admore {
+  border: 0;
+  background: none;
+  color: var(--cal-text-muted);
+}
+
+.cal-admore:hover {
+  background: var(--cal-hover);
+}
+
+/* A "+N" that hides a request waiting for an answer. */
+.cal-admore.is-warn {
+  color: var(--cal-on-request);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--cal-request);
+}
+
+/* Time axis and columns */
+.cal-body {
+  position: relative;
+  display: flex;
+}
+
+.cal-axis {
+  position: relative;
+  flex: 0 0 var(--cal-axis);
+  border-right: 1px solid var(--cal-line);
+}
+
+.cal-hour,
+.cal-now-pill {
+  position: absolute;
+  transform: translateY(-50%);
+  font-size: var(--font-size-2xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cal-hour {
+  right: 6px;
+  color: var(--cal-text-muted);
+}
+
+.cal-now-pill {
+  right: 2px;
+  z-index: 2;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  background: var(--cal-now);
+  color: var(--cal-on-now);
+  font-weight: 700;
+}
+
+.cal-night,
+.cal-early {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--cal-strip);
+  overflow: hidden;
+  border: 0;
+  border-bottom: 1px solid var(--cal-line);
+  background: var(--cal-night);
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cal-early {
+  z-index: 1;
+}
+
+.cal-night.is-open {
+  height: 20px;
+  border-bottom: 0;
+  background: none;
+}
+
+.cal-night.is-open::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-top: 1.5px solid currentColor;
+  border-left: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.cal-cols {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  background-image: linear-gradient(to bottom, var(--cal-line) 1px, transparent 1px);
+  background-position: 0 var(--cal-strip);
+  background-size: 100% var(--cal-hour);
+}
+
+.cal-col {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  border-left: 1px solid var(--cal-line);
+}
+
+.cal-col.is-weekend {
+  background: var(--cal-weekend);
+}
+
+.cal-off {
+  position: absolute;
+  right: 0;
+  left: 0;
+  background: var(--cal-off-hours);
+  pointer-events: none;
+}
+
+/* Behind event text, as the spec asks. */
+.cal-now {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--cal-now);
+  pointer-events: none;
+}
+
+/* Events: top and height are inline; left, width and stacking are variables
+   so the narrow-event hover can widen a block without !important. */
+.cal-ev {
+  position: absolute;
+  left: var(--l);
+  z-index: var(--z, 3);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: var(--w);
+  padding: 3px 6px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--cal-ev) 42%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--cal-ev) 16%, var(--cal-surface));
+  color: color-mix(in srgb, var(--cal-ev) 45%, var(--cal-ink));
+  font-size: var(--font-size-xs);
+  line-height: 15px;
+  cursor: pointer;
+}
+
+/* render.js clamps the title to the lines that fit (--cal-lines), so neither
+   line shrinks to a sliver that cuts through its glyphs. Words never break
+   inside: one too wide for the block is wrapped in .cal-ev-word and ends in an
+   ellipsis on a line of its own, which is how countLines in layout.js counts
+   it. */
+.cal-ev-title {
+  display: -webkit-box;
+  flex-shrink: 0;
+  overflow: hidden;
+  font-weight: 600;
+  overflow-wrap: normal;
+  word-break: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--cal-lines, 4);
+}
+
+.cal-ev-word {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.cal-ev-time {
+  flex-shrink: 0;
+  font-size: var(--font-size-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* One row: the title gives way (ellipsis) so the start time stays beside it
+   rather than wrapping below the block's bottom edge. */
+.cal-ev.is-short {
+  flex-flow: row nowrap;
+  align-items: baseline;
+  column-gap: 5px;
+  padding-block: 1px;
+}
+
+.cal-ev.is-short .cal-ev-title {
+  display: block;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Too short for a full line: the line box is the block's own height. */
+.cal-ev.is-tiny {
+  padding-block: 0;
+  line-height: var(--cal-lh);
+}
+
+.cal-ev.is-narrow {
+  padding-inline: 3px;
+}
+
+/* Hover only, and under the column's "+N" chip (--cal-lift, see render.js):
+   a focused block keeps its size, so it never covers its neighbours. */
+.cal-ev.is-narrow:hover {
+  left: 1px;
+  z-index: var(--cal-lift);
+  width: calc(var(--cal-col) - 6px);
+  box-shadow: var(--shadow-md);
+}
+
+.cal-ev.is-free {
+  border: 1.5px dashed var(--cal-ev);
+  background: var(--cal-surface);
+}
+
+.cal-ev.is-booking {
+  border-color: transparent;
+  background: var(--cal-booking);
+  color: var(--cal-on-booking);
+}
+
+.cal-ev.is-past {
+  padding-left: 8px;
+  border-color: color-mix(in srgb, var(--cal-ev) 22%, var(--cal-line));
+  background: color-mix(in srgb, var(--cal-ev) 8%, var(--cal-surface));
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--cal-ev) 65%, var(--cal-surface));
+  color: var(--cal-text-past);
+}
+
+.cal-ev.is-past.is-free {
+  border-style: dashed;
+}
+
+.cal-ev.is-booking.is-past {
+  background: color-mix(in srgb, var(--cal-booking) 14%, var(--cal-surface));
+  color: var(--cal-text-past);
+}
+
+/* A booking request: the booking's turquoise with an amber striped edge and
+   a "Request" flag opening its title, the loudest item on the grid because
+   it needs an answer. Expired, it goes quiet: the past tint, a grey edge and
+   an "Expired" flag. */
+.cal-ev.is-request {
+  padding-left: 11px;
+  border-color: var(--cal-request);
+}
+
+.cal-ev.is-request::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--cal-request) 0 3px,
+    color-mix(in srgb, var(--cal-request) 30%, var(--cal-surface)) 3px 6px
+  );
+  content: "";
+}
+
+.cal-ev-request {
+  display: inline-block;
+  margin-right: 2px;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  background: var(--cal-request);
+  color: var(--cal-on-request);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  line-height: 14px;
+  vertical-align: baseline;
+}
+
+.cal-ev.is-request.is-expired {
+  border-color: color-mix(in srgb, var(--cal-booking) 22%, var(--cal-line));
+  background: color-mix(in srgb, var(--cal-booking) 8%, var(--cal-surface));
+  box-shadow: none;
+  color: var(--cal-text-past);
+}
+
+.cal-ev.is-request.is-expired::before {
+  background: var(--cal-line-strong);
+}
+
+.cal-ev.is-expired .cal-ev-request,
+.cal-list-flag.is-expired {
+  background: var(--cal-chip);
+  box-shadow: inset 0 0 0 1px var(--cal-line-strong);
+  color: var(--cal-text-past);
+}
+
+.cal-ev.is-attention {
+  padding-right: 14px;
+  border-color: var(--cal-warn);
+}
+
+.cal-ev-dot {
+  position: absolute;
+  top: 5px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--cal-warn);
+}
+
+/* "+N more" */
+.cal-more {
+  position: absolute;
+  left: var(--l);
+  z-index: var(--z, 14);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: var(--w);
+  padding-top: 3px;
+  overflow: hidden;
+  border: 1px solid var(--cal-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--cal-chip);
+  color: var(--cal-text);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  line-height: 1.15;
+  cursor: pointer;
+}
+
+.cal-more small {
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+}
+
+.cal-more:hover {
+  background: var(--cal-hover);
+}
+
+.cal-more.is-warn {
+  border-color: var(--cal-warn);
+}
+
+.cal-more-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 3px;
+  border-radius: var(--radius-full);
+  background: var(--cal-warn);
+}
+
+.cal-ev:focus-visible {
+  z-index: var(--cal-lift);
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 1px;
+}
+
+.cal-dayhead:focus-visible,
+.cal-more:focus-visible,
+.cal-adbar:focus-visible,
+.cal-admore:focus-visible,
+.cal-early:focus-visible,
+.cal-night:focus-visible {
+  z-index: 21;
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 1px;
+}
+
+/* Empty and loading states */
+.cal-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 25;
+  max-width: 22rem;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-xl);
+  background: var(--cal-surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.cal-skeleton {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: repeat(var(--cal-days, 7), minmax(0, 1fr));
+  margin-left: var(--cal-axis, 56px);
+  padding-top: 36px;
+}
+
+.cal-skeleton-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 48px 6px 0;
+  border-left: 1px solid var(--cal-line);
+}
+
+.cal-skeleton-block {
+  display: block;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: var(--cal-skeleton);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--cal-surface) 55%, transparent),
+    transparent
+  );
+  background-repeat: no-repeat;
+  background-size: 1000px 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cal-skeleton-block {
+    background-image: none;
+    animation: none;
+  }
+}
+
+.cal-skeleton-block.is-short {
+  width: 70%;
+  height: 28px;
+}
+
+/* The "+N more" list, drawn by the hook */
+.cal-list {
+  position: fixed;
+  z-index: var(--cal-z-pop);
+  display: flex;
+  flex-direction: column;
+  min-width: 14rem;
+  max-width: 20rem;
+  max-height: 60vh;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-xl);
+  background: var(--cal-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.cal-list-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--cal-text);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cal-list-item:hover {
+  background: var(--cal-hover);
+}
+
+.cal-list-item:focus-visible {
+  background: var(--cal-hover);
+  outline: 2px solid var(--cal-focus);
+  outline-offset: -2px;
+}
+
+.cal-list-swatch {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--cal-ev);
+}
+
+.cal-list-flag {
+  flex: 0 0 auto;
+  margin-inline: var(--spacing-1);
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  background: var(--cal-request);
+  color: var(--cal-on-request);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.cal-list-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-list-time {
+  flex: 0 0 auto;
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-list-item .cal-ev-dot {
+  position: static;
+}
+
+/* The preview, rendered by LiveView and positioned by the hook through
+   variables on <html>. */
+.cal-preview {
+  position: fixed;
+  top: var(--cal-pop-y, 30%);
+  left: var(--cal-pop-x, 50%);
+  z-index: var(--cal-z-sheet);
+  width: 20rem;
+  max-width: calc(100vw - 16px);
+  padding: 16px;
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-2xl);
+  background: var(--cal-surface);
+  box-shadow: var(--shadow-lg);
+  max-height: var(--cal-pop-h, calc(100vh - 16px));
+  overflow-y: auto;
+}
+
+.cal-preview:focus {
+  outline: none;
+}
+
+.cal-preview-swatch {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  margin-top: 5px;
+  border-radius: var(--radius-sm);
+  background: var(--cal-ev);
+}
+
+/* Rail checkboxes: a colour box per calendar */
+.cal-check {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--cal-ev);
+  border-radius: var(--radius-default);
+  background: var(--cal-surface);
+  color: var(--cal-on-check);
+  cursor: pointer;
+}
+
+.cal-check.is-checked {
+  background: var(--cal-ev);
+}
+
+/* Editing. Resize hit areas are transparent strips at a draggable block's
+   edges (render.js); the grip is painted only on hover and focus, inside
+   the block's padding, so it never covers text. On touch there are none:
+   long-press dragging and the selected-event handle come with the phone
+   layout. */
+.cal-ev-grip {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.cal-ev-grip.is-start {
+  top: -1px;
+}
+
+.cal-ev-grip.is-end {
+  bottom: -1px;
+}
+
+.cal-ev-grip::after {
+  position: absolute;
+  left: 50%;
+  width: 16px;
+  height: 3px;
+  margin-left: -8px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--cal-ev) 60%, var(--cal-ink));
+  content: "";
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.cal-ev-grip.is-start::after {
+  top: 1px;
+}
+
+.cal-ev-grip.is-end::after {
+  bottom: 1px;
+}
+
+.cal-ev:hover .cal-ev-grip::after,
+.cal-ev:focus-visible .cal-ev-grip::after {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .cal-ev-grip {
+    display: none;
+  }
+}
+
+/* The block being dragged spans its column and shows its new time. */
+.cal-ev.is-dragging {
+  left: 1px;
+  z-index: 40;
+  width: calc(var(--cal-col) - 6px);
+  box-shadow: var(--shadow-lg);
+  cursor: grabbing;
+}
+
+/* The new time takes the old one's place, so the block never shows both. */
+.cal-ev.is-dragging .cal-ev-time {
+  display: none;
+}
+
+.cal-drag-time {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* On a one-row block the new time keeps its room and the title gives way. */
+.cal-ev.is-short .cal-drag-time {
+  flex-shrink: 0;
+}
+
+/* The block in the keyboard move mode. */
+.cal-ev.is-moving {
+  z-index: var(--cal-lift);
+  outline: 2px dashed var(--cal-focus);
+  outline-offset: 1px;
+}
+
+/* Keyboard focus never lands under the sticky day headers and all-day lane
+   (the hook sets --cal-top-h after each draw). A press on a block starts a
+   drag, never a text selection. */
+.cal-ev {
+  -webkit-user-select: none;
+  user-select: none;
+  scroll-margin-top: calc(var(--cal-top-h, 0px) + 8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cal-ev-grip::after {
+    transition: none;
+  }
+}
+
+/* Bookable times (calendar/bookable.js, drawn by render.js): a hatched band
+   behind the events, never in the way of a click on the slot under it; one
+   label per day; the note when none is in view. Colours are refined with
+   the rest of the layer's styles. */
+.cal-bookable {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-primary-500) 18%, transparent) 0 2px,
+    transparent 2px 8px
+  );
+  pointer-events: none;
+}
+
+.cal-bookable-label {
+  position: absolute;
+  left: 2px;
+  z-index: 1;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--cal-surface);
+  color: var(--color-primary-700);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 16px;
+  cursor: pointer;
+}
+
+.cal-bookable-label:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 1px;
+}
+
+.cal-bookable-note {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  z-index: 25;
+  margin: 0;
+  padding: 8px 12px;
+  transform: translateX(-50%);
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-lg);
+  background: var(--cal-surface);
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.cal-bookable-show {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary-700);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* The explainer a day's "Bookable" label opens (hooks/calendar_canvas/bookable.js),
+   placed beside the label like the "+N" list. */
+.cal-bookable-pop {
+  position: fixed;
+  z-index: var(--cal-z-pop);
+  width: 20rem;
+  max-width: calc(100vw - 16px);
+  padding: 12px;
+  overflow-y: auto;
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-xl);
+  background: var(--cal-surface);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--font-size-sm);
+}
+
+.cal-bookable-pop-title {
+  margin: 0 0 4px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.cal-bookable-pop-text,
+.cal-bookable-pop-time,
+.cal-bookable-pop-status,
+.cal-bookable-pop-hint {
+  margin: 0 0 8px;
+}
+
+.cal-bookable-pop-hint,
+.cal-bookable-pop-status {
+  color: var(--cal-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.cal-bookable-pop-status:empty {
+  display: none;
+}
+
+.cal-bookable-pop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cal-bookable-pop-button {
+  padding: 4px 10px;
+  border: 1px solid var(--cal-line);
+  border-radius: var(--radius-md);
+  background: var(--cal-surface);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cal-bookable-pop-button:hover {
+  background: var(--cal-hover);
+}
+
+.cal-bookable-pop-button:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: 1px;
+}
+
+.cal-bookable-pop-button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}

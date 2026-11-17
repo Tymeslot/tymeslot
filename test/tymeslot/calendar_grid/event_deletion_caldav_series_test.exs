@@ -18,7 +18,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionCalDAVSeriesTest do
   import Ecto.Query, only: [select: 3, where: 3]
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -157,7 +157,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionCalDAVSeriesTest do
       expect_put()
 
       assert {:ok, %{uid: uid, linked_meeting: :none}} =
-               CalendarGrid.delete_event(user.id, occurrence, :occurrence)
+               Changes.delete_event(user.id, occurrence, :occurrence)
 
       assert uid == occurrence.uid
       assert_received {:put, @url, body, headers}
@@ -180,7 +180,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionCalDAVSeriesTest do
     } do
       expect_put()
 
-      assert {:ok, _deleted} = CalendarGrid.delete_event(user.id, occurrence, :occurrence)
+      assert {:ok, _deleted} = Changes.delete_event(user.id, occurrence, :occurrence)
       assert_received {:put, _url, body, _headers}
 
       assert cached_uids(integration) ==
@@ -203,7 +203,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionCalDAVSeriesTest do
     } do
       expect_put()
 
-      assert {:ok, _deleted} = CalendarGrid.delete_event(user.id, override, :occurrence)
+      assert {:ok, _deleted} = Changes.delete_event(user.id, override, :occurrence)
 
       assert_received {:put, @url, body, _headers}
       lines = LineFolder.unfold_lines(body)
@@ -231,7 +231,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionCalDAVSeriesTest do
       end)
 
       assert {:ok, %{linked_meeting: :none}} =
-               CalendarGrid.delete_event(user.id, occurrence, :series)
+               Changes.delete_event(user.id, occurrence, :series)
 
       assert_received {:delete, @url}
       assert cached_uids(integration) == [unrelated.uid]
@@ -250,7 +250,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionCalDAVSeriesTest do
       end)
 
       assert {:error, %{retry: :not_queued}} =
-               CalendarGrid.delete_event(user.id, occurrence, :occurrence)
+               Changes.delete_event(user.id, occurrence, :occurrence)
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
       assert {row.sync_state, row.etag, row.raw_ical} == {"synced", "\"etag-1\"", @series_ical}

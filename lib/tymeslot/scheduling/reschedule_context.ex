@@ -19,10 +19,15 @@ defmodule Tymeslot.Scheduling.RescheduleContext do
       (`ThemeFlow.reschedule_location_choice/1`).
     * `:form_data` - the booking form's starting values: the attendee's
       own details.
+    * `:window_until` - for a session of a series, the last day it may move
+      to (`Tymeslot.BookingSeries.window_until/1`), which can lie past the
+      booking window; nil otherwise.
   """
 
+  alias Tymeslot.BookingSeries
+
   @enforce_keys [:uid, :meeting, :location_choice, :form_data]
-  defstruct [:uid, :meeting, :meeting_type, :location_choice, :form_data]
+  defstruct [:uid, :meeting, :meeting_type, :location_choice, :form_data, :window_until]
 
   @type location_choice :: %{
           option_id: String.t() | nil,
@@ -38,7 +43,8 @@ defmodule Tymeslot.Scheduling.RescheduleContext do
           meeting: struct(),
           meeting_type: map() | nil,
           location_choice: location_choice(),
-          form_data: %{String.t() => String.t()}
+          form_data: %{String.t() => String.t()},
+          window_until: Date.t() | nil
         }
 
   @doc "The context for `meeting`, whose type has resolved to `meeting_type`."
@@ -60,7 +66,8 @@ defmodule Tymeslot.Scheduling.RescheduleContext do
         "name" => meeting.attendee_name,
         "email" => meeting.attendee_email,
         "message" => meeting.attendee_message || ""
-      }
+      },
+      window_until: BookingSeries.window_until(meeting)
     }
   end
 end

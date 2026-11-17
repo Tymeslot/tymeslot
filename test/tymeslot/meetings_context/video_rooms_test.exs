@@ -62,8 +62,14 @@ defmodule Tymeslot.MeetingsContext.VideoRoomsTest do
 
     test "meeting without video integration still creates successfully" do
       %{user: user} = create_always_bookable_profile()
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 60)
 
-      meeting_params = build_meeting_params(user, %{date: Date.add(Date.utc_today(), 7)})
+      meeting_params =
+        build_meeting_params(user, %{
+          date: Date.add(Date.utc_today(), 7),
+          meeting_type_id: meeting_type.id
+        })
+
       form_data = build_form_data()
 
       result = Create.execute(meeting_params, form_data, with_video_room: true)

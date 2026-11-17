@@ -257,13 +257,14 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   @doc """
   Tells the guests of a held request the host declined, or that expired, that
   the booking is off. Only a request a reschedule sent back into the gate had
-  invited guests; `notify_cancelled/3` sends nothing for any other.
+  invited guests; `notify_cancelled/3` sends nothing for any other. `once`
+  wraps each guest's send as in `notify_cancelled/3`.
   """
-  @spec notify_released(map()) :: result()
-  def notify_released(%{first_announced_at: nil}), do: :ok
+  @spec notify_released(map(), (String.t(), (-> term()) -> term())) :: result()
+  def notify_released(%{first_announced_at: nil}, _once), do: :ok
 
-  def notify_released(meeting),
-    do: notify_cancelled(meeting, AppointmentBuilder.from_meeting(meeting))
+  def notify_released(meeting, once),
+    do: notify_cancelled(meeting, AppointmentBuilder.from_meeting(meeting), once)
 
   # What the booker told the host and nobody else: their address, their
   # message, their contact details, and their answers to the booking form

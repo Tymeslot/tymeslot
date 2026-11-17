@@ -37,25 +37,19 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
 
   require Logger
 
-  alias Tymeslot.Auth
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Activation
-  alias Tymeslot.Bookings.CalendarJobs
-  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.ChargeBackfill
   alias Tymeslot.MeetingPayments.HeldMeetings
   alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
+  alias Tymeslot.MeetingPayments.Webhooks.PaymentCompletion
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
+  alias Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
-  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
-  alias Tymeslot.Meetings.UniqueInvitation
-  alias Tymeslot.Meetings.UniqueSlot
   alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Repo
 
@@ -95,7 +89,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # would confirm the meeting before the money has actually settled.
   defp handle_payment(payment, event_id, %{"payment_status" => "paid"} = object) do
     if charged_as_booked?(payment, object) do
-      classify(run(payment, event_id, object))
+      classify(complete_payment(payment, event_id, object))
     else
       Logger.error("checkout.session.completed: amount or currency does not match the booking",
         payment_id: payment.id,
@@ -130,6 +124,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
 
   defp classify(:ok), do: {:ok, :ok}
   defp classify({:error, reason}), do: {{:error, :retry_later, reason}, :error}
+
+  # A series' one payment confirms every session of it.
+  defp complete_payment(%BookingPaymentSchema{series_id: series_id} = payment, event_id, object)
+       when is_binary(series_id),
+       do: SeriesCheckoutCompleted.run(payment, event_id, object)
+
+  defp complete_payment(payment, event_id, object), do: run(payment, event_id, object)
 
   # Activation (the video room, the emails) runs only for the transaction
   # that moved the rows itself. A second completion of the same payment, the
@@ -176,8 +177,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # them to work.  A failure here is logged but does not roll back the
   # payment transition; the reconciler can retry if needed.
   defp after_payment(paid, meeting, pending, object) do
-    backfill_charge_id(paid, object)
-    emit_payment_succeeded(paid, meeting)
+    PaymentCompletion.backfill_charge_id(paid, object)
+    PaymentCompletion.emit_payment_succeeded(paid, meeting)
     HeldMeetings.broadcast(meeting.id, :paid)
     Availability.changed(meeting.organizer_user_id)
     Activation.after_commit(pending)
@@ -202,7 +203,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
       event_id: event_id
     )
 
-    backfill_charge_id(paid, object)
+    PaymentCompletion.backfill_charge_id(paid, object)
   end
 
   defp after_refusal(paid, meeting, event_id, object) do
@@ -213,29 +214,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
       event_id: event_id
     )
 
-    backfill_charge_id(paid, object)
+    PaymentCompletion.backfill_charge_id(paid, object)
     HeldMeetings.announce_expired(meeting)
-  end
-
-  # Best effort: a failure is logged and the payment transition stands. For
-  # a late payment being refunded, `RefundLatePayment` backfills again before
-  # it refunds.
-  defp backfill_charge_id(payment, object) do
-    case ChargeBackfill.backfill(payment, object["payment_intent"]) do
-      {:ok, _updated} ->
-        :ok
-
-      {:error, reason} when reason in [:missing_payment_intent, :charge_not_available] ->
-        Logger.warning("checkout.session.completed: charge ID not available on payment intent",
-          payment_id: payment.id
-        )
-
-      {:error, reason} ->
-        Logger.error("checkout.session.completed: failed to backfill stripe_charge_id",
-          payment_id: payment.id,
-          reason: LogFormat.reason(reason)
-        )
-    end
   end
 
   # A completion arriving after its booking expired (`:recovered` below)
@@ -270,19 +250,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
         end
       end
 
-      # A meeting whose organiser is gone has no schedule to come back into.
-      case Scheduling.reinstate_with_conflict_check(meeting, write_fn) do
-        {:error, reason} when reason in [:time_conflict, :organizer_required] ->
-          refund_late_payment(payment, event_id, object)
-
-        {:error, %Ecto.Changeset{} = changeset} = error ->
-          if UniqueInvitation.violation?(changeset) or UniqueSlot.violation?(changeset),
-            do: refund_late_payment(payment, event_id, object),
-            else: error
-
-        result ->
-          result
-      end
+      meeting
+      |> Scheduling.reinstate_with_conflict_check(write_fn)
+      |> PaymentCompletion.refund_if_slot_lost(fn ->
+        refund_late_payment(payment, event_id, object)
+      end)
     end
   end
 
@@ -296,12 +268,15 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   defp run_in_transaction(payment, event_id, object, slot) do
     with {:ok, meeting} <- lock_meeting(payment.meeting_id),
          {:proceed, transition} <- check_transition(meeting, payment),
-         :ok <- host_accepting(meeting),
+         :ok <- PaymentCompletion.host_accepting(meeting),
          :ok <- slot_checked(transition, slot),
-         {:ok, paid} <- mark_paid(payment, event_id, object),
+         {:ok, paid} <- PaymentCompletion.mark_paid(payment, event_id, object),
          {:ok, confirmed} <-
-           MeetingQueries.update_meeting_status(meeting, post_payment_status(meeting)),
-         {:ok, _job_status} <- schedule_calendar_creation(confirmed),
+           MeetingQueries.update_meeting_status(
+             meeting,
+             PaymentCompletion.post_payment_status(meeting)
+           ),
+         {:ok, _job_status} <- PaymentCompletion.schedule_calendar_creation(confirmed),
          {:ok, pending} <- activate(confirmed) do
       {:ok, {transition, paid, confirmed, pending}}
     else
@@ -311,23 +286,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
     end
   end
 
-  # A host whose account waits to be deleted takes no booking, even one whose
-  # checkout was opened before the deletion was requested.
-  defp host_accepting(%{organizer_user_id: user_id} = meeting) when is_integer(user_id) do
-    if Auth.deletion_pending?(user_id),
-      do: {:refuse, :host_pending_deletion, meeting},
-      else: :ok
-  end
-
-  defp host_accepting(_meeting), do: :ok
-
   # The booking is not confirmed: the meeting is left (or put) `expired` and
   # the payment, which truly was taken, is recorded paid and refunded in full
   # by `RefundLatePayment`, inserted in this same transaction, which also
   # emails the attendee once Stripe has accepted the refund. The job
   # backfills the charge id it needs, so no Stripe call is made here.
   defp refuse(payment, meeting, event_id, object) do
-    with {:ok, paid} <- mark_paid(payment, event_id, object),
+    with {:ok, paid} <- PaymentCompletion.mark_paid(payment, event_id, object),
          {:ok, expired} <- expire(meeting),
          {:ok, _job} <- Oban.insert(RefundLatePayment.new_for(paid.id)) do
       {:ok, {:refused, paid, expired}}
@@ -340,7 +305,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # in full like a refused one; one already recorded is a replay of this.
   defp refund_orphaned(%{status: status} = payment, event_id, object)
        when status in [:pending, :failed] do
-    with {:ok, paid} <- mark_paid(payment, event_id, object),
+    with {:ok, paid} <- PaymentCompletion.mark_paid(payment, event_id, object),
          {:ok, _job} <- Oban.insert(RefundLatePayment.new_for(paid.id)) do
       {:ok, {:refused, paid, nil}}
     end
@@ -371,12 +336,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # stay `failed`, off the host's outstanding refunds, once Stripe stopped
   # redelivering this event.
   defp refund_late_payment(payment, event_id, object) do
-    backfill_charge_id(payment, object)
+    PaymentCompletion.backfill_charge_id(payment, object)
 
     LockedPayment.run(payment, event_id, fn locked ->
       with {:ok, meeting} <- lock_meeting(locked.meeting_id),
            {:proceed, :recovered} <- check_transition(meeting, locked),
-           {:ok, paid} <- mark_paid(locked, event_id, object),
+           {:ok, paid} <- PaymentCompletion.mark_paid(locked, event_id, object),
            {:ok, _job} <- Oban.insert(RefundLatePayment.new_for(paid.id)) do
         {:ok, {:refund_scheduled, paid, meeting}}
       else
@@ -384,64 +349,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
         _no_longer_recoverable -> {:ok, :no_op}
       end
     end)
-  end
-
-  # Payment clearing does not always mean the booking is on. The gate
-  # decision is read from the meeting row rather than re-derived from the
-  # live meeting type: `approval_requested_at` being stamped is the record
-  # of the promise shown to the invitee on the booking form
-  # (`Policy.approval_attributes/2` stamps it at submission, even on the
-  # paid path), and a host toggling `requires_approval` while a Stripe
-  # Checkout session sits open — it can stay open 24h — must not silently
-  # change what that invitee was told. Where the row was gated, the paid
-  # booking moves into the approval gate rather than straight to confirmed,
-  # and the host's clock starts here — they are only asked once the money
-  # has actually cleared. Only the clock's *start* moves: its length is the
-  # window stamped on the row at submission, replayed by
-  # `Approval.restart_deadline/2`, so a host who set a 72-hour window still
-  # gets 72 hours on a paid booking. Declining or letting it lapse refunds the full
-  # remaining balance directly (`Meetings.Approval.after_release/1`); there
-  # is no cancellation pipeline involved, because the attendee never got a
-  # confirmed meeting to weigh a partial refund against. The confirm branch
-  # explicitly nulls both approval columns rather than leaving them
-  # untouched, so a row that reaches :confirmed never carries a stale
-  # approval clock alongside it.
-  defp post_payment_status(%{approval_requested_at: %DateTime{}} = meeting) do
-    requested_at = DateTime.truncate(Clock.utc_now(), :second)
-
-    %{
-      status: :awaiting_approval,
-      approval_requested_at: requested_at,
-      approval_deadline_at: Approval.restart_deadline(meeting, requested_at)
-    }
-  end
-
-  defp post_payment_status(_meeting),
-    do: %{status: :confirmed, approval_requested_at: nil, approval_deadline_at: nil}
-
-  # Scheduled inside the same DB transaction as `mark_paid`/the meeting
-  # transition: `CalendarJobs.schedule_job/2` inserts through Oban's
-  # configured repo, which is this same `Repo`, so the insert commits
-  # atomically with the payment/meeting state change. If the insert fails
-  # (a transient DB error, not the absorbed unique-constraint conflict —
-  # see `CalendarJobs.schedule_job/2`), rolling back here leaves the
-  # booking_payment :pending and the meeting :awaiting_payment, so a
-  # Stripe redelivery of this same event — no longer blocked by the
-  # `last_event_id` replay guard, since that write rolled back too — or the
-  # next `ReconcileAwaitingPayments` sweep can retry the whole transition.
-  defp schedule_calendar_creation(meeting) do
-    case CalendarJobs.schedule_job(meeting, "create") do
-      {:ok, _status} = ok ->
-        ok
-
-      {:error, reason} ->
-        Logger.error("checkout.session.completed: failed to schedule calendar job",
-          meeting_id: meeting.id,
-          reason: LogFormat.reason(reason)
-        )
-
-        {:error, reason}
-    end
   end
 
   defp fetch_meeting(nil), do: {:error, :meeting_missing}
@@ -465,37 +372,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   defp check_transition(%{status: :expired}, %{status: :failed}), do: {:proceed, :recovered}
 
   defp check_transition(_meeting, _payment), do: :no_op
-
-  defp mark_paid(payment, event_id, object) do
-    case BookingPaymentQueries.update(payment, %{
-           status: paid_status(payment.status),
-           paid_at: DateTime.utc_now(:second),
-           stripe_payment_intent_id: object["payment_intent"],
-           last_event_id: event_id
-         }) do
-      {:ok, updated} = result ->
-        Telemetry.emit_status_changed(payment.status, updated.status, :webhook_paid)
-        result
-
-      {:error, _changeset} = err ->
-        err
-    end
-  end
-
-  # A dispute can land before this completed event (the charge is disputed the
-  # instant it is captured). When it has, the row is already `disputed` — record
-  # the payment_intent and timestamp but keep the dispute status rather than
-  # clobbering it back to `paid`.
-  defp paid_status(:disputed), do: :disputed
-  defp paid_status(_status), do: :paid
-
-  defp emit_payment_succeeded(paid, meeting) do
-    :telemetry.execute(
-      [:tymeslot, :meeting_payments, :booking_payment, :succeeded],
-      %{count: 1},
-      %{currency: paid.currency, has_video: not is_nil(meeting.video_integration_id)}
-    )
-  end
 
   # The public booking page derives occupancy from the organiser's connected
   # calendars alone, so a booking only stops being offered once it has been

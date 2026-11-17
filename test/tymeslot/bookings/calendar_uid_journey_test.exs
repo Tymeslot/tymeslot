@@ -32,8 +32,8 @@ defmodule Tymeslot.Bookings.CalendarUidJourneyTest do
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Sync
-  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventSync
+  alias Tymeslot.Meetings.ExternalCalendar
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.TestMocks
@@ -113,7 +113,7 @@ defmodule Tymeslot.Bookings.CalendarUidJourneyTest do
       }
 
       periods =
-        Meetings.merge_busy_periods(
+        ExternalCalendar.merge_busy_periods(
           [mirror],
           user.id,
           DateTime.add(meeting.start_time, -1, :day),

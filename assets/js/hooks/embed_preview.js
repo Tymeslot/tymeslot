@@ -12,7 +12,12 @@ export const EmbedPreview = {
     const { username, baseUrl, embedType, isReady, layout, locale, initialHeight, maxWidth } = this.el.dataset;
     const prev = this._cachedDataset;
 
+    // The server renders this container empty, so any re-render of the
+    // component around it (switching to the Live Preview tab is one) patches
+    // away the preview built here. Rebuild it then, even with the settings
+    // unchanged; otherwise the tab shows an empty box.
     if (
+      this.el.childElementCount > 0 &&
       username === prev.username &&
       baseUrl === prev.baseUrl &&
       embedType === prev.embedType &&

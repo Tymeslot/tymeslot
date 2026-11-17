@@ -12,7 +12,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Emails.RecipientLocale
+  alias Tymeslot.Meetings.AttendeeName
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.Utils.MapKeys
   alias TymeslotWeb.Endpoint
@@ -49,25 +51,40 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   """
   @spec build_event_data(map(), keyword()) :: map()
   def build_event_data(meeting, opts \\ []) do
-    %{
+    # The texts go into the organiser's own calendar, in their language.
+    texts =
+      in_organiser_locale(meeting, fn ->
+        %{
+          description: describe(meeting, opts),
+          location: meeting.meeting_url || organiser_location(meeting)
+        }
+      end)
+
+    Map.merge(texts, %{
       uid: meeting.calendar_uid,
       summary: meeting.title,
-      description: build_event_description(meeting, opts),
       start_time: meeting.start_time,
       end_time: meeting.end_time,
       timezone: meeting.attendee_timezone,
-      location: meeting.meeting_url || meeting.location,
       conference_url: meeting.meeting_url,
       transparency: if(Map.get(meeting, :show_as_free), do: :transparent, else: :opaque),
       status: event_status(meeting),
       attachments: build_attachments(meeting),
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
-      attendee_name: meeting.attendee_name,
+      # No name where it would only repeat the address (a meeting the host
+      # manages names its first guest by their address), so the attendee
+      # shows once, under the address.
+      attendee_name: AttendeeName.display_name(meeting),
       attendee_email: meeting.attendee_email,
       reminders: build_reminders(meeting)
-    }
+    })
   end
+
+  # A default location label ("In person") in the organiser's language, as
+  # the rest of their calendar entry; a venue or their own text as written.
+  defp organiser_location(meeting),
+    do: MeetingTypes.display_location(meeting.location, Map.get(meeting, :location_kind))
 
   # A booking held for the host's manual approval is written to their calendar
   # as TENTATIVE: the slot has to be visibly taken, or the availability grid —
@@ -135,21 +152,26 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
     # on the way here — calendar writes run from an Oban worker — so without
     # this wrapper every label below falls back to the default locale, which
     # is how a German host ends up with an "Attendee:" line.
-    RecipientLocale.with_user_id_locale(Map.get(meeting, :organizer_user_id), fn ->
-      parts = [
-        attendee_identity_line(meeting, Keyword.get(opts, :attendees, [])),
-        meeting.description,
-        organizer_note_section(meeting),
-        attendee_message_section(meeting),
-        custom_answers_section(meeting),
-        attachments_section(meeting),
-        video_meeting_section(meeting)
-      ]
+    in_organiser_locale(meeting, fn -> describe(meeting, opts) end)
+  end
 
-      parts
-      |> Enum.filter(& &1)
-      |> Enum.join()
-    end)
+  defp in_organiser_locale(meeting, fun),
+    do: RecipientLocale.with_user_id_locale(Map.get(meeting, :organizer_user_id), fun)
+
+  defp describe(meeting, opts) do
+    parts = [
+      attendee_identity_line(meeting, Keyword.get(opts, :attendees, [])),
+      meeting.description,
+      organizer_note_section(meeting),
+      attendee_message_section(meeting),
+      custom_answers_section(meeting),
+      attachments_section(meeting),
+      video_meeting_section(meeting)
+    ]
+
+    parts
+    |> Enum.filter(& &1)
+    |> Enum.join()
   end
 
   @doc """
@@ -225,9 +247,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   defp attendee_identity_line(%{attendee_email: email} = meeting, _attendees)
        when is_binary(email) and email != "" do
     identity =
-      case Map.get(meeting, :attendee_name) do
-        name when is_binary(name) and name != "" -> "#{name} <#{email}>"
-        _missing -> email
+      case AttendeeName.display_name(meeting) do
+        nil -> email
+        name -> "#{name} <#{email}>"
       end
 
     dgettext("emails", "Attendee: %{attendee}", attendee: identity) <> "\n\n"

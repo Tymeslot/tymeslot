@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPagesTest do
   test "the reschedule page leads to the organiser's booking page for this meeting" do
     out = meeting(:reschedule, Map.put(assigns(), :meeting_uid, "m-42"))
 
-    assert out =~ "/testuser?reschedule_meeting_uid=m-42"
+    assert out =~ "/testuser?locale=en&amp;reschedule_meeting_uid=m-42"
   end
 
   test "the payment pages carry the theme's own test id, from the page's theme" do

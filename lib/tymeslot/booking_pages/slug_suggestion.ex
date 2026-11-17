@@ -132,6 +132,6 @@ defmodule Tymeslot.BookingPages.SlugSuggestion do
   defp pad(slug), do: slug
 
   defp avoid_reserved(slug) do
-    if slug in BookingPageSchema.reserved_slugs(), do: slug <> "-" <> @fallback, else: slug
+    if BookingPageSchema.reserved?(slug), do: slug <> "-" <> @fallback, else: slug
   end
 end

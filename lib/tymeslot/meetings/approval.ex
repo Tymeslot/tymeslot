@@ -63,6 +63,20 @@ defmodule Tymeslot.Meetings.Approval do
       invitee gets `Bookings.Cancel`'s ordinary cancellation email rather
       than a decline or expiry notice.
 
+  ## A series is one request
+
+  A session of a booking series held for approval is not answered on its
+  own: while the series request is open
+  (`Tymeslot.BookingSeries.Approval.series_request?/1`), `approve/1`,
+  `decline/2`, `expire/1` and `withdraw/2` on any of its sessions act on the
+  whole series, and return the session they were given, as it now is. A
+  confirmed session the booker moved back into the gate is a request of its
+  own, answered here like any other. So the dashboard's request card, the host's email links and
+  the expiry jobs need not know about series. That includes an external
+  calendar delete of one session's tentative event (`Bookings.Cancel`,
+  `withdrawn_by: :calendar`): it withdraws the whole series, since a series
+  missing one session is not the series that was asked for.
+
   ## The deadline
 
   `deadline_for/2` is capped at the meeting's own start time. A request for a
@@ -80,6 +94,7 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.CalendarJobs
+  alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -91,7 +106,6 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
   alias Tymeslot.Notifications.DispatchInTransactionError
   alias Tymeslot.Notifications.Events
-  alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Repo
   alias Tymeslot.Validation.Constraints
@@ -238,6 +252,13 @@ defmodule Tymeslot.Meetings.Approval do
   """
   @spec approve(Meeting.t()) :: {:ok, Meeting.t()} | {:error, error()}
   def approve(%Meeting{} = meeting) do
+    case SeriesApproval.for_session(meeting, :approve) do
+      :not_in_series -> approve_one(meeting)
+      answered -> answered
+    end
+  end
+
+  defp approve_one(meeting) do
     now = Clock.utc_now()
 
     cond do
@@ -338,7 +359,7 @@ defmodule Tymeslot.Meetings.Approval do
   before a reschedule sent it back into the gate is announced as rescheduled
   instead, to the invitee and to every integration
   (`Orchestrator.send_reapproval_notifications/1`,
-  `Notifications.Events.meeting_created_deferred/1`).
+  `Notifications.Events.meeting_created_deferred/2`).
 
   What is left runs here, in this order: stop the request notifications, flip
   the tentative calendar hold to a real event, fan out to webhooks, Telegram
@@ -375,10 +396,19 @@ defmodule Tymeslot.Meetings.Approval do
   """
   @spec decline(Meeting.t(), String.t() | nil) :: {:ok, Meeting.t()} | {:error, error()}
   def decline(%Meeting{} = meeting, reason \\ nil) do
-    release(meeting, :cancelled,
+    case SeriesApproval.for_session(meeting, {:decline, reason}) do
+      :not_in_series -> release(meeting, :cancelled, decline_changes(reason, Clock.utc_now()))
+      answered -> answered
+    end
+  end
+
+  @doc "What a decline writes besides its status: the reason, capped, and when."
+  @spec decline_changes(String.t() | nil, DateTime.t()) :: keyword()
+  def decline_changes(reason, %DateTime{} = now) do
+    [
       decline_reason: normalise_reason(reason),
-      approval_declined_at: DateTime.truncate(Clock.utc_now(), :second)
-    )
+      approval_declined_at: DateTime.truncate(now, :second)
+    ]
   end
 
   @doc """
@@ -389,7 +419,10 @@ defmodule Tymeslot.Meetings.Approval do
   """
   @spec expire(Meeting.t()) :: {:ok, Meeting.t()} | {:error, error()}
   def expire(%Meeting{} = meeting) do
-    release(meeting, :expired, [])
+    case SeriesApproval.for_session(meeting, :expire) do
+      :not_in_series -> release(meeting, :expired, [])
+      answered -> answered
+    end
   end
 
   @doc """
@@ -409,26 +442,30 @@ defmodule Tymeslot.Meetings.Approval do
   being reported as a decline.
 
   `extra_changes` lets `Bookings.Cancel` record why (e.g. an external
-  calendar deletion) without this module knowing about that reason itself.
+  calendar deletion) without this module knowing about that reason itself,
+  and say who withdrew it: `withdrawn_by: :calendar` for an external
+  deletion, which a series is told as the host's cancellation, and the
+  default `:attendee` otherwise.
   Notification is deliberately not sent from here: `Bookings.Cancel` sends
   its own ordinary cancellation email for every exit it owns, and decline/
   expire's host-facing wording would be wrong for a withdrawal.
   """
   @spec withdraw(Meeting.t(), keyword()) :: {:ok, Meeting.t()} | {:error, error()}
   def withdraw(%Meeting{} = meeting, extra_changes \\ []) do
+    {withdrawn_by, extra_changes} = Keyword.pop(extra_changes, :withdrawn_by, :attendee)
+
+    case SeriesApproval.for_session(meeting, {:withdraw, withdrawn_by, extra_changes}) do
+      :not_in_series -> withdraw_one(meeting, extra_changes)
+      answered -> answered
+    end
+  end
+
+  defp withdraw_one(meeting, extra_changes) do
     now = DateTime.truncate(Clock.utc_now(), :second)
     changes = [status: :cancelled, cancelled_at: now] ++ extra_changes
 
     with_released_meeting(meeting, changes, fn released ->
-      best_effort(released, "cancel request notifications", fn ->
-        Orchestrator.cancel_request_notifications(released)
-      end)
-
-      best_effort(released, "cancel calendar event", fn ->
-        Meetings.cancel_calendar_event(released)
-      end)
-
-      best_effort(released, "release video room", fn -> release_video_room(released) end)
+      clear_released_request(released)
 
       best_effort(released, "refund unapproved request", fn ->
         ApprovalRefunds.refund_unapproved_request(released)
@@ -512,10 +549,28 @@ defmodule Tymeslot.Meetings.Approval do
   # order that matters: stop the jobs that would contradict the outcome, take
   # the hold off the host's calendar, take the video room off the provider,
   # refund whatever the attendee paid for a booking that never got approved,
-  # then tell the invitee. Each step runs through `best_effort/3` so a crash
+  # then tell the invitee, and any guests a reschedule had invited, from email
+  # jobs (`Orchestrator.send_request_outcome_notifications/2`). Each step runs through `best_effort/3` so a crash
   # in one cannot stop the next; none of them may fail the transition, which
   # has already been committed and cannot be undone.
   defp after_release(%Meeting{status: status} = meeting) do
+    clear_released_request(meeting)
+
+    best_effort(meeting, "refund unapproved request", fn ->
+      ApprovalRefunds.refund_unapproved_request(meeting)
+    end)
+
+    best_effort(meeting, "announce release", fn -> announce_release(meeting, status) end)
+
+    :ok
+  end
+
+  @doc """
+  Takes a committed release off its request jobs, the host's calendar and
+  the video provider, each step best-effort (see `after_release/1`).
+  """
+  @spec clear_released_request(Meeting.t()) :: :ok
+  def clear_released_request(%Meeting{} = meeting) do
     best_effort(meeting, "cancel request notifications", fn ->
       Orchestrator.cancel_request_notifications(meeting)
     end)
@@ -525,14 +580,6 @@ defmodule Tymeslot.Meetings.Approval do
     end)
 
     best_effort(meeting, "release video room", fn -> release_video_room(meeting) end)
-
-    best_effort(meeting, "refund unapproved request", fn ->
-      ApprovalRefunds.refund_unapproved_request(meeting)
-    end)
-
-    best_effort(meeting, "announce release", fn -> announce_release(meeting, status) end)
-    best_effort(meeting, "notify guests", fn -> GuestNotifications.notify_released(meeting) end)
-
     :ok
   end
 

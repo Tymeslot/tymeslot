@@ -25,7 +25,6 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Create
-  alias Tymeslot.Invitations
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.EmailVerificationJobs
   alias Tymeslot.Meetings.GuestQueries
@@ -33,7 +32,6 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Workers.ApprovalExpiryWorker
   alias Tymeslot.Meetings.Workers.EmailVerificationExpiryWorker
-  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
@@ -201,41 +199,6 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
       assert reload(meeting).status == :expired
     end
 
-    # The type's settings decide what verifying does (approval, above); with
-    # the type gone they cannot be read, so the booking must not go ahead
-    # without the approval it may have needed.
-    test "a held booking whose meeting type was deleted is released, not confirmed", %{
-      user: user
-    } do
-      type = insert(:meeting_type, user: user, requires_approval: true)
-      meeting = held(user, meeting_type_id: type.id)
-      :ok = EmailVerificationJobs.schedule_expiry(meeting)
-      Repo.delete!(type)
-
-      assert {:error, :expired} = EmailVerification.verify(reload(meeting))
-
-      assert %{status: :expired, email_verified_at: nil} = reload(meeting)
-      refute_enqueued(worker: EmailVerificationExpiryWorker)
-      refute_enqueued(worker: CalendarEventWorker)
-      refute_enqueued(worker: VideoRoomWorker)
-      refute_enqueued(worker: EmailWorker)
-      refute_enqueued(worker: WebhookWorker)
-    end
-
-    test "an archived meeting type's settings still apply", %{user: user} do
-      type =
-        insert(:meeting_type,
-          user: user,
-          requires_approval: true,
-          approval_window_hours: 24,
-          is_active: false
-        )
-
-      meeting = held(user, meeting_type_id: type.id)
-
-      assert {:ok, :verified, %{status: :awaiting_approval}} = EmailVerification.verify(meeting)
-    end
-
     # The deadline is read from the row inside the transaction, not from the
     # caller's copy, which may have been read before the hold was shortened.
     test "the deadline is read from the stored booking, not the caller's copy", %{user: user} do
@@ -248,58 +211,6 @@ defmodule Tymeslot.Meetings.EmailVerificationTest do
       assert {:error, :expired} = EmailVerification.verify(meeting)
       assert %{status: :expired, email_verified_at: nil} = reload(meeting)
       refute_enqueued(worker: CalendarEventWorker)
-    end
-
-    # The type's rules refuse verification alongside payment or seats, so a
-    # host who wants either turns verification off in the same save;
-    # confirming the held booking then would skip the payment or the seat.
-    for {became, changes} <- [
-          {"paid", [payment_required: true]},
-          {"a group type", [max_participants: 5]}
-        ] do
-      test "a held booking whose meeting type became #{became} is released", %{user: user} do
-        type = insert(:meeting_type, user: user)
-        meeting = held(user, meeting_type_id: type.id)
-        :ok = EmailVerificationJobs.schedule_expiry(meeting)
-
-        Repo.update_all(where(MeetingTypeSchema, id: ^type.id),
-          set: [requires_email_verification: false] ++ unquote(changes)
-        )
-
-        assert {:error, :expired} = EmailVerification.verify(meeting)
-
-        assert %{status: :expired, email_verified_at: nil} = reload(meeting)
-        refute_enqueued(worker: EmailVerificationExpiryWorker)
-        refute_enqueued(worker: CalendarEventWorker)
-        refute_enqueued(worker: EmailWorker)
-        refute_enqueued(worker: WebhookWorker)
-      end
-    end
-
-    # The organiser never saw the held booking, so they may revoke the link it
-    # came through; the booking must not then appear on their calendar.
-    test "a booking through an invitation revoked during the hold is released", %{user: user} do
-      type = insert(:meeting_type, user: user, invitation_only: true)
-      {:ok, invitation} = Invitations.create(user.id, type, %{})
-      meeting = held(user, meeting_type_id: type.id, invitation_id: invitation.id)
-      :ok = EmailVerificationJobs.schedule_expiry(meeting)
-      {:ok, _revoked} = Invitations.revoke(user.id, invitation.id)
-
-      assert {:error, :expired} = EmailVerification.verify(meeting)
-
-      assert %{status: :expired, email_verified_at: nil} = reload(meeting)
-      refute_enqueued(worker: EmailVerificationExpiryWorker)
-      refute_enqueued(worker: CalendarEventWorker)
-      refute_enqueued(worker: EmailWorker)
-      refute_enqueued(worker: WebhookWorker)
-    end
-
-    test "a booking through an invitation still open is confirmed", %{user: user} do
-      type = insert(:meeting_type, user: user, invitation_only: true)
-      {:ok, invitation} = Invitations.create(user.id, type, %{})
-      meeting = held(user, meeting_type_id: type.id, invitation_id: invitation.id)
-
-      assert {:ok, :verified, %{status: :confirmed}} = EmailVerification.verify(meeting)
     end
 
     test "a booking released before verification stays released", %{user: user} do

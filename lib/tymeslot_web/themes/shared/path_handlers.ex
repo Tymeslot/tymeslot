@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   alias Tymeslot.MeetingTypes
   alias TymeslotWeb.Live.Scheduling.EntryRefusal
   alias TymeslotWeb.Themes.Shared.Journey
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
 
   # The route's own segments, which arrive in `params` beside the query.
@@ -25,7 +26,16 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # What a page carries of the visitor's choices: the deep-link parameters
   # `put_choices/2` writes, the chosen length, and a facts address's mark of
   # a visit that came through the overview (`facts_address/1`).
-  @choice_params ["duration", "date", "time", "minutes", "visitor_timezone", "step", "via"]
+  @choice_params [
+    "duration",
+    "date",
+    "time",
+    "minutes",
+    "visitor_timezone",
+    "step",
+    "via",
+    "series"
+  ]
 
   @doc """
   Builds a path with locale and theme query parameters.
@@ -242,6 +252,11 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     if meeting_uid, do: "/#{username}/meeting/#{meeting_uid}/reschedule", else: "/#{username}"
   end
 
+  defp base_path(:series, username, assigns) do
+    series_uid = assigns[:series_uid]
+    if series_uid, do: "/#{username}/series/#{series_uid}", else: "/#{username}"
+  end
+
   defp base_path(_action, username, _assigns), do: "/#{username}"
 
   defp build_query_params(socket, locale) do
@@ -259,7 +274,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   # What a fresh booking forgets of them: everything built on the meeting
   # type, which a restart keeps (`Journey.Runtime.restart/1`).
-  @slot_params ["date", "time", "minutes", "step"]
+  @slot_params ["date", "time", "minutes", "step", "series"]
 
   @doc """
   The query string that carries the visitor's choices on the page's own URL
@@ -305,7 +320,9 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # left out, since every browser reports its own again on connect.
   # A paged journey shows one moment at a time and does not move on by
   # itself, so the moment on screen goes as `step` (`Navigators.Paged`
-  # resumes on it). The answers and the details are not carried: the
+  # resumes on it). The series chosen for the slot goes as `series`
+  # (`Journey.Facts.Series.to_param/1`), which the page checks again on
+  # arrival. The answers and the details are not carried: the
   # details form is recovered by LiveView's form recovery. Nor is anything
   # on an outcome, whose choices are a booking already made (carried, a
   # reload of the confirmation would land on the details for the slot just
@@ -320,6 +337,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
       |> maybe_put_query_param("time", assigns[:selected_date] && assigns[:selected_time])
       |> maybe_put_query_param("visitor_timezone", chosen_timezone(assigns))
       |> maybe_put_query_param("step", paged_moment(assigns))
+      |> maybe_put_query_param("series", Series.to_param(assigns))
     end
   end
 
@@ -496,7 +514,10 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   `reschedule_meeting_uid` query param, so the restarted booking updates
   the existing meeting instead of silently creating a duplicate — the
   reschedule context is derived solely from that param
-  (`LiveHelpers.Mount.handle_scheduling_params/2`).
+  (`LiveHelpers.Mount.handle_scheduling_params/2`). The page's language
+  goes with it as `locale`, so the booking flow carries on in the language
+  the reschedule page was shown in (the attendee's booked one, unless they
+  picked another) rather than switching to the browser's midway.
 
   Falls back to "/" if the profile or username is unavailable.
   """
@@ -504,18 +525,20 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   def organizer_scheduling_path(assigns) do
     case BookingPages.public_address(assigns[:organizer_profile]) do
       address when is_binary(address) and address != "" ->
-        maybe_append_reschedule_uid("/#{address}", assigns[:meeting_uid])
+        with_query("/#{address}", reschedule_query(assigns[:meeting_uid], assigns[:locale]))
 
       _other ->
         "/"
     end
   end
 
-  defp maybe_append_reschedule_uid(base_path, uid) when is_binary(uid) and uid != "" do
-    "#{base_path}?#{URI.encode_query(%{"reschedule_meeting_uid" => uid})}"
+  defp reschedule_query(uid, locale) when is_binary(uid) and uid != "" do
+    Map.reject(%{"reschedule_meeting_uid" => uid, "locale" => locale}, fn {_key, value} ->
+      is_nil(value)
+    end)
   end
 
-  defp maybe_append_reschedule_uid(base_path, _uid), do: base_path
+  defp reschedule_query(_uid, _locale), do: %{}
 
   @doc """
   The confirmation step's "Add to calendar" link: the booked meeting as a

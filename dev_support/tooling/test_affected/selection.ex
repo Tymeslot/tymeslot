@@ -45,6 +45,25 @@ defmodule Tymeslot.TestAffected.Selection do
     * **data** (anything else, such as `priv/tz/` or `priv/professions/`) may
       be read through a path built at runtime, so unnamed it widens.
 
+  ## Code nothing mirrors
+
+  A lib file with no mirror test file is resolved through the code that names
+  its modules: the tests that do, the mirror test file of each lib module that
+  does (its callers, one hop), and the files of its mirror directory, with the
+  domain tags of the first two swept as for a mirror file. When neither
+  exists, the mirror directory's files run alone. Its tags are never swept:
+  `test/tymeslot_web/live/dashboard/` carries nearly every domain, so sweeping
+  them, as this once did, turned any dashboard component into the full suite.
+  Replayed over 200 commits, dropping that sweep cost no test the commits
+  themselves edited. Only with no mirror directory either does the suite
+  widen.
+
+  ## Test support
+
+  A module under `test/support/` selects the tests that reach it, and widens
+  where it runs suite-wide; `Tymeslot.TestAffected.Naming` has the rules, and
+  how a module is found by name.
+
   ## Changes upstream
 
   A repository consuming another as a path dependency builds against that
@@ -54,8 +73,9 @@ defmodule Tymeslot.TestAffected.Selection do
   in a domain no upstream test carries (the consumer's own features, which
   wrap upstream code but which no upstream tag can name) are selected whole by
   any upstream change that reaches code, since the tag sweep cannot reach
-  them. A widening upstream change widens here too; an upstream test file
-  changes nothing here. The consumer can also name a directory of its own
+  them. A widening upstream change widens here too, and so does an upstream
+  `test/support/` module, which the consumer compiles into its own suite; an
+  upstream test file changes nothing here. The consumer can also name a directory of its own
   tests that exist to check the two repositories against each other
   (`:upstream_tests`); any upstream change that reaches the build selects all
   of them.
@@ -69,12 +89,16 @@ defmodule Tymeslot.TestAffected.Selection do
   it reports success.
   """
 
+  alias Tymeslot.TestAffected.Mirror
+  alias Tymeslot.TestAffected.Naming
+
   @typedoc "Index of the suite as it exists on disk."
   @type index :: %{
           test_files: MapSet.t(String.t()),
           tags: %{String.t() => MapSet.t(atom())},
           domain_tags: MapSet.t(atom()),
-          sources: %{String.t() => String.t()}
+          sources: %{String.t() => String.t()},
+          config: %{String.t() => String.t()}
         }
 
   @typedoc "What to run, and why."
@@ -98,13 +122,13 @@ defmodule Tymeslot.TestAffected.Selection do
   @moduletag_re ~r/^\s*@moduletag\s+:?([a-z_0-9]+)/m
   # Heredoc bodies are string data, often the source of a module under test.
   @heredoc_re ~r/("""|''')[\s\S]*?\1/
-  @defmodule_re ~r/defmodule\s+([A-Z][\w.]*)/
 
   @ignored_prefixes ~w[assets/ priv/static/ priv/cert/ .github/ .gitea/ doc/ dev/]
   @ignored_extensions ~w[.md .txt .json .yml .yaml .css .js .mjs .cjs .png .svg .ico]
 
   @widening_files ~w[mix.exs mix.lock]
-  @widening_prefixes ~w[config/ test/support/ test/test_helper.exs]
+  @widening_prefixes ~w[config/ test/test_helper.exs]
+  @support_prefix "test/support/"
   @migration_prefixes ~w[priv/repo/migrations/ priv/saas_repo/migrations/]
 
   # Code resolved through a mirror directory: `lib/x` to `test/x`, and the
@@ -119,10 +143,6 @@ defmodule Tymeslot.TestAffected.Selection do
   @tooling_files ~w[.formatter.exs .credo.exs .dialyzer_ignore.exs .sobelow-conf .sobelow-skips .env.example]
   @tooling_names ~r/^(Dockerfile|LICENSE)|\.dockerignore$/
   @tooling_prefixes ~w[.githooks/ scripts/ dev_support/]
-
-  # A parent directory shorter than this is too general to count as naming a
-  # file: `priv` would match nearly every module that reads anything.
-  @min_named_segments 2
 
   @doc """
   Builds the plan for `changed` against `index`.
@@ -166,14 +186,17 @@ defmodule Tymeslot.TestAffected.Selection do
 
   `:ignore` cannot affect the Elixir suite. `:widen` is compiled into, or read
   by, every test. `:migrations` changes the database shape underneath all of
-  them. `{:test, path}` is a test file in its own right, and `{:lib, path}` is
-  compiled code to resolve through its mirror directory. `:tooling`,
-  `:translations` and `:data` are not code, and are resolved through whoever
-  names them (see the moduledoc).
+  them. `{:test, path}` is a test file in its own right, `{:lib, path}` is
+  compiled code to resolve through its mirror directory, and `{:support,
+  path}` is test-support code, resolved through the tests that use it.
+  `:tooling`, `:translations` and `:data` are not code, and are resolved
+  through whoever names them (see the moduledoc). Anything else under
+  `test/support/` (fixture files, SQL) is data whatever its extension, since
+  the suite reads it.
   """
   @spec classify(String.t()) ::
           :ignore
-          | {:widen | :migrations | :test | :lib, String.t()}
+          | {:widen | :migrations | :test | :lib | :support, String.t()}
           | {:tooling | :translations | :data, String.t()}
   def classify(path) do
     cond do
@@ -181,6 +204,7 @@ defmodule Tymeslot.TestAffected.Selection do
       starts_with_any?(path, @migration_prefixes) -> {:migrations, path}
       starts_with_any?(path, @widening_prefixes) -> {:widen, path}
       String.ends_with?(path, "_test.exs") -> {:test, path}
+      String.starts_with?(path, @support_prefix) -> classify_support(path)
       starts_with_any?(path, @ignored_prefixes) -> :ignore
       Path.extname(path) in @ignored_extensions -> :ignore
       String.starts_with?(path, @translation_prefix) -> {:translations, path}
@@ -190,6 +214,9 @@ defmodule Tymeslot.TestAffected.Selection do
     end
   end
 
+  defp classify_support(path),
+    do: if(Path.extname(path) == ".ex", do: {:support, path}, else: {:data, path})
+
   defp compiled?(path), do: Enum.any?(@source_extensions, &String.ends_with?(path, &1))
 
   defp tooling?(path) do
@@ -198,44 +225,6 @@ defmodule Tymeslot.TestAffected.Selection do
     name in @tooling_files or name =~ @tooling_names or
       starts_with_any?(path, @tooling_prefixes)
   end
-
-  # Maps a lib path to the deepest existing mirror test directory.
-  #
-  # `lib/tymeslot/auth/oauth/google.ex` mirrors to `test/tymeslot/auth/oauth`,
-  # walking up a segment at a time when a directory has no counterpart. Around a
-  # third of lib directories do not mirror exactly, so the walk matters; it stops
-  # at `test/` rather than selecting the whole suite by accident.
-  @spec mirror_dir(String.t(), index()) :: String.t() | nil
-  defp mirror_dir(path, index) do
-    path
-    |> Path.dirname()
-    |> test_dir()
-    |> walk_up(index)
-  end
-
-  defp test_dir("lib/" <> rest), do: "test/" <> rest
-  defp test_dir("dev_support/" <> rest), do: "test/dev_support/" <> rest
-  defp test_dir(path), do: path
-
-  defp walk_up("test", _index), do: nil
-  defp walk_up(".", _index), do: nil
-
-  defp walk_up(dir, index) when is_binary(dir) do
-    cond do
-      # `test/tymeslot` or `test/tymeslot_web` is not a mirror of anything, it
-      # is most of the suite. Widening honestly beats a selection that only
-      # looks targeted.
-      root?(dir) -> nil
-      dir_populated?(dir, index) -> dir
-      true -> dir |> Path.dirname() |> walk_up(index)
-    end
-  end
-
-  defp root?(dir), do: dir |> Path.split() |> length() <= 2
-
-  defp dir_populated?(dir, index), do: Enum.any?(index.test_files, &in_dir?(&1, dir))
-
-  defp in_dir?(file, dir), do: String.starts_with?(file, dir <> "/")
 
   defp empty_plan do
     %{
@@ -297,8 +286,47 @@ defmodule Tymeslot.TestAffected.Selection do
     apply_named(plan, path, index, unnamed)
   end
 
+  defp apply_classification({:support, path}, plan, index) do
+    case Naming.support_users(path, index) do
+      {:widen, why} ->
+        %{plan | scope: :full_suite, reasons: ["#{path}: #{why}" | plan.reasons]}
+
+      {:ok, tests} ->
+        %{
+          plan
+          | files: union(plan.files, tests),
+            reasons: ["#{path}: used by #{count(tests, "test file")}" | plan.reasons]
+        }
+    end
+  end
+
   defp apply_classification({:lib, path}, plan, index) do
-    case mirror(path, index) do
+    {users, callers} = Naming.code_naming(path, index)
+
+    case Mirror.mirror_file(path, index) do
+      nil -> apply_unmirrored(path, users, callers, plan, index)
+      file -> add_seeded(plan, [file], users, "#{path}: #{file}", index)
+    end
+  end
+
+  # Seeds the selection with `seed`, sweeps the domain tags it declares, and
+  # adds `extra`, tests that name the changed module, whose tags are left out
+  # of the sweep: a test naming a module is not about it.
+  defp add_seeded(plan, seed, extra, label, index) do
+    tags = domain_tags_of(seed, index)
+    tagged = Enum.filter(index.test_files, &tagged_with_any?(&1, tags, index))
+    named = if extra == [], do: "", else: " + #{count(extra, "test")} naming it"
+
+    %{
+      plan
+      | files: plan.files |> union(seed) |> union(tagged) |> union(extra),
+        tags: MapSet.union(plan.tags, tags),
+        reasons: ["#{label} + #{describe_tags(tags)}#{named}" | plan.reasons]
+    }
+  end
+
+  defp apply_unmirrored(path, [], [], plan, index) do
+    case Mirror.mirror_from_dir(path, index) do
       nil ->
         %{
           plan
@@ -307,31 +335,66 @@ defmodule Tymeslot.TestAffected.Selection do
         }
 
       {seed, label} ->
-        tags = domain_tags_of(seed, index)
-        tagged = Enum.filter(index.test_files, &tagged_with_any?(&1, tags, index))
-
         %{
           plan
-          | files: plan.files |> union(seed) |> union(tagged),
-            tags: MapSet.union(plan.tags, tags),
-            reasons: ["#{path}: #{label} + #{describe_tags(tags)}" | plan.reasons]
+          | files: union(plan.files, seed),
+            reasons: ["#{path}: no test or mirrored caller names it; #{label}" | plan.reasons]
         }
     end
   end
+
+  defp apply_unmirrored(path, users, callers, plan, index) do
+    caller_seeds = Enum.flat_map(callers, &List.wrap(Mirror.mirror_file(&1, index)))
+
+    dir_files =
+      case Mirror.mirror_from_dir(path, index) do
+        nil -> []
+        {files, _label} -> files
+      end
+
+    if users == [] and caller_seeds == [] do
+      apply_unmirrored(path, [], [], plan, index)
+    else
+      plan
+      |> add_seeded(
+        caller_seeds ++ users,
+        [],
+        "#{path}: named by #{describe_named(users, callers)}",
+        index
+      )
+      |> Map.update!(:files, &union(&1, dir_files))
+    end
+  end
+
+  defp count(list, noun),
+    do: "#{length(list)} #{noun}#{if length(list) == 1, do: "", else: "s"}"
 
   # Runs the tests that name `path`, plus the mirror tests of each module that
   # does; `unnamed` decides what a path nobody names does. The module's own code
   # did not change, so its domain is not swept: that is the rule for code, and
   # here it would turn one module reading a file into half the suite. A
-  # test-support module reaches the tests that use it rather than widening, as
-  # changing it would.
+  # test-support module reaches the tests that use it, as changing it would.
   defp apply_named(plan, path, index, unnamed) do
-    {tests, modules} = named_by(path, index)
-    {support, modules} = Enum.split_with(modules, &String.starts_with?(&1, "test/support/"))
-    tests = tests ++ Enum.flat_map(support, &users_of(&1, index))
+    {tests, modules} = Naming.named_by(path, index)
+    {support, modules} = Enum.split_with(modules, &String.starts_with?(&1, @support_prefix))
+    reached = Enum.map(support, &Naming.support_users(&1, index))
 
+    case Enum.find(reached, &match?({:widen, _why}, &1)) do
+      {:widen, why} ->
+        %{plan | scope: :full_suite, reasons: ["#{path}: read by #{why}" | plan.reasons]}
+
+      nil when tests == [] and modules == [] and support == [] ->
+        unnamed.(plan)
+
+      nil ->
+        tests = tests ++ Enum.flat_map(reached, fn {:ok, users} -> users end)
+        apply_named_found(plan, path, tests, modules, index)
+    end
+  end
+
+  defp apply_named_found(plan, path, tests, modules, index) do
     if tests == [] and modules == [] do
-      unnamed.(plan)
+      plan
     else
       plan = %{
         plan
@@ -344,7 +407,7 @@ defmodule Tymeslot.TestAffected.Selection do
   end
 
   defp apply_reader(module, plan, index) do
-    case mirror(module, index) do
+    case Mirror.mirror(module, index) do
       nil ->
         %{
           plan
@@ -355,39 +418,6 @@ defmodule Tymeslot.TestAffected.Selection do
       {seed, _label} ->
         %{plan | files: union(plan.files, seed)}
     end
-  end
-
-  # The test files naming any module `file` defines.
-  defp users_of(file, index) do
-    case @defmodule_re |> Regex.scan(Map.fetch!(index.sources, file)) |> Enum.map(&List.last/1) do
-      [] ->
-        []
-
-      names ->
-        pattern = :binary.compile_pattern(names)
-        Enum.filter(index.test_files, &contains?(Map.get(index.sources, &1, ""), pattern))
-    end
-  end
-
-  defp contains?(source, pattern), do: :binary.match(source, pattern) != :nomatch
-
-  defp named_by(path, index) do
-    pattern = path |> needles() |> :binary.compile_pattern()
-
-    index.sources
-    |> Enum.filter(fn {file, source} -> file != path and contains?(source, pattern) end)
-    |> Enum.map(fn {file, _source} -> file end)
-    |> Enum.sort()
-    |> Enum.split_with(&MapSet.member?(index.test_files, &1))
-  end
-
-  # The path itself, and each parent directory long enough to be specific.
-  defp needles(path) do
-    segments = Path.split(path)
-
-    (length(segments) - 1)..@min_named_segments//-1
-    |> Enum.map(&(segments |> Enum.take(&1) |> Path.join()))
-    |> then(&[path | &1])
   end
 
   defp describe_named(tests, modules) do
@@ -422,6 +452,15 @@ defmodule Tymeslot.TestAffected.Selection do
 
       upstream.scope == :full_suite ->
         %{plan | scope: :full_suite, reasons: Enum.reverse(reasons) ++ plan.reasons}
+
+      # Compiled into this suite as well, where its users are this
+      # repository's tests, which the upstream index cannot see.
+      support = Enum.find(reaching, &match?({:support, _path}, classify(&1))) ->
+        %{
+          plan
+          | scope: :full_suite,
+            reasons: ["upstream #{support}: test support this suite compiles" | plan.reasons]
+        }
 
       true ->
         plan
@@ -467,64 +506,13 @@ defmodule Tymeslot.TestAffected.Selection do
 
   defp add_upstream_tests(plan, dir, index) do
     dir = String.trim_trailing(dir, "/")
-    files = Enum.filter(index.test_files, &in_dir?(&1, dir))
+    files = Enum.filter(index.test_files, &Mirror.in_dir?(&1, dir))
 
     %{
       plan
       | files: union(plan.files, files),
         reasons: ["#{dir}/: checks the upstream" | plan.reasons]
     }
-  end
-
-  @doc """
-  Resolves a lib path to the test files the selection is seeded from.
-
-  The mirror *file* is preferred over the mirror directory. It carries the same
-  domain tags, so the tag sweep that does the real work is unchanged, while the
-  seed stops dragging in every sibling: measured over 156 commits that is 15%
-  of the suite rather than 26%, for six tenths of a point of recall. The
-  directory only stands in when no mirror file exists, which is also what stops
-  a top-level context module seeding itself with the whole of `test/tymeslot`.
-  """
-  @spec mirror(String.t(), index()) :: {[String.t()], String.t()} | nil
-  def mirror(path, index) do
-    case mirror_file(path, index) do
-      nil -> mirror_from_dir(path, index)
-      file -> {[file], file}
-    end
-  end
-
-  defp mirror_from_dir(path, index) do
-    case mirror_dir(path, index) do
-      nil -> nil
-      dir -> {Enum.filter(index.test_files, &in_dir?(&1, dir)), dir <> "/"}
-    end
-  end
-
-  @doc """
-  Maps a lib path to its mirror test file, when one exists.
-
-  `lib/tymeslot/auth/oauth/google.ex` mirrors to
-  `test/tymeslot/auth/oauth/google_test.exs`.
-  """
-  @spec mirror_file(String.t(), index()) :: String.t() | nil
-  def mirror_file(path, index) do
-    candidate =
-      path
-      |> test_dir()
-      |> strip_source_extension()
-      |> Kernel.<>("_test.exs")
-
-    if MapSet.member?(index.test_files, candidate), do: candidate
-  end
-
-  # `.html.heex` first: a colocated template belongs to its LiveView, so
-  # `foo_live.html.heex` should find `foo_live_test.exs` rather than look for a
-  # test named after the template.
-  defp strip_source_extension(path) do
-    Enum.find_value(@source_extensions, path, fn ext ->
-      if String.ends_with?(path, ext), do: String.replace_suffix(path, ext, "")
-    end)
   end
 
   defp domain_tags_of(files, index) do

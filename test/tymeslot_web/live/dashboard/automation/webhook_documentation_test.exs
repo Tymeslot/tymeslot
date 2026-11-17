@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentationTest do
 
   import Phoenix.LiveViewTest
 
+  alias Tymeslot.Notifications.EventTypes
   alias TymeslotWeb.Dashboard.Automation.WebhookDocumentation
 
   describe "webhook_documentation/1" do
@@ -13,6 +14,17 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentationTest do
       html = render_component(&WebhookDocumentation.webhook_documentation/1, assigns)
       assert html =~ "Webhook Integration Guide"
       assert html =~ "meeting.created"
+    end
+
+    test "lists every event a webhook can subscribe to" do
+      html = render_component(&WebhookDocumentation.webhook_documentation/1, %{})
+
+      for event <- EventTypes.all() do
+        assert html =~
+                 "<code class=\"text-token-sm font-black text-tymeslot-900\">#{event}</code>"
+      end
+
+      assert html =~ "Triggers once when you decline a series request"
     end
 
     test "documents the delivery id header that lets receivers discard duplicates" do

@@ -12,6 +12,7 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocation do
   """
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.MeetingTypes
 
   @doc """
   The place a meeting is held at, as written, for one held somewhere named:
@@ -54,9 +55,46 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocation do
   # pending.
   def type(%Meeting{video_integration_id: id}) when is_integer(id), do: :video
   # Meetings booked before `location_kind` existed. Their location strings
-  # were written by this application, never by a host, so matching the two
+  # were written by this application, never by a host, so matching the
   # literals it used is sound for exactly those rows and nothing else.
-  def type(%Meeting{location: "Phone Call"}), do: :phone
-  def type(%Meeting{location: "In Person"}), do: :in_person
+  def type(%Meeting{location: location}) do
+    case legacy_placeholder(location) do
+      kind when kind in [:phone, :in_person] -> kind
+      _other -> :custom
+    end
+  end
+
   def type(_meeting), do: :custom
+
+  @doc """
+  `location`, of the kind `type/1` classed it as, as the reader sees it in
+  the current locale: a default location label ("In person") in their
+  language, a venue or the host's own text as written
+  (`Tymeslot.MeetingTypes.display_location/2`).
+  """
+  @spec display(String.t(), atom() | nil) :: String.t()
+  @spec display(nil, atom() | nil) :: nil
+  def display(location, :in_person_to_arrange),
+    do: MeetingTypes.display_location(location, :in_person)
+
+  def display(location, type) when type in [:in_person, :custom, :phone, :video],
+    do: MeetingTypes.display_location(location, type)
+
+  def display(location, _type), do: location
+
+  @doc """
+  What a location string stood for when an older release wrote an English
+  placeholder in place of a place: `:to_be_determined` for "To be
+  determined", or the kind a bare "In Person" or "Phone Call" named. nil for
+  any other string, a real place included.
+
+  Only meetings booked before `location_kind` existed carry these, so a
+  caller reads it for a meeting whose `location_kind` is nil; a host can
+  write the same words as a custom location since.
+  """
+  @spec legacy_placeholder(String.t() | nil) :: :to_be_determined | :in_person | :phone | nil
+  def legacy_placeholder("To be determined"), do: :to_be_determined
+  def legacy_placeholder("In Person"), do: :in_person
+  def legacy_placeholder("Phone Call"), do: :phone
+  def legacy_placeholder(_location), do: nil
 end

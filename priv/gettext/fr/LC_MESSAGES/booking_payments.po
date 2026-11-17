@@ -125,3 +125,17 @@ msgstr "Votre réservation n’a pas été confirmée. Votre invitation lui rest
 #, elixir-autogen, elixir-format
 msgid "Your booking is not confirmed. To try again, open the invitation link you were sent."
 msgstr "Votre réservation n'est pas confirmée. Pour réessayer, ouvrez le lien d'invitation qui vous a été envoyé."
+
+#: lib/tymeslot/meeting_payments/checkout_sessions.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}, %{count} session"
+msgid_plural "%{name}, %{count} sessions"
+msgstr[0] "%{name}, %{count} séance"
+msgstr[1] "%{name}, %{count} séances"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Thank you, your %{count} session is confirmed, the first on %{date}."
+msgid_plural "Thank you, your %{count} sessions are confirmed, the first on %{date}."
+msgstr[0] "Merci, votre %{count} séance est confirmée, la première le %{date}."
+msgstr[1] "Merci, vos %{count} séances sont confirmées, la première le %{date}."

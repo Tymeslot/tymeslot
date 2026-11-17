@@ -924,7 +924,7 @@ The booking flow is shared and described as data (`TymeslotWeb.Themes.Shared.Jou
 
 **Facts** are what a booking needs: `:meeting_type`, `:length` (only when the meeting type offers several lengths and the journey has a moment asking it; the slot then needs it, and without such a moment the type is booked for its primary length), `:slot`, `:answers` (only when the meeting type has custom fields) and `:attendee` (the booking form, its location and its guests). Each is a module that `use`s `Journey.Fact`: `requires/1` (the facts that must be known first; the answers need only the meeting type, so questions may come before the calendar), `required?/1`, `known?/1`, the canonical events it owns and `handle/3`, `enter/2` (what showing a moment that collects it sets up), `continue/1` (whether the booker may move on: done, stay, or an error the page flashes), `back/1`, `revisitable?/1`, and optionally `default/2` with `default_strategies/0` (the meeting type takes `:first`, `:shortest` and `:only`, the type of an organiser who offers exactly one; with several, the visitor chooses). A fact works on the LiveView's own assigns; there is no separate session. `config :tymeslot, :extra_booking_facts` adds fact modules to `Journey.facts/0`.
 
-**A journey** groups the facts into moments, each a LiveComponent the theme writes, and names its outcomes. `use SchedulingLive, steps: %{…}` is the classic journey (`Journey.classic/1`: `overview` collects `[:meeting_type]`, an optional `length` step `[:length]`, `schedule` `[:slot]`, `questions` `[:answers]`, `booking` `[:attendee]`, on `Navigators.Paged`). Any other journey is written out:
+**A journey** groups the facts into moments, each a LiveComponent the theme writes, and names its outcomes. `use SchedulingLive, steps: %{…}` is the classic journey (`Journey.classic/1`: `overview` collects `[:meeting_type]`, an optional `length` step `[:length]`, `schedule` `[:slot]`, an optional `series` step `[:series]` (a meeting type offering a series; the moment's body is `TymeslotWeb.Themes.Shared.SeriesChooser.chooser/1`, its heading and the line under a way on not yet open `SeriesChooser.heading/1` and `next_hint/1`, the booking form's summary and the confirmation's sessions `SeriesSummary`, all made of `SeriesParts` and styled by `shared/components/series.css` plus the theme's own rules; a journey of its own places a moment collecting `:series` after the one collecting `:slot`, or collects it beside the slot and the details on one moment, as Paper does, where the runtime enters it once the time is known), `questions` `[:answers]`, `booking` `[:attendee]`, on `Navigators.Paged`). Any other journey is written out:
 
 ```elixir
 use TymeslotWeb.Themes.Shared.SchedulingLive,
@@ -1130,7 +1130,7 @@ Choosing a meeting type is the way on; a theme that wants a separate Next sends 
 | Assign | Read on | Present | Holds |
 |---|---|---|---|
 | `locale` | every step | mount | the page's locale (`data-locale`, date and time formatting) |
-| `current_state` | every step | mount | the step on screen (`:overview`, `:schedule`, `:questions`, `:booking`, `:confirmation`) |
+| `current_state` | every step | mount | the step on screen (`:overview`, `:length`, `:schedule`, `:series`, `:questions`, `:booking`, `:confirmation`) |
 | `theme_tokens` | every step | mount | the `%Tokens{}` of the organiser's customisation; templates render from its `media` |
 | `organizer_profile` | overview, schedule, booking, confirmation, awaiting payment | mount | the organiser's profile: name, avatar, greeting, `headline`, `bio` |
 | `username_context` | every step | mount | the organiser's username, for paths |
@@ -1164,6 +1164,16 @@ Choosing a meeting type is the way on; a theme that wants a separate Next sends 
 | `week_slots` | schedule | mount | the week of slots, `nil` until the step sends `load_week` (see [A week of slots](#a-week-of-slots)) |
 | `week_slots_loading` | schedule | mount | whether the week is loading |
 | `week_slots_error` | schedule | mount | why the week could not be fetched |
+| `series_choice` | series, booking | mount | the series chosen (`Journey.Facts.Series`): `nil`, `:single`, or `%{mode:, starts:, count:}`; `Series.count/1` gives the sessions booked, nil for a single session |
+| `series_preview` | series | mount | the sessions the last check judged; render `Series.rows/1` (each row's `status`: `:available`, `{:unavailable, reason}` or `:pending`) and `SeriesParts.occurrence_list/1` rather than reading it |
+| `series_checking?` | series | mount | whether a check of the series is in flight |
+| `series_error` | series | mount | why the last check gave no answer (`:availability_unverifiable`, `:overlapping_starts`, `:invalid_count`), else nil; `SeriesParts.check_error/1` words it |
+| `series_refocus` | series | mount | whether the moment takes the focus back to where sessions are added, set once one was added; pass it to `SeriesParts.refocus/1` on the control that mounts there |
+| `series_picker` | series | mount | a flexible series' picker of further sessions, nil while closed; `SeriesPicker.days/1` lists what it offers |
+| `series_offered?` | series | mount | whether the meeting type's series is offered, settled once per type |
+| `series_single_allowed?` | series | mount | whether the booker may book just the time picked |
+| `series` | confirmation | mount | the series a submission booked, nil for a single booking (every submission starts without one) |
+| `series_meetings` | confirmation | mount | the sessions a series booking made, in order; `[]` for a single booking |
 | `engine` | questions | mount | the custom-questions engine; `CustomQuestions.Events.assign_render_state/1` derives the question on screen from it |
 | `form` | booking | mount | the booking form |
 | `validation_errors` | booking | mount | the booking form's visible errors |
@@ -1233,6 +1243,7 @@ The one decision the driver does not take from the markup is whether a meeting t
 |---|---|---|---|
 | `data-fact="meeting_type"` | each meeting-type choice | `data-value`: what `select_duration` sends, the type's slug (`MeetingTypes.effective_slug/1`) | theme |
 | `data-fact="length"` | each length choice of a meeting type offering several | `data-value`: what `select_length` sends, the length in minutes | theme |
+| `data-fact="series"` | each control that changes the series: the count stepper's buttons, a flexible picker's times | `data-value`: what it sends (the count, or the session's start in ISO 8601) | theme; shared on `SeriesParts.picker_slots/1` |
 | `data-fact="date"` | each day button of a picker of days | `data-value`: the ISO date | theme |
 | `data-fact="time"` | each time button | `data-value`: what `select_time` sends | shared (`SlotList`) |
 | `data-fact="slot"` | each button that picks a day and a time in one click | `data-date` (ISO) and `data-time` | shared (`WeekGrid`) |
@@ -1607,7 +1618,7 @@ Every place a new theme touches, in the order to add them (`aurora`, id `"3"`, a
 - [ ] **Registry binding**: nothing to edit; the module must be `TymeslotWeb.Themes.Aurora.Theme` in `lib/tymeslot_web/themes/aurora/theme.ex` (`registry_test.exs` fails, naming the key, otherwise)
 - [ ] **`theme.ex`**: one `use TymeslotWeb.Themes.Core.Theme, live_view:, preview_image:, description:, story:, axes:` (the description and the story `dgettext_noop/2` calls in one domain, the axes passing `theme_rubric_test.exs`), plus `voice:` if the theme words the shared booking lines its own way
 - [ ] **Translations**: `mix gettext.extract --merge` adds the description's and the story's msgids (and a voice's lines, to `booking_voice.po`) to every locale's `dashboard_appearance.po`; translate it there, or CI's `gettext.extract --check-up-to-date` fails
-- [ ] **`scheduling/live.ex`**: one `use TymeslotWeb.Themes.Shared.SchedulingLive, wrapper:, steps:`, with the aliases above it, naming your `scheduling/wrapper.ex` and all five steps (plus `length:`, so a meeting type offering several lengths lets the booker choose); or `journey:` with moments of your own (see "Journeys: facts, moments and navigators" under Common Patterns)
+- [ ] **`scheduling/live.ex`**: one `use TymeslotWeb.Themes.Shared.SchedulingLive, wrapper:, steps:`, with the aliases above it, naming your `scheduling/wrapper.ex` and all five steps (plus `length:`, so a meeting type offering several lengths lets the booker choose, and `series:`, so a meeting type offering a series can be booked as one); or `journey:` with moments of your own (see "Journeys: facts, moments and navigators" under Common Patterns)
 - [ ] **Step components** under `scheduling/components/`: render-only LiveComponents that delegate `update/2` and `handle_event/3` to `Shared.StepEvents` (the questions step delegates `handle_event/3` to `Shared.CustomQuestions.Events` instead) and use the canonical event names, plus `theme:<name>` for an event of the theme's own, handled in `live.ex`'s `handle_theme_event/3`; the schedule step wires its navigation buttons to the `CalendarNavigation` boundary checks
 - [ ] **Page templates**: either a `page_shell:` (recommended: one function component, the six pages from `Shared.DefaultPages`, with `shared/components/manage-pages.css` imported) or the six conventional modules, `meeting/` (`Reschedule`, `Cancel`, `CancelConfirmed`), `poll/voting.ex` and `payment/` (`Processing`, `Cancelled`), each with a `render/1`, or overrides of the generated render callbacks
 - [ ] **Customisation spec**: a module that `use`s `Tymeslot.ThemeCustomizations.Spec` (see `QuillSpec`), the one `customization_spec:` names; options of the theme's own need a group module, a descriptor, their part of `tokens/2` and a panel (see [A theme with options of its own](#a-theme-with-options-of-its-own))

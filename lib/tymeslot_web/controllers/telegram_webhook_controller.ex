@@ -13,7 +13,7 @@ defmodule TymeslotWeb.TelegramWebhookController do
     if Telegram.telegram_enabled?() and Telegram.shared_bot_mode?() do
       client_ip = ClientIP.get(conn)
 
-      case RateLimiter.check(:webhook, client_ip) do
+      case RateLimiter.check(:telegram_webhook, client_ip) do
         :ok ->
           case verify_secret(conn) do
             :ok ->

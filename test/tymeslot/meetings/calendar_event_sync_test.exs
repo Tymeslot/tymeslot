@@ -1,5 +1,6 @@
 defmodule Tymeslot.Meetings.CalendarEventSyncTest do
   use Tymeslot.DataCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :meetings
   @moduletag :integration
@@ -85,9 +86,9 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
         {:error, "Fatal server error"}
       end)
 
-      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, fn _meeting, _reason -> :ok end)
-
       assert {:error, "Fatal server error"} = CalendarEventSync.create(meeting.id, 5)
+
+      assert_sync_error_enqueued(meeting.id, "Fatal server error")
     end
 
     test "updates from a fresh read when the event already exists at the meeting's UID" do
@@ -206,12 +207,9 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
         {:error, :precondition_failed}
       end)
 
-      expect(Tymeslot.EmailServiceMock, :send_calendar_sync_error, fn meeting, reason ->
-        assert {meeting.id, reason} == {meeting_id, :calendar_event_not_updatable}
-        :ok
-      end)
-
       assert {:error, :calendar_event_not_updatable} = CalendarEventSync.update(meeting_id, 5)
+
+      assert_sync_error_enqueued(meeting_id, "calendar_event_not_updatable")
     end
 
     test "returns {:error, :meeting_not_found} for a non-existent meeting" do
@@ -640,5 +638,11 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       assert {:error, :calendar_mapping_persistence_failed} =
                CalendarEventSync.create(meeting.id, 1)
     end
+  end
+
+  defp assert_sync_error_enqueued(meeting_id, reason) do
+    action = "send_calendar_sync_error"
+    args = %{"action" => action, "meeting_id" => meeting_id, "error_reason" => reason}
+    assert_enqueued(worker: Tymeslot.Workers.EmailWorker, args: args)
   end
 end

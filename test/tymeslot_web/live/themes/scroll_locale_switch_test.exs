@@ -213,13 +213,16 @@ defmodule TymeslotWeb.Live.Themes.ScrollLocaleSwitchTest do
       %{profile: profile, slug: MeetingTypes.effective_slug(private)}
     end
 
-    test "is not chosen by naming it on the overview", %{conn: conn, profile: profile, slug: slug} do
-      {:ok, view, _html} =
-        live(conn, ~p"/#{profile.username}?duration=#{slug}&entered_via_overview=true&locale=de")
+    test "is not chosen by naming it on the overview, but sent to its own link",
+         %{conn: conn, profile: profile, slug: slug} do
+      assert {:error, {:redirect, %{to: to}}} =
+               live(
+                 conn,
+                 ~p"/#{profile.username}?duration=#{slug}&entered_via_overview=true&locale=de"
+               )
 
-      assert state(view, :offer) == "current"
-      refute has_element?(view, "#when-step")
-      refute has_element?(view, "[data-fact='meeting_type'][data-value='#{slug}']")
+      assert URI.parse(to).path == "/#{profile.username}/#{slug}"
+      refute to =~ "duration="
     end
 
     test "stays locked on its own link whatever the URL claims",

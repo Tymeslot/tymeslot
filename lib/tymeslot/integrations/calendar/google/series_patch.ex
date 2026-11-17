@@ -9,10 +9,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatch do
   and `timeZone` with anything it left out:
 
     * **Plain fields** (`:summary`, `:description`, `:location`, `:colour`,
-      `:reminders`, `:attendees`) are sent under their Google keys, mapped
-      as `Google.EventMapper` maps them. A field the edit cleared is sent
-      cleared (`colorId: null`, the calendar's default reminders, no
-      attendees), which a replace would have done by leaving it out.
+      `:reminders`, `:attendees`, `:transparency`) are sent under their
+      Google keys, mapped as `Google.EventMapper` maps them. A field the
+      edit cleared is sent cleared (`colorId: null`, the calendar's default
+      reminders, no attendees, busy), which a replace would have done by
+      leaving it out.
     * **A move** of the occurrence moves the master's `start` and `end` by
       as much, on the wall clock of the master's own `timeZone`, which
       Google requires on a recurring event and expands the series in (see
@@ -50,7 +51,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatch do
     location: "location",
     colour: "colorId",
     reminders: "reminders",
-    attendees: "attendees"
+    attendees: "attendees",
+    transparency: "transparency"
   }
 
   # What a cleared field is sent as: `EventMapper` leaves it out, which on a
@@ -61,7 +63,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatch do
     "location" => "",
     "colorId" => nil,
     "reminders" => %{"useDefault" => true},
-    "attendees" => []
+    "attendees" => [],
+    "transparency" => "opaque"
   }
 
   @doc """

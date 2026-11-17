@@ -184,6 +184,22 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
       assert_received {:guest_send, "yes@example.com"}
       refute_received {:guest_send, _email}
     end
+
+    test "the released-request guest job retries, and the retry writes only to the guest missed" do
+      %{meeting: meeting} = meeting_with_guests(moved(%{status: :cancelled}))
+
+      fail_once_for("no@example.com", :send_guest_cancellation)
+
+      :ok = EmailScheduler.schedule_released_guest_cancellations(meeting.id)
+
+      assert {:error, "1 guest email(s) failed"} = run_job("send_released_guest_cancellations")
+      assert_received {:guest_send, "yes@example.com"}
+      assert_received {:guest_send, "no@example.com"}
+
+      assert :ok = run_job("send_released_guest_cancellations")
+      assert_received {:guest_send, "no@example.com"}
+      refute_received {:guest_send, _email}
+    end
   end
 
   # An attendee whose address the provider suppressed must not cost the
@@ -340,22 +356,39 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
       assert :ok = GuestNotifications.notify_cancelled(meeting, %{uid: meeting.uid})
     end
 
-    test "declining a rescheduled request that had been confirmed tells the guests" do
-      user = insert(:user)
+    for {how, release} <- [{"declining", :decline}, {"expiring", :expire}] do
+      test "#{how} a rescheduled request that had been confirmed tells the guests from a job" do
+        user = insert(:user)
 
-      %{meeting: meeting} =
-        meeting_with_guests(%{
-          status: :awaiting_approval,
-          organizer_user_id: user.id,
-          approval_requested_at: DateTime.utc_now(:second),
-          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 24, :hour)
-        })
+        %{meeting: meeting} =
+          meeting_with_guests(%{
+            status: :awaiting_approval,
+            organizer_user_id: user.id,
+            approval_requested_at: DateTime.utc_now(:second),
+            approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 24, :hour)
+          })
 
-      expect(EmailServiceMock, :send_guest_cancellation, 2, fn _email, _details ->
-        {:ok, :sent}
-      end)
+        test_pid = self()
 
-      assert {:ok, _declined} = Approval.decline(meeting)
+        stub(EmailServiceMock, :send_guest_cancellation, fn email, _details ->
+          send(test_pid, {:guest_send, email})
+          {:ok, :sent}
+        end)
+
+        assert {:ok, _released} = apply(Approval, unquote(release), [meeting])
+        refute_received {:guest_send, _email}
+
+        # Guest-only: the booker and the host hear the outcome from its own job.
+        assert [job] =
+                 all_enqueued(
+                   worker: EmailWorker,
+                   args: %{"action" => "send_released_guest_cancellations"}
+                 )
+
+        assert :ok = perform_job(EmailWorker, job.args)
+        assert_received {:guest_send, "yes@example.com"}
+        assert_received {:guest_send, "no@example.com"}
+      end
     end
 
     test "declining a request that was never confirmed leaves the guests alone" do
@@ -371,6 +404,11 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
         })
 
       assert {:ok, _declined} = Approval.decline(meeting)
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_released_guest_cancellations"}
+      )
     end
 
     test "the cancellation email job tells the guests alongside host and booker" do

@@ -44,6 +44,10 @@ defmodule Tymeslot.Meetings.VideoRooms do
     :video_integration_inactive
   ]
 
+  # Why a room could not be attached that the organiser fixes in their
+  # integration settings, logged as expected rather than as a fault.
+  @owner_fixable_video_refusals [:video_integration_needs_reauth, :video_integration_inactive]
+
   # Get Video module dynamically to avoid compile-time warnings with mocks
   @spec video_module() :: module()
   defp video_module do
@@ -96,6 +100,14 @@ defmodule Tymeslot.Meetings.VideoRooms do
   """
   @spec add_video_room_to_meeting(String.t()) :: {:ok, MeetingSchema.t()} | {:error, term()}
   def add_video_room_to_meeting(meeting_id) do
+    Logger.info("Request to add video room to meeting", meeting_id: meeting_id)
+
+    meeting_id
+    |> attach_video_room()
+    |> log_attach_outcome(meeting_id)
+  end
+
+  defp attach_video_room(meeting_id) do
     with {:ok, meeting} <- fetch_meeting(meeting_id),
          :not_attached <- attached_status(meeting),
          {:ok, user_id} <- get_meeting_organizer_user_id(meeting),
@@ -108,6 +120,35 @@ defmodule Tymeslot.Meetings.VideoRooms do
       {:error, _reason} = error -> error
     end
   end
+
+  defp log_attach_outcome({:ok, _meeting} = ok, meeting_id) do
+    Logger.info("Successfully added video room", meeting_id: meeting_id)
+    ok
+  end
+
+  defp log_attach_outcome({:error, :meeting_not_found} = error, meeting_id) do
+    Logger.warning("Attempted to add video room to non-existent meeting", meeting_id: meeting_id)
+    error
+  end
+
+  # A video integration switched off or waiting to be reconnected is the
+  # owner's to fix, and the meeting goes ahead without a room: expected, not a
+  # fault.
+  defp log_attach_outcome({:error, reason} = error, meeting_id)
+       when reason in @owner_fixable_video_refusals do
+    Logger.info("Video room not added: the video integration is unavailable",
+      meeting_id: meeting_id,
+      reason: reason
+    )
+
+    error
+  end
+
+  # A Teams meeting waiting for the booking's own calendar event
+  # (`:calendar_event_pending`) is the expected first outcome, already logged
+  # here as a wait; `Tymeslot.Workers.VideoRoomWorker` logs any other failure
+  # once, with what it does about it.
+  defp log_attach_outcome({:error, _reason} = error, _meeting_id), do: error
 
   @doc """
   Builds a meeting's join URLs again for a new start time, when its provider's

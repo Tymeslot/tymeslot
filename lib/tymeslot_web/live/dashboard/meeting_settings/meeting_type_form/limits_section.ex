@@ -8,15 +8,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LimitsSection do
   part of the surrounding meeting-type form (no nested form element); each
   change dispatches `update_booking_limits` back to the parent
   `MeetingTypeForm` (`@myself`), which owns the socket state and auto-save.
+
+  A cap lower than what one series of this type can book in its period is
+  pointed out (`series_notes`, from `SeriesHandlers.limit_notes/2`, empty
+  while the series is paused), never refused: the series section says the
+  same.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.MeetingSettings.Components.BookingLimitFields
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection
 
   attr :booking_limits, :map, required: true
   attr :week_start, :atom, required: true, values: [:monday, :sunday]
+  attr :series_notes, :list, default: [], doc: "The series' booking-limit conflicts, worded"
   attr :myself, :any, required: true
 
   @spec limits_section(map()) :: Phoenix.LiveView.Rendered.t()
@@ -49,6 +56,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LimitsSection do
           phx-target={@myself}
         />
       </.card>
+
+      <SeriesSection.note
+        :for={note <- @series_notes}
+        variant={:warning}
+        testid="limits-series-conflict"
+      >
+        {note}
+      </SeriesSection.note>
     </section>
     """
   end

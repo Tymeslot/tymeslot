@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
               </div>
               <button
                 type="button"
-                class="w-10 h-10 shrink-0 rounded-token-xl bg-tymeslot-50 text-tymeslot-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
+                class="modal-close relative w-10 h-10 shrink-0 rounded-token-xl bg-tymeslot-50 text-tymeslot-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
                 aria-label={dgettext("common", "Close modal")}
                 phx-click={@on_cancel}
               >

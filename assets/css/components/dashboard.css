@@ -286,6 +286,10 @@
     position: fixed !important;
     width: 320px;
     max-width: 85vw;
+    /* Fixed, so the root's safe-area padding does not reach it. */
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
   }
   
   .dashboard-sidebar.dashboard-sidebar-open {
@@ -373,34 +377,6 @@
 }
 
 /* ===================================
-   CALENDAR GRID RESPONSIVE
-   =================================== */
-
-/* Responsive time-axis width for the calendar grid */
-#calendar-grid {
-  --time-axis: 4rem;
-}
-
-/* Narrow screens: 3.5rem is the least that fits a 12-hour label ("06 AM")
-   and "all-day" beside the axis's right padding. */
-@media (max-width: 640px) {
-  #calendar-grid {
-    --time-axis: 3.5rem;
-  }
-}
-
-/* Below md the dashboard content has no gutter of its own in full-width mode,
-   so the grids take the same 0.75rem inset as the toolbar above them rather
-   than running to the screen edge. */
-@media (width < 48rem) {
-  #calendar-allday-row,
-  #calendar-drag-zone,
-  #calendar-month-grid {
-    margin-inline: 0.75rem;
-  }
-}
-
-/* ===================================
    AVAILABILITY WEEKDAY ROWS
    =================================== */
 
@@ -410,9 +386,8 @@
    on .input, so the shared component keeps one shape everywhere else. */
 .day-hours-inline .input {
   @apply w-auto rounded-token-xl py-1 text-sm;
-  /* The shared select style reserves pr-10 for the chevron icon overlaid on
-     it. Tightening the padding here has to move the chevron with it, or the
-     time runs underneath the arrow. */
+  /* The shared select reserves pr-10 for its background-image chevron:
+     tighter padding must move the chevron too, or the time runs under it. */
   padding-left: 0.5rem;
   padding-right: 1.625rem;
 }
@@ -421,6 +396,81 @@
   right: 0.5rem;
   width: 1rem;
   height: 1rem;
+}
+
+/* The menu as an icon rail (DashboardSidebar `rail`), from lg up where the
+   menu is a column: labels leave the screen but stay the links' accessible
+   names, and their tooltips show them; section titles become dividers. */
+@media (width >= 64rem) {
+  .dashboard-sidebar--rail > div {
+    padding-inline: 0.75rem;
+  }
+
+  .dashboard-sidebar--rail .dashboard-nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* `flex-basis` stacks the View Page and copy buttons, which share a
+     wrapping row; the nav rows are already one per line. */
+  .dashboard-sidebar--rail .dashboard-nav-link {
+    justify-content: center;
+    padding-inline: 0;
+    flex-basis: 100%;
+  }
+
+  .dashboard-sidebar--rail .dashboard-nav-link,
+  .dashboard-sidebar--rail .dashboard-nav-link:hover {
+    translate: none;
+  }
+
+  .dashboard-sidebar--rail .dashboard-nav-link > * {
+    margin-inline: 0;
+  }
+
+  .dashboard-sidebar--rail .dashboard-nav-notification {
+    top: 0.25rem;
+    right: 0.25rem;
+    transform: none;
+  }
+
+  .dashboard-sidebar--rail .dashboard-nav-section-title {
+    font-size: 0;
+    padding-inline: 0.5rem;
+    margin-block: 0.5rem;
+  }
+
+  .dashboard-sidebar--rail .dashboard-nav-section-title::after {
+    margin-inline-start: 0;
+    opacity: 1;
+  }
+
+  .dashboard-sidebar--rail nav {
+    margin-top: 0.5rem;
+  }
+}
+
+/* Focus mode on the calendar (CalendarFocus), from lg up where the menu
+   is a column: the menu, the row's gutter and the strips go. */
+@media (width >= 64rem) {
+  #dashboard-root[data-calendar-focus] #dashboard-sidebar {
+    display: none;
+  }
+
+  #dashboard-root[data-calendar-focus] .dashboard-main-row {
+    gap: 0;
+  }
+
+  #dashboard-root[data-calendar-focus] #calendar-strips > * {
+    display: none;
+  }
 }
 
 /* A time in the poll form's week (AvailabilityWeek) where a meeting would

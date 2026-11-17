@@ -47,6 +47,11 @@ body {
   z-index: 9990;
 }
 
+/* Above the calendar: the row alone, so the grid keeps the height. */
+.brand-nav.brand-nav-compact {
+  padding-block: 0;
+}
+
 /* Mobile Navigation Styles */
 .mobile-menu {
   z-index: 9999;

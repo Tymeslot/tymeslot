@@ -258,11 +258,13 @@ msgid "%{label} before"
 msgstr "%{label} avant"
 
 #: lib/tymeslot_web/components/shared/reminder_picker.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "1 hour before"
 msgstr "1 heure avant"
 
 #: lib/tymeslot_web/components/shared/reminder_picker.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "30 min. before"
 msgstr "30 min. avant"
@@ -325,6 +327,7 @@ msgid "Reminder value must be a positive number"
 msgstr "La valeur du rappel doit être un nombre positif"
 
 #: lib/tymeslot_web/components/shared/reminder_picker.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
 msgstr "Rappels"

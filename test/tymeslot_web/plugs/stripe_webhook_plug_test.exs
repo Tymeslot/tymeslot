@@ -90,15 +90,15 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
   end
 
   describe "rate limit isolation" do
-    test "an exhausted generic webhook bucket does not throttle Stripe", %{conn: conn} do
+    test "an exhausted Telegram webhook bucket does not throttle Stripe", %{conn: conn} do
       last_octet = rem(System.unique_integer([:positive]), 250) + 1
       conn = %{conn | remote_ip: {10, 78, 0, last_octet}}
       client_ip = ClientIP.get(conn)
 
-      # The bucket Telegram and Zoom share; Stripe must not draw from it.
-      for _i <- 1..101, do: RateLimit.hit("webhook:#{client_ip}", 600_000, 100)
-      assert {:error, :rate_limited, _message} = RateLimiter.check(:webhook, client_ip)
-      on_exit(fn -> RateLimiter.clear_bucket("webhook:#{client_ip}") end)
+      # Another provider's bucket; Stripe must not draw from it.
+      for _i <- 1..101, do: RateLimit.hit("telegram_webhook:#{client_ip}", 600_000, 100)
+      assert {:error, :rate_limited, _message} = RateLimiter.check(:telegram_webhook, client_ip)
+      on_exit(fn -> RateLimiter.clear_bucket("telegram_webhook:#{client_ip}") end)
 
       conn =
         conn

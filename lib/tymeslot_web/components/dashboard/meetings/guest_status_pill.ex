@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill do
   The pill showing how a guest has answered an invitation to a booking.
 
   Shared by the meeting card's guest list and the add-guest modal, so a guest
-  reads the same in both places. A pending guest is an invitation still
+  reads the same in both places. `:tentative`, which only a calendar
+  reports, is a guest who may come. A pending guest is an invitation still
   waiting for an answer.
   """
 
@@ -29,6 +30,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.GuestStatusPill do
 
   defp presentation(:declined),
     do: {:danger, "hero-x-circle-mini", dgettext("dashboard_bookings", "Declined")}
+
+  defp presentation(:tentative),
+    do: {:info, "hero-question-mark-circle-mini", dgettext("dashboard_calendar_power", "Maybe")}
 
   defp presentation(:pending),
     do: {:warning, "hero-clock-mini", dgettext("dashboard_bookings", "Awaiting reply")}

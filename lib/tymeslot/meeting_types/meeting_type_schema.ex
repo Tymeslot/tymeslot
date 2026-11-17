@@ -13,15 +13,19 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   alias Tymeslot.MeetingTypes.GroupValidation
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.MeetingTypes.PaymentValidation
   alias Tymeslot.MeetingTypes.ReminderValidation
+  alias Tymeslot.MeetingTypes.SeriesSettings
+  alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
           id: integer() | nil,
           name: String.t() | nil,
           description: String.t() | nil,
+          translations: map(),
           duration_minutes: integer() | nil,
           extra_lengths_minutes: [integer()] | nil,
           slot_interval_minutes: integer() | nil,
@@ -40,6 +44,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           max_participants: integer(),
           fixed_dates: boolean(),
           one_off: boolean(),
+          series_mode: :recurring | :flexible | nil,
+          series_frequency: :daily | :weekly | :monthly | nil,
+          series_interval: pos_integer(),
+          series_min_occurrences: pos_integer() | nil,
+          series_max_occurrences: pos_integer() | nil,
+          series_required: boolean(),
           show_seat_availability: boolean(),
           last_spots_threshold: pos_integer() | nil,
           max_guests_per_booking: pos_integer() | nil,
@@ -92,6 +102,13 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     # See `Tymeslot.MeetingTypes.FixedDates` and `Tymeslot.MeetingTypes.OneOffEvents`.
     field(:fixed_dates, :boolean, default: false)
     field(:one_off, :boolean, default: false)
+    # See `Tymeslot.MeetingTypes.SeriesSettings`; nil mode is no series.
+    field(:series_mode, Ecto.Enum, values: [:recurring, :flexible])
+    field(:series_frequency, Ecto.Enum, values: [:daily, :weekly, :monthly])
+    field(:series_interval, :integer, default: 1)
+    field(:series_min_occurrences, :integer)
+    field(:series_max_occurrences, :integer)
+    field(:series_required, :boolean, default: true)
     field(:show_seat_availability, :boolean, default: true)
     field(:last_spots_threshold, :integer)
     # Guests one booking may bring; nil is the public page's default (`Guests.limit_for/1`).
@@ -136,6 +153,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     # "does this type do video, and on which integration" keep working.
     embeds_many(:locations, LocationOption, on_replace: :delete)
 
+    # Translations of the name, description, questions and locations, keyed
+    # by path (`Tymeslot.ContentTranslations`): the embeds carry none of their
+    # own. No changeset here casts it, so the form, its autosave and the
+    # question and location editors can never wipe it.
+    field(:translations, :map, default: %{})
+
     timestamps(type: :utc_datetime)
   end
 
@@ -166,12 +189,13 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   @reserved_slug_format ~r/^\d+min$/
   # Reserved because a fixed route would shadow the type's address:
   # `/:username/poll/:token` (the public poll voting page) shadows
-  # `/:username/poll/book`, and `/:username/thank-you` (and a page's
+  # `/:username/poll/book`, `/:username/series/:series_uid` (a booking
+  # series' page) `/:username/series/book`, and `/:username/thank-you` (and a page's
   # `/:username/:page/thank-you`) the type's own page. "book" is free: a
   # name-derived slug can be "book" anyway, and
   # `TymeslotWeb.Live.Scheduling.PageAddress` reads a page's
   # `/:username/:page/book` as its type slugged "book".
-  @reserved_slugs ~w(poll thank-you)
+  @reserved_slugs ~w(poll series thank-you)
   @slug_max_length 80
 
   @doc """
@@ -222,6 +246,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :max_participants,
       :fixed_dates,
       :one_off,
+      :series_mode,
+      :series_frequency,
+      :series_interval,
+      :series_min_occurrences,
+      :series_max_occurrences,
+      :series_required,
       :show_seat_availability,
       :last_spots_threshold,
       :max_guests_per_booking,
@@ -239,7 +269,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     ])
     |> cast_embed(:custom_fields, with: &FieldDefinition.changeset/2)
     |> cast_embed(:attachments, with: &MeetingTypeAttachment.changeset/2)
-    |> cast_embed(:locations, with: &LocationOption.changeset/2)
+    |> cast_embed(:locations, with: &location_changeset/2)
     |> validate_locations()
     |> project_video_fields()
     |> validate_required([:name, :duration_minutes, :user_id])
@@ -253,12 +283,15 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     )
     |> normalize_slug()
     |> validate_slug()
+    |> validate_derived_slug()
     |> validate_video_integration()
     |> validate_calendar_destination()
     |> ReminderValidation.validate_changeset()
     |> PaymentValidation.validate_changeset(opts)
     |> EmailVerificationRule.validate_changeset()
     |> GroupValidation.validate_changeset()
+    |> SeriesSettings.validate_changeset()
+    |> check_constraint(:series_mode, name: :meeting_types_series_check)
     |> unique_constraint([:user_id, :name],
       error_key: :name,
       message: dgettext_noop("errors", "You already have a meeting type with this name")
@@ -344,14 +377,15 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   @doc """
   Focused changeset for changing a meeting type's visibility (`is_private`
   and `invitation_only`), without re-validating unrelated fields (e.g. video
-  integration). An invitation-only type must stay one-to-one, which is the one
-  rule checked here.
+  integration). An invitation-only type must stay one-to-one and cannot be a
+  series; those are the rules checked here.
   """
   @spec visibility_changeset(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
   def visibility_changeset(meeting_type, attrs) do
     meeting_type
     |> cast(attrs, [:is_private, :invitation_only])
     |> GroupValidation.validate_invitation_only_not_group()
+    |> SeriesSettings.validate_conflicts()
   end
 
   @doc """
@@ -365,6 +399,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> cast(attrs, [:slug])
     |> normalize_slug()
     |> validate_slug()
+    |> validate_derived_slug()
     |> unique_constraint([:user_id, :slug],
       name: :meeting_types_user_id_slug_index,
       message: dgettext_noop("errors", "is already taken")
@@ -410,7 +445,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           String.length(slug) > @slug_max_length ->
             add_error(changeset, :slug, dgettext_noop("errors", "is too long"))
 
-          Regex.match?(@reserved_slug_format, slug) or slug in @reserved_slugs ->
+          reserved_slug?(slug) ->
             add_error(changeset, :slug, "is reserved")
 
           not Regex.match?(@slug_format, slug) ->
@@ -423,6 +458,49 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           true ->
             changeset
         end
+    end
+  end
+
+  # Without a custom slug, a type's address comes from its name
+  # (`Slugs.effective_slug/1`), so a name such as "Thank you" would give it an
+  # address a fixed route shadows. Checked only when the name or the slug
+  # changes, so a type saved before the rule keeps saving its other settings.
+  # The error goes on the field the organiser changed: the name, or else the
+  # slug they cleared.
+  defp validate_derived_slug(changeset) do
+    name = get_field(changeset, :name)
+    name_changed? = changed?(changeset, :name)
+
+    if get_field(changeset, :slug) == nil and is_binary(name) and
+         (name_changed? or changed?(changeset, :slug)) and
+         reserved_slug?(Slugs.to_slug(%{name: name})) do
+      add_error(
+        changeset,
+        if(name_changed?, do: :name, else: :slug),
+        dgettext_noop(
+          "errors",
+          "would give a reserved booking link; choose another name or set a custom link"
+        ),
+        validation: :reserved
+      )
+    else
+      changeset
+    end
+  end
+
+  defp reserved_slug?(slug),
+    do: Regex.match?(@reserved_slug_format, slug) or slug in @reserved_slugs
+
+  # A location's label is stored with any localised default put back into
+  # English (`LocationSelection.stored_label/2`), so a label the editor showed
+  # in the host's language and posted back untouched is not saved as theirs.
+  defp location_changeset(option, attrs) do
+    changeset = LocationOption.changeset(option, attrs)
+    label = get_field(changeset, :label)
+
+    case LocationSelection.stored_label(get_field(changeset, :kind), label) do
+      ^label -> changeset
+      stored -> put_change(changeset, :label, stored)
     end
   end
 

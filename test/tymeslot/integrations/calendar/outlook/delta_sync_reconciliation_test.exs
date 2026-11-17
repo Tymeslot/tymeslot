@@ -69,9 +69,16 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncReconciliationTest do
   describe "fetch_and_apply/1 - linked meetings" do
     setup do
       TestMocks.setup_email_mocks()
-      Application.put_env(:swoosh, :shared_test_process, self())
-      on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
       :ok
+    end
+
+    # The host is told from an email job, so what a sweep leaves behind is
+    # that job.
+    defp host_notices do
+      all_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_external_booking_change"}
+      )
     end
 
     defp booking_moved_in_outlook do
@@ -128,11 +135,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncReconciliationTest do
 
     test "a second sweep over the same changes does not tell the host again" do
       {integration, meeting, moved} = booking_moved_in_outlook()
-      organizer_email = meeting.organizer_email
 
       expect_delta([moved])
       assert :ok = DeltaSync.fetch_and_apply(integration)
-      assert_received {:email, %{to: [{_name, ^organizer_email}]}}
+      assert [%{args: %{"meeting_id" => meeting_id}}] = host_notices()
+      assert meeting_id == meeting.id
 
       # A crash before the delta link was stored hands the next sweep the
       # same changes again.
@@ -143,7 +150,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncReconciliationTest do
       assert {:ok, %{calendar_sync_status: :externally_modified}} =
                MeetingQueries.get_meeting(meeting.id)
 
-      refute_received {:email, _email}
+      assert [_only_the_first] = host_notices()
     end
 
     test "does not flag a booking while Tymeslot's own write to it is pending" do
@@ -154,7 +161,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncReconciliationTest do
       assert :ok = DeltaSync.fetch_and_apply(integration)
 
       assert {:ok, %{calendar_sync_status: nil}} = MeetingQueries.get_meeting(meeting.id)
-      refute_received {:email, _email}
+      assert host_notices() == []
     end
 
     # The write finishes while the sweep is still reading and processing, so
@@ -171,7 +178,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncReconciliationTest do
       assert :ok = DeltaSync.fetch_and_apply(integration)
 
       assert {:ok, %{calendar_sync_status: nil}} = MeetingQueries.get_meeting(meeting.id)
-      refute_received {:email, _email}
+      assert host_notices() == []
     end
 
     # The webhook path reads one event rather than a delta, under the same rule.
@@ -191,7 +198,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncReconciliationTest do
                })
 
       assert {:ok, %{calendar_sync_status: nil}} = MeetingQueries.get_meeting(meeting.id)
-      refute_received {:email, _email}
+      assert host_notices() == []
     end
 
     test "flags a booking whose Tymeslot write completed before the sweep began" do
@@ -205,8 +212,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncReconciliationTest do
       assert {:ok, %{calendar_sync_status: :externally_modified}} =
                MeetingQueries.get_meeting(meeting.id)
 
-      organizer_email = meeting.organizer_email
-      assert_received {:email, %{to: [{_name, ^organizer_email}]}}
+      assert [%{args: %{"meeting_id" => meeting_id}}] = host_notices()
+      assert meeting_id == meeting.id
     end
 
     # The sweep is the only way an integration without a Graph subscription

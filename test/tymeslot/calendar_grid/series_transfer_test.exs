@@ -22,7 +22,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
 
   import Mox
 
-  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.SeriesTransfer
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -91,7 +91,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
     do: insert(:calendar_integration, user: user, provider: provider, calendar_paths: paths)
 
   defp move(user, event, integration, calendar_id \\ nil) do
-    CalendarGrid.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
+    Changes.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
   end
 
   # The one-off move's create and delete: a series move must never reach them.
@@ -164,22 +164,22 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
     test "moves an event outside any series on its own", %{user: user} do
       event = insert_row(caldav_integration(user), %{uid: "offsite", provider_event_id: "/o.ics"})
 
-      assert CalendarGrid.ensure_movable(event) == :ok
+      assert Changes.ensure_movable(event) == :ok
     end
 
     test "moves a Google occurrence with its series", %{google: google} do
-      assert CalendarGrid.ensure_movable(google_occurrence(google)) == {:ok, :series}
+      assert Changes.ensure_movable(google_occurrence(google)) == {:ok, :series}
     end
 
     test "moves an Outlook occurrence with its series", %{user: user} do
       outlook = insert(:calendar_integration, user: user, provider: "outlook")
       event = insert_row(outlook, %{uid: "AAMk-occ", recurring_event_id: "AAMk-master"})
 
-      assert CalendarGrid.ensure_movable(event) == {:ok, :series}
+      assert Changes.ensure_movable(event) == {:ok, :series}
     end
 
     test "moves a CalDAV series with itself", %{user: user} do
-      assert CalendarGrid.ensure_movable(caldav_series(caldav_integration(user))) ==
+      assert Changes.ensure_movable(caldav_series(caldav_integration(user))) ==
                {:ok, :series}
     end
 
@@ -193,7 +193,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
           provider_metadata: %{"calendar_item_type" => "RecurringMaster"}
         })
 
-      assert CalendarGrid.ensure_movable(event) == {:error, :recurring_event}
+      assert Changes.ensure_movable(event) == {:error, :recurring_event}
     end
 
     # The grid hands in whatever it last assigned, which may be a copy that
@@ -201,7 +201,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
     test "reads the cached row, not the copy it is handed", %{google: google} do
       event = google_occurrence(google)
 
-      assert CalendarGrid.ensure_movable(%{event | recurring_event_id: nil}) == {:ok, :series}
+      assert Changes.ensure_movable(%{event | recurring_event_id: nil}) == {:ok, :series}
     end
   end
 
@@ -289,7 +289,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
 
   describe "series_move_notes/2, before a series move" do
     test "a Google series within its own account carries everything", %{google: google} do
-      assert CalendarGrid.series_move_notes(google_occurrence(google), google) == {:ok, []}
+      assert Changes.series_move_notes(google_occurrence(google), google) == {:ok, []}
     end
 
     test "a Google series to another account loses its occurrences changed on their own", %{
@@ -298,7 +298,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
     } do
       other = insert(:calendar_integration, user: user, provider: "google")
 
-      assert CalendarGrid.series_move_notes(google_occurrence(google), other) ==
+      assert Changes.series_move_notes(google_occurrence(google), other) ==
                {:ok, [:changed_occurrences_reset]}
     end
 
@@ -306,7 +306,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
       outlook = insert(:calendar_integration, user: user, provider: "outlook")
       event = google_occurrence(outlook, %{provider: "outlook"})
 
-      assert CalendarGrid.series_move_notes(event, outlook) ==
+      assert Changes.series_move_notes(event, outlook) ==
                {:ok, [:changed_or_cancelled_occurrences_reset, :teams_meeting_not_carried]}
     end
 
@@ -319,14 +319,14 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
           attendees: [%{"email" => "guest@example.com"}]
         })
 
-      assert {:ok, notes} = CalendarGrid.series_move_notes(event, outlook)
+      assert {:ok, notes} = Changes.series_move_notes(event, outlook)
       assert List.last(notes) == :guests_reinvited
     end
 
     test "a CalDAV series carries its whole resource", %{user: user} do
       event = caldav_series(caldav_integration(user))
 
-      assert CalendarGrid.series_move_notes(event, caldav_integration(user, "radicale")) ==
+      assert Changes.series_move_notes(event, caldav_integration(user, "radicale")) ==
                {:ok, []}
     end
 
@@ -334,7 +334,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
       other = insert(:calendar_integration, user: user, provider: "google")
       event = google_occurrence(google)
 
-      assert CalendarGrid.series_move_notes(%{event | recurring_event_id: nil}, other) ==
+      assert Changes.series_move_notes(%{event | recurring_event_id: nil}, other) ==
                {:ok, [:changed_occurrences_reset]}
     end
 
@@ -349,13 +349,13 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
 
       unaddressable = caldav_series(caldav_integration(user), %{provider_event_id: nil})
 
-      assert CalendarGrid.series_move_notes(google_occurrence(google), caldav_integration(user)) ==
+      assert Changes.series_move_notes(google_occurrence(google), caldav_integration(user)) ==
                {:error, :cross_provider_series}
 
-      assert CalendarGrid.series_move_notes(exchange_event, exchange) ==
+      assert Changes.series_move_notes(exchange_event, exchange) ==
                {:error, :recurring_event}
 
-      assert CalendarGrid.series_move_notes(unaddressable, caldav_integration(user)) ==
+      assert Changes.series_move_notes(unaddressable, caldav_integration(user)) ==
                {:error, :unaddressable_series}
     end
   end

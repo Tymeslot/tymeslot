@@ -4,6 +4,10 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Live do
   `Navigators.Paged`. The overview offers the meeting types; the schedule
   screen picks the day and the time and, below them on the same screen,
   asks the meeting type's questions and the details, once a time is picked.
+  For a meeting type that offers a series, the series comes between the
+  time and the details on the same screen: Paper keeps two working
+  screens, so the schedule moment collects the series too, and the
+  runtime enters it once the time is known.
   Between them, a meeting type that offers several lengths asks which one
   on a screen of its own; the navigator passes it over for every other.
   Paper has no events of its own.
@@ -26,7 +30,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Live do
       moments: [
         {:overview, collects: [:meeting_type], component: OverviewComponent},
         {:length, collects: [:length], component: LengthComponent},
-        {:schedule, collects: [:slot, :answers, :attendee], component: ScheduleComponent}
+        {:schedule, collects: [:slot, :series, :answers, :attendee], component: ScheduleComponent}
       ],
       outcomes: %{confirmation: ConfirmationComponent, awaiting_payment: :shared}
     ]

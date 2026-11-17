@@ -71,7 +71,9 @@ defmodule Tymeslot.Meetings.Recipient do
   participant, and `[]` once they have all cancelled: its people are its
   participant rows, never its `attendee_*` fields. A solo meeting returns a
   single recipient built from its `attendee_*` fields (or `[]` if it has no
-  attendee email).
+  attendee email). A meeting the host manages (`HostManaged.managed?/1`)
+  returns `[]`: it has no booker, and the person in its attendee fields is a
+  guest, told with the other guests.
   """
   @spec for_meeting(MeetingSchema.t()) :: [t()]
   def for_meeting(%MeetingSchema{} = meeting) do
@@ -189,6 +191,7 @@ defmodule Tymeslot.Meetings.Recipient do
   defp seat_url(token, action), do: UrlBuilder.base_url() <> "/seat/#{token}/#{action}"
 
   defp attendee_recipients(%MeetingSchema{attendee_email: email}) when email in [nil, ""], do: []
+  defp attendee_recipients(%MeetingSchema{managed_by_host: true}), do: []
 
   defp attendee_recipients(meeting) do
     [

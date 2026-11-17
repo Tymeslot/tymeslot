@@ -8,20 +8,22 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   alias Tymeslot.BookingPages
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Security.RateLimiter
 
   alias Phoenix.LiveView
 
+  alias TymeslotWeb.Components.Dashboard.Meetings.CancelSeriesModal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Dashboard.Meetings.HostMoveModal
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents
+  alias TymeslotWeb.Components.Dashboard.Meetings.SeriesModal
   alias TymeslotWeb.Dashboard.BookingsManagement.CalendarMove
   alias TymeslotWeb.Dashboard.BookingsManagement.Cancellation
   alias TymeslotWeb.Dashboard.BookingsManagement.GuestActions
   alias TymeslotWeb.Dashboard.BookingsManagement.Modals
   alias TymeslotWeb.Dashboard.BookingsManagement.RequestActions
   alias TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest
+  alias TymeslotWeb.Dashboard.BookingsManagement.SeriesActions
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.RateLimit
 
@@ -42,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> assign(:cancel_refund_error, %{})
      |> assign(:cancel_refund_form, %{choice: "full", amount: "", acknowledged: false})
      |> assign(:sending_reschedule, nil)
-     |> assign(:answering_request, nil)
+     |> assign(:answering_request, MapSet.new())
      |> assign(:answering_opts, %{})
      |> assign(:move_offers, %{})
      |> assign(:awaiting_approval_count, 0)
@@ -66,7 +68,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> assign(:guest_stage_error, nil)
      |> assign(:guest_stage_input, "")
      |> assign(:add_guests_existing, [])
-     |> assign(:host_move_meeting, nil)}
+     |> assign(:host_move_meeting, nil)
+     |> SeriesActions.mount()}
   end
 
   @impl Phoenix.LiveComponent
@@ -160,6 +163,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
       end
     )
   end
+
+  def handle_event("series:" <> _action = event, params, socket),
+    do: SeriesActions.handle_event(event, params, socket, &load_meetings/1)
 
   def handle_event("show_cancel_modal", %{"id" => _meeting_id} = params, socket),
     do: {:noreply, Cancellation.show(socket, params, &Policy.can_cancel_meeting?/1)}
@@ -283,16 +289,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   # not the one write handler in the module a click loop can drive unbounded.
   def handle_event("approve_request", %{"id" => _id} = params, socket) do
     RateLimit.with_rate_limit(
-      RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)),
+      RateLimiter.check(:dashboard_meeting_approval, socket.assigns.current_user.id),
       socket,
-      fn ->
-        RequestActions.answer(socket, params, &Approval.approve/1,
-          success:
-            dgettext("dashboard_bookings", "Booking confirmed. The invitee has been told."),
-          failure: dgettext("dashboard_bookings", "That request could not be approved."),
-          reload: &load_meetings/1
-        )
-      end
+      fn -> RequestActions.approve(socket, params, &load_meetings/1) end
     )
   end
 
@@ -339,19 +338,15 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   def handle_event("confirm_decline_request", params, socket) do
     RateLimit.with_rate_limit(
-      RateLimiter.check(:meeting_approval, dashboard_approval_key(socket)),
+      RateLimiter.check(:dashboard_meeting_approval, socket.assigns.current_user.id),
       socket,
       fn ->
-        reason = sanitize_decline_reason(Map.get(params, "reason"))
+        reason = RequestActions.decline_reason(Map.get(params, "reason"))
 
         ModalHook.with_modal_data(socket, :decline_request, fn meeting ->
           socket
           |> ModalHook.hide_modal(:decline_request)
-          |> RequestActions.answer(%{"id" => meeting.id}, &Approval.decline(&1, reason),
-            success: dgettext("dashboard_bookings", "Request declined. The slot is free again."),
-            failure: dgettext("dashboard_bookings", "That request could not be declined."),
-            reload: &load_meetings/1
-          )
+          |> RequestActions.decline(meeting, reason, &load_meetings/1)
         end)
       end
     )
@@ -418,7 +413,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         cancelling={@cancelling_meeting != nil}
         decline_request={@decline_request_modal_data}
         show_decline={@show_decline_request_modal || false}
-        declining={@answering_request != nil}
+        declining={
+          @decline_request_modal_data != nil and
+            RequestActions.answering?(@answering_request, @decline_request_modal_data.id)
+        }
         reschedule_request={@reschedule_request_modal_data}
         show_reschedule={@show_reschedule_request_modal || false}
         sending_reschedule={@sending_reschedule}
@@ -432,6 +430,21 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         existing_guests={@add_guests_existing}
         profile={@profile}
         time_format={@time_format}
+        target={@myself}
+      />
+
+      <SeriesModal.series_modal
+        id="series-modal"
+        show={@show_series_modal}
+        overview={@series_modal_data}
+        timezone={Helpers.get_meeting_timezone(nil, @profile)}
+        time_format={@time_format}
+        target={@myself}
+      />
+      <CancelSeriesModal.cancel_series_modal
+        id="cancel-series-modal"
+        show={@show_cancel_series_modal}
+        data={@cancel_series_modal_data}
         target={@myself}
       />
 
@@ -538,20 +551,4 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   defp validate_filter(filter) when filter in @valid_filters, do: {:ok, filter}
   defp validate_filter(_filter), do: {:error, "Invalid filter option"}
-
-  # Shares the emailed link's per-answer limiter (`meeting_approval:...`) but
-  # under a `"dashboard:"`-prefixed identifier keyed on the host, since the
-  # dashboard has an authenticated user and no client IP: the two surfaces
-  # cannot exhaust each other's budget.
-  defp dashboard_approval_key(socket), do: "dashboard:#{socket.assigns.current_user.id}"
-
-  # A crafted socket frame can send a non-binary `reason` (e.g. a
-  # `reason[x]=y` payload arrives as a map, not a string) or one containing a
-  # null byte, which PostgreSQL rejects even though it is valid UTF-8.
-  # Anything but a clean string is treated as no reason given rather than
-  # reaching `Approval.decline/2` and crashing the LiveView.
-  defp sanitize_decline_reason(reason) when is_binary(reason),
-    do: String.replace(reason, "\x00", "")
-
-  defp sanitize_decline_reason(_reason), do: nil
 end

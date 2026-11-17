@@ -67,6 +67,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     |> maybe_put_payment(assigns)
     |> maybe_put_max_participants(assigns)
     |> put_fixed_dates(assigns)
+    |> put_series(assigns)
     |> Map.put("max_guests_per_booking", to_param(Map.get(assigns, :guest_limit)))
   end
 
@@ -211,6 +212,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   # one-to-one type, so the setting posts as it is, whichever the type is.
   defp put_fixed_dates(params, assigns),
     do: Map.put(params, "fixed_dates", to_string(Map.get(assigns, :fixed_dates) == true))
+
+  # The series as the form holds it. A form that never set up the series
+  # state posts none, so the stored series is left alone.
+  defp put_series(params, %{series: series}) do
+    Map.merge(params, %{
+      "series_mode" => to_param(series.series_mode),
+      "series_frequency" => to_param(series.series_frequency),
+      "series_interval" => to_param(series.series_interval),
+      "series_min_occurrences" => to_param(series.series_min_occurrences),
+      "series_max_occurrences" => to_param(series.series_max_occurrences),
+      "series_required" => to_string(series.series_required)
+    })
+  end
+
+  defp put_series(params, _assigns), do: params
 
   defp stored_max_participants(nil), do: "1"
   defp stored_max_participants(type), do: to_string(type.max_participants)

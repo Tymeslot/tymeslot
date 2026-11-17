@@ -45,7 +45,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   require Logger
 
   alias Tymeslot.Analytics
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Availability.ExtraAvailability
   alias Tymeslot.Clock
   alias Tymeslot.FinancialRetention
@@ -117,7 +117,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       args_key: "unverified_account_retention_days",
       config_key: :unverified_account_days,
       default_days: 30,
-      prune: {Auth, :purge_unverified_accounts}
+      prune: {AccountDeletion, :purge_unverified_accounts}
     },
     %{
       name: "invitee data",

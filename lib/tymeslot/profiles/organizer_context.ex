@@ -61,16 +61,25 @@ defmodule Tymeslot.Profiles.OrganizerContext do
   defp load_meeting_types(profile), do: MeetingTypes.get_public_meeting_types(profile.user_id)
 
   defp build_organizer_context(profile, address) do
-    meeting_types = profile.meeting_types
-    display_name = profile.full_name || get_user_name_from_profile(profile) || profile.username
-
     %{
       username: BookingPages.public_address(profile) || address,
       profile: profile,
       user_id: profile.user_id,
-      meeting_types: meeting_types,
-      page_title: page_title(profile, display_name)
+      meeting_types: profile.meeting_types,
+      page_title: page_title(profile)
     }
+  end
+
+  @doc """
+  The booking page's title for `profile`, in the current Gettext locale: the
+  page's name and the host's for a profile presenting one of its booking
+  pages, otherwise "Schedule with <host>". Built again once the page's
+  language and translated texts are settled.
+  """
+  @spec page_title(ProfileSchema.t()) :: String.t()
+  def page_title(%ProfileSchema{} = profile) do
+    display_name = profile.full_name || get_user_name_from_profile(profile) || profile.username
+    page_title(profile, display_name)
   end
 
   # A booking page is named for what it offers, and the host stays the person.

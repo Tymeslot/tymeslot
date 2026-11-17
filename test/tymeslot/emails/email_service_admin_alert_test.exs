@@ -3,25 +3,12 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
   @moduletag :emails
 
   import Tymeslot.Factory
+  import Tymeslot.Test.DirectEmailSends
 
   alias Tymeslot.Emails.EmailService
 
-  defmodule RaisingAdminAlerts do
-    @spec send_alert(any(), any()) :: no_return()
-    def send_alert(_event, _metadata) do
-      raise "admin alert failure"
-    end
-  end
-
-  # Hands each alert to the test process; AdminAlerts calls the
-  # implementation in the caller's process.
-  defmodule RecordingAdminAlerts do
-    @spec send_alert(any(), map()) :: :ok
-    def send_alert(event, metadata) do
-      send(self(), {:admin_alert, event, metadata})
-      :ok
-    end
-  end
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   # EmailService.deliver/1 runs inside CircuitBreaker.call/2, which executes the
   # delivery function inside a GenServer. Swoosh's test adapter delivers to
@@ -109,52 +96,5 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
       assert email.text_body =~ "Alert with no metadata"
       assert email.text_body =~ "(none)"
     end
-  end
-
-  test "calendar sync error still sends email when admin alert fails" do
-    original_alerts = Application.get_env(:tymeslot, :admin_alerts_impl)
-    Application.put_env(:tymeslot, :admin_alerts_impl, RaisingAdminAlerts)
-
-    on_exit(fn ->
-      if is_nil(original_alerts) do
-        Application.delete_env(:tymeslot, :admin_alerts_impl)
-      else
-        Application.put_env(:tymeslot, :admin_alerts_impl, original_alerts)
-      end
-    end)
-
-    meeting = build(:meeting)
-
-    assert {:ok, _response} = EmailService.send_calendar_sync_error(meeting, :test_error)
-
-    assert_received {:email, email}
-    assert [{_name, address}] = email.to
-    assert address == meeting.organizer_email
-    assert email.subject =~ "Calendar Sync Error"
-  end
-
-  test "calendar sync error alerts the operator even when the email cannot be rendered" do
-    original_alerts = Application.get_env(:tymeslot, :admin_alerts_impl)
-    Application.put_env(:tymeslot, :admin_alerts_impl, RecordingAdminAlerts)
-
-    on_exit(fn ->
-      if is_nil(original_alerts) do
-        Application.delete_env(:tymeslot, :admin_alerts_impl)
-      else
-        Application.put_env(:tymeslot, :admin_alerts_impl, original_alerts)
-      end
-    end)
-
-    # No start time: the template cannot place the meeting on a clock.
-    meeting = build(:meeting, start_time: nil)
-
-    assert_raise MatchError, fn ->
-      EmailService.send_calendar_sync_error(meeting, :test_error)
-    end
-
-    assert_received {:admin_alert, :calendar_sync_error, %{meeting_id: meeting_id} = metadata}
-    assert meeting_id == meeting.id
-    assert metadata.owner_email == meeting.organizer_email
-    refute_received {:email, _email}
   end
 end

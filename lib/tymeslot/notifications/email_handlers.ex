@@ -22,6 +22,7 @@ defmodule Tymeslot.Notifications.EmailHandlers do
   alias Tymeslot.Notifications.Email.RescheduleEmails
   alias Tymeslot.Notifications.Email.RescheduleRequestEmails
   alias Tymeslot.Notifications.Email.SeatJobs
+  alias Tymeslot.Notifications.Email.SeriesEmails
 
   # The handlers that declare some of their discards an expected end of the
   # job. `AdminEmails` discards nothing of its own.
@@ -38,7 +39,8 @@ defmodule Tymeslot.Notifications.EmailHandlers do
     PollEmails,
     RescheduleEmails,
     RescheduleRequestEmails,
-    SeatJobs
+    SeatJobs,
+    SeriesEmails
   ]
 
   @doc """

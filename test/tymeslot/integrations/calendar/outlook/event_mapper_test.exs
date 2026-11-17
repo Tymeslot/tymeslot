@@ -84,6 +84,32 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
 
       assert result["showAs"] == "tentative"
     end
+
+    for show_as <- ~w(oof tentative workingElsewhere) do
+      test "writes back a stored #{show_as} on a busy event" do
+        result = format(timed(%{transparency: "opaque", show_as: unquote(show_as)}))
+
+        assert result["showAs"] == unquote(show_as)
+      end
+    end
+
+    test "free wins over a stored blocking state" do
+      result = format(timed(%{transparency: "transparent", show_as: "oof"}))
+
+      assert result["showAs"] == "free"
+    end
+
+    test "a stored free on an event made busy is busy" do
+      result = format(timed(%{transparency: "opaque", show_as: "free"}))
+
+      assert result["showAs"] == "busy"
+    end
+
+    test "a stored state Graph does not block with is busy" do
+      result = format(timed(%{transparency: "opaque", show_as: "unknown"}))
+
+      assert result["showAs"] == "busy"
+    end
   end
 
   describe "format_event_data/1 — sensitivity (visibility)" do
@@ -404,6 +430,17 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
 
       assert [%{"emailAddress" => %{"address" => "ada@example.com"}}] = result["attendees"]
     end
+  end
+
+  defp timed(attrs) do
+    Map.merge(
+      %{
+        summary: "Away",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z]
+      },
+      attrs
+    )
   end
 
   # Every payload here has a rule Graph can express, or none.

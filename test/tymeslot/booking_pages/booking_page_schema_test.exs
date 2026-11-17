@@ -37,7 +37,19 @@ defmodule Tymeslot.BookingPages.BookingPageSchemaTest do
       assert {"is reserved", _opts} = page_changeset(%{name: "x", slug: slug}).errors[:slug]
     end
 
+    # `/:username/series/:series_uid` is a booking series' page.
+    assert {"is reserved", _opts} = page_changeset(%{name: "x", slug: "series"}).errors[:slug]
+
     assert page_changeset(%{name: "Dash", slug: "dashboard"}).valid?
+  end
+
+  test "refuses a legacy duration link, which already names a meeting type" do
+    for slug <- ~w(30min 120min) do
+      assert {"is reserved", _opts} = page_changeset(%{name: "x", slug: slug}).errors[:slug]
+    end
+
+    assert page_changeset(%{name: "x", slug: "30mins"}).valid?
+    assert page_changeset(%{name: "x", slug: "min30"}).valid?
   end
 
   test "refuses an unknown theme" do

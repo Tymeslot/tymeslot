@@ -13,12 +13,16 @@ defmodule Tymeslot.Emails.GroupParticipantEmailsTest do
   @moduletag :bookings
 
   import Tymeslot.Factory
+  import Tymeslot.Test.DirectEmailSends
 
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.EmailService.AppointmentEmails
   alias Tymeslot.Emails.Templates.AppointmentCancellation
   alias Tymeslot.Emails.Templates.AppointmentConfirmation
   alias Tymeslot.Meetings.Recipient
+
+  # Exercises sends directly rather than through the job that makes them.
+  setup :allow_direct_sends
 
   setup do
     Application.put_env(:swoosh, :shared_test_process, self())

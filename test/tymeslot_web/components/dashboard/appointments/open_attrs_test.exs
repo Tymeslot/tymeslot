@@ -22,12 +22,10 @@ defmodule TymeslotWeb.Components.Dashboard.Appointments.OpenAttrsTest do
            }
   end
 
-  test "leaves the keys to a hook that already turns them into a click" do
-    attrs = OpenAttrs.build("show_event", %{"event-id" => 7}, keys: :hook)
-
-    assert attrs["role"] == "button"
-    assert attrs["tabindex"] == "0"
-    refute Map.has_key?(attrs, "data-keyboard-click")
+  test "refuses a keys mode it does not know, rather than binding no keyboard" do
+    assert_raise FunctionClauseError, fn ->
+      OpenAttrs.build("show_event", %{"event-id" => 7}, keys: :hook)
+    end
   end
 
   test "binds the click alone for an element with its own keyboard route" do

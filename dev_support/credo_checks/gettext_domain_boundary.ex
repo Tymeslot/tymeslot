@@ -14,8 +14,9 @@ defmodule CredoChecks.GettextDomainBoundary do
   ## Known domains
 
   Catalogues are split small and per app area, so that a change to one area means
-  reading one small `.po`. The `:domains` param below is the enforced list, and
-  the `tymeslot-translations` skill describes what belongs in each domain.
+  reading one small `.po`. The `:domains` param below is the enforced list and
+  the one source of truth for it; a string belongs in the domain the code
+  around it already uses.
   `CredoChecks.GettextDomainBoundaryTest` fails if this list and the `.pot`
   templates in `priv/gettext` disagree, so adding a domain means extracting it
   and listing it here in the same change.
@@ -53,27 +54,29 @@ defmodule CredoChecks.GettextDomainBoundary do
     category: :design,
     param_defaults: [
       domains: ~w(
-        booking booking_confirmation booking_manage booking_polls booking_sessions
+        booking booking_confirmation booking_manage booking_polls booking_series booking_sessions
         booking_voice embed errors
         meeting_types
         common
         errors_input
         datetime booking_errors booking_payments
         emails emails_account emails_booking emails_booking_requests
-        emails_booking_changes
+        emails_booking_changes emails_booking_series
         emails_integrations emails_payments emails_polls
         auth auth_invitation auth_oauth account onboarding onboarding_wizard
         dashboard_common
         dashboard_home dashboard_meeting_types dashboard_meeting_form dashboard_meeting_lengths
         dashboard_meeting_questions dashboard_meeting_locations dashboard_meeting_fixed_dates
         dashboard_availability dashboard_availability_policy dashboard_availability_time_off
-        dashboard_calendar_settings dashboard_calendar
-        dashboard_calendar_events dashboard_calendar_modals dashboard_calendar_repeat dashboard_group_events
+        dashboard_calendar_settings dashboard_calendar dashboard_calendar_events
+        dashboard_calendar_repeat dashboard_group_events
         dashboard_integrations dashboard_calendar_recurrence dashboard_calendar_import
-        dashboard_calendar_location
+        dashboard_calendar_editing dashboard_calendar_booking
+        dashboard_calendar_views dashboard_calendar_power
         dashboard_calendar_providers
         dashboard_automation dashboard_automation_chat dashboard_appearance
-        dashboard_booking_pages
+        dashboard_booking_series
+        dashboard_booking_pages dashboard_languages
         dashboard_embed dashboard_payments dashboard_bookings dashboard_profile
         dashboard_analytics dashboard_admin dashboard_admin_users dashboard_video dashboard_polls
         integrations

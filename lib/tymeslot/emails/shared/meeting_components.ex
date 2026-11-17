@@ -20,6 +20,8 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
     (`attendee_message_box/2`).
   - `Meeting.Notes` — the organiser-note callout for guest-facing emails
     (`organizer_note_box/2`).
+  - `Meeting.Description` — the description the organiser wrote for the
+    meeting (`description_section/1`, `description_text/1`).
   - `Meeting.CustomAnswers` — the snapshotted custom-field answers table
     (`custom_answers_section/1`).
   """
@@ -28,6 +30,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
     ActionsBar,
     Attendee,
     CustomAnswers,
+    Description,
     Hero,
     Notes,
     VideoSection
@@ -47,6 +50,8 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   defdelegate counterpart_section(intent, details), to: Attendee
   defdelegate attendee_message_box(intent, message), to: Attendee
   defdelegate organizer_note_box(intent, note), to: Notes
+  defdelegate description_section(details), to: Description, as: :section
+  defdelegate description_text(details), to: Description, as: :text_section
 
   defdelegate custom_answers_section(appointment_details), to: CustomAnswers
 end

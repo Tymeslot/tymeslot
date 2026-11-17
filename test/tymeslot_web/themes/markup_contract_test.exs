@@ -16,7 +16,9 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
   journey collects them; a moment's questions are all answered, however
   many it shows at a time, before the walk leaves it. Each theme is walked a
   second time with the booked type offering three lengths, so a journey that
-  asks the length is held to marking it too.
+  asks the length is held to marking it too, and a third with the booked
+  type offering a weekly series, so a journey that asks the series is held
+  to marking its session count.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -26,6 +28,7 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
 
   import Ecto.Query, only: [from: 2]
   import Mox
+  import Tymeslot.ConfigTestHelpers, only: [setup_config: 2]
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
   import Tymeslot.Factory
 
@@ -46,6 +49,7 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
   @max_moments 12
   @answers %{"mc-company" => "Acme Corp", "mc-recorded" => true}
   @length_picked 60
+  @series_picked 3
 
   setup :verify_on_exit!
 
@@ -97,12 +101,40 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
 
       assert DateTime.diff(meeting.end_time, meeting.start_time, :minute) == meeting.duration
     end
+
+    # The type booked is a weekly series of two to four sessions. A journey
+    # with a moment asking the series must mark the session count's controls
+    # and take a change through them, and the booking makes the sessions
+    # chosen; every shipped theme asks it. A journey without such a moment (a
+    # fixture's) books the one session picked.
+    @tag :capture_log
+    test "#{theme.name}: a type offering a series marks the series", %{conn: conn} do
+      setup_config(:tymeslot, feature_access_checker: Tymeslot.Features.DefaultAccessChecker)
+
+      {seen, view, user} =
+        walk_booking(conn, unquote(theme.id), "contract-series-#{unquote(theme.slug)}", [],
+          series: true
+        )
+
+      asks_series? = Progress.moment_for(live_assigns(view).journey, :series) != nil
+      unless unquote(theme.fixture), do: assert(asks_series?, "the theme never asks the series")
+
+      booked = Repo.all(from(m in MeetingSchema, where: m.organizer_user_id == ^user.id))
+
+      if asks_series? do
+        assert seen == [:answers, :attendee, :meeting_type, :series, :slot]
+        assert length(booked) == @series_picked
+      else
+        assert seen == [:answers, :attendee, :meeting_type, :slot]
+        assert length(booked) == 1
+      end
+    end
   end
 
-  defp walk_booking(conn, theme_id, username, extra_lengths \\ []) do
+  defp walk_booking(conn, theme_id, username, extra_lengths \\ [], opts \\ []) do
     %{user: user, profile: profile} = seed_booking_account(theme_id, username, @timezone)
 
-    asked = ask_questions(user, extra_lengths)
+    asked = ask_questions(user, extra_lengths, Keyword.get(opts, :series, false))
     insert(:meeting_type, user: user, duration_minutes: 60, name: "Long Chat", is_active: true)
 
     ctx = %{
@@ -127,28 +159,52 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
   defp walk(view, ctx, seen, moments_left) do
     assigns = live_assigns(view)
 
-    case Enum.find(assigns.journey.moments, &(&1.key == assigns.current_state)) do
+    case next_moment(assigns, List.flatten(seen)) do
       nil ->
         assert has_element?(view, "[data-intent='restart']"),
                "the #{inspect(assigns.current_state)} outcome offers no fresh start"
 
         seen
 
-      moment ->
-        facts =
-          Enum.filter(moment.collects, fn fact ->
-            Map.fetch!(Journey.facts(), fact).required?(assigns)
-          end)
+      {moment, current?} ->
+        facts = required_facts(moment, assigns)
 
         Enum.each(facts, &check_and_do(view, &1, ctx, assigns))
 
         # The way on where the theme renders one; else the driver asserts that
         # the next moment opened by itself, and fails by name if it did not.
-        unless :attendee in facts, do: BookingDriver.continue(view)
+        # A moment the page already passed has no way on of its own to take.
+        if current? and :attendee not in facts, do: BookingDriver.continue(view)
 
         walk(view, ctx, [facts | seen], moments_left - 1)
     end
   end
+
+  # The moment to check next: one still on screen whose facts the walk has
+  # not checked, which a page that moves on by itself can pass before the
+  # walk reaches it (a series every session of which its first check found
+  # available), else the current one; nil on an outcome.
+  defp next_moment(assigns, seen) do
+    journey = assigns.journey
+
+    case Enum.find(journey.moments, &(&1.key == assigns.current_state)) do
+      nil ->
+        nil
+
+      current ->
+        passed =
+          journey.navigator.visible(journey, assigns)
+          |> Enum.map(fn {moment, _state} -> moment end)
+          |> Enum.find(fn moment ->
+            moment.key != current.key and required_facts(moment, assigns) -- seen != []
+          end)
+
+        if passed, do: {passed, false}, else: {current, true}
+    end
+  end
+
+  defp required_facts(moment, assigns),
+    do: Enum.filter(moment.collects, &Map.fetch!(Journey.facts(), &1).required?(assigns))
 
   defp check_and_do(view, :meeting_type, ctx, _assigns) do
     assert Enum.sort(attribute(view, "[data-fact='meeting_type']", "data-value")) == ctx.offered,
@@ -236,6 +292,30 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
     wait_until(fn -> has_element?(view, "[data-intent='restart']") end, 10_000)
   end
 
+  # The series' check answers first; then each count control is marked with
+  # the count it sets and sends series_set_count, and one more session
+  # taken through its mark is the choice the booking holds.
+  defp check_and_do(view, :series, _ctx, _assigns) do
+    render_async(view)
+
+    counts = attribute(view, "[data-fact='series']", "data-value")
+    events = attribute(view, "[data-fact='series']", "phx-click")
+
+    assert counts != [], "a moment collecting the series marks no series choice"
+
+    assert length(events) == length(counts) and Enum.all?(events, &(&1 =~ "series_set_count")),
+           "a series count control does not send series_set_count"
+
+    view
+    |> element("[data-fact='series'][data-value='#{@series_picked}']")
+    |> render_click()
+
+    render_async(view)
+
+    assert live_assigns(view).series_choice.count == @series_picked,
+           "the series control marked #{@series_picked} did not choose #{@series_picked} sessions"
+  end
+
   defp check_and_do(_view, fact, _ctx, _assigns),
     do: flunk("the markup contract has no rule for the #{inspect(fact)} fact; add one here")
 
@@ -269,29 +349,45 @@ defmodule TymeslotWeb.Themes.MarkupContractTest do
     end
   end
 
-  defp ask_questions(user, extra_lengths) do
+  defp ask_questions(user, extra_lengths, series?) do
     meeting_type = Repo.get_by!(MeetingTypeSchema, user_id: user.id)
 
+    series =
+      if series?,
+        do: %{
+          "series_mode" => "recurring",
+          "series_frequency" => "weekly",
+          "series_interval" => 1,
+          "series_min_occurrences" => 2,
+          "series_max_occurrences" => 4,
+          # A journey without a series moment books the one session picked.
+          "series_required" => false
+        },
+        else: %{}
+
     {:ok, meeting_type} =
-      MeetingTypes.update_meeting_type(meeting_type, %{
-        "extra_lengths_minutes" => extra_lengths,
-        "custom_fields" => [
-          %{
-            "id" => "mc-company",
-            "type" => "short_text",
-            "label" => "Company",
-            "required" => true,
-            "position" => 0
-          },
-          %{
-            "id" => "mc-recorded",
-            "type" => "yes_no",
-            "label" => "May we record the call?",
-            "required" => true,
-            "position" => 1
-          }
-        ]
-      })
+      MeetingTypes.update_meeting_type(
+        meeting_type,
+        Map.merge(series, %{
+          "extra_lengths_minutes" => extra_lengths,
+          "custom_fields" => [
+            %{
+              "id" => "mc-company",
+              "type" => "short_text",
+              "label" => "Company",
+              "required" => true,
+              "position" => 0
+            },
+            %{
+              "id" => "mc-recorded",
+              "type" => "yes_no",
+              "label" => "May we record the call?",
+              "required" => true,
+              "position" => 1
+            }
+          ]
+        })
+      )
 
     meeting_type
   end
