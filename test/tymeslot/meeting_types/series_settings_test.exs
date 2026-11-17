@@ -6,6 +6,8 @@ defmodule Tymeslot.MeetingTypes.SeriesSettingsTest do
   import Tymeslot.ConfigTestHelpers
 
   alias Ecto.Changeset
+  alias Tymeslot.BookingSeries.Check
+  alias Tymeslot.BookingSeries.Dates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.SeriesSettings
 
@@ -115,34 +117,75 @@ defmodule Tymeslot.MeetingTypes.SeriesSettingsTest do
       refute rhythm(:weekly, 3, 2, 19).valid?
     end
 
-    test "monthly fits 13 sessions, which twelve monthly steps can hold, and refuses 14" do
-      assert rhythm(:monthly, 1, 2, 13).valid?
+    test "monthly fits 12 sessions (eleven steps) and refuses 13, which twelve steps can overrun" do
+      assert rhythm(:monthly, 1, 2, 12).valid?
 
-      cs = rhythm(:monthly, 1, 2, 14)
+      cs = rhythm(:monthly, 1, 2, 13)
       assert [{_msg, opts}] = errors(cs, :series_max_occurrences)
-      assert opts[:max] == 13
+      assert opts[:max] == 12
     end
 
-    test "every 2, 3 and 4 months fit 7, 5 and 4 sessions" do
-      for {interval, fitting} <- [{2, 7}, {3, 5}, {4, 4}] do
+    test "every 2, 3 and 4 months fit 6, 4 and 3 sessions" do
+      for {interval, fitting} <- [{2, 6}, {3, 4}, {4, 3}] do
         assert rhythm(:monthly, interval, 2, fitting).valid?
         refute rhythm(:monthly, interval, 2, fitting + 1).valid?
       end
     end
 
     test "a minimum that cannot fit is refused on the minimum too" do
-      cs = rhythm(:monthly, 1, 14, 15)
+      cs = rhythm(:monthly, 1, 13, 14)
 
       assert [{_msg, opts}] = errors(cs, :series_min_occurrences)
-      assert opts[:max] == 13
+      assert opts[:max] == 12
       assert [{_msg, _opts}] = errors(cs, :series_max_occurrences)
     end
 
     test "a fixed count that cannot fit is reported once, on the maximum" do
-      cs = rhythm(:monthly, 1, 14, 14)
+      cs = rhythm(:monthly, 1, 13, 13)
 
       assert errors(cs, :series_min_occurrences) == []
       assert [{_msg, _opts}] = errors(cs, :series_max_occurrences)
+    end
+
+    test "the largest count allowed fits the span from every first date of a year" do
+      span = Check.span_days()
+
+      overruns =
+        for zone <- ["Europe/Berlin", "Australia/Sydney"],
+            frequency <- [:daily, :weekly, :monthly],
+            interval <- SeriesSettings.intervals(),
+            count = min(SeriesSettings.max_fitting_count(frequency, interval), 26),
+            day <- 0..365,
+            first = DateTime.new!(Date.add(~D[2027-01-01], day), ~T[17:30:00], zone),
+            first = DateTime.shift_zone!(first, "Etc/UTC"),
+            last = List.last(Dates.recurring_starts(first, frequency, interval, count, zone)),
+            DateTime.compare(last, DateTime.add(first, span, :day)) == :gt,
+            do: {zone, frequency, interval, DateTime.to_date(first)}
+
+      assert overruns == []
+    end
+
+    test "one more session than allowed overruns the span from some first date" do
+      span = Check.span_days()
+
+      fits_everywhere? = fn frequency, interval, count ->
+        Enum.all?(0..365, fn day ->
+          first = DateTime.new!(Date.add(~D[2027-01-01], day), ~T[17:30:00], "Etc/UTC")
+          last = List.last(Dates.recurring_starts(first, frequency, interval, count, "Etc/UTC"))
+          DateTime.compare(last, DateTime.add(first, span, :day)) != :gt
+        end)
+      end
+
+      capped =
+        for frequency <- [:weekly, :monthly],
+            interval <- SeriesSettings.intervals(),
+            count = SeriesSettings.max_fitting_count(frequency, interval),
+            count < 26,
+            do: {frequency, interval, count}
+
+      assert capped != []
+      # A cap one session short of what always fits would refuse a bookable series.
+      assert Enum.filter(capped, fn {f, i, c} -> fits_everywhere?.(f, i, c + 1) end) == []
     end
 
     test "daily rhythms always fit the count bounds" do

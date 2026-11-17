@@ -307,12 +307,17 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
   end
 
   # Every later session must start within `Check.span_days/0` (365) of the
-  # first, so a recurring rhythm caps how many sessions a series can hold.
-  # Only a count that can never fit is refused. Daily and weekly steps are
-  # exact. Monthly steps keep the weekday ordinal, so twelve of them span 364
-  # or 371 days depending on the dates, and thirteen at least 392: twelve
-  # months can fit, thirteen never do.
-  @span_months 12
+  # first, so a recurring rhythm caps how many sessions a series can hold. A
+  # count is refused when it fails for any first date, since a fixed package
+  # at that count could not be booked from those dates at all. Daily and
+  # weekly steps are whole days in the host's wall-clock time, so the cap is
+  # exact; a clock change moves a start by an hour at most, and no weekly cap
+  # lands within an hour of the span (every 4 weeks, 14 sessions: 364 days).
+  # Monthly steps keep the weekday ordinal, so their length in days varies:
+  # eleven months always fit (at most 343 days), twelve span 364 to 371
+  # depending on the first date, so a series may step at most eleven months
+  # past its first session.
+  @span_months 11
 
   defp validate_span(changeset, :recurring) do
     frequency = get_field(changeset, :series_frequency)
@@ -338,7 +343,7 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
   @doc """
   The most sessions a recurring series at `frequency` every `interval` can
   hold with every one inside `Tymeslot.BookingSeries.Check.span_days/0` of
-  the first, or nil for a rhythm that is not valid.
+  the first, whatever the first date, or nil for a rhythm that is not valid.
   """
   @spec max_fitting_count(atom(), term()) :: pos_integer() | nil
   def max_fitting_count(:monthly, interval) when interval in @intervals,
