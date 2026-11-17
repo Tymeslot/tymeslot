@@ -881,3 +881,8 @@ msgstr "E-Mail-Bestätigung lässt sich nicht mit Zahlungen kombinieren"
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require email confirmation"
 msgstr "Gruppenbuchungen können keine E-Mail-Bestätigung erfordern"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "would give a reserved booking link; choose another name or set a custom link"
+msgstr "ergäbe einen reservierten Buchungslink; wählen Sie einen anderen Namen oder legen Sie einen benutzerdefinierten Link fest"

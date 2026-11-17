@@ -883,3 +883,8 @@ msgstr "la conferma dell'email non può essere combinata con il pagamento"
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require email confirmation"
 msgstr "le prenotazioni di gruppo non possono richiedere la conferma dell'email"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "would give a reserved booking link; choose another name or set a custom link"
+msgstr "darebbe un link di prenotazione riservato; scegli un altro nome o imposta un link personalizzato"

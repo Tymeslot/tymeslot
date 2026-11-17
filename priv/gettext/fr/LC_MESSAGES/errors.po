@@ -881,3 +881,8 @@ msgstr "la confirmation de l’adresse e-mail n’est pas compatible avec le pai
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require email confirmation"
 msgstr "les réservations de groupe ne peuvent pas exiger de confirmation de l’adresse e-mail"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "would give a reserved booking link; choose another name or set a custom link"
+msgstr "donnerait un lien de réservation réservé ; choisissez un autre nom ou définissez un lien personnalisé"

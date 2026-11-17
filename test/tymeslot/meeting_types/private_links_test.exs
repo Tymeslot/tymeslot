@@ -12,6 +12,7 @@ defmodule Tymeslot.MeetingTypes.PrivateLinksTest do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.Repo
 
   describe "effective_slug/1" do
     test "derives from the name when no custom slug is set" do
@@ -171,6 +172,78 @@ defmodule Tymeslot.MeetingTypes.PrivateLinksTest do
 
       assert {:ok, reverted} = MeetingTypes.set_private(updated, false)
       assert reverted.is_private == false
+    end
+  end
+
+  describe "a name whose derived slug is reserved" do
+    @reserved_link "would give a reserved booking link; choose another name or set a custom link"
+    @reserved_names ["Thank you", "Poll", "30min"]
+
+    defp type_attrs(user, extra),
+      do: Map.merge(%{name: "Intro", duration_minutes: 30, user_id: user.id}, extra)
+
+    test "is refused on the name when creating a type" do
+      user = insert(:user)
+
+      for name <- @reserved_names do
+        assert {:error, cs} = MeetingTypes.create_meeting_type(type_attrs(user, %{name: name}))
+        assert @reserved_link in errors_on(cs).name
+      end
+
+      assert MeetingTypes.get_all_meeting_types(user.id) == []
+    end
+
+    test "is refused on the name when renaming a type, leaving it unchanged" do
+      type = insert(:meeting_type, name: "Intro", slug: nil)
+
+      for name <- @reserved_names do
+        assert {:error, cs} = MeetingTypes.update_meeting_type(type, %{name: name})
+        assert @reserved_link in errors_on(cs).name
+      end
+
+      assert %{name: "Intro", slug: nil} = Repo.reload!(type)
+    end
+
+    test "is refused when submitted through the dashboard form" do
+      user = insert(:user)
+      params = %{"name" => "Thank you", "duration" => "30", "is_active" => "true"}
+
+      assert {:error, %Changeset{} = cs} =
+               MeetingTypes.create_meeting_type_from_form(user.id, params, %{
+                 selected_icon: "hero-phone"
+               })
+
+      assert @reserved_link in errors_on(cs).name
+    end
+
+    test "is accepted with a custom slug" do
+      user = insert(:user)
+
+      for {name, slug} <- [
+            {"Thank you", "thanks"},
+            {"Poll", "quick-poll"},
+            {"30min", "half-hour"}
+          ] do
+        assert {:ok, type} =
+                 MeetingTypes.create_meeting_type(type_attrs(user, %{name: name, slug: slug}))
+
+        assert MeetingTypes.effective_slug(type) == slug
+      end
+    end
+
+    test "keeps its custom slug from being cleared" do
+      type = insert(:meeting_type, name: "Thank you", slug: "thanks")
+
+      assert {:error, cs} = MeetingTypes.update_slug(type, nil)
+      assert @reserved_link in errors_on(cs).slug
+      assert Repo.reload!(type).slug == "thanks"
+    end
+
+    test "on a type saved before the rule does not block its other settings" do
+      type = insert(:meeting_type, name: "Thank you", slug: nil)
+
+      assert {:ok, updated} = MeetingTypes.update_meeting_type(type, %{description: "Hi"})
+      assert updated.description == "Hi"
     end
   end
 

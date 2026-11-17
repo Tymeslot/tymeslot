@@ -906,3 +906,8 @@ msgstr "potvrzení e-mailu nelze kombinovat s platbou"
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require email confirmation"
 msgstr "skupinové rezervace nemohou vyžadovat potvrzení e-mailu"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "would give a reserved booking link; choose another name or set a custom link"
+msgstr "by vytvořil vyhrazený rezervační odkaz; zvolte jiný název nebo nastavte vlastní odkaz"

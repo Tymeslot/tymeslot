@@ -899,3 +899,8 @@ msgstr "підтвердження електронної пошти не мож
 #, elixir-autogen, elixir-format
 msgid "group bookings cannot require email confirmation"
 msgstr "групові бронювання не можуть вимагати підтвердження електронної пошти"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "would give a reserved booking link; choose another name or set a custom link"
+msgstr "дало б зарезервоване посилання для бронювання; оберіть іншу назву або вкажіть власне посилання"
