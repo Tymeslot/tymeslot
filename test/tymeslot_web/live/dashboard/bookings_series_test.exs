@@ -317,8 +317,15 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       open_series(view, first)
       view |> element("[data-testid=cancel-remaining-sessions]") |> render_click()
 
-      # Nothing can be refunded, so there is nothing to choose.
+      # Nothing can be refunded, so there is nothing to choose, and the
+      # dialog says why before the host confirms.
       refute has_element?(view, "#cancel-series-form input[name=cancel_refund_choice]")
+
+      assert has_element?(
+               view,
+               "#cancel-series-form",
+               "Cancelling won't refund the attendee: the payment is older than the 60-day refund window."
+             )
 
       view |> form("#cancel-series-form") |> render_submit()
 
@@ -327,6 +334,32 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
 
       assert render(view) =~
                "4 sessions cancelled without a refund: the payment is older than the 60-day refund window."
+    end
+
+    test "a disputed payment is said up front to be refunded by none of it", %{
+      view: view,
+      payment: payment
+    } do
+      payment |> Changeset.change(status: :disputed) |> Repo.update!()
+
+      [first | _rest] = meetings()
+      open_series(view, first)
+      view |> element("[data-testid=cancel-remaining-sessions]") |> render_click()
+
+      assert has_element?(
+               view,
+               "#cancel-series-form",
+               "Cancelling won't refund the attendee: the payment is under dispute."
+             )
+    end
+
+    test "a refundable payment carries no no-refund warning", %{view: view} do
+      [first | _rest] = meetings()
+      open_series(view, first)
+      view |> element("[data-testid=cancel-remaining-sessions]") |> render_click()
+
+      assert has_element?(view, "#cancel-series-form input[name=cancel_refund_choice]")
+      refute has_element?(view, "#cancel-series-form", "Cancelling won't refund the attendee")
     end
 
     test "a refused amount keeps the dialog open with nothing cancelled", %{view: view} do

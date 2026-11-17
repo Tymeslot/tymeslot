@@ -53,11 +53,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   @spec cancel_meeting_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_meeting_modal(assigns) do
-    assigns =
-      assign(assigns,
-        paid?: MeetingPayments.refundable?(assigns[:booking_payment]),
-        no_refund_reason: no_refund_reason_for(assigns[:booking_payment])
-      )
+    assigns = assign(assigns, :paid?, MeetingPayments.refundable?(assigns[:booking_payment]))
 
     ~H"""
     <Modal.confirm_modal
@@ -112,9 +108,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             )}
           </:full>
         </.refund_choices>
-        <.info_box :if={@no_refund_reason} variant={:warning} class="mb-0!">
-          {no_refund_warning(@no_refund_reason)}
-        </.info_box>
+        <.no_refund_warning booking_payment={@booking_payment} />
         <p :if={not @paid?} class="text-tymeslot-500">
           {if Helpers.group_meeting?(@meeting),
             do:
@@ -284,9 +278,28 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   defp refundable_remaining(_payment), do: 0
 
-  # Money the attendee paid that cannot be refunded from here: the refusal
-  # (`MeetingPayments.refund_refusal/1`), said before the host confirms. Nil
-  # when nothing is owed, or it can be.
+  attr :booking_payment, :map, default: nil
+
+  @doc """
+  Says, before the host confirms, why cancelling refunds none of the money
+  the attendee paid (`MeetingPayments.refund_refusal/1`): past the refund
+  window, under dispute, or never paid. Renders nothing when nothing is owed
+  or it can be refunded. Shared by the single cancel dialog and the
+  cancel-remaining dialog of a series.
+  """
+  @spec no_refund_warning(map()) :: Phoenix.LiveView.Rendered.t()
+  def no_refund_warning(assigns) do
+    assigns = assign(assigns, :reason, no_refund_reason_for(assigns.booking_payment))
+
+    ~H"""
+    <.info_box :if={@reason} variant={:warning} class="mb-0!">
+      {no_refund_sentence(@reason)}
+    </.info_box>
+    """
+  end
+
+  # Money the attendee paid that cannot be refunded from here. Nil when
+  # nothing is owed, or it can be.
   defp no_refund_reason_for(payment) do
     with true <- unrefunded?(payment),
          {:error, reason} <- MeetingPayments.refund_refusal(payment) do
@@ -303,21 +316,21 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   # Each refusal has its own whole sentence, so a translation is never
   # stitched together from a lower-case fragment.
-  defp no_refund_warning(:outside_refund_window),
+  defp no_refund_sentence(:outside_refund_window),
     do:
       dgettext(
         "dashboard_bookings",
         "Cancelling won't refund the attendee: the payment is older than the 60-day refund window. You can refund it from Stripe."
       )
 
-  defp no_refund_warning(:under_dispute),
+  defp no_refund_sentence(:under_dispute),
     do:
       dgettext(
         "dashboard_bookings",
         "Cancelling won't refund the attendee: the payment is under dispute. Settle the dispute in Stripe first."
       )
 
-  defp no_refund_warning(:not_paid),
+  defp no_refund_sentence(:not_paid),
     do:
       dgettext(
         "dashboard_bookings",

@@ -7,7 +7,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelSeriesModal do
   single cancel dialog's three refund choices
   (`CancelMeetingModal.refund_choices/1`), the full refund being the
   remaining sessions' share: one session's price for each, never more than
-  is left to refund (`Tymeslot.BookingSeries.cancel_remaining/2`).
+  is left to refund (`Tymeslot.BookingSeries.cancel_remaining/2`). For one
+  it can no longer refund, it says why up front, as the single cancel
+  dialog does (`CancelMeetingModal.no_refund_warning/1`).
   """
 
   use Phoenix.Component
@@ -90,6 +92,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelSeriesModal do
             )}
           </:full>
         </CancelMeetingModal.refund_choices>
+        <CancelMeetingModal.no_refund_warning booking_payment={@data.overview.payment} />
 
         <p class="text-tymeslot-500">
           {dgettext(
