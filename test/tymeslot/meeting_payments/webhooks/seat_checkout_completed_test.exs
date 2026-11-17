@@ -5,6 +5,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
   @moduletag :payments
   @moduletag :integration
 
+  import ExUnit.CaptureLog
   import Tymeslot.Factory
 
   alias Ecto.Changeset
@@ -16,6 +17,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Repo
   alias Tymeslot.StripeWebhookFixtures
+  alias Tymeslot.Test.ClockHelpers
   alias Tymeslot.Test.EnqueuedJobs
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
@@ -133,6 +135,18 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
     |> Enum.filter(
       &(&1.worker == inspect(CalendarEventWorker) and &1.args["action"] == "create" and
           &1.args["meeting_id"] == meeting_id)
+    )
+  end
+
+  defp refunds_for(payment),
+    do: all_enqueued(worker: RefundLatePayment, args: %{"booking_payment_id" => payment.id})
+
+  defp lapsed_seat(ctx, meeting, email) do
+    held_seat(
+      ctx,
+      meeting,
+      [email: email, status: :released, released_reason: :expired],
+      status: :failed
     )
   end
 
@@ -310,14 +324,18 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
     meeting = slot(ctx)
     {hold, payment} = held_seat(ctx, meeting, email: "payer@example.com")
 
-    assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_collision", payment))
+    event = completed_event("evt_collision", payment)
+    assert :ok = CheckoutSessionCompleted.handle(event)
 
     paid = Repo.reload!(payment)
     assert paid.status == :paid
-    assert_enqueued(worker: RefundLatePayment, args: %{"booking_payment_id" => paid.id})
+    assert paid.last_event_id == "evt_collision"
     assert %{status: :released, released_reason: :failed} = SeatHolds.get(hold.id)
     assert Repo.get!(MeetingSchema, meeting.id).status == :expired
     assert ParticipantQueries.list_live_for_meeting(meeting.id) == []
+
+    assert :ok = CheckoutSessionCompleted.handle(event)
+    assert [_one] = refunds_for(paid)
   end
 
   test "a host pending deletion takes no paid seat", ctx do
@@ -334,5 +352,185 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
     assert paid.status == :paid
     assert_enqueued(worker: RefundLatePayment, args: %{"booking_payment_id" => paid.id})
     assert ParticipantQueries.list_live_for_meeting(meeting.id) == []
+  end
+
+  # The registration check runs twice: once before anything is written,
+  # and again on the locked row as the seat is taken. A session closing
+  # between the two (staged by moving the clock past the close as the hold
+  # is marked converted) rolls the conversion back, so the refund must run
+  # in a fresh transaction rather than inside the aborted one.
+  test "a registration closing mid-conversion refunds the seat in a fresh transaction", ctx do
+    closes_at = DateTime.add(ctx.start_time, -1, :day)
+    session = slot(ctx, status: :confirmed, planned: true, registration_closes_at: closes_at)
+    {hold, payment} = lapsed_seat(ctx, session, "late@example.com")
+
+    ClockHelpers.freeze_clock(DateTime.add(closes_at, -60, :second))
+    close_registration_on_conversion(DateTime.add(closes_at, 60, :second))
+
+    assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_closing", payment))
+
+    paid = Repo.reload!(payment)
+    assert paid.status == :paid
+    assert paid.participant_id == nil
+    assert [_one] = refunds_for(paid)
+    assert %{status: :released, released_reason: :expired} = SeatHolds.get(hold.id)
+    assert ParticipantQueries.list_live_for_meeting(session.id) == []
+  end
+
+  defp close_registration_on_conversion(later) do
+    test_pid = self()
+    handler_id = "close-registration-#{inspect(make_ref())}"
+
+    :ok =
+      :telemetry.attach(
+        handler_id,
+        [:tymeslot, :repo, :query],
+        fn _event, _measurements, metadata, _config ->
+          if self() == test_pid and metadata[:source] == "seat_holds" and
+               metadata[:query] =~ ~r/^UPDATE .*"status" = /,
+             do: ClockHelpers.freeze_clock(later)
+        end,
+        nil
+      )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
+  end
+
+  test "a hold held on a session whose registration closed since is still booked", ctx do
+    session =
+      slot(ctx,
+        status: :confirmed,
+        planned: true,
+        registration_closes_at: DateTime.add(DateTime.utc_now(:second), -3600, :second)
+      )
+
+    {hold, payment} = held_seat(ctx, session, email: "early@example.com")
+
+    assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_reserved", payment))
+
+    assert Repo.reload!(payment).status == :paid
+    assert [%{email: "early@example.com"}] = ParticipantQueries.list_live_for_meeting(session.id)
+    assert SeatHolds.get(hold.id).status == :converted
+    assert refunds_for(payment) == []
+  end
+
+  test "a lapsed hold on a session whose registration closed is refunded", ctx do
+    session =
+      slot(ctx,
+        status: :confirmed,
+        planned: true,
+        registration_closes_at: DateTime.add(DateTime.utc_now(:second), -3600, :second)
+      )
+
+    {_hold, payment} = lapsed_seat(ctx, session, "late@example.com")
+
+    assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_closed", payment))
+
+    assert Repo.reload!(payment).status == :paid
+    assert [_one] = refunds_for(payment)
+    assert ParticipantQueries.list_live_for_meeting(session.id) == []
+  end
+
+  test "a seat captured already disputed is booked and stays disputed", ctx do
+    meeting = slot(ctx)
+    {hold, payment} = held_seat(ctx, meeting, [email: "payer@example.com"], status: :disputed)
+
+    assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_disputed", payment))
+
+    paid = Repo.reload!(payment)
+    assert paid.status == :disputed
+    assert %DateTime{} = paid.paid_at
+    assert [%{id: participant_id}] = ParticipantQueries.list_live_for_meeting(meeting.id)
+    assert paid.participant_id == participant_id
+    assert SeatHolds.get(hold.id).status == :converted
+    assert refunds_for(paid) == []
+
+    # Stripe redelivering the completion after the dispute books nothing twice.
+    assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_disputed_again", payment))
+    assert length(ParticipantQueries.list_live_for_meeting(meeting.id)) == 1
+  end
+
+  test "a disputed seat refused for a full slot releases the hold, its refund left to the dispute",
+       ctx do
+    meeting = slot(ctx, status: :confirmed, capacity: 2)
+    insert(:participant, meeting: meeting, email: "one@example.com")
+    insert(:participant, meeting: meeting, email: "two@example.com")
+    {hold, payment} = held_seat(ctx, meeting, [email: "payer@example.com"], status: :disputed)
+
+    assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_disputed_full", payment))
+
+    paid = Repo.reload!(payment)
+    assert paid.status == :disputed
+    assert %{status: :released, released_reason: :failed} = SeatHolds.get(hold.id)
+    assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
+    assert length(ParticipantQueries.list_live_for_meeting(meeting.id)) == 2
+    assert [job] = refunds_for(paid)
+    assert {:discard, :under_dispute} = perform_job(RefundLatePayment, job.args)
+  end
+
+  # The booker's email has a free seat on the meeting already, which only
+  # the insert finds, having written: the conversion rolls back.
+  test "a seat whose email is already booked on the meeting is refunded", ctx do
+    meeting = slot(ctx, status: :confirmed)
+    insert(:participant, meeting: meeting, email: "payer@example.com")
+    {hold, payment} = held_seat(ctx, meeting, email: "payer@example.com")
+
+    assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_twice", payment))
+
+    paid = Repo.reload!(payment)
+    assert paid.status == :paid
+    assert [_one] = refunds_for(paid)
+    assert %{status: :released, released_reason: :failed} = SeatHolds.get(hold.id)
+    assert length(ParticipantQueries.list_live_for_meeting(meeting.id)) == 1
+  end
+
+  test "a seat whose conversion can never succeed is refunded rather than retried", ctx do
+    meeting = slot(ctx, status: :confirmed)
+    insert(:participant, meeting: meeting, email: "seated@example.com")
+    # The factory skips the hold's changeset, so the participant's refuses it.
+    {hold, payment} = held_seat(ctx, meeting, email: "not-an-email")
+
+    log =
+      capture_log(fn ->
+        assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_invalid", payment))
+      end)
+
+    assert log =~ "seat conversion failed for good"
+    paid = Repo.reload!(payment)
+    assert paid.status == :paid
+    assert [_one] = refunds_for(paid)
+    assert %{status: :released, released_reason: :failed} = SeatHolds.get(hold.id)
+  end
+
+  test "a lapsed hold on a fixed-date type is refunded, not booked on a new session", ctx do
+    fixed_type =
+      insert(:meeting_type,
+        user: ctx.user,
+        max_participants: 4,
+        fixed_dates: true,
+        payment_required: true,
+        price_cents: @seat_price
+      )
+
+    lapsed = slot(ctx, status: :expired, meeting_type_ref: fixed_type)
+    {_hold, payment} = lapsed_seat(ctx, lapsed, "late@example.com")
+
+    assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_fixed", payment))
+
+    assert Repo.reload!(payment).status == :paid
+    assert [_one] = refunds_for(payment)
+    assert Repo.aggregate(MeetingSchema, :count) == 1
+  end
+
+  test "a lapsed hold whose type was deleted is refunded", ctx do
+    lapsed = slot(ctx, status: :expired)
+    {_hold, payment} = lapsed_seat(ctx, lapsed, "late@example.com")
+    Repo.delete!(ctx.meeting_type)
+
+    assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_deleted", payment))
+
+    assert Repo.reload!(payment).status == :paid
+    assert [_one] = refunds_for(payment)
+    assert Repo.aggregate(MeetingSchema, :count) == 1
   end
 end

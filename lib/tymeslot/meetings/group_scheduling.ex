@@ -156,7 +156,8 @@ defmodule Tymeslot.Meetings.GroupScheduling do
       join_only: Keyword.get(opts, :join_only, false),
       exclude_from_conflicts: Keyword.get(opts, :exclude_from_conflicts, fn -> nil end),
       in_outer_transaction: Keyword.get(opts, :in_outer_transaction, false),
-      hold: Keyword.get(opts, :hold)
+      hold: Keyword.get(opts, :hold),
+      registration_reserved?: false
     }
 
     cond do
@@ -187,7 +188,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   Converts the seat hold `hold_id` into a participant once its payment has
   completed; see `Tymeslot.Meetings.SeatHoldConversion.convert_hold/2`.
   """
-  defdelegate convert_hold(hold_id, opts \\ []), to: SeatHoldConversion
+  defdelegate convert_hold(hold_id, opts), to: SeatHoldConversion
 
   @doc """
   The live group meeting at `(meeting_type_id, start_time)` that a booking of

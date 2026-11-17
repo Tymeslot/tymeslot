@@ -38,9 +38,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
   alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Payments.Behaviours.WebhookHandler
 
-  # Why a seat hold is released, by the reason its payment failed.
-  @hold_release_reasons %{webhook_expired: :expired, webhook_async_payment_failed: :failed}
-
   @doc """
   Runs the fail-and-expire flow for `event`, wrapped in the webhook telemetry
   span. `event_type` is the Stripe event name and `telemetry_reason` the status
@@ -157,7 +154,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
     case SeatHolds.get(hold_id) do
       %SeatHoldSchema{} = hold ->
         with {:ok, released} <-
-               SeatRelease.release_hold(hold, Map.fetch!(@hold_release_reasons, reason)),
+               SeatRelease.release_hold(hold, hold_release_reason(reason)),
              do: {:ok, {:seat, released}}
 
       nil ->
@@ -180,6 +177,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
       {:error, _changeset} = error -> error
     end
   end
+
+  # Why a seat hold is released, by the reason its payment failed.
+  defp hold_release_reason(:webhook_expired), do: :expired
+  defp hold_release_reason(:webhook_async_payment_failed), do: :failed
 
   defp moved_on(nil), do: :unchanged
   defp moved_on(meeting_id), do: {:moved_on, meeting_id}

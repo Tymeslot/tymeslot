@@ -235,13 +235,17 @@ defmodule Tymeslot.Bookings.CreateGroup do
   again where it still has room, on a new meeting when nobody holds it,
   except on a fixed-date type, whose sessions only its host plans.
 
-  Options are those of `book_seat/3` that schedule jobs (`:with_video_room`).
+  Returns `GroupScheduling.convert_hold/2`'s result: a `{:refused, reason}`
+  leaves the webhook's transaction usable, an `{:error, reason}` has rolled
+  it back.
   """
-  @spec complete_paid_hold(Ecto.UUID.t(), keyword()) ::
-          {:ok, GroupScheduling.seat_booking()} | {:error, term()}
-  def complete_paid_hold(hold_id, opts \\ []) do
+  @spec complete_paid_hold(Ecto.UUID.t()) ::
+          {:ok, GroupScheduling.seat_booking()}
+          | {:refused, :slot_full | :hold_not_convertible}
+          | {:error, term()}
+  def complete_paid_hold(hold_id) do
     GroupScheduling.convert_hold(hold_id,
-      on_booked: &schedule_seat_jobs(&1, opts),
+      on_booked: &schedule_seat_jobs(&1, []),
       new_slot: &late_slot/2
     )
   end

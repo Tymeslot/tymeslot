@@ -52,11 +52,19 @@ defmodule Tymeslot.Meetings.SeatHolds do
   defdelegate list_held_for_meeting(meeting_id), to: SeatHoldQueries
 
   @doc """
-  Up to `limit` holds still `held` past `cutoff`, the longest overdue
-  first: holds whose payment outcome never reached them.
+  Up to `limit` holds still `held` past `cutoff`: holds whose payment
+  outcome never reached them, those a sweep looked at least recently
+  (`mark_swept/1`) first.
   """
   @spec list_overdue(DateTime.t(), pos_integer()) :: [SeatHoldSchema.t()]
   defdelegate list_overdue(cutoff, limit), to: SeatHoldQueries
+
+  @doc """
+  Records that a sweep looked at the hold `id` and left it held, so the
+  next sweep reaches the holds behind it first.
+  """
+  @spec mark_swept(binary()) :: :ok
+  defdelegate mark_swept(id), to: SeatHoldQueries, as: :touch
 
   @doc """
   Releases a hold that is still `held`, freeing its seats.

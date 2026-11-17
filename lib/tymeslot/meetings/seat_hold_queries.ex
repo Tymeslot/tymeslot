@@ -65,18 +65,19 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
   @doc """
   Marks the hold `id` converted, from `held` or `released` (a late payment
   converts a lapsed hold), clearing any release reason. Call with the hold
-  locked (`get_for_update/1`); a hold already converted is left as it is.
+  locked (`get_for_update/1`) and found not converted yet; a hold already
+  converted raises a `MatchError`.
   """
-  @spec mark_converted(binary()) :: :ok | {:error, :not_convertible}
+  @spec mark_converted(binary()) :: :ok
   def mark_converted(id) when is_binary(id) do
     now = DateTime.truncate(Clock.utc_now(), :second)
 
-    {count, _rows} =
+    {1, _rows} =
       SeatHold
       |> where([h], h.id == ^id and h.status != :converted)
       |> Repo.update_all(set: [status: :converted, released_reason: nil, updated_at: now])
 
-    if count == 1, do: :ok, else: {:error, :not_convertible}
+    :ok
   end
 
   @doc "Links the converted hold `id` to the participant it became."
@@ -94,15 +95,29 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
 
   @doc """
   Up to `limit` holds still `held` whose `expires_at` is before `cutoff`,
-  the longest overdue first.
+  the least recently touched first (`touch/1`), so holds a sweep has
+  already looked at go behind those it has not.
   """
   @spec list_overdue(DateTime.t(), pos_integer()) :: [SeatHold.t()]
   def list_overdue(%DateTime{} = cutoff, limit) when is_integer(limit) and limit > 0 do
     held()
     |> where([h], h.expires_at < ^cutoff)
-    |> order_by([h], asc: h.expires_at, asc: h.id)
+    |> order_by([h], asc: h.updated_at, asc: h.id)
     |> limit(^limit)
     |> Repo.all()
+  end
+
+  @doc "Bumps `updated_at` on the hold `id` while it is still `held`."
+  @spec touch(binary()) :: :ok
+  def touch(id) when is_binary(id) do
+    now = DateTime.truncate(Clock.utc_now(), :second)
+
+    {_count, _rows} =
+      SeatHold
+      |> where([h], h.id == ^id and h.status == :held)
+      |> Repo.update_all(set: [updated_at: now])
+
+    :ok
   end
 
   @doc "Seats held on the meeting `meeting_id`."

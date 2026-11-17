@@ -8,18 +8,24 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHolds do
   own expiry webhook normally releases it first. A hold still `held` five
   minutes past its `expires_at` is settled here:
 
-    * its payment has a Checkout session: the session is polled and its
-      completion or expiry replayed through the webhook handlers
+    * its payment is pending with a Checkout session: the session is polled
+      and its completion or expiry replayed through the webhook handlers
       (`ReconcileAwaitingPayments.reconcile/1`); a session Stripe still
       reports open is skipped, and picked up again by a later run;
-    * no session (the checkout never opened) or no payment at all: the
-      payment, if any, is failed and the hold released as `:failed`, its
-      meeting settled (`SeatRelease.release_unpaid_hold/1`).
+    * no payment at all, a pending one with no session (the checkout never
+      opened), or a failed one: the payment, if pending, is failed and the
+      hold released as `:failed`, its meeting settled
+      (`SeatRelease.release_unpaid_hold/1`);
+    * a payment paid, disputed or refunded beside a hold still held: a
+      hold converts with its payment, so this is a broken invariant. It is
+      logged as an error and counted, never released, so a paid seat is
+      not given away.
 
   Runs every five minutes (configured in the Oban crontab). One hold that
   cannot be settled is logged and counted, and the rest are still swept.
-  `@batch_limit` bounds one run; a backlog is worked through over the next
-  ones, the longest overdue first.
+  `@batch_limit` bounds one run; a hold a run leaves held is marked swept
+  (`SeatHolds.mark_swept/1`) and goes behind the others, so a backlog of
+  sessions Stripe reports open cannot starve the rest.
   """
 
   use Oban.Worker,
@@ -36,6 +42,7 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHolds do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments
   alias Tymeslot.Meetings.SeatHolds
+  alias Tymeslot.Meetings.SeatHoldSchema
 
   @grace_seconds 5 * 60
   @batch_limit 200
@@ -72,13 +79,43 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHolds do
   end
 
   defp settle(hold) do
-    case BookingPayments.payment_for_seat_hold(hold.id) do
-      %BookingPaymentSchema{status: :pending, stripe_checkout_session_id: session_id} = payment
-      when is_binary(session_id) ->
-        reconcile_tally(ReconcileAwaitingPayments.reconcile(payment))
+    outcome = settle_payment(hold, BookingPayments.payment_for_seat_hold(hold.id))
+    if outcome != :released, do: SeatHolds.mark_swept(hold.id)
+    outcome
+  end
 
-      _no_session ->
-        release(hold)
+  defp settle_payment(
+         _hold,
+         %BookingPaymentSchema{status: :pending, stripe_checkout_session_id: id} = payment
+       )
+       when is_binary(id),
+       do: reconcile_tally(ReconcileAwaitingPayments.reconcile(payment))
+
+  defp settle_payment(hold, nil), do: release(hold)
+
+  defp settle_payment(hold, %BookingPaymentSchema{
+         status: :pending,
+         stripe_checkout_session_id: nil
+       }),
+       do: release(hold)
+
+  defp settle_payment(hold, %BookingPaymentSchema{status: :failed}), do: release(hold)
+
+  # Read unlocked, so the hold may have converted with its payment since it
+  # was listed; only one still held beside a settled payment is wrong.
+  defp settle_payment(hold, %BookingPaymentSchema{status: status} = payment) do
+    case SeatHolds.get(hold.id) do
+      %SeatHoldSchema{status: :held} ->
+        Logger.error("ExpireSeatHolds found a seat hold still held beside a settled payment",
+          seat_hold_id: hold.id,
+          payment_id: payment.id,
+          status: status
+        )
+
+        :errors
+
+      _settled ->
+        :skipped
     end
   end
 

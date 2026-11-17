@@ -6,6 +6,7 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
   `Tymeslot.Meetings.GroupScheduling.convert_hold/2`.
   """
 
+  alias Tymeslot.ContentTranslations.AttendeeTexts
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingQueries
@@ -32,16 +33,26 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
       abandoning the checkout, converts while a slot has room for all its
       seats: its own meeting while that still holds its slot, else the live
       meeting at that meeting's slot, else a new one (`:new_slot`).
+    * A hold still held on its own meeting reserved its seats before any
+      registration close, so it converts there even once a planned
+      session's registration has closed. A hold released already reserves
+      nothing and respects the close like any other booking. Decided by the
+      hold's state, never its `expires_at`: a delayed webhook or a sweeper
+      replay can arrive after the expiry for a payment made inside it.
     * A hold already converted, released because its meeting was cancelled,
       or whose meeting has since been cancelled is refused as
       `:hold_not_convertible`; its payment is always refunded.
-    * No room for the hold's seats, or no meeting to join on a type that
-      takes no new one, is refused as `:slot_full`.
+    * No room for the hold's seats, a closed registration it did not
+      reserve against, or no meeting to join on a type that takes no new
+      one, is refused as `:slot_full`.
 
-  Both refusals are decided under the locks before anything is written, so
-  they leave the caller's transaction usable. Any other error rolls it back;
-  a unique-slot violation (a confirmed meeting of the organiser's already at
-  the slot) has by then aborted it in Postgres.
+  Refusals are decided under the locks before anything is written and
+  come back as `{:refused, reason}`, leaving the caller's transaction
+  usable. Every `{:error, reason}` has rolled the caller's transaction back
+  (a refusal met only once writing, `:slot_full` or `:already_booked` among
+  them, or a unique-slot violation, which a confirmed meeting of the
+  organiser's at the slot raises and which has aborted it in Postgres), so
+  the caller must settle the payment in a fresh transaction.
 
   The hold stops counting against its slot before the seats are taken, so a
   slot it alone fills still takes it. Joining an `:awaiting_payment` meeting
@@ -50,12 +61,12 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
   Options:
     * `:on_booked`: as for `book_seat/3`, run with the booking once the
       participant exists.
-    * `:new_slot`: `(hold, meeting -> {:ok, (-> meeting_attrs), max_participants} | :none)`,
-      asked only when the hold's own meeting no longer holds its slot: the
-      capacity of a meeting the conversion would create there and a
-      function building its attrs (called only if it is created), or
-      `:none` for a type that takes no new meeting (a fixed-date type, whose
-      sessions only its host plans). Defaults to `:none`.
+    * `:new_slot` (required): `(hold, meeting -> {:ok, (-> meeting_attrs),
+      max_participants} | :none)`, asked only when the hold's own meeting no
+      longer holds its slot: the capacity of a meeting the conversion would
+      create there and a function building its attrs (called only if it is
+      created), or `:none` for a type that takes no new meeting (a
+      fixed-date type, whose sessions only its host plans).
   """
   @spec convert_hold(Ecto.UUID.t(), keyword()) ::
           {:ok,
@@ -65,18 +76,20 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
              created_meeting?: boolean(),
              on_booked_result: term()
            }}
-          | {:error, :slot_full | :hold_not_convertible | term()}
-  def convert_hold(hold_id, opts \\ []) when is_binary(hold_id) do
+          | {:refused, :slot_full | :hold_not_convertible}
+          | {:error, term()}
+  def convert_hold(hold_id, opts) when is_binary(hold_id) do
     hooks = %{
       on_booked: Keyword.get(opts, :on_booked, fn _booking -> {:ok, :noop} end),
-      new_slot: Keyword.get(opts, :new_slot, fn _hold, _meeting -> :none end),
+      new_slot: Keyword.fetch!(opts, :new_slot),
       join_only: false,
       hold: nil,
+      registration_reserved?: false,
       exclude_from_conflicts: fn -> nil end
     }
 
     case Repo.transaction(fn -> convert_locked(hold_id, hooks) end) do
-      {:ok, {:error, _refusal} = refused} -> refused
+      {:ok, {:refused, _reason} = refused} -> refused
       {:ok, booking} -> {:ok, booking}
       {:error, _reason} = error -> error
     end
@@ -94,23 +107,24 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
 
       with :ok <- convertible(hold, own),
            {:ok, target} <- conversion_target(hold, own, hooks) do
-        convert_into(target, hold, hooks)
+        convert_into(target, hold, own, hooks)
       end
     else
-      _gone -> {:error, :hold_not_convertible}
+      _gone -> {:refused, :hold_not_convertible}
     end
   end
 
-  defp convertible(%SeatHoldSchema{status: :converted}, _own), do: {:error, :hold_not_convertible}
+  defp convertible(%SeatHoldSchema{status: :converted}, _own),
+    do: {:refused, :hold_not_convertible}
 
   defp convertible(%SeatHoldSchema{released_reason: :meeting_cancelled}, _own),
-    do: {:error, :hold_not_convertible}
+    do: {:refused, :hold_not_convertible}
 
   defp convertible(%SeatHoldSchema{}, %Meeting{status: :cancelled}),
-    do: {:error, :hold_not_convertible}
+    do: {:refused, :hold_not_convertible}
 
   defp convertible(%SeatHoldSchema{}, %Meeting{}), do: :ok
-  defp convertible(_hold, _own), do: {:error, :hold_not_convertible}
+  defp convertible(_hold, _own), do: {:refused, :hold_not_convertible}
 
   # Decided by the rule `SeatWrites.take_seat/5` applies once the hold has
   # stopped counting, so a slot found joinable here is joined without a
@@ -121,30 +135,35 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
     else
       case hooks.new_slot.(hold, own) do
         {:ok, build_attrs, max_participants} ->
+          # A second meeting row, locked after the hold. Safe: every path
+          # that locks two meetings takes the organiser's schedule lock
+          # first (held here), and a writer locking a single meeting never
+          # waits on a second one while holding it.
           case GroupMeetingQueries.get_live_for_update(own.meeting_type_id, own.start_time) do
             nil -> create_target_for(build_attrs, max_participants, hold)
             %Meeting{} = live -> join_target_for(live, hold)
           end
 
         :none ->
-          {:error, :slot_full}
+          {:refused, :slot_full}
       end
     end
   end
 
   defp join_target_for(meeting, hold) do
-    seats_left = meeting.capacity - Seats.seats_taken(meeting.id) + own_held_seats(meeting, hold)
+    reserved = own_held_seats(meeting, hold)
+    seats_left = meeting.capacity - Seats.seats_taken(meeting.id) + reserved
 
     if SeatWrites.joinable?(meeting, hold.seats, seats_left) and
-         SeatWrites.registration_open?(meeting),
-       do: {:ok, {:join, meeting}},
-       else: {:error, :slot_full}
+         (reserved > 0 or SeatWrites.registration_open?(meeting)),
+       do: {:ok, {:join, meeting, reserved > 0}},
+       else: {:refused, :slot_full}
   end
 
   defp create_target_for(build_attrs, max_participants, hold) do
     if max_participants >= 2 and hold.seats <= max_participants,
       do: {:ok, {:create, build_attrs, max_participants}},
-      else: {:error, :slot_full}
+      else: {:refused, :slot_full}
   end
 
   defp own_held_seats(
@@ -158,13 +177,17 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
   defp slot_live?(meeting),
     do: meeting.status in MeetingState.occupying() and not MeetingState.slot_void?(meeting)
 
-  defp convert_into(target, hold, hooks) do
+  defp convert_into(target, hold, own, hooks) do
     :ok = SeatHoldQueries.mark_converted(hold.id)
 
-    {live_meeting, meeting_attrs, max_participants} =
+    {live_meeting, meeting_attrs, max_participants, hooks} =
       case target do
-        {:join, meeting} -> {meeting, %{}, meeting.capacity}
-        {:create, build_attrs, max_participants} -> {nil, build_attrs.(), max_participants}
+        {:join, meeting, reserved?} ->
+          {meeting, booker_texts(own, hold), meeting.capacity,
+           %{hooks | registration_reserved?: reserved?}}
+
+        {:create, build_attrs, max_participants} ->
+          {nil, build_attrs.(), max_participants, hooks}
       end
 
     seat_request = %{
@@ -176,5 +199,15 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
     booking = SeatWrites.take_seat(live_meeting, meeting_attrs, seat_request, hold.seats, hooks)
     :ok = SeatHoldQueries.link_participant(hold.id, booking.participant.id)
     SeatWrites.run_on_booked(booking, hooks.on_booked)
+  end
+
+  # The booker read the slot in their own language on the hold's own
+  # meeting, so their locale's copy of its texts comes with them to the
+  # meeting they join (`AttendeeTexts.merge/2`); joining the own meeting
+  # again adds nothing.
+  defp booker_texts(own, hold) do
+    own
+    |> Map.take(AttendeeTexts.keys())
+    |> Map.put(:attendee_texts, Map.take(own.attendee_texts || %{}, [hold.locale]))
   end
 end

@@ -54,7 +54,11 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
     )
   end
 
-  defp convert(hold), do: Repo.transaction(fn -> GroupScheduling.convert_hold(hold.id) end)
+  defp convert(hold) do
+    Repo.transaction(fn ->
+      GroupScheduling.convert_hold(hold.id, new_slot: fn _hold, _meeting -> :none end)
+    end)
+  end
 
   test "converting the first hold confirms the meeting and reports it as new", ctx do
     meeting = slot(ctx, status: :awaiting_payment)
@@ -136,7 +140,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
         released_reason: :expired
       )
 
-    assert {:ok, {:error, :slot_full}} =
+    assert {:ok, {:refused, :slot_full}} =
              Repo.transaction(fn -> CreateGroup.complete_paid_hold(hold.id) end)
 
     assert %{status: :released, released_reason: :expired, participant_id: nil} =
@@ -150,7 +154,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
     meeting = slot(ctx, status: :cancelled)
     hold = insert(:seat_hold, meeting: meeting, email: "payer@example.com")
 
-    assert {:ok, {:error, :hold_not_convertible}} = convert(hold)
+    assert {:ok, {:refused, :hold_not_convertible}} = convert(hold)
     assert SeatHolds.get(hold.id).status == :held
     assert ParticipantQueries.list_live_for_meeting(meeting.id) == []
   end
@@ -166,7 +170,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
         released_reason: :meeting_cancelled
       )
 
-    assert {:ok, {:error, :hold_not_convertible}} =
+    assert {:ok, {:refused, :hold_not_convertible}} =
              Repo.transaction(fn -> CreateGroup.complete_paid_hold(hold.id) end)
 
     assert Repo.aggregate(MeetingSchema, :count) == 1
@@ -177,7 +181,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
     hold = insert(:seat_hold, meeting: meeting, email: "payer@example.com")
 
     assert {:ok, {:ok, _booking}} = convert(hold)
-    assert {:ok, {:error, :hold_not_convertible}} = convert(hold)
+    assert {:ok, {:refused, :hold_not_convertible}} = convert(hold)
     assert length(ParticipantQueries.list_live_for_meeting(meeting.id)) == 1
   end
 
@@ -195,5 +199,83 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
     assert {:ok, {:ok, booking}} = convert(hold)
     assert booking.meeting.id == meeting.id
     assert SeatHolds.seats_held(meeting.id) == 0
+  end
+
+  describe "a planned session whose registration has closed" do
+    setup ctx do
+      session =
+        slot(ctx,
+          status: :confirmed,
+          planned: true,
+          registration_closes_at: DateTime.add(DateTime.utc_now(:second), -3600, :second)
+        )
+
+      %{session: session}
+    end
+
+    test "still converts a hold held on it, which reserved its seats before the close", ctx do
+      hold = insert(:seat_hold, meeting: ctx.session, email: "early@example.com")
+
+      assert {:ok, {:ok, booking}} = convert(hold)
+      assert booking.meeting.id == ctx.session.id
+
+      assert [%{email: "early@example.com"}] =
+               ParticipantQueries.list_live_for_meeting(ctx.session.id)
+
+      assert SeatHolds.get(hold.id).status == :converted
+    end
+
+    test "refuses a hold that had lapsed, as any booking after the close", ctx do
+      hold =
+        insert(:seat_hold,
+          meeting: ctx.session,
+          email: "late@example.com",
+          status: :released,
+          released_reason: :expired
+        )
+
+      assert {:ok, {:refused, :slot_full}} = convert(hold)
+      assert %{status: :released, released_reason: :expired} = SeatHolds.get(hold.id)
+      assert ParticipantQueries.list_live_for_meeting(ctx.session.id) == []
+    end
+  end
+
+  test "a lapsed hold joins the live meeting now at its slot, bringing its language's texts",
+       ctx do
+    texts = %{
+      "de" => %{"meeting_type" => "Gruppenkurs"},
+      "fr" => %{"meeting_type" => "Cours collectif"}
+    }
+
+    lapsed =
+      slot(ctx,
+        status: :expired,
+        meeting_type: "Group Class",
+        description: "A class",
+        attendee_texts: texts
+      )
+
+    live = slot(ctx, status: :confirmed, meeting_type: "Group Class", description: "A class")
+    insert(:participant, meeting: live, email: "seated@example.com")
+
+    hold =
+      insert(:seat_hold,
+        meeting: lapsed,
+        email: "late@example.com",
+        locale: "de",
+        status: :released,
+        released_reason: :expired
+      )
+
+    assert {:ok, {:ok, booking}} =
+             Repo.transaction(fn -> CreateGroup.complete_paid_hold(hold.id) end)
+
+    assert booking.meeting.id == live.id
+    refute booking.created_meeting?
+    assert length(ParticipantQueries.list_live_for_meeting(live.id)) == 2
+
+    assert Repo.get!(MeetingSchema, live.id).attendee_texts == %{
+             "de" => %{"meeting_type" => "Gruppenkurs"}
+           }
   end
 end

@@ -34,7 +34,10 @@ defmodule Tymeslot.Meetings.SeatWrites do
 
   `hooks` carries `:join_only` (no slot to join refuses as `:slot_full`),
   `:hold` (`nil`, or `%{expires_at: _}` to take a hold rather than a
-  participant) and `:exclude_from_conflicts` (as for `book_seat/3`).
+  participant), `:exclude_from_conflicts` (as for `book_seat/3`) and
+  `:registration_reserved?`: true when the seats were held on
+  `live_meeting` before its registration closed (a paid hold converting
+  there), so a closed registration does not refuse them.
   Returns the booking map; every refusal rolls back.
   """
   @spec take_seat(Meeting.t() | nil, map(), map(), pos_integer(), map()) :: map()
@@ -46,7 +49,7 @@ defmodule Tymeslot.Meetings.SeatWrites do
 
   def take_seat(%Meeting{} = meeting, meeting_attrs, seat_request, seats_requested, hooks) do
     meeting
-    |> join_meeting(seat_request, seats_requested, hooks.hold)
+    |> join_meeting(seat_request, seats_requested, hooks)
     |> add_attendee_texts(meeting_attrs)
   end
 
@@ -116,13 +119,15 @@ defmodule Tymeslot.Meetings.SeatWrites do
   # a meeting not yet created, see `create_meeting_with_first_seat/4`); the
   # type keeps a group meeting's capacity in step with its limit. A planned
   # session's registration close is re-read here, on the locked row, for the
-  # same reason the seats are: the caller's pre-check read it unlocked.
-  defp join_meeting(meeting, seat_request, seats_requested, hold_opts) do
-    if joinable?(meeting, seats_requested) and registration_open?(meeting) do
-      seat = insert_seat_or_rollback(meeting, seat_request, seats_requested, hold_opts)
+  # same reason the seats are: the caller's pre-check read it unlocked. Seats
+  # reserved on the meeting before the close skip it.
+  defp join_meeting(meeting, seat_request, seats_requested, hooks) do
+    if joinable?(meeting, seats_requested) and
+         (hooks.registration_reserved? or registration_open?(meeting)) do
+      seat = insert_seat_or_rollback(meeting, seat_request, seats_requested, hooks.hold)
 
       {meeting, confirmed?} =
-        if hold_opts, do: {meeting, false}, else: confirm_if_awaiting_payment(meeting)
+        if hooks.hold, do: {meeting, false}, else: confirm_if_awaiting_payment(meeting)
 
       Map.merge(seat, %{meeting: meeting, created_meeting?: confirmed?})
     else

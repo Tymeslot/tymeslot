@@ -5,9 +5,11 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHoldsTest do
   @moduletag :payments
   @moduletag :integration
 
+  import ExUnit.CaptureLog
   import Mox
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
@@ -150,5 +152,44 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHoldsTest do
              perform_job(ExpireSeatHolds, %{})
 
     assert SeatHolds.get(hold.id).status == :held
+  end
+
+  test "a hold still held beside a paid payment is reported, never released", ctx do
+    {hold, payment} =
+      overdue_hold(ctx, 10, status: :paid, stripe_checkout_session_id: "cs_sweep_paid_held")
+
+    Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(hold.id))
+
+    log =
+      capture_log(fn ->
+        assert {:ok, %{errors: 1, released: 0}} = perform_job(ExpireSeatHolds, %{})
+      end)
+
+    assert log =~ "still held beside a settled payment"
+    assert SeatHolds.get(hold.id).status == :held
+    assert Repo.reload!(payment).status == :paid
+    assert Repo.get!(MeetingSchema, ctx.meeting.id).status == :awaiting_payment
+    refute_received :expired
+  end
+
+  test "a hold left open goes behind the holds a sweep has not looked at", ctx do
+    long_ago = DateTime.add(DateTime.utc_now(:second), -3600, :second)
+    {open, _payment} = overdue_hold(ctx, 20, stripe_checkout_session_id: "cs_sweep_still_open")
+    open |> Changeset.change(updated_at: long_ago) |> Repo.update!()
+
+    stripe_reports(%{"status" => "open", "payment_status" => "unpaid"})
+    assert {:ok, %{skipped: 1}} = perform_job(ExpireSeatHolds, %{})
+
+    # Less overdue than the open one, but not looked at yet.
+    waiting =
+      insert(:seat_hold,
+        meeting: ctx.meeting,
+        email: "waiting@example.com",
+        expires_at: DateTime.add(DateTime.utc_now(:second), -10, :minute),
+        updated_at: DateTime.add(long_ago, 60, :second)
+      )
+
+    assert [first, second] = SeatHolds.list_overdue(DateTime.utc_now(:second), 2)
+    assert {first.id, second.id} == {waiting.id, open.id}
   end
 end

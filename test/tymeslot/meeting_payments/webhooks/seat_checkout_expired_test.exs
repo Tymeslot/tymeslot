@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutExpiredTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.AccountCurrency
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionAsyncPaymentFailed
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
@@ -145,5 +146,30 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutExpiredTest do
 
     assert %{status: :released, released_reason: :failed} = SeatHolds.get(hold.id)
     assert Repo.reload!(payment).status == :failed
+  end
+
+  test "a hold released already is not announced a second time", ctx do
+    meeting = slot(ctx, status: :awaiting_payment)
+    {hold, payment} = held_seat(ctx, meeting, email: "payer@example.com")
+    {:ok, _released} = SeatHolds.release(hold, :abandoned)
+    Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(hold.id))
+
+    assert :ok = CheckoutSessionExpired.handle(expired_event("evt_released_already", payment))
+
+    assert Repo.reload!(payment).status == :failed
+    refute_received :expired
+  end
+
+  test "a failed payment whose hold is still held releases it", ctx do
+    meeting = slot(ctx, status: :awaiting_payment)
+    {hold, payment} = held_seat(ctx, meeting, email: "payer@example.com")
+    payment |> Changeset.change(status: :failed) |> Repo.update!()
+    Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(hold.id))
+
+    assert :ok = CheckoutSessionExpired.handle(expired_event("evt_failed_held", payment))
+
+    assert %{status: :released, released_reason: :expired} = SeatHolds.get(hold.id)
+    assert Repo.get!(MeetingSchema, meeting.id).status == :expired
+    assert_received :expired
   end
 end

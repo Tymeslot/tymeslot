@@ -271,11 +271,13 @@ defmodule Tymeslot.Bookings.SeatRelease do
   @doc """
   Announces a released hold (`release_hold/2`) once its transaction has
   committed: the meeting it settled expired or cancelled with the usual
-  effects, the slot's seats offered again, and the booker's payment page
-  told the hold is gone.
+  effects, the slot's seats offered again, and, when this release freed the
+  hold, the booker's payment page told the hold is gone. A hold no longer
+  held was announced by whoever settled it first (a conversion, or an
+  earlier release), so nothing goes to its topic a second time.
   """
   @spec announce_released(hold_release()) :: :ok
-  def announce_released(%{hold_id: hold_id, meeting: meeting, settled: settled}) do
+  def announce_released(%{hold_id: hold_id, meeting: meeting, settled: settled} = release) do
     case settled do
       {:ok, :expired, expired} -> Checkout.announce_expired(expired)
       {:ok, :cancelled, cancelled} -> Cancel.finalise_cancellation(cancelled)
@@ -283,7 +285,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
     end
 
     if meeting, do: SeatEffects.broadcast_and_invalidate(meeting)
-    SeatHolds.broadcast(hold_id, :expired)
+    if release.released?, do: SeatHolds.broadcast(hold_id, :expired)
     :ok
   end
 end
