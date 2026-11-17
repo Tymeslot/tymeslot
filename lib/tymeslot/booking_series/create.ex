@@ -222,7 +222,7 @@ defmodule Tymeslot.BookingSeries.Create do
 
     plan
     |> run_transaction(attrs, booking_data, opts)
-    |> map_result(occurrences, booking_data)
+    |> map_result(plan, occurrences, booking_data)
   end
 
   defp session(%Occurrence{} = occurrence) do
@@ -360,7 +360,7 @@ defmodule Tymeslot.BookingSeries.Create do
   defp occurrence_failed(meeting_attrs, reason),
     do: Repo.rollback({:occurrence_failed, meeting_attrs.series_position, reason})
 
-  defp map_result({:ok, {series, booked, pending}}, _occurrences, booking_data) do
+  defp map_result({:ok, {series, booked, pending}}, _plan, _occurrences, booking_data) do
     :ok = Activation.after_commit(pending)
     {meetings, seats} = Enum.unzip(booked)
     seats = Enum.reject(seats, &is_nil/1)
@@ -374,18 +374,43 @@ defmodule Tymeslot.BookingSeries.Create do
 
   # A session taken between the check and the lock is reported as the check
   # would have reported it, so the booker can choose again.
-  defp map_result({:error, {:occurrence_failed, position, reason}}, occurrences, _booking_data)
+  defp map_result(
+         {:error, {:occurrence_failed, position, reason}},
+         plan,
+         occurrences,
+         booking_data
+       )
        when is_map_key(@lost_in_lock, reason) do
     occurrence = Enum.find(occurrences, &(&1.position == position))
-    status = {:unavailable, Map.fetch!(@lost_in_lock, reason)}
-    {:error, {:occurrences_unavailable, [%{occurrence | status: status}]}}
+    lost = %{occurrence | status: {:unavailable, Map.fetch!(@lost_in_lock, reason)}}
+    {:error, {:occurrences_unavailable, lost_with_the_rest(lost, plan, booking_data)}}
   end
 
-  defp map_result({:error, {:occurrence_failed, _position, reason}}, _occurrences, booking_data),
+  defp map_result({:error, {:occurrence_failed, _position, reason}}, _plan, _occ, booking_data),
     do: {:error, Errors.classify_creation_error(reason, booking_data)}
 
-  defp map_result({:error, reason}, _occurrences, booking_data),
+  defp map_result({:error, reason}, _plan, _occurrences, booking_data),
     do: {:error, Errors.classify_creation_error(reason, booking_data)}
+
+  # The transaction stops at the first session it finds taken, but whatever
+  # took it (most often a rival series that won the lock) may have taken
+  # later ones too. It has committed by now, so the whole series is judged
+  # again, outside any transaction, and every session lost is reported in
+  # one answer rather than one per attempt. The session the transaction met
+  # is always among them, as it found it; a check that cannot read the
+  # calendars this time leaves that one alone to report.
+  defp lost_with_the_rest(lost, plan, booking_data) do
+    rest =
+      case check(plan, booking_data) do
+        {:ok, occurrences} ->
+          Enum.reject(occurrences, &(Occurrence.available?(&1) or &1.position == lost.position))
+
+        {:error, _unverifiable} ->
+          []
+      end
+
+    Enum.sort_by([lost | rest], & &1.position)
+  end
 
   # A paid series is held until its checkout, opened now that it has
   # committed, is paid; a checkout that cannot be opened releases it.

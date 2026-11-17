@@ -88,12 +88,17 @@ defmodule Tymeslot.BookingSeries.CreateRaceTest do
     }
 
     series = %{mode: :recurring, first_start: DateTime.add(contested, -7, :day), count: 3}
+    # A week later: its first two sessions are the first series' last two.
+    later_series = %{mode: :recurring, first_start: contested, count: 3}
     single = %{date: DateTime.to_date(contested), time: "10:00"}
 
     %{
       contested: contested,
       book_single: fn -> Create.execute(Map.merge(params, single), form()) end,
-      book_series: fn -> BookingSeries.book(Map.put(params, :series, series), form()) end
+      book_series: fn -> BookingSeries.book(Map.put(params, :series, series), form()) end,
+      book_later_series: fn ->
+        BookingSeries.book(Map.put(params, :series, later_series), form("other@example.com"))
+      end
     }
   end
 
@@ -124,11 +129,51 @@ defmodule Tymeslot.BookingSeries.CreateRaceTest do
     assert series_rows == 1
   end
 
+  # The losing series' transaction stops at the first session it finds
+  # taken; the booker is still told of every session the winner took, so
+  # they re-pick once rather than once per clash.
+  test "two overlapping series: the loser learns every session it lost at once", ctx do
+    {first_result, second_result} = staged(ctx.book_series, ctx.book_later_series)
+
+    assert {:ok, %{meetings: [_first, _second, _third]}} = first_result
+    assert {:error, {:occurrences_unavailable, lost}} = second_result
+
+    assert [
+             %Occurrence{position: 1, status: {:unavailable, :booked}},
+             %Occurrence{position: 2, status: {:unavailable, :booked}}
+           ] = lost
+
+    {meetings, series_rows} = committed(ctx)
+    assert length(meetings) == 3
+    assert series_rows == 1
+  end
+
+  # The second look reads the calendars again; when it cannot, the session
+  # the transaction met is still reported, as it found it.
+  test "the loser still learns the session it met when the second look fails", ctx do
+    fail_calendars = fn ->
+      stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        {:error, :timeout}
+      end)
+    end
+
+    {first_result, second_result} =
+      staged(ctx.book_series, ctx.book_later_series, fail_calendars)
+
+    assert {:ok, %{meetings: [_first, _second, _third]}} = first_result
+
+    assert {:error, {:occurrences_unavailable, [%Occurrence{position: 1} = lost]}} =
+             second_result
+
+    assert lost.status == {:unavailable, :booked}
+  end
+
   # Runs `first` until it has inserted its first meeting, holding the
   # organiser's schedule lock, then starts `second` and waits until it is
-  # blocked on that lock, before letting `first` commit. Either step not
-  # happening fails the test, so the race is always the one staged.
-  defp staged(first, second) do
+  # blocked on that lock, before running `before_release` and letting
+  # `first` commit. Either step not happening fails the test, so the race is
+  # always the one staged.
+  defp staged(first, second, before_release \\ fn -> :ok end) do
     test_pid = self()
 
     holder =
@@ -148,6 +193,7 @@ defmodule Tymeslot.BookingSeries.CreateRaceTest do
     waiter = Task.async(fn -> unboxed(second) end)
     assert RaceConductor.await_finished_or_blocked(waiter) == :blocked
 
+    before_release.()
     send(holder_pid, :release)
     {Task.await(holder, 30_000), Task.await(waiter, 30_000)}
   end
@@ -159,5 +205,6 @@ defmodule Tymeslot.BookingSeries.CreateRaceTest do
     end)
   end
 
-  defp form, do: %{"name" => "Racer", "email" => "racer@example.com", "message" => ""}
+  defp form(email \\ "racer@example.com"),
+    do: %{"name" => "Racer", "email" => email, "message" => ""}
 end
