@@ -39,6 +39,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   attr :surface, :any, required: true
   attr :group_allowed, :boolean, default: false
   attr :venues, :list, default: []
+  attr :reminder_picker, :map, default: nil, doc: "the meeting's `ReminderPickerState`"
   attr :timezone, :string, default: "Etc/UTC"
 
   @spec new_form(map()) :: Phoenix.LiveView.Rendered.t()
@@ -151,7 +152,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         form_key={@guest_form_key}
         surface={@surface}
       />
-      <PanelMeetingFields.meeting_fields :if={!@group} values={@values} />
+      <PanelMeetingFields.meeting_fields
+        :if={!@group}
+        values={@values}
+        reminder_picker={@reminder_picker}
+        surface={@surface}
+      />
       <PanelGroupEventFields.group_event_fields
         :if={@group_offered}
         values={@values}

@@ -12,32 +12,24 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
   with; the others are invited as its guests, at most `Guests.max_guests/0`
   of them. The draft's notes become the note to the guests, held to the
   meeting's own limit. A meeting has a start and an end time, so an all-day
-  draft is refused. Reminders are chosen from `reminder_choices/0`, never
-  typed. `rate_limit/1` is the budget each meeting spends, since every one
-  emails its guests.
+  draft is refused. Reminders are lead times, `%{value:, unit:}`, held to
+  the rules a meeting type's reminders follow
+  (`ReminderValidation.check_policy/2`). `rate_limit/1` is the budget each
+  meeting spends, since every one emails its guests.
   """
 
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes.Reminders
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.UniversalSanitizer
 
   @max_name 255
 
-  @reminders [
-    {"30_minutes", %{value: 30, unit: "minutes"}},
-    {"1_hours", %{value: 1, unit: "hours"}},
-    {"1_days", %{value: 1, unit: "days"}}
-  ]
-
   @type field :: :all_day | :guests | :guest_name | :locale | :note | :reminders
-
-  @doc "The reminder emails a meeting can send, by the key the form sends."
-  @spec reminder_choices() :: [String.t()]
-  def reminder_choices, do: Enum.map(@reminders, &elem(&1, 0))
 
   @doc "How many people a meeting can be with: its guest and the guests it invites."
   @spec max_guests() :: pos_integer()
@@ -47,8 +39,8 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
 
   @doc """
   The meeting `create` describes, with the string-keyed `fields` the panel
-  holds (`"guest_name"`, `"locale"`, `"reminders"`), for the organiser
-  `user_id`.
+  holds (`"guest_name"`, `"locale"`, and `"reminders"`, the lead times the
+  reminder picker holds), for the organiser `user_id`.
   """
   @spec build(CreateParams.t(), map(), pos_integer()) ::
           {:ok, map()} | {:error, field(), atom()}
@@ -131,18 +123,27 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
       else: {:error, :note, :too_long}
   end
 
-  # The form sends an empty key with its boxes, so that ticking none still
-  # sends the field; it stands for nothing.
   defp reminders(nil), do: {:ok, []}
 
-  defp reminders(keys) when is_list(keys) do
-    chosen = for {key, reminder} <- @reminders, key in keys, do: reminder
-
-    if Enum.all?(keys, &(&1 in ["" | reminder_choices()])) and
-         ReminderValidation.check_policy(chosen) == :ok,
-       do: {:ok, chosen},
-       else: {:error, :reminders, :invalid}
+  defp reminders(held) when is_list(held) do
+    with {:ok, chosen} <- normalise_reminders(held),
+         :ok <- ReminderValidation.check_policy(chosen) do
+      {:ok, chosen}
+    else
+      _invalid -> {:error, :reminders, :invalid}
+    end
   end
 
-  defp reminders(_keys), do: {:error, :reminders, :invalid}
+  defp reminders(_held), do: {:error, :reminders, :invalid}
+
+  # Each lead time as `%{value: pos_integer, unit: "minutes" | "hours" |
+  # "days"}`; the first that is not one refuses them all.
+  defp normalise_reminders(held) do
+    Enum.reduce_while(held, {:ok, []}, fn reminder, {:ok, normalised} ->
+      case Reminders.normalize_reminder(reminder) do
+        {:ok, clean} -> {:cont, {:ok, normalised ++ [clean]}}
+        {:error, _reason} = error -> {:halt, error}
+      end
+    end)
+  end
 end
