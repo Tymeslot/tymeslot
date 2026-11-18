@@ -38,6 +38,12 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
           | :confirmed
           | :cancelled
 
+  @typedoc """
+  The outcomes a held seat's checkout can have: a seat never waits for the
+  host's approval, so never `:awaiting_approval` or `:declined`.
+  """
+  @type seat :: :processing | :failed | :expired | :confirmed | :cancelled
+
   # A booking in one of these is on, whatever else happened to it since.
   @live_statuses [:confirmed, :completed, :reschedule_requested]
 
@@ -82,7 +88,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
     * `:expired` for any other release: the checkout lapsed or was left, or
       a payment that came too late found no room and is refunded.
   """
-  @spec classify_seat(SeatHoldSchema.t() | nil, BookingPaymentSchema.t() | nil) :: t()
+  @spec classify_seat(SeatHoldSchema.t() | nil, BookingPaymentSchema.t() | nil) :: seat()
   def classify_seat(nil, _payment), do: :processing
   def classify_seat(%SeatHoldSchema{status: :converted}, _payment), do: :confirmed
 
