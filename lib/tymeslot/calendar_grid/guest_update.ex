@@ -12,10 +12,15 @@ defmodule Tymeslot.CalendarGrid.GuestUpdate do
   every following occurrence of a series, or of all of them, drops the
   series' cached rows, which that pipeline would read, so it is sent at once
   from both versions (`AttendeeNotifications.series_updated_confirm/4`).
+
+  The debounced update is held for a while before it goes out, so later
+  edits join it: `held_until/1` says until when one is still held, and
+  `cancel/3` drops it, so the guests are told nothing after all.
   """
 
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.Integrations.Calendar.Attendee
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.AttendeeNotifications
 
   @type refusal :: :booking | :unauthorized | :read_only | :not_organiser
@@ -51,4 +56,38 @@ defmodule Tymeslot.CalendarGrid.GuestUpdate do
         {:ok, :noop}
     end
   end
+
+  @doc """
+  When the update held for `event`'s guests goes out, or nil when none is
+  held. Only a cached calendar event has one; anything else has none.
+  """
+  @spec held_until(map()) :: DateTime.t() | nil
+  def held_until(%ProviderCalendarEventSchema{} = event),
+    do: AttendeeNotifications.pending_due_at(event)
+
+  def held_until(_event), do: nil
+
+  @doc """
+  Drops the update held for `event`'s guests, so they are told nothing:
+  `{:ok, :cancelled}`; when none was held any more, `{:ok, :already_sent}`
+  when it has gone out, or `{:ok, :not_held}` when it went some other way
+  (cancelled from another tab). Refused, like `tell/5`, unless the user
+  organises the event on a calendar they can write.
+  """
+  @spec cancel(pos_integer(), [map()], map()) ::
+          {:ok, :cancelled | :already_sent | :not_held} | {:error, refusal()}
+  def cancel(user_id, integrations, event) do
+    with :ok <- EditGuard.guest_update(user_id, integrations, event) do
+      case cancel_held(event) do
+        {:ok, :cancelled} -> {:ok, :cancelled}
+        {:ok, :sent} -> {:ok, :already_sent}
+        {:ok, :none} -> {:ok, :not_held}
+      end
+    end
+  end
+
+  defp cancel_held(%ProviderCalendarEventSchema{} = event),
+    do: AttendeeNotifications.cancel_pending(event)
+
+  defp cancel_held(_not_cached), do: {:ok, :none}
 end

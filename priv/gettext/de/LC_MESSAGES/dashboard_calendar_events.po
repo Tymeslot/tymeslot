@@ -460,3 +460,13 @@ msgstr "Der Hauptteilnehmer kann den Termin verschieben oder absagen. Schalten S
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Diese Zeit ist nicht mehr verfügbar. Bitte wählen Sie eine andere."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+msgstr "Ereignis gelöscht, aber die Absage des Termins ist fehlgeschlagen. Der Teilnehmer wird möglicherweise nicht benachrichtigt."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Ereignis gelöscht, aber die Teilnehmer konnten nicht benachrichtigt werden."

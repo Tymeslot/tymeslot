@@ -88,3 +88,23 @@ msgstr "містить щось, що потребує вашої уваги"
 #, elixir-autogen, elixir-format
 msgid "More on %{date}: %{count}"
 msgstr "Ще на %{date}: %{count}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "All"
+msgstr "Усі"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings"
+msgstr "Бронювання"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "No bookings in these weeks."
+msgstr "У ці тижні бронювань немає."
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Filter agenda"
+msgstr "Фільтрувати розклад"

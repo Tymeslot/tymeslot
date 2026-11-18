@@ -466,3 +466,13 @@ msgstr "Основний учасник може перенести або ск�
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Цей час більше недоступний. Виберіть інший."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+msgstr "Подію видалено, але скасувати зустріч не вдалося. Учасник може не отримати сповіщення."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Подію видалено, але учасників не вдалося сповістити."

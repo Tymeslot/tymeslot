@@ -88,3 +88,23 @@ msgstr "obsahuje něco, co vyžaduje vaši pozornost"
 #, elixir-autogen, elixir-format
 msgid "More on %{date}: %{count}"
 msgstr "Další dne %{date}: %{count}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "All"
+msgstr "Vše"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings"
+msgstr "Rezervace"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "No bookings in these weeks."
+msgstr "V těchto týdnech nejsou žádné rezervace."
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Filter agenda"
+msgstr "Filtrovat agendu"

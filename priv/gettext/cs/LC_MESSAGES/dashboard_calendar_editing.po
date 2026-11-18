@@ -112,6 +112,7 @@ msgstr "U rezervací a jejich kopií v kalendáři se stav obsazeno/volno nas
 msgid "Calendar"
 msgstr "Kalendář"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
@@ -752,3 +753,23 @@ msgstr "Adresa %{email} byla přidána. Pozvánka bude odeslána, jakmile se zm�
 #, elixir-autogen, elixir-format
 msgid "Removed %{email}. They will be told once the change has synced to your calendar."
 msgstr "Adresa %{email} byla odebrána. Oznámení bude odesláno, jakmile se změna synchronizuje s vaším kalendářem."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Guests will be told about these changes"
+msgstr "Hosté budou o těchto změnách informováni"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Guests won't be told."
+msgstr "Hosté nebudou informováni."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Too late to cancel: guests have been told."
+msgstr "Na zrušení je pozdě: hosté už byli informováni."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "This update is no longer waiting to be sent."
+msgstr "Tato aktualizace už nečeká na odeslání."

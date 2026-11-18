@@ -86,8 +86,14 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
              recurring: false,
              guests: 0,
              request: false,
-             expired: false
+             expired: false,
+             tymeslot: false
            }
+  end
+
+  test "an event created in Tymeslot says so, for the agenda's Bookings filter" do
+    assert %{tymeslot: true} = EventPayload.event(timed(created_by_tymeslot: true), @context)
+    assert %{tymeslot: false} = EventPayload.event(timed(created_by_tymeslot: false), @context)
   end
 
   test "an event inside the hour the clocks go back keeps its length" do

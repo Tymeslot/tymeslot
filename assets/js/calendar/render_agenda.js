@@ -3,21 +3,32 @@
  * for assistive technology as well as by colour), and each event as a row
  * that opens its preview. The list ends in a sentinel the hook watches to
  * load the next weeks, or, once the agenda has gone as far as it goes, in
- * "Show later". The list is its own scroller (`data-view-scroll`). Pure;
- * every string comes from the server and is escaped.
+ * "Show later". The list is its own scroller (`data-view-scroll`), headed
+ * by the lens: All or only Bookings (`data-agenda-lens`, the one shown
+ * pressed). Pure; every string comes from the server and is escaped.
  */
 import { colour, dateLabel, escapeHtml, interpolate, requestAria, requestFlag } from "./render.js";
+import { AGENDA_LENSES } from "./agenda.js";
 import { dayNumber, formatMinutes, isoWeekday } from "./time.js";
 
-export function renderAgenda({ groups, strings, timeFormat, now, done, loading = false }) {
+export function renderAgenda({ groups, strings, timeFormat, now, done, loading = false, lens = "all" }) {
   const opts = { strings, timeFormat, now };
+  const empty = lens === "bookings" ? strings.agenda_no_bookings : strings.agenda_empty;
   const list = groups.length
     ? `<ol class="cal-agenda-days">${groups.map((group) => renderAgendaDay(group, opts)).join("")}</ol>`
-    : `<p class="cal-agenda-empty" role="note">${escapeHtml(strings.agenda_empty)}</p>`;
+    : `<p class="cal-agenda-empty" role="note">${escapeHtml(empty)}</p>`;
   const end = done
     ? `<button type="button" class="cal-agenda-later" data-agenda-later>${escapeHtml(strings.agenda_later)}</button>`
     : `<p class="cal-agenda-more" data-agenda-sentinel>${escapeHtml(strings.agenda_loading)}</p>`;
-  return `<div class="cal-agenda" data-view-scroll role="region" aria-label="${escapeHtml(strings.agenda_label)}"${loading ? ' aria-busy="true"' : ""}>${list}${end}</div>`;
+  return `<div class="cal-agenda" data-view-scroll role="region" aria-label="${escapeHtml(strings.agenda_label)}"${loading ? ' aria-busy="true"' : ""}>${lensBar(lens, strings)}${list}${end}</div>`;
+}
+
+function lensBar(lens, strings) {
+  const labels = { all: strings.agenda_lens_all, bookings: strings.agenda_lens_bookings };
+  const buttons = AGENDA_LENSES.map(
+    (value) => `<button type="button" data-agenda-lens="${value}" aria-pressed="${value === lens}">${escapeHtml(labels[value])}</button>`,
+  ).join("");
+  return `<div class="cal-agenda-lens" role="group" aria-label="${escapeHtml(strings.agenda_lens_label)}">${buttons}</div>`;
 }
 
 // One day as a list item (`<li>`), or the empty-day note when `group` is null.

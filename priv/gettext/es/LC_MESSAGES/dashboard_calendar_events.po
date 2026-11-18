@@ -459,3 +459,13 @@ msgstr "El participante principal puede mover o cancelar la reunión. Desactíva
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Este horario ya no está disponible. Elige otro."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+msgstr "Se eliminó el evento, pero no se pudo cancelar la reunión. Puede que el asistente no reciba el aviso."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Evento eliminado, pero no se pudo avisar a los asistentes."

@@ -35,6 +35,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Dashboard.Calendar.BookingPreview
+  alias TymeslotWeb.Dashboard.Calendar.LinkedText
   alias TymeslotWeb.Dashboard.Calendar.PreviewGuests
   alias TymeslotWeb.Dashboard.Calendar.TreatAs
   alias TymeslotWeb.Dashboard.Calendar.UndeliveredNotice
@@ -70,6 +71,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       relative: relative(event, context.now),
       repeats: EventPayload.recurring?(event),
       location: present(Map.get(event, :location)),
+      notes: present(Map.get(event, :description)),
       guests: GuestReplies.of_event(event),
       join_url: web_url(Map.get(event, :video_link) || Map.get(event, :join_url)),
       availability: availability(event, integration, entry),
@@ -146,7 +148,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           {dgettext("dashboard_calendar", "Repeats")}
         </.row>
         <.row :if={@preview.location} icon="hero-map-pin">
-          <span class="break-words">{@preview.location}</span>
+          <LinkedText.linked_text
+            id="calendar-preview-location"
+            text={@preview.location}
+            class="break-words"
+          />
+        </.row>
+        <.row :if={@preview.notes} icon="hero-bars-3-bottom-left">
+          <LinkedText.linked_text
+            id="calendar-preview-notes"
+            text={@preview.notes}
+            class="block max-h-40 overflow-y-auto whitespace-pre-line break-words"
+          />
         </.row>
         <PreviewGuests.guests :if={@preview.guests != []} guests={@preview.guests} />
         <.row :if={@preview.availability} icon="hero-shield-check">

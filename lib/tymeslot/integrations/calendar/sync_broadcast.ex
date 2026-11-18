@@ -44,7 +44,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcast do
 
   @doc """
   Broadcasts that a delete was scheduled from the calendar, with the address
-  it was scheduled with, so the organiser's other calendars hide the event.
+  it was scheduled with (and whether it tells the attendees,
+  `notify_attendees`), so the organiser's other calendars hide the event.
   """
   @spec broadcast_delete_scheduled(integer(), pos_integer(), map(), atom()) :: :ok
   def broadcast_delete_scheduled(user_id, token, address, scope) do

@@ -125,6 +125,25 @@ defmodule Tymeslot.CalendarGrid.EventDeletionRecoveryTest do
       assert {untouched.status, untouched.calendar_sync_status} == {:confirmed, nil}
     end
 
+    test "a scheduled delete tells the organiser's calendars the cancellation failed", %{
+      user: user,
+      caldav: caldav,
+      event: event
+    } do
+      link_meeting(caldav, event)
+
+      stub_module(MeetingCalendarQueries, :update_calendar_sync_status_if_changed, fn _id,
+                                                                                      _status ->
+        {:error, :not_found}
+      end)
+
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{user.id}")
+      {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, delay: 0)
+      Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
+
+      assert_receive {:calendar_delete_result, _user_id, ^token, {:deleted, :cancel_failed}}
+    end
+
     test "reports a cancellation that crashed the same way", %{
       user: user,
       caldav: caldav,

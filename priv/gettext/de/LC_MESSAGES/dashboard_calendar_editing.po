@@ -110,6 +110,7 @@ msgstr "Für Buchungen und ihre Kalenderkopien wird „Beschäftigt“ oder „F
 msgid "Calendar"
 msgstr "Kalender"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
@@ -750,3 +751,23 @@ msgstr "%{email} hinzugefügt. Die Einladung wird versendet, sobald die Änderun
 #, elixir-autogen, elixir-format
 msgid "Removed %{email}. They will be told once the change has synced to your calendar."
 msgstr "%{email} entfernt. Die Benachrichtigung wird versendet, sobald die Änderung mit Ihrem Kalender synchronisiert wurde."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Guests will be told about these changes"
+msgstr "Die Gäste werden über diese Änderungen benachrichtigt"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Guests won't be told."
+msgstr "Die Gäste werden nicht benachrichtigt."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Too late to cancel: guests have been told."
+msgstr "Zu spät zum Abbrechen: Die Gäste wurden bereits benachrichtigt."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "This update is no longer waiting to be sent."
+msgstr "Diese Benachrichtigung steht nicht mehr zum Versand aus."

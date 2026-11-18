@@ -17,8 +17,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [push_event: 3]
 
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
+  alias TymeslotWeb.Dashboard.Calendar.PanelGuests
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
 
   @type socket :: Phoenix.LiveView.Socket.t()
@@ -41,10 +43,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   def open_edit(socket, id) do
     case Map.fetch(socket.assigns.events_by_id, id) do
       {:ok, event} ->
+        held_until = held_until(event)
+
         without_draft(socket, fn socket ->
           socket
           |> drop_prompts()
-          |> assign(panel: new_panel(socket.assigns, event), preview: nil, open_menu: nil)
+          |> assign(
+            panel: new_panel(socket.assigns, event, held_until),
+            preview: nil,
+            open_menu: nil
+          )
+          |> PanelGuests.forget_held_from(id, held_until)
+          |> PanelGuests.watch_hold(id, held_until)
           |> push_event("calendar:panel", %{open: true})
         end)
 
@@ -160,7 +170,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
 
   defp without_draft(socket, leave), do: leave.(socket)
 
-  defp new_panel(assigns, event) do
+  defp new_panel(assigns, event, held_until) do
     %{
       mode: :edit,
       event_id: EventPayload.id(event),
@@ -169,7 +179,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       draft_id: nil,
       form: %{},
       scope: nil,
-      opened_with: event,
+      opened_with: Map.get(assigns.untold_moves, EventPayload.id(event), event),
+      guests_pending: held_until != nil,
+      hold_watch: nil,
       status: opening_status(assigns.integrations, event),
       writes: [],
       errors: %{},
@@ -177,6 +189,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       calendar_version: 0,
       video_version: 0
     }
+  end
+
+  # An update "Tell guests" sent is held a while before it goes out; the
+  # panel offers to cancel it meanwhile, until it is due. Only an event
+  # with guests can have one, so the others cost no query.
+  defp held_until(event) do
+    if event |> Map.get(:attendees) |> List.wrap() |> Enum.any?(),
+      do: Changes.guest_update_held_until(event)
   end
 
   defp opening_status(integrations, event),

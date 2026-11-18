@@ -110,6 +110,7 @@ msgstr "Per le prenotazioni e le loro copie nel calendario, lo stato occupato o 
 msgid "Calendar"
 msgstr "Calendario"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
@@ -750,3 +751,23 @@ msgstr "Hai aggiunto %{email}. L'invito partirà non appena la modifica sarà si
 #, elixir-autogen, elixir-format
 msgid "Removed %{email}. They will be told once the change has synced to your calendar."
 msgstr "Hai rimosso %{email}. L'avviso partirà non appena la modifica sarà sincronizzata con il tuo calendario."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Guests will be told about these changes"
+msgstr "Gli ospiti verranno avvisati di queste modifiche"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Guests won't be told."
+msgstr "Gli ospiti non verranno avvisati."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Too late to cancel: guests have been told."
+msgstr "Troppo tardi per annullare: gli ospiti sono già stati avvisati."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "This update is no longer waiting to be sent."
+msgstr "Questo aggiornamento non è più in attesa di invio."

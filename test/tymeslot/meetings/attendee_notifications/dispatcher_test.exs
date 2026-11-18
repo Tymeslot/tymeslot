@@ -8,6 +8,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherTest do
 
   alias Tymeslot.Meetings.AttendeeNotifications.Dispatcher
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
+  alias Tymeslot.Repo
 
   setup do
     event = insert(:provider_calendar_event)
@@ -57,7 +58,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherTest do
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
       assert [_job] = all_enqueued(worker: Worker)
 
-      :ok = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
+      {:ok, :cancelled} = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
       assert all_enqueued(worker: Worker) == []
     end
 
@@ -73,8 +74,33 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherTest do
 
       assert length(all_enqueued(worker: Worker)) == 2
 
-      :ok = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
+      {:ok, :cancelled} = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
       assert all_enqueued(worker: Worker) == []
+    end
+
+    test "says the update was sent when it ran before the cancel", %{event: event} do
+      {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
+
+      Repo.update_all(Oban.Job,
+        set: [
+          state: "completed",
+          attempted_at: DateTime.utc_now(),
+          completed_at: DateTime.utc_now()
+        ]
+      )
+
+      assert Dispatcher.cancel_pending(event.id, :provider_calendar_event) == {:ok, :sent}
+    end
+
+    test "says nothing was waiting when no update ran or waits", %{event: event} do
+      assert Dispatcher.cancel_pending(event.id, :provider_calendar_event) == {:ok, :none}
+
+      # An update sent long before is not the one the cancel came too late for.
+      {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
+      long_ago = DateTime.add(DateTime.utc_now(), -3600)
+      Repo.update_all(Oban.Job, set: [state: "completed", attempted_at: long_ago])
+
+      assert Dispatcher.cancel_pending(event.id, :provider_calendar_event) == {:ok, :none}
     end
 
     test "does not affect jobs for other events", %{event: event} do
@@ -83,7 +109,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherTest do
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
       {:ok, :scheduled} = Dispatcher.schedule_update(other.id, :provider_calendar_event)
 
-      :ok = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
+      {:ok, :cancelled} = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
 
       jobs = all_enqueued(worker: Worker)
       assert length(jobs) == 1
@@ -103,7 +129,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherTest do
 
     test "returns false after cancel_pending removes the job", %{event: event} do
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
-      :ok = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
+      {:ok, :cancelled} = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
       refute Dispatcher.pending?(event.id, :provider_calendar_event)
     end
   end

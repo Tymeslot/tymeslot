@@ -42,6 +42,48 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePreviewTest do
     assert has_element?(lv, "#calendar-preview", "Guests can't book this time")
   end
 
+  test "web addresses in the place and notes are links that open in a new tab", %{
+    conn: conn,
+    integration: integration
+  } do
+    call =
+      event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z], 60,
+        location: "https://meet.example.com/abc",
+        description: "Agenda in https://docs.example.com/review. Bring <notes>."
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open(lv, "event-#{call.id}")
+    assert_reply(lv, %{opened: true})
+
+    assert has_element?(
+             lv,
+             ~s|#calendar-preview-location a[href="https://meet.example.com/abc"][target="_blank"][rel="noopener noreferrer"]|
+           )
+
+    assert has_element?(
+             lv,
+             ~s|#calendar-preview-notes a[href="https://docs.example.com/review"]|,
+             "https://docs.example.com/review"
+           )
+
+    assert has_element?(lv, "#calendar-preview-notes", "Bring <notes>.")
+  end
+
+  test "a place that is not a web address stays text", %{conn: conn, integration: integration} do
+    call =
+      event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z], 60,
+        location: "javascript:alert(1)"
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open(lv, "event-#{call.id}")
+    assert_reply(lv, %{opened: true})
+
+    assert has_element?(lv, "#calendar-preview-location", "javascript:alert(1)")
+    refute has_element?(lv, "#calendar-preview-location a")
+  end
+
   test "a free event says guests can book over it", %{conn: conn, integration: integration} do
     focus =
       event(integration, "work", "Focus time", ~U[2026-10-15 09:00:00Z], 120,
