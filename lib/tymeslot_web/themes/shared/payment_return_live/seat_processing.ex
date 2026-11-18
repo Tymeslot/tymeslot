@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.SeatProcessing do
   webhook is still in flight; the page listens on the hold's topic and
   re-reads the hold on `{:paid, participant_id}` or `:expired`
   (`PaymentReturn.Seat.refresh/1`). Its outcome is the hold's
-  (`PaymentReturn.Seat.outcome/3`), never the shared meeting's, and the page
+  (`Checkout.seat_checkout_outcome/2`), never the shared meeting's, and the page
   never changes anything.
   """
 

@@ -135,4 +135,14 @@ defmodule Tymeslot.MeetingPayments.Checkout do
   @spec checkout_outcome(BookingPaymentSchema.t() | nil, MeetingSchema.t() | nil) ::
           CheckoutOutcome.t()
   defdelegate checkout_outcome(payment, meeting), to: CheckoutOutcome, as: :classify
+
+  @doc """
+  What a booker returning from a held group seat's Stripe Checkout should be
+  told, judged by the hold rather than the shared meeting: still
+  `:processing`, `:confirmed`, `:cancelled`, `:failed` or `:expired`. See
+  `CheckoutOutcome.classify_seat/2` for the rules.
+  """
+  @spec seat_checkout_outcome(SeatHoldSchema.t() | nil, BookingPaymentSchema.t() | nil) ::
+          CheckoutOutcome.t()
+  defdelegate seat_checkout_outcome(hold, payment), to: CheckoutOutcome, as: :classify_seat
 end

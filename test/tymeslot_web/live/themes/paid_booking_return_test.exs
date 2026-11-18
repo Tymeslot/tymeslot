@@ -251,48 +251,72 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
 
     test "the seat return page reports a lapsed hold as expired although the meeting is confirmed",
          %{conn: conn, user: user} do
-      meeting_type = Repo.get_by!(MeetingTypeSchema, user_id: user.id)
-      start = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
-
-      meeting =
-        insert(:group_meeting,
-          organizer_user_id: user.id,
-          meeting_type_ref: meeting_type,
-          start_time: start,
-          end_time: DateTime.add(start, 30, :minute),
-          capacity: 5,
-          status: :confirmed
-        )
-
-      insert(:participant, meeting: meeting, email: "on-time@example.com")
-
-      hold =
-        insert(:seat_hold,
-          meeting: meeting,
-          email: "late@example.com",
-          status: :released,
-          released_reason: :expired
-        )
-
-      insert(:booking_payment,
-        meeting: meeting,
-        seat_hold_id: hold.id,
-        seat_payment: true,
-        seats: 1,
-        amount_cents: 2000,
-        host_user_id: user.id,
-        stripe_account_id: "acct_RETURN",
-        stripe_checkout_session_id: "cs_LAPSED",
-        status: :failed
-      )
-
-      {:ok, view, _html} =
-        live(conn, "/themes/quill/payment-processing/seat/#{hold.id}?session_id=cs_LAPSED")
+      view =
+        seat_return_page(conn, user, %{status: :released, released_reason: :expired, seats: 2}, %{
+          status: :failed
+        })
 
       shell = "[data-testid='quill-payment-processing']"
       assert has_element?(view, "#{shell} h1", "Your seats were released")
+      assert has_element?(view, "#{shell} p", "so the seats held for you were released")
       refute has_element?(view, "#{shell} h1", "Booking confirmed")
       assert has_element?(view, "#{shell} a[href='/paid-seat/group-class']", "Return to booking")
+    end
+
+    test "a single lapsed seat reads in the singular", %{conn: conn, user: user} do
+      view = seat_return_page(conn, user, %{status: :released, released_reason: :expired})
+
+      assert has_element?(
+               view,
+               "[role='status'][aria-live='polite'] h1",
+               "Your seat was released"
+             )
+
+      assert has_element?(view, "p", "so the seat held for you was released")
+    end
+
+    test "a payment that came after the hold lapsed is refunded",
+         %{conn: conn, user: user} do
+      view =
+        seat_return_page(conn, user, %{status: :released, released_reason: :expired}, %{
+          status: :refunded,
+          paid_at: DateTime.utc_now(:second)
+        })
+
+      assert has_element?(view, "h1", "Your seat was released")
+
+      assert has_element?(
+               view,
+               "p",
+               "Your payment arrived after the seat held for you was released, and the session had no room left. Your payment is being refunded."
+             )
+
+      refute has_element?(view, "a", "Return to booking")
+    end
+
+    test "a hold released with its cancelled session reads as cancelled",
+         %{conn: conn, user: user} do
+      view =
+        seat_return_page(conn, user, %{status: :released, released_reason: :meeting_cancelled})
+
+      assert has_element?(view, "h1", "Booking cancelled")
+
+      assert has_element?(
+               view,
+               "p",
+               "This booking has been cancelled, so it won't be going ahead."
+             )
+    end
+
+    test "a hold whose payment failed reads as not completed", %{conn: conn, user: user} do
+      view =
+        seat_return_page(conn, user, %{status: :released, released_reason: :failed}, %{
+          status: :failed
+        })
+
+      assert has_element?(view, "h1", "Payment not completed")
+      assert has_element?(view, "p", "Your booking is not confirmed.")
+      assert has_element?(view, "a[href='/paid-seat/group-class']", "Return to booking")
     end
 
     @tag :capture_log
@@ -334,6 +358,50 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
       assert has_element?(view, "[data-testid='quill-payment-cancelled'] h1", "Payment cancelled")
       assert %{status: :held} = SeatHolds.get(hold_id)
     end
+  end
+
+  # Mounts the processing page of a hold on a confirmed group session that
+  # others booked: the hold and its payment are the only rows that differ.
+  defp seat_return_page(conn, user, hold_attrs, payment_attrs \\ %{status: :pending}) do
+    meeting_type = Repo.get_by!(MeetingTypeSchema, user_id: user.id)
+    start = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
+
+    meeting =
+      insert(:group_meeting,
+        organizer_user_id: user.id,
+        meeting_type_ref: meeting_type,
+        start_time: start,
+        end_time: DateTime.add(start, 30, :minute),
+        capacity: 5,
+        status: :confirmed
+      )
+
+    insert(:participant, meeting: meeting, email: "on-time@example.com")
+
+    hold =
+      insert(:seat_hold, Map.merge(%{meeting: meeting, email: "late@example.com"}, hold_attrs))
+
+    insert(
+      :booking_payment,
+      Map.merge(
+        %{
+          meeting: meeting,
+          seat_hold_id: hold.id,
+          seat_payment: true,
+          seats: hold.seats,
+          amount_cents: 2000 * hold.seats,
+          host_user_id: user.id,
+          stripe_account_id: "acct_RETURN",
+          stripe_checkout_session_id: "cs_SEAT_#{hold.id}"
+        },
+        payment_attrs
+      )
+    )
+
+    {:ok, view, _html} =
+      live(conn, "/themes/quill/payment-processing/seat/#{hold.id}?session_id=cs_SEAT_#{hold.id}")
+
+    view
   end
 
   # Books a seat and one guest on the paid group type at the top level,

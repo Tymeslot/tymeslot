@@ -375,13 +375,25 @@ defmodule Tymeslot.Bookings.CreateGroup do
   Each takes a seat of their own.
   """
   @spec guest_emails(map()) :: [String.t()]
-  def guest_emails(booking_data) do
-    if Policy.guests_allowed?(booking_data) do
-      %{form_data: form_data} = booking_data
+  def guest_emails(%{meeting_type: meeting_type, form_data: form_data} = booking_data) do
+    booker_guests(Map.get(booking_data, :guest_emails, []), form_data["email"], meeting_type)
+  end
 
-      booking_data
-      |> Map.get(:guest_emails, [])
-      |> Guests.sanitize_emails(form_data["email"], Guests.limit_for(booking_data.meeting_type))
+  @doc """
+  The seats a booking of `meeting_type` takes: the booker's, and one for
+  each guest they bring, counted by the rule the booking is held and
+  charged by (`guest_emails/1`): the booker's own address, a repeat or an
+  invalid address takes no seat, and guests past the type's limit or on a
+  type that takes none are dropped. The booking form shows its total from
+  this, so the submit never promises a price the checkout does not charge.
+  """
+  @spec seats_for([String.t()] | nil, String.t() | nil, map() | nil) :: pos_integer()
+  def seats_for(guest_emails, booker_email, meeting_type),
+    do: 1 + length(booker_guests(guest_emails, booker_email, meeting_type))
+
+  defp booker_guests(guest_emails, booker_email, meeting_type) do
+    if Policy.guests_allowed?(%{meeting_type: meeting_type}) do
+      Guests.sanitize_emails(guest_emails, booker_email, Guests.limit_for(meeting_type))
     else
       []
     end

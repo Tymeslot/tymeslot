@@ -16,20 +16,17 @@ defmodule TymeslotWeb.Themes.Shared.Components.SubmitPrice do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.MeetingTypes
   alias TymeslotWeb.Components.PaymentHelpers
   alias TymeslotWeb.Themes.Shared.BookingText
 
   @amount_id "submit-price-amount"
 
-  @doc "The seats a booking takes: the booker's, and one for each guest they add."
-  @spec seats([String.t()] | nil) :: pos_integer()
-  def seats(guest_emails) when is_list(guest_emails), do: 1 + length(guest_emails)
-  def seats(nil), do: 1
-
   @doc """
   The price text to show, or `nil` when none is (a free type, one without a
   price, or a reschedule). `seats` is what the booking takes
-  (`seats/1`); a group type's price for more than one is their total.
+  (`Tymeslot.Bookings.CreateGroup.seats_for/3`); a group type's price for
+  more than one is their total.
   """
   @spec label(map() | nil, String.t() | nil, String.t() | nil, boolean(), pos_integer()) ::
           String.t() | nil
@@ -37,25 +34,21 @@ defmodule TymeslotWeb.Themes.Shared.Components.SubmitPrice do
 
   def label(_meeting_type, _currency, _locale, true, _seats), do: nil
 
-  def label(%{max_participants: max} = meeting_type, currency, locale, false, seats)
-      when is_integer(max) and max > 1 and is_integer(seats) and seats > 1 do
-    case BookingText.price_label(meeting_type, currency, locale) do
-      nil ->
-        nil
+  def label(meeting_type, currency, locale, false, seats) do
+    per_person = BookingText.price_label(meeting_type, currency, locale)
 
-      _per_person ->
-        dngettext(
-          "booking",
-          "%{total} for %{count} seat",
-          "%{total} for %{count} seats",
-          seats,
-          total: PaymentHelpers.format_amount(meeting_type.price_cents * seats, currency, locale)
-        )
+    if per_person && seats > 1 && MeetingTypes.group_type?(meeting_type) do
+      dngettext(
+        "booking",
+        "%{total} for %{count} seat",
+        "%{total} for %{count} seats",
+        seats,
+        total: PaymentHelpers.format_amount(meeting_type.price_cents * seats, currency, locale)
+      )
+    else
+      per_person
     end
   end
-
-  def label(meeting_type, currency, locale, false, _seats),
-    do: BookingText.price_label(meeting_type, currency, locale)
 
   @doc """
   The id for a submit's `aria-describedby`: that of the amount when one is
@@ -71,7 +64,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.SubmitPrice do
   attr :currency, :string, default: nil, doc: "the organiser's currency (`@host_currency`)"
   attr :locale, :string, default: nil
   attr :rescheduling, :boolean, default: false
-  attr :seats, :integer, default: 1, doc: "the seats the booking takes (`seats/1`)"
+
+  attr :seats, :integer,
+    default: 1,
+    doc: "the seats the booking takes (`SeriesSummary.seats/1`)"
+
   attr :class, :any, default: nil
 
   @spec price(map()) :: Phoenix.LiveView.Rendered.t()

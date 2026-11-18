@@ -313,6 +313,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   """
   @spec forget_payment_wait(Socket.t()) :: Socket.t()
   def forget_payment_wait(socket) do
+    # A seat's wait holds its meeting too, so this also unsubscribes that
+    # meeting's topic, which the seat's page never joined: harmless.
     case socket.assigns[:awaiting_payment_meeting] do
       %{id: id} -> Phoenix.PubSub.unsubscribe(Tymeslot.PubSub, Checkout.payment_topic(id))
       _none -> :ok

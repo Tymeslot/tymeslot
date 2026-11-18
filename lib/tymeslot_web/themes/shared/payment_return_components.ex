@@ -43,128 +43,126 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
   """
   @spec processing_body(map()) :: Phoenix.LiveView.Rendered.t()
   def processing_body(assigns) do
-    assigns =
-      assign(
-        assigns,
-        :shown,
-        assigns.outcome ||
-          PaymentReturn.outcome(assigns.loading, assigns.payment, assigns.meeting)
-      )
+    assigns = assign(assigns, :shown, PaymentReturn.page_outcome(assigns))
 
+    # One live region, so a screen reader hears the outcome replace the
+    # wait without moving focus.
     ~H"""
-    <%= case @shown do %>
-      <% :failed -> %>
-        <h1 class="payment-page-heading">
-          {dgettext("booking_payments", "Payment not completed")}
-        </h1>
-        <p class="payment-page-body">
-          {dgettext(
-            "booking_payments",
-            "Your booking is not confirmed. You can return and try again at any time."
-          )}
-        </p>
-        <a :if={@rebook_path} href={@rebook_path} class="payment-page-link">
-          {dgettext("booking_payments", "Return to booking")}
-        </a>
-      <% :cancelled -> %>
-        <h1 class="payment-page-heading">
-          {dgettext("booking_payments", "Booking cancelled")}
-        </h1>
-        <p class="payment-page-body">
-          {dgettext(
-            "booking_payments",
-            "This booking has been cancelled, so it won't be going ahead."
-          )}
-        </p>
-      <% :loading -> %>
-        <h1 class="payment-page-heading">
-          {dgettext("booking_payments", "Confirming your payment…")}
-        </h1>
-        <p class="payment-page-body">
-          {dgettext("booking_payments", "Please wait while we confirm your booking.")}
-        </p>
-      <% :awaiting_approval -> %>
-        <h1 class="payment-page-heading">
-          {dgettext("booking_payments", "Payment received")}
-        </h1>
-        <p class="payment-page-body">
-          {dgettext(
-            "booking_payments",
-            "Thanks, your payment went through. Your booking is not confirmed yet though:"
-          )}
-        </p>
-        <ApprovalNotice.block
-          organizer_name={@meeting.organizer_name}
-          stage={:after}
-          class="mt-4"
-        />
-        <.paid_line payment={@payment} />
-        <p :if={PaymentReturn.approval_deadline_text(@meeting)} class="payment-page-body">
-          <%= if Approval.refunds_on_release?(@meeting) do %>
-            <.with_date
-              date={PaymentReturn.approval_deadline_text(@meeting)}
-              text={
-                dgettext(
-                  "booking_payments",
-                  "If there's no answer by %{deadline}, the request lapses and you're refunded automatically.",
-                  deadline: date_marker()
-                )
-              }
-            />
-          <% else %>
-            <.with_date
-              date={PaymentReturn.approval_deadline_text(@meeting)}
-              text={
-                dgettext(
-                  "booking_payments",
-                  "If there's no answer by %{deadline}, the request lapses.",
-                  deadline: date_marker()
-                )
-              }
-            />
-          <% end %>
-        </p>
-      <% :declined -> %>
-        <h1 class="payment-page-heading">
-          {dgettext("booking_payments", "Booking not accepted")}
-        </h1>
-        <p class="payment-page-body">
-          <%= if Approval.refunds_on_release?(@meeting) do %>
+    <div role="status" aria-live="polite" data-testid="payment-processing-status">
+      <%= case @shown do %>
+        <% :failed -> %>
+          <h1 class="payment-page-heading">
+            {dgettext("booking_payments", "Payment not completed")}
+          </h1>
+          <p class="payment-page-body">
             {dgettext(
               "booking_payments",
-              "This booking wasn't accepted, so it won't be going ahead. Your payment is being refunded."
+              "Your booking is not confirmed. You can return and try again at any time."
             )}
-          <% else %>
+          </p>
+          <a :if={@rebook_path} href={@rebook_path} class="payment-page-link">
+            {dgettext("booking_payments", "Return to booking")}
+          </a>
+        <% :cancelled -> %>
+          <h1 class="payment-page-heading">
+            {dgettext("booking_payments", "Booking cancelled")}
+          </h1>
+          <p class="payment-page-body">
             {dgettext(
               "booking_payments",
-              "This booking wasn't accepted, so it won't be going ahead."
+              "This booking has been cancelled, so it won't be going ahead."
             )}
-          <% end %>
-        </p>
-      <% :expired -> %>
-        <.expired
-          seat_hold={@seat_hold}
-          meeting={@meeting}
-          payment={@payment}
-          rebook_path={@rebook_path}
-        />
-      <% :confirmed -> %>
-        <h1 class="payment-page-heading">
-          {dgettext("booking_payments", "Booking confirmed")}
-        </h1>
-        <p class="payment-page-body">
-          <.with_date
-            date={
-              LocalizationHelpers.format_meeting_datetime(
-                @meeting.start_time,
-                @meeting.attendee_timezone
-              )
-            }
-            text={confirmed_text(@series_count)}
+          </p>
+        <% :loading -> %>
+          <h1 class="payment-page-heading">
+            {dgettext("booking_payments", "Confirming your payment…")}
+          </h1>
+          <p class="payment-page-body">
+            {dgettext("booking_payments", "Please wait while we confirm your booking.")}
+          </p>
+        <% :awaiting_approval -> %>
+          <h1 class="payment-page-heading">
+            {dgettext("booking_payments", "Payment received")}
+          </h1>
+          <p class="payment-page-body">
+            {dgettext(
+              "booking_payments",
+              "Thanks, your payment went through. Your booking is not confirmed yet though:"
+            )}
+          </p>
+          <ApprovalNotice.block
+            organizer_name={@meeting.organizer_name}
+            stage={:after}
+            class="mt-4"
           />
-        </p>
-        <.paid_line payment={@payment} />
-    <% end %>
+          <.paid_line payment={@payment} />
+          <p :if={PaymentReturn.approval_deadline_text(@meeting)} class="payment-page-body">
+            <%= if Approval.refunds_on_release?(@meeting) do %>
+              <.with_date
+                date={PaymentReturn.approval_deadline_text(@meeting)}
+                text={
+                  dgettext(
+                    "booking_payments",
+                    "If there's no answer by %{deadline}, the request lapses and you're refunded automatically.",
+                    deadline: date_marker()
+                  )
+                }
+              />
+            <% else %>
+              <.with_date
+                date={PaymentReturn.approval_deadline_text(@meeting)}
+                text={
+                  dgettext(
+                    "booking_payments",
+                    "If there's no answer by %{deadline}, the request lapses.",
+                    deadline: date_marker()
+                  )
+                }
+              />
+            <% end %>
+          </p>
+        <% :declined -> %>
+          <h1 class="payment-page-heading">
+            {dgettext("booking_payments", "Booking not accepted")}
+          </h1>
+          <p class="payment-page-body">
+            <%= if Approval.refunds_on_release?(@meeting) do %>
+              {dgettext(
+                "booking_payments",
+                "This booking wasn't accepted, so it won't be going ahead. Your payment is being refunded."
+              )}
+            <% else %>
+              {dgettext(
+                "booking_payments",
+                "This booking wasn't accepted, so it won't be going ahead."
+              )}
+            <% end %>
+          </p>
+        <% :expired -> %>
+          <.expired
+            seat_hold={@seat_hold}
+            meeting={@meeting}
+            payment={@payment}
+            rebook_path={@rebook_path}
+          />
+        <% :confirmed -> %>
+          <h1 class="payment-page-heading">
+            {dgettext("booking_payments", "Booking confirmed")}
+          </h1>
+          <p class="payment-page-body">
+            <.with_date
+              date={
+                LocalizationHelpers.format_meeting_datetime(
+                  @meeting.start_time,
+                  @meeting.attendee_timezone
+                )
+              }
+              text={confirmed_text(@series_count)}
+            />
+          </p>
+          <.paid_line payment={@payment} />
+      <% end %>
+    </div>
     """
   end
 
@@ -201,20 +199,29 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
   defp expired(assigns) do
     ~H"""
     <h1 class="payment-page-heading">
-      {dgettext("booking_payments", "Your seats were released")}
+      {dngettext(
+        "booking_payments",
+        "Your seat was released",
+        "Your seats were released",
+        @seat_hold.seats
+      )}
     </h1>
     <%= if match?(%{paid_at: %DateTime{}}, @payment) do %>
       <p class="payment-page-body">
-        {dgettext(
+        {dngettext(
           "booking_payments",
-          "Your payment arrived after the seats held for you were released, and the session had no room left. Your payment is being refunded."
+          "Your payment arrived after the seat held for you was released, and the session had no room left. Your payment is being refunded.",
+          "Your payment arrived after the seats held for you were released, and the session had no room left. Your payment is being refunded.",
+          @seat_hold.seats
         )}
       </p>
     <% else %>
       <p class="payment-page-body">
-        {dgettext(
+        {dngettext(
           "booking_payments",
-          "The payment wasn't completed in time, so the seats held for you were released. You can return and book again."
+          "The payment wasn't completed in time, so the seat held for you was released. You can return and book again.",
+          "The payment wasn't completed in time, so the seats held for you were released. You can return and book again.",
+          @seat_hold.seats
         )}
       </p>
       <a :if={@rebook_path} href={@rebook_path} class="payment-page-link">

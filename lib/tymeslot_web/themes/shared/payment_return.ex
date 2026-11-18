@@ -462,8 +462,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   assigns (`PaymentReturn.Seat.outcome/3`), else the meeting's (`outcome/3`).
   """
   @spec page_outcome(map()) :: outcome()
-  def page_outcome(%{outcome: outcome}) when is_atom(outcome) and not is_nil(outcome),
-    do: outcome
+  def page_outcome(%{outcome: outcome}) when outcome != nil, do: outcome
 
   def page_outcome(assigns), do: outcome(assigns.loading, assigns.payment, assigns.meeting)
 

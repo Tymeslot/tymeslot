@@ -448,30 +448,47 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   meeting's uid), the location it was booked at, and the name and email
   the booker gave, from the hold. The seat is looked up by its participant,
   since a late payment can seat the booker on a meeting other than the
-  hold's (`SeatView.for_participant/1`). Only the wait for a seat moves:
-  a broadcast once the page has moved on, or one for a participant that no
-  longer exists, changes nothing.
+  hold's (`SeatView.for_participant/1`). A seat that cannot be read (the
+  participant gone by the time the page asks) is logged, and the booker
+  still reaches the confirmation, without the seat's calendar file and at
+  the held meeting's location, rather than waiting on a payment that has
+  already gone through. Only the wait for a seat moves: a broadcast once
+  the page has moved on changes nothing.
   """
   @spec handle_seat_payment_paid(Socket.t(), binary()) :: {:noreply, Socket.t()}
   def handle_seat_payment_paid(socket, participant_id) do
-    with %{current_state: :awaiting_payment, awaiting_payment_hold: %{} = hold} <-
-           socket.assigns,
-         {:ok, seat} <- SeatView.for_participant(participant_id) do
-      socket =
-        socket
-        |> assign(:meeting_uid, nil)
-        |> assign(:seat_calendar_url, seat_calendar_url(seat))
-        |> assign(:meeting_status, seat.status)
-        |> BookingLocation.assign_booked(seat)
-        |> assign(:name, hold.name)
-        |> assign(:email, hold.email)
-        |> assign(:paid_payment, BookingPayments.payment_for_participant(participant_id))
-        |> Runtime.forget_payment_wait()
+    case socket.assigns do
+      %{current_state: :awaiting_payment, awaiting_payment_hold: %{} = hold} ->
+        socket =
+          socket
+          |> assign_paid_seat(SeatView.for_participant(participant_id), participant_id)
+          |> assign(:meeting_uid, nil)
+          |> assign(:name, hold.name)
+          |> assign(:email, hold.email)
+          |> assign(:paid_payment, BookingPayments.payment_for_participant(participant_id))
+          |> Runtime.forget_payment_wait()
 
-      {:noreply, Runtime.transition_to(socket, :confirmation, %{})}
-    else
-      _not_waiting_or_gone -> {:noreply, socket}
+        {:noreply, Runtime.transition_to(socket, :confirmation, %{})}
+
+      _not_waiting_for_a_seat ->
+        {:noreply, socket}
     end
+  end
+
+  defp assign_paid_seat(socket, {:ok, seat}, _participant_id) do
+    socket
+    |> assign(:seat_calendar_url, seat_calendar_url(seat))
+    |> assign(:meeting_status, seat.status)
+    |> BookingLocation.assign_booked(seat)
+  end
+
+  defp assign_paid_seat(socket, {:error, :not_found}, participant_id) do
+    Logger.warning("Paid seat not found for its confirmation", participant_id: participant_id)
+
+    socket
+    |> assign(:seat_calendar_url, nil)
+    |> assign(:meeting_status, nil)
+    |> BookingLocation.assign_booked(socket.assigns[:awaiting_payment_meeting] || %{})
   end
 
   defp seat_calendar_url(seat) do

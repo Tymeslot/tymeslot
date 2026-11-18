@@ -8,9 +8,10 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn.Seat do
 
   A seat's pages are keyed by its hold, never by the group meeting, which is
   shared: its status says how the session stands, not whether this booker's
-  seats were paid. The outcome is the hold's (`outcome/3`), so a hold that
-  lapsed on a session others confirmed reads as expired, and a hold that
-  became a seat reads as confirmed.
+  seats were paid. The outcome is the hold's (`outcome/3`, decided by
+  `Checkout.seat_checkout_outcome/2`), so a hold that lapsed on a session
+  others confirmed reads as expired, and a hold that became a seat reads as
+  confirmed.
 
   The processing page is authorised as the meeting's is
   (`PaymentReturn`): the hold exists, its meeting's organiser's theme is the
@@ -20,11 +21,13 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn.Seat do
   the source of truth.
   """
 
+  alias Ecto.UUID
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Phoenix.PubSub
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.SeatHoldSchema
@@ -73,10 +76,10 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn.Seat do
 
   @doc """
   Mounts the seat's processing page: subscribes to the hold's topic
-  (`SeatHolds.topic/1`) before reading anything, so a `{:paid, _}` or
-  `:expired` landing between the two is not missed, then authorises the
-  visitor (`authorize/3`) and assigns the page's state (`assign_state/2`),
-  the organiser's customisation and profile. A visitor who fails any check
+  (`SeatHolds.topic/1`) once its id is a UUID, before reading anything, so
+  a `{:paid, _}` or `:expired` landing between the two is not missed, then
+  authorises the visitor (`authorize/3`) and assigns the page's state
+  (`assign_state/2`), the organiser's customisation and profile. A visitor who fails any check
   is sent home with a generic flash (`PaymentReturn.reject/1`). The dead
   render reads only the page's language.
   """
@@ -90,24 +93,23 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn.Seat do
       )
 
     if LiveView.connected?(socket) do
-      PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(hold_id))
+      with {:ok, hold_id} <- UUID.cast(hold_id),
+           :ok <- PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(hold_id)),
+           {:ok, %{hold: hold, meeting: meeting, payment: payment, profile: profile}} <-
+             authorize(hold_id, theme_slug, params["session_id"]) do
+        socket =
+          socket
+          |> PaymentReturn.assign_customization(profile)
+          |> PaymentReturn.assign_organizer(profile, as_booked(meeting, hold))
+          |> Component.assign(
+            rebook_path: PaymentReturn.booking_path(profile, meeting),
+            hold_meeting: meeting
+          )
+          |> assign_state(hold, payment)
 
-      case authorize(hold_id, theme_slug, params["session_id"]) do
-        {:ok, %{hold: hold, meeting: meeting, payment: payment, profile: profile}} ->
-          socket =
-            socket
-            |> PaymentReturn.assign_customization(profile)
-            |> PaymentReturn.assign_organizer(profile, as_booked(meeting, hold))
-            |> Component.assign(
-              rebook_path: PaymentReturn.booking_path(profile, meeting),
-              hold_meeting: meeting
-            )
-            |> assign_state(hold, payment)
-
-          {:ok, socket}
-
-        {:error, _reason} ->
-          {:ok, PaymentReturn.reject(socket)}
+        {:ok, socket}
+      else
+        _invalid_or_refused -> {:ok, PaymentReturn.reject(socket)}
       end
     else
       socket =
@@ -149,38 +151,21 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn.Seat do
   def refresh(socket), do: socket
 
   @doc """
-  What the seat's return page tells its booker now:
-
-    * `:loading` on the dead render, and while the hold is held with its
-      payment still pending;
-    * `:confirmed` once the hold became a seat, even one cancelled since;
-    * `:cancelled` when the hold was released because its session was
-      cancelled;
-    * `:failed` when the payment failed, unpaid;
-    * `:expired` for any other release: the checkout lapsed or was left, or
-      a payment that came too late found no room and is refunded.
+  What the seat's return page tells its booker now: `:loading` on the dead
+  render and while the checkout is still processing, else the hold's
+  outcome, which the domain decides (`Checkout.seat_checkout_outcome/2`),
+  as `PaymentReturn.outcome/3` maps a meeting's.
   """
   @spec outcome(boolean(), SeatHoldSchema.t() | nil, MeetingPayments.booking_payment() | nil) ::
           outcome()
   def outcome(true, _hold, _payment), do: :loading
-  def outcome(false, nil, _payment), do: :loading
-  def outcome(false, %SeatHoldSchema{status: :converted}, _payment), do: :confirmed
 
-  def outcome(
-        false,
-        %SeatHoldSchema{status: :released, released_reason: :meeting_cancelled},
-        _payment
-      ),
-      do: :cancelled
-
-  def outcome(false, %SeatHoldSchema{status: :released}, %{paid_at: %DateTime{}}), do: :expired
-
-  def outcome(false, %SeatHoldSchema{status: :released, released_reason: :failed}, _payment),
-    do: :failed
-
-  def outcome(false, %SeatHoldSchema{status: :released}, _payment), do: :expired
-  def outcome(false, %SeatHoldSchema{status: :held}, %{status: :failed}), do: :failed
-  def outcome(false, %SeatHoldSchema{status: :held}, _payment), do: :loading
+  def outcome(false, hold, payment) do
+    case Checkout.seat_checkout_outcome(hold, payment) do
+      :processing -> :loading
+      outcome -> outcome
+    end
+  end
 
   @doc """
   Assigns the seat's page language on the dead render, as

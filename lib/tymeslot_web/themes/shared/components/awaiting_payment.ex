@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.AwaitingPayment do
       id="awaiting-payment"
       phx-hook="PaymentRedirectOpenTab"
     >
-      <div class="awaiting-payment-card">
+      <div class="awaiting-payment-card" role="status">
         <div class="awaiting-payment-icon" aria-hidden="true">
           <.icon name="hero-arrow-right" />
         </div>

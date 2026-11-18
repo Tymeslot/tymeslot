@@ -15,6 +15,7 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Create
+  alias Tymeslot.Bookings.CreateGroup
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.StripeAdapterMock
@@ -128,6 +129,40 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
     assert payment.seats == 2
 
     assert EnqueuedJobs.for_user(ctx.user) == []
+  end
+
+  # The booking form prices its submit with `CreateGroup.seats_for/3`; the
+  # hold must take, and the checkout charge, exactly those seats.
+  test "a guest who is the booker takes no seat of their own, priced or held", ctx do
+    expect_checkout()
+    guests = ["One@Example.com ", "guest@example.com", "guest@example.com"]
+
+    assert CreateGroup.seats_for(guests, "one@example.com", ctx.meeting_type) == 2
+
+    assert {:ok, :payment_required, %{seat_hold: %{seats: 2} = hold}} =
+             execute(ctx, "one@example.com", %{guest_emails: guests})
+
+    assert %{seats: 2, amount_cents: 4000} = BookingPaymentQueries.by_seat_hold_id(hold.id)
+  end
+
+  describe "CreateGroup.seats_for/3" do
+    test "counts the booker alone with no guests", ctx do
+      assert CreateGroup.seats_for([], "one@example.com", ctx.meeting_type) == 1
+      assert CreateGroup.seats_for(nil, "one@example.com", ctx.meeting_type) == 1
+    end
+
+    test "drops invalid addresses and caps guests at the type's limit", ctx do
+      meeting_type = %{ctx.meeting_type | max_guests_per_booking: 2}
+      guests = ["a@example.com", "not-an-email", "b@example.com", "c@example.com"]
+
+      assert CreateGroup.seats_for(guests, "one@example.com", meeting_type) == 3
+    end
+
+    test "counts no guests on a type that takes none", ctx do
+      meeting_type = %{ctx.meeting_type | allow_guests: false}
+
+      assert CreateGroup.seats_for(["a@example.com"], "one@example.com", meeting_type) == 1
+    end
   end
 
   test "a seat hold fires no automation", ctx do

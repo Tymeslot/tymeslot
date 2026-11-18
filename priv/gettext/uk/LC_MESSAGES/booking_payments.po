@@ -144,15 +144,24 @@ msgstr[2] "Дякуємо, ваші %{count} сесій підтверджено
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "The payment wasn't completed in time, so the seats held for you were released. You can return and book again."
-msgstr ""
+msgid "The payment wasn't completed in time, so the seat held for you was released. You can return and book again."
+msgid_plural "The payment wasn't completed in time, so the seats held for you were released. You can return and book again."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "Your payment arrived after the seats held for you were released, and the session had no room left. Your payment is being refunded."
-msgstr ""
+msgid "Your payment arrived after the seat held for you was released, and the session had no room left. Your payment is being refunded."
+msgid_plural "Your payment arrived after the seats held for you were released, and the session had no room left. Your payment is being refunded."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "Your seats were released"
-msgstr ""
+msgid "Your seat was released"
+msgid_plural "Your seats were released"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""

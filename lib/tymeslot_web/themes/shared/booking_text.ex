@@ -41,6 +41,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Availability.Offer
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Components.PaymentHelpers
@@ -230,7 +231,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   one without a price, and when the currency is unknown. A demo persona's
   meeting type is a plain map without the fields, and is `nil` too.
 
-  A group type charges each seat (`max_participants` above 1), so its price
+  A group type charges each seat (`MeetingTypes.group_type?/1`), so its price
   reads "€20.00 per person" wherever it is listed; only the submit shows
   what a booking with guests costs in all (`SubmitPrice.label/5`).
   """
@@ -239,13 +240,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
       when is_integer(cents) and cents > 0 and is_binary(currency) do
     formatted = PaymentHelpers.format_amount(cents, currency, locale)
 
-    case Map.get(meeting_type, :max_participants) do
-      max when is_integer(max) and max > 1 ->
-        dgettext("booking", "%{price} per person", price: formatted)
-
-      _one_to_one ->
-        formatted
-    end
+    if MeetingTypes.group_type?(meeting_type),
+      do: dgettext("booking", "%{price} per person", price: formatted),
+      else: formatted
   end
 
   def price_label(_meeting_type, _currency, _locale), do: nil

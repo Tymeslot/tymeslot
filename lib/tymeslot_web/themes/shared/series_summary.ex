@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesSummary do
 
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
+  alias Tymeslot.Bookings.CreateGroup
   alias Tymeslot.Bookings.MeetingLinks
   alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
@@ -79,11 +80,18 @@ defmodule TymeslotWeb.Themes.Shared.SeriesSummary do
       )
 
   @doc """
-  The seats the booking form books (`SubmitPrice.seats/1`): the booker's,
-  and one for each guest added.
+  The seats the booking form books: the booker's, and one for each guest
+  added, counted as the booking will be charged
+  (`CreateGroup.seats_for/3`), so a guest the booking would drop (the
+  booker's own address, one past the type's limit) is not priced.
   """
   @spec seats(map()) :: pos_integer()
-  def seats(assigns), do: SubmitPrice.seats(assigns[:guest_emails])
+  def seats(assigns),
+    do:
+      CreateGroup.seats_for(assigns[:guest_emails], booker_email(assigns), assigns[:meeting_type])
+
+  defp booker_email(%{form: %{params: %{"email" => email}}}) when is_binary(email), do: email
+  defp booker_email(_assigns), do: nil
 
   @doc """
   The submit's label: "Book 4 sessions" ("Request 4 sessions" on a type the

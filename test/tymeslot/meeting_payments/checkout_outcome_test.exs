@@ -18,11 +18,13 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.FailAndExpire
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.SeatHoldSchema
 
   setup :verify_on_exit!
 
@@ -207,6 +209,67 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
       assert {:ok, _expired} = Approval.expire(meeting)
 
       assert outcome(meeting) == :expired
+    end
+  end
+
+  # A seat's outcome is its hold's: the shared meeting says nothing about
+  # whether this booker's seats were paid, so the rows here are the hold and
+  # its payment only.
+  describe "seat_checkout_outcome/2" do
+    defp seat_outcome(hold_attrs, payment_attrs \\ %{status: :pending, paid_at: nil}) do
+      Checkout.seat_checkout_outcome(
+        struct(SeatHoldSchema, hold_attrs),
+        payment_attrs && struct(BookingPaymentSchema, payment_attrs)
+      )
+    end
+
+    defp paid, do: %{status: :paid, paid_at: DateTime.utc_now(:second)}
+
+    test "no hold to judge is still processing" do
+      assert Checkout.seat_checkout_outcome(nil, nil) == :processing
+    end
+
+    test "a hold that became a seat is confirmed" do
+      assert seat_outcome(%{status: :converted}, paid()) == :confirmed
+    end
+
+    # The page reports the checkout, which did book the seat; what became of
+    # the seat afterwards is the seat's own confirmation and emails' story.
+    test "a seat cancelled since its payment still reads as confirmed" do
+      assert seat_outcome(%{status: :converted}, %{status: :refunded, paid_at: paid().paid_at}) ==
+               :confirmed
+    end
+
+    test "a hold released because its session was cancelled is cancelled" do
+      assert seat_outcome(%{status: :released, released_reason: :meeting_cancelled}) ==
+               :cancelled
+    end
+
+    test "a hold released because its payment failed is failed" do
+      assert seat_outcome(%{status: :released, released_reason: :failed}, %{
+               status: :failed,
+               paid_at: nil
+             }) == :failed
+    end
+
+    # Its payment came after the hold had gone and found no room: refunded.
+    test "a released hold whose payment completed late is expired" do
+      assert seat_outcome(%{status: :released, released_reason: :expired}, paid()) == :expired
+      assert seat_outcome(%{status: :released, released_reason: :failed}, paid()) == :expired
+    end
+
+    test "any other release is expired" do
+      assert seat_outcome(%{status: :released, released_reason: :expired}) == :expired
+      assert seat_outcome(%{status: :released, released_reason: :abandoned}) == :expired
+    end
+
+    test "a held seat whose payment failed is failed" do
+      assert seat_outcome(%{status: :held}, %{status: :failed, paid_at: nil}) == :failed
+    end
+
+    test "a held seat whose payment is pending is still processing" do
+      assert seat_outcome(%{status: :held}) == :processing
+      assert seat_outcome(%{status: :held}, nil) == :processing
     end
   end
 end

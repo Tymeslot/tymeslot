@@ -18,14 +18,18 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
   @moduletag :scheduling
   @moduletag :integration
 
+  import ExUnit.CaptureLog
   import Mox
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
   import Tymeslot.JourneyFixtureHelpers, only: [seed_organiser: 3]
 
+  alias Ecto.Changeset
+  alias Ecto.UUID
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
@@ -34,6 +38,7 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Meetings.SeatView
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.StripeWebhookFixtures
@@ -102,8 +107,29 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
         add_guest(view, "second@example.com")
         assert has_element?(view, @submit_price, "€60.00 for 3 seats")
 
+        # The submit is described by the element that holds the total.
+        assert has_element?(view, "#submit-price-amount", "€60.00 for 3 seats")
+
+        assert has_element?(
+                 view,
+                 "[data-intent='submit'][aria-describedby~='submit-price-amount']"
+               )
+
         remove_guest(view, "second@example.com")
         assert has_element?(view, @submit_price, "€40.00 for 2 seats")
+      end
+
+      # The booking drops a guest who is the booker, so the submit does too.
+      test "a guest who is the booker takes no seat of their own",
+           %{conn: conn, profile: profile} do
+        view = open_form(conn, "/#{profile.username}?timezone=UTC")
+
+        add_guest(view, "pat@example.com")
+        assert has_element?(view, @submit_price, "€40.00 for 2 seats")
+
+        fill_booker(view, "pat@example.com")
+        assert has_element?(view, @submit_price, "€20.00 per person")
+        refute has_element?(view, @submit_price, "seats")
       end
     end
   end
@@ -111,6 +137,24 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
   describe "at the top level" do
     setup do
       %{profile: seed_group_organiser("1", "group-top")}
+    end
+
+    # The checkout charges the seats the submit showed: one, not two.
+    @tag :capture_log
+    test "a guest who is the booker is not charged a seat", %{conn: conn, profile: profile} do
+      expect_checkout("cs_GROUP_SELF")
+      view = open_form(conn, "/#{profile.username}?timezone=UTC")
+      add_guest(view, "pat@example.com")
+      fill_booker(view, "pat@example.com")
+      assert has_element?(view, @submit_price, "€20.00 per person")
+
+      submit(view)
+
+      assert_redirect(view, "https://checkout.stripe.com/c/pay/cs_GROUP_SELF", 5_000)
+      assert [%SeatHoldSchema{seats: 1} = hold] = Repo.all(SeatHoldSchema)
+
+      assert %{seats: 1, amount_cents: 2000} =
+               Repo.get_by!(BookingPaymentSchema, seat_hold_id: hold.id)
     end
 
     @tag :capture_log
@@ -132,19 +176,31 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
 
   describe "inside an embed" do
     setup do
-      %{profile: seed_group_organiser("1", "group-embed")}
+      profile = seed_group_organiser("1", "group-embed")
+
+      # One venue, so the confirmation has a location to show.
+      venue = insert(:venue, user: Repo.preload(profile, :user).user, name: "Main Hall")
+
+      MeetingTypeSchema
+      |> Repo.get_by!(user_id: profile.user_id)
+      |> Changeset.change()
+      |> Changeset.put_embed(:locations, [in_person_location([venue])])
+      |> Repo.update!()
+
+      %{profile: profile}
     end
 
     @tag :capture_log
     test "an embedded paid seat confirms in the iframe when payment lands",
          %{conn: conn, profile: profile} do
-      view = submit_embedded(conn, profile, "cs_GROUP_PAID")
-      hold = :sys.get_state(view.pid).socket.assigns.awaiting_payment_hold
-      assert %SeatHoldSchema{seats: 2} = hold
+      {view, hold} = submit_embedded(conn, profile, "cs_GROUP_PAID")
+      assert %SeatHoldSchema{seats: 2, name: "Pay Pat", email: "pat@example.com"} = hold
+      topic = SeatHolds.topic(hold.id)
+      assert subscribed?(view, topic)
 
       payment = Repo.get_by!(BookingPaymentSchema, seat_hold_id: hold.id)
       assert :ok = CheckoutSessionCompleted.handle(completed_event(payment))
-      _drain = :sys.get_state(view.pid)
+      _drain = render(view)
 
       %SeatHoldSchema{status: :converted, participant_id: participant_id} =
         SeatHolds.get(hold.id)
@@ -155,42 +211,78 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
       assert has_element?(view, "[data-testid='confirmation-heading']")
       assert has_element?(view, "a[href='#{calendar_url}']")
       assert has_element?(view, "[data-testid='confirmation-paid']", "€40.00")
+      assert has_element?(view, "[data-testid='confirmation-location']", "Main Hall")
+      assert render(view) =~ "Pay Pat"
+      assert render(view) =~ "pat@example.com"
       refute has_element?(view, "[data-testid='awaiting-payment']")
-      assert :sys.get_state(view.pid).socket.assigns.awaiting_payment_hold == nil
+      refute subscribed?(view, topic)
+    end
+
+    # A repeated broadcast (PubSub redelivery, a second webhook) finds the
+    # wait already over and changes nothing.
+    @tag :capture_log
+    test "a second {:paid, _} for the seat is ignored", %{conn: conn, profile: profile} do
+      {view, hold} = submit_embedded(conn, profile, "cs_GROUP_TWICE")
+      payment = Repo.get_by!(BookingPaymentSchema, seat_hold_id: hold.id)
+      assert :ok = CheckoutSessionCompleted.handle(completed_event(payment))
+      _drain = render(view)
+      confirmed = view |> element("[data-testid='confirmation-heading']") |> render()
+
+      %SeatHoldSchema{participant_id: participant_id} = SeatHolds.get(hold.id)
+      send(view.pid, {:paid, participant_id})
+
+      assert Process.alive?(view.pid)
+      assert view |> element("[data-testid='confirmation-heading']") |> render() == confirmed
+    end
+
+    # The payment went through, so the booker is not left waiting: the
+    # confirmation shows, without the seat's calendar file it cannot read.
+    test "a {:paid, _} naming no participant still confirms, with a warning",
+         %{conn: conn, profile: profile} do
+      {view, _hold} = submit_embedded(conn, profile, "cs_GROUP_GONE")
+
+      log =
+        capture_log([level: :warning], fn ->
+          send(view.pid, {:paid, UUID.generate()})
+          _drain = render(view)
+        end)
+
+      assert log =~ "Paid seat not found for its confirmation"
+      assert has_element?(view, "[data-testid='confirmation-heading']")
+      refute has_element?(view, "[data-testid='awaiting-payment']")
+      refute has_element?(view, "a[href$='.ics']")
+      refute has_element?(view, "[data-testid='confirmation-paid']")
     end
 
     @tag :capture_log
     test "an embedded paid seat returns to the booking form when the hold expires",
          %{conn: conn, profile: profile} do
-      view = submit_embedded(conn, profile, "cs_GROUP_LAPSE")
-      hold = :sys.get_state(view.pid).socket.assigns.awaiting_payment_hold
+      {view, hold} = submit_embedded(conn, profile, "cs_GROUP_LAPSE")
       topic = SeatHolds.topic(hold.id)
 
       payment = Repo.get_by!(BookingPaymentSchema, seat_hold_id: hold.id)
       assert :ok = CheckoutSessionExpired.handle(expired_event(payment))
-      _drain = :sys.get_state(view.pid)
+      _drain = render(view)
 
       assert render(view) =~ "Payment was cancelled"
       refute has_element?(view, "[data-testid='awaiting-payment']")
       assert has_element?(view, "form[data-fact='attendee']")
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-      assert assigns.awaiting_payment_hold == nil
-      assert assigns.awaiting_payment_meeting == nil
-      refute view.pid in Enum.map(Registry.lookup(Tymeslot.PubSub, topic), &elem(&1, 0))
+      refute subscribed?(view, topic)
+      refute subscribed?(view, Checkout.payment_topic(hold.meeting_id))
     end
 
     # A seat's wait ends only on its hold's own message: a bare `:paid`
     # names no seat, and the group meeting has no attendee to confirm.
     @tag :capture_log
     test "a bare :paid does not end a seat's wait", %{conn: conn, profile: profile} do
-      view = submit_embedded(conn, profile, "cs_GROUP_BARE")
+      {view, hold} = submit_embedded(conn, profile, "cs_GROUP_BARE")
 
       send(view.pid, :paid)
-      _drain = :sys.get_state(view.pid)
+      _drain = render(view)
 
       assert has_element?(view, "[data-testid='awaiting-payment']")
       refute has_element?(view, "[data-testid='confirmation-heading']")
+      assert subscribed?(view, SeatHolds.topic(hold.id))
     end
   end
 
@@ -242,6 +334,17 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
     |> render_click()
   end
 
+  defp fill_booker(view, email) do
+    view
+    |> form("form[data-fact='attendee']", %{
+      "booking" => %{"name" => "Pay Pat", "email" => email, "message" => ""}
+    })
+    |> render_change()
+  end
+
+  defp subscribed?(view, topic),
+    do: view.pid in Enum.map(Registry.lookup(Tymeslot.PubSub, topic), &elem(&1, 0))
+
   # Submitted here rather than by `BookingDriver.submit/2`, which waits on
   # the page afterwards: a paid booking leaves it for Stripe.
   defp submit(view) do
@@ -266,23 +369,23 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
     end)
   end
 
-  # Books a seat and one guest inside the embed, and returns the view once
-  # it waits on the payment, having pushed the checkout to a new tab.
+  # Books a seat and one guest inside the embed, and returns the view and
+  # the hold once it waits on the payment, having pushed the checkout to a
+  # new tab (which only an embedded page does).
   defp submit_embedded(conn, profile, session_id) do
     expect_checkout(session_id)
     url = "https://checkout.stripe.com/c/pay/#{session_id}"
 
     conn = put_req_header(conn, "referer", "https://embedder.test/page")
     view = open_form(conn, "/#{profile.username}?embed=1&timezone=UTC")
-    assert :sys.get_state(view.pid).socket.assigns[:embedded] == true
     add_guest(view, "friend@example.com")
 
     submit(view)
-    _drain = :sys.get_state(view.pid)
+    _drain = render(view)
 
     assert_push_event(view, "payment_redirect_open_tab", %{url: ^url})
     assert has_element?(view, "[data-testid='awaiting-payment']")
-    view
+    {view, Repo.get_by!(SeatHoldSchema, email: "pat@example.com")}
   end
 
   defp completed_event(payment) do
