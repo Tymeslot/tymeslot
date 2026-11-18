@@ -211,14 +211,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
     end
   end
 
-  defp cancelled(socket, panel, told_from, :cancelled) do
-    untold_from = told_from || panel.opened_with
+  defp cancelled(socket, panel, told_from, :cancelled),
+    do:
+      socket
+      |> untold_again(panel, told_from)
+      |> Toast.show(dgettext("dashboard_calendar_editing", "Guests won't be told."))
 
-    socket
-    |> assign(:panel, %{panel | guests_pending: false, opened_with: untold_from})
-    |> assign(:untold_moves, Map.put(socket.assigns.untold_moves, panel.event_id, untold_from))
-    |> Toast.show(dgettext("dashboard_calendar_editing", "Guests won't be told."))
-  end
+  # Cancelled from another tab, say: the guests were not told either.
+  defp cancelled(socket, panel, told_from, :not_held),
+    do:
+      socket
+      |> untold_again(panel, told_from)
+      |> Toast.show(
+        dgettext("dashboard_calendar_editing", "This update is no longer waiting to be sent.")
+      )
 
   defp cancelled(socket, panel, _told_from, :already_sent) do
     socket
@@ -226,6 +232,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
     |> Toast.show(
       dgettext("dashboard_calendar_editing", "Too late to cancel: guests have been told.")
     )
+  end
+
+  defp untold_again(socket, panel, told_from) do
+    untold_from = told_from || panel.opened_with
+
+    socket
+    |> assign(:panel, %{panel | guests_pending: false, opened_with: untold_from})
+    |> assign(:untold_moves, Map.put(socket.assigns.untold_moves, panel.event_id, untold_from))
   end
 
   @doc """

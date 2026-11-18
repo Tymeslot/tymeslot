@@ -768,3 +768,8 @@ msgstr "Гостей не буде повідомлено."
 #, elixir-autogen, elixir-format
 msgid "Too late to cancel: guests have been told."
 msgstr "Скасувати вже запізно: гостей уже повідомлено."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "This update is no longer waiting to be sent."
+msgstr "Це повідомлення про зміни вже не очікує надсилання."

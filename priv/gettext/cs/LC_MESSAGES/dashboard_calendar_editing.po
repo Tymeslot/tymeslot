@@ -768,3 +768,8 @@ msgstr "Hosté nebudou informováni."
 #, elixir-autogen, elixir-format
 msgid "Too late to cancel: guests have been told."
 msgstr "Na zrušení je pozdě: hosté už byli informováni."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "This update is no longer waiting to be sent."
+msgstr "Tato aktualizace už nečeká na odeslání."

@@ -266,6 +266,6 @@ defmodule Tymeslot.CalendarGrid.Changes do
   `Tymeslot.CalendarGrid.GuestUpdate.cancel/3`.
   """
   @spec cancel_guest_update(pos_integer(), [map()], map()) ::
-          {:ok, :cancelled | :already_sent} | {:error, GuestUpdate.refusal()}
+          {:ok, :cancelled | :already_sent | :not_held} | {:error, GuestUpdate.refusal()}
   defdelegate cancel_guest_update(user_id, integrations, event), to: GuestUpdate, as: :cancel
 end

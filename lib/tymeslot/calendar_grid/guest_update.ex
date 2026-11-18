@@ -69,17 +69,19 @@ defmodule Tymeslot.CalendarGrid.GuestUpdate do
 
   @doc """
   Drops the update held for `event`'s guests, so they are told nothing:
-  `{:ok, :cancelled}`, or `{:ok, :already_sent}` when none was held any
-  more, as it has gone out. Refused, like `tell/5`, unless the user
+  `{:ok, :cancelled}`; when none was held any more, `{:ok, :already_sent}`
+  when it has gone out, or `{:ok, :not_held}` when it went some other way
+  (cancelled from another tab). Refused, like `tell/5`, unless the user
   organises the event on a calendar they can write.
   """
   @spec cancel(pos_integer(), [map()], map()) ::
-          {:ok, :cancelled | :already_sent} | {:error, refusal()}
+          {:ok, :cancelled | :already_sent | :not_held} | {:error, refusal()}
   def cancel(user_id, integrations, event) do
     with :ok <- EditGuard.guest_update(user_id, integrations, event) do
       case cancel_held(event) do
         {:ok, :cancelled} -> {:ok, :cancelled}
-        {:ok, :none} -> {:ok, :already_sent}
+        {:ok, :sent} -> {:ok, :already_sent}
+        {:ok, :none} -> {:ok, :not_held}
       end
     end
   end

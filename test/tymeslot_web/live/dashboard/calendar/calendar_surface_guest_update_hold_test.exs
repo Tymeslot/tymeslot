@@ -174,6 +174,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestUpdateHoldTest do
     refute has_element?(lv, "#calendar-panel-untold")
   end
 
+  test "Cancel after another tab cancelled it says it is no longer waiting", %{
+    lv: lv,
+    review: review
+  } do
+    change_and_tell(lv, review)
+    {:ok, :cancelled} = Dispatcher.cancel_pending(review.id, :provider_calendar_event)
+
+    lv |> element("#calendar-panel-cancel-guest-update") |> render_click()
+
+    assert has_element?(lv, "#calendar-toast", "This update is no longer waiting to be sent.")
+    refute has_element?(lv, "#calendar-toast", "Too late to cancel")
+    assert has_element?(lv, "#calendar-panel-untold", "Guests haven't been told")
+  end
+
   test "a panel opened on a held update drops its Cancel once the update is due", %{
     conn: conn,
     lv: lv,

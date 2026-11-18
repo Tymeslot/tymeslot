@@ -52,6 +52,24 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherQueries do
   end
 
   @doc """
+  Returns true if a Worker job for the given `event_id` + `kind` has started
+  sending (it is running, has run or is retrying) since `since`.
+  """
+  @spec sent_since?(integer, binary, DateTime.t()) :: boolean
+  def sent_since?(event_id, kind, %DateTime{} = since)
+      when is_integer(event_id) and is_binary(kind) do
+    event_id_str = Integer.to_string(event_id)
+
+    Oban.Job
+    |> where([j], j.worker == ^@worker)
+    |> where([j], j.state in ~w(executing completed retryable))
+    |> where([j], j.attempted_at >= ^since)
+    |> where([j], fragment("?->>'event_id' = ?", j.args, ^event_id_str))
+    |> where([j], fragment("?->>'kind' = ?", j.args, ^kind))
+    |> Repo.exists?()
+  end
+
+  @doc """
   Returns true if a scheduled/available Worker job exists for the given
   `event_id` + `kind`.
   """

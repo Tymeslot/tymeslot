@@ -766,3 +766,8 @@ msgstr "Os convidados não serão avisados."
 #, elixir-autogen, elixir-format
 msgid "Too late to cancel: guests have been told."
 msgstr "Tarde demais para cancelar: os convidados já foram avisados."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "This update is no longer waiting to be sent."
+msgstr "Esta atualização não está mais aguardando envio."

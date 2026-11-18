@@ -516,10 +516,11 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   end
 
   @doc """
-  Drops the debounced job queued for this event: `{:ok, :cancelled}`, or
-  `{:ok, :none}` when none was waiting any more (it has gone out).
+  Drops the debounced job queued for this event: `{:ok, :cancelled}`, or,
+  when none was waiting any more, `{:ok, :sent}` when it has just gone out
+  and `{:ok, :none}` otherwise.
   """
-  @spec cancel_pending(event) :: {:ok, :cancelled | :none}
+  @spec cancel_pending(event) :: {:ok, :cancelled | :sent | :none}
   def cancel_pending(event) do
     Dispatcher.cancel_pending(event_id(event), event_kind(event))
   end
