@@ -29,6 +29,13 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   afterwards) treats the refund as made. `refunded_before_cents` only names
   the refund for the job's uniqueness and the host's failure email.
 
+  `amount_cents` is the most the job refunds: each attempt refunds the
+  smaller of it and what remains of the payment, read under the payment's
+  row lock in the transaction that makes the refund. A refund the host
+  made in between (a partial one from the payments page) so shrinks the
+  job's rather than failing it, and a payment refunded in full meanwhile
+  leaves the job nothing to do: it succeeds, and the host is not emailed.
+
   A refund no retry can make (`unretryable/0`: outside the refund window,
   under dispute, not paid, more than remains) is discarded at once; any
   other failure is retried. Neither declares itself an expected outcome,
@@ -45,6 +52,7 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ChargeBackfill
@@ -139,26 +147,42 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
     kind, reason when kind in [:exit, :throw] -> {:error, {kind, reason}}
   end
 
-  # A job with no id (built by hand) cannot run twice, so has nothing to
-  # claim and no key of its own: it refunds under the derived key.
-  # Otherwise the claim and the refund commit together, and a run racing
-  # for the claim waits on it, then finds the refund made.
-  defp refund_once(nil, id, host_user_id, amount, _opts),
-    do: Refunds.issue_host_refund(id, host_user_id, amount)
-
+  # The claim and the refund commit together, and a run racing for the
+  # claim waits on it, then finds the refund made. A job with no id (built
+  # by hand) cannot run twice, so has nothing to claim and no key of its
+  # own: it refunds under the derived key.
+  #
+  # The payment is locked before the refund is sized, and stays locked
+  # through `Refunds.issue_host_refund/5`, which takes the same row lock
+  # again in this transaction: nothing can refund it in between.
   defp refund_once(job_id, id, host_user_id, amount, opts) do
     Repo.transaction(fn ->
-      with :claimed <- DeliveryClaims.claim(job_id, opts[:claim]),
+      with :claimed <- claim(job_id, opts),
+           {:ok, due} <- amount_due(id, host_user_id, amount),
            {:ok, refunded} <-
-             Refunds.issue_host_refund(id, host_user_id, amount, nil,
-               idempotency_key: "#{opts[:key_prefix]}:#{job_id}"
-             ) do
+             Refunds.issue_host_refund(id, host_user_id, due, nil, key_opts(job_id, opts)) do
         refunded
       else
         :already_claimed -> :already_made
+        :nothing_left -> :nothing_left
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
+  end
+
+  defp claim(nil, _opts), do: :claimed
+  defp claim(job_id, opts), do: DeliveryClaims.claim(job_id, opts[:claim])
+
+  defp key_opts(nil, _opts), do: []
+  defp key_opts(job_id, opts), do: [idempotency_key: "#{opts[:key_prefix]}:#{job_id}"]
+
+  defp amount_due(id, host_user_id, amount) do
+    with {:ok, locked} <- BookingPaymentQueries.get_for_update(id, host_user_id) do
+      case min(amount, Refunds.refundable_remaining_cents(locked)) do
+        0 -> :nothing_left
+        due -> {:ok, due}
+      end
+    end
   end
 
   defp ensure_charge(%{stripe_charge_id: charge} = payment)

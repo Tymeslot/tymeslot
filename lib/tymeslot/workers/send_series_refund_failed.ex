@@ -7,8 +7,9 @@ defmodule Tymeslot.Workers.SendSeriesRefundFailed do
   group session.
 
   Enqueued by `Tymeslot.MeetingPayments.HostRefundAttempt` when it gives up
-  on a refund: discarded as one no retry can make, or out of attempts. Loads a fresh booking-payment row inside `perform/1`, and sends
-  nothing once the payment is gone. The send is claimed through
+  on a refund: discarded as one no retry can make, or out of attempts.
+  Loads a fresh booking-payment row inside `perform/1`, and sends nothing
+  once the payment is gone. The send is claimed through
   `Tymeslot.Workers.DeliveryClaims`, so a rescued job does not send it twice.
   """
 

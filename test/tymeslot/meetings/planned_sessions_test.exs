@@ -9,6 +9,7 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :bookings
+  @moduletag :payments
   @moduletag :integration
 
   import Mox
@@ -19,12 +20,14 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
   alias Tymeslot.Availability.Offer
   alias Tymeslot.Bookings.{CancelSeat, Create, RescheduleSeat}
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.PlannedSessions
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.EmailHandlers
@@ -229,6 +232,46 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
 
       assert {:error, :slot_taken} = book(ctx, starts_at, "one@example.com")
       assert [%{status: :cancelled}] = Repo.all(MeetingSchema)
+    end
+  end
+
+  describe "the host cancelling a session someone paid a seat on" do
+    setup ctx do
+      session = plan!(ctx.meeting_type, at(5, ~T[18:00:00]))
+      participant = insert(:participant, meeting: session)
+      hold = insert(:seat_hold, meeting: session, status: :converted)
+
+      payment =
+        insert(:paid_booking_payment,
+          meeting_id: session.id,
+          participant_id: participant.id,
+          seat_hold_id: hold.id,
+          seat_payment: true,
+          amount_cents: 2000,
+          host_user_id: ctx.user.id
+        )
+
+      %{session: session, payment: payment}
+    end
+
+    test "refunds the seat in full", ctx do
+      assert {:ok, _cancelled} = PlannedSessions.cancel(ctx.session, ctx.user.id)
+
+      assert [%{args: %{"amount_cents" => 2000, "booking_payment_id" => payment_id}}] =
+               all_enqueued(worker: GroupCancelRefund)
+
+      assert payment_id == ctx.payment.id
+    end
+
+    test "by deleting the type refunds the seat in full", ctx do
+      assert {:ok, _deleted} = MeetingTypes.delete_meeting_type(ctx.meeting_type)
+
+      assert Repo.get!(MeetingSchema, ctx.session.id).status == :cancelled
+
+      assert [%{args: %{"amount_cents" => 2000, "booking_payment_id" => payment_id}}] =
+               all_enqueued(worker: GroupCancelRefund)
+
+      assert payment_id == ctx.payment.id
     end
   end
 

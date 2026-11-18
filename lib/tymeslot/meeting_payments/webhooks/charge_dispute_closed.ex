@@ -172,6 +172,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   # A paid seat never happened when its hold never became a participant
   # (refused for a full slot, say), whatever became of the meeting it was
   # held on, which other seats may keep going ahead.
+  #
+  # Known gap: a booked seat whose session the host cancelled while the
+  # seat was under dispute counts as booked here, so a won dispute
+  # schedules nothing for it. The host's cancellation left it out of its
+  # refunds (`Meetings.Cancellation`), its money then being with the card
+  # network, so once the dispute returns that money to the host nothing
+  # refunds it to the attendee.
   defp never_booked?(%BookingPaymentSchema{seat_hold_id: hold_id, participant_id: nil})
        when is_binary(hold_id),
        do: true

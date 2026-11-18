@@ -309,11 +309,6 @@ msgstr "Non è stato possibile effettuare il rimborso di una sessione di gruppo 
 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
-msgid "A refund for your cancelled group session could not be made"
-msgstr "Non è stato possibile effettuare un rimborso per la tua sessione di gruppo annullata"
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
 msgid "GROUP SESSION REFUND NOT MADE"
 msgstr "RIMBORSO DELLA SESSIONE DI GRUPPO NON EFFETTUATO"
 
@@ -336,3 +331,8 @@ msgstr "Inizio:"
 #, elixir-autogen, elixir-format
 msgid "You cancelled a group session, but the refund of %{amount} to one of its attendees could not be made. The session stays cancelled."
 msgstr "Hai annullato una sessione di gruppo, ma non è stato possibile rimborsare %{amount} a uno dei partecipanti. La sessione resta annullata."
+
+#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "Group session refund not made: %{amount}"
+msgstr ""

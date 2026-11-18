@@ -176,6 +176,28 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert Repo.reload!(payment).refunded_amount_cents == 7_000
     end
 
+    test "a refund the host made in between shrinks the job's to what remains", %{
+      host: host,
+      series: series,
+      payment: payment
+    } do
+      pay(series, 4)
+      [first | _rest] = meetings()
+      into_the_past!(first)
+
+      assert {:ok, %{refund: {:scheduled, 15_000}}} = cancel_as_host(series, host)
+
+      # The host refunds most of the payment from the payments page before
+      # the job runs: what is left is less than the job was scheduled for.
+      expect_refund(12_000)
+      assert {:ok, _refunded} = Refunds.issue_host_refund(payment.id, host.user.id, 12_000)
+
+      expect_refund(8_000)
+      assert :ok = run_refund_job()
+      assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
+      assert refund_failed_jobs() == []
+    end
+
     test "a refund Stripe made but the job failed to record is replayed, not made again", %{
       host: host,
       series: series,

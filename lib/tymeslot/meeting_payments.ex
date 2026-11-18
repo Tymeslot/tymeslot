@@ -334,7 +334,9 @@ defmodule Tymeslot.MeetingPayments do
   moved to (`new_participant` on `new_meeting`), keeping its status,
   amount and refunds: a moved seat keeps its payment, and no price
   difference is charged or refunded. A free seat has no payment, and
-  nothing changes. Inside the move's transaction, under its meeting locks.
+  nothing changes. Inside the move's transaction, under its meeting locks,
+  so the payment row is locked after them (see
+  `BookingPaymentQueries.move_to_participant/3` for why that order is safe).
   """
   @spec move_seat_payment(binary(), %{id: binary()}, %{id: binary()}) :: :ok
   def move_seat_payment(old_participant_id, new_participant, new_meeting) do

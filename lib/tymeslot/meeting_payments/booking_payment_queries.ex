@@ -76,7 +76,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   The payment the meeting `meeting_id` owns itself, or `nil`: the one payment
   of a one-to-one booking. A session of a paid series owns none (see
   `for_meeting/1`), and a group meeting's seat payments, one per paying
-  booker, are never returned here (`list_for_meeting_seats/1`).
+  booker, are never returned here (`list_for_live_seats/1`).
   """
   @spec by_meeting_id(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
   def by_meeting_id(meeting_id),
@@ -109,11 +109,18 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     end
   end
 
-  @doc "Every seat payment on the group meeting `meeting_id`, oldest first."
-  @spec list_for_meeting_seats(Ecto.UUID.t()) :: [BookingPaymentSchema.t()]
-  def list_for_meeting_seats(meeting_id) do
+  @doc """
+  The seat payments of the seats still live on the group meeting
+  `meeting_id`, oldest first: each linked to a participant who has not
+  cancelled. A payment whose hold never became a seat (no participant: its
+  hold was refused or released before converting) and the payment of a
+  participant who has left are not returned.
+  """
+  @spec list_for_live_seats(Ecto.UUID.t()) :: [BookingPaymentSchema.t()]
+  def list_for_live_seats(meeting_id) do
     BookingPaymentSchema
-    |> where([b], b.meeting_id == ^meeting_id and b.seat_payment)
+    |> join(:inner, [b], p in assoc(b, :participant))
+    |> where([b, p], b.meeting_id == ^meeting_id and b.seat_payment and is_nil(p.cancelled_at))
     |> order_by([b], asc: b.inserted_at, asc: b.id)
     |> Repo.all()
   end
@@ -122,6 +129,15 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   Points the seat payment of the participant `old_participant_id` at
   `new_participant` on `new_meeting`, in one update, returning how many
   rows it moved (0 for a free seat).
+
+  The update locks the payment row, and its caller already holds the
+  meeting locks of the move: meetings first, payment after, the reverse of
+  the order a webhook takes (`Tymeslot.MeetingPayments.Webhooks.LockedPayment`: payment, then
+  meeting). That is safe only because no webhook for a converted seat's
+  payment (the only kind this moves) takes a meeting lock: a dispute or a
+  refund event locks the payment alone. A future webhook handler that
+  locks a meeting under a converted seat's payment must keep it so, or
+  take its locks in this order, or it can deadlock with a seat move.
   """
   @spec move_to_participant(binary(), %{id: binary()}, %{id: binary()}) :: non_neg_integer()
   def move_to_participant(old_participant_id, %{id: participant_id}, %{id: meeting_id})

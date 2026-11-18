@@ -120,6 +120,14 @@ defmodule Tymeslot.MeetingPayments.Checkout do
   defdelegate abandon_seat_checkout(hold_id), to: CheckoutSessions
 
   @doc """
+  Once a meeting's cancellation has committed, expires the open checkouts
+  of the seat holds it released and tells their bookers. See
+  `CheckoutSessions.abandon_released_seat_holds/1`.
+  """
+  @spec abandon_released_seat_holds([SeatHoldSchema.t()]) :: :ok
+  defdelegate abandon_released_seat_holds(holds), to: CheckoutSessions
+
+  @doc """
   What an attendee returning from Stripe Checkout should be told about their
   booking: still `:processing`, `:failed`, `:awaiting_approval`, `:declined`,
   `:expired`, `:confirmed` or `:cancelled`. See `CheckoutOutcome` for the rules.

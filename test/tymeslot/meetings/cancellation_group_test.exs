@@ -24,12 +24,16 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
   alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
+  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Repo
+  alias Tymeslot.StripeWebhookFixtures
   alias Tymeslot.Test.RaceConductor
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
@@ -134,6 +138,24 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
   end
 
   defp status(meeting), do: Repo.get!(MeetingSchema, meeting.id).status
+
+  # The shape Stripe delivers, from the recorded fixture, for this seat.
+  defp completed_event(payment) do
+    "checkout.session.completed"
+    |> StripeWebhookFixtures.event()
+    |> Map.merge(%{"id" => "evt_after_cancel", "account" => @account})
+    |> update_in(["data", "object"], fn session ->
+      Map.merge(session, %{
+        "id" => payment.stripe_checkout_session_id,
+        "client_reference_id" => "seat_hold:" <> payment.seat_hold_id,
+        "payment_intent" => "pi_#{payment.seat_hold_id}",
+        "payment_status" => "paid",
+        "amount_total" => payment.amount_cents,
+        "currency" => payment.currency,
+        "metadata" => %{"seat_hold_id" => payment.seat_hold_id}
+      })
+    end)
+  end
 
   test "cancelling a paid group meeting schedules one refund per paid seat" do
     ctx = host_and_session()
@@ -252,19 +274,42 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     refute Map.has_key?(args, "seat_refund")
   end
 
-  test "a refund job failure does not undo the cancellation" do
+  test "a failing on_cancelled rolls the cancellation back" do
     ctx = host_and_session()
-    payment = paid_seat(ctx, "ada@example.com")
+    paid_seat(ctx, "ada@example.com")
+    hold = open_hold(ctx, "late@example.com")
 
-    # The work committed with the cancellation failing rolls it back.
+    # The seats are settled as the host's cancellation settles them, then
+    # the callback fails: nothing of it may commit.
+    on_cancelled = fn cancelled ->
+      SeatHolds.release_open_for_meeting(cancelled.id, :meeting_cancelled)
+
+      Oban.insert!(
+        GroupCancelRefund.new_for(
+          hd(BookingPayments.seat_payments_for_meeting(cancelled.id, ctx.host.id)),
+          ctx.host.id,
+          @price
+        )
+      )
+
+      {:error, :boom}
+    end
+
     assert {:error, :boom} =
              Cancel.execute(ctx.session,
                caller: :organizer,
                announce: false,
-               on_cancelled: fn _cancelled -> {:error, :boom} end
+               on_cancelled: on_cancelled
              )
 
     assert status(ctx.session) == :confirmed
+    assert SeatHolds.get(hold.id).status == :held
+    assert refund_amounts() == []
+  end
+
+  test "a refund job failure does not undo the cancellation" do
+    ctx = host_and_session()
+    payment = paid_seat(ctx, "ada@example.com")
 
     # A refund failing in its job leaves the session cancelled.
     assert {:ok, _cancelled} =
@@ -290,6 +335,153 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     assert [%{args: %{"host_user_id" => host_id}}] = all_enqueued(worker: GroupCancelRefund)
     assert host_id == ctx.host.id
     assert [_other_seat] = BookingPayments.seat_payments_for_meeting(ctx.session.id, other.id)
+  end
+
+  test "a payment that never became a seat is neither refunded nor counted" do
+    ctx = host_and_session()
+
+    refused =
+      insert(:seat_hold, meeting: ctx.session, status: :released, released_reason: :failed)
+
+    # Refused at checkout for a full slot: its own refund is already queued
+    # (`RefundLatePayment`), and it never had a participant.
+    insert(:paid_booking_payment,
+      meeting_id: ctx.session.id,
+      seat_hold_id: refused.id,
+      seat_payment: true,
+      amount_cents: @price,
+      host_user_id: ctx.host.id,
+      stripe_account_id: @account
+    )
+
+    assert {:ok, _cancelled} =
+             Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats)
+
+    assert refund_amounts() == []
+
+    # Nobody holds a paid seat, so the emails say nothing about refunds.
+    assert [%{args: args}] =
+             all_enqueued(worker: EmailWorker, args: %{action: "send_cancellation_emails"})
+
+    refute Map.has_key?(args, "seat_refund")
+  end
+
+  test "a participant who left before the host cancelled is not refunded" do
+    ctx = host_and_session()
+    paid_seat(ctx, "ada@example.com")
+    left = paid_seat(ctx, "grace@example.com", amount_cents: 1500)
+
+    left.participant_id
+    |> then(&Repo.get!(ParticipantSchema, &1))
+    |> Changeset.change(cancelled_at: DateTime.utc_now(:second))
+    |> Repo.update!()
+
+    assert {:ok, _cancelled} =
+             Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats)
+
+    assert refund_amounts() == [2000]
+  end
+
+  describe "the refund action" do
+    test "any action on a group meeting settles it seat by seat" do
+      ctx = host_and_session()
+      paid_seat(ctx, "ada@example.com")
+      hold = open_hold(ctx, "late@example.com")
+      stub(StripeAdapterMock, :expire_checkout_session, fn id, _opts -> {:ok, %{"id" => id}} end)
+
+      assert {:ok, _cancelled} =
+               Meetings.cancel_meeting_with_refund(
+                 ctx.session,
+                 ctx.host.id,
+                 {:not_refunded, :outside_refund_window}
+               )
+
+      assert SeatHolds.get(hold.id).released_reason == :meeting_cancelled
+      assert refund_amounts() == []
+    end
+
+    test "an amount on a group meeting refunds every seat in full" do
+      ctx = host_and_session()
+      paid_seat(ctx, "ada@example.com")
+
+      assert {:ok, _cancelled} =
+               Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, {:refund, 500})
+
+      assert refund_amounts() == [2000]
+    end
+
+    test "refund_seats on a one-to-one meeting is refused with nothing cancelled" do
+      host = insert(:user)
+      meeting = insert(:meeting, organizer_user_id: host.id, status: :confirmed)
+
+      assert {:error, :not_found} =
+               Meetings.cancel_meeting_with_refund(meeting, host.id, :refund_seats)
+
+      assert status(meeting) == :confirmed
+    end
+  end
+
+  describe "the host deleting the session from their calendar" do
+    test "releases the open holds and refunds no seat, as for a one-to-one meeting" do
+      ctx = host_and_session()
+      paid_seat(ctx, "ada@example.com")
+      hold = open_hold(ctx, "late@example.com")
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(hold.id))
+      session_id = "cs_open_#{hold.id}"
+
+      expect(StripeAdapterMock, :expire_checkout_session, fn ^session_id, _opts ->
+        {:ok, %{"id" => session_id, "status" => "expired"}}
+      end)
+
+      assert {:ok, cancelled} = Cancel.execute_external(ctx.session)
+
+      assert cancelled.status == :cancelled
+      assert %{status: :released, released_reason: :meeting_cancelled} = SeatHolds.get(hold.id)
+      assert_receive :expired
+      assert refund_amounts() == []
+    end
+  end
+
+  describe "a checkout completing after the host cancelled" do
+    setup do
+      # The completed webhook backfills the charge the refund is made on.
+      stub(StripeAdapterMock, :retrieve_payment_intent, fn intent, _opts ->
+        {:ok, %{"latest_charge" => "ch_" <> intent}}
+      end)
+
+      stub(StripeAdapterMock, :expire_checkout_session, fn _id, _opts ->
+        {:error, :already_completed}
+      end)
+
+      :ok
+    end
+
+    test "is refunded exactly once, by its own late refund" do
+      ctx = host_and_session()
+      hold = open_hold(ctx, "late@example.com")
+      payment = BookingPayments.payment_for_seat_hold(hold.id)
+
+      assert {:ok, _cancelled} =
+               Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats)
+
+      assert :ok = CheckoutSessionCompleted.handle(completed_event(payment))
+
+      assert [_one] =
+               all_enqueued(
+                 worker: RefundLatePayment,
+                 args: %{"booking_payment_id" => payment.id}
+               )
+
+      assert refund_amounts() == []
+
+      expect(StripeAdapterMock, :create_refund, 1, fn %{amount: @price}, _opts ->
+        {:ok, %{"id" => "re_LATE_SEAT"}}
+      end)
+
+      assert %{failure: 0} = Oban.drain_queue(queue: :payments)
+
+      assert %{status: :refunded, refunded_amount_cents: @price} = Repo.reload!(payment)
+    end
   end
 
   describe "a seat paid while the cancellation waited" do

@@ -95,8 +95,8 @@ defmodule Tymeslot.Emails.Templates.SeriesRefundFailed do
     end)
   end
 
-  defp subject_line(:group_meeting, _amount),
-    do: dgettext("emails_payments", "A refund for your cancelled group session could not be made")
+  defp subject_line(:group_meeting, amount),
+    do: dgettext("emails_payments", "Group session refund not made: %{amount}", amount: amount)
 
   defp subject_line(_series, amount),
     do: dgettext("emails_payments", "Series refund not made: %{amount}", amount: amount)

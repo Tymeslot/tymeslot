@@ -81,6 +81,32 @@ defmodule Tymeslot.MeetingPayments.Workers.GroupCancelRefundTest do
     assert Repo.reload!(payment).refunded_amount_cents == 2000
   end
 
+  test "refunds only what a refund the host made in between left", %{payment: payment} do
+    payment
+    |> Changeset.change(status: :partially_refunded, refunded_amount_cents: 500)
+    |> Repo.update!()
+
+    expect(StripeAdapterMock, :create_refund, fn %{amount: 1500}, _opts ->
+      {:ok, %{id: "re_SEAT"}}
+    end)
+
+    assert :ok = run_job()
+    assert %{refunded_amount_cents: 2000, status: :refunded} = Repo.reload!(payment)
+  end
+
+  test "succeeds with no refund and no email once the payment was refunded in full", %{
+    payment: payment
+  } do
+    payment
+    |> Changeset.change(status: :refunded, refunded_amount_cents: 2000)
+    |> Repo.update!()
+
+    # No Stripe call is expected: Mox fails the test on one.
+    assert :ok = run_job()
+    refute_enqueued(worker: SendSeriesRefundFailed)
+    assert Repo.reload!(payment).refunded_amount_cents == 2000
+  end
+
   test "discards outside the refund window and emails the host", %{payment: payment} do
     payment
     |> Changeset.change(paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day))
@@ -132,7 +158,7 @@ defmodule Tymeslot.MeetingPayments.Workers.GroupCancelRefundTest do
       assert :ok = perform_job(SendSeriesRefundFailed, args)
 
       assert_received {:email, email}
-      assert email.subject == "A refund for your cancelled group session could not be made"
+      assert email.subject == "Group session refund not made: €20.00"
       assert email.text_body =~ "You cancelled a group session"
       assert email.text_body =~ "Group Class"
       assert email.text_body =~ "Ada Lovelace"

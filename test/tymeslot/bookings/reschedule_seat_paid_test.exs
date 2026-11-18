@@ -125,4 +125,20 @@ defmodule Tymeslot.Bookings.RescheduleSeatPaidTest do
     assert Repo.get!(MeetingSchema, ctx.old_meeting.id).status == :confirmed
     assert ParticipantQueries.list_live_for_meeting(ctx.old_meeting.id) == []
   end
+
+  describe "the meeting a move would vacate (vacated_meeting/2)" do
+    test "is the old meeting when the mover holds its last live seat", ctx do
+      seat = %{participant: ctx.mover, meeting: ctx.old_meeting}
+
+      assert %{id: meeting_id} = RescheduleSeat.vacated_meeting(seat, ctx.user.id)
+      assert meeting_id == ctx.old_meeting.id
+    end
+
+    test "is none while a booker still holds a seat on it", ctx do
+      insert(:seat_hold, meeting: ctx.old_meeting, email: "payer@example.com")
+      seat = %{participant: ctx.mover, meeting: ctx.old_meeting}
+
+      assert RescheduleSeat.vacated_meeting(seat, ctx.user.id) == nil
+    end
+  end
 end

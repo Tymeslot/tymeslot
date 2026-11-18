@@ -129,6 +129,27 @@ defmodule Tymeslot.Bookings.SeatReleaseTest do
     assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
   end
 
+  describe "cancel_if_emptied/1, inside the caller's transaction" do
+    test "keeps a meeting a booker still holds a seat on", %{meeting: meeting} do
+      insert(:seat_hold, meeting: meeting, email: "payer@example.com")
+
+      assert {:ok, :seats_remain} = SeatRelease.cancel_if_emptied(meeting)
+      assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
+    end
+
+    test "cancels it once the hold is no longer held", %{meeting: meeting} do
+      insert(:seat_hold,
+        meeting: meeting,
+        email: "payer@example.com",
+        status: :released,
+        released_reason: :expired
+      )
+
+      assert {:ok, {:cancelled, %{status: :cancelled}}} = SeatRelease.cancel_if_emptied(meeting)
+      assert Repo.get!(MeetingSchema, meeting.id).status == :cancelled
+    end
+  end
+
   test "the participant's own cancellation refunds nothing", ctx do
     params = %{
       date: Date.add(Date.utc_today(), 3),

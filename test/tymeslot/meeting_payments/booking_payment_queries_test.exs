@@ -17,6 +17,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueriesTest do
         insert(:booking_payment,
           meeting: meeting,
           seat_hold_id: first_hold.id,
+          participant: insert(:participant, meeting: meeting),
           seat_payment: true,
           host_user_id: host.id,
           inserted_at: ~U[2026-11-01 10:00:00Z]
@@ -26,6 +27,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueriesTest do
         insert(:booking_payment,
           meeting: meeting,
           seat_hold_id: second_hold.id,
+          participant: insert(:participant, meeting: meeting),
           seat_payment: true,
           host_user_id: host.id,
           inserted_at: ~U[2026-11-01 10:05:00Z]
@@ -35,15 +37,46 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueriesTest do
       assert BookingPaymentQueries.for_meeting(meeting.id) == nil
       assert BookingPaymentQueries.for_meeting_for_host(meeting.id, host.id) == nil
 
-      assert Enum.map(BookingPaymentQueries.list_for_meeting_seats(meeting.id), & &1.id) ==
+      assert Enum.map(BookingPaymentQueries.list_for_live_seats(meeting.id), & &1.id) ==
                [first.id, second.id]
     end
 
-    test "list_for_meeting_seats leaves out a one-to-one booking's payment" do
+    test "list_for_live_seats leaves out a payment that never became a seat and a seat left" do
+      meeting = insert(:group_meeting)
+      [refused_hold, left_hold, live_hold] = insert_list(3, :seat_hold, meeting: meeting)
+      left = insert(:participant, meeting: meeting, cancelled_at: ~U[2026-11-01 09:00:00Z])
+
+      insert(:booking_payment,
+        meeting: meeting,
+        seat_hold_id: refused_hold.id,
+        seat_payment: true
+      )
+
+      insert(:booking_payment,
+        meeting: meeting,
+        seat_hold_id: left_hold.id,
+        participant: left,
+        seat_payment: true
+      )
+
+      live =
+        insert(:booking_payment,
+          meeting: meeting,
+          seat_hold_id: live_hold.id,
+          participant: insert(:participant, meeting: meeting),
+          seat_payment: true
+        )
+
+      assert Enum.map(BookingPaymentQueries.list_for_live_seats(meeting.id), & &1.id) == [
+               live.id
+             ]
+    end
+
+    test "list_for_live_seats leaves out a one-to-one booking's payment" do
       meeting = insert(:meeting)
       payment = insert(:booking_payment, meeting: meeting)
 
-      assert BookingPaymentQueries.list_for_meeting_seats(meeting.id) == []
+      assert BookingPaymentQueries.list_for_live_seats(meeting.id) == []
       assert BookingPaymentQueries.by_meeting_id(meeting.id).id == payment.id
     end
   end

@@ -151,11 +151,19 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   The seat payments `host_user_id` took on the group meeting `meeting_id`
   that still hold some of the attendee's money (`Refunds.refund_outstanding?/1`),
   oldest first: what cancelling the meeting refunds.
+
+  Only the seats live when it is read count: a payment linked to a
+  participant who has not cancelled. A payment whose hold never became a
+  seat is settled by its own path (one refused at checkout by
+  `Tymeslot.MeetingPayments.Workers.RefundLatePayment`), so it is not
+  refunded twice, nor counted as a paid seat. A participant who left before the host cancelled is not
+  refunded here either: leaving refunds nothing automatically, and the
+  host can still refund them from the payments page.
   """
   @spec seat_payments_for_meeting(Ecto.UUID.t(), integer()) :: [BookingPaymentSchema.t()]
   def seat_payments_for_meeting(meeting_id, host_user_id) when is_integer(host_user_id) do
     meeting_id
-    |> BookingPaymentQueries.list_for_meeting_seats()
+    |> BookingPaymentQueries.list_for_live_seats()
     |> Enum.filter(&(&1.host_user_id == host_user_id and Refunds.refund_outstanding?(&1)))
   end
 
