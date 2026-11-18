@@ -40,6 +40,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelMeetingReminders
   alias TymeslotWeb.Dashboard.Calendar.PanelNewGuests
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewReminders
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Transfer
@@ -163,6 +164,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
 
   def submit(
         %{assigns: %{panel: %{mode: :new, status: status}}} = socket,
+        %{"intent" => "add_reminder"} = params
+      )
+      when status != :saving,
+      do: socket |> change(params) |> PanelNewReminders.add(params)
+
+  def submit(
+        %{assigns: %{panel: %{mode: :new, status: status}}} = socket,
         %{"intent" => "create"} = params
       )
       when status != :saving do
@@ -183,6 +191,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       do: PanelNewGuests.drop(socket, email)
 
   def drop_guest(socket, _email), do: socket
+
+  @doc "Drops the event reminder at `index` from the form."
+  @spec drop_reminder(socket(), term()) :: socket()
+  def drop_reminder(%{assigns: %{panel: %{mode: :new, status: status}}} = socket, index)
+      when status != :saving,
+      do: PanelNewReminders.drop(socket, index)
+
+  def drop_reminder(socket, _index), do: socket
 
   @doc """
   Puts `form` in the New event state: the draft is cast again and the grid
@@ -396,10 +412,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
 
     # "reminders" reach the form only when `PanelMeeting` books a meeting:
     # the lead times of its reminder emails, from the panel's reminder
-    # picker, not the event's own reminders, so the cast leaves them out.
+    # picker. The event's own reminders are `"event_reminders"`.
     params =
       form
-      |> Map.delete("reminders")
+      |> Map.put("reminders", PanelNewReminders.params(form))
       |> Map.put("title", untitled(form["title"]))
       |> Map.reject(fn {key, value} -> key == "video_integration_id" and value in [nil, ""] end)
 

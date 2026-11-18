@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
   What the side panel's New event state sets on a plain calendar event
   before it is created, as the old Quick Add did: one of the organiser's
   saved locations as its place, refused when it was deleted while the
-  panel was open.
+  panel was open, and reminders, several, each a notification or an email.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -67,6 +67,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
     render(lv)
     render(lv)
     payload
+  end
+
+  defp add_reminder(lv, minutes, method) do
+    render_submit(new_form(lv), %{
+      "intent" => "add_reminder",
+      "event_reminder_minutes" => minutes,
+      "event_reminder_method" => method
+    })
   end
 
   describe "a saved location" do
@@ -141,6 +149,70 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
                lv,
                ~s(#calendar-panel-meeting-location option[value="venue:#{venue.id}"][selected])
              )
+    end
+  end
+
+  describe "reminders" do
+    test "several, each a notification or an email, are written with the event", %{
+      lv: lv,
+      integration: integration
+    } do
+      more_options(lv, integration)
+
+      add_reminder(lv, "10", "popup")
+      add_reminder(lv, "1440", "email")
+      add_reminder(lv, "30", "popup")
+
+      assert has_element?(
+               lv,
+               "#calendar-panel-new-reminders li",
+               "Notification 10 minutes before"
+             )
+
+      assert has_element?(lv, "#calendar-panel-new-reminders li", "Email 1 day before")
+
+      lv
+      |> element(
+        ~s(#calendar-panel-new-reminders button[aria-label="Remove reminder Notification 30 minutes before"])
+      )
+      |> render_click()
+
+      refute has_element?(lv, "#calendar-panel-new-reminders li", "30 minutes before")
+
+      render_submit(new_form(lv), %{"intent" => "create"})
+
+      assert created(lv).reminders == [
+               %{method: :popup, minutes_before: 10},
+               %{method: :email, minutes_before: 1440}
+             ]
+    end
+
+    test "a lead time the row does not offer, or one already held, adds nothing", %{
+      lv: lv,
+      integration: integration
+    } do
+      more_options(lv, integration)
+
+      add_reminder(lv, "7", "popup")
+      add_reminder(lv, "10", "sms")
+      refute has_element?(lv, "#calendar-panel-new-reminders li")
+
+      add_reminder(lv, "10", "popup")
+      add_reminder(lv, "10", "popup")
+
+      assert [_one] =
+               lv
+               |> render()
+               |> Floki.parse_document!()
+               |> Floki.find("#calendar-panel-new-reminders li")
+    end
+
+    test "give way to a meeting's own reminder emails", %{lv: lv, integration: integration} do
+      more_options(lv, integration, %{"guests" => ["ada@example.com"]})
+      assert has_element?(lv, "#calendar-panel-new-reminders")
+
+      render_change(new_form(lv), %{"meeting" => "true"})
+      refute has_element?(lv, "#calendar-panel-new-reminders")
     end
   end
 end

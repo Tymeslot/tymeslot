@@ -8,8 +8,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
 
   With a guest, the form offers to send the draft as a Tymeslot meeting
   (`PanelMeetingFields`, `PanelMeeting`). A meeting has times, is busy and
-  takes its place from its own fields, so All day, Show as and Place give
-  way to the meeting's fields while it is ticked, and Notes becomes the
+  takes its place from its own fields, so All day, Show as, Place and the
+  event's reminders (`PanelNewReminders`) give way to the meeting's fields
+  while it is ticked, and Notes becomes the
   note to the guests.
 
   Without a calendar to write to, only a Tymeslot meeting can be made: its
@@ -34,6 +35,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelMeetingFields
   alias TymeslotWeb.Dashboard.Calendar.PanelNewGuests
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewReminders
   alias TymeslotWeb.Dashboard.Calendar.PanelVideoField
 
   attr :values, :map, required: true, doc: "the typed values (`panel.form`)"
@@ -171,6 +173,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         :if={!@group}
         video_integrations={@video_integrations}
         value={@values["video_integration_id"]}
+      />
+      <PanelNewReminders.field
+        :if={!@meeting and !@group}
+        reminders={PanelNewReminders.of(@values)}
+        surface={@surface}
       />
       <PanelGuestsField.draft_guests
         :if={!@group}

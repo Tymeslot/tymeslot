@@ -55,6 +55,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   def handle("draft_drop_guest", %{"email" => email}, socket),
     do: PanelNew.drop_guest(socket, email)
 
+  def handle("draft_drop_reminder", %{"index" => index}, socket),
+    do: PanelNew.drop_reminder(socket, index)
+
   def handle("draft_cancel", _params, socket), do: PanelNew.cancel(socket)
 
   # The meeting's reminder picker (see `PanelMeetingReminders`).
