@@ -132,6 +132,8 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
 
   test "a seat hold fires no automation", ctx do
     insert(:webhook, user: ctx.user, events: ["meeting.created"])
+    insert(:slack_integration, user: ctx.user)
+    insert(:telegram_integration, user: ctx.user)
     expect_checkout()
 
     assert {:ok, :payment_required, %{seat_hold: %{status: :held}}} =

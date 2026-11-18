@@ -737,7 +737,7 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
-msgid "You still hold %{amount} from %{count} participant. Refund it from your Payments page if you need to."
-msgid_plural "You still hold %{amount} from %{count} participants. Refund them from your Payments page if you need to."
+msgid "You still hold %{amount} from %{count} participant. Refund it under Payments in your dashboard if you need to."
+msgid_plural "You still hold %{amount} from %{count} participants. Refund them under Payments in your dashboard if you need to."
 msgstr[0] ""
 msgstr[1] ""

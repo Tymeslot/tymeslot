@@ -21,6 +21,8 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
   alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Bookings.Cancel
+  alias Tymeslot.Emails.Templates.AppointmentCancellation
+  alias Tymeslot.EmailServiceMock
   alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.StripeAdapterMock
@@ -139,6 +141,33 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
 
   defp status(meeting), do: Repo.get!(MeetingSchema, meeting.id).status
 
+  defp seat_refund_arg do
+    assert [%{args: args}] =
+             all_enqueued(worker: EmailWorker, args: %{action: "send_cancellation_emails"})
+
+    args["seat_refund"]
+  end
+
+  # Drains the enqueued cancellation email job, returning the organiser's
+  # copy as rendered.
+  defp organiser_email do
+    test = self()
+
+    expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn _email, details ->
+      send(test, {:organiser, details})
+      {:ok, "sent"}
+    end)
+
+    stub(EmailServiceMock, :send_cancellation_email_to_attendee, fn _email, _details ->
+      {:ok, "sent"}
+    end)
+
+    assert %{failure: 0, discard: 0} = Oban.drain_queue(queue: :emails)
+    assert_received {:organiser, details}
+
+    AppointmentCancellation.render(:organizer, "host@example.com", details)
+  end
+
   # The shape Stripe delivers, from the recorded fixture, for this seat.
   defp completed_event(payment) do
     "checkout.session.completed"
@@ -174,8 +203,11 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     assert status(ctx.session) == :cancelled
     assert refund_amounts() == [1500, 2000, 2000]
 
-    assert [%{args: %{"seat_refund" => "full"}}] =
-             all_enqueued(worker: EmailWorker, args: %{action: "send_cancellation_emails"})
+    assert seat_refund_arg() == %{
+             "choice" => "full",
+             "count" => 3,
+             "totals" => [%{"currency" => "eur", "amount_cents" => 5500}]
+           }
   end
 
   test "the dialog's choice: every seat in full, or none with the acknowledgement" do
@@ -214,8 +246,90 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     assert status(ctx.session) == :cancelled
     assert refund_amounts() == []
 
-    assert [%{args: %{"seat_refund" => "none"}}] =
-             all_enqueued(worker: EmailWorker, args: %{action: "send_cancellation_emails"})
+    assert seat_refund_arg() == %{
+             "choice" => "none",
+             "count" => 1,
+             "totals" => [%{"currency" => "eur", "amount_cents" => @price}]
+           }
+  end
+
+  # A host who changed their currency between bookings holds money in both.
+  test "seats paid in two currencies are totalled per currency" do
+    ctx = host_and_session()
+    paid_seat(ctx, "ada@example.com", currency: "usd", amount_cents: 3000)
+    paid_seat(ctx, "grace@example.com")
+    paid_seat(ctx, "alan@example.com", currency: "usd", amount_cents: 1000)
+
+    assert {:ok, _cancelled} =
+             Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :none)
+
+    assert seat_refund_arg() == %{
+             "choice" => "none",
+             "count" => 3,
+             "totals" => [
+               %{"currency" => "eur", "amount_cents" => @price},
+               %{"currency" => "usd", "amount_cents" => 4000}
+             ]
+           }
+  end
+
+  # The organiser is told of the very seats the cancellation settled, at what
+  # each still held then: a seat partly refunded before the cancel counts at
+  # its balance, and a disputed seat (its money with the card network) is
+  # neither refunded nor counted. Full and none name the same seats and sums.
+  describe "what the organiser's cancellation email is told" do
+    setup do
+      ctx = host_and_session()
+      paid_seat(ctx, "ada@example.com")
+
+      paid_seat(ctx, "alan@example.com",
+        status: :partially_refunded,
+        refunded_amount_cents: 500
+      )
+
+      paid_seat(ctx, "eve@example.com", status: :disputed)
+      ctx
+    end
+
+    for {action, choice, refunds} <- [
+          {:refund_seats, "full", [1500, 2000]},
+          {:none, "none", []}
+        ] do
+      test "for a #{choice} refund, the seats settled and what they held", ctx do
+        assert {:ok, _cancelled} =
+                 Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, unquote(action))
+
+        assert refund_amounts() == unquote(refunds)
+
+        assert seat_refund_arg() == %{
+                 "choice" => unquote(choice),
+                 "count" => 2,
+                 "totals" => [%{"currency" => "eur", "amount_cents" => 3500}]
+               }
+      end
+    end
+
+    test "a full refund renders the seats being refunded in the organiser's email", ctx do
+      assert {:ok, _cancelled} =
+               Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats)
+
+      email = organiser_email()
+
+      assert email.text_body =~ "REFUNDS ON THEIR WAY:"
+      assert email.text_body =~ "€35.00 is being refunded to 2 participants."
+      assert email.html_body =~ "Refunds on their way"
+    end
+
+    test "no refund renders what the organiser still holds in their email", ctx do
+      assert {:ok, _cancelled} =
+               Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :none)
+
+      email = organiser_email()
+
+      assert email.text_body =~ "REFUNDS OUTSTANDING:"
+      assert email.text_body =~ "You still hold €35.00 from 2 participants."
+      refute email.text_body =~ "is being refunded"
+    end
   end
 
   test "a partial choice refunds every seat in full" do

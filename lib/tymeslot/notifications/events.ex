@@ -324,8 +324,10 @@ defmodule Tymeslot.Notifications.Events do
   `integrations: false` tells no integration: a session cancelled with the
   rest of its series, announced whole by `meeting.series_cancelled`.
 
-  `seat_refund: :full | :none` is passed on to the cancellation emails of a
-  group session the host cancelled: whether its paid seats are refunded.
+  `seat_refund:` (`Tymeslot.Meetings.Cancellation.seat_refund/0`) is
+  passed on to the organiser's cancellation email of a group session the
+  host cancelled: whether its paid seats are refunded, how many and how
+  much.
   """
   @spec meeting_cancelled(term(), keyword()) :: {:ok, term()} | {:error, term()}
   def meeting_cancelled(meeting, opts \\ []) do

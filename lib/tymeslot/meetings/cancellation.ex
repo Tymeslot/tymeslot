@@ -67,7 +67,9 @@ defmodule Tymeslot.Meetings.Cancellation do
   tells the host. Once committed, each released hold's checkout is expired
   (a payment completing anyway is refunded, its hold having been released
   for a cancelled meeting) and its booker's payment page told, and the
-  cancellation is announced.
+  cancellation is announced. The organiser's email is told of the seats
+  settled under the lock and what each held then (`t:seat_refund/0`), so it
+  names exactly the refunds scheduled, or the money left with the host.
   """
 
   alias Tymeslot.Bookings.Cancel
@@ -84,6 +86,19 @@ defmodule Tymeslot.Meetings.Cancellation do
 
   @typedoc "Why a payment can no longer be refunded (`MeetingPayments.refund_refusal/1`)."
   @type refund_refusal :: :not_paid | :outside_refund_window | :under_dispute
+
+  @typedoc """
+  What a host's cancellation of a group session did with its paid seats'
+  money, for the organiser's cancellation email: refunded every seat
+  (`:full`) or none (`:none`), how many seats, and what they still held in
+  each currency when the cancellation settled them. Present only when a
+  seat was paid.
+  """
+  @type seat_refund :: %{
+          choice: :full | :none,
+          count: pos_integer(),
+          totals: [%{currency: String.t(), amount_cents: non_neg_integer()}]
+        }
 
   @typedoc """
   What to refund: nothing, a positive amount in minor units, nothing
@@ -313,7 +328,11 @@ defmodule Tymeslot.Meetings.Cancellation do
 
     with {:ok, scheduled} <- schedule_refunds(payments, organizer_user_id, refund?) do
       {:ok,
-       %{released_holds: released, refunds_scheduled: scheduled, paid_seats: length(payments)}}
+       %{
+         released_holds: released,
+         refunds_scheduled: scheduled,
+         seat_money: BookingPayments.seat_money_summary(payments)
+       }}
     end
   end
 
@@ -330,8 +349,11 @@ defmodule Tymeslot.Meetings.Cancellation do
     end)
   end
 
-  # The emails say what happens to the money only when somebody paid.
-  defp seat_refund_opts(%{paid_seats: 0}, _refund?), do: []
-  defp seat_refund_opts(_settled, true), do: [seat_refund: :full]
-  defp seat_refund_opts(_settled, false), do: [seat_refund: :none]
+  # The organiser's email says what happens to the money only when somebody
+  # paid, and names the very seats settled above, at what each still held:
+  # the same seats and sums whether they are being refunded or not.
+  defp seat_refund_opts(%{seat_money: %{count: 0}}, _refund?), do: []
+
+  defp seat_refund_opts(%{seat_money: money}, refund?),
+    do: [seat_refund: Map.put(money, :choice, if(refund?, do: :full, else: :none))]
 end

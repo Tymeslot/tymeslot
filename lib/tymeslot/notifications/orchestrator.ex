@@ -256,8 +256,9 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @doc """
   Schedules cancellation notifications via EmailScheduler.
 
-  `seat_refund: :full | :none` tells the emails of a group session the
-  host cancelled whether its paid seats are being refunded.
+  `seat_refund:` (`Tymeslot.Meetings.Cancellation.seat_refund/0`) tells
+  the organiser's email of a group session the host cancelled whether its
+  paid seats are being refunded, how many and how much.
   """
   @spec send_cancellation_notifications(%{atom() => term()}, keyword()) ::
           {:ok, atom()} | {:error, term()}

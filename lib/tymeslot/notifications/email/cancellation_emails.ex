@@ -54,12 +54,26 @@ defmodule Tymeslot.Notifications.Email.CancellationEmails do
     end)
   end
 
-  # What the host's cancellation of a group meeting does with its paid seats'
-  # money, from the job's `"seat_refund"` argument. Absent from a job
-  # persisted before the argument existed, and from a meeting nobody paid for:
-  # read as no refund, which is what the organiser is told they still hold.
-  defp seat_refund(%{"seat_refund" => "full"}), do: :full
-  defp seat_refund(_args), do: :none
+  # What the host's cancellation of a group meeting did with its paid seats'
+  # money, from the job's `"seat_refund"` argument
+  # (`Tymeslot.Meetings.Cancellation.seat_refund/0`, fixed when the seats were
+  # settled). Absent when nobody paid, so the organiser's copy says nothing
+  # of money; so does any other shape, which no released version enqueued.
+  defp seat_refund(%{
+         "seat_refund" => %{"choice" => choice, "count" => count, "totals" => totals}
+       })
+       when choice in ["full", "none"] and is_integer(count) and count > 0 and is_list(totals) do
+    %{
+      choice: String.to_existing_atom(choice),
+      count: count,
+      totals:
+        Enum.map(totals, fn %{"currency" => currency, "amount_cents" => cents} ->
+          %{currency: currency, amount_cents: cents}
+        end)
+    }
+  end
+
+  defp seat_refund(_args), do: nil
 
   defp send_cancellation_emails_for_meeting(meeting, seat_refund, job_id) do
     appointment_details = AppointmentBuilder.from_meeting(meeting)

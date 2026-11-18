@@ -16,9 +16,6 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
 
-  # Statuses in which a seat's money changed hands: refunded ones included.
-  @paid_statuses [:paid, :partially_refunded, :refunded]
-
   @typedoc """
   How many refunds a host still owes, and how much of each currency.
   """
@@ -142,49 +139,27 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
     do: BookingPaymentQueries.by_participant_id(participant_id)
 
   @doc """
-  What a host's cancellation of the group meeting `meeting_id` does with the
-  money of its live seats, for the organiser's email: how many paid seats
-  and how much, or `nil` when no seat was paid.
+  How many of `payments` there are and how much of their money each currency
+  still holds (`Refunds.refundable_remaining_cents/1`), currencies in
+  alphabetical order: the seats a host's cancellation of a group meeting
+  refunds, or leaves to be refunded by hand, as its emails tell the organiser.
 
-  `choice` is `:full` when the cancellation refunds every seat (the refunds
-  are separate jobs, so a seat already refunded by the time this is read
-  still counts, at what it paid) and `:none` when it refunds nothing, which
-  counts the seats still holding money (`seat_payments_for_meeting/2`).
+  Pure: summarises the list it is given, so a caller that reads the seats
+  under the meeting's lock and sizes the refunds from them reports exactly
+  those seats.
   """
-  @spec seat_refund_summary(Ecto.UUID.t(), integer(), :full | :none) ::
-          %{
-            choice: :full | :none,
-            count: pos_integer(),
-            amount_cents: non_neg_integer(),
-            currency: String.t()
-          }
-          | nil
-  def seat_refund_summary(meeting_id, host_user_id, choice) when choice in [:full, :none] do
-    case summarised_seat_payments(meeting_id, host_user_id, choice) do
-      [] ->
-        nil
+  @spec seat_money_summary([BookingPaymentSchema.t()]) :: outstanding_refunds_summary()
+  def seat_money_summary(payments) do
+    totals =
+      payments
+      |> Enum.group_by(& &1.currency, &Refunds.refundable_remaining_cents/1)
+      |> Enum.sort_by(fn {currency, _amounts} -> currency end)
+      |> Enum.map(fn {currency, amounts} ->
+        %{currency: currency, amount_cents: Enum.sum(amounts)}
+      end)
 
-      [%{currency: currency} | _rest] = payments ->
-        %{
-          choice: choice,
-          count: length(payments),
-          amount_cents: payments |> Enum.map(&seat_amount(&1, choice)) |> Enum.sum(),
-          currency: currency
-        }
-    end
+    %{count: length(payments), totals: totals}
   end
-
-  defp summarised_seat_payments(meeting_id, host_user_id, :none),
-    do: seat_payments_for_meeting(meeting_id, host_user_id)
-
-  defp summarised_seat_payments(meeting_id, host_user_id, :full) do
-    meeting_id
-    |> BookingPaymentQueries.list_for_live_seats()
-    |> Enum.filter(&(&1.host_user_id == host_user_id and &1.status in @paid_statuses))
-  end
-
-  defp seat_amount(payment, :full), do: payment.amount_cents
-  defp seat_amount(payment, :none), do: Refunds.refundable_remaining_cents(payment)
 
   @doc """
   The meetings a booking payment paid for: its meeting, or every session of

@@ -2,8 +2,9 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
   @moduledoc """
   The emails of a group meeting the host cancelled when some seats were
   paid: the organiser's copy says what happens to the money (read from the
-  cancellation job's `"seat_refund"` argument), and the participants' copies
-  never mention a refund, which the host may yet decline.
+  cancellation job's `"seat_refund"` argument, which carries the seats and
+  sums the cancellation settled), and the participants' copies never mention
+  a refund, which the host may yet decline.
   """
 
   use Tymeslot.DataCase, async: false
@@ -73,39 +74,82 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
     {details, AppointmentCancellation.render(:organizer, "host@example.com", details)}
   end
 
-  test "a full-refund group cancellation tells the organiser refunds are on their way", ctx do
-    {details, email} = organiser_copy(ctx.meeting, %{"seat_refund" => "full"})
+  defp seat_refund(choice, totals \\ [%{"currency" => "eur", "amount_cents" => 8000}]),
+    do: %{"seat_refund" => %{"choice" => choice, "count" => 2, "totals" => totals}}
 
-    assert %{choice: :full, count: 2} = details.seat_refunds
+  test "a full-refund group cancellation tells the organiser refunds are on their way", ctx do
+    {details, email} = organiser_copy(ctx.meeting, seat_refund("full"))
+
+    assert details.seat_money == %{choice: :full, count: 2, amount: "€80.00"}
     assert email.text_body =~ "€80.00 is being refunded to 2 participants."
     assert email.html_body =~ "Refunds on their way"
     refute email.html_body =~ "Refunds outstanding"
   end
 
   test "a no-refund group cancellation tells the organiser what they still hold", ctx do
-    {details, email} = organiser_copy(ctx.meeting, %{"seat_refund" => "none"})
+    {details, email} = organiser_copy(ctx.meeting, seat_refund("none"))
 
-    assert %{choice: :none, count: 2} = details.seat_refunds
+    assert details.seat_money == %{choice: :none, count: 2, amount: "€80.00"}
     assert email.html_body =~ "Refunds outstanding"
-    assert email.text_body =~ "You still hold €80.00 from 2 participants."
+
+    assert email.text_body =~
+             "You still hold €80.00 from 2 participants. Refund them under Payments in your dashboard if you need to."
+
     refute email.text_body =~ "is being refunded"
   end
 
-  test "a cancellation job without seat_refund reads as none", ctx do
-    {details, email} = organiser_copy(ctx.meeting)
+  # The numbers are the job's, fixed when the cancellation settled the seats:
+  # the email reads no payment of its own, so a refund issued since cannot
+  # change them.
+  test "the organiser's copy names the job's numbers, not the payments' now", ctx do
+    {details, email} =
+      organiser_copy(
+        ctx.meeting,
+        seat_refund("full", [%{"currency" => "eur", "amount_cents" => 1234}])
+      )
 
-    assert %{choice: :none, count: 2} = details.seat_refunds
-    assert email.text_body =~ "You still hold €80.00 from 2 participants."
+    assert details.seat_money.amount == "€12.34"
+    assert email.text_body =~ "€12.34 is being refunded to 2 participants."
+    refute email.text_body =~ "€80.00"
+  end
+
+  test "seats paid in more than one currency list each currency's total", ctx do
+    totals = [
+      %{"currency" => "eur", "amount_cents" => 8000},
+      %{"currency" => "usd", "amount_cents" => 5000}
+    ]
+
+    {details, email} = organiser_copy(ctx.meeting, seat_refund("none", totals))
+
+    assert details.seat_money.amount == "€80.00, $50.00"
+    assert email.text_body =~ "You still hold €80.00, $50.00 from 2 participants."
+    assert email.html_body =~ "€80.00, $50.00"
+  end
+
+  # Neither shape tells what the cancellation settled, so the organiser's
+  # copy says nothing of money rather than guess from the payments now.
+  for {name, extra} <- [
+        {"without seat_refund", %{}},
+        {"with a bare choice", %{"seat_refund" => "full"}}
+      ] do
+    test "a cancellation job #{name} says nothing about refunds", ctx do
+      {details, email} = organiser_copy(ctx.meeting, unquote(Macro.escape(extra)))
+
+      assert details.seat_money == nil
+      refute String.downcase(email.text_body) =~ "refund"
+      refute String.downcase(email.html_body) =~ "refund"
+    end
   end
 
   test "a group cancellation with no paid seat says nothing about refunds" do
     free = insert(:group_meeting, capacity: 3, status: :cancelled)
     insert(:participant, meeting: free)
 
-    {details, email} = organiser_copy(free, %{"seat_refund" => "full"})
+    {details, email} = organiser_copy(free)
 
-    assert details.seat_refunds == nil
-    refute email.text_body =~ "refund"
+    assert details.seat_money == nil
+    refute String.downcase(email.text_body) =~ "refund"
+    refute String.downcase(email.html_body) =~ "refund"
   end
 
   test "participants' cancellation emails never mention a refund", ctx do
@@ -116,7 +160,7 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
         {:ok, "sent"}
       end)
 
-      assert :ok = perform_job(EmailWorker, cancel_job(ctx.meeting, %{"seat_refund" => choice}))
+      assert :ok = perform_job(EmailWorker, cancel_job(ctx.meeting, seat_refund(choice)))
 
       seat_jobs =
         all_enqueued(worker: EmailWorker, args: %{"action" => "send_seat_meeting_cancellation"})

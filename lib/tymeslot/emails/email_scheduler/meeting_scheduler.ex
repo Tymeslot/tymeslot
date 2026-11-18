@@ -473,8 +473,11 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @doc """
   Schedules cancellation emails to be sent immediately with high priority.
 
-  `seat_refund: :full | :none` is carried to the job as `"seat_refund"`,
-  for the emails of a group session the host cancelled.
+  `seat_refund:` (`Tymeslot.Meetings.Cancellation.seat_refund/0`) is
+  carried to the job as `"seat_refund"`, with string keys, for the
+  organiser's email of a group session the host cancelled:
+  `%{"choice" => "full", "count" => 2, "totals" => [%{"currency" => "eur",
+  "amount_cents" => 8000}]}`.
   """
   @spec schedule_cancellation_emails(term(), keyword()) :: :ok | {:error, term()}
   def schedule_cancellation_emails(meeting_id, opts \\ []) do
@@ -495,8 +498,17 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
     |> Helpers.ok()
   end
 
-  defp seat_refund_arg(seat_refund) when seat_refund in [:full, :none],
-    do: %{"seat_refund" => Atom.to_string(seat_refund)}
+  defp seat_refund_arg(%{choice: choice, count: count, totals: totals})
+       when choice in [:full, :none] do
+    %{
+      "seat_refund" => %{
+        "choice" => Atom.to_string(choice),
+        "count" => count,
+        "totals" =>
+          Enum.map(totals, &%{"currency" => &1.currency, "amount_cents" => &1.amount_cents})
+      }
+    }
+  end
 
   defp seat_refund_arg(nil), do: %{}
 

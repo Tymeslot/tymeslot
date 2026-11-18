@@ -127,11 +127,13 @@ defmodule Tymeslot.Bookings.Cancel do
   def announce(%Meeting{} = meeting), do: send_cancellation_notifications(meeting)
 
   @doc """
-  As `announce/1`, for a group session the host cancelled: `seat_refund:
-  :full | :none` says whether its paid seats are being refunded, for the
-  cancellation emails to tell each participant.
+  As `announce/1`, for a group session the host cancelled:
+  `seat_refund:` (`Tymeslot.Meetings.Cancellation.seat_refund/0`) says
+  whether its paid seats are being refunded, how many and how much, for
+  the organiser's cancellation email. Participants are never told.
   """
-  @spec announce(Meeting.t(), keyword()) :: :ok
+  @spec announce(Meeting.t(), [{:seat_refund, Tymeslot.Meetings.Cancellation.seat_refund()}]) ::
+          :ok
   def announce(%Meeting{} = meeting, opts),
     do: send_cancellation_notifications(meeting, Keyword.take(opts, [:seat_refund]))
 

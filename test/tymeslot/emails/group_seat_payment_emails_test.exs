@@ -168,6 +168,26 @@ defmodule Tymeslot.Emails.GroupSeatPaymentEmailsTest do
       refute email.text_body =~ "REFUND"
     end
 
+    # A moved seat keeps its payment, so the move says nothing of money.
+    test "the organiser's spot-moved email carries no payment block", ctx do
+      paid = paid_seat(ctx, "Ada", amount_cents: 2000)
+
+      details =
+        ctx.meeting
+        |> AppointmentBuilder.for_organizer_of_seat(paid.seat)
+        |> Map.put(:original_start_time_owner_tz, ~U[2026-01-14 09:00:00Z])
+
+      assert %{amount_cents: 2000} = details.booking_payment
+
+      email = SeatUpdateForOrganizer.render(:moved, "host@example.com", details)
+
+      for body <- [email.text_body, email.html_body] do
+        refute body =~ "€20.00"
+        refute body =~ "You received"
+        refute String.downcase(body) =~ "refund"
+      end
+    end
+
     test "the organiser seat count ignores unpaid holds", ctx do
       paid = paid_seat(ctx, "Ada", amount_cents: 2000)
       insert(:seat_hold, meeting: ctx.meeting, seats: 2, email: "paying@example.com")

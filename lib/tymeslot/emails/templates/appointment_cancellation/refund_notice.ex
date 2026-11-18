@@ -32,7 +32,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
   Host-facing refund notice, or `nil` when nothing is outstanding. A group
   meeting the host cancelled carries `:count` and `:choice` as well: how many
   paid seats, and whether the cancellation refunds them (`:full`) or leaves
-  the money with the host (`:none`).
+  the money with the host (`:none`). Its `:amount` lists one formatted total
+  per currency the seats were paid in, joined by commas.
   """
   @type notice ::
           %{
@@ -44,12 +45,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
 
   @doc """
   Builds the notice from the `:booking_payment` snapshot in
-  `appointment_details`, or from the `:seat_refunds` summary of a group
+  `appointment_details`, or from the `:seat_money` summary of a group
   meeting the host cancelled (`Tymeslot.Notifications.Email.GroupMeetingEmails`),
   or returns `nil` when no money is outstanding.
   """
   @spec build(map()) :: notice()
-  def build(%{seat_refunds: %{choice: _choice, count: _count, amount: _amount} = seats}),
+  def build(%{seat_money: %{choice: _choice, count: _count, amount: _amount} = seats}),
     do: seats
 
   def build(appointment_details) do
@@ -129,8 +130,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
   defp seats_line(%{choice: :none, count: count, amount: amount}, bold?) do
     dngettext(
       "emails_booking_changes",
-      "You still hold %{amount} from %{count} participant. Refund it from your Payments page if you need to.",
-      "You still hold %{amount} from %{count} participants. Refund them from your Payments page if you need to.",
+      "You still hold %{amount} from %{count} participant. Refund it under Payments in your dashboard if you need to.",
+      "You still hold %{amount} from %{count} participants. Refund them under Payments in your dashboard if you need to.",
       count,
       amount: amount(amount, bold?),
       count: count
