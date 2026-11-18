@@ -53,6 +53,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
             preview: nil,
             open_menu: nil
           )
+          |> PanelGuests.forget_held_from(id, held_until)
           |> PanelGuests.watch_hold(id, held_until)
           |> push_event("calendar:panel", %{open: true})
         end)

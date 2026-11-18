@@ -109,6 +109,36 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestUpdateHoldTest do
     assert has_element?(lv, "#calendar-panel-tell-guests")
   end
 
+  test "a hold that ended while the panel was closed leaves nothing behind for a later one", %{
+    lv: lv,
+    review: review
+  } do
+    change_and_tell(lv, review)
+    close_and_reopen(lv, review)
+    Oban.drain_queue(queue: :emails, with_scheduled: true)
+
+    # Reopened with nothing held: where the sent update counted from is gone.
+    close_and_reopen(lv, review)
+    refute has_element?(lv, "#calendar-panel-guests-pending")
+
+    # A new hold, from another tab, cancelled here counts from the event as
+    # it is, so nothing is untold: the change was told already.
+    {:ok, :scheduled} = Dispatcher.schedule_update(review.id, :provider_calendar_event)
+    close_and_reopen(lv, review)
+    lv |> element("#calendar-panel-cancel-guest-update") |> render_click()
+
+    assert has_element?(lv, "#calendar-toast", "Guests won't be told.")
+    refute has_element?(lv, "#calendar-panel-untold")
+  end
+
+  defp close_and_reopen(lv, review) do
+    lv |> element("#calendar-panel-close") |> render_click()
+
+    lv
+    |> element("#calendar-canvas")
+    |> render_hook("calendar:edit", %{"id" => "event-#{review.id}"})
+  end
+
   test "the panel reopened on the event still offers Cancel", %{
     conn: conn,
     lv: lv,

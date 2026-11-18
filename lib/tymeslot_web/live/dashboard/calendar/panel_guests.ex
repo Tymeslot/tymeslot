@@ -329,9 +329,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
 
   defp told_from(_socket, panel), do: panel.opened_with
 
-  defp forget_held_from(socket, _id, %DateTime{}), do: socket
+  @doc """
+  Forgets where the held update for the event `id` counted from once none
+  is held (`held_until` nil), so a later hold, from another tab say, is not
+  taken back to a starting point that belonged to an earlier one.
+  """
+  @spec forget_held_from(socket(), String.t(), DateTime.t() | nil) :: socket()
+  def forget_held_from(socket, _id, %DateTime{}), do: socket
 
-  defp forget_held_from(socket, id, nil),
+  def forget_held_from(socket, id, nil),
     do: assign(socket, :held_from, Map.delete(socket.assigns.held_from, id))
 
   defp send_update(socket, panel, event),
