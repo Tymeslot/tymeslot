@@ -183,6 +183,59 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     )
   end
 
+  test "a guest typed but not added is invited on Create", %{lv: lv, integration: integration} do
+    more_options(lv, integration)
+
+    render_change(new_form(lv), %{"guest_email" => " Grace@Example.com "})
+    assert has_element?(lv, "#calendar-panel-create", "Create and invite")
+
+    render_submit(new_form(lv), %{"intent" => "create", "guest_email" => " Grace@Example.com "})
+
+    assert [%{email: "grace@example.com"}] = await_create(lv).attendees
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{"action" => "send_calendar_invitation", "attendee_email" => "grace@example.com"}
+    )
+  end
+
+  test "a typed guest the draft already has is invited once", %{
+    lv: lv,
+    integration: integration
+  } do
+    more_options(lv, integration, %{"guests" => ["grace@example.com"]})
+
+    render_submit(new_form(lv), %{"intent" => "create", "guest_email" => "grace@example.com"})
+
+    assert [%{email: "grace@example.com"}] = await_create(lv).attendees
+  end
+
+  test "an invalid address left in the guest field stops the create and says why", %{
+    lv: lv,
+    integration: integration
+  } do
+    more_options(lv, integration)
+
+    render_submit(new_form(lv), %{"intent" => "create", "guest_email" => "not-an-address"})
+
+    refute_receive {:provider_call, _pid, _call}, 100
+    assert render(lv) =~ "Enter a valid email address."
+    assert has_element?(lv, "#calendar-panel-create:not([disabled])")
+  end
+
+  test "the organiser's own address left in the guest field stops the create", %{
+    lv: lv,
+    integration: integration,
+    user: user
+  } do
+    more_options(lv, integration)
+
+    render_submit(new_form(lv), %{"intent" => "create", "guest_email" => user.email})
+
+    refute_receive {:provider_call, _pid, _call}, 100
+    assert render(lv) =~ "You&#39;re the organiser, so there&#39;s no need to invite yourself."
+  end
+
   test "Enter in a field with no guest typed creates nothing", %{lv: lv, integration: integration} do
     more_options(lv, integration)
     render_submit(new_form(lv), %{"intent" => "add_guest", "guest_email" => ""})

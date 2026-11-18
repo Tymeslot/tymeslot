@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeetingFields do
 
     ~H"""
     <section
-      :if={@values["guests"] != []}
+      :if={PanelMeeting.guests?(@values)}
       id="calendar-panel-meeting"
       class="space-y-3 rounded-token-lg border border-tymeslot-200 p-3"
     >

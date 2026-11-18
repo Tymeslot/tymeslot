@@ -78,10 +78,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
   defp timed(%{"meeting" => true} = fields), do: Map.put(fields, "all_day", false)
   defp timed(fields), do: fields
 
-  @doc "Whether the form describes a meeting: the box ticked, and a guest to meet."
+  @doc """
+  Whether the form describes a meeting: the box ticked, and a guest to meet
+  (`guests?/1`).
+  """
   @spec on?(map()) :: boolean()
-  def on?(%{"meeting" => true, "guests" => [_first | _rest]}), do: true
+  def on?(%{"meeting" => true} = form), do: guests?(form)
   def on?(_form), do: false
+
+  @doc """
+  Whether the draft has a guest: one added, or one typed into the guest
+  field and not added yet, which Create adds first
+  (`PanelNewGuests.take_pending/2`).
+  """
+  @spec guests?(map()) :: boolean()
+  def guests?(form), do: form["guests"] not in [nil, []] or (form["guest_pending"] || "") != ""
 
   @doc """
   Creates the panel's meeting: checks it, spends the budget, and hands it to

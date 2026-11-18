@@ -111,6 +111,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     refute has_element?(lv, "#calendar-panel-meeting-fields")
   end
 
+  test "is offered for a guest typed but not added yet, who Create then invites", %{
+    conn: conn,
+    integration: integration
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    more_options(lv, integration, %{"guests" => []})
+
+    render_change(new_form(lv), %{"guest_email" => "ada@example.com"})
+    assert has_element?(lv, "#calendar-panel-meeting", "Send as a Tymeslot meeting")
+
+    render_change(new_form(lv), %{"guest_email" => "ada@example.com", "meeting" => "true"})
+    assert has_element?(lv, "#calendar-panel-meeting-guest-name")
+
+    trace(lv)
+    create_meeting(lv, %{"guest_email" => "ada@example.com", "meeting" => "true"})
+
+    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+    assert %{attendee_email: "ada@example.com", guest_emails: []} = params
+  end
+
   test "the language of its emails starts as the organiser's own", %{
     conn: conn,
     user: user,

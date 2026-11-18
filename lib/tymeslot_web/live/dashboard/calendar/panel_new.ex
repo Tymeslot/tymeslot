@@ -39,12 +39,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   alias TymeslotWeb.Dashboard.Calendar.PanelGroupEvent
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelMeetingReminders
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewGuests
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Transfer
   alias TymeslotWeb.Dashboard.CalendarEditMessages
 
   @type socket :: Phoenix.LiveView.Socket.t()
+  @type status :: :idle | :saving | {:failed, String.t()}
 
   @text_fields ~w(title start end calendar location description video_integration_id)
 
@@ -63,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   def open(socket, _params), do: {false, socket}
 
   defp open_draft(socket, draft_id, params) do
-    {guests, guests_status} = typed_guests(socket, params["guests"])
+    {guests, guests_status} = PanelNewGuests.typed(socket, params["guests"])
 
     form =
       params
@@ -124,6 +126,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       |> Map.merge(form_fields(params, form))
       |> Map.merge(PanelMeeting.fields(params))
       |> Map.merge(PanelGroupEvent.fields(params))
+      |> Map.merge(PanelNewGuests.pending(params, socket.assigns.current_user))
       |> convert_all_day(form)
       |> follow_start(form, params["_target"])
 
@@ -140,7 +143,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   The New event form's submit. `intent=add_guest` adds the typed guest to
   the form (an empty field adds nothing, so Enter in another field never
   creates, and Enter in the reminder picker's custom row adds the lead time
-  it holds); `intent=create` creates the event.
+  it holds); `intent=create` creates the event, adding first a guest typed
+  but not added (`PanelNewGuests.take_pending/2`).
   """
   @spec submit(socket(), map()) :: socket()
   def submit(
@@ -152,29 +156,45 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
 
     case String.trim(params["guest_email"] || "") do
       "" -> PanelMeetingReminders.add_typed(socket, params)
-      email -> add_guest(socket, email)
+      email -> PanelNewGuests.add(socket, email)
     end
   end
 
-  def submit(socket, %{"intent" => "create"} = params), do: socket |> change(params) |> create()
+  def submit(
+        %{assigns: %{panel: %{mode: :new, status: status}}} = socket,
+        %{"intent" => "create"} = params
+      )
+      when status != :saving do
+    socket = change(socket, params)
+
+    case PanelNewGuests.take_pending(socket, params["guest_email"]) do
+      {:ok, socket} -> create(socket)
+      {:error, socket} -> socket
+    end
+  end
+
   def submit(socket, _params), do: socket
 
   @doc "Drops the guest `email` from the form."
   @spec drop_guest(socket(), String.t()) :: socket()
-  def drop_guest(
-        %{assigns: %{panel: %{mode: :new, status: status, form: form} = panel}} = socket,
-        email
-      )
-      when is_binary(email) and status != :saving do
-    form = %{form | "guests" => List.delete(form["guests"], email)}
+  def drop_guest(%{assigns: %{panel: %{mode: :new, status: status}}} = socket, email)
+      when is_binary(email) and status != :saving,
+      do: PanelNewGuests.drop(socket, email)
+
+  def drop_guest(socket, _email), do: socket
+
+  @doc """
+  Puts `form` in the New event state: the draft is cast again and the grid
+  is told.
+  """
+  @spec put_form(socket(), map()) :: socket()
+  def put_form(%{assigns: %{panel: %{mode: :new} = panel}} = socket, form) do
     {draft, status} = cast(socket, form, panel.draft)
 
     socket
     |> assign(:panel, %{panel | form: form, draft: draft, status: status})
     |> SurfaceData.push_events(false)
   end
-
-  def drop_guest(socket, _email), do: socket
 
   @doc "Closes the New event state and drops its draft."
   @spec cancel(socket()) :: socket()
@@ -383,56 +403,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
 
     CreateParams.cast(user.id, integrations, params, timezone, calendar: calendar)
   end
-
-  defp add_guest(%{assigns: %{panel: %{form: form} = panel}} = socket, raw) do
-    user_id = socket.assigns.current_user.id
-    guests = form["guests"]
-
-    # The domain's own rules (valid address, not the organiser's, at most
-    # `CreateParams.max_guests/0`), so the chips never promise an invitation
-    # a create would drop.
-    with {:ok, [email]} <- one_guest(user_id, raw),
-         :ok <- not_yet_a_guest(guests, email),
-         {:ok, _kept} <- CreateParams.guests(user_id, guests ++ [email]) do
-      form = %{form | "guests" => guests ++ [email]}
-      {draft, status} = cast(socket, form, panel.draft)
-
-      socket
-      |> assign(:panel, %{panel | form: form, draft: draft, status: status})
-      |> assign(:guest_form_key, socket.assigns.guest_form_key + 1)
-    else
-      {:ok, []} ->
-        warn(socket, Creation.guest_message(:organiser))
-
-      {:error, :guests, :too_many} ->
-        warn(socket, Creation.refusal_message(:guests, :too_many))
-
-      {:error, :guests, _invalid} ->
-        warn(socket, Creation.guest_message(:invalid))
-
-      {:error, :already_a_guest, email} ->
-        warn(socket, Creation.guest_message({:duplicate, email}))
-    end
-  end
-
-  defp one_guest(user_id, raw), do: CreateParams.guests(user_id, [raw])
-
-  defp not_yet_a_guest(guests, email),
-    do: if(email in guests, do: {:error, :already_a_guest, email}, else: :ok)
-
-  # The guests the hook sent, checked as a create checks them; ones the
-  # domain refuses leave the form with none and the reason in the header.
-  defp typed_guests(socket, list) when is_list(list) do
-    case CreateParams.guests(socket.assigns.current_user.id, Enum.filter(list, &is_binary/1)) do
-      {:ok, guests} ->
-        {guests, :idle}
-
-      {:error, field, reason} ->
-        {[], {:failed, Creation.refusal_message(field, reason)}}
-    end
-  end
-
-  defp typed_guests(_socket, _other), do: {[], :idle}
 
   # The form's fields; in the all-day state the end it shows is the last day,
   # inclusive, and the form keeps the exclusive end the create params use.

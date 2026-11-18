@@ -222,7 +222,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           disabled={@saving or @blocked}
           aria-describedby={@blocked && "calendar-panel-calendar-note"}
         >
-          {if @group or @values["guests"] == [],
+          {if @group or not PanelMeeting.guests?(@values),
             do: dgettext("dashboard_calendar_editing", "Create"),
             else: dgettext("dashboard_calendar_editing", "Create and invite")}
         </.action_button>
