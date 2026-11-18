@@ -306,14 +306,18 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     |> Enum.reject(&is_nil/1)
   end
 
+  # The address may come as a `mailto:` URI, as an `ATTENDEE` carries it, in
+  # any case (RFC 3986 §3.1), and is matched without it.
   defp parse_contact(value) do
-    case Regex.run(~r/^(.*?)\s*<([^<>\s]+@[^<>\s]+)>$/, value) do
+    case Regex.run(~r/^(.*?)\s*<(?:mailto:)?([^<>\s]+@[^<>\s]+)>$/i, value) do
       [_match, name, email] ->
         %{"email" => email, "name" => blank_to_nil(name)}
 
       nil ->
-        if Regex.match?(~r/^[^<>\s]+@[^<>\s]+$/, value),
-          do: %{"email" => value, "name" => nil}
+        case Regex.run(~r/^(?:mailto:)?([^<>\s]+@[^<>\s]+)$/i, value) do
+          [_match, email] -> %{"email" => email, "name" => nil}
+          nil -> nil
+        end
     end
   end
 

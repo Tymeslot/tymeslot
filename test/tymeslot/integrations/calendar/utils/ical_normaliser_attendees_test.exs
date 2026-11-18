@@ -166,6 +166,17 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliserAttendeesTest do
                cached("planning@tymeslot.com", "Contact:Ada Lovelace <ada@example.com>")
     end
 
+    test "are matched by their address without a mailto: prefix, in any case" do
+      assert [
+               %{email: "ada@example.com", display_name: "Ada Lovelace"},
+               %{email: "grace@example.com", display_name: nil}
+             ] =
+               cached("planning@tymeslot.com", """
+               CONTACT:Ada Lovelace <MAILTO:ada@example.com>
+               CONTACT:mailto:grace@example.com
+               """)
+    end
+
     test "naming no address are left out" do
       assert cached("planning@tymeslot.com", "CONTACT:Front desk, ext. 12") == []
     end
