@@ -77,6 +77,48 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingUpdatePatchTest do
     %{user: user, integration: integration, meeting: meeting}
   end
 
+  describe "a reschedule of a booking whose calendar copy was given a repeat rule" do
+    # The sync caches the series' occurrences under the booking's UID and a
+    # slot's key, each with the resource's document, and no row under the
+    # bare UID.
+    test "patches the series' document, keeping the rule", ctx do
+      series =
+        String.replace(
+          organiser_document(),
+          "DTEND:20261102T093000Z\r\n",
+          "DTEND:20261102T093000Z\r\nRRULE:FREQ=WEEKLY;COUNT=3\r\n"
+        )
+
+      for {key, synced_at} <- [
+            {"20261102T090000", ~U[2026-11-01 08:00:00.000000Z]},
+            {"20261109T090000", ~U[2026-11-01 09:00:00.000000Z]}
+          ] do
+        insert(:provider_calendar_event,
+          calendar_integration: ctx.integration,
+          provider: "caldav",
+          provider_calendar_id: @calendar_path,
+          uid: "#{@event_uid}_#{key}",
+          provider_event_id: @href,
+          provider_metadata: %{"uid" => @event_uid},
+          raw_ical: series,
+          etag: "\"etag-series\"",
+          synced_at: synced_at
+        )
+      end
+
+      serve(fn _method, _path -> {204, []} end)
+
+      assert :ok = reschedule(ctx.meeting)
+
+      assert [{"PUT", @href, ["\"etag-series\""], body}] = requests()
+      lines = LineFolder.unfold_lines(body)
+
+      assert "RRULE:FREQ=WEEKLY;COUNT=3" in lines
+      assert "CATEGORIES:CLIENT-A" in lines
+      assert @second_attendee in lines
+    end
+  end
+
   describe "a reschedule of a booking the organiser has touched" do
     test "keeps what their client added and moves the event", ctx do
       cache_document(ctx.integration, organiser_document(), "\"etag-1\"")

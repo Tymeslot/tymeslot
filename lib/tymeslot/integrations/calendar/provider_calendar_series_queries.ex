@@ -132,6 +132,29 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries do
   defp except_role(query, role), do: where(query, [e], e.role != ^role)
 
   @doc """
+  The most recently synced occurrence of the CalDAV series `series_uid` in
+  the integration `calendar_integration_id` that carries its resource's
+  document: every occurrence is cached with the resource's `raw_ical`, ETag
+  and href, under the series' UID and a slot's key. `{:error, :not_found}`
+  when none is cached.
+  """
+  @spec get_resource_occurrence(integer(), String.t()) ::
+          {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found}
+  def get_resource_occurrence(calendar_integration_id, series_uid) do
+    row =
+      ProviderCalendarEventSchema
+      |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+      |> where([e], fragment("?->>'uid' = ?", e.provider_metadata, ^series_uid))
+      |> where([e], e.uid != ^series_uid)
+      |> where([e], not is_nil(e.raw_ical) and e.raw_ical != "")
+      |> order_by([e], desc: e.synced_at, desc: e.id)
+      |> limit(1)
+      |> Repo.one()
+
+    if row, do: {:ok, row}, else: {:error, :not_found}
+  end
+
+  @doc """
   The videos the rows cached under the CalDAV series UIDs `series_uids`
   themselves carry, in the integration `calendar_integration_id`: `{uid,
   video_integration_id, video_link}` for each such row with both a video
