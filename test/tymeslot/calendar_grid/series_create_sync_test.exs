@@ -157,7 +157,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
       assert :ok = SyncReconciler.process_tier1(integration, caldav_series(@href), [])
 
       occurrences = blocks_over_weeks(integration, first_start, 3)
-      assert Enum.map(occurrences, & &1.uid) |> Enum.all?(&(&1 != one_off.uid))
+      assert Enum.all?(occurrences, &(&1.uid != one_off.uid))
       assert length(occurrences) == 3
       assert Enum.reject(occurrences, &(&1.video_link == link)) == []
       assert Enum.reject(occurrences, &(&1.video_integration_id == video.id)) == []
