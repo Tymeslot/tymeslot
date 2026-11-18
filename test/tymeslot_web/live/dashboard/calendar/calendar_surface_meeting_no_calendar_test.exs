@@ -75,6 +75,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingNoCalendarTest do
     )
 
     refute has_element?(lv, "#calendar-panel")
+
+    # The reload after the booking draws the meeting, though no calendar has it.
+    assert_push_event(lv, "calendar:events", %{reset: true, events: events}, @task_timeout)
+    assert Enum.any?(events, &(&1.id == "booking-#{meeting.id}"))
+  end
+
+  test "a meeting with a video call is booked with no calendar", %{conn: conn, user: user} do
+    video = insert(:video_integration, user: user, name: "MiroTalk", is_active: true)
+    body = Jason.encode!(%{"room_id" => "room-123", "meeting_url" => "https://meet.example/r"})
+
+    Mox.stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      {:ok, %Req.Response{status: 200, body: body}}
+    end)
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    more_options(lv)
+    render_change(new_form(lv), %{"meeting" => "true", "video_integration_id" => "#{video.id}"})
+
+    render_submit(new_form(lv), %{"intent" => "create", "guest_name" => "Ada Lovelace"})
+
+    meeting = eventually(fn -> Repo.one(MeetingSchema) end, timeout: @task_timeout)
+
+    assert meeting.calendar_integration_id == nil
+    assert meeting.video_integration_id == video.id
   end
 
   test "a plain event cannot be created, and the note says why", %{conn: conn} do
