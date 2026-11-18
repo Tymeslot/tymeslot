@@ -216,7 +216,7 @@ defmodule Tymeslot.Bookings.CancelSeat do
   # the meeting goes with them they carry `slot_freed: true`, and the
   # organiser's one email about it says the slot is now empty and free (the
   # meeting-level cancellation of an emptied meeting sends the organiser
-  # nothing, see `MeetingEmails`).
+  # nothing, see `CancellationEmails`).
   defp after_commit(meeting, cancelled) do
     publish_seat_change(meeting)
 
