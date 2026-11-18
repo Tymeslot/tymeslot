@@ -127,6 +127,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       |> Map.merge(PanelMeeting.fields(params))
       |> Map.merge(PanelGroupEvent.fields(params))
       |> Map.merge(PanelNewGuests.pending(params, socket.assigns.current_user))
+      |> PanelMeeting.carry_place(form)
       |> convert_all_day(form)
       |> follow_start(form, params["_target"])
 

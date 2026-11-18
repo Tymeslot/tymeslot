@@ -15,7 +15,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
   (`PanelMeetingReminders`). With "Main participant" off the host manages
   the meeting alone: every guest is an equal guest, no guest name is asked
   for, and the meeting is known by its title, which it then needs. Its
-  place is none, a saved location, or one typed in. The box counts only
+  place is none, a saved location, or one typed in; a Place typed before the
+  box was ticked becomes the one typed in (`carry_place/2`). The box counts only
   while the draft has a guest (`on?/1`). A meeting has times: ticking it
   makes an all-day draft timed.
 
@@ -77,6 +78,27 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
 
   defp timed(%{"meeting" => true} = fields), do: Map.put(fields, "all_day", false)
   defp timed(fields), do: fields
+
+  @doc """
+  A Place typed while the draft was a plain event (in the panel, or in
+  quick create) carries into the meeting's location as a custom one when
+  the box is ticked, rather than being dropped: a meeting takes its place
+  from its own fields. Only on the change that ticks it, and only while no
+  meeting location has been chosen, so a choice is never overwritten.
+  """
+  @spec carry_place(map(), map()) :: map()
+  def carry_place(
+        %{"meeting" => true, "location_choice" => "", "location" => place} = form,
+        %{"meeting" => false}
+      )
+      when is_binary(place) do
+    case String.trim(place) do
+      "" -> form
+      typed -> Map.merge(form, %{"location_choice" => "custom", "location_custom" => typed})
+    end
+  end
+
+  def carry_place(form, _was), do: form
 
   @doc """
   Whether the form describes a meeting: the box ticked, and a guest to meet

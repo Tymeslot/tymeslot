@@ -214,6 +214,35 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingOptionsTest do
       assert meeting.location == "Room 4, second floor"
     end
 
+    test "a Place typed before the box was ticked becomes the meeting's location", %{lv: lv} do
+      render_change(new_form(lv), %{"meeting" => "false"})
+      render_change(new_form(lv), %{"location" => "Café Rose"})
+      render_change(new_form(lv), %{"meeting" => "true", "location" => "Café Rose"})
+
+      assert has_element?(
+               lv,
+               ~s(#calendar-panel-meeting-location-custom[value="Café Rose"])
+             )
+
+      submit_meeting(lv, %{"guest_name" => "Ada Lovelace"})
+
+      assert %{location: {:custom, "Café Rose"}} = booked()
+    end
+
+    test "a meeting location already chosen is kept when the box is ticked again", %{lv: lv} do
+      render_change(new_form(lv), %{
+        "location_choice" => "custom",
+        "location_custom" => "Room 4"
+      })
+
+      render_change(new_form(lv), %{"meeting" => "false"})
+      render_change(new_form(lv), %{"meeting" => "true", "location" => "Café Rose"})
+
+      submit_meeting(lv, %{"guest_name" => "Ada Lovelace"})
+
+      assert %{location: {:custom, "Room 4"}} = booked()
+    end
+
     test "no choice, or a place left blank, books it without one", %{lv: lv} do
       submit_meeting(lv, %{"guest_name" => "Ada Lovelace", "location_choice" => "custom"})
 

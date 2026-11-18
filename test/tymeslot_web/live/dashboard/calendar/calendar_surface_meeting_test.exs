@@ -131,6 +131,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     assert %{attendee_email: "ada@example.com", guest_emails: []} = params
   end
 
+  test "the place quick create parsed becomes the meeting's location", %{
+    conn: conn,
+    integration: integration
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    more_options(lv, integration, %{"location" => "Room 4"})
+    as_meeting(lv)
+
+    trace(lv)
+    create_meeting(lv)
+
+    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+    assert %{location: {:custom, "Room 4"}} = params
+  end
+
   test "the language of its emails starts as the organiser's own", %{
     conn: conn,
     user: user,
