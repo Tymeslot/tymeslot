@@ -487,6 +487,7 @@ msgstr "Supprimer le lien"
 msgid "Removed %{email}."
 msgstr "%{email} ne figure plus parmi les invités."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
 #, elixir-autogen, elixir-format
 msgid "Repeat"

@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
   alias TymeslotWeb.Dashboard.Calendar.PanelGuestsField
   alias TymeslotWeb.Dashboard.Calendar.PanelNewForm
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
@@ -40,11 +41,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   # The New event state draws the draft's form: there is no event to read
   # a guard or a repeat rule from, and every field can be changed.
   @impl Phoenix.LiveComponent
-  def update(%{panel: %{mode: :new}} = assigns, socket) do
+  def update(%{panel: %{mode: :new} = panel} = assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
      |> assign(
+       new_repeat:
+         PanelNewRepeat.field(
+           panel.form,
+           panel.draft,
+           provider(assigns.integrations, panel.draft),
+           assigns.timezone
+         ),
        event_id: nil,
        editable: true,
        movable: true,
@@ -73,6 +81,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
      |> assign(:event_id, panel.event_id)
      |> assign_booking_copy()
      |> assign_untold()}
+  end
+
+  defp provider(_integrations, nil), do: nil
+
+  defp provider(integrations, draft) do
+    case Enum.find(integrations, &(&1.id == draft.integration_id)) do
+      nil -> nil
+      integration -> integration.provider
+    end
   end
 
   # Asked on every update the panel's event or its starting point changes;
@@ -286,6 +303,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           venues={Map.get(@panel, :venues, [])}
           reminder_picker={Map.get(@panel, :reminder_picker)}
           timezone={@timezone}
+          repeat={@new_repeat}
         />
       </div>
     </aside>

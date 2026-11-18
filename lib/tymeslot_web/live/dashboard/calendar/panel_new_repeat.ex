@@ -1,0 +1,110 @@
+defmodule TymeslotWeb.Dashboard.Calendar.PanelNewRepeat do
+  @moduledoc """
+  Repeat in the side panel's New event state: the draft can be made a
+  series before it is created, so the whole series is written at once and
+  its guests are invited to the series, as the old Quick Add allowed.
+
+  It offers what the edit panel's Repeat field does (`PanelRepeat`): the
+  common patterns named for the draft's own start, and Custom…, which
+  opens the repeat editor (`RecurrenceEditor`) inside the New event form.
+  The form keeps the choice (`"repeat"`, a `PanelRepeat` preset or
+  `"custom"`) and the editor's fields (`"repeat_custom"`); the rule is
+  composed from the draft as cast, so it follows a start that moves, and
+  what the calendar would refuse is refused before anything is written. A
+  Tymeslot meeting and a group event do not repeat, so the field gives way
+  to them.
+  """
+
+  alias Tymeslot.CalendarGrid.CreateParams
+  alias TymeslotWeb.Components.Calendar.RecurrenceEditor
+  alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
+
+  @custom_fields ~w(freq interval by_day on end_type count until)
+
+  @doc "The repeat fields among a form change's `params`."
+  @spec fields(map()) :: map()
+  def fields(params) do
+    choice =
+      case params["repeat"] do
+        choice when is_binary(choice) -> %{"repeat" => choice}
+        _absent -> %{}
+      end
+
+    custom =
+      if Map.has_key?(params, "freq"),
+        do: %{"repeat_custom" => Map.take(params, @custom_fields)},
+        else: %{}
+
+    Map.merge(choice, custom)
+  end
+
+  @doc "Whether the form is one that can repeat: a plain calendar event."
+  @spec offered?(map()) :: boolean()
+  def offered?(form), do: form["meeting"] != true and form["group_event"] != true
+
+  @doc """
+  The rule the form's repeat choice makes for `create`, the draft as cast,
+  on a calendar of `provider`, in the organiser's `timezone`: `{:ok, nil}`
+  for none, or `{:error, :repeat, message}` when the calendar would refuse
+  it.
+  """
+  @spec rule(map(), CreateParams.t(), String.t() | nil, String.t()) ::
+          {:ok, String.t() | nil} | {:error, :repeat, String.t()}
+  def rule(form, create, provider, timezone) do
+    with true <- offered?(form),
+         {:ok, spec} <- spec(form) do
+      case PanelRepeat.rule_for(spec, event(create, provider), nil, timezone) do
+        {:ok, rule, _opts} -> {:ok, rule}
+        :unchanged -> {:ok, nil}
+        {:error, message} -> {:error, :repeat, message}
+      end
+    else
+      _none -> {:ok, nil}
+    end
+  end
+
+  @doc """
+  What the field shows for `create`, the draft as cast (see
+  `PanelRepeat.field/2`): the form's choice, and the rule the draft repeats
+  by, which the summary names and the editor draws. Nothing for a draft the
+  domain has not accepted yet.
+  """
+  @spec field(map(), CreateParams.t() | nil, String.t() | nil, String.t()) :: map() | nil
+  def field(_form, nil, _provider, _timezone), do: nil
+
+  def field(form, create, provider, timezone) do
+    field = PanelRepeat.field(event(create, provider), timezone)
+    rule = create.recurrence_rule
+
+    %{
+      field
+      | current: choice(form),
+        rule: rule,
+        summary: rule && RecurrenceEditor.summary(rule, field.start)
+    }
+  end
+
+  defp choice(form) do
+    case form["repeat"] do
+      "custom" -> "custom"
+      choice when is_binary(choice) -> if(PanelRepeat.preset?(choice), do: choice, else: "none")
+      _none -> "none"
+    end
+  end
+
+  defp spec(form) do
+    case choice(form) do
+      "none" -> :none
+      "custom" -> {:ok, {:custom, form["repeat_custom"] || %{}}}
+      preset -> {:ok, {:preset, preset}}
+    end
+  end
+
+  # The draft as the repeat field reads an event: a one-off with no rule yet,
+  # starting where the draft does, on the calendar it is going to.
+  defp event(%CreateParams{all_day: true} = create, provider),
+    do: %{all_day: true, start_date: create.start_at, recurrence_rule: nil, provider: provider}
+
+  defp event(create, provider),
+    do: %{all_day: false, start_at: create.start_at, recurrence_rule: nil, provider: provider}
+end

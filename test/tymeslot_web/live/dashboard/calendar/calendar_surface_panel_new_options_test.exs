@@ -3,10 +3,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
   What the side panel's New event state sets on a plain calendar event
   before it is created, as the old Quick Add did: one of the organiser's
   saved locations as its place, refused when it was deleted while the
-  panel was open, and reminders, several, each a notification or an email.
+  panel was open; reminders, several, each a notification or an email; and
+  a repeat, so the series is created at once.
   """
 
   use TymeslotWeb.LiveCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :calendar
   @moduletag :live
@@ -16,8 +18,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
   alias Tymeslot.Venues
+  alias Tymeslot.Workers.EmailWorker
 
   @task_timeout 5_000
 
@@ -213,6 +217,87 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
 
       render_change(new_form(lv), %{"meeting" => "true"})
       refute has_element?(lv, "#calendar-panel-new-reminders")
+    end
+  end
+
+  describe "repeat" do
+    test "a common pattern makes the event a series at once, its guests invited to it", %{
+      lv: lv,
+      integration: integration
+    } do
+      more_options(lv, integration, %{"guests" => ["grace@example.com"]})
+
+      # 15 October 2026 is a Thursday.
+      assert has_element?(
+               lv,
+               ~s(#calendar-panel-new-repeat-preset option[value="weekly"]),
+               "Every week on Thursday"
+             )
+
+      render_change(new_form(lv), %{"repeat" => "weekly"})
+      assert has_element?(lv, "#calendar-panel-new-repeat-summary")
+
+      render_submit(new_form(lv), %{"intent" => "create"})
+      created(lv)
+
+      assert %{recurrence_rule: "FREQ=WEEKLY"} = Repo.one!(ProviderCalendarEventSchema)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_calendar_invitation", "attendee_email" => "grace@example.com"}
+      )
+    end
+
+    test "Custom… opens the repeat editor inside the form, and its pattern is created", %{
+      lv: lv,
+      integration: integration
+    } do
+      more_options(lv, integration)
+
+      render_change(new_form(lv), %{"repeat" => "custom"})
+
+      assert has_element?(
+               lv,
+               "#calendar-panel-new-repeat #recurrence-editor-form-panel-new-repeat"
+             )
+
+      render_change(new_form(lv), %{
+        "repeat" => "custom",
+        "freq" => "daily",
+        "interval" => "2",
+        "end_type" => "count",
+        "count" => "3"
+      })
+
+      assert has_element?(lv, "#calendar-panel-new-repeat-summary")
+
+      render_submit(new_form(lv), %{"intent" => "create"})
+      created(lv)
+
+      assert %{recurrence_rule: "FREQ=DAILY;INTERVAL=2;COUNT=3"} =
+               Repo.one!(ProviderCalendarEventSchema)
+    end
+
+    test "Does not repeat creates a one-off", %{lv: lv, integration: integration} do
+      more_options(lv, integration)
+      render_change(new_form(lv), %{"repeat" => "weekly"})
+      render_change(new_form(lv), %{"repeat" => "none"})
+
+      render_submit(new_form(lv), %{"intent" => "create"})
+      created(lv)
+
+      assert %{recurrence_rule: nil} = Repo.one!(ProviderCalendarEventSchema)
+    end
+
+    test "gives way to a Tymeslot meeting, which does not repeat", %{
+      lv: lv,
+      integration: integration
+    } do
+      more_options(lv, integration, %{"guests" => ["ada@example.com"]})
+      assert has_element?(lv, "#calendar-panel-new-repeat")
+
+      render_change(new_form(lv), %{"meeting" => "true"})
+      refute has_element?(lv, "#calendar-panel-new-repeat")
     end
   end
 end

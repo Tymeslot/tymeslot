@@ -13,6 +13,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   while it is ticked, and Notes becomes the
   note to the guests.
 
+  A plain event can repeat (`PanelNewRepeat`): a common pattern named for
+  its start, or one set in the repeat editor behind Custom…, so the series
+  is created at once.
+
   Without a calendar to write to, only a Tymeslot meeting can be made: its
   calendar is none (Tymeslot only), and for anything else Create is off
   beside a note that says why.
@@ -28,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings.MeetingSchema
+  alias TymeslotWeb.Components.Calendar.RecurrenceEditor
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
   alias TymeslotWeb.Dashboard.Calendar.PanelGroupEvent
   alias TymeslotWeb.Dashboard.Calendar.PanelGroupEventFields
@@ -37,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   alias TymeslotWeb.Dashboard.Calendar.PanelNewGuests
   alias TymeslotWeb.Dashboard.Calendar.PanelNewReminders
   alias TymeslotWeb.Dashboard.Calendar.PanelVideoField
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
 
   attr :values, :map, required: true, doc: "the typed values (`panel.form`)"
   attr :saving, :boolean, required: true
@@ -49,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   attr :reminder_picker, :map, default: nil, doc: "the meeting's `ReminderPickerState`"
   attr :timezone, :string, default: "Etc/UTC"
   attr :has_accounts, :boolean, default: false, doc: "whether any calendar account is connected"
+  attr :repeat, :map, default: nil, doc: "the Repeat field, from `PanelNewRepeat.field/4`"
 
   @spec new_form(map()) :: Phoenix.LiveView.Rendered.t()
   def new_form(assigns) do
@@ -124,6 +131,36 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           name="end"
           value={@shown_end}
           label={dgettext("dashboard_calendar_editing", "Ends")}
+        />
+      </div>
+      <div :if={@repeat && !@meeting && !@group} id="calendar-panel-new-repeat" class="space-y-1">
+        <.select
+          id="calendar-panel-new-repeat-preset"
+          name="repeat"
+          label={dgettext("dashboard_calendar_editing", "Repeat")}
+          value={@repeat.current}
+          options={@repeat.options}
+          disabled={not @repeat.writable}
+        />
+        <p
+          :if={@repeat.summary}
+          id="calendar-panel-new-repeat-summary"
+          class="text-token-xs text-tymeslot-500"
+        >
+          {@repeat.summary}
+        </p>
+        <p :if={not @repeat.writable} class="text-token-xs text-tymeslot-500">
+          {CalendarEditMessages.repeat_refusal(:not_supported)}
+        </p>
+        <RecurrenceEditor.recurrence_editor
+          :if={@repeat.current == "custom" and @repeat.writable}
+          embedded
+          recurrence_rule={@repeat.rule}
+          timezone={@repeat.timezone}
+          start={@repeat.start}
+          myself={@surface}
+          key="panel-new-repeat"
+          change_event="panel:draft_change"
         />
       </div>
       <PanelCalendarField.calendar_field

@@ -487,6 +487,7 @@ msgstr "Quitar enlace"
 msgid "Removed %{email}."
 msgstr "Se quitó a %{email}."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
 #, elixir-autogen, elixir-format
 msgid "Repeat"

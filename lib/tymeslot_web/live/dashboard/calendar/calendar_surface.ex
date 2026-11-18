@@ -356,6 +356,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           context={@panel_context}
           calendar_choices={CalendarDirectory.choices(@accounts)}
           has_accounts={@accounts != []}
+          integrations={@integrations}
           video_integrations={@video_integrations}
           guest_form_key={@guest_form_key}
           moving={not is_nil(@transfer)}

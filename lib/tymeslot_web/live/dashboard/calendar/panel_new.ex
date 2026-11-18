@@ -41,6 +41,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   alias TymeslotWeb.Dashboard.Calendar.PanelMeetingReminders
   alias TymeslotWeb.Dashboard.Calendar.PanelNewGuests
   alias TymeslotWeb.Dashboard.Calendar.PanelNewReminders
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Transfer
@@ -128,6 +129,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       |> Map.merge(PanelMeeting.fields(params))
       |> Map.merge(PanelGroupEvent.fields(params))
       |> Map.merge(PanelNewGuests.pending(params, socket.assigns.current_user))
+      |> Map.merge(PanelNewRepeat.fields(params))
       |> PanelMeeting.carry_place(form)
       |> convert_all_day(form)
       |> follow_start(form, params["_target"])
@@ -378,10 +380,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
         assign(socket, :panel, %{panel | status: {:failed, message}})
 
       {:error, field, reason} ->
-        assign(socket, :panel, %{
-          panel
-          | status: {:failed, Creation.refusal_message(field, reason)}
-        })
+        assign(socket, :panel, %{panel | status: {:failed, refusal_message(field, reason)}})
     end
   end
 
@@ -391,7 +390,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   through it, so the two never disagree on the event's fields; a meeting
   may have no calendar while the organiser has none to write to.
   """
-  @spec cast_form(socket(), map()) :: {:ok, CreateParams.t()} | {:error, atom(), atom()}
+  @spec cast_form(socket(), map()) :: {:ok, CreateParams.t()} | {:error, atom(), term()}
   def cast_form(socket, form), do: cast_params(socket, form, :optional)
 
   # The draft the payload draws: the form as the domain casts it, or the
@@ -401,7 +400,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   defp cast(socket, form, previous) do
     case cast_params(socket, form, :optional) do
       {:ok, create} -> {create, :idle}
-      {:error, field, reason} -> {previous, {:failed, Creation.refusal_message(field, reason)}}
+      {:error, field, reason} -> {previous, {:failed, refusal_message(field, reason)}}
     end
   end
 
@@ -418,9 +417,31 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       |> Map.put("reminders", PanelNewReminders.params(form))
       |> Map.put("title", untitled(form["title"]))
       |> Map.reject(fn {key, value} -> key == "video_integration_id" and value in [nil, ""] end)
+      |> Map.delete("recurrence_rule")
 
-    CreateParams.cast(user.id, integrations, params, timezone, calendar: calendar)
+    cast = &CreateParams.cast(user.id, integrations, &1, timezone, calendar: calendar)
+
+    # A repeat rule is composed from the draft's own start, so the draft is
+    # cast first and again with the rule, which the domain then checks.
+    with {:ok, create} <- cast.(params) do
+      case PanelNewRepeat.rule(form, create, provider(integrations, create), timezone) do
+        {:ok, nil} -> {:ok, create}
+        {:ok, rule} -> cast.(Map.put(params, "recurrence_rule", rule))
+        {:error, :repeat, message} -> {:error, :repeat, message}
+      end
+    end
   end
+
+  defp provider(integrations, create) do
+    case Enum.find(integrations, &(&1.id == create.integration_id)) do
+      nil -> nil
+      integration -> integration.provider
+    end
+  end
+
+  # A repeat the calendar would refuse comes with its message.
+  defp refusal_message(:repeat, message), do: message
+  defp refusal_message(field, reason), do: Creation.refusal_message(field, reason)
 
   # The form's fields; in the all-day state the end it shows is the last day,
   # inclusive, and the form keeps the exclusive end the create params use.

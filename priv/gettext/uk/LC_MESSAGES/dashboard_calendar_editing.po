@@ -489,6 +489,7 @@ msgstr "Видалити посилання"
 msgid "Removed %{email}."
 msgstr "Видалено %{email}."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
 #, elixir-autogen, elixir-format
 msgid "Repeat"
