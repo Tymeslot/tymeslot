@@ -91,6 +91,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
 
   def take_pending(socket, _raw), do: {:ok, socket}
 
+  @doc """
+  How many guests the draft would invite: those added, and one typed but
+  not added yet (`pending/2`).
+  """
+  @spec count(map()) :: non_neg_integer()
+  def count(form) do
+    added = length(form["guests"] || [])
+    if (form["guest_pending"] || "") != "", do: added + 1, else: added
+  end
+
   @doc "Drops the guest `email` from the draft."
   @spec drop(socket(), String.t()) :: socket()
   def drop(%{assigns: %{panel: %{form: form}}} = socket, email),

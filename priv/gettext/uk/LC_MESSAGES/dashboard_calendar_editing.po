@@ -809,3 +809,26 @@ msgstr "Нагадування синхронізуються з вашим ка
 #, elixir-autogen, elixir-format
 msgid "Remove reminder %{label}"
 msgstr "Видалити нагадування %{label}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} guest hasn't been invited yet. Discard?"
+msgid_plural "%{count} guests haven't been invited yet. Discard?"
+msgstr[0] "%{count} гість ще не отримав запрошення. Відхилити?"
+msgstr[1] "%{count} гості ще не отримали запрошення. Відхилити?"
+msgstr[2] "%{count} гостей ще не отримали запрошення. Відхилити?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Discard"
+msgstr "Відхилити"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Go back"
+msgstr "Повернутися"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Unsent invitations"
+msgstr "Ненадіслані запрошення"

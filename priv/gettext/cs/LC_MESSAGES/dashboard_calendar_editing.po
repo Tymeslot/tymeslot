@@ -809,3 +809,26 @@ msgstr "Připomínky se synchronizují s vaším kalendářem, aby vás mohl up
 #, elixir-autogen, elixir-format
 msgid "Remove reminder %{label}"
 msgstr "Odebrat připomínku %{label}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} guest hasn't been invited yet. Discard?"
+msgid_plural "%{count} guests haven't been invited yet. Discard?"
+msgstr[0] "%{count} host zatím nebyl pozván. Zahodit?"
+msgstr[1] "%{count} hosté zatím nebyli pozváni. Zahodit?"
+msgstr[2] "%{count} hostů zatím nebylo pozváno. Zahodit?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Discard"
+msgstr "Zahodit"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Go back"
+msgstr "Zpět"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Unsent invitations"
+msgstr "Neodeslané pozvánky"

@@ -415,6 +415,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         delete_prompt={@delete_prompt}
         series_move_prompt={@series_move_prompt}
         remove_guest_prompt={@remove_guest_prompt}
+        discard_draft_prompt={@discard_draft_prompt}
         decline_request_modal_data={@decline_request_modal_data}
         cancel_meeting_modal_data={@cancel_meeting_modal_data}
         cancel_booking_payment={@cancel_booking_payment}

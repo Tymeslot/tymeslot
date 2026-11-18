@@ -807,3 +807,25 @@ msgstr "Os lembretes são sincronizados com seu calendário para ele avisar voc�
 #, elixir-autogen, elixir-format
 msgid "Remove reminder %{label}"
 msgstr "Remover o lembrete %{label}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} guest hasn't been invited yet. Discard?"
+msgid_plural "%{count} guests haven't been invited yet. Discard?"
+msgstr[0] "O convite ainda não foi enviado a %{count} convidado. Descartar?"
+msgstr[1] "O convite ainda não foi enviado a %{count} convidados. Descartar?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Discard"
+msgstr "Descartar"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Go back"
+msgstr "Voltar"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Unsent invitations"
+msgstr "Convites não enviados"

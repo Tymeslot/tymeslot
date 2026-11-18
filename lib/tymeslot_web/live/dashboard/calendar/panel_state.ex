@@ -184,8 +184,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
 
   # What the panel asked about its event goes when the panel leaves that
   # event: the series question, the question about moving a series to another
-  # calendar and the one about removing a guest (the panel is the only place
-  # they are asked), since an answer would act on an event no longer shown.
+  # calendar, the one about removing a guest and the one about discarding a
+  # draft's guests (the panel is the only place they are asked), since an answer would act on an event no longer shown.
   # The grid's own series question (a drag or resize) stays.
   defp drop_prompts(socket) do
     assign(socket,
@@ -195,7 +195,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
           else: socket.assigns.series_prompt
         ),
       series_move_prompt: nil,
-      remove_guest_prompt: nil
+      remove_guest_prompt: nil,
+      discard_draft_prompt: nil
     )
   end
 end

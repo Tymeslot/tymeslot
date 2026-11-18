@@ -284,6 +284,62 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     refute has_element?(lv, "#calendar-panel")
   end
 
+  describe "a draft with guests" do
+    test "asks before Cancel discards it, and Go back keeps it", %{
+      lv: lv,
+      integration: integration
+    } do
+      more_options(lv, integration, %{"guests" => ["grace@example.com", "ada@example.com"]})
+
+      lv |> element("#calendar-panel-new-cancel") |> render_click()
+
+      assert has_element?(
+               lv,
+               "#calendar-discard-draft",
+               "2 guests haven't been invited yet. Discard?"
+             )
+
+      assert has_element?(lv, "#calendar-panel")
+
+      lv |> element("#calendar-discard-draft-cancel") |> render_click()
+
+      refute has_element?(lv, "#calendar-discard-draft")
+      assert has_element?(lv, "#calendar-panel-guests li", "grace@example.com")
+    end
+
+    test "Discard closes the panel and drops the draft", %{lv: lv, integration: integration} do
+      more_options(lv, integration, %{"guests" => ["grace@example.com"]})
+
+      lv |> element("#calendar-panel-close") |> render_click()
+      assert has_element?(lv, "#calendar-discard-draft", "1 guest hasn't been invited yet.")
+
+      lv |> element("#calendar-discard-draft-confirm") |> render_click()
+
+      refute has_element?(lv, "#calendar-discard-draft")
+      refute has_element?(lv, "#calendar-panel")
+      assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
+      refute_receive {:provider_call, _pid, _call}, 100
+    end
+
+    test "counts a guest typed but not added", %{lv: lv, integration: integration} do
+      more_options(lv, integration)
+      render_change(new_form(lv), %{"guest_email" => "grace@example.com"})
+
+      lv |> element("#calendar-panel-new-cancel") |> render_click()
+
+      assert has_element?(lv, "#calendar-discard-draft", "1 guest hasn't been invited yet.")
+    end
+
+    test "a draft without guests closes at once", %{lv: lv, integration: integration} do
+      more_options(lv, integration)
+
+      lv |> element("#calendar-panel-new-cancel") |> render_click()
+
+      refute has_element?(lv, "#calendar-discard-draft")
+      refute has_element?(lv, "#calendar-panel")
+    end
+  end
+
   test "the close button drops the draft from the grid", %{lv: lv, integration: integration} do
     more_options(lv, integration)
     lv |> element("#calendar-panel-close") |> render_click()

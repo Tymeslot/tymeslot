@@ -46,6 +46,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     end
   end
 
+  # A New event draft with guests asks first (`PanelNew.cancel/1`).
+  def handle("close", _params, %{assigns: %{panel: %{mode: :new}}} = socket),
+    do: PanelNew.cancel(socket)
+
   def handle("close", _params, socket), do: PanelState.close(socket)
 
   # The New event form (see `PanelNew`).
@@ -59,6 +63,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     do: PanelNew.drop_reminder(socket, index)
 
   def handle("draft_cancel", _params, socket), do: PanelNew.cancel(socket)
+  def handle("draft_discard_confirm", _params, socket), do: PanelNew.discard(socket)
+  def handle("draft_discard_cancel", _params, socket), do: PanelNew.keep(socket)
 
   # The meeting's reminder picker (see `PanelMeetingReminders`).
   def handle("meeting_" <> _picker_event = name, params, socket),

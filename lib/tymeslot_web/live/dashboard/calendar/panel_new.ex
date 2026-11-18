@@ -215,10 +215,34 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
     |> SurfaceData.push_events(false)
   end
 
-  @doc "Closes the New event state and drops its draft."
+  @doc """
+  Closes the New event state and drops its draft, asking first when the
+  draft has guests (`DiscardDraftModal`), since nobody has been invited yet.
+  """
   @spec cancel(socket()) :: socket()
+  def cancel(%{assigns: %{panel: %{mode: :new, status: status, form: form}}} = socket)
+      when status != :saving do
+    case PanelNewGuests.count(form) do
+      0 -> PanelState.close(socket)
+      count -> assign(socket, :discard_draft_prompt, %{count: count})
+    end
+  end
+
+  # A meeting being booked is inviting its guests already: nothing is
+  # discarded by closing, so nothing is asked.
   def cancel(%{assigns: %{panel: %{mode: :new}}} = socket), do: PanelState.close(socket)
   def cancel(socket), do: socket
+
+  @doc "Discard in the question `cancel/1` asks: the draft goes."
+  @spec discard(socket()) :: socket()
+  def discard(%{assigns: %{discard_draft_prompt: %{}, panel: %{mode: :new}}} = socket),
+    do: PanelState.close(socket)
+
+  def discard(socket), do: assign(socket, :discard_draft_prompt, nil)
+
+  @doc "Go back in the question `cancel/1` asks: the draft stays."
+  @spec keep(socket()) :: socket()
+  def keep(socket), do: assign(socket, :discard_draft_prompt, nil)
 
   @doc """
   The create path answered for the draft `draft_id`: when it is the

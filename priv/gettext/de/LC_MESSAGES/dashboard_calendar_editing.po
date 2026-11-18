@@ -807,3 +807,25 @@ msgstr "Erinnerungen werden mit Ihrem Kalender synchronisiert, damit er Sie auf 
 #, elixir-autogen, elixir-format
 msgid "Remove reminder %{label}"
 msgstr "Erinnerung %{label} entfernen"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} guest hasn't been invited yet. Discard?"
+msgid_plural "%{count} guests haven't been invited yet. Discard?"
+msgstr[0] "%{count} Gast wurde noch nicht eingeladen. Verwerfen?"
+msgstr[1] "%{count} Gäste wurden noch nicht eingeladen. Verwerfen?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Discard"
+msgstr "Verwerfen"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Go back"
+msgstr "Zurück"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Unsent invitations"
+msgstr "Nicht versendete Einladungen"

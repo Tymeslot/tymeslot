@@ -165,7 +165,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingRemindersTest do
     render_click(preset(lv, "1-days"))
     assert has_element?(lv, "#calendar-panel-meeting-reminders .tag-semantic", "1 day before")
 
+    # The draft has a guest, so Cancel asks first.
     lv |> element("#calendar-panel-new-cancel") |> render_click()
+    lv |> element("#calendar-discard-draft-confirm") |> render_click()
     refute has_element?(lv, "#calendar-panel")
 
     lv
