@@ -757,3 +757,8 @@ msgstr "Adresa %{email} byla odebrána. Oznámení bude odesláno, jakmile se zm
 #, elixir-autogen, elixir-format
 msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
 msgstr "Váš kalendář je potřeba připojit znovu. Připojte jej prosím na stránce Integrace."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
+#, elixir-autogen, elixir-format
+msgid "None (Tymeslot only)"
+msgstr "Žádný (jen Tymeslot)"

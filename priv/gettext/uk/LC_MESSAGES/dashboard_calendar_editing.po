@@ -757,3 +757,8 @@ msgstr "Видалено %{email}. Сповіщення буде надісла�
 #, elixir-autogen, elixir-format
 msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
 msgstr "Ваш календар потрібно перепідключити. Зробіть це на сторінці «Інтеграції»."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
+#, elixir-autogen, elixir-format
+msgid "None (Tymeslot only)"
+msgstr "Немає (лише Tymeslot)"

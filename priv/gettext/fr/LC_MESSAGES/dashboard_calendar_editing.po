@@ -755,3 +755,8 @@ msgstr "%{email} ne figure plus parmi les invités. La notification sera envoyé
 #, elixir-autogen, elixir-format
 msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
 msgstr "Votre calendrier doit être reconnecté. Veuillez le reconnecter depuis la page Intégrations."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
+#, elixir-autogen, elixir-format
+msgid "None (Tymeslot only)"
+msgstr "Aucun (Tymeslot uniquement)"

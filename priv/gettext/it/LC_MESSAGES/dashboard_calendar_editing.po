@@ -755,3 +755,8 @@ msgstr "Hai rimosso %{email}. L'avviso partirà non appena la modifica sarà sin
 #, elixir-autogen, elixir-format
 msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
 msgstr "Il tuo calendario deve essere ricollegato. Ricollegalo dalla pagina Integrazioni."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
+#, elixir-autogen, elixir-format
+msgid "None (Tymeslot only)"
+msgstr "Nessuno (solo Tymeslot)"

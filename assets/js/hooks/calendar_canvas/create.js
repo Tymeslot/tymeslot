@@ -469,7 +469,6 @@ export const CreateMixin = {
 
   moreOptions() {
     if (this.draft?.status !== "editing") return;
-    if (!(this.settings.calendars || []).length) return;
     this.updateDraft({ ...this.draft, status: "opening", error: null });
     const { id } = this.draft;
     const unlock = () => {

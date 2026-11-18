@@ -127,13 +127,19 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         editable: false,
         movable: false,
         pending: pending?,
-        calendar: CalendarDirectory.key(params.integration_id, params.calendar_id),
+        calendar: draft_calendar(params),
         recurring: is_binary(params.recurrence_rule),
         guests: length(params.guests)
       },
       draft_timing(params, context.timezone)
     )
   end
+
+  # A meeting kept in Tymeslot alone is on no calendar.
+  defp draft_calendar(%CreateParams{integration_id: nil}), do: nil
+
+  defp draft_calendar(params),
+    do: CalendarDirectory.key(params.integration_id, params.calendar_id)
 
   @doc "Whether `event` belongs to a repeating series: its master or one occurrence."
   @spec recurring?(map()) :: boolean()

@@ -757,3 +757,8 @@ msgstr "Usunięto: %{email}. Powiadomienie zostanie wysłane po zsynchronizowani
 #, elixir-autogen, elixir-format
 msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
 msgstr "Kalendarz trzeba połączyć ponownie. Zrób to na stronie Integracje."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
+#, elixir-autogen, elixir-format
+msgid "None (Tymeslot only)"
+msgstr "Brak (tylko Tymeslot)"

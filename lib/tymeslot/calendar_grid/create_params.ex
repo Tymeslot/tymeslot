@@ -12,6 +12,11 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   as plain text (null bytes go). An empty title is refused: the web layer
   gives an untitled draft its default name before casting.
 
+  A Tymeslot meeting may be booked with no calendar at all when the
+  organiser has none they can write to (`calendar: :optional`): the meeting
+  then lives in Tymeslot alone, and its `integration_id` and `calendar_id`
+  are nil. A calendar event always needs one.
+
   `to_payload/1` turns the result into what `Changes.create_event/2` writes.
   """
 
@@ -66,8 +71,8 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
           | :video_integration_id
 
   @type t :: %__MODULE__{
-          integration_id: pos_integer(),
-          calendar_id: String.t(),
+          integration_id: pos_integer() | nil,
+          calendar_id: String.t() | nil,
           title: String.t(),
           start_at: DateTime.t() | Date.t(),
           end_at: DateTime.t() | Date.t(),
@@ -85,21 +90,27 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   @doc """
   Checks the string-keyed `params` a create was asked with, for `user_id`
   whose active calendar accounts are `integrations`, in the organiser's
-  `timezone`.
+  `timezone`. With `calendar: :optional`, for a Tymeslot meeting, no
+  calendar is accepted while the organiser has none to write to.
   """
-  @spec cast(pos_integer(), [map()], map(), String.t()) ::
+  @spec cast(pos_integer(), [map()], map(), String.t(), keyword()) ::
           {:ok, t()} | {:error, field(), atom()}
-  def cast(user_id, integrations, params, timezone) when is_map(params) do
+  def cast(user_id, integrations, params, timezone, opts \\ [])
+
+  def cast(user_id, integrations, params, timezone, opts) when is_map(params) do
+    calendar_rule = Keyword.get(opts, :calendar, :required)
+
     with {:ok, title} <- clean_text(:title, params["title"]),
          {:ok, all_day} <- flag(params["all_day"], :all_day),
          {:ok, start_at, end_at} <- timing(all_day, params["start"], params["end"], timezone),
-         {:ok, integration, calendar_id} <- calendar(user_id, integrations, params["calendar"]),
+         {:ok, integration, calendar_id} <-
+           calendar(user_id, integrations, params["calendar"], calendar_rule),
          {:ok, details} <- details(user_id, integration, params) do
       {:ok,
        struct!(
          __MODULE__,
          Map.merge(details, %{
-           integration_id: integration.id,
+           integration_id: integration && integration.id,
            calendar_id: calendar_id,
            title: title,
            start_at: start_at,
@@ -111,7 +122,7 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
     end
   end
 
-  def cast(_user_id, _integrations, _params, _timezone), do: {:error, :params, :invalid}
+  def cast(_user_id, _integrations, _params, _timezone, _opts), do: {:error, :params, :invalid}
 
   @doc "The payload `Changes.create_event/2` writes for `params`."
   @spec to_payload(t()) :: map()
@@ -272,13 +283,22 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   # `integrations` are the organiser's active accounts as the surface loaded
   # them; the owner is checked again so a list from anywhere else cannot
   # widen what a create may target.
-  defp calendar(user_id, integrations, key) do
+  defp calendar(user_id, integrations, key, :optional) when key in [nil, ""] do
+    if Enum.any?(integrations, &own_writable?(&1, user_id)),
+      do: {:error, :calendar, :not_found},
+      else: {:ok, nil, nil}
+  end
+
+  defp calendar(user_id, integrations, key, _rule) do
     with {:ok, integration_id, calendar_id} <- parse_key(key),
          {:ok, integration} <- own(integrations, user_id, integration_id),
          :ok <- writable(integration, calendar_id) do
       {:ok, integration, calendar_id}
     end
   end
+
+  defp own_writable?(integration, user_id),
+    do: integration.user_id == user_id and CalendarDirectory.writable_calendars(integration) != []
 
   defp parse_key(key) do
     case CalendarDirectory.parse_key(key) do
@@ -386,6 +406,9 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   defp reminder(_invalid), do: :error
 
   defp recurrence(rule, _integration) when rule in [nil, ""], do: {:ok, nil}
+
+  # A meeting kept in Tymeslot alone has no calendar to write a series to.
+  defp recurrence(_rule, nil), do: {:error, :recurrence_rule, :not_repeatable}
 
   defp recurrence(rule, integration) when is_binary(rule) and byte_size(rule) <= @max_rule do
     with {:ok, parsed} <- RRule.parse(rule),

@@ -243,7 +243,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
          :ok <- not_moving(socket, id),
          :ok <- EditGuard.writable(integrations, event),
          true <- EditGuard.movable?(integrations, event),
-         {:ok, create} <- cast_params(socket, copy_params(event, integrations, timezone)),
+         {:ok, create} <-
+           cast_params(socket, copy_params(event, integrations, timezone), :required),
          {:ok, socket} <- Creation.start(socket, copy_id(), create) do
       # The copy is drawn as a saving draft until its create answers.
       SurfaceData.push_events(socket, false)
@@ -329,7 +330,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   # Where a group event can take place, read once per draft and only for an
   # organiser who may make one.
   defp start_create(socket, panel) do
-    with {:ok, create} <- cast_params(socket, panel.form),
+    with {:ok, create} <- cast_params(socket, panel.form, :required),
          {:ok, socket} <- Creation.start(socket, panel.draft_id, create) do
       socket
       |> assign(:panel, %{panel | draft: nil, status: :saving})
@@ -348,17 +349,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   end
 
   @doc """
-  The New event form cast as a create (`CreateParams.cast/4`), an untitled
+  The New event form cast as a create (`CreateParams.cast/5`), an untitled
   draft named "New event" first. `PanelMeeting` casts a meeting's draft
-  through it, so the two never disagree on the event's fields.
+  through it, so the two never disagree on the event's fields; a meeting
+  may have no calendar while the organiser has none to write to.
   """
   @spec cast_form(socket(), map()) :: {:ok, CreateParams.t()} | {:error, atom(), atom()}
-  def cast_form(socket, form), do: cast_params(socket, form)
+  def cast_form(socket, form), do: cast_params(socket, form, :optional)
 
   # The draft the payload draws: the form as the domain casts it, or the
-  # last accepted one with the reason in the header.
+  # last accepted one with the reason in the header. Without a calendar to
+  # write to it is still drawn, as it may become a meeting; Create says
+  # whether an event can be made of it.
   defp cast(socket, form, previous) do
-    case cast_params(socket, form) do
+    case cast_params(socket, form, :optional) do
       {:ok, create} -> {create, :idle}
       {:error, field, reason} -> {previous, {:failed, Creation.refusal_message(field, reason)}}
     end
@@ -366,7 +370,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
 
   # The video select's "No video call" sends an empty value, which is no
   # video rather than a malformed id.
-  defp cast_params(socket, form) do
+  defp cast_params(socket, form, calendar) do
     %{current_user: user, integrations: integrations, timezone: timezone} = socket.assigns
 
     # The form's "reminders" are a meeting's reminder emails (`PanelMeeting`),
@@ -377,7 +381,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       |> Map.put("title", untitled(form["title"]))
       |> Map.reject(fn {key, value} -> key == "video_integration_id" and value in [nil, ""] end)
 
-    CreateParams.cast(user.id, integrations, params, timezone)
+    CreateParams.cast(user.id, integrations, params, timezone, calendar: calendar)
   end
 
   defp add_guest(%{assigns: %{panel: %{form: form} = panel}} = socket, raw) do

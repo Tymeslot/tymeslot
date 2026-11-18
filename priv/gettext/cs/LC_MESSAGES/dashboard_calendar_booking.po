@@ -113,6 +113,7 @@ msgid "Connect a calendar"
 msgstr "Připojit kalendář"
 
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar to add events here."
 msgstr "Připojte kalendář, abyste sem mohli přidávat události."
@@ -411,6 +412,7 @@ msgid "You have too many time-off periods to block more time. Remove some first.
 msgstr "Máte příliš mnoho období nepřítomnosti, takže další čas nelze zablokovat. Nejprve některá odeberte."
 
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
 #, elixir-autogen, elixir-format
 msgid "Your connected calendars are read-only, so events can't be added here."
 msgstr "Připojené kalendáře jsou jen pro čtení, takže sem nelze přidávat události."

@@ -278,6 +278,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           values={@panel.form}
           saving={@panel.status == :saving}
           calendar_choices={@calendar_choices}
+          has_accounts={@has_accounts}
           video_integrations={@video_integrations}
           guest_form_key={@guest_form_key}
           surface={@surface}

@@ -12,6 +12,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   way to the meeting's fields while it is ticked, and Notes becomes the
   note to the guests.
 
+  Without a calendar to write to, only a Tymeslot meeting can be made: its
+  calendar is none (Tymeslot only), and for anything else Create is off
+  beside a note that says why.
+
   Without guests, and on a plan with group bookings, it offers to make the
   draft a group event instead (`PanelGroupEventFields`, `PanelGroupEvent`).
   While that is ticked, the fields a sign-up event has no use for (All day,
@@ -41,6 +45,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   attr :venues, :list, default: []
   attr :reminder_picker, :map, default: nil, doc: "the meeting's `ReminderPickerState`"
   attr :timezone, :string, default: "Etc/UTC"
+  attr :has_accounts, :boolean, default: false, doc: "whether any calendar account is connected"
 
   @spec new_form(map()) :: Phoenix.LiveView.Rendered.t()
   def new_form(assigns) do
@@ -54,7 +59,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         group_offered:
           assigns.calendar_choices != [] and
             PanelGroupEvent.offered?(assigns.group_allowed, assigns.values),
-        timed: PanelMeeting.on?(assigns.values) or group
+        timed: PanelMeeting.on?(assigns.values) or group,
+        # Without a calendar to write to only a Tymeslot meeting can be made.
+        blocked: assigns.calendar_choices == [] and not PanelMeeting.on?(assigns.values)
       )
 
     ~H"""
@@ -116,7 +123,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           label={dgettext("dashboard_calendar_editing", "Ends")}
         />
       </div>
-      <PanelCalendarField.calendar_field choices={@calendar_choices} value={@values["calendar"]} />
+      <PanelCalendarField.calendar_field
+        :if={@calendar_choices != []}
+        choices={@calendar_choices}
+        value={@values["calendar"]}
+      />
+      <PanelCalendarField.no_calendar
+        :if={@calendar_choices == []}
+        meeting={@meeting}
+        has_accounts={@has_accounts}
+      />
       <div :if={!@meeting and !@group}>
         <.select
           id="calendar-panel-new-free"
@@ -203,7 +219,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           name="intent"
           value="create"
           variant={:primary}
-          disabled={@saving}
+          disabled={@saving or @blocked}
+          aria-describedby={@blocked && "calendar-panel-calendar-note"}
         >
           {if @group or @values["guests"] == [],
             do: dgettext("dashboard_calendar_editing", "Create"),
