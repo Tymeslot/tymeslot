@@ -71,6 +71,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
 
   defp new_form(lv), do: form(lv, "#calendar-panel-new-form")
 
+  defp add_reminder(lv, preset) do
+    lv
+    |> element(~s(#calendar-panel-meeting-reminders [data-testid="reminder-preset-#{preset}"]))
+    |> render_click()
+  end
+
   defp as_meeting(lv), do: render_change(new_form(lv), %{"meeting" => "true"})
 
   # What the panel hands the dashboard process is seen by tracing it.
@@ -132,9 +138,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     assert has_element?(lv, "#calendar-panel-meeting-guest-name")
     assert has_element?(lv, "#calendar-panel-meeting-locale")
 
-    for key <- ~w(30_minutes 1_hours 1_days) do
-      assert has_element?(lv, "#calendar-panel-meeting-reminder-#{key}")
+    for preset <- ~w(30-minutes 1-hours 1-days) do
+      assert has_element?(
+               lv,
+               ~s(#calendar-panel-meeting-reminders [data-testid="reminder-preset-#{preset}"])
+             )
     end
+
+    assert has_element?(
+             lv,
+             ~s(#calendar-panel-meeting-reminders [data-testid="reminder-custom-toggle"])
+           )
 
     for id <- ~w(calendar-panel-new-all-day calendar-panel-new-free calendar-panel-new-location) do
       refute has_element?(lv, "##{id}")
@@ -182,11 +196,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
     more_options(lv, integration)
     as_meeting(lv)
+    add_reminder(lv, "1-hours")
+    add_reminder(lv, "1-days")
     trace(lv)
 
     create_meeting(lv, %{
       "locale" => "fr",
-      "reminders" => ["", "1_hours", "1_days"],
       "description" => "Agenda: the Q3 roadmap."
     })
 
@@ -278,7 +293,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
     more_options(lv, integration)
     as_meeting(lv)
-    render_change(new_form(lv), %{"reminders" => ["", "1_hours"]})
+    add_reminder(lv, "1-hours")
     render_change(new_form(lv), %{"meeting" => "false"})
     refute has_element?(lv, "#calendar-panel-meeting-fields")
     trace(lv)
@@ -503,10 +518,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
 
       as_meeting(lv)
 
-      for key <- ~w(30_minutes 1_hours 1_days) do
+      for preset <- ~w(30-minutes 1-hours 1-days) do
         assert has_element?(
                  lv,
-                 "#calendar-panel-meeting-reminders div[class~='min-h-11'] #calendar-panel-meeting-reminder-#{key}"
+                 ~s(#calendar-panel-meeting-reminders [data-testid="reminder-preset-#{preset}"])
                )
       end
 

@@ -312,7 +312,6 @@ msgid "%{method} %{minutes}"
 msgstr ""
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "1 day before"
 msgstr ""

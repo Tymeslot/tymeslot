@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.PanelGroupEvent
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
+  alias TymeslotWeb.Dashboard.Calendar.PanelMeetingReminders
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Transfer
@@ -97,7 +98,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
         repeat: %{custom_open: false, draft: nil, version: 0},
         calendar_version: 0,
         video_version: 0,
-        venues: Venues.list_venues(socket.assigns.current_user.id)
+        venues: Venues.list_venues(socket.assigns.current_user.id),
+        reminder_picker: PanelMeetingReminders.new()
       },
       preview: nil,
       open_menu: nil
@@ -137,7 +139,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   @doc """
   The New event form's submit. `intent=add_guest` adds the typed guest to
   the form (an empty field adds nothing, so Enter in another field never
-  creates); `intent=create` creates the event.
+  creates, and Enter in the reminder picker's custom row adds the lead time
+  it holds); `intent=create` creates the event.
   """
   @spec submit(socket(), map()) :: socket()
   def submit(
@@ -148,7 +151,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
     socket = change(socket, params)
 
     case String.trim(params["guest_email"] || "") do
-      "" -> socket
+      "" -> PanelMeetingReminders.add_typed(socket, params)
       email -> add_guest(socket, email)
     end
   end

@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
+  alias TymeslotWeb.Dashboard.Calendar.PanelMeetingReminders
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelState
@@ -55,6 +56,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     do: PanelNew.drop_guest(socket, email)
 
   def handle("draft_cancel", _params, socket), do: PanelNew.cancel(socket)
+
+  # The meeting's reminder picker (see `PanelMeetingReminders`).
+  def handle("meeting_" <> _picker_event = name, params, socket),
+    do: PanelMeetingReminders.event(socket, name, params)
+
   def handle("duplicate", _params, socket), do: PanelNew.duplicate(socket)
   def handle("delete", _params, socket), do: PanelNew.delete(socket)
 

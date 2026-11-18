@@ -4,7 +4,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeetingFields do
   Tymeslot meeting" box, offered once the draft has a guest, and while it
   is ticked whether the first guest is the meeting's main participant, the
   guest's name (with one), the meeting's place, the language of every
-  email about the meeting and its reminder emails. Drawn inside the form `PanelNewForm`
+  email about the meeting and its reminder emails, chosen with the reminder
+  picker the meeting type form uses (`PanelMeetingReminders`), its common
+  lead times a click away. Drawn inside the form `PanelNewForm`
   draws, so a change reaches `panel:draft_change` like any other field.
   Each box and the toggle sit in a 44px row below 640px, where the panel is
   a sheet under a thumb, and their labels fill the row so the whole row taps.
@@ -14,17 +16,33 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeetingFields do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Bookings.CreateAdHoc
-  alias Tymeslot.CalendarGrid.MeetingParams
   alias Tymeslot.Locales
   alias Tymeslot.MeetingTypes.ReminderValidation
+  alias TymeslotWeb.Components.Shared.ReminderPicker
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
+  alias TymeslotWeb.Dashboard.Calendar.PanelMeetingReminders
 
   attr :values, :map, required: true, doc: "the typed values (`panel.form`)"
   attr :venues, :list, default: [], doc: "the organiser's saved locations"
+  attr :reminder_picker, :map, default: nil, doc: "the panel's `ReminderPickerState`"
+  attr :surface, :any, required: true
+
+  # The lead times a click away: the ones the panel offered before any
+  # could be typed.
+  @reminder_presets [
+    %{value: 30, unit: "minutes"},
+    %{value: 1, unit: "hours"},
+    %{value: 1, unit: "days"}
+  ]
 
   @spec meeting_fields(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_fields(assigns) do
-    assigns = assign(assigns, :on, PanelMeeting.on?(assigns.values))
+    assigns =
+      assign(assigns,
+        on: PanelMeeting.on?(assigns.values),
+        reminder_picker: assigns.reminder_picker || PanelMeetingReminders.new(),
+        reminder_presets: @reminder_presets
+      )
 
     ~H"""
     <section
@@ -126,32 +144,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeetingFields do
             )}
           </p>
         </div>
-        <fieldset id="calendar-panel-meeting-reminders" class="space-y-1">
-          <legend class="label">{dgettext("common", "Reminders")}</legend>
-          <%!-- Sent with the boxes so that ticking none still sends the field. --%>
-          <input type="hidden" name="reminders[]" value="" />
-          <div
-            :for={{key, label} <- reminder_choices()}
-            class="flex min-h-11 items-center sm:min-h-0 [&_label]:flex [&_label]:min-h-11 [&_label]:items-center sm:[&_label]:min-h-0"
-          >
-            <.input
-              type="checkbox"
-              id={"calendar-panel-meeting-reminder-#{key}"}
-              name="reminders[]"
-              value={key}
-              checked={key in @values["reminders"]}
-              label={label}
-            />
-          </div>
-          <p class="text-token-xs text-tymeslot-500">
-            {dngettext(
-              "dashboard_calendar_events",
-              "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it.",
-              "Add up to %{count} reminder emails for this meeting. The guest and anyone else invited receive it.",
-              ReminderValidation.max_reminders()
-            )}
-          </p>
-        </fieldset>
+        <div id="calendar-panel-meeting-reminders">
+          <ReminderPicker.reminder_picker
+            reminders={@reminder_picker.reminders}
+            max_reminders={ReminderValidation.max_reminders()}
+            new_reminder_value={@reminder_picker.new_reminder_value}
+            new_reminder_unit={@reminder_picker.new_reminder_unit}
+            reminder_error={@reminder_picker.reminder_error}
+            show_custom_reminder={@reminder_picker.show_custom_reminder}
+            reminder_confirmation={@reminder_picker.reminder_confirmation}
+            description={
+              dngettext(
+                "dashboard_calendar_events",
+                "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it.",
+                "Add up to %{count} reminder emails for this meeting. The guest and anyone else invited receive it.",
+                ReminderValidation.max_reminders()
+              )
+            }
+            presets={@reminder_presets}
+            event_prefix="panel:meeting_"
+            myself={@surface}
+          />
+        </div>
       </div>
     </section>
     """
@@ -173,15 +187,5 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeetingFields do
       end
 
     saved ++ [{dgettext("dashboard_calendar_events", "Custom location…"), "custom"}]
-  end
-
-  defp reminder_choices do
-    labels = %{
-      "30_minutes" => dgettext("common", "30 min. before"),
-      "1_hours" => dgettext("common", "1 hour before"),
-      "1_days" => dgettext("dashboard_calendar_events", "1 day before")
-    }
-
-    Enum.map(MeetingParams.reminder_choices(), &{&1, Map.fetch!(labels, &1)})
   end
 end

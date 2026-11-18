@@ -21,7 +21,7 @@ defmodule Tymeslot.CalendarGrid.MeetingParamsTest do
   @fields %{
     "guest_name" => "  Ada Lovelace ",
     "locale" => "fr",
-    "reminders" => ["", "1_days", "30_minutes"]
+    "reminders" => [%{value: 30, unit: "minutes"}, %{value: 1, unit: "days"}]
   }
 
   defp create(attrs \\ %{}) do
@@ -161,14 +161,33 @@ defmodule Tymeslot.CalendarGrid.MeetingParamsTest do
              MeetingParams.build(create(), %{@fields | "locale" => ""}, 42)
   end
 
-  test "a reminder that is not one of the choices is refused" do
-    assert MeetingParams.build(create(), %{@fields | "reminders" => ["2_weeks"]}, 42) ==
+  test "any lead time a meeting type could have is taken, string keys and all" do
+    reminders = [%{"value" => "2", "unit" => "weeks"}]
+
+    assert MeetingParams.build(create(), %{@fields | "reminders" => reminders}, 42) ==
              {:error, :reminders, :invalid}
+
+    reminders = [%{"value" => 45, "unit" => "minutes"}, %{value: 2, unit: "days"}]
+
+    assert {:ok, %{reminders: [%{value: 45, unit: "minutes"}, %{value: 2, unit: "days"}]}} =
+             MeetingParams.build(create(), %{@fields | "reminders" => reminders}, 42)
   end
 
-  test "ticking no reminder means no reminder email" do
+  test "reminders a meeting type could not have are refused" do
+    for reminders <- [
+          [%{value: 0, unit: "minutes"}],
+          [%{value: 30, unit: "minutes"}, %{value: 30, unit: "minutes"}],
+          Enum.map(1..4, &%{value: &1, unit: "hours"}),
+          ["30_minutes"]
+        ] do
+      assert MeetingParams.build(create(), %{@fields | "reminders" => reminders}, 42) ==
+               {:error, :reminders, :invalid}
+    end
+  end
+
+  test "no reminder means no reminder email" do
     assert {:ok, %{reminders: []}} =
-             MeetingParams.build(create(), %{@fields | "reminders" => [""]}, 42)
+             MeetingParams.build(create(), %{@fields | "reminders" => []}, 42)
   end
 
   test "a note past the meeting's own limit is refused" do

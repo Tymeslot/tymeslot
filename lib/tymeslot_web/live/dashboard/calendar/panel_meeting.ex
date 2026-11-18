@@ -5,14 +5,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
   bare calendar event. The first guest is the one the meeting is with and
   gives it their name; the others are invited as its guests; every email
   about it is written in the language chosen here; the notes go to the
-  guests as a note; and the reminder emails ticked are the only ones sent
+  guests as a note; and the reminder emails chosen are the only ones sent
   (see `Tymeslot.CalendarGrid.MeetingParams`).
 
   The meeting's fields live in the panel's `form` beside the event's own
   (`"meeting"`, `"main_participant"`, `"guest_name"`, `"locale"`,
-  `"reminders"`, `"location_choice"`, `"location_custom"`), so the form
-  draws what was typed. With "Main participant" off the host manages the
-  meeting alone: every guest is an equal guest, no guest name is asked
+  `"location_choice"`, `"location_custom"`), so the form draws what was
+  typed; its reminders are the panel's reminder picker
+  (`PanelMeetingReminders`). With "Main participant" off the host manages
+  the meeting alone: every guest is an equal guest, no guest name is asked
   for, and the meeting is known by its title, which it then needs. Its
   place is none, a saved location, or one typed in. The box counts only
   while the draft has a guest (`on?/1`). A meeting has times: ticking it
@@ -36,12 +37,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
   alias TymeslotWeb.Dashboard.Calendar.Creation
+  alias TymeslotWeb.Dashboard.Calendar.PanelMeetingReminders
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
   alias TymeslotWeb.Dashboard.Calendar.PanelState
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
-  @fields ~w(meeting main_participant guest_name locale reminders location_choice location_custom)
+  @fields ~w(meeting main_participant guest_name locale location_choice location_custom)
 
   @doc "The meeting fields a new draft starts with, for the organiser `user`."
   @spec defaults(map()) :: map()
@@ -52,8 +54,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
       "guest_name" => "",
       "location_choice" => "",
       "location_custom" => "",
-      "locale" => Locales.guest_default_locale(user),
-      "reminders" => []
+      "locale" => Locales.guest_default_locale(user)
     }
 
   @doc """
@@ -71,10 +72,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
   defp field({key, value}) when key in ["meeting", "main_participant"],
     do: {key, value in [true, "true", "on"]}
 
-  defp field({"reminders", keys}) when is_list(keys),
-    do: {"reminders", Enum.filter(keys, &(&1 in MeetingParams.reminder_choices()))}
-
-  defp field({"reminders", _other}), do: {"reminders", []}
   defp field({key, value}) when is_binary(value), do: {key, String.replace(value, "\x00", "")}
   defp field({key, _value}), do: {key, ""}
 
@@ -88,12 +85,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
 
   @doc """
   Creates the panel's meeting: checks it, spends the budget, and hands it to
-  the dashboard. A refusal stays in the panel's header.
+  the dashboard. A refusal stays in the panel's header; a lead time typed
+  into the reminder picker that cannot be added stays in the picker.
   """
   @spec create(socket(), map()) :: socket()
   def create(socket, panel) do
+    case PanelMeetingReminders.commit_pending(panel) do
+      {:ok, picker} -> book(socket, Map.put(panel, :reminder_picker, picker))
+      {:error, picker} -> assign(socket, :panel, Map.put(panel, :reminder_picker, picker))
+    end
+  end
+
+  defp book(socket, panel) do
     user = socket.assigns.current_user
-    form = titled(panel.form)
+    form = panel.form |> titled() |> Map.put("reminders", panel.reminder_picker.reminders)
 
     with {:ok, create} <- PanelNew.cast_form(socket, form),
          {:ok, params} <- MeetingParams.build(create, form, user.id),

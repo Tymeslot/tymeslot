@@ -283,6 +283,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           surface={@surface}
           group_allowed={@group_allowed}
           venues={Map.get(@panel, :venues, [])}
+          reminder_picker={Map.get(@panel, :reminder_picker)}
           timezone={@timezone}
         />
       </div>
