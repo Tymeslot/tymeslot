@@ -4,6 +4,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchemaTest do
   @moduletag :database
   @moduletag :payments
 
+  alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Repo
@@ -127,7 +128,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchemaTest do
       assert payment.seat_payment
 
       plain = BookingPaymentSchema.create_changeset(Map.put(@valid_attrs, :seat_payment, true))
-      refute Ecto.Changeset.get_field(plain, :seat_payment)
+      refute Changeset.get_field(plain, :seat_payment)
     end
 
     test "a meeting still takes one non-seat payment" do
@@ -154,16 +155,16 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchemaTest do
     test "a hold takes one payment" do
       meeting = insert(:group_meeting)
       hold = insert(:seat_hold, meeting: meeting)
-      {:ok, _} = insert_seat_payment(meeting, hold)
+      {:ok, _payment} = insert_seat_payment(meeting, hold)
 
       assert {:error, changeset} = insert_seat_payment(meeting, hold)
-      assert %{seat_hold_id: [_]} = errors_on(changeset)
+      assert %{seat_hold_id: [_message]} = errors_on(changeset)
     end
 
     test "seats below one is refused" do
       cs = BookingPaymentSchema.create_changeset(Map.put(@valid_attrs, :seats, 0))
       assert {:error, changeset} = Repo.insert(cs)
-      assert %{seats: [_]} = errors_on(changeset)
+      assert %{seats: [_message]} = errors_on(changeset)
     end
 
     test "move_seat_changeset/2 moves a seat payment to another meeting and participant" do
@@ -197,11 +198,11 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchemaTest do
           participant_id: participant.id
         })
 
-      assert %{seat_payment: [_]} = errors_on(cs)
+      assert %{seat_payment: [_message]} = errors_on(cs)
 
       seat = insert(:booking_payment, seat_payment: true, meeting: other)
       cs = BookingPaymentSchema.move_seat_changeset(seat, %{meeting_id: nil, participant_id: nil})
-      assert %{meeting_id: [_], participant_id: [_]} = errors_on(cs)
+      assert %{meeting_id: [_meeting_error], participant_id: [_participant_error]} = errors_on(cs)
     end
 
     test "move_seat_changeset/2 reports an unknown meeting as a changeset error" do
@@ -216,7 +217,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchemaTest do
                })
                |> Repo.update()
 
-      assert %{meeting_id: [_]} = errors_on(cs)
+      assert %{meeting_id: [_message]} = errors_on(cs)
     end
 
     test "convert_changeset/2 links the participant and refuses a missing or unknown one" do
@@ -232,7 +233,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchemaTest do
 
       assert Repo.reload!(converted).participant_id == participant.id
 
-      assert %{participant_id: [_]} =
+      assert %{participant_id: [_message]} =
                errors_on(BookingPaymentSchema.convert_changeset(payment, %{participant_id: nil}))
 
       assert {:error, cs} =
@@ -240,7 +241,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchemaTest do
                |> BookingPaymentSchema.convert_changeset(%{participant_id: UUID.generate()})
                |> Repo.update()
 
-      assert %{participant_id: [_]} = errors_on(cs)
+      assert %{participant_id: [_message]} = errors_on(cs)
     end
   end
 end

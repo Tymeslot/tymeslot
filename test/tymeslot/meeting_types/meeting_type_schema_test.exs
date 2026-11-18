@@ -127,7 +127,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
         )
 
       assert changeset.valid?
-      assert Ecto.Changeset.get_field(changeset, :payment_required)
+      assert Changeset.get_field(changeset, :payment_required)
     end
 
     test "a solo type may still require payment" do

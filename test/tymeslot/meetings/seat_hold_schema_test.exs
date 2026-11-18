@@ -27,18 +27,18 @@ defmodule Tymeslot.Meetings.SeatHoldSchemaTest do
 
   test "one live hold per email per meeting" do
     meeting = insert(:group_meeting)
-    assert {:ok, _} = insert_hold(meeting, "Ann@example.com")
+    assert {:ok, _hold} = insert_hold(meeting, "Ann@example.com")
 
     assert {:error, changeset} = insert_hold(meeting, "ann@example.com")
-    assert %{email: [_]} = errors_on(changeset)
+    assert %{email: [_message]} = errors_on(changeset)
   end
 
   test "a released hold frees its email" do
     meeting = insert(:group_meeting)
     {:ok, first} = insert_hold(meeting, "Ann@example.com")
-    {:ok, _} = first |> SeatHoldSchema.release_changeset(:abandoned) |> Repo.update()
+    {:ok, _released} = first |> SeatHoldSchema.release_changeset(:abandoned) |> Repo.update()
 
-    assert {:ok, _} = insert_hold(meeting, "ann@example.com")
+    assert {:ok, _hold} = insert_hold(meeting, "ann@example.com")
   end
 
   test "released needs a reason" do
@@ -58,7 +58,7 @@ defmodule Tymeslot.Meetings.SeatHoldSchemaTest do
       SeatHoldSchema.create_changeset(%{hold_attrs(meeting, "a@example.com") | seats: 0})
 
     refute changeset.valid?
-    assert %{seats: [_]} = errors_on(changeset)
+    assert %{seats: [_message]} = errors_on(changeset)
   end
 
   test "a hold needs the contact details a participant needs" do
@@ -71,7 +71,9 @@ defmodule Tymeslot.Meetings.SeatHoldSchemaTest do
       |> SeatHoldSchema.create_changeset()
 
     refute changeset.valid?
-    assert %{timezone: [_], locale: [_], email: [_]} = errors_on(changeset)
+
+    assert %{timezone: [_timezone_error], locale: [_locale_error], email: [_email_error]} =
+             errors_on(changeset)
   end
 
   test "a hold normalises its email like a participant" do
@@ -84,7 +86,7 @@ defmodule Tymeslot.Meetings.SeatHoldSchemaTest do
     attrs = %{hold_attrs(%{id: UUID.generate()}, "a@example.com") | meeting_id: UUID.generate()}
 
     assert {:error, changeset} = attrs |> SeatHoldSchema.create_changeset() |> Repo.insert()
-    assert %{meeting_id: [_]} = errors_on(changeset)
+    assert %{meeting_id: [_message]} = errors_on(changeset)
   end
 
   test "release and convert refuse a hold that is not held" do
@@ -92,8 +94,10 @@ defmodule Tymeslot.Meetings.SeatHoldSchemaTest do
     {:ok, released} = hold |> SeatHoldSchema.release_changeset(:expired) |> Repo.update()
     assert released.status == :released and released.released_reason == :expired
 
-    assert %{status: [_]} = errors_on(SeatHoldSchema.convert_changeset(released, UUID.generate()))
-    assert %{status: [_]} = errors_on(SeatHoldSchema.release_changeset(released, :failed))
+    assert %{status: [_message]} =
+             errors_on(SeatHoldSchema.convert_changeset(released, UUID.generate()))
+
+    assert %{status: [_message]} = errors_on(SeatHoldSchema.release_changeset(released, :failed))
   end
 
   test "converting a held hold records the participant" do
