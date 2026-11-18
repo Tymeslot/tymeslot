@@ -489,6 +489,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
       assert has_element?(lv, "#calendar-toast", "Guests won't be told.")
     end
 
+    test "Cancel in a panel reopened during the hold offers Tell guests again", %{
+      lv: lv,
+      review: review
+    } do
+      change_and_tell(lv, review)
+      lv |> element("#calendar-panel-close") |> render_click()
+
+      lv
+      |> element("#calendar-canvas")
+      |> render_hook("calendar:edit", %{"id" => "event-#{review.id}"})
+
+      refute has_element?(lv, "#calendar-panel-untold")
+      lv |> element("#calendar-panel-cancel-guest-update") |> render_click()
+
+      nothing_sent()
+      assert has_element?(lv, "#calendar-panel-untold", "Guests haven't been told")
+      assert has_element?(lv, "#calendar-panel-tell-guests")
+    end
+
     test "the panel reopened on the event still offers Cancel", %{
       conn: conn,
       lv: lv,

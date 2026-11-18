@@ -80,6 +80,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       tab_id: nil,
       undoing: %{},
       untold_moves: %{},
+      held_from: %{},
       toast: nil,
       series_prompt: nil,
       delete_prompt: nil,

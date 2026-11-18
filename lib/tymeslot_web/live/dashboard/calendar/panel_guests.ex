@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
       held_until = Changes.guest_update_held_until(event)
 
       socket
-      |> assign(:panel, told(panel, event, held_until != nil))
+      |> count_from_now(panel, event, held_until != nil)
       |> assign(:untold_moves, Map.delete(socket.assigns.untold_moves, panel.event_id))
       |> watch_hold(panel.event_id, held_until)
       |> Toast.show(dgettext("dashboard_calendar_editing", "Guests will get an update."))
@@ -193,14 +193,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   @spec cancel_pending(socket()) :: socket()
   def cancel_pending(socket) do
     with {:ok, event} <- panel_event(socket),
-         %{guests_pending: true, told_from: told_from} = panel <- socket.assigns.panel,
+         %{guests_pending: true} = panel <- socket.assigns.panel,
          {:ok, outcome} <-
            Changes.cancel_guest_update(
              socket.assigns.current_user.id,
              socket.assigns.integrations,
              event
            ) do
-      cancelled(socket, panel, told_from, outcome)
+      socket
+      |> assign(:held_from, Map.delete(socket.assigns.held_from, panel.event_id))
+      |> cancelled(panel, Map.get(socket.assigns.held_from, panel.event_id), outcome)
     else
       {:error, _reason} = refusal -> refuse(socket, refusal)
       _nothing_held -> socket
@@ -237,6 +239,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
 
         socket
         |> PanelState.update(&%{&1 | guests_pending: held_until != nil})
+        |> forget_held_from(id, held_until)
         |> watch_hold(id, held_until)
 
       :error ->
@@ -268,14 +271,31 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
     socket
   end
 
-  # The panel counts from the event as it is now, and remembers where it
-  # counted from before, so a cancelled update leaves the changes untold
-  # again. A second Tell while one is held joins it, and keeps the first
-  # starting point.
-  defp told(panel, event, held?) do
-    told_from = if panel.guests_pending, do: panel.told_from, else: panel.opened_with
-    %{panel | opened_with: event, guests_pending: held?, told_from: told_from}
+  # The panel counts from the event as it is now. While the update is held,
+  # the surface remembers where it counted from before (`held_from`, by event
+  # id), so a Cancel leaves the changes untold again, also in a panel opened
+  # on the event later. A second Tell while one is held joins it, and keeps
+  # the first starting point.
+  defp count_from_now(socket, panel, event, held?) do
+    held_from =
+      if held?,
+        do: Map.put(socket.assigns.held_from, panel.event_id, told_from(socket, panel)),
+        else: Map.delete(socket.assigns.held_from, panel.event_id)
+
+    socket
+    |> assign(:panel, %{panel | opened_with: event, guests_pending: held?})
+    |> assign(:held_from, held_from)
   end
+
+  defp told_from(socket, %{guests_pending: true} = panel),
+    do: Map.get(socket.assigns.held_from, panel.event_id, panel.opened_with)
+
+  defp told_from(_socket, panel), do: panel.opened_with
+
+  defp forget_held_from(socket, _id, %DateTime{}), do: socket
+
+  defp forget_held_from(socket, id, nil),
+    do: assign(socket, :held_from, Map.delete(socket.assigns.held_from, id))
 
   defp send_update(socket, panel, event),
     do:
