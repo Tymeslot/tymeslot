@@ -177,7 +177,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           )}
         </p>
       </div>
-      <div class="flex justify-end gap-2 border-t border-tymeslot-100 pt-3">
+      <%!-- Wraps where the labels are longer than the panel is wide, as
+            "Create and invite" is in some languages, rather than pushing
+            Cancel out of view. --%>
+      <div class="flex flex-wrap justify-end gap-2 border-t border-tymeslot-100 pt-3">
         <.action_button
           id="calendar-panel-new-cancel"
           type="button"
