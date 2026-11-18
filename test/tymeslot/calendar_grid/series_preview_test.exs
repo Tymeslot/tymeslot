@@ -310,6 +310,104 @@ defmodule Tymeslot.CalendarGrid.SeriesPreviewTest do
     end
   end
 
+  describe "the occurrences previewed" do
+    setup do
+      freeze_clock(~U[2026-11-10 12:00:00Z])
+      %{integration: insert(:calendar_integration, provider: "google")}
+    end
+
+    test "end with a COUNT", %{integration: integration} do
+      google_stand_in(integration, %{recurrence_rule: "FREQ=WEEKLY;COUNT=3"})
+
+      assert starts(previews(weeks(integration, @first, 6))) ==
+               Enum.map(1..2, &week(@first, &1))
+    end
+
+    test "end with an UNTIL, and none fall in a window after the last", %{
+      integration: integration
+    } do
+      google_stand_in(integration, %{recurrence_rule: "FREQ=WEEKLY;UNTIL=20261202T235959Z"})
+
+      assert starts(previews(weeks(integration, @first, 6))) ==
+               Enum.map(1..2, &week(@first, &1))
+
+      assert weeks(integration, week(@first, 3), 3) == []
+    end
+
+    test "leave out an excluded date", %{integration: integration} do
+      google_stand_in(integration, %{recurrence_exceptions: [~D[2026-11-25]]})
+
+      assert starts(previews(weeks(integration, @first, 4))) ==
+               Enum.map(2..3, &week(@first, &1))
+    end
+
+    test "of an all-day series fall on whole days", %{integration: integration} do
+      google_stand_in(integration, %{
+        all_day: true,
+        start_at: nil,
+        end_at: nil,
+        start_date: ~D[2026-11-18],
+        end_date: ~D[2026-11-19],
+        recurrence_rule: "FREQ=WEEKLY;COUNT=3"
+      })
+
+      assert integration
+             |> weeks(@first, 4)
+             |> previews()
+             |> Enum.map(&{&1.start_date, &1.end_date}) ==
+               [{~D[2026-11-25], ~D[2026-11-26]}, {~D[2026-12-02], ~D[2026-12-03]}]
+    end
+
+    test "count towards a read's limit, the earliest kept", %{integration: integration} do
+      google_stand_in(integration, %{})
+
+      events =
+        CalendarGrid.list_events_for_range(
+          [integration.id],
+          DateTime.add(@first, -1, :hour),
+          week(@first, 4),
+          limit: 2
+        )
+
+      assert starts(events) == [@first, week(@first, 1)]
+    end
+  end
+
+  describe "a Google or Outlook one-off given a repeat rule" do
+    setup do
+      freeze_clock(~U[2026-11-10 12:00:00Z])
+      Mox.stub(Tymeslot.CalendarMock, :update_event, fn _uid, _payload, _context -> :ok end)
+      :ok
+    end
+
+    for provider <- ["google", "outlook"] do
+      test "on #{provider} previews its later weeks" do
+        provider = unquote(provider)
+        user = insert(:user)
+        integration = insert(:calendar_integration, user: user, provider: provider)
+
+        one_off =
+          insert(:provider_calendar_event,
+            calendar_integration: integration,
+            uid: "one-off-ical-uid",
+            provider: provider,
+            provider_calendar_id: "primary",
+            provider_event_id: "one-off-1",
+            summary: "Weekly review",
+            start_at: @first,
+            end_at: DateTime.add(@first, 3600)
+          )
+
+        assert previews(weeks(integration, @first, 4)) == []
+
+        {:ok, _updated} =
+          Changes.update_event(user.id, one_off, %{recurrence_rule: @rule}, timezone: "Etc/UTC")
+
+        assert starts(weeks(integration, @first, 4)) == Enum.map(0..3, &week(@first, &1))
+      end
+    end
+  end
+
   describe "a series on Google or Outlook" do
     setup do
       freeze_clock(~U[2026-11-10 12:00:00Z])
@@ -415,6 +513,23 @@ defmodule Tymeslot.CalendarGrid.SeriesPreviewTest do
         )
       )
   end
+
+  defp google_stand_in(integration, attrs) do
+    stand_in(
+      integration,
+      Map.merge(
+        %{
+          uid: "weekly-ical-uid",
+          provider: "google",
+          provider_calendar_id: "primary",
+          provider_event_id: "master-1"
+        },
+        attrs
+      )
+    )
+  end
+
+  defp starts(events), do: Enum.map(events, & &1.start_at)
 
   defp weeks(integration, start, count),
     do:
