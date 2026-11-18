@@ -481,5 +481,5 @@ msgstr "Evento eliminado, pero no se pudo avisar a los asistentes."
 
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
-msgid "Syncing with your calendar. Open it to change the whole series."
-msgstr "Sincronizando con tu calendario. Ábrelo para cambiar toda la serie."
+msgid "Syncing with your calendar. Open the event to change the whole series."
+msgstr "Sincronizando con tu calendario. Abre el evento para cambiar toda la serie."

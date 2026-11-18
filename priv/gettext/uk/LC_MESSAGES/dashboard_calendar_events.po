@@ -488,5 +488,5 @@ msgstr "Подію видалено, але учасників не вдалос
 
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
-msgid "Syncing with your calendar. Open it to change the whole series."
+msgid "Syncing with your calendar. Open the event to change the whole series."
 msgstr "Триває синхронізація з вашим календарем. Відкрийте подію, щоб змінити всю серію."

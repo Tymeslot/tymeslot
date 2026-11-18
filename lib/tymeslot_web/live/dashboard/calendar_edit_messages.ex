@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
       {:warning,
        dgettext(
          "dashboard_calendar_events",
-         "Syncing with your calendar. Open it to change the whole series."
+         "Syncing with your calendar. Open the event to change the whole series."
        )}
 
   def refusal({:error, :booking}),

@@ -484,5 +484,5 @@ msgstr "Usunięto wydarzenie, ale nie udało się powiadomić uczestników."
 
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
-msgid "Syncing with your calendar. Open it to change the whole series."
-msgstr "Trwa synchronizacja z kalendarzem. Otwórz je, aby zmienić całą serię."
+msgid "Syncing with your calendar. Open the event to change the whole series."
+msgstr "Trwa synchronizacja z kalendarzem. Otwórz wydarzenie, aby zmienić całą serię."

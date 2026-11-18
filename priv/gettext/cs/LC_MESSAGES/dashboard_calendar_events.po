@@ -488,5 +488,5 @@ msgstr "Událost byla smazána, ale účastníky se nepodařilo informovat."
 
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
-msgid "Syncing with your calendar. Open it to change the whole series."
+msgid "Syncing with your calendar. Open the event to change the whole series."
 msgstr "Probíhá synchronizace s vaším kalendářem. Otevřete událost a změňte celou sérii."
