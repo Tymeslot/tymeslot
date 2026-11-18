@@ -538,6 +538,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
 
       refute has_element?(lv, "#calendar-panel")
       assert has_element?(lv, "#calendar-preview")
+
+      # The hook's open was answered `opened: false`, so it is told to place
+      # and focus the preview now.
+      id = "event-#{other.id}"
+      assert_push_event(lv, "calendar:preview-opened", %{id: ^id})
     end
 
     test "More options on another draft asks first, then has the hook choose it again", %{

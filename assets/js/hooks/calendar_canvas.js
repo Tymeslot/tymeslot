@@ -163,6 +163,7 @@ export const CalendarCanvas = {
       this.render();
     });
     this.handleEvent("calendar:preview-closed", () => this.previewClosed());
+    this.handleEvent("calendar:preview-opened", ({ id }) => this.previewOpened(id));
     this.handleEvent("calendar:panel", (change) => this.panelChanged(change));
 
     if (typeof ResizeObserver !== "undefined") {
@@ -545,6 +546,18 @@ export const CalendarCanvas = {
     else style.removeProperty("--cal-pop-h");
     style.setProperty("--cal-pop-x", `${Math.round(left)}px`);
     style.setProperty("--cal-pop-y", `${Math.round(top)}px`);
+  },
+
+  // The server opened the preview itself (after the side panel's question
+  // about its draft was answered): placed beside the event as a click would
+  // place it, and focused.
+  previewOpened(id) {
+    const anchor = [...this.el.querySelectorAll("[data-event-id]")].find((node) => node.dataset.eventId === id);
+    this.select(id);
+    this.lastOpened = id;
+    this.returnTo = null;
+    const rect = anchor ? anchor.getBoundingClientRect() : { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 };
+    this.positionPreview(rect);
   },
 
   previewClosed() {

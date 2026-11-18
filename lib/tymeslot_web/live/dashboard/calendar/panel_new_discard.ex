@@ -71,7 +71,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewDiscard do
   def keep(socket), do: assign(socket, :discard_draft_prompt, nil)
 
   defp carry_on(socket, :close), do: socket
-  defp carry_on(socket, {:open, id}), do: PanelState.open_preview(socket, id)
+  # The hook positions and focuses a preview it opened itself; this one it
+  # did not (its `calendar:open` was answered `opened: false`), so it is told.
+  defp carry_on(socket, {:open, id}) do
+    socket = PanelState.open_preview(socket, id)
+
+    if socket.assigns.preview,
+      do: push_event(socket, "calendar:preview-opened", %{id: id}),
+      else: socket
+  end
+
   defp carry_on(socket, {:edit, id}), do: PanelState.open_edit(socket, id)
 
   defp carry_on(socket, {:more_options, draft}),
