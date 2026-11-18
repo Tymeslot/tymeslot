@@ -335,4 +335,4 @@ msgstr "Cancelaste una sesión de grupo, pero no se pudo reembolsar %{amount} a 
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Group session refund not made: %{amount}"
-msgstr ""
+msgstr "Reembolso de la sesión de grupo no realizado: %{amount}"

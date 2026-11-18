@@ -335,4 +335,4 @@ msgstr "Zrušili jste skupinové setkání, ale jednomu z jeho účastníků se
 #: lib/tymeslot/emails/templates/series_refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Group session refund not made: %{amount}"
-msgstr ""
+msgstr "Vrácení platby za skupinové setkání neproběhlo: %{amount}"
