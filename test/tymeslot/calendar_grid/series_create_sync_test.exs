@@ -25,6 +25,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
   alias Tymeslot.Integrations.Calendar.DebugStore
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Workers.SyncDebugCalendarWorker
 
@@ -158,6 +159,33 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
       assert Enum.reject(occurrences, &(&1.video_link == link)) == []
       assert Enum.reject(occurrences, &(&1.video_integration_id == video.id)) == []
     end
+
+    test "a stand-in with a queued delete stays until the queue has sent it", %{
+      integration: integration,
+      first_start: first_start
+    } do
+      cache_created_caldav_series(integration, first_start, %{})
+      set_sync_state(integration, "weekly@tymeslot.com", "locally_deleted")
+
+      assert :ok = SyncReconciler.process_tier1(integration, caldav_series(@href), [])
+
+      assert {:ok, %{sync_state: "locally_deleted"}} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "weekly@tymeslot.com")
+    end
+
+    # A create whose PUT timed out is queued, but landed: its occurrences
+    # coming back from the server say so.
+    test "a stand-in with a queued create goes once the server returns the series", %{
+      integration: integration,
+      first_start: first_start
+    } do
+      cache_created_caldav_series(integration, first_start, %{})
+      set_sync_state(integration, "weekly@tymeslot.com", "locally_created")
+
+      assert :ok = SyncReconciler.process_tier1(integration, caldav_series(@href), [])
+
+      assert blocks_on(integration, first_start) == ["weekly@tymeslot.com_20261118T180000"]
+    end
   end
 
   # A one-off CalDAV event under the series' future UID, as an earlier sync
@@ -175,6 +203,13 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
       video_link: link,
       video_integration_id: video && video.id
     )
+  end
+
+  defp set_sync_state(integration, uid, state) do
+    {1, _rows} =
+      ProviderCalendarEventSchema
+      |> where([e], e.calendar_integration_id == ^integration.id and e.uid == ^uid)
+      |> Repo.update_all(set: [sync_state: state])
   end
 
   # The row the grid caches for a series it has just written to a CalDAV

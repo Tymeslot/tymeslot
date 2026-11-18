@@ -342,7 +342,9 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   # Once the series' occurrences arrive it would show that date twice, so it
   # goes. A full fetch would prune it as absent, but a delta sync only reports
   # what changed, and the debug sync never prunes. Its video goes to the
-  # occurrences first, as a master's does above.
+  # occurrences first, as a master's does above. Only a row the sync has
+  # caught up with goes; one holding a queued edit or delete stays until the
+  # queue has sent it.
   defp drop_replaced_series_rows(integration_id, calendar_events) do
     batch_uids = MapSet.new(calendar_events, & &1.uid)
 
@@ -366,7 +368,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
       )
     end)
 
-    ProviderCalendarEventQueries.delete_by_uids(integration_id, series_uids)
+    ProviderCalendarEventQueries.delete_series_stand_ins(integration_id, series_uids)
   end
 
   # `{series_uid, href}` for an expanded occurrence of a CalDAV-family series,
