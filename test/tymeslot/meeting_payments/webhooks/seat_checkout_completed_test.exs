@@ -21,6 +21,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
   alias Tymeslot.Test.EnqueuedJobs
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.WebhookWorker
 
   @account "acct_SEAT_HOST"
   @seat_price 2500
@@ -168,6 +169,21 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
     participant_id = participant.id
     assert_receive {:paid, ^participant_id}
     assert [_one] = seat_confirmations(ctx.user, participant.id)
+  end
+
+  test "converting a hold fires one seat-booked automation", ctx do
+    insert(:webhook, user: ctx.user, events: ["meeting.created"])
+    meeting = slot(ctx)
+    {_hold, payment} = held_seat(ctx, meeting, email: "payer@example.com")
+
+    assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_automation", payment))
+
+    assert [participant] = ParticipantQueries.list_live_for_meeting(meeting.id)
+
+    assert [job] = all_enqueued(worker: WebhookWorker)
+    assert job.args["event_type"] == "meeting.created"
+    assert job.args["meeting_id"] == meeting.id
+    assert job.args["participant_id"] == participant.id
   end
 
   test "the first paid seat schedules the calendar event, the second does not", ctx do

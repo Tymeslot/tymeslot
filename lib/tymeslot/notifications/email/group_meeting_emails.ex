@@ -33,9 +33,11 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
 
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -173,10 +175,15 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   Dispatches one cancellation job per live participant plus one organiser
   email sent inline (there is only ever one organiser, so a job buys it no
   independent retry benefit).
+
+  `seat_refund` is what the host's cancellation does with the money of the
+  seats that were paid for (`:full` refunds each, `:none` refunds nothing):
+  the organiser's copy says so, and only the organiser's. A participant is
+  never told of a refund, which the host may yet decline.
   """
-  @spec send_group_cancellation_emails(MeetingSchema.t(), [Recipient.t()]) ::
+  @spec send_group_cancellation_emails(MeetingSchema.t(), [Recipient.t()], :full | :none) ::
           :ok | {:error, term()}
-  def send_group_cancellation_emails(meeting, participants) do
+  def send_group_cancellation_emails(meeting, participants, seat_refund) do
     with :ok <-
            dispatch_seat_jobs(participants, fn recipient ->
              EmailScheduler.schedule_seat_meeting_cancellation_email(
@@ -185,7 +192,9 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
              )
            end) do
       organizer_details =
-        AppointmentBuilder.for_organizer_of_group(meeting, length(participants))
+        meeting
+        |> AppointmentBuilder.for_organizer_of_group(length(participants))
+        |> Map.put(:seat_refunds, seat_refunds(meeting, seat_refund))
 
       meeting.organizer_email
       |> Config.email_service_module().send_cancellation_email_to_organizer(organizer_details)
@@ -250,6 +259,20 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
         requested_at
       )
     end)
+  end
+
+  # What the organiser is told of the paid seats' money, or nil when no seat
+  # was paid, formatted in the seats' currency.
+  defp seat_refunds(meeting, choice) do
+    case BookingPayments.seat_refund_summary(meeting.id, meeting.organizer_user_id, choice) do
+      nil ->
+        nil
+
+      %{amount_cents: cents, currency: currency} = summary ->
+        summary
+        |> Map.take([:choice, :count])
+        |> Map.put(:amount, Formatting.format_currency(cents, currency))
+    end
   end
 
   defp send_seat_meeting_cancellation_email(meeting, participant) do

@@ -14,6 +14,11 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
   participant's seat links are theirs alone. A move also carries
   `:original_start_time_owner_tz`, the time the spot moved from.
 
+  When the seat was paid for (`:booking_payment` in the payload), the booked
+  email adds what the organiser received (`PaymentBlocks`), and the cancelled
+  one says the money is still theirs to refund (`RefundNotice`): a participant
+  leaving refunds nothing on its own.
+
   Like every organiser email, it carries no calendar file: the organiser's
   calendar holds the slot as one provider event that Tymeslot keeps up to
   date itself, and an attachment would be imported on top of it as a second
@@ -23,6 +28,8 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
   import Swoosh.Email
 
   alias Tymeslot.Emails.RecipientLocale
+  alias Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice
+  alias Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks
 
   alias Tymeslot.Emails.Shared.{
     Formatting,
@@ -47,6 +54,7 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
       intent = intent(variant)
       copy = copy(variant, details)
       meeting_details = TemplateHelper.organizer_meeting_details(details)
+      payment = payment_block(variant, details)
 
       mjml_content = """
       #{Text.centered_text(copy.lead, padding: "8px 0 16px 0")}
@@ -58,6 +66,8 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
       #{MeetingComponents.custom_answers_section(details)}
+
+      #{payment.html}
 
       #{if line = seats_line(details), do: Text.centered_text(line, font_size: "14px", padding: "8px 0 8px 0")}
 
@@ -79,9 +89,32 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
       |> MjmlEmail.put_reply_to(details.attendee_name, details.attendee_email)
       |> subject(copy.subject)
       |> html_body(TemplateHelper.compile_template(mjml_content, stage))
-      |> text_body(text_body(details, meeting_details, copy, locale))
+      |> text_body(text_body(details, meeting_details, copy, locale, payment.text))
     end)
   end
+
+  # What the money did, for a seat that was paid for: the payout when the
+  # spot is booked, the balance still held when it is cancelled. Nothing for a
+  # free seat or a move (the seat keeps its payment).
+  defp payment_block(:booked, details) do
+    case PaymentBlocks.organizer_summary(details) do
+      nil ->
+        %{html: "", text: ""}
+
+      summary ->
+        %{
+          html: PaymentBlocks.organizer_summary_html(summary),
+          text: "\n" <> PaymentBlocks.organizer_summary_text(summary) <> "\n"
+        }
+    end
+  end
+
+  defp payment_block(:cancelled, details) do
+    notice = RefundNotice.build(details)
+    %{html: RefundNotice.html(notice), text: RefundNotice.text(notice)}
+  end
+
+  defp payment_block(:moved, _details), do: %{html: "", text: ""}
 
   defp intent(:booked), do: :confirmed
   defp intent(:cancelled), do: :cancelled
@@ -229,14 +262,14 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     )
   end
 
-  defp text_body(details, meeting_details, copy, locale) do
+  defp text_body(details, meeting_details, copy, locale, payment_text) do
     """
     #{copy.title}
 
     #{copy.lead}
     #{TextBodyHelper.format_attendee_info(details, locale)}
     #{dgettext("emails_booking_changes", "MEETING DETAILS:")}
-    #{TextBodyHelper.format_meeting_details(meeting_details, locale)}#{TextBodyHelper.format_custom_answers(details, locale)}
+    #{TextBodyHelper.format_meeting_details(meeting_details, locale)}#{TextBodyHelper.format_custom_answers(details, locale)}#{payment_text}
 
     #{seats_line(details)}
     #{dgettext("emails_booking_changes", "Open in dashboard")}: #{details.dashboard_url}

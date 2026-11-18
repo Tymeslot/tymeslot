@@ -118,10 +118,10 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
 
   @spec handle_cancellation_emails(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
-  def handle_cancellation_emails(%{"meeting_id" => meeting_id}, job_id) do
+  def handle_cancellation_emails(%{"meeting_id" => meeting_id} = args, job_id) do
     with_meeting(meeting_id, "cancellation emails", fn meeting ->
       if meeting.status == :cancelled do
-        send_cancellation_emails_for_meeting(meeting, job_id)
+        send_cancellation_emails_for_meeting(meeting, seat_refund(args), job_id)
       else
         Logger.info("Skipping cancellation emails - meeting is not cancelled",
           meeting_id: meeting_id,
@@ -159,6 +159,13 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
     end
   end
 
+  # What the host's cancellation of a group meeting does with its paid seats'
+  # money, from the job's `"seat_refund"` argument. Absent from a job
+  # persisted before the argument existed, and from a meeting nobody paid for:
+  # read as no refund, which is what the organiser is told they still hold.
+  defp seat_refund(%{"seat_refund" => "full"}), do: :full
+  defp seat_refund(_args), do: :none
+
   # Unlike confirmations and reminders, a cancellation has no per-recipient
   # sent flag on the meeting, so what stops a rescued job re-sending it is a
   # claim on the job itself (`DeliveryClaims`): one for the organiser's copy,
@@ -167,11 +174,12 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
   # and a retry writes only to whoever was missed. On a group meeting one
   # claim covers the per-seat fan-out instead, which is itself safe to repeat
   # (see `GroupMeetingEmails`).
-  defp send_cancellation_emails_for_meeting(meeting, job_id) do
+  defp send_cancellation_emails_for_meeting(meeting, seat_refund, job_id) do
     appointment_details = AppointmentBuilder.from_meeting(meeting)
     Logger.info("Sending cancellation emails", meeting_id: meeting.id)
 
-    participants = send_participant_cancellations(meeting, appointment_details, job_id)
+    participants =
+      send_participant_cancellations(meeting, appointment_details, seat_refund, job_id)
 
     guests =
       GuestNotifications.notify_cancelled(
@@ -185,7 +193,7 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
     DeliveryOutcome.combine("cancellation", [meeting_id: meeting.id], [participants, guests])
   end
 
-  defp send_participant_cancellations(meeting, appointment_details, job_id) do
+  defp send_participant_cancellations(meeting, appointment_details, seat_refund, job_id) do
     if Meetings.group?(meeting) do
       DeliveryClaims.once(job_id, "cancellation:participants", fn ->
         # `group?/1` is capacity-based, not "has live participants": a meeting
@@ -196,8 +204,11 @@ defmodule Tymeslot.Notifications.Email.MeetingEmails do
         # repeat that with nobody to name, so the emptied meeting sends
         # nothing more.
         case Meetings.recipients(meeting) do
-          [] -> :ok
-          participants -> GroupMeetingEmails.send_group_cancellation_emails(meeting, participants)
+          [] ->
+            :ok
+
+          participants ->
+            GroupMeetingEmails.send_group_cancellation_emails(meeting, participants, seat_refund)
         end
       end)
     else

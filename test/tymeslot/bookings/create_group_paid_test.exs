@@ -26,6 +26,9 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
   alias Tymeslot.Test.EnqueuedJobs
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
+  alias Tymeslot.Workers.SlackWorker
+  alias Tymeslot.Workers.TelegramWorker
+  alias Tymeslot.Workers.WebhookWorker
 
   setup :verify_on_exit!
 
@@ -125,6 +128,18 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
     assert payment.seats == 2
 
     assert EnqueuedJobs.for_user(ctx.user) == []
+  end
+
+  test "a seat hold fires no automation", ctx do
+    insert(:webhook, user: ctx.user, events: ["meeting.created"])
+    expect_checkout()
+
+    assert {:ok, :payment_required, %{seat_hold: %{status: :held}}} =
+             execute(ctx, "one@example.com")
+
+    refute_enqueued(worker: WebhookWorker)
+    refute_enqueued(worker: SlackWorker)
+    refute_enqueued(worker: TelegramWorker)
   end
 
   test "a failed checkout releases the hold and the slot", ctx do

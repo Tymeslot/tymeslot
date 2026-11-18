@@ -82,6 +82,25 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   def by_meeting_id(meeting_id),
     do: Repo.one(own_payment(meeting_id))
 
+  @doc """
+  The seat payment that paid for the participant `participant_id`, or `nil`
+  for a free seat or an id that names nobody.
+  """
+  @spec by_participant_id(term()) :: BookingPaymentSchema.t() | nil
+  def by_participant_id(participant_id) do
+    case cast_id(participant_id) do
+      {:ok, uuid} ->
+        BookingPaymentSchema
+        |> where([b], b.participant_id == ^uuid and b.seat_payment)
+        |> order_by([b], asc: b.inserted_at, asc: b.id)
+        |> limit(1)
+        |> Repo.one()
+
+      {:error, :not_found} ->
+        nil
+    end
+  end
+
   @doc "The payment opened for the seat hold `hold_id`, or `nil`. A malformed id returns `nil`."
   @spec by_seat_hold_id(term()) :: BookingPaymentSchema.t() | nil
   def by_seat_hold_id(hold_id) do

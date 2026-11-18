@@ -35,6 +35,15 @@ defmodule Tymeslot.Meetings.Seats do
     do: ParticipantQueries.count_seats_taken(meeting_id) + SeatHolds.seats_held(meeting_id)
 
   @doc """
+  Seats booked on a meeting: live participants plus their guests who hold a
+  seat. Unlike `seats_taken/1` it leaves out the seats held for bookers
+  still paying, who are not on the meeting yet: the count to tell the
+  organiser, whose emails are about the people who have booked.
+  """
+  @spec seats_booked(binary()) :: non_neg_integer()
+  def seats_booked(meeting_id), do: ParticipantQueries.count_seats_taken(meeting_id)
+
+  @doc """
   Seats taken from already-loaded participant and guest lists: the
   participants plus the guests who hold a seat.
 

@@ -46,4 +46,39 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocksTest do
       refute html =~ "View receipt"
     end
   end
+
+  describe "seat counts" do
+    defp details(seats) do
+      %{
+        booking_payment: %{
+          status: :paid,
+          amount_cents: 4000,
+          currency: "eur",
+          application_fee_cents: 200,
+          seats: seats
+        }
+      }
+    end
+
+    test "a payment for several seats names them in the receipt and the payout summary" do
+      receipt = PaymentBlocks.attendee_receipt(details(2))
+      summary = PaymentBlocks.organizer_summary(details(2))
+
+      assert receipt.seats == 2
+      assert summary.seats == 2
+      assert PaymentBlocks.attendee_receipt_text(receipt) =~ "For 2 seats"
+      assert PaymentBlocks.organizer_summary_text(summary) =~ "For 2 seats"
+      assert PaymentBlocks.organizer_summary_html(summary) =~ "For 2 seats"
+    end
+
+    test "a payment for one seat shows no seat count" do
+      receipt = PaymentBlocks.attendee_receipt(details(1))
+      summary = PaymentBlocks.organizer_summary(details(1))
+
+      refute Map.has_key?(receipt, :seats)
+      refute Map.has_key?(summary, :seats)
+      refute PaymentBlocks.attendee_receipt_text(receipt) =~ "seat"
+      refute PaymentBlocks.organizer_summary_text(summary) =~ "seat"
+    end
+  end
 end

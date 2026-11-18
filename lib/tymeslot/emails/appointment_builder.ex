@@ -47,6 +47,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     meeting
     |> Recipient.as_seen_by(recipient)
     |> build(reminder_interval)
+    |> with_seat_payment(recipient)
   end
 
   @doc """
@@ -94,7 +95,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   left or moved (name, email, phone, company, message, answers), but never
   carries that participant's seat links: the organiser's way to act on the
   meeting is their dashboard, and the seat links are the participant's
-  credentials. `:seats_taken` and `:capacity` say how full the slot is now.
+  credentials. `:seats_taken` and `:capacity` say how full the slot is now: people
+  booked, not the seats held for bookers still paying.
   """
   @spec for_organizer_of_seat(MeetingSchema.t(), Recipient.t()) ::
           Tymeslot.Emails.EmailService.appointment_details()
@@ -103,7 +105,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     |> from_meeting(seat, nil)
     |> with_original_texts()
     |> Map.merge(organizer_group_links())
-    |> Map.merge(%{seats_taken: Seats.seats_taken(meeting.id), capacity: meeting.capacity})
+    |> Map.merge(%{seats_taken: Seats.seats_booked(meeting.id), capacity: meeting.capacity})
   end
 
   @doc """
@@ -216,6 +218,15 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       |> Map.put(:booking_page_name, BookedThrough.name(meeting))
     end)
   end
+
+  # A group meeting's payments belong to its seats, so `build/2` finds none
+  # for the meeting: a participant's details carry their own seat's payment
+  # (nil for a free seat), and the organiser's seat email, built from the
+  # same recipient, carries it too.
+  defp with_seat_payment(details, %Recipient{kind: :participant, participant_id: id}),
+    do: Map.put(details, :booking_payment, BookingPayments.payment_for_participant(id))
+
+  defp with_seat_payment(details, _recipient), do: details
 
   # The organiser's chosen clock, resolved once per payload rather than per
   # template. Deliberately namespaced away from the plain `:time_format` key the
