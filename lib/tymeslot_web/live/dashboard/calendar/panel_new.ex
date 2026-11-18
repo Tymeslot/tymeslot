@@ -394,8 +394,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   defp cast_params(socket, form, calendar) do
     %{current_user: user, integrations: integrations, timezone: timezone} = socket.assigns
 
-    # The form's "reminders" are a meeting's reminder emails (`PanelMeeting`),
-    # not the event's own reminders, which this form never edits.
+    # "reminders" reach the form only when `PanelMeeting` books a meeting:
+    # the lead times of its reminder emails, from the panel's reminder
+    # picker, not the event's own reminders, so the cast leaves them out.
     params =
       form
       |> Map.delete("reminders")

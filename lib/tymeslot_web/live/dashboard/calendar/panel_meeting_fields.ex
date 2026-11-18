@@ -9,7 +9,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeetingFields do
   lead times a click away. Drawn inside the form `PanelNewForm`
   draws, so a change reaches `panel:draft_change` like any other field.
   Each box and the toggle sit in a 44px row below 640px, where the panel is
-  a sheet under a thumb, and their labels fill the row so the whole row taps.
+  a sheet under a thumb, and their labels fill the row so the whole row taps;
+  the reminder picker's buttons and custom number get a 44px hit area there
+  too.
   """
 
   use TymeslotWeb, :html
@@ -144,7 +146,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeetingFields do
             )}
           </p>
         </div>
-        <div id="calendar-panel-meeting-reminders">
+        <%!-- The picker's buttons and its custom row's number take a 44px
+              hit area below 640px, where the panel is a sheet. --%>
+        <div
+          id="calendar-panel-meeting-reminders"
+          class="max-sm:[&_button]:min-h-11 max-sm:[&_button]:min-w-11 max-sm:[&_input]:min-h-11"
+        >
           <ReminderPicker.reminder_picker
             reminders={@reminder_picker.reminders}
             max_reminders={ReminderValidation.max_reminders()}

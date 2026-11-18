@@ -103,7 +103,7 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
     end
   end
 
-  @doc "Spends one meeting from the organiser's budget (20 in 10 minutes)."
+  @doc "Spends one meeting from the organiser's budget (10 in 10 minutes)."
   @spec rate_limit(pos_integer()) :: :ok | {:error, :rate_limited, String.t()}
   def rate_limit(user_id) do
     case RateLimiter.check(:dashboard_quick_add_meeting, user_id) do

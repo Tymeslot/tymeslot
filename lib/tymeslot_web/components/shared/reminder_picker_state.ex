@@ -71,7 +71,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPickerState do
   end
 
   @doc """
-  Adds one of the preset lead times, as posted by a quick-add button.
+  Adds one of the preset lead times, as posted by its one-click button.
   """
   @spec add_quick(t(), map()) :: {:ok, t()} | {:noop, t()}
   def add_quick(state, %{"amount" => amount, "unit" => unit}), do: add(state, amount, unit)
@@ -98,7 +98,8 @@ defmodule TymeslotWeb.Components.Shared.ReminderPickerState do
 
   @doc """
   Adds what the open custom row still holds, for an owner about to act on the
-  list: focus leaving the row, or the quick-add meeting being created.
+  list: focus leaving the row, or a meeting booked from the calendar's side
+  panel being created.
 
   A typed value is the host's intent even if Add was never pressed, so it is
   added rather than dropped; a value that fails validation leaves its message
