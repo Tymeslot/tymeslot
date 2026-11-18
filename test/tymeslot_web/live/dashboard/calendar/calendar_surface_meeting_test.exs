@@ -203,6 +203,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
       assert render(lv) =~ "No more guests can be added to this meeting."
     end
 
+    test "an address typed before the meeting filled is not counted once the field gives way",
+         %{conn: conn, integration: integration} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, integration, %{"guests" => guests(Guests.max_guests())})
+      as_meeting(lv)
+
+      # With a main participant the meeting takes one more, typed here.
+      render_change(new_form(lv), %{"guest_email" => "one-more@example.com"})
+
+      # Without one it is full: the field goes, and the address with it.
+      render_change(new_form(lv), %{"main_participant" => "false"})
+      refute has_element?(lv, "#calendar-panel-guest-add")
+
+      lv |> element("#calendar-panel-new-cancel") |> render_click()
+
+      assert has_element?(
+               lv,
+               "#calendar-discard-draft",
+               "#{Guests.max_guests()} guests haven't been invited yet."
+             )
+    end
+
     test "is an event's while the box is not ticked", %{conn: conn, integration: integration} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       more_options(lv, integration, %{"guests" => guests(MeetingParams.max_guests())})

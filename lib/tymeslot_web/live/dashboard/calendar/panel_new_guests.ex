@@ -138,6 +138,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   def max(%{"meeting" => true}), do: MeetingParams.max_guests()
   def max(_form), do: CreateParams.max_guests()
 
+  @doc """
+  Drops an address typed but not added from a form that can take no more
+  guests: the guest field gives way at the limit, so the address would
+  otherwise count for a guest nobody is invited as.
+  """
+  @spec without_pending_when_full(map()) :: map()
+  def without_pending_when_full(form),
+    do: if(full?(form), do: Map.put(form, "guest_pending", ""), else: form)
+
   @doc "Whether a meeting draft holds as many guests as it can, so no more can be added."
   @spec full?(map()) :: boolean()
   def full?(%{"meeting" => true} = form), do: length(form["guests"] || []) >= max(form)

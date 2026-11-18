@@ -133,6 +133,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       |> Map.merge(PanelNewRepeat.fields(params))
       |> Map.merge(PanelNewReminders.fields(params))
       |> PanelMeeting.carry_place(form)
+      |> PanelNewGuests.without_pending_when_full()
       |> convert_all_day(form)
       |> follow_start(form, params["_target"])
 
