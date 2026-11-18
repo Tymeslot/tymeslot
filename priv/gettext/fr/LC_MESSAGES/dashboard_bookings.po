@@ -1045,3 +1045,10 @@ msgstr "Quelqu’un a payé une place pendant que cette fenêtre était ouverte.
 #, elixir-autogen, elixir-format
 msgid "Tick the acknowledgement to cancel without refunding the participants."
 msgstr "Cochez la case de confirmation pour annuler sans rembourser les participants."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling won't refund %{count} participant (%{amount}): their payment is older than the 60-day refund window. You can refund it from Stripe."
+msgid_plural "Cancelling won't refund %{count} participants (%{amount}): their payments are older than the 60-day refund window. You can refund them from Stripe."
+msgstr[0] ""
+msgstr[1] ""

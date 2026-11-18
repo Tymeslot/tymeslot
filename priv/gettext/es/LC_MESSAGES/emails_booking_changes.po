@@ -741,3 +741,10 @@ msgid "You still hold %{amount} from %{count} participant. Refund it under Payme
 msgid_plural "You still hold %{amount} from %{count} participants. Refund them under Payments in your dashboard if you need to."
 msgstr[0] "Todavía conservas %{amount} cobrados a %{count} participante. Si hace falta, haz el reembolso desde Pagos en tu panel."
 msgstr[1] "Todavía conservas %{amount} cobrados a %{count} participantes. Si hace falta, haz los reembolsos desde Pagos en tu panel."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} from %{count} participant can't be refunded automatically: the payment is older than the 60-day refund window. Refund it from your Stripe dashboard."
+msgid_plural "%{amount} from %{count} participants can't be refunded automatically: their payments are older than the 60-day refund window. Refund them from your Stripe dashboard."
+msgstr[0] ""
+msgstr[1] ""

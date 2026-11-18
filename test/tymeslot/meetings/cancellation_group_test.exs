@@ -98,7 +98,8 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     assert seat_refund_arg() == %{
              "choice" => "full",
              "count" => 3,
-             "totals" => [%{"currency" => "eur", "amount_cents" => 5500}]
+             "totals" => [%{"currency" => "eur", "amount_cents" => 5500}],
+             "outside_window" => %{"count" => 0, "totals" => []}
            }
   end
 
@@ -141,7 +142,8 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     assert seat_refund_arg() == %{
              "choice" => "none",
              "count" => 1,
-             "totals" => [%{"currency" => "eur", "amount_cents" => @price}]
+             "totals" => [%{"currency" => "eur", "amount_cents" => @price}],
+             "outside_window" => %{"count" => 0, "totals" => []}
            }
   end
 
@@ -161,7 +163,8 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
              "totals" => [
                %{"currency" => "eur", "amount_cents" => @price},
                %{"currency" => "usd", "amount_cents" => 4000}
-             ]
+             ],
+             "outside_window" => %{"count" => 0, "totals" => []}
            }
   end
 
@@ -323,6 +326,41 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
              Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats)
 
     assert refund_amounts() == [2000]
+  end
+
+  # The host chose against the seats the dialog showed; a seat paid after
+  # that (converted between the dialog's last check and the cancellation's
+  # own read under the meeting's lock) must not be refunded, or kept,
+  # without the host seeing it.
+  describe "the seats the host chose against" do
+    test "a seat paid since rolls the cancellation back, returning the seats now" do
+      ctx = host_and_session()
+      seen = paid_seat(ctx, "ada@example.com")
+      late = paid_seat(ctx, "late@example.com")
+
+      assert {:error, {:payments_changed, payments}} =
+               Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats,
+                 seat_payment_ids: [seen.id]
+               )
+
+      assert payments |> Enum.map(& &1.id) |> Enum.sort() == Enum.sort([seen.id, late.id])
+      assert status(ctx.session) == :confirmed
+      assert refund_amounts() == []
+      refute_enqueued(worker: EmailWorker, args: %{action: "send_cancellation_emails"})
+    end
+
+    test "the seats the host saw are settled" do
+      ctx = host_and_session()
+      seen = paid_seat(ctx, "ada@example.com")
+
+      assert {:ok, _cancelled} =
+               Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats,
+                 seat_payment_ids: [seen.id]
+               )
+
+      assert status(ctx.session) == :cancelled
+      assert refund_amounts() == [@price]
+    end
   end
 
   describe "the refund action" do

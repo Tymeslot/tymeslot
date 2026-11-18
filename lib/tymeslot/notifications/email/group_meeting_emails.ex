@@ -270,11 +270,17 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   # commas rather than a translated connective.
   defp seat_money(nil), do: nil
 
-  defp seat_money(%{choice: choice, count: count, totals: totals}) do
+  defp seat_money(%{choice: choice, outside_window: outside_window} = seats) do
+    seats
+    |> seat_amount()
+    |> Map.merge(%{choice: choice, outside_window: seat_amount(outside_window)})
+  end
+
+  defp seat_amount(%{count: count, totals: totals}) do
     amount =
       Enum.map_join(totals, ", ", &Formatting.format_currency(&1.amount_cents, &1.currency))
 
-    %{choice: choice, count: count, amount: amount}
+    %{count: count, amount: amount}
   end
 
   defp send_seat_meeting_cancellation_email(meeting, participant) do

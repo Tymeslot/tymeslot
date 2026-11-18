@@ -31,15 +31,19 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
   @typedoc """
   Host-facing refund notice, or `nil` when nothing is outstanding. A group
   meeting the host cancelled carries `:count` and `:choice` as well: how many
-  paid seats, and whether the cancellation refunds them (`:full`) or leaves
-  the money with the host (`:none`). Its `:amount` lists one formatted total
-  per currency the seats were paid in, joined by commas.
+  paid seats Tymeslot can refund, and whether the cancellation refunds them
+  (`:full`) or leaves the money with the host (`:none`). Its `:amount` lists
+  one formatted total per currency the seats were paid in, joined by
+  commas. `:outside_window` counts and totals the same way the seats paid
+  more than 60 days before, which only the host's Stripe dashboard can
+  refund, whatever the choice.
   """
   @type notice ::
           %{
             required(:amount) => String.t(),
-            optional(:count) => pos_integer(),
-            optional(:choice) => :full | :none
+            optional(:count) => non_neg_integer(),
+            optional(:choice) => :full | :none,
+            optional(:outside_window) => %{count: non_neg_integer(), amount: String.t()}
           }
           | nil
 
@@ -66,11 +70,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
   @spec html(notice()) :: String.t()
   def html(nil), do: ""
 
-  def html(%{choice: :full} = seats),
-    do: card(dgettext("emails_booking_changes", "Refunds on their way"), seats_line(seats, true))
-
-  def html(%{choice: :none} = seats),
-    do: card(dgettext("emails_booking_changes", "Refunds outstanding"), seats_line(seats, true))
+  def html(%{choice: _choice} = seats),
+    do: card(seats_title(seats), Enum.join(seats_lines(seats, true), "<br /><br />"))
 
   def html(%{amount: amount}) do
     card(
@@ -89,19 +90,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
   @spec text(notice()) :: String.t()
   def text(nil), do: ""
 
-  def text(%{choice: :full} = seats) do
+  def text(%{choice: _choice} = seats) do
     """
 
-    #{dgettext("emails_booking_changes", "REFUNDS ON THEIR WAY:")}
-    #{seats_line(seats, false)}
-    """
-  end
-
-  def text(%{choice: :none} = seats) do
-    """
-
-    #{dgettext("emails_booking_changes", "REFUNDS OUTSTANDING:")}
-    #{seats_line(seats, false)}
+    #{seats_text_title(seats)}
+    #{Enum.join(seats_lines(seats, false), "\n")}
     """
   end
 
@@ -112,6 +105,43 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
     #{dgettext("emails_booking_changes", "You still hold %{amount} for this booking.", amount: amount)}
     #{dgettext("emails_booking_changes", "Cancelling does not refund anything on its own. Issue or decline the refund under Payments in your dashboard.")}
     """
+  end
+
+  # Refunds are on their way only when the cancellation refunds a seat;
+  # seats past the refund window alone are money the host still holds.
+  defp seats_title(%{choice: :full, count: count}) when count > 0,
+    do: dgettext("emails_booking_changes", "Refunds on their way")
+
+  defp seats_title(_seats), do: dgettext("emails_booking_changes", "Refunds outstanding")
+
+  defp seats_text_title(%{choice: :full, count: count}) when count > 0,
+    do: dgettext("emails_booking_changes", "REFUNDS ON THEIR WAY:")
+
+  defp seats_text_title(_seats), do: dgettext("emails_booking_changes", "REFUNDS OUTSTANDING:")
+
+  # The seats Tymeslot can refund, then those past the refund window, each
+  # said only when there are some.
+  defp seats_lines(seats, bold?) do
+    outside_window = Map.get(seats, :outside_window, %{count: 0})
+
+    Enum.filter(
+      [
+        seats.count > 0 && seats_line(seats, bold?),
+        outside_window.count > 0 && outside_window_line(outside_window, bold?)
+      ],
+      & &1
+    )
+  end
+
+  defp outside_window_line(%{count: count, amount: amount}, bold?) do
+    dngettext(
+      "emails_booking_changes",
+      "%{amount} from %{count} participant can't be refunded automatically: the payment is older than the 60-day refund window. Refund it from your Stripe dashboard.",
+      "%{amount} from %{count} participants can't be refunded automatically: their payments are older than the 60-day refund window. Refund them from your Stripe dashboard.",
+      count,
+      amount: amount(amount, bold?),
+      count: count
+    )
   end
 
   # `bold?` marks the amount for the MJML body; the plain-text line shares the

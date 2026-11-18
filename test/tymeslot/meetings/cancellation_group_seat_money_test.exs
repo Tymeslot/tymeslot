@@ -15,10 +15,13 @@ defmodule Tymeslot.Meetings.CancellationGroupSeatMoneyTest do
   import Mox
   import Tymeslot.GroupCancellationTestHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Emails.Templates.AppointmentCancellation
   alias Tymeslot.EmailServiceMock
+  alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
   alias Tymeslot.Meetings
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
 
@@ -95,7 +98,8 @@ defmodule Tymeslot.Meetings.CancellationGroupSeatMoneyTest do
         assert seat_refund_arg() == %{
                  "choice" => unquote(choice),
                  "count" => 2,
-                 "totals" => [%{"currency" => "eur", "amount_cents" => 3500}]
+                 "totals" => [%{"currency" => "eur", "amount_cents" => 3500}],
+                 "outside_window" => %{"count" => 0, "totals" => []}
                }
       end
     end
@@ -119,6 +123,67 @@ defmodule Tymeslot.Meetings.CancellationGroupSeatMoneyTest do
 
       assert email.text_body =~ "REFUNDS OUTSTANDING:"
       assert email.text_body =~ "You still hold €35.00 from 2 participants."
+      refute email.text_body =~ "is being refunded"
+    end
+  end
+
+  # A seat paid more than 60 days ago is past the refund window: the host's
+  # cancellation queues no refund for it, which would only be refused, and
+  # tells the organiser to refund it from Stripe.
+  describe "a seat paid outside the refund window" do
+    setup do
+      ctx = host_and_session()
+      paid_seat(ctx, "ada@example.com")
+
+      paid_seat(ctx, "old@example.com",
+        paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day),
+        amount_cents: 3000
+      )
+
+      ctx
+    end
+
+    test "is not refunded, and is carried apart to the organiser's email", ctx do
+      assert {:ok, _cancelled} =
+               Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats)
+
+      assert refund_amounts() == [2000]
+
+      assert seat_refund_arg() == %{
+               "choice" => "full",
+               "count" => 1,
+               "totals" => [%{"currency" => "eur", "amount_cents" => 2000}],
+               "outside_window" => %{
+                 "count" => 1,
+                 "totals" => [%{"currency" => "eur", "amount_cents" => 3000}]
+               }
+             }
+
+      email = organiser_email()
+
+      assert email.text_body =~ "€20.00 is being refunded to 1 participant."
+
+      assert email.text_body =~
+               "€30.00 from 1 participant can't be refunded automatically: the payment is older than the 60-day refund window. Refund it from your Stripe dashboard."
+
+      assert email.html_body =~ "Refund it from your Stripe dashboard."
+    end
+
+    test "with no seat left to refund, the email says only what Stripe must refund", ctx do
+      BookingPaymentSchema
+      |> Repo.get_by!(attendee_email: "ada@example.com")
+      |> Changeset.change(paid_at: DateTime.add(DateTime.utc_now(:second), -70, :day))
+      |> Repo.update!()
+
+      assert {:ok, _cancelled} =
+               Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats)
+
+      assert refund_amounts() == []
+
+      email = organiser_email()
+
+      assert email.text_body =~ "REFUNDS OUTSTANDING:"
+      assert email.text_body =~ "€50.00 from 2 participants can't be refunded automatically"
       refute email.text_body =~ "is being refunded"
     end
   end

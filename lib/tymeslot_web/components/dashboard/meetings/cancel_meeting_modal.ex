@@ -287,13 +287,19 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   # A group session's refund: every paid seat in full, or none behind an
   # acknowledgement. Posts the same fields as `refund_choices/1`, less the
   # amount: a partial refund is a per-payment action.
+  #
+  # Seats paid more than 60 days ago are past the refund window, so neither
+  # choice refunds them: a warning says so, and that Stripe can.
   defp seat_options(assigns) do
     summary = BookingPayments.seat_money_summary(assigns.seat_payments)
+    outside_window = BookingPayments.seat_money(assigns.seat_payments).outside_window
 
     assigns =
       assign(assigns,
         count: summary.count,
-        total: Enum.map_join(summary.totals, " + ", &format_amount(&1.amount_cents, &1.currency))
+        total: join_totals(summary.totals),
+        outside_window_count: outside_window.count,
+        outside_window_total: join_totals(outside_window.totals)
       )
 
     ~H"""
@@ -345,8 +351,20 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         />
       </fieldset>
     </div>
+    <.info_box :if={@outside_window_count > 0} variant={:warning} class="mb-0!">
+      {dngettext(
+        "dashboard_bookings",
+        "Cancelling won't refund %{count} participant (%{amount}): their payment is older than the 60-day refund window. You can refund it from Stripe.",
+        "Cancelling won't refund %{count} participants (%{amount}): their payments are older than the 60-day refund window. You can refund them from Stripe.",
+        @outside_window_count,
+        amount: @outside_window_total
+      )}
+    </.info_box>
     """
   end
+
+  defp join_totals(totals),
+    do: Enum.map_join(totals, " + ", &format_amount(&1.amount_cents, &1.currency))
 
   attr :id_prefix, :string, required: true, doc: "prefixes the acknowledgement error's id"
   attr :refund_form, :map, required: true

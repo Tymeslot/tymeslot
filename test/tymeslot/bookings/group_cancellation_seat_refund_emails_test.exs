@@ -80,7 +80,13 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
   test "a full-refund group cancellation tells the organiser refunds are on their way", ctx do
     {details, email} = organiser_copy(ctx.meeting, seat_refund("full"))
 
-    assert details.seat_money == %{choice: :full, count: 2, amount: "€80.00"}
+    assert details.seat_money == %{
+             choice: :full,
+             count: 2,
+             amount: "€80.00",
+             outside_window: %{count: 0, amount: ""}
+           }
+
     assert email.text_body =~ "€80.00 is being refunded to 2 participants."
     assert email.html_body =~ "Refunds on their way"
     refute email.html_body =~ "Refunds outstanding"
@@ -89,7 +95,13 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
   test "a no-refund group cancellation tells the organiser what they still hold", ctx do
     {details, email} = organiser_copy(ctx.meeting, seat_refund("none"))
 
-    assert details.seat_money == %{choice: :none, count: 2, amount: "€80.00"}
+    assert details.seat_money == %{
+             choice: :none,
+             count: 2,
+             amount: "€80.00",
+             outside_window: %{count: 0, amount: ""}
+           }
+
     assert email.html_body =~ "Refunds outstanding"
 
     assert email.text_body =~
@@ -124,6 +136,33 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
     assert details.seat_money.amount == "€80.00, $50.00"
     assert email.text_body =~ "You still hold €80.00, $50.00 from 2 participants."
     assert email.html_body =~ "€80.00, $50.00"
+  end
+
+  # A job enqueued before seats past the refund window were told apart
+  # carries none (the tests above); one that does names them apart.
+  test "seats past the refund window are named for the organiser to refund from Stripe",
+       ctx do
+    extra = %{
+      "seat_refund" => %{
+        "choice" => "none",
+        "count" => 0,
+        "totals" => [],
+        "outside_window" => %{
+          "count" => 1,
+          "totals" => [%{"currency" => "eur", "amount_cents" => 4000}]
+        }
+      }
+    }
+
+    {details, email} = organiser_copy(ctx.meeting, extra)
+
+    assert details.seat_money.outside_window == %{count: 1, amount: "€40.00"}
+    assert email.text_body =~ "REFUNDS OUTSTANDING:"
+
+    assert email.text_body =~
+             "€40.00 from 1 participant can't be refunded automatically: the payment is older than the 60-day refund window. Refund it from your Stripe dashboard."
+
+    refute email.text_body =~ "You still hold"
   end
 
   # Neither shape tells what the cancellation settled, so the organiser's

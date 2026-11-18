@@ -24,6 +24,16 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
           totals: [%{currency: String.t(), amount_cents: non_neg_integer()}]
         }
 
+  @typedoc """
+  A group meeting's paid seats as its host's cancellation settles them
+  (`seat_money/1`): those it can refund, and those outside the refund window.
+  """
+  @type seat_money :: %{
+          count: non_neg_integer(),
+          totals: [%{currency: String.t(), amount_cents: non_neg_integer()}],
+          outside_window: outstanding_refunds_summary()
+        }
+
   @doc """
   Lists recent booking payments for a host, newest first, leaving out
   checkouts that never captured anything (`BookingPaymentQueries.for_host/2`).
@@ -159,6 +169,30 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
       end)
 
     %{count: length(payments), totals: totals}
+  end
+
+  @doc """
+  Splits seat payments into those Tymeslot can still refund
+  (`Refunds.refundable?/1`) and the rest, paid more than 60 days ago, which
+  only the host's Stripe dashboard can refund. Each keeps its order.
+  """
+  @spec split_by_refund_window([BookingPaymentSchema.t()]) ::
+          {[BookingPaymentSchema.t()], [BookingPaymentSchema.t()]}
+  def split_by_refund_window(payments), do: Enum.split_with(payments, &Refunds.refundable?/1)
+
+  @doc """
+  What a host's cancellation of a group meeting does with the money of
+  `payments`: the seats Tymeslot can still refund, summarised as
+  `seat_money_summary/1` does, and under `:outside_window` the seats paid
+  too long ago for that (`split_by_refund_window/1`), which the host must
+  refund from Stripe.
+
+  Pure, like `seat_money_summary/1`.
+  """
+  @spec seat_money([BookingPaymentSchema.t()]) :: seat_money()
+  def seat_money(payments) do
+    {refundable, outside_window} = split_by_refund_window(payments)
+    Map.put(seat_money_summary(refundable), :outside_window, seat_money_summary(outside_window))
   end
 
   @doc """

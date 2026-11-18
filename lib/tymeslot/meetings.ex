@@ -207,14 +207,17 @@ defmodule Tymeslot.Meetings do
   `{:error, :not_found}`) and issues the resolved refund, or, for a group
   session, schedules one per paid seat (`:refund_seats`). A refund that
   failed after the cancellation is `{:error, {:refund_failed, reason}}`.
-  See `Tymeslot.Meetings.Cancellation`.
+  `seat_payment_ids:` names the paid seats the host chose against; others
+  paid under the lock are `{:error, {:payments_changed, payments}}`, with
+  nothing cancelled. See `Tymeslot.Meetings.Cancellation`.
   """
   @spec cancel_meeting_with_refund(
           Ecto.Schema.t(),
           integer(),
-          Cancellation.refund_action()
+          Cancellation.refund_action(),
+          keyword()
         ) :: {:ok, Ecto.Schema.t()} | {:error, term()}
-  defdelegate cancel_meeting_with_refund(meeting, acting_user_id, refund_action),
+  defdelegate cancel_meeting_with_refund(meeting, acting_user_id, refund_action, opts \\ []),
     to: Cancellation,
     as: :cancel
 

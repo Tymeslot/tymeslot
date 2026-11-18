@@ -61,7 +61,9 @@ defmodule Tymeslot.Meetings.Cancellation do
   The seats are settled in the cancellation's own transaction, once the
   meeting row is cancelled and so locked (`Cancel.execute_settling/3`):
   every seat hold still open is released as `:meeting_cancelled`, and one
-  `Workers.GroupCancelRefund` job is inserted per paid seat. Read under that lock, the seats include one paid while the
+  `Workers.GroupCancelRefund` job is inserted per paid seat still inside the
+  60-day refund window; a seat paid before that is left for the host to
+  refund from Stripe, as the dialog and the organiser's email say. Read under that lock, the seats include one paid while the
   cancellation waited for it. The Stripe calls run in the jobs, never under
   the lock, so a refund that fails leaves the session cancelled, and the job
   tells the host. Once committed, each released hold's checkout is expired
@@ -90,14 +92,20 @@ defmodule Tymeslot.Meetings.Cancellation do
   @typedoc """
   What a host's cancellation of a group session did with its paid seats'
   money, for the organiser's cancellation email: refunded every seat
-  (`:full`) or none (`:none`), how many seats, and what they still held in
-  each currency when the cancellation settled them. Present only when a
-  seat was paid.
+  (`:full`) or none (`:none`), how many seats Tymeslot can refund, and what
+  they still held in each currency when the cancellation settled them.
+  `:outside_window` counts and totals the seats paid more than 60 days
+  before, which no choice refunds: only the host's Stripe dashboard can.
+  Present only when a seat was paid.
   """
   @type seat_refund :: %{
           choice: :full | :none,
-          count: pos_integer(),
-          totals: [%{currency: String.t(), amount_cents: non_neg_integer()}]
+          count: non_neg_integer(),
+          totals: [%{currency: String.t(), amount_cents: non_neg_integer()}],
+          outside_window: %{
+            count: non_neg_integer(),
+            totals: [%{currency: String.t(), amount_cents: non_neg_integer()}]
+          }
         }
 
   @typedoc """
@@ -214,11 +222,19 @@ defmodule Tymeslot.Meetings.Cancellation do
   are made by jobs, so it never returns `{:refund_failed, _}`.
   `:refund_seats` on a one-to-one meeting, which has no seats, is
   `{:error, :not_found}`, with nothing cancelled.
+
+  `seat_payment_ids:` names the paid seats the host's choice was made
+  against (the cancel dialog's). A group session whose paid seats, read
+  under the meeting's lock, are any others (one paid or refunded since)
+  is not cancelled: `{:error, {:payments_changed, payments}}` returns them
+  as they now stand, for the host to choose again. Without it, whatever
+  seats are paid are settled.
   """
-  @spec cancel(struct(), integer() | nil, refund_action()) ::
+  @spec cancel(struct(), integer() | nil, refund_action(), keyword()) ::
           {:ok, struct()}
           | {:error, :not_found}
           | {:error, {:refund_failed, term()}}
+          | {:error, {:payments_changed, [BookingPaymentSchema.t()]}}
           | {:error, term()}
   # A session of an open series request is answered with its series
   # (decline, from the request), never cancelled on its own: the dashboard
@@ -226,23 +242,31 @@ defmodule Tymeslot.Meetings.Cancellation do
   # confirmed session the booker moved back into the approval gate is a
   # request of its own (`SeriesApproval.series_request?/1` is false for it),
   # cancelled like any single booking awaiting approval.
-  def cancel(%{organizer_user_id: owner_id} = meeting, acting_user_id, refund_action)
+  def cancel(meeting, acting_user_id, refund_action, opts \\ [])
+
+  def cancel(%{organizer_user_id: owner_id} = meeting, acting_user_id, refund_action, opts)
       when is_integer(owner_id) and owner_id == acting_user_id do
     if SeriesApproval.series_request?(meeting),
       do: {:error, {:not_cancellable, :held_for_series_approval}},
-      else: cancel_as_organizer(meeting, acting_user_id, refund_action)
+      else: cancel_as_organizer(meeting, acting_user_id, refund_action, opts)
   end
 
-  def cancel(_meeting, _acting_user_id, _refund_action), do: {:error, :not_found}
+  def cancel(_meeting, _acting_user_id, _refund_action, _opts), do: {:error, :not_found}
 
   # A group meeting is always settled seat by seat, whichever action
   # came in: its seats are never one payment. Nothing but `:none` or a
   # refusal (nothing left that can be refunded) declines the refund; an
   # amount refunds every seat in full, as `resolve_seat_refund/2` resolves
   # a partial choice.
-  defp cancel_as_organizer(meeting, organizer_user_id, refund_action) do
+  defp cancel_as_organizer(meeting, organizer_user_id, refund_action, opts) do
     if Meetings.group?(meeting),
-      do: cancel_group(meeting, organizer_user_id, refunds_seats?(refund_action)),
+      do:
+        cancel_group(
+          meeting,
+          organizer_user_id,
+          refunds_seats?(refund_action),
+          Keyword.get(opts, :seat_payment_ids)
+        ),
       else: cancel_one_to_one(meeting, organizer_user_id, refund_action)
   end
 
@@ -291,8 +315,8 @@ defmodule Tymeslot.Meetings.Cancellation do
     end
   end
 
-  defp cancel_group(meeting, organizer_user_id, refund?) do
-    settle = &settle_seats(&1, organizer_user_id, refund?)
+  defp cancel_group(meeting, organizer_user_id, refund?, seen_ids) do
+    settle = &settle_seats(&1, organizer_user_id, refund?, seen_ids)
 
     case Cancel.execute_settling(meeting, settle, caller: :organizer, announce: false) do
       # A request still awaiting approval is withdrawn, not cancelled, and
@@ -322,18 +346,36 @@ defmodule Tymeslot.Meetings.Cancellation do
   # its money is with the card network. That leaves a gap: should the host
   # later win the dispute (`Webhooks.ChargeDisputeClosed`), the money comes
   # back to them for a session they cancelled, and nothing refunds it.
-  defp settle_seats(cancelled, organizer_user_id, refund?) do
+  #
+  # A seat paid more than 60 days ago is past the refund window
+  # (`BookingPayments.split_by_refund_window/1`): no job is queued for it,
+  # which would only be refused, and the email tells the host to refund it
+  # from Stripe.
+  #
+  # The seats read here are the ones settled, so they must be the ones the
+  # host chose against (`seen_ids`): any others roll the cancellation back.
+  defp settle_seats(cancelled, organizer_user_id, refund?, seen_ids) do
     released = SeatHolds.release_open_for_meeting(cancelled.id, :meeting_cancelled)
     payments = BookingPayments.seat_payments_for_meeting(cancelled.id, organizer_user_id)
+    {refundable, _outside_window} = BookingPayments.split_by_refund_window(payments)
 
-    with {:ok, scheduled} <- schedule_refunds(payments, organizer_user_id, refund?) do
+    with :ok <- seen(payments, seen_ids),
+         {:ok, scheduled} <- schedule_refunds(refundable, organizer_user_id, refund?) do
       {:ok,
        %{
          released_holds: released,
          refunds_scheduled: scheduled,
-         seat_money: BookingPayments.seat_money_summary(payments)
+         seat_money: BookingPayments.seat_money(payments)
        }}
     end
+  end
+
+  defp seen(_payments, nil), do: :ok
+
+  defp seen(payments, seen_ids) do
+    if MapSet.new(payments, & &1.id) == MapSet.new(seen_ids),
+      do: :ok,
+      else: {:error, {:payments_changed, payments}}
   end
 
   defp schedule_refunds(_payments, _organizer_user_id, false), do: {:ok, 0}
@@ -352,7 +394,8 @@ defmodule Tymeslot.Meetings.Cancellation do
   # The organiser's email says what happens to the money only when somebody
   # paid, and names the very seats settled above, at what each still held:
   # the same seats and sums whether they are being refunded or not.
-  defp seat_refund_opts(%{seat_money: %{count: 0}}, _refund?), do: []
+  defp seat_refund_opts(%{seat_money: %{count: 0, outside_window: %{count: 0}}}, _refund?),
+    do: []
 
   defp seat_refund_opts(%{seat_money: money}, refund?),
     do: [seat_refund: Map.put(money, :choice, if(refund?, do: :full, else: :none))]

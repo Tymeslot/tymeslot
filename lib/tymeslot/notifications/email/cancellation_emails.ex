@@ -29,6 +29,9 @@ defmodule Tymeslot.Notifications.Email.CancellationEmails do
   # The meeting was restored or moved on since the email was scheduled.
   @meeting_not_cancelled "Meeting not cancelled"
 
+  # The seats past the refund window of a job that names none.
+  @no_seats %{"count" => 0, "totals" => []}
+
   @doc """
   Whether `reason`, from a discard this module returned, is an expected end
   of the email job rather than a fault
@@ -59,21 +62,36 @@ defmodule Tymeslot.Notifications.Email.CancellationEmails do
   # (`Tymeslot.Meetings.Cancellation.seat_refund/0`, fixed when the seats were
   # settled). Absent when nobody paid, so the organiser's copy says nothing
   # of money; so does any other shape, which no released version enqueued.
-  defp seat_refund(%{
-         "seat_refund" => %{"choice" => choice, "count" => count, "totals" => totals}
-       })
-       when choice in ["full", "none"] and is_integer(count) and count > 0 and is_list(totals) do
-    %{
-      choice: String.to_existing_atom(choice),
-      count: count,
-      totals:
-        Enum.map(totals, fn %{"currency" => currency, "amount_cents" => cents} ->
-          %{currency: currency, amount_cents: cents}
-        end)
-    }
+  # A job enqueued before seats past the refund window were told apart has
+  # no `"outside_window"`, and counts none.
+  defp seat_refund(%{"seat_refund" => %{"choice" => choice} = arg})
+       when choice in ["full", "none"] do
+    with {:ok, seats} <- seat_count(arg),
+         {:ok, outside_window} <- seat_count(Map.get(arg, "outside_window", @no_seats)),
+         true <- seats.count + outside_window.count > 0 do
+      seats
+      |> Map.put(:choice, String.to_existing_atom(choice))
+      |> Map.put(:outside_window, outside_window)
+    else
+      _malformed_or_empty -> nil
+    end
   end
 
   defp seat_refund(_args), do: nil
+
+  defp seat_count(%{"count" => count, "totals" => totals})
+       when is_integer(count) and count >= 0 and is_list(totals) do
+    {:ok,
+     %{
+       count: count,
+       totals:
+         Enum.map(totals, fn %{"currency" => currency, "amount_cents" => cents} ->
+           %{currency: currency, amount_cents: cents}
+         end)
+     }}
+  end
+
+  defp seat_count(_arg), do: :error
 
   defp send_cancellation_emails_for_meeting(meeting, seat_refund, job_id) do
     appointment_details = AppointmentBuilder.from_meeting(meeting)

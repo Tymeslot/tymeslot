@@ -123,17 +123,19 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
 
     with {:ok, paid} <- recheck(meeting, user_id, paid(socket.assigns)),
          {:ok, _refund_action} <- resolve_refund(meeting, paid, params) do
-      {outcome, type, message} = cancel_checked(user_id, meeting, paid, params)
+      case cancel_checked(user_id, meeting, paid, params) do
+        {{:changed, fresh}, _type, _message} ->
+          payments_changed(socket, fresh)
 
-      socket
-      |> assign(:cancel_refund_error, %{})
-      |> Flash.put_flash(type, message)
-      |> settle(outcome, reload)
+        {outcome, type, message} ->
+          socket
+          |> assign(:cancel_refund_error, %{})
+          |> Flash.put_flash(type, message)
+          |> settle(outcome, reload)
+      end
     else
       {:changed, fresh} ->
-        socket
-        |> assign(fresh)
-        |> assign(:cancel_refund_error, %{payments: payments_changed_message()})
+        payments_changed(socket, fresh)
 
       # Shown beside the field it is about, rather than as a flash.
       {:error, reason} ->
@@ -141,6 +143,12 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
           refund_error_field(reason) => refund_error_message(reason, meeting)
         })
     end
+  end
+
+  defp payments_changed(socket, fresh) do
+    socket
+    |> assign(fresh)
+    |> assign(:cancel_refund_error, %{payments: payments_changed_message()})
   end
 
   @doc """
@@ -156,8 +164,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     * `:refused`: the meeting started or ended meanwhile; nothing changed and
       the dialog closes.
     * `{:changed, fresh}`: what was paid changed since the dialog opened
-      (`recheck/3`), so nothing was cancelled; the dialog stays open on
-      `fresh` for the host to choose again.
+      (`recheck/3`, or the cancellation's own read of the paid seats under
+      the meeting's lock), so nothing was cancelled; the dialog stays open
+      on `fresh` for the host to choose again.
     * `:invalid` (a refund choice that does not add up) and `:failed`: the
       dialog stays open for another try.
   """
@@ -195,7 +204,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   defp cancel_checked(user_id, meeting, paid, params) do
     case resolve_refund(meeting, paid, params) do
       {:ok, refund_action} ->
-        result = Meetings.cancel_meeting_with_refund(meeting, user_id, refund_action)
+        result =
+          Meetings.cancel_meeting_with_refund(meeting, user_id, refund_action,
+            seat_payment_ids: Enum.map(paid.cancel_seat_payments, & &1.id)
+          )
+
         emit_confirm(user_id, meeting.id, result)
         outcome(meeting, refund_action, result)
 
@@ -218,6 +231,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
 
   defp outcome(_meeting, refund_action, {:ok, _cancelled}),
     do: {:closed, :info, success_message(refund_action)}
+
+  # A seat was paid or refunded between the recheck and the cancellation's
+  # locked read of the seats: nothing was cancelled.
+  defp outcome(_meeting, _refund_action, {:error, {:payments_changed, seats}}),
+    do:
+      {{:changed, %{no_payments() | cancel_seat_payments: seats}}, :error,
+       payments_changed_message()}
 
   # The meeting is cancelled; only the money is outstanding.
   defp outcome(_meeting, _refund_action, {:error, {:refund_failed, _reason}}),
