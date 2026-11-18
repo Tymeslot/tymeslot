@@ -303,6 +303,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         mini_cursor={@mini_cursor}
         week_start={Period.week_start(@preferences.week_start_day)}
         preferences={@preferences}
+        desktop_permission={@desktop_permission}
         time_format={@time_format}
         rail_open={@rail_open}
         calendar_focus={@calendar_focus}
@@ -383,6 +384,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         reauth_ids={@reauth_ids}
         bookable={LayerChoices.rail(@preferences, @bookable_types)}
         preferences={@preferences}
+        desktop_permission={@desktop_permission}
         time_format={@time_format}
         timezone={@timezone}
         target={@myself}

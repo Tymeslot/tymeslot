@@ -6,6 +6,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
 
   require Logger
 
+  alias Tymeslot.Auth
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.UndeliveredUpdates
@@ -324,7 +325,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
   @spec handle_calendar_invitation(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_calendar_invitation(%{"user_id" => user_id} = args) do
-    with {:ok, user} <- UserQueries.get_user(user_id),
+    with {:ok, user} <- Auth.get_user_with_profile(user_id),
          {:ok, details} <- CalendarEventDetails.invitation_details(user, args),
          {:ok, _email_result} <-
            Config.email_service_module().send_calendar_invitation(args["attendee_email"], details) do
@@ -362,7 +363,7 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmails do
         %{"event_uid" => event_uid, "integration_id" => integration_id} = args,
         job_id
       ) do
-    with {:ok, user} <- UserQueries.get_user(args["user_id"]),
+    with {:ok, user} <- Auth.get_user_with_profile(args["user_id"]),
          {:ok, current_event} <- updated_event(args, integration_id, event_uid),
          changes = CalendarEventDetails.changes(current_event, args),
          false <- nothing_to_announce?(changes, args),

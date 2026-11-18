@@ -9,9 +9,10 @@
  * A command is `{id, label, keys, keywords?, run, wideOnly?, notPhone?}`: `label` is a key in
  * `strings`, or, for a toggle that names the choice it switches to, a
  * function of the settings returning one; `run` likewise. `run.type` is
- * what the hook does: view, create, bookable, push (to the surface) or key
+ * what the hook does: view, create, bookable, push (to the surface), key
  * (the power key table: T, J, K, F, ? and the digits, so a command does what
- * its key does).
+ * its key does) or permission (ask the browser for notifications, then push
+ * its answer).
  */
 import { parseQuick } from "./parse.js";
 import { dateLabel, interpolate } from "./render.js";
@@ -57,7 +58,12 @@ export const COMMANDS = [
   toggle("weekends", (s) => Boolean(s.show_weekends), ["command_hide_weekends", "command_show_weekends"], "calendar:toggle_weekends"),
   toggle("week-numbers", (s) => Boolean(s.show_week_numbers), ["command_hide_week_numbers", "command_show_week_numbers"], "calendar:toggle_week_numbers"),
   toggle("fold", (s) => Boolean(s.fold_night), ["command_unfold", "command_fold"], "calendar:toggle_fold_night"),
-  toggle("reminders", (s) => Boolean(s.desktop_reminders), ["command_reminders_off", "command_reminders_on"], "calendar:toggle_desktop_reminders", undefined, ["reminders", "notifications"]),
+  // Off is the plain toggle; on asks the browser first (inside the key or
+  // click that runs the row), and the surface saves it only once allowed.
+  {
+    ...toggle("reminders", (s) => Boolean(s.desktop_reminders), ["command_reminders_off", "command_reminders_on"], "calendar:toggle_desktop_reminders", undefined, ["reminders", "notifications"]),
+    run: (s) => (s.desktop_reminders ? push("calendar:toggle_desktop_reminders") : { type: "permission", event: "calendar:enable_desktop_reminders" }),
+  },
   { id: "import", label: "command_import", keys: null, run: push("calendar:ics_open") },
 ];
 

@@ -451,6 +451,44 @@ describe("the hook's own rows", () => {
     expect(pushes(hook, "calendar:toggle_menu")).toEqual([{ menu: "shortcuts" }]);
   });
 
+  describe("desktop notifications", () => {
+    afterEach(() => {
+      delete global.Notification;
+    });
+
+    test("turning them on asks the browser inside the key press and pushes its answer", async () => {
+      global.Notification = { permission: "default", requestPermission: vi.fn(() => Promise.resolve("denied")) };
+      const { hook, input } = mount();
+      typeIn(input, "notifications");
+      press(input, "Enter");
+
+      // Asked synchronously, before anything is awaited; the bar is closed.
+      expect(global.Notification.requestPermission).toHaveBeenCalledTimes(1);
+      expect(isOpen()).toBe(false);
+      // Never the plain toggle, which would not wait for the browser.
+      expect(pushes(hook, "calendar:toggle_desktop_reminders")).toEqual([]);
+      await vi.waitFor(() => expect(pushes(hook, "calendar:enable_desktop_reminders")).toEqual([{ permission: "denied", source: "command" }]));
+    });
+
+    test("a browser without notifications is pushed as unsupported", async () => {
+      const { hook, input } = mount();
+      typeIn(input, "notifications");
+      press(input, "Enter");
+      await vi.waitFor(() => expect(pushes(hook, "calendar:enable_desktop_reminders")).toEqual([{ permission: "unsupported", source: "command" }]));
+    });
+
+    test("turning them off is the plain toggle and asks nothing", () => {
+      global.Notification = { permission: "granted", requestPermission: vi.fn() };
+      const { hook, input } = mount();
+      hook.settings = { ...hook.settings, desktop_reminders: true };
+      typeIn(input, "notifications");
+      press(input, "Enter");
+      expect(global.Notification.requestPermission).not.toHaveBeenCalled();
+      expect(pushes(hook, "calendar:toggle_desktop_reminders")).toEqual([{}]);
+      expect(pushes(hook, "calendar:enable_desktop_reminders")).toEqual([]);
+    });
+  });
+
   test("Leave the calendar set, while one is active", () => {
     const { hook, input } = mount();
     hook.settings = { ...hook.settings, active_set: 1 };

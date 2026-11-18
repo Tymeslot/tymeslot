@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   require Logger
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.VTimezone
   alias Tymeslot.Timezones
@@ -291,25 +292,32 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   # alone. With an attendee's `"email"` and `"name"` but no reply, which a
   # `CONTACT` cannot carry, so the normaliser can take them for an event's
   # guests where they are (see `ICalNormaliser`); a value naming no address
-  # is left out.
+  # is left out. The property name is matched in any case, and the value is
+  # taken after the first colon outside quotes, so a quoted `ALTREP` URI in
+  # the parameters does not end up in the name.
   defp extract_contacts(lines) do
     lines
-    |> Enum.filter(&(String.starts_with?(&1, "CONTACT:") or String.starts_with?(&1, "CONTACT;")))
+    |> Enum.filter(&(ContentLines.property_name(&1) == "CONTACT"))
     |> Enum.map(fn line ->
-      line |> String.split(":", parts: 2) |> List.last() |> decode_value()
+      {_name_and_params, value} = ContentLines.split_value(line)
+      decode_value(value)
     end)
     |> Enum.map(&parse_contact/1)
     |> Enum.reject(&is_nil/1)
   end
 
+  # The address may come as a `mailto:` URI, as an `ATTENDEE` carries it, in
+  # any case (RFC 3986 §3.1), and is matched without it.
   defp parse_contact(value) do
-    case Regex.run(~r/^(.*?)\s*<([^<>\s]+@[^<>\s]+)>$/, value) do
+    case Regex.run(~r/^(.*?)\s*<(?:mailto:)?([^<>\s]+@[^<>\s]+)>$/i, value) do
       [_match, name, email] ->
         %{"email" => email, "name" => blank_to_nil(name)}
 
       nil ->
-        if Regex.match?(~r/^[^<>\s]+@[^<>\s]+$/, value),
-          do: %{"email" => value, "name" => nil}
+        case Regex.run(~r/^(?:mailto:)?([^<>\s]+@[^<>\s]+)$/i, value) do
+          [_match, email] -> %{"email" => email, "name" => nil}
+          nil -> nil
+        end
     end
   end
 
