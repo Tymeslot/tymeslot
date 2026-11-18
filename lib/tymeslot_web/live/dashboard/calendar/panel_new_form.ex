@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Venues
   alias TymeslotWeb.Components.Calendar.RecurrenceEditor
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
   alias TymeslotWeb.Dashboard.Calendar.PanelGroupEvent
@@ -198,7 +199,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         name="location_venue"
         label={dgettext("dashboard_calendar_editing", "Saved location")}
         prompt={dgettext("dashboard_calendar_editing", "None, or type a place")}
-        options={Enum.map(@venues, &{&1.name, to_string(&1.id)})}
+        options={Enum.map(@venues, &{Venues.display(&1), to_string(&1.id)})}
         value={@values["location_venue"]}
       />
       <.input

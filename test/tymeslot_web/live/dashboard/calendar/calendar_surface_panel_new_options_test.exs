@@ -113,7 +113,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
       venue = insert(:venue, user: user, name: "Head office", description: "12 High Street")
       more_options(lv, integration)
 
-      assert has_element?(lv, ~s(#calendar-panel-new-venue option[value="#{venue.id}"]))
+      # Labelled as it is written, so venues of one name can be told apart.
+      assert has_element?(
+               lv,
+               ~s(#calendar-panel-new-venue option[value="#{venue.id}"]),
+               "Head office (12 High Street)"
+             )
 
       render_change(new_form(lv), %{"location_venue" => "#{venue.id}"})
       refute has_element?(lv, "#calendar-panel-new-location")
