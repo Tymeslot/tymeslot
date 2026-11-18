@@ -1,0 +1,146 @@
+defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
+  @moduledoc """
+  What the side panel's New event state sets on a plain calendar event
+  before it is created, as the old Quick Add did: one of the organiser's
+  saved locations as its place, refused when it was deleted while the
+  panel was open.
+  """
+
+  use TymeslotWeb.LiveCase, async: true
+
+  @moduletag :calendar
+  @moduletag :live
+
+  import Mox
+  import Tymeslot.Factory
+  import TymeslotWeb.CalendarSurfaceHelpers
+
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Repo
+  alias Tymeslot.Venues
+
+  @task_timeout 5_000
+
+  setup %{conn: conn} do
+    context = owner(conn)
+    test_pid = self()
+
+    stub(Tymeslot.CalendarMock, :create_event, fn payload, _context ->
+      send(test_pid, {:provider_call, self(), payload})
+      {:ok, CreatedEvent.new(payload.uid)}
+    end)
+
+    {:ok, lv, _html} = live(context.conn, ~p"/dashboard/calendar")
+    Map.put(context, :lv, lv)
+  end
+
+  defp more_options(lv, integration, extra \\ %{}) do
+    lv
+    |> element("#calendar-canvas")
+    |> render_hook(
+      "calendar:more_options",
+      Map.merge(
+        %{
+          "draft" => "d1",
+          "title" => "Planning",
+          "start" => "2026-10-15T13:00",
+          "end" => "2026-10-15T14:00",
+          "all_day" => false,
+          "calendar" => "#{integration.id}:work",
+          "location" => "",
+          "guests" => [],
+          "free" => false
+        },
+        extra
+      )
+    )
+
+    assert_reply(lv, %{opened: true})
+  end
+
+  defp new_form(lv), do: form(lv, "#calendar-panel-new-form")
+
+  defp created(lv) do
+    assert_receive {:provider_call, task_pid, payload}, @task_timeout
+    ref = Process.monitor(task_pid)
+    assert_receive {:DOWN, ^ref, :process, ^task_pid, _reason}, @task_timeout
+    render(lv)
+    render(lv)
+    payload
+  end
+
+  describe "a saved location" do
+    test "is offered beside Place, and written as the event's place", %{
+      lv: lv,
+      user: user,
+      integration: integration
+    } do
+      venue = insert(:venue, user: user, name: "Head office", description: "12 High Street")
+      more_options(lv, integration)
+
+      assert has_element?(lv, ~s(#calendar-panel-new-venue option[value="#{venue.id}"]))
+
+      render_change(new_form(lv), %{"location_venue" => "#{venue.id}"})
+      refute has_element?(lv, "#calendar-panel-new-location")
+
+      render_submit(new_form(lv), %{"intent" => "create"})
+
+      assert created(lv).location == Venues.display(venue)
+      assert Venues.display(venue) == "Head office (12 High Street)"
+    end
+
+    test "deleted while the panel was open is refused, and nothing is written", %{
+      lv: lv,
+      user: user,
+      integration: integration
+    } do
+      venue = insert(:venue, user: user, name: "Head office")
+      more_options(lv, integration)
+      render_change(new_form(lv), %{"location_venue" => "#{venue.id}"})
+
+      Repo.delete!(venue)
+      render_submit(new_form(lv), %{"intent" => "create"})
+
+      refute_receive {:provider_call, _pid, _payload}, 100
+
+      assert has_element?(
+               lv,
+               "#calendar-panel [role=status]",
+               "That location can no longer be used. Please choose another one."
+             )
+    end
+
+    test "someone else's is refused", %{lv: lv, user: user, integration: integration} do
+      insert(:venue, user: user, name: "Head office")
+      theirs = insert(:venue, name: "Someone else's office")
+      more_options(lv, integration)
+
+      render_submit(new_form(lv), %{"intent" => "create", "location_venue" => "#{theirs.id}"})
+
+      refute_receive {:provider_call, _pid, _payload}, 100
+    end
+
+    test "is not offered to an organiser with none", %{lv: lv, integration: integration} do
+      more_options(lv, integration)
+
+      refute has_element?(lv, "#calendar-panel-new-venue")
+      assert has_element?(lv, "#calendar-panel-new-location")
+    end
+
+    test "carries into the meeting when it is sent as a Tymeslot meeting", %{
+      lv: lv,
+      user: user,
+      integration: integration
+    } do
+      venue = insert(:venue, user: user, name: "Head office")
+      more_options(lv, integration, %{"guests" => ["ada@example.com"]})
+      render_change(new_form(lv), %{"location_venue" => "#{venue.id}"})
+      render_change(new_form(lv), %{"meeting" => "true"})
+
+      assert has_element?(
+               lv,
+               ~s(#calendar-panel-meeting-location option[value="venue:#{venue.id}"][selected])
+             )
+    end
+  end
+end

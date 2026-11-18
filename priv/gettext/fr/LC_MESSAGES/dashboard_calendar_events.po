@@ -446,7 +446,9 @@ msgstr "Lieux enregistrés"
 msgid "Shown on the calendar entry and in every invitation."
 msgstr "Affiché dans l’entrée d’agenda et dans chaque invitation."
 
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "That location can no longer be used. Please choose another one."
 msgstr "Ce lieu ne peut plus être utilisé. Veuillez en choisir un autre."

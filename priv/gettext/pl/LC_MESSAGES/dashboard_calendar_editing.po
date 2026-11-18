@@ -768,3 +768,13 @@ msgstr "Brak (tylko Tymeslot)"
 #, elixir-autogen, elixir-format
 msgid "No more guests can be added to this meeting."
 msgstr "Do tego spotkania nie można dodać więcej gości."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "None, or type a place"
+msgstr "Brak lub wpisz miejsce"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Saved location"
+msgstr "Zapisana lokalizacja"

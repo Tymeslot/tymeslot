@@ -766,3 +766,13 @@ msgstr "Nessuno (solo Tymeslot)"
 #, elixir-autogen, elixir-format
 msgid "No more guests can be added to this meeting."
 msgstr "Non è possibile aggiungere altri ospiti a questa riunione."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "None, or type a place"
+msgstr "Nessuno, oppure scrivi un luogo"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Saved location"
+msgstr "Luogo salvato"

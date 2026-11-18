@@ -151,8 +151,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
             else: dgettext("dashboard_calendar_editing", "Guests can't book this time")}
         </p>
       </div>
+      <.select
+        :if={!@meeting and !@group and @venues != []}
+        id="calendar-panel-new-venue"
+        name="location_venue"
+        label={dgettext("dashboard_calendar_editing", "Saved location")}
+        prompt={dgettext("dashboard_calendar_editing", "None, or type a place")}
+        options={Enum.map(@venues, &{&1.name, to_string(&1.id)})}
+        value={@values["location_venue"]}
+      />
       <.input
-        :if={!@meeting and !@group}
+        :if={!@meeting and !@group and @values["location_venue"] in [nil, ""]}
         id="calendar-panel-new-location"
         name="location"
         value={@values["location"]}

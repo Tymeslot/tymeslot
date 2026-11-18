@@ -12,6 +12,10 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   as plain text (null bytes go). An empty title is refused: the web layer
   gives an untitled draft its default name before casting.
 
+  A place is the text typed in, or one of the organiser's saved locations
+  (`"location_venue"`), written as its one-line text and refused
+  (`:venue_gone`) when it was deleted meanwhile.
+
   A Tymeslot meeting may be booked with no calendar at all when the
   organiser has none they can write to (`calendar: :optional`): the meeting
   then lives in Tymeslot alone, and its `integration_id` and `calendar_id`
@@ -28,6 +32,7 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Security.UniversalSanitizer
+  alias Tymeslot.Venues
 
   @max_text %{title: 500, location: 1_000, description: 5_000}
   @max_guests 50
@@ -149,7 +154,7 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
 
   # The optional fields, as the struct's keys.
   defp details(user_id, integration, params) do
-    with {:ok, location} <- clean_text(:location, params["location"]),
+    with {:ok, location} <- place(user_id, params),
          {:ok, description} <- clean_text(:description, params["description"]),
          {:ok, guests} <- guests(user_id, params["guests"]),
          {:ok, free} <- flag(params["free"], :free),
@@ -168,6 +173,21 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
        }}
     end
   end
+
+  # --- place ---
+
+  # One of the organiser's saved locations (`"location_venue"`, its id) is
+  # written as its one-line text (`Venues.display/1`), read afresh so one
+  # deleted while the draft was open is refused rather than written under its
+  # old name; otherwise the place is the text typed in.
+  defp place(user_id, %{"location_venue" => id}) when is_binary(id) and id != "" do
+    case Venues.get_venue(user_id, id) do
+      {:ok, venue} -> clean_text(:location, Venues.display(venue))
+      {:error, :not_found} -> {:error, :location, :venue_gone}
+    end
+  end
+
+  defp place(_user_id, params), do: clean_text(:location, params["location"])
 
   # --- text ---
 

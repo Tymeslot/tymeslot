@@ -432,6 +432,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
   def refusal_message(:calendar, _not_found),
     do: dgettext("dashboard_calendar_editing", "Choose one of your calendars.")
 
+  def refusal_message(:location, :venue_gone),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "That location can no longer be used. Please choose another one."
+      )
+
   def refusal_message(:location, :too_long),
     do:
       dgettext(

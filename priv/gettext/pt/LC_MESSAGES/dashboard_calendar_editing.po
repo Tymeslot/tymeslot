@@ -766,3 +766,13 @@ msgstr "Nenhum (só no Tymeslot)"
 #, elixir-autogen, elixir-format
 msgid "No more guests can be added to this meeting."
 msgstr "Não é possível adicionar mais convidados a esta reunião."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "None, or type a place"
+msgstr "Nenhum, ou digite um local"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Saved location"
+msgstr "Local salvo"

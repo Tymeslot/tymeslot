@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   @type socket :: Phoenix.LiveView.Socket.t()
   @type status :: :idle | :saving | {:failed, String.t()}
 
-  @text_fields ~w(title start end calendar location description video_integration_id)
+  @text_fields ~w(title start end calendar location location_venue description video_integration_id)
 
   @doc """
   Opens the panel on the draft `params` describe (`calendar:more_options`).

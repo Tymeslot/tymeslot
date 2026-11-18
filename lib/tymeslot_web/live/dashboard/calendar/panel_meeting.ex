@@ -82,11 +82,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
   @doc """
   A Place typed while the draft was a plain event (in the panel, or in
   quick create) carries into the meeting's location as a custom one when
-  the box is ticked, rather than being dropped: a meeting takes its place
+  the box is ticked, and a saved location chosen for it as that saved
+  location, rather than being dropped: a meeting takes its place
   from its own fields. Only on the change that ticks it, and only while no
   meeting location has been chosen, so a choice is never overwritten.
   """
   @spec carry_place(map(), map()) :: map()
+  def carry_place(
+        %{"meeting" => true, "location_choice" => "", "location_venue" => venue} = form,
+        %{"meeting" => false}
+      )
+      when is_binary(venue) and venue != "",
+      do: %{form | "location_choice" => "venue:" <> venue}
+
   def carry_place(
         %{"meeting" => true, "location_choice" => "", "location" => place} = form,
         %{"meeting" => false}

@@ -768,3 +768,13 @@ msgstr "Немає (лише Tymeslot)"
 #, elixir-autogen, elixir-format
 msgid "No more guests can be added to this meeting."
 msgstr "До цієї зустрічі більше не можна додати гостей."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "None, or type a place"
+msgstr "Немає, або введіть місце"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Saved location"
+msgstr "Збережене місце"
