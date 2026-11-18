@@ -809,3 +809,8 @@ msgstr "Událost „%{title}“ se už maže."
 #, elixir-autogen, elixir-format
 msgid "“%{title}” is back"
 msgstr "Událost „%{title}“ je zpět"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "Show %{account} first to choose its calendars."
+msgstr "Pokud chcete vybrat kalendáře účtu %{account}, nejdřív tento účet zobrazte."

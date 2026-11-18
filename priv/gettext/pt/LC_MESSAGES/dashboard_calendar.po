@@ -806,3 +806,8 @@ msgstr "O evento “%{title}” já está sendo excluído."
 #, elixir-autogen, elixir-format
 msgid "“%{title}” is back"
 msgstr "Evento “%{title}” restaurado"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "Show %{account} first to choose its calendars."
+msgstr "Mostre %{account} para escolher os calendários desta conta."

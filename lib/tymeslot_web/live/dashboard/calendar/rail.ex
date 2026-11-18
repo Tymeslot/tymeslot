@@ -203,6 +203,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
             <.check
               checked={not calendar.hidden}
               disabled={account.hidden and not @set_active}
+              disabled_reason={
+                dgettext("dashboard_calendar", "Show %{account} first to choose its calendars.",
+                  account: account.name
+                )
+              }
+              reason_id={row_id(@id_prefix, account, calendar, "hidden-account")}
               colour={calendar.colour}
               label={calendar.name}
               described_by={described_by(@id_prefix, account, calendar)}
@@ -232,7 +238,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   end
 
   attr :checked, :boolean, required: true
-  attr :disabled, :boolean, default: false
+
+  attr :disabled, :boolean,
+    default: false,
+    doc: "drawn `aria-disabled`, so it stays in the tab order to say why (`disabled_reason`)"
+
+  attr :disabled_reason, :string, default: nil, doc: "why it cannot be ticked, in a tooltip"
+  attr :reason_id, :string, default: nil, doc: "the reason's id, for `aria-describedby`"
   attr :colour, :string, required: true, doc: "a colour token from ColourTokens"
   attr :label, :string, required: true
   attr :described_by, :string, default: nil, doc: "ids of the markers that qualify the label"
@@ -241,30 +253,45 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   attr :data, :list, required: true
   attr :target, :any, required: true
 
+  # A checkbox that cannot be ticked stays focusable and says why: it is
+  # `aria-disabled` with no click, its reason in a tooltip it is described
+  # by. The server refuses the toggle as well (`Visibility.toggle_calendar/3`).
   defp check(assigns) do
     ~H"""
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={to_string(@checked)}
-      aria-label={@label}
-      aria-describedby={@described_by}
-      aria-disabled={@disabled && "true"}
-      disabled={@disabled}
-      phx-click={!@disabled && @event}
-      phx-target={@target}
-      class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-token-sm disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
-      {value_attrs(@values)}
-      {@data}
+    <.tooltip
+      :let={tip}
+      id={@disabled && @reason_id}
+      text={@disabled && @disabled_reason}
     >
-      <span
-        class={["cal-check", @checked && "is-checked"]}
-        style={"--cal-ev: var(--color-#{@colour})"}
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={to_string(@checked)}
+        aria-label={@label}
+        aria-describedby={describe([@described_by, tip])}
+        aria-disabled={@disabled && "true"}
+        phx-click={!@disabled && @event}
+        phx-target={@target}
+        class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-token-sm aria-disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400"
+        {value_attrs(@values)}
+        {@data}
       >
-        <.icon :if={@checked} name="hero-check-micro" class="h-3 w-3" />
-      </span>
-    </button>
+        <span
+          class={["cal-check", @checked && "is-checked"]}
+          style={"--cal-ev: var(--color-#{@colour})"}
+        >
+          <.icon :if={@checked} name="hero-check-micro" class="h-3 w-3" />
+        </span>
+      </button>
+    </.tooltip>
     """
+  end
+
+  defp describe(ids) do
+    case Enum.filter(ids, &is_binary/1) do
+      [] -> nil
+      present -> Enum.join(present, " ")
+    end
   end
 
   attr :label, :string, required: true

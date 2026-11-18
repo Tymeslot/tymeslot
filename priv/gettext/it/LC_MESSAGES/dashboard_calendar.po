@@ -807,3 +807,8 @@ msgstr "«%{title}» è già in fase di eliminazione."
 #, elixir-autogen, elixir-format
 msgid "“%{title}” is back"
 msgstr "Evento «%{title}» ripristinato"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "Show %{account} first to choose its calendars."
+msgstr "Mostra prima %{account} per sceglierne i calendari."

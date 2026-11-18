@@ -815,3 +815,8 @@ msgstr "Подія «%{title}» уже видаляється."
 #, elixir-autogen, elixir-format
 msgid "“%{title}” is back"
 msgstr "Подію «%{title}» відновлено"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "Show %{account} first to choose its calendars."
+msgstr "Спочатку покажіть обліковий запис %{account}, щоб вибрати його календарі."
