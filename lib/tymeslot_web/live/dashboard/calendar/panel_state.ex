@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       draft_id: nil,
       form: %{},
       scope: nil,
-      opened_with: event,
+      opened_with: Map.get(assigns.untold_moves, EventPayload.id(event), event),
       status: opening_status(assigns.integrations, event),
       writes: [],
       errors: %{},

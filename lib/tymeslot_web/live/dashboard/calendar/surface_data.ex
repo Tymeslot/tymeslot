@@ -79,6 +79,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       undo: UndoStack.new(),
       tab_id: nil,
       undoing: %{},
+      untold_moves: %{},
       toast: nil,
       series_prompt: nil,
       delete_prompt: nil,

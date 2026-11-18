@@ -18,8 +18,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
 
   Panel edits tell nobody on their own. `untold?/2` says whether the event
   has guests and differs, in anything they would see, from the event as the
-  panel opened on it (`panel.opened_with`); `tell/1` sends one update for
-  all of it and makes the event as it is now the new starting point. Only
+  panel opened on it (`panel.opened_with`), or as it was before a drag or
+  resize nobody was told about (`untold_moves`, see `Manipulation`); `tell/1`
+  sends one update for all of it and makes the event as it is now the new
+  starting point. Only
   the organiser of an event on a calendar they can write may tell its
   guests; the domain refuses anyone else (`Changes.tell_guests/5`).
   """
@@ -155,6 +157,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
          {:ok, _sent_or_noop} <- send_update(socket, panel, event) do
       socket
       |> assign(:panel, %{panel | opened_with: event})
+      |> assign(:untold_moves, Map.delete(socket.assigns.untold_moves, panel.event_id))
       |> Toast.show(dgettext("dashboard_calendar_editing", "Guests will get an update."))
     else
       true ->
