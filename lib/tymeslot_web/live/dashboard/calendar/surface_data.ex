@@ -67,6 +67,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       window_events: [],
       locked_uids: MapSet.new(),
       colour_overrides: %{},
+      calendar_colour_keys: %{},
+      calendar_colour_open: nil,
       events: [],
       events_by_id: %{},
       window: nil,
@@ -152,6 +154,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       integration_tokens: ColourTokens.for_integrations(integrations),
       calendar_tokens: ColourTokens.for_calendars(integrations, appearances),
       colour_overrides: Calendar.overrides_for(user_id),
+      calendar_colour_keys: Appearance.colour_keys(appearances),
       manual_hidden_keys: Appearance.hidden_keys(appearances),
       working_hours: WorkingHours.for_profile(socket.assigns[:profile]),
       bookable_types: LayerPreferences.meeting_types(user_id),
@@ -444,6 +447,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       |> assign(:colour_overrides, Calendar.overrides_for(socket.assigns.current_user.id))
       |> filter_events()
       |> push_events(true)
+
+  @doc """
+  After a calendar's colour was chosen: reads the calendars' colours again
+  (no events query), rebuilds the rail and an open preview, and pushes the
+  window with a cache reset, so its events repaint at once.
+  """
+  @spec reload_colours(socket()) :: socket()
+  def reload_colours(socket) do
+    %{current_user: user, integrations: integrations} = socket.assigns
+    appearances = Appearance.list_for_user(user.id)
+
+    socket
+    |> assign(
+      calendar_tokens: ColourTokens.for_calendars(integrations, appearances),
+      calendar_colour_keys: Appearance.colour_keys(appearances)
+    )
+    |> assign_accounts()
+    |> filter_events()
+    |> push_events(true)
+  end
 
   @doc "Applies hidden calendars and pending deletes to the loaded window again, without pushing."
   @spec refilter(socket()) :: socket()

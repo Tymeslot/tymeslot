@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
   attr :problem_ids, :any, default: MapSet.new()
   attr :reauth_ids, :any, default: MapSet.new()
   attr :bookable, :map, required: true, doc: "see `LayerChoices.rail/2`"
+  attr :colours, :map, default: %{keys: %{}, open: nil}, doc: "see `Rail.calendar_list/1`"
   attr :preferences, :map, required: true, doc: "the organiser's `CalendarPreferencesSchema`"
   attr :time_format, :string, required: true, doc: ~s("24h" or "12h")
   attr :timezone, :string, required: true, doc: "the zone the surface reads times in"
@@ -86,6 +87,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
           problem_ids={@problem_ids}
           reauth_ids={@reauth_ids}
           set_active={not is_nil(@set_view.name)}
+          colours={@colours}
           spell_out
           target={@target}
         />

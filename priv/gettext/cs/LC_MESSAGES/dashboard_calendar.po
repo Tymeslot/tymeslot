@@ -820,7 +820,13 @@ msgstr "Pokud chcete vybrat kalendáře účtu %{account}, nejdřív tento úče
 msgid "%{count}/%{capacity} seats taken"
 msgstr "%{count}/%{capacity} míst obsazeno"
 
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_colours.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save that colour. Please try again."
 msgstr "Barvu se nepodařilo uložit. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_colour_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Colour of %{calendar}"
+msgstr "Barva kalendáře %{calendar}"

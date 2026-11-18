@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Dashboard.Calendar.CalendarColourPicker
   alias TymeslotWeb.Dashboard.Calendar.MiniMonth
   alias TymeslotWeb.Dashboard.Calendar.RailLayers
   alias TymeslotWeb.Dashboard.Calendar.RailSets
@@ -39,6 +40,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   attr :week_start, :atom, required: true
   attr :locale, :string, required: true
   attr :bookable, :map, required: true, doc: "see `LayerChoices.rail/2`"
+  attr :colours, :map, default: %{keys: %{}, open: nil}, doc: "see `calendar_list/1`"
   attr :set_view, :map, required: true, doc: "see `RailSets.view/1`"
   attr :target, :any, required: true
   attr :week_numbers, :boolean, default: false
@@ -76,6 +78,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
         problem_ids={@problem_ids}
         reauth_ids={@reauth_ids}
         set_active={not is_nil(@set_view.name)}
+        colours={@colours}
         target={@target}
       />
       <RailLayers.layers bookable={@bookable} target={@target} />
@@ -101,6 +104,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
   attr :reauth_ids, :any, default: MapSet.new()
 
   attr :set_active, :boolean, default: false, doc: "a set is active: ticks edit it"
+
+  attr :colours, :map,
+    default: %{keys: %{}, open: nil},
+    doc:
+      "each calendar's stored palette key (`keys`, by `{integration id, calendar id}`) and the calendar whose palette is open (`open`), see `CalendarColours`"
 
   attr :spell_out, :boolean,
     default: false,
@@ -198,7 +206,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
           <li
             :for={calendar <- account.calendars}
             data-calendar-row={calendar.id}
-            class="flex items-center gap-2 py-0.5"
+            class="flex flex-wrap items-center gap-x-2 py-0.5"
           >
             <.check
               checked={not calendar.hidden}
@@ -229,6 +237,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.Rail do
               :if={calendar.read_only and not account.read_only}
               id={row_id(@id_prefix, account, calendar, "read-only")}
               label={dgettext("dashboard_calendar", "Read only")}
+            />
+            <CalendarColourPicker.toggle
+              id={row_id(@id_prefix, account, calendar, "colour")}
+              account={account}
+              calendar={calendar}
+              open={@colours.open == {account.id, calendar.id}}
+              controls={row_id(@id_prefix, account, calendar, "colour-palette")}
+              target={@target}
+            />
+            <CalendarColourPicker.palette
+              :if={@colours.open == {account.id, calendar.id}}
+              id={row_id(@id_prefix, account, calendar, "colour-palette")}
+              account={account}
+              calendar={calendar}
+              selected={Map.get(@colours.keys, {account.id, calendar.id})}
+              target={@target}
             />
           </li>
         </ul>

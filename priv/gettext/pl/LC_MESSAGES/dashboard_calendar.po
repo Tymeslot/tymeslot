@@ -821,7 +821,13 @@ msgstr "Pokaż konto %{account}, aby wybrać jego kalendarze."
 msgid "%{count}/%{capacity} seats taken"
 msgstr "Zajęte miejsca: %{count}/%{capacity}"
 
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_colours.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't save that colour. Please try again."
 msgstr "Nie udało się zapisać koloru. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_colour_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Colour of %{calendar}"
+msgstr "Kolor kalendarza %{calendar}"

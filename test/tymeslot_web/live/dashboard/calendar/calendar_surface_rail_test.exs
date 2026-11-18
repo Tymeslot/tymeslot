@@ -134,10 +134,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
 
   test "inside a hidden account the calendars keep their own ticks, cannot be toggled, and say why",
        %{
-    conn: conn,
-    user: user,
-    integration: integration
-  } do
+         conn: conn,
+         user: user,
+         integration: integration
+       } do
     event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z])
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
