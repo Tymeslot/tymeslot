@@ -11,7 +11,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   add actions to it that are server writes anyway. The hook only positions it
   (CSS variables on `<html>`) and takes focus back when it closes.
 
-  An event the organiser can change offers Edit (the side panel) and Delete
+  An event a group meeting with live seats sits on says so, and offers
+  nothing to change (`EditGuard.seat_locked?/2`). An event the organiser can
+  change offers Edit (the side panel) and Delete
   (see `Deletion`), and a Busy/Free toggle unless it is a booking or a
   booking's calendar copy (`FreeBusy`). A booking offers what
   `BookingPreview` allows: Accept and Decline on a request, Reschedule and
@@ -38,6 +40,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   alias TymeslotWeb.Dashboard.Calendar.PreviewGuests
   alias TymeslotWeb.Dashboard.Calendar.TreatAs
   alias TymeslotWeb.Dashboard.Calendar.UndeliveredNotice
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @doc "What `build/2` needs from the surface's assigns."
@@ -52,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       integration_tokens: assigns.integration_tokens,
       calendar_tokens: assigns.calendar_tokens,
       bookability: Map.get(assigns, :bookability, %{}),
+      locked_uids: Map.get(assigns, :locked_uids, MapSet.new()),
       user_id: assigns.current_user.id
     }
   end
@@ -60,6 +64,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   @spec build(map(), map()) :: map()
   def build(event, context) do
     {integration, entry} = source(event, context.integrations)
+    locked = EditGuard.seat_locked?(Map.get(context, :locked_uids, MapSet.new()), event)
 
     %{
       id: EventPayload.id(event),
@@ -74,8 +79,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       join_url: web_url(Map.get(event, :video_link) || Map.get(event, :join_url)),
       availability: availability(event, integration, entry),
       sync_note: sync_note(event, integration),
-      editable: EditGuard.editable?(context.integrations, event),
-      free_busy: free_busy(event, context.integrations),
+      locked: locked,
+      editable: not locked and EditGuard.editable?(context.integrations, event),
+      free_busy: free_busy(event, context.integrations, locked),
       free: Map.get(event, :transparency) == "transparent",
       treat_as: TreatAs.state(event, blocking?(integration, entry), context),
       meeting_id: Map.get(event, :meeting_id),
@@ -185,6 +191,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           </span>
           <span :if={@preview.free_busy == :booking} class="block text-tymeslot-500">
             {dgettext("dashboard_calendar", "Set in the meeting type")}
+          </span>
+        </.row>
+        <.row :if={@preview.locked} icon="hero-lock-closed">
+          <span id="calendar-preview-locked" class="text-tymeslot-600">
+            {CalendarEditMessages.seat_lock_message()}
           </span>
         </.row>
         <.row :if={@preview.sync_note} icon="hero-arrow-up-tray">
@@ -356,9 +367,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   # Whether the toggle is offered: a booking and a booking's calendar copy
   # follow their meeting type; a read-only event shows its state only. An
   # editable event the toggle refuses is a booking's calendar copy.
-  defp free_busy(%{kind: :booking}, _integrations), do: :booking
+  defp free_busy(%{kind: :booking}, _integrations, _locked), do: :booking
+  defp free_busy(_event, _integrations, true), do: :read_only
 
-  defp free_busy(event, integrations) do
+  defp free_busy(event, integrations, false) do
     cond do
       EditGuard.free_busy_editable?(integrations, event) -> :editable
       EditGuard.editable?(integrations, event) -> :booking

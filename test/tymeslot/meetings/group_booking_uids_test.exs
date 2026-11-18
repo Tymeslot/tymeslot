@@ -1,7 +1,7 @@
 defmodule Tymeslot.Meetings.GroupBookingUidsTest do
   @moduledoc """
   Coverage for the two lookups behind the calendar grid's seat lock: the set
-  the grid paints from, for the range it has loaded, and the single-uid guard
+  the grid paints from, for the range or the uids it has loaded, and the single-uid guard
   its handlers enforce. Both answer the same question for the acting
   organiser, so they are asserted against the same cases: a group meeting
   (`capacity > 1`) whose slot is live and on which at least one seat has not
@@ -36,8 +36,16 @@ defmodule Tymeslot.Meetings.GroupBookingUidsTest do
 
     guarded = Meetings.group_booking_uid?(user.id, meeting.calendar_uid)
 
-    # The set and the guard must never disagree for a meeting in range.
+    among =
+      MapSet.member?(
+        Meetings.group_booking_uids_among(user.id, [meeting.calendar_uid, "unrelated-uid"]),
+        meeting.calendar_uid
+      )
+
+    # The set, the uid lookup and the guard must never disagree for a meeting
+    # in range.
     assert in_set == guarded
+    assert among == guarded
     in_set
   end
 
@@ -140,5 +148,19 @@ defmodule Tymeslot.Meetings.GroupBookingUidsTest do
 
   test "an event with no uid is never locked", %{user: user} do
     refute Meetings.group_booking_uid?(user.id, nil)
+  end
+
+  test "the uid lookup ignores the range and asks nothing of no uids", %{user: user} do
+    start = DateTime.add(DateTime.utc_now(:second), 60, :day)
+
+    meeting =
+      meeting_for(user, capacity: 2, start_time: start, end_time: DateTime.add(start, 1, :hour))
+
+    insert(:participant, meeting: meeting)
+
+    assert Meetings.group_booking_uids_among(user.id, [meeting.calendar_uid]) ==
+             MapSet.new([meeting.calendar_uid])
+
+    assert Meetings.group_booking_uids_among(user.id, []) == MapSet.new()
   end
 end

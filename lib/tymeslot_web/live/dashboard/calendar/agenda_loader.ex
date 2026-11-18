@@ -83,6 +83,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.AgendaLoader do
       |> assign(
         window: Date.range(window.first, chunk.last),
         window_events: held ++ added,
+        locked_uids:
+          MapSet.union(socket.assigns.locked_uids, SurfaceData.locked_uids(socket.assigns, added)),
         agenda_through: chunk.last
       )
       |> SurfaceData.refilter()

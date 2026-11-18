@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Dashboard.Calendar.BadgeStrings
   alias TymeslotWeb.Dashboard.Calendar.BookableStrings
   alias TymeslotWeb.Dashboard.Calendar.PowerStrings
   alias TymeslotWeb.Dashboard.Calendar.ViewStrings
@@ -25,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
       |> Map.merge(request_strings())
       |> Map.merge(opening_strings())
       |> Map.merge(BookableStrings.strings())
+      |> Map.merge(BadgeStrings.strings())
       |> Map.merge(ViewStrings.strings())
       |> Map.merge(PowerStrings.strings())
     end)

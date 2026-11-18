@@ -75,6 +75,12 @@ defmodule Tymeslot.Meetings do
     to: Tymeslot.Meetings.GroupMeetingQueries
 
   @doc """
+  Which of the calendar event `uids` belong to the organiser's group meetings
+  with live seats, in one query.
+  """
+  defdelegate group_booking_uids_among(user_id, uids), to: Tymeslot.Meetings.GroupMeetingQueries
+
+  @doc """
   Whether the organiser's meeting behind a calendar event's `uid` is a group
   meeting with live seats.
   """

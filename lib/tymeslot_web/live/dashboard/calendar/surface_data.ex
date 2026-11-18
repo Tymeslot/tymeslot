@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Meetings
   alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.Calendar.AgendaLoader
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
@@ -63,6 +64,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       hidden_count: 0,
       working_hours: WorkingHours.fallback(),
       window_events: [],
+      locked_uids: MapSet.new(),
       events: [],
       events_by_id: %{},
       window: nil,
@@ -206,8 +208,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   def load_window(socket) do
     window = window_for(socket.assigns)
 
+    events = list_events(socket.assigns, window)
+
     socket
-    |> assign(window: window, window_events: list_events(socket.assigns, window))
+    |> assign(
+      window: window,
+      window_events: events,
+      locked_uids: locked_uids(socket.assigns, events)
+    )
     |> filter_events()
     |> BookableLayer.load()
   end
@@ -223,6 +231,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
     # Bookings are drawn as themselves rather than as their calendar copies,
     # and requests that expired unanswered are drawn too (see `EventWindow`).
     EventWindow.list_events(user.id, integrations, start_dt, end_dt, include_expired: true)
+  end
+
+  @doc """
+  The uids among `events` whose group meeting has live seats, which the
+  grid, the preview and the panel draw locked (`EditGuard.seat_locked?/2`):
+  one query for them all, however many there are.
+  """
+  @spec locked_uids(map(), [map()]) :: MapSet.t(String.t())
+  def locked_uids(%{current_user: user}, events) do
+    uids = for %{uid: uid} <- events, is_binary(uid), uniq: true, do: uid
+    Meetings.group_booking_uids_among(user.id, uids)
   end
 
   @doc "`events` without hidden calendars and accounts, or deletes still waiting for their undo."
@@ -360,6 +379,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       integration_tokens: assigns.integration_tokens,
       calendar_tokens: assigns.calendar_tokens,
       integrations: assigns.integrations,
+      locked_uids: assigns.locked_uids,
       events: assigns.events,
       drafts: drafts(assigns),
       settings: settings(assigns),

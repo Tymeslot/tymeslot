@@ -108,12 +108,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   # (a booking's calendar copy keeps the booking's time), and whether the
   # organiser may email its guests: invite, remove, tell (they organise
   # it; a query or two).
+  # An event a group meeting with live seats sits on opens read only, saying
+  # so (`EditGuard.drawn_writable/3`).
   defp opened(socket, event, %{integrations: integrations} = context) do
-    writable = EditGuard.writable(integrations, event)
+    writable = EditGuard.drawn_writable(integrations, context.locked_uids, event)
 
     assign(socket,
       editable: writable == :ok,
-      movable: EditGuard.movable?(integrations, event),
+      movable: writable == :ok and EditGuard.movable?(integrations, event),
       read_only_reason: read_only_reason(writable),
       emails_guests: EditGuard.guest_update(context.user_id, integrations, event) == :ok
     )

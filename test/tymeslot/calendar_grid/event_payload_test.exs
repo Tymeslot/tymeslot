@@ -82,6 +82,7 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
              attention: false,
              editable: false,
              movable: false,
+             locked: false,
              calendar: "7:work",
              recurring: false,
              guests: 0,
@@ -271,6 +272,7 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
                attention: false,
                editable: false,
                movable: false,
+               locked: false,
                pending: true,
                calendar: "7:work",
                recurring: false,
@@ -319,6 +321,17 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
       context = Map.put(@context, :integrations, [integration(list)])
 
       assert %{editable: false} = EventPayload.event(timed([]), context)
+    end
+
+    test "an event a group meeting with live seats sits on is locked, and cannot be changed" do
+      context =
+        Map.merge(@context, %{
+          integrations: [integration([%{"id" => "work", "selected" => true}])],
+          locked_uids: MapSet.new(["seats-1"])
+        })
+
+      assert %{locked: true, editable: false, movable: false} =
+               EventPayload.event(timed(uid: "seats-1"), context)
     end
 
     test "without the organiser's integrations nothing is offered" do

@@ -11,7 +11,7 @@
 import { agendaGroups } from "./agenda.js";
 import { chipCapacity, dayDots, eventsOnDay, monthLayout, monthWeeks } from "./month.js";
 import { renderAgendaDay } from "./render_agenda.js";
-import { colour, dateLabel, escapeHtml, interpolate, requestAria, requestFlag, weekNumberHtml } from "./render.js";
+import { badgeNotes, colour, dateLabel, escapeHtml, interpolate, requestAria, requestFlag, weekNumberHtml } from "./render.js";
 import { MINUTES_PER_DAY, dayNumber, formatMinutes, isoFromDay, isoWeekday } from "./time.js";
 
 const HEAD_ROW = 24;
@@ -89,7 +89,7 @@ function monthBar(bar, e, iso, { settings, strings, now }) {
   const first = dateLabel(isoFromDay(e.startDay), strings);
   const span = e.endDay - e.startDay > 1 ? `${first} – ${dateLabel(isoFromDay(e.endDay - 1), strings)}` : first;
   const when = e.all_day ? strings.all_day : `${formatMinutes(e.startMin % MINUTES_PER_DAY, settings.time_format)}–${formatMinutes(e.endMin % MINUTES_PER_DAY, settings.time_format)}`;
-  const label = [e.title, flag && requestAria(e, strings), when, span, past && strings.ended].filter(Boolean).join(", ");
+  const label = [e.title, flag && requestAria(e, strings), when, span, past && strings.ended, ...badgeNotes(e, strings)].filter(Boolean).join(", ");
   const classes = eventClasses("cal-mbar", e, past, flag, [bar.cutStart && "cut-start", bar.cutEnd && "cut-end"]);
   return (
     `<button type="button" class="${classes}" data-event-id="${escapeHtml(e.id)}" data-day="${iso}" aria-label="${escapeHtml(label)}" ` +
@@ -105,7 +105,7 @@ function monthChip(e, iso, column, row, { settings, strings, now }) {
   const range = `${formatMinutes(e.startMin % MINUTES_PER_DAY, tf)}–${formatMinutes(e.endMin % MINUTES_PER_DAY, tf)}`;
   // A chip for the day an overnight event ends on starts at midnight: no time.
   const start = e.startMin < dayNumber(iso) * MINUTES_PER_DAY ? "" : formatMinutes(e.startMin % MINUTES_PER_DAY, tf);
-  const label = [e.title, flag && requestAria(e, strings), dateLabel(iso, strings), range, e.free && !e.expired && strings.shown_as_free, past && strings.ended, e.attention && strings.waiting_to_sync].filter(Boolean).join(", ");
+  const label = [e.title, flag && requestAria(e, strings), dateLabel(iso, strings), range, e.free && !e.expired && strings.shown_as_free, past && strings.ended, e.attention && strings.waiting_to_sync, ...badgeNotes(e, strings)].filter(Boolean).join(", ");
   return (
     `<button type="button" class="${eventClasses("cal-mchip", e, past, flag)}" data-event-id="${escapeHtml(e.id)}" data-day="${iso}" aria-label="${escapeHtml(label)}" ` +
     `style="grid-column:${column + 1};grid-row:${row};--cal-ev:${colour(e.colour)}">` +

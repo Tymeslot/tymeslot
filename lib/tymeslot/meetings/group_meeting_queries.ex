@@ -226,6 +226,24 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   end
 
   @doc """
+  Which of `uids` (calendar event uids) belong to the organiser's group
+  meetings with live seats, as `group_booking_uids_for_user/3` reads live
+  seats: the events of a loaded calendar window that the grid draws locked,
+  whenever their meeting is, in one query for them all.
+  """
+  @spec group_booking_uids_among(integer(), [String.t()]) :: MapSet.t(String.t())
+  def group_booking_uids_among(_user_id, []), do: MapSet.new()
+
+  def group_booking_uids_among(user_id, uids) when is_integer(user_id) and is_list(uids) do
+    user_id
+    |> live_seats_query()
+    |> where([meeting: m], m.calendar_uid in ^uids)
+    |> select([meeting: m], m.calendar_uid)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  @doc """
   Whether the organiser's meeting whose calendar event carries `uid` (its
   `calendar_uid`) is a group meeting with live seats.
 

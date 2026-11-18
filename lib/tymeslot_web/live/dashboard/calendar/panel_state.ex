@@ -120,6 +120,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       timezone: assigns.timezone,
       time_format: assigns.time_format,
       integrations: assigns.integrations,
+      locked_uids: Map.get(assigns, :locked_uids, MapSet.new()),
       user_id: assigns.current_user.id
     }
 
@@ -170,7 +171,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       form: %{},
       scope: nil,
       opened_with: event,
-      status: opening_status(assigns.integrations, event),
+      status: opening_status(assigns, event),
       writes: [],
       errors: %{},
       repeat: %{custom_open: false, draft: nil, version: 0},
@@ -179,8 +180,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
     }
   end
 
-  defp opening_status(integrations, event),
-    do: if(EditGuard.editable?(integrations, event), do: :idle, else: :read_only)
+  defp opening_status(assigns, event) do
+    locked = Map.get(assigns, :locked_uids, MapSet.new())
+
+    if EditGuard.drawn_writable(assigns.integrations, locked, event) == :ok,
+      do: :idle,
+      else: :read_only
+  end
 
   # What the panel asked about its event goes when the panel leaves that
   # event: the series question, the question about moving a series to another

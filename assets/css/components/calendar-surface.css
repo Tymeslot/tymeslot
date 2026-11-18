@@ -478,6 +478,34 @@
   background: var(--cal-warn);
 }
 
+/* A group meeting with live seats sits on the event: a lock in the bottom
+   corner, with its reason in a tooltip (calendar/render.js, lockBadge). */
+.cal-ev-lock {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--cal-ink) 18%, transparent);
+  cursor: help;
+}
+
+.cal-ev-badge-icon {
+  width: 10px;
+  height: 10px;
+}
+
+.cal-ev.is-tiny .cal-ev-lock {
+  top: 1px;
+  bottom: auto;
+  width: 12px;
+  height: 12px;
+}
+
 /* "+N more" */
 .cal-more {
   position: absolute;

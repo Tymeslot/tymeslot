@@ -163,7 +163,7 @@ function allDayLane({ bars, more, warn, rows }, days, { strings, now, byId, metr
     const first = dateLabel(isoFromDay(e.startDay), strings);
     const span = e.endDay - e.startDay > 1 ? `${first} – ${dateLabel(isoFromDay(e.endDay - 1), strings)}` : first;
     const flag = requestFlag(e, strings);
-    const label = [e.title, flag && requestAria(e, strings), strings.all_day, span, e.endMin <= now && strings.ended].filter(Boolean).join(", ");
+    const label = [e.title, flag && requestAria(e, strings), strings.all_day, span, e.endMin <= now && strings.ended, ...badgeNotes(e, strings)].filter(Boolean).join(", ");
     const classes = ["cal-adbar", bar.cutStart && "cut-start", bar.cutEnd && "cut-end", e.endMin <= now && "is-past", e.free && !e.expired && "is-free", e.kind === "booking" && "is-booking", flag && "is-request", e.expired && "is-expired"]
       .filter(Boolean)
       .join(" ");
@@ -386,10 +386,10 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
   const shortWithoutTime = short && !shortRowFits(item, shown, start, measure, inset);
   const time = item.hideTime || shortWithoutTime || (fit && !fit.time) ? "" : short || item.width < 110 ? start : range;
   const tiny = short && item.height < LINE_HEIGHT + 4;
-  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && !event.expired && "is-free", event.kind === "booking" && "is-booking", flag && "is-request", compact && "has-badge", event.expired && "is-expired", event.attention && "is-attention", movingId === event.id && "is-moving"]
+  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && !event.expired && "is-free", event.kind === "booking" && "is-booking", flag && "is-request", compact && "has-badge", event.expired && "is-expired", event.attention && "is-attention", movingId === event.id && "is-moving", event.locked && "is-locked"]
     .filter(Boolean)
     .join(" ");
-  const label = [event.title, flag && requestAria(event, strings), dateLabel(isoFromDay(event.startDay), strings), range, event.free && !event.expired && strings.shown_as_free, past && strings.ended, event.attention && strings.waiting_to_sync]
+  const label = [event.title, flag && requestAria(event, strings), dateLabel(isoFromDay(event.startDay), strings), range, event.free && !event.expired && strings.shown_as_free, past && strings.ended, event.attention && strings.waiting_to_sync, ...badgeNotes(event, strings)]
     .filter(Boolean)
     .join(", ");
   const style =
@@ -406,8 +406,29 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
     `<div class="${classes}" role="button" tabindex="-1" data-event-id="${escapeHtml(event.id)}"${editable ? " data-editable" : ""} aria-label="${escapeHtml(label)}" aria-describedby="calendar-keys-hint" style="${style}">` +
     `<span class="cal-ev-title">${flagHtml}${short ? escapeHtml(event.title) : titleHtml(event.title, item.width - inset, measure)}</span>${timeHtml}` +
     (event.attention ? `<span class="cal-ev-dot" aria-hidden="true"></span>` : "") +
+    (event.locked ? lockBadge(strings) : "") +
     (editable && item.height >= GRIP_MIN_HEIGHT ? GRIPS : "") +
     `</div>`
+  );
+}
+
+// What an event's badges say, for its accessible name: the block is what
+// keyboard and screen-reader users reach, and its aria-label replaces
+// everything inside it, badges included.
+export function badgeNotes(event, strings) {
+  return [event.locked && strings.seat_locked].filter(Boolean);
+}
+
+// The seat lock (`locked`: a group meeting with live seats sits on the
+// event): a lock in the block's corner whose tooltip (tooltip.js, delegated
+// from the document) says why it cannot be changed. A tap on it shows the
+// tooltip without opening the event (`data-tooltip-isolated`).
+export function lockBadge(strings) {
+  const text = escapeHtml(strings.seat_locked);
+  return (
+    `<span class="tooltip-anchor" data-tooltip data-tooltip-isolated>` +
+    `<span class="cal-ev-lock" role="img" aria-label="${text}">${strings.icons?.lock ?? ""}</span>` +
+    `<span role="tooltip" popover="manual" class="tooltip-bubble">${text}</span></span>`
   );
 }
 
