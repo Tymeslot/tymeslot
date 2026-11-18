@@ -916,12 +916,12 @@ msgstr "Wyślemy ci e-mailem link do potwierdzenia tej rezerwacji."
 #: lib/tymeslot_web/themes/shared/booking_text.ex
 #, elixir-autogen, elixir-format
 msgid "%{price} per person"
-msgstr ""
+msgstr "%{price} za osobę"
 
 #: lib/tymeslot_web/themes/shared/components/submit_price.ex
 #, elixir-autogen, elixir-format
 msgid "%{total} for %{count} seat"
 msgid_plural "%{total} for %{count} seats"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%{total} za %{count} miejsce"
+msgstr[1] "%{total} za %{count} miejsca"
+msgstr[2] "%{total} za %{count} miejsc"
