@@ -7,14 +7,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.LinkedText do
   new tab with `rel="noopener noreferrer"`; everything else stays text.
   The markup is built by HEEx, so the text and the address are escaped like
   any other assign. Punctuation that ends a sentence is left out of the
-  address it follows ("see https://example.com." links the address alone).
+  address it follows ("see https://example.com." links the address alone),
+  and an address longer than 2048 bytes stays text.
   """
 
   use TymeslotWeb, :html
 
   @url ~r{https?://[^\s<>"']+}i
-  @punctuation ~w(. , ; : ! ?)
-  @brackets %{")" => "(", "]" => "[", "}" => "{"}
+  @punctuation ~c".,;:!?"
+  # Each closing bracket, and the closing bracket each opening one pairs with.
+  @closing %{?) => ?(, ?] => ?[, ?} => ?{}
+  @opening Map.new(@closing, fn {close, open} -> {open, close} end)
+
+  # An address longer than this is left as text: no real link needs it, and
+  # notes come from outside invitations and feeds.
+  @max_address_bytes 2_048
 
   @typedoc "A run of plain text, or a web address to link."
   @type part :: {:text, String.t()} | {:link, String.t()}
@@ -31,7 +38,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.LinkedText do
   defp classify(chunk) do
     if Regex.match?(~r{\Ahttps?://}i, chunk) do
       {address, tail} = split_trailing(chunk)
-      if web_address?(address), do: [{:link, address}, {:text, tail}], else: [{:text, chunk}]
+
+      if byte_size(address) <= @max_address_bytes and web_address?(address),
+        do: [{:link, address}, {:text, tail}],
+        else: [{:text, chunk}]
     else
       [{:text, chunk}]
     end
@@ -40,23 +50,42 @@ defmodule TymeslotWeb.Dashboard.Calendar.LinkedText do
   # Sentence punctuation after an address is not part of it, nor is a
   # closing bracket the address does not open itself: "(see
   # https://example.com)" ends before the bracket, while
-  # "https://en.wikipedia.org/wiki/Foo_(bar)" keeps it.
-  defp split_trailing(chunk, tail \\ "") do
-    {address, last} = String.split_at(chunk, -1)
-
-    if trailing?(address, last),
-      do: split_trailing(address, last <> tail),
-      else: {chunk, tail}
+  # "https://en.wikipedia.org/wiki/Foo_(bar)" keeps it. One pass from the
+  # end, with the brackets counted once, so a long run of them costs no more
+  # than its length. Every character that can trail is a single byte.
+  defp split_trailing(chunk) do
+    cut = trailing_start(chunk, byte_size(chunk), bracket_balance(chunk))
+    {binary_part(chunk, 0, cut), binary_part(chunk, cut, byte_size(chunk) - cut)}
   end
 
-  defp trailing?(_address, last) when last in @punctuation, do: true
+  # How many more closing than opening brackets of each kind `chunk` holds.
+  defp bracket_balance(chunk) do
+    for <<byte <- chunk>>, reduce: %{} do
+      balance ->
+        cond do
+          Map.has_key?(@closing, byte) -> Map.update(balance, byte, 1, &(&1 + 1))
+          Map.has_key?(@opening, byte) -> Map.update(balance, @opening[byte], -1, &(&1 - 1))
+          true -> balance
+        end
+    end
+  end
 
-  defp trailing?(address, last) when is_map_key(@brackets, last),
-    do: count(address, last) >= count(address, Map.fetch!(@brackets, last))
+  defp trailing_start(_chunk, 0, _balance), do: 0
 
-  defp trailing?(_address, _last), do: false
+  defp trailing_start(chunk, at, balance) do
+    byte = :binary.at(chunk, at - 1)
 
-  defp count(text, char), do: length(String.split(text, char)) - 1
+    cond do
+      byte in @punctuation ->
+        trailing_start(chunk, at - 1, balance)
+
+      Map.has_key?(@closing, byte) and Map.get(balance, byte, 0) > 0 ->
+        trailing_start(chunk, at - 1, Map.update!(balance, byte, &(&1 - 1)))
+
+      true ->
+        at
+    end
+  end
 
   defp web_address?(address) do
     case URI.new(address) do

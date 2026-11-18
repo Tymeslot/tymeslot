@@ -58,6 +58,33 @@ defmodule TymeslotWeb.Dashboard.Calendar.LinkedTextTest do
              ]
     end
 
+    test "a long run after an address costs no more than its length" do
+      for run <- [")", ".", "?", "]."] do
+        small = "https://a.example/" <> String.duplicate(run, 5_000)
+        large = "https://a.example/" <> String.duplicate(run, 50_000)
+
+        {small_us, [{:link, "https://a.example/"} | _rest]} =
+          :timer.tc(fn -> LinkedText.parts(small) end)
+
+        {large_us, [{:link, "https://a.example/"}, {:text, tail}]} =
+          :timer.tc(fn -> LinkedText.parts(large) end)
+
+        assert byte_size(tail) == byte_size(large) - byte_size("https://a.example/")
+        # Ten times the input in well under a hundred times the time: linear,
+        # not quadratic, with room for a busy machine.
+        assert large_us < max(small_us, 5_000) * 40
+        assert large_us < 1_000_000
+      end
+    end
+
+    test "an address longer than 2048 bytes stays text" do
+      long = "https://a.example/" <> String.duplicate("a", 2_100)
+      assert LinkedText.parts(long) == [{:text, long}]
+
+      fits = "https://a.example/" <> String.duplicate("a", 2_000)
+      assert LinkedText.parts(fits) == [{:link, fits}]
+    end
+
     test "links no other scheme and no address without a host" do
       for text <- ["javascript:alert(1)", "ftp://example.com", "mailto:a@example.com", "https://"] do
         assert LinkedText.parts(text) == [{:text, text}]
