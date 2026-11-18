@@ -13,6 +13,7 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
   import Ecto.Query
 
   alias Ecto.Changeset
+  alias Ecto.UUID
   alias Tymeslot.Clock
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
@@ -27,9 +28,14 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
     |> Repo.insert()
   end
 
-  @doc "Fetches a hold by id."
+  @doc "Fetches a hold by id; `nil` for none, or an id that is no UUID (one from a URL)."
   @spec get(binary()) :: SeatHold.t() | nil
-  def get(id) when is_binary(id), do: Repo.get(SeatHold, id)
+  def get(id) when is_binary(id) do
+    case UUID.cast(id) do
+      {:ok, uuid} -> Repo.get(SeatHold, uuid)
+      :error -> nil
+    end
+  end
 
   @doc "Fetches a hold by id, locking the row `FOR UPDATE`. Call inside a transaction."
   @spec get_for_update(binary()) :: SeatHold.t() | nil

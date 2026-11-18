@@ -27,9 +27,14 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
 
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
+  alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.SeatHolds
+  alias Tymeslot.Meetings.Seats
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -72,6 +77,11 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
     CalendarMock
     |> stub(:get_events_for_range_fresh, fn _user_id, _start, _end -> {:ok, []} end)
     |> stub(:get_booking_integration_info, fn _user_id -> {:error, :no_integration} end)
+
+    # The completion webhook looks up the charge; these payments have none.
+    stub(StripeAdapterMock, :retrieve_payment_intent, fn _id, _opts ->
+      {:ok, %{"latest_charge" => nil}}
+    end)
 
     :ok
   end
@@ -182,6 +192,222 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
         refute render(view) =~ "Mia Laurent"
       end
     end
+  end
+
+  # A group seat's checkout returns to pages keyed by its hold, never by the
+  # shared meeting, whose status is the session's, not the booker's.
+  describe "a paid group seat" do
+    setup do
+      %{user: user, profile: profile} =
+        seed_organiser("1", "paid-seat",
+          types: [
+            [
+              name: "Group Class",
+              duration_minutes: 30,
+              max_participants: 5,
+              allow_guests: true,
+              payment_required: true,
+              price_cents: 2000
+            ]
+          ]
+        )
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_RETURN",
+        default_currency: "eur",
+        charges_enabled: true
+      )
+
+      %{user: user, profile: profile}
+    end
+
+    @tag :capture_log
+    test "the seat return page waits, then confirms", %{conn: conn, profile: profile} do
+      %{success_url: success_url, hold_id: hold_id} = book_seat_to_checkout(conn, profile)
+
+      {:ok, view, _html} = live(conn, success_url)
+      shell = "[data-testid='quill-payment-processing']"
+      assert has_element?(view, "#{shell} h1", "Confirming your payment")
+
+      payment = BookingPayments.payment_for_seat_hold(hold_id)
+      assert :ok = CheckoutSessionCompleted.handle(seat_completed_event(payment))
+
+      assert has_element?(view, "#{shell} h1", "Booking confirmed")
+      assert has_element?(view, "#{shell} [data-testid='payment-paid-amount']", "Paid: €40.00")
+      assert %{status: :converted} = SeatHolds.get(hold_id)
+    end
+
+    @tag :capture_log
+    test "the seat return page refuses a wrong session id", %{conn: conn, profile: profile} do
+      %{hold_id: hold_id} = book_seat_to_checkout(conn, profile)
+
+      assert {:error, {:redirect, %{to: "/"}}} =
+               live(conn, "/themes/quill/payment-processing/seat/#{hold_id}?session_id=cs_OTHER")
+
+      assert {:error, {:redirect, %{to: "/"}}} =
+               live(conn, "/themes/quill/payment-processing/seat/not-a-hold?session_id=cs_OTHER")
+    end
+
+    test "the seat return page reports a lapsed hold as expired although the meeting is confirmed",
+         %{conn: conn, user: user} do
+      meeting_type = Repo.get_by!(MeetingTypeSchema, user_id: user.id)
+      start = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
+
+      meeting =
+        insert(:group_meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: meeting_type,
+          start_time: start,
+          end_time: DateTime.add(start, 30, :minute),
+          capacity: 5,
+          status: :confirmed
+        )
+
+      insert(:participant, meeting: meeting, email: "on-time@example.com")
+
+      hold =
+        insert(:seat_hold,
+          meeting: meeting,
+          email: "late@example.com",
+          status: :released,
+          released_reason: :expired
+        )
+
+      insert(:booking_payment,
+        meeting: meeting,
+        seat_hold_id: hold.id,
+        seat_payment: true,
+        seats: 1,
+        amount_cents: 2000,
+        host_user_id: user.id,
+        stripe_account_id: "acct_RETURN",
+        stripe_checkout_session_id: "cs_LAPSED",
+        status: :failed
+      )
+
+      {:ok, view, _html} =
+        live(conn, "/themes/quill/payment-processing/seat/#{hold.id}?session_id=cs_LAPSED")
+
+      shell = "[data-testid='quill-payment-processing']"
+      assert has_element?(view, "#{shell} h1", "Your seats were released")
+      refute has_element?(view, "#{shell} h1", "Booking confirmed")
+      assert has_element?(view, "#{shell} a[href='/paid-seat/group-class']", "Return to booking")
+    end
+
+    @tag :capture_log
+    test "returning through the cancel URL releases the hold", %{conn: conn, profile: profile} do
+      %{cancel_url: cancel_url, hold_id: hold_id} = book_seat_to_checkout(conn, profile)
+      %{meeting_id: meeting_id} = SeatHolds.get(hold_id)
+      assert Seats.seats_taken(meeting_id) == 2
+      test_pid = self()
+
+      expect(StripeAdapterMock, :expire_checkout_session, fn @session_id, opts ->
+        send(test_pid, {:expired_session, opts[:connect_account]})
+        {:ok, %{id: @session_id, status: "expired"}}
+      end)
+
+      {:ok, view, _html} = live(conn, cancel_url)
+      shell = "[data-testid='quill-payment-cancelled']"
+      assert has_element?(view, "#{shell} h1", "Payment cancelled")
+      assert has_element?(view, "#{shell} a[href='/paid-seat/group-class']", "Return to booking")
+
+      # Leaving the checkout ends it at Stripe; Stripe's
+      # `checkout.session.expired` webhook then releases the hold.
+      assert_receive {:expired_session, "acct_RETURN"}
+      assert %{status: :held} = SeatHolds.get(hold_id)
+
+      payment = BookingPayments.payment_for_seat_hold(hold_id)
+      assert :ok = CheckoutSessionExpired.handle(seat_expired_event(payment))
+
+      assert %{status: :released} = SeatHolds.get(hold_id)
+      assert Seats.seats_taken(meeting_id) == 0
+    end
+
+    # Without the signed return token the visitor only reads the page.
+    test "the cancel page without its token leaves the checkout open",
+         %{conn: conn, profile: profile} do
+      %{hold_id: hold_id} = book_seat_to_checkout(conn, profile)
+
+      {:ok, view, _html} = live(conn, "/themes/quill/payment-cancelled/seat/#{hold_id}")
+
+      assert has_element?(view, "[data-testid='quill-payment-cancelled'] h1", "Payment cancelled")
+      assert %{status: :held} = SeatHolds.get(hold_id)
+    end
+  end
+
+  # Books a seat and one guest on the paid group type at the top level,
+  # asserts the visitor is sent to Stripe Checkout, and returns the return
+  # URLs as paths with the hold they are keyed by.
+  defp book_seat_to_checkout(conn, profile) do
+    test_pid = self()
+
+    expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
+      send(test_pid, {:checkout_session, params})
+      {:ok, %{id: @session_id, url: @checkout_url}}
+    end)
+
+    {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=UTC")
+    BookingDriver.book(view, meeting_type: "group-class", until: :attendee)
+
+    view |> element("[data-testid='guest-toggle']") |> render_click()
+    view |> form("#guest-add-form", %{"guest_email" => "friend@example.com"}) |> render_submit()
+
+    view
+    |> form("form[data-fact='attendee']", %{
+      "booking" => %{"name" => "Pay Pat", "email" => "pat@example.com", "message" => ""}
+    })
+    |> render_submit()
+
+    assert_redirect(view, @checkout_url, 5_000)
+    assert_received {:checkout_session, params}
+
+    success_url =
+      params.success_url |> String.replace("{CHECKOUT_SESSION_ID}", @session_id) |> path_of()
+
+    %{"hold_id" => hold_id} =
+      Regex.named_captures(
+        ~r{^/themes/quill/payment-processing/seat/(?<hold_id>[^/?]+)\?session_id=#{@session_id}$},
+        success_url
+      ) || flunk("expected a seat processing URL, got #{success_url}")
+
+    %{success_url: success_url, cancel_url: path_of(params.cancel_url), hold_id: hold_id}
+  end
+
+  defp seat_completed_event(payment) do
+    seat_event(payment, "checkout.session.completed", %{
+      "payment_intent" => "pi_SEAT_RETURN",
+      "payment_status" => "paid",
+      "amount_total" => payment.amount_cents,
+      "currency" => payment.currency
+    })
+  end
+
+  defp seat_expired_event(payment) do
+    seat_event(payment, "checkout.session.expired", %{
+      "payment_status" => "unpaid",
+      "status" => "expired"
+    })
+  end
+
+  defp seat_event(payment, type, object) do
+    %{
+      "id" => "evt_#{type}_#{payment.id}",
+      "type" => type,
+      "account" => "acct_RETURN",
+      "created" => System.os_time(:second),
+      "data" => %{
+        "object" =>
+          Map.merge(
+            %{
+              "id" => payment.stripe_checkout_session_id,
+              "client_reference_id" => "seat_hold:" <> payment.seat_hold_id,
+              "metadata" => %{"seat_hold_id" => payment.seat_hold_id}
+            },
+            object
+          )
+      }
+    }
   end
 
   # An organiser on `theme_id` with one paid meeting type, "Paid Consult",

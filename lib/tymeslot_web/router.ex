@@ -443,6 +443,14 @@ defmodule TymeslotWeb.Router do
 
       live "/themes/:theme_slug/payment-cancelled/:meeting_id",
            Themes.Shared.PaymentReturnLive.Cancelled
+
+      # A held group seat's checkout returns here. Stripe stores these URLs
+      # with each session, so their shape never changes once shipped.
+      live "/themes/:theme_slug/payment-processing/seat/:seat_hold_id",
+           Themes.Shared.PaymentReturnLive.SeatProcessing
+
+      live "/themes/:theme_slug/payment-cancelled/seat/:seat_hold_id",
+           Themes.Shared.PaymentReturnLive.SeatCancelled
     end
   end
 
