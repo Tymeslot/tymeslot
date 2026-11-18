@@ -134,6 +134,65 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     assert %{attendee_email: "ada@example.com", guest_emails: []} = params
   end
 
+  # The form's own fields post what the panel drew, as a browser's do once
+  # a change elsewhere has re-rendered them: these submit without the
+  # address, which only survives if the panel draws it back.
+  describe "a guest typed but not added yet" do
+    test "stays in the field when the box is ticked, and Create invites them to the meeting",
+         %{conn: conn, integration: integration} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, integration, %{"guests" => []})
+
+      render_change(new_form(lv), %{"guest_email" => "ada@example.com"})
+      as_meeting(lv)
+
+      assert has_element?(lv, ~s(#calendar-panel-guests input[value="ada@example.com"]))
+      assert has_element?(lv, "#calendar-panel-meeting-guest-name")
+
+      trace(lv)
+      create_meeting(lv)
+
+      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+      assert %{attendee_email: "ada@example.com", guest_emails: []} = params
+    end
+
+    test "stays in the field when a reminder is chosen, and Create invites them to the meeting",
+         %{conn: conn, integration: integration} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, integration, %{"guests" => []})
+
+      render_change(new_form(lv), %{"guest_email" => "ada@example.com", "meeting" => "true"})
+      add_reminder(lv, "30-minutes")
+
+      assert has_element?(lv, ~s(#calendar-panel-guests input[value="ada@example.com"]))
+
+      trace(lv)
+      create_meeting(lv)
+
+      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+
+      assert %{attendee_email: "ada@example.com", reminders: [%{value: 30, unit: "minutes"}]} =
+               params
+    end
+
+    test "gone by Create, the meeting is refused under the guest field, not made a plain event",
+         %{conn: conn, integration: integration} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, integration, %{"guests" => []})
+
+      render_change(new_form(lv), %{"guest_email" => "ada@example.com", "meeting" => "true"})
+      assert has_element?(lv, "#calendar-panel-create", "Create and invite")
+      trace(lv)
+
+      create_meeting(lv, %{"guest_email" => ""})
+
+      assert has_element?(lv, "#calendar-panel-guests", "Enter a valid email address.")
+      assert has_element?(lv, "#calendar-panel-create:not([disabled])")
+      refute_received {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}
+      refute_received {:provider_call, _task_pid, _payload}
+    end
+  end
+
   test "the place quick create parsed becomes the meeting's location", %{
     conn: conn,
     integration: integration

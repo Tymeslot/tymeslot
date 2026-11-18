@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
   @doc """
   Whether the draft has a guest: one added, or one typed into the guest
   field and not added yet, which Create adds first
-  (`PanelNewGuests.take_pending/2`).
+  (`PanelNewGuests.take_pending/3`).
   """
   @spec guests?(map()) :: boolean()
   def guests?(form), do: form["guests"] not in [nil, []] or (form["guest_pending"] || "") != ""

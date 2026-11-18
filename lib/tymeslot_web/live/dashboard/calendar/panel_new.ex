@@ -156,7 +156,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   the form (an empty field adds nothing, so Enter in another field never
   creates, and Enter in the reminder picker's custom row adds the lead time
   it holds); `intent=create` creates the event, adding first a guest typed
-  but not added (`PanelNewGuests.take_pending/2`).
+  but not added (`PanelNewGuests.take_pending/3`).
   """
   @spec submit(socket(), map()) :: socket()
   def submit(
@@ -177,9 +177,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
         %{"intent" => "create"} = params
       )
       when status != :saving do
+    meeting? = PanelMeeting.on?(socket.assigns.panel.form)
     socket = change(socket, params)
 
-    case PanelNewGuests.take_pending(socket, params["guest_email"]) do
+    case PanelNewGuests.take_pending(socket, params["guest_email"], meeting?) do
       {:ok, socket} -> create(socket)
       {:error, socket} -> socket
     end
