@@ -752,3 +752,8 @@ msgstr "Dodano: %{email}. Zaproszenie zostanie wysłane po zsynchronizowaniu zmi
 #, elixir-autogen, elixir-format
 msgid "Removed %{email}. They will be told once the change has synced to your calendar."
 msgstr "Usunięto: %{email}. Powiadomienie zostanie wysłane po zsynchronizowaniu zmiany z kalendarzem."
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The time belongs to the booking. Reschedule it from Bookings."
+msgstr "Termin wynika z rezerwacji. Zmień go w sekcji Rezerwacje."

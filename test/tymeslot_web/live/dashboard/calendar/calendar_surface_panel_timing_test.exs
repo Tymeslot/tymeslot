@@ -337,5 +337,34 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelTimingTest do
 
       refute_receive {:written, _uid, _payload}, 200
     end
+
+    test "a booking's calendar copy says why its timing is disabled", %{
+      conn: conn,
+      integration: integration
+    } do
+      copy = event(integration, "work", "Intro call", ~U[2026-10-16 10:00:00Z])
+      insert(:meeting, calendar_integration_id: integration.id, calendar_uid: copy.uid)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      edit(lv, copy)
+
+      assert has_element?(
+               lv,
+               "#calendar-panel-timing fieldset[disabled][aria-describedby='calendar-panel-timing-locked']"
+             )
+
+      assert has_element?(
+               lv,
+               "#calendar-panel-timing-locked",
+               "The time belongs to the booking. Reschedule it from Bookings."
+             )
+    end
+  end
+
+  test "an event whose timing can change shows no reason", %{lv: lv, review: review} do
+    edit(lv, review)
+
+    refute has_element?(lv, "#calendar-panel-timing fieldset[disabled]")
+    refute has_element?(lv, "#calendar-panel-timing-locked")
   end
 end

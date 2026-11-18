@@ -192,6 +192,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           :if={timed_or_all_day?(@event)}
           timing={PanelTiming.fields(@event, @context.timezone)}
           disabled={!@movable}
+          reason={timing_reason(@editable, @movable)}
           error={@panel.errors["timing"]}
           target={@surface}
         />
@@ -297,6 +298,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
     do: dgettext("dashboard_calendar_editing", "Nothing is saved until you create it")
 
   defp status_text(%{status: status}), do: PanelStatus.text(status)
+
+  # An event that can be changed but not moved is a booking's calendar copy,
+  # whose time is the booking's. One that cannot be changed at all says why
+  # at the top of the panel already.
+  defp timing_reason(true, false),
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "The time belongs to the booking. Reschedule it from Bookings."
+      )
+
+  defp timing_reason(_editable, _movable), do: nil
 
   defp title_value(%{kind: :booking} = booking), do: EventPayload.title(booking)
   defp title_value(event), do: Map.get(event, :summary) || ""

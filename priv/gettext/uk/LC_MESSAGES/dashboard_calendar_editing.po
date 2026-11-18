@@ -752,3 +752,8 @@ msgstr "Додано %{email}. Запрошення буде надіслано,
 #, elixir-autogen, elixir-format
 msgid "Removed %{email}. They will be told once the change has synced to your calendar."
 msgstr "Видалено %{email}. Сповіщення буде надіслано, щойно зміну синхронізовано з вашим календарем."
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The time belongs to the booking. Reschedule it from Bookings."
+msgstr "Час належить бронюванню. Перенесіть його в розділі «Бронювання»."
