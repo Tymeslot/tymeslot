@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceContactGuestsTest do
   import Mox
   import Tymeslot.CalDAVSyncTestFixtures, only: [caldav_report_xml: 2]
   import Tymeslot.ConfigTestHelpers
+  import Tymeslot.Test.AttendeeEmailDelivery, only: [deliver_all: 1]
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Ecto.Changeset
@@ -133,6 +134,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceContactGuestsTest do
     assert %{success: 1} = Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
 
     assert cancelled_to() == ["ada@example.com"]
+
+    # The email job, run through the real email service to the test mailbox.
+    with_config(:tymeslot, :email_service_module, Tymeslot.Emails.EmailService)
+    with_config(:swoosh, :shared_test_process, self())
+
+    assert [email] = deliver_all("send_calendar_invitation")
+    assert [{_name, "ada@example.com"}] = email.to
+    assert email.subject =~ "Cancelled - Planning"
+    assert email.text_body =~ "has cancelled an event you were invited to."
   end
 
   test "moving it says the guest has not been told", %{lv: lv, id: id} do

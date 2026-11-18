@@ -14,14 +14,20 @@ defmodule Tymeslot.Notifications.Email.IntegrationEmailsTest do
 
   describe "handle_calendar_invitation/1" do
     test "sends an invitation with parsed datetimes and organiser identity" do
-      user = insert(:user, name: "Alice Organiser", email: "alice@example.com")
+      user = insert(:user, name: "Alice Account", email: "alice@example.com")
+      # The handler loads this row itself: the name the guest knows the
+      # organiser by, and the clock the event is stated in.
+      insert(:profile, user: user, full_name: "Alice Organiser", timezone: "Europe/Berlin")
 
       expect(EmailServiceMock, :send_calendar_invitation, fn "bob@example.com", details ->
         assert details.event_title == "Team Sync"
         assert details.event_uid == "evt-uid-1"
-        # The same instants, stated in the organiser's timezone.
+        # The same instants, stated in the organiser's timezone: 10:00 UTC is
+        # 12:00 in Berlin in April.
         assert DateTime.compare(details.start_time, ~U[2026-04-10 10:00:00Z]) == :eq
         assert DateTime.compare(details.end_time, ~U[2026-04-10 11:00:00Z]) == :eq
+        assert details.timezone == "Europe/Berlin"
+        assert {details.start_time.time_zone, details.start_time.hour} == {"Europe/Berlin", 12}
         assert details.duration == 60
         assert details.location == "Office"
         assert details.organizer_name == "Alice Organiser"
