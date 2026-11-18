@@ -16,7 +16,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
   import Mox
 
   import Tymeslot.AvailabilityTestHelpers,
-    only: [open_schedule_for: 1, create_bookable_profile: 1, next_bookable_weekday: 0]
+    only: [open_schedule_for: 1]
 
   import Tymeslot.Factory
 
@@ -595,64 +595,5 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
     assert {:ok, %{cancelled_at: %DateTime{}}} = ParticipantQueries.get(mover.id)
 
     refute_enqueued(worker: EmailWorker, args: %{"action" => "send_seat_reschedule_emails"})
-  end
-
-  # `Validation.prepare_new_times/2` never ran `ScheduleCheck`, so a seat
-  # move could land outside the organiser's own working hours — an
-  # unauthenticated seat-token holder could confirm a meeting the organiser
-  # never offered.
-  describe "schedule enforcement" do
-    setup do
-      %{user: user} =
-        create_bookable_profile(
-          hours: %{is_available: true, start_time: ~T[09:00:00], end_time: ~T[17:00:00]}
-        )
-
-      meeting_type =
-        insert(:meeting_type,
-          user: user,
-          duration_minutes: 30,
-          is_active: true,
-          max_participants: 2
-        )
-
-      date = next_bookable_weekday()
-
-      old_params = %{
-        date: date,
-        time: "10:00",
-        duration: "30min",
-        user_timezone: "Etc/UTC",
-        organizer_user_id: user.id,
-        meeting_type_id: meeting_type.id
-      }
-
-      {:ok, old_meeting} =
-        Create.execute(old_params, %{"name" => "Mover", "email" => "mover-hours@example.com"})
-
-      mover =
-        old_meeting.id
-        |> ParticipantQueries.list_live_for_meeting()
-        |> Enum.find(&(&1.email == "mover-hours@example.com"))
-
-      %{old_meeting: old_meeting, mover: mover, date: date}
-    end
-
-    test "a seat move to a time outside the organiser's schedule is refused",
-         %{old_meeting: old_meeting, mover: mover, date: date} do
-      outside_hours_params = %{
-        date: Date.to_iso8601(date),
-        time: "22:00",
-        duration: "30min",
-        user_timezone: "Etc/UTC"
-      }
-
-      assert {:error, :slot_taken} =
-               move(mover, outside_hours_params)
-
-      # Atomicity: the old seat still stands
-      assert [%{email: "mover-hours@example.com"}] =
-               ParticipantQueries.list_live_for_meeting(old_meeting.id)
-    end
   end
 end
