@@ -135,6 +135,9 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
     %{
       colour_only: true,
       colour: colour,
+      # The event's own calendar: without it Google patches the booking
+      # calendar, where an event on any other calendar is not found.
+      calendar_id: event.provider_calendar_id,
       provider_event_id: event.provider_event_id,
       raw_ical: event.raw_ical,
       etag: event.etag

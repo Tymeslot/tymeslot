@@ -25,6 +25,7 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
       summary: "Meeting",
       provider: integration.provider,
       provider_event_id: "pid-1",
+      provider_calendar_id: "work",
       raw_ical: "BEGIN:VEVENT\nUID:uid-1\nRRULE:FREQ=WEEKLY\nEND:VEVENT",
       all_day: false,
       start_at: ~U[2026-07-03 10:00:00Z],
@@ -95,6 +96,7 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
       expect(Tymeslot.CalendarMock, :update_event, fn "uid-1", event_data, {integ_id, user_id} ->
         assert event_data.colour_only == true
         assert event_data.colour == "blueberry"
+        assert event_data.calendar_id == "work"
         assert event_data.provider_event_id == "pid-1"
         assert event_data.raw_ical =~ "RRULE:FREQ=WEEKLY"
         # Timing/summary/description/location must NOT be sent — a full-field
