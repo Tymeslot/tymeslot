@@ -180,7 +180,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
       planned: `{:ok, :kept}`;
     * nobody left on a meeting still awaiting payment (a slot only holds
       ever took): expired as an unpaid booking is, `{:ok, :expired, meeting}`,
-      for `Checkout.announce_expired/1` after commit;
+      for `announce_released/1` after commit;
     * nobody left on a confirmed meeting: cancelled as `cancel_if_emptied/1`
       cancels it, `{:ok, :cancelled, meeting}`, for
       `Cancel.finalise_cancellation/1` after commit.
@@ -286,7 +286,10 @@ defmodule Tymeslot.Bookings.SeatRelease do
   @spec announce_released(hold_release()) :: :ok
   def announce_released(%{hold_id: hold_id, meeting: meeting, settled: settled} = release) do
     case settled do
-      {:ok, :expired, expired} -> Checkout.announce_expired(expired)
+      # A hold-created meeting that expires had no booker but the hold's,
+      # who hears on the hold's topic below; the slot is offered again by
+      # `broadcast_and_invalidate/1`.
+      {:ok, :expired, _expired} -> :ok
       {:ok, :cancelled, cancelled} -> Cancel.finalise_cancellation(cancelled)
       {:ok, :kept} -> :ok
     end

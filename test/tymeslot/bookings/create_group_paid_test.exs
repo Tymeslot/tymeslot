@@ -157,7 +157,8 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
     meeting = Repo.get!(MeetingSchema, hold.meeting_id)
     assert meeting.status == :expired
     assert Seats.seats_left(meeting, 4) == 4
-    assert_receive :expired
+    # A seat's outcome goes to its hold's topic, never the shared meeting's.
+    refute_receive :expired
   end
 
   test "a failed checkout on a joined meeting leaves the meeting alone", ctx do

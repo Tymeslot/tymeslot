@@ -11,6 +11,8 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   alias Phoenix.LiveView.Socket
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.BookingPayments
+  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.SeatView
   alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
@@ -83,6 +85,12 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   # PubSub broadcasts for embedded paid bookings — see
   # `BookingSubmissionHandlerComponent.handle_payment_required_embedded/3`.
   def route(:paid, socket), do: handle_payment_paid(socket)
+
+  # A held group seat's outcome, on the hold's own topic
+  # (`BookingSubmissionHandlerComponent.handle_seat_payment_required/5`).
+  def route({:paid, participant_id}, socket) when is_binary(participant_id),
+    do: handle_seat_payment_paid(socket, participant_id)
+
   def route(:expired, socket), do: handle_payment_expired(socket)
   def route(_message, _socket), do: :unhandled
 
@@ -399,6 +407,11 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_payment_paid(socket) do
     case socket.assigns do
+      # A seat's wait ends on its hold's `{:paid, participant_id}`: a bare
+      # `:paid` names no seat, and the group meeting has no attendee.
+      %{awaiting_payment_hold: %{}} ->
+        {:noreply, socket}
+
       %{current_state: :awaiting_payment, awaiting_payment_meeting: %{} = meeting} ->
         socket =
           socket
@@ -426,12 +439,57 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
     do: BookingPayments.payment_for_meeting(meeting.id, meeting.organizer_user_id)
 
   @doc """
+  Handles a held group seat's `{:paid, participant_id}` broadcast, on the
+  hold's topic the embedded booker subscribed to when Stripe Checkout
+  opened in a new tab.
+
+  The payment made the hold a participant, so the confirmation is that
+  seat's, as for a free seat: its own calendar file (never the shared
+  meeting's uid), the location it was booked at, and the name and email
+  the booker gave, from the hold. The seat is looked up by its participant,
+  since a late payment can seat the booker on a meeting other than the
+  hold's (`SeatView.for_participant/1`). Only the wait for a seat moves:
+  a broadcast once the page has moved on, or one for a participant that no
+  longer exists, changes nothing.
+  """
+  @spec handle_seat_payment_paid(Socket.t(), binary()) :: {:noreply, Socket.t()}
+  def handle_seat_payment_paid(socket, participant_id) do
+    with %{current_state: :awaiting_payment, awaiting_payment_hold: %{} = hold} <-
+           socket.assigns,
+         {:ok, seat} <- SeatView.for_participant(participant_id) do
+      socket =
+        socket
+        |> assign(:meeting_uid, nil)
+        |> assign(:seat_calendar_url, seat_calendar_url(seat))
+        |> assign(:meeting_status, seat.status)
+        |> BookingLocation.assign_booked(seat)
+        |> assign(:name, hold.name)
+        |> assign(:email, hold.email)
+        |> assign(:paid_payment, BookingPayments.payment_for_participant(participant_id))
+        |> Runtime.forget_payment_wait()
+
+      {:noreply, Runtime.transition_to(socket, :confirmation, %{})}
+    else
+      _not_waiting_or_gone -> {:noreply, socket}
+    end
+  end
+
+  defp seat_calendar_url(seat) do
+    case Meetings.booker_calendar(seat) do
+      {:seat, url} -> url
+      _no_seat_file -> nil
+    end
+  end
+
+  @doc """
   Handles the `:expired` PubSub broadcast for an embedded paid booking.
 
   When the Stripe Checkout session expires (attendee closed the tab,
   30 minutes elapsed, etc.) we send the booker back to the moment
   collecting the attendee (the classic booking step) with a flash so they
   can try again, and stop listening for that meeting's payment broadcasts.
+  A held group seat's `:expired` comes on its hold's topic, and ends its
+  wait the same way (`Runtime.forget_payment_wait/1` forgets the hold too).
   """
   @spec handle_payment_expired(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

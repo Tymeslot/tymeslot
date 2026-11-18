@@ -9,6 +9,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutExpiredTest do
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.AccountCurrency
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionAsyncPaymentFailed
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
   alias Tymeslot.Meetings.MeetingSchema
@@ -101,6 +102,21 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutExpiredTest do
     assert Repo.reload!(payment).status == :failed
     assert_receive :expired
     assert {:ok, _changed} = AccountCurrency.change_default_currency(account, "usd")
+  end
+
+  # The booker waits on the hold's topic; the meeting's is for one-to-one
+  # bookings, and a seat's lapse must not end anyone's wait there.
+  test "a seat expiry never broadcasts on the meeting topic", ctx do
+    meeting = slot(ctx, status: :awaiting_payment)
+    {hold, payment} = held_seat(ctx, meeting, email: "payer@example.com")
+    Phoenix.PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(meeting.id))
+    Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(hold.id))
+
+    assert :ok = CheckoutSessionExpired.handle(expired_event("evt_quiet_expiry", payment))
+
+    assert Repo.get!(MeetingSchema, meeting.id).status == :expired
+    assert_receive :expired
+    refute_receive :expired
   end
 
   test "an expired hold on a joined meeting leaves the meeting", ctx do
