@@ -15,6 +15,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeatLockTest do
   import Tymeslot.Factory
   import TymeslotWeb.CalendarSurfaceHelpers
 
+  alias Tymeslot.Integrations.Calendar
+
   @lock "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
 
   setup %{conn: conn} do
@@ -99,6 +101,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeatLockTest do
     assert has_element?(lv, "#calendar-panel-read-only", @lock)
     assert has_element?(lv, "#calendar-panel-title[disabled]")
     assert has_element?(lv, "#calendar-panel-timing fieldset[disabled]")
+  end
+
+  test "the side panel offers no colour, and a colour sent anyway is refused", %{
+    conn: conn,
+    user: user,
+    session: session
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    hook(lv, "calendar:edit", %{"id" => "event-#{session.id}"})
+
+    refute has_element?(lv, "#calendar-panel-colour")
+
+    hook(lv, "panel:colour", %{"colour" => "tomato"})
+
+    assert Calendar.overrides_for(user.id) == %{}
   end
 
   test "a move sent anyway is refused and the event stays", %{conn: conn, session: session} do
