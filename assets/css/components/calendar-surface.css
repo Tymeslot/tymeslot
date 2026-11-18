@@ -510,7 +510,7 @@
   gap: 1px;
   padding: 0 4px;
   border-radius: var(--radius-full);
-  color: var(--cal-on-booking);
+  color: var(--cal-on-replies);
   font-size: var(--font-size-2xs);
   font-weight: 700;
   line-height: 14px;
@@ -530,7 +530,7 @@
 
 .cal-ev-replies.is-declined,
 .cal-mreplies.is-declined {
-  background: var(--cal-now);
+  background: var(--cal-replies-declined);
 }
 
 .cal-ev.has-replies {
