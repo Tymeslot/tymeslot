@@ -141,3 +141,9 @@ test("the bookings lens keeps only bookings, and says so when there are none", (
   expect(holder.querySelector(".cal-agenda-empty").textContent).toBe("No bookings in these weeks.");
   expect(draw({ groups: [] }).querySelector(".cal-agenda-empty").textContent).toBe("Nothing planned in these weeks.");
 });
+
+test("the bookings lens keeps the events made in Tymeslot too", () => {
+  const made = ev("event-8", "Intro call", "2026-10-15T10:00", "2026-10-15T10:30", { tymeslot: true });
+  const synced = ev("event-9", "Lunch", "2026-10-15T12:00", "2026-10-15T13:00", { tymeslot: false });
+  expect(lensEvents([...events, made, synced], "bookings").map((e) => e.id)).toEqual(["booking-4", "event-8"]);
+});

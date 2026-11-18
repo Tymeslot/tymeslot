@@ -6,8 +6,9 @@
  * hook asks the server for more as its end scrolls into sight (see
  * hooks/calendar_canvas/views.js).
  *
- * Its lens shows everything ("all") or only the Tymeslot bookings
- * ("bookings"); a booking's calendar copy is already drawn as the booking.
+ * Its lens shows everything ("all") or only what Tymeslot made ("bookings"):
+ * the bookings, whose calendar copies are drawn as the bookings, and the
+ * events created here (`tymeslot`), such as a meeting made with New event.
  */
 import { AGENDA_MAX_DAYS, MINUTES_PER_DAY, dayNumber, isoFromDay } from "./time.js";
 
@@ -44,5 +45,5 @@ export const AGENDA_LENSES = ["all", "bookings"];
 
 // The events the lens shows.
 export function lensEvents(events, lens) {
-  return lens === "bookings" ? events.filter((e) => e.kind === "booking") : events;
+  return lens === "bookings" ? events.filter((e) => e.kind === "booking" || e.tymeslot === true) : events;
 }

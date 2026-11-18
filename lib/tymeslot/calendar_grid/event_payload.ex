@@ -98,7 +98,8 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         recurring: recurring?(event),
         guests: guest_count(event),
         request: Map.get(event, :request, false),
-        expired: Map.get(event, :expired, false)
+        expired: Map.get(event, :expired, false),
+        tymeslot: Map.get(event, :created_by_tymeslot) == true
       },
       timing(event, context.timezone)
     )
