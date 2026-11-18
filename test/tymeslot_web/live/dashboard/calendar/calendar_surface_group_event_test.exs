@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGroupEventTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.OneOffEvents
@@ -176,6 +177,33 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGroupEventTest do
     assert [session] = PlannedSessions.list(type)
     assert session.start_time == ~U[2026-10-24 18:00:00Z]
     assert session.registration_closes_at == ~U[2026-10-23 12:00:00Z]
+  end
+
+  # A booking still awaiting its attendee's email verification holds its
+  # slot but is hidden from the host, so the refusal must not speak of a
+  # booking they cannot see.
+  test "a time held by a hidden booking is refused without naming a booking", %{
+    conn: conn,
+    user: user,
+    integration: integration,
+    venue: venue
+  } do
+    insert(:awaiting_verification_meeting,
+      organizer_user_id: user.id,
+      start_time: ~U[2026-10-24 18:00:00Z],
+      end_time: ~U[2026-10-24 18:30:00Z]
+    )
+
+    lv = open(conn, integration)
+    as_group_event(lv)
+
+    html = create(lv, %{"max_participants" => "12", "group_location" => "venue:#{venue.id}"})
+
+    assert html =~ "This time is no longer available. Please choose another time."
+    refute html =~ "You already have a booking"
+    assert has_element?(lv, "#calendar-panel-new-form")
+    assert Repo.all(MeetingTypeSchema) == []
+    assert Repo.aggregate(MeetingSchema, :count) == 1
   end
 
   test "keeps the panel open and says what is missing", %{conn: conn, integration: integration} do
