@@ -222,6 +222,22 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
       assert BookingPayments.list_outstanding_refunds_for_host(1) == []
       assert %{count: 0} = BookingPayments.outstanding_refunds_summary_for_host(1)
     end
+
+    # Refused at checkout (its slot full): the session goes ahead with the
+    # others, but this seat never happened, so its money is owed back until
+    # its refund goes through.
+    test "a seat paid for but never booked is outstanding on a session going ahead" do
+      session = insert(:group_meeting, status: :confirmed, capacity: 4)
+
+      refused =
+        payment_for(1, session, %{seat_payment: true, participant_id: nil, amount_cents: 2500})
+
+      assert [found] = BookingPayments.list_outstanding_refunds_for_host(1)
+      assert found.id == refused.id
+
+      assert %{count: 1, totals: [%{currency: "eur", amount_cents: 2500}]} =
+               BookingPayments.outstanding_refunds_summary_for_host(1)
+    end
   end
 
   describe "outstanding_refunds_summary_for_host/1" do

@@ -150,6 +150,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
   # series' first session), `{:seat, release}` for a hold, `{:moved_on,
   # meeting_id}` when nothing was held any more, or `:unchanged` when there
   # is no meeting.
+  # A seat payment whose hold is gone has nothing left to release, and
+  # never its group meeting, which other seats share.
+  defp release(%BookingPaymentSchema{seat_payment: true, seat_hold_id: nil}, _reason),
+    do: {:ok, :unchanged}
+
   defp release(%BookingPaymentSchema{seat_hold_id: hold_id}, reason) when is_binary(hold_id) do
     case SeatHolds.get(hold_id) do
       %SeatHoldSchema{} = hold ->

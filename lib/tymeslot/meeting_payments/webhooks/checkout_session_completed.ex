@@ -130,6 +130,17 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   defp classify(:ok), do: {:ok, :ok}
   defp classify({:error, reason}), do: {{:error, :retry_later, reason}, :error}
 
+  # A seat payment whose hold is gone (deleted on erasure, or 30 days after
+  # it settled) has no seat left to book: one still awaiting its money is
+  # refunded in full, as a payment whose meeting is gone is. It never
+  # confirms the group meeting it was held on, which other seats share.
+  defp complete_payment(
+         %BookingPaymentSchema{seat_payment: true, seat_hold_id: nil} = payment,
+         event_id,
+         object
+       ),
+       do: refund_holdless_seat(payment, event_id, object)
+
   # A series' one payment confirms every session of it.
   defp complete_payment(%BookingPaymentSchema{series_id: series_id} = payment, event_id, object)
        when is_binary(series_id),
@@ -141,6 +152,24 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
        do: SeatCheckoutCompleted.run(payment, event_id, object)
 
   defp complete_payment(payment, event_id, object), do: run(payment, event_id, object)
+
+  defp refund_holdless_seat(payment, event_id, object) do
+    case LockedPayment.run(payment, event_id, &refund_orphaned(&1, event_id, object)) do
+      {:ok, {:refused, paid, nil}} ->
+        after_refusal(paid, nil, event_id, object)
+
+      {:ok, outcome} when outcome in [:no_op, :idempotent_replay] ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("checkout.session.completed handler failed",
+          event_id: event_id,
+          reason: LogFormat.reason(reason)
+        )
+
+        {:error, reason}
+    end
+  end
 
   # Activation (the video room, the emails) runs only for the transaction
   # that moved the rows itself. A second completion of the same payment, the

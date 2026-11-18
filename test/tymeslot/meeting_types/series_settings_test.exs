@@ -363,6 +363,16 @@ defmodule Tymeslot.MeetingTypes.SeriesSettingsTest do
     end
   end
 
+  test "a paid group type saved with a series is not offered it, and books single sessions" do
+    paid_group =
+      stored_series(%{series_required: true, payment_required: true, max_participants: 5})
+
+    paid_one_to_one = stored_series(%{payment_required: true, max_participants: 1})
+
+    assert SeriesSettings.offer(paid_group) == %{offered?: false, single_allowed?: true}
+    assert SeriesSettings.offered?(paid_one_to_one)
+  end
+
   test "turning the series off clears its settings" do
     stored =
       stored_series(%{

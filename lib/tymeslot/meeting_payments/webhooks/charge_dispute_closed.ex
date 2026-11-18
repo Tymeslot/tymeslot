@@ -57,8 +57,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
-  alias Tymeslot.Meetings.SeatHolds
-  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Payments.Behaviours.WebhookHandler
 
   @event_type "charge.dispute.closed"
@@ -179,16 +177,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   # refunds (`Meetings.Cancellation`), its money then being with the card
   # network, so once the dispute returns that money to the host nothing
   # refunds it to the attendee.
-  defp never_booked?(%BookingPaymentSchema{seat_hold_id: hold_id, participant_id: nil})
-       when is_binary(hold_id),
-       do: true
-
-  defp never_booked?(%BookingPaymentSchema{seat_hold_id: hold_id}) when is_binary(hold_id) do
-    case SeatHolds.get(hold_id) do
-      %SeatHoldSchema{status: status} -> status != :converted
-      nil -> false
-    end
-  end
+  #
+  # A seat is told apart by its immutable `seat_payment` marker rather than
+  # by its hold, which is deleted 30 days after it settles (or on erasure):
+  # a refused seat whose hold is gone is still a seat that never happened.
+  defp never_booked?(%BookingPaymentSchema{seat_payment: true, participant_id: nil}), do: true
+  defp never_booked?(%BookingPaymentSchema{seat_payment: true}), do: false
 
   defp never_booked?(payment) do
     case HeldMeetings.meetings_for(payment) do

@@ -381,6 +381,34 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       )
     end
 
+    # Its hold was deleted (30 days after it settled, or on erasure) before
+    # the dispute closed: the seat payment's marker still says what it was.
+    test "a refused seat whose hold is gone is refunded once the dispute is won" do
+      meeting = insert(:group_meeting, status: :confirmed)
+
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          meeting_id: meeting.id,
+          seat_hold_id: nil,
+          seat_payment: true,
+          status: :disputed,
+          amount_cents: 2500,
+          refunded_amount_cents: 0,
+          stripe_charge_id: "ch_SEAT_HOLD_GONE"
+        )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_closed_event("evt_SEAT_HOLD_GONE_WON", "ch_SEAT_HOLD_GONE", "won", 2500)
+               )
+
+      assert_enqueued(
+        worker: RefundLatePayment,
+        args: %{"booking_payment_id" => bp.id, "reason" => "after_dispute"}
+      )
+    end
+
     test "a booked seat is not refunded when the dispute is won" do
       meeting = insert(:group_meeting, status: :confirmed)
       participant = insert(:participant, meeting: meeting)

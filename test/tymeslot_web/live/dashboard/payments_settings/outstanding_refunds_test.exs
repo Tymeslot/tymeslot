@@ -109,4 +109,22 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefundsTest do
       refute html =~ "Cancelled 2 Nov"
     end
   end
+
+  describe "a seat paid for but never booked" do
+    test "is dated by its payment, as not booked" do
+      html =
+        render_card(
+          payments: [
+            payment(
+              meeting: build(:group_meeting, status: :confirmed),
+              seat_payment: true,
+              participant_id: nil,
+              paid_at: ~U[2026-11-03 09:00:00Z]
+            )
+          ]
+        )
+
+      assert html =~ "Not booked, paid 3 Nov 2026"
+    end
+  end
 end

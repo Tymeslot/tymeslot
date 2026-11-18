@@ -21,6 +21,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Repo
 
   setup :verify_on_exit!
@@ -94,6 +95,37 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
 
       assert {:ok, %{cancelled_count: 1}} = ConnectAccountRetirement.disconnect(user)
       assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
+    end
+
+    # A group session others have booked keeps going ahead: the pending
+    # seat's hold is released as failed, and its booker told, but the
+    # meeting is never expired as a one-to-one booking's would be.
+    test "releases an open seat hold without expiring its group meeting" do
+      user = insert(:user)
+      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id)
+      meeting = insert(:group_meeting, organizer_user: user, status: :confirmed, capacity: 4)
+      insert(:participant, meeting: meeting)
+      hold = insert(:seat_hold, meeting: meeting)
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(hold.id))
+
+      payment =
+        insert(:booking_payment,
+          host_user_id: user.id,
+          meeting: meeting,
+          seat_hold_id: hold.id,
+          seat_payment: true,
+          stripe_checkout_session_id: "cs_SEAT_OPEN",
+          status: :pending
+        )
+
+      stub(StripeAdapterMock, :expire_checkout_session, fn _session_id, _opts -> {:ok, %{}} end)
+
+      assert {:ok, %{cancelled_count: 1}} = ConnectAccountRetirement.disconnect(user)
+
+      assert BookingPaymentQueries.get(payment.id).status == :failed
+      assert %{status: :released, released_reason: :failed} = SeatHolds.get(hold.id)
+      assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
+      assert_receive :expired
     end
 
     # Disconnecting neither settles nor cancels a refund the host already owes;

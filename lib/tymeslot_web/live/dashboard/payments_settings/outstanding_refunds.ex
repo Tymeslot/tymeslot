@@ -179,6 +179,15 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
     end
   end
 
+  # A seat paid for but never booked (refused at checkout, its slot full
+  # say) is dated by its payment: the session it was held on may go ahead.
+  defp format_date_cell(%{
+         seat_payment: true,
+         participant_id: nil,
+         paid_at: %DateTime{} = paid_at
+       }),
+       do: dgettext("dashboard_payments", "Not booked, paid %{date}", date: format_date(paid_at))
+
   # A seat its participant cancelled is dated by when they left: the session
   # itself may still be going ahead.
   defp format_date_cell(%{participant: %{cancelled_at: %DateTime{} = left_at}}),

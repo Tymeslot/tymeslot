@@ -104,6 +104,21 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutExpiredTest do
     assert {:ok, _changed} = AccountCurrency.change_default_currency(account, "usd")
   end
 
+  # The hold was deleted while the checkout was open (the booker's erasure,
+  # say), and the group meeting it was held on still awaits other seats'
+  # payments: only the payment fails.
+  test "an expired seat checkout whose hold is gone fails the payment alone", ctx do
+    meeting = slot(ctx, status: :awaiting_payment)
+    {hold, payment} = held_seat(ctx, meeting, email: "payer@example.com")
+    event = expired_event("evt_hold_gone", payment)
+    Repo.delete!(hold)
+
+    assert :ok = CheckoutSessionExpired.handle(event)
+
+    assert %{status: :failed, seat_hold_id: nil} = Repo.reload!(payment)
+    assert Repo.get!(MeetingSchema, meeting.id).status == :awaiting_payment
+  end
+
   # The booker waits on the hold's topic; the meeting's is for one-to-one
   # bookings, and a seat's lapse must not end anyone's wait there.
   test "a seat expiry never broadcasts on the meeting topic", ctx do

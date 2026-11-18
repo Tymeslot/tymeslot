@@ -76,11 +76,17 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
   Whether bookers are offered the series right now: it is configured and the
   host's plan includes it. A checker failure counts as not offered, and so
   does a type that asks bookers to confirm their email, which a series would
-  skip: its single sessions are verified instead.
+  skip: its single sessions are verified instead. A paid group type, which
+  `conflicts/1` refuses a series but which may have been saved with one
+  before that rule, books single sessions too: a seat is paid per session.
   """
   @spec offered?(MeetingTypeSchema.t()) :: boolean()
   def offered?(%{series_mode: nil}), do: false
   def offered?(%{requires_email_verification: true}), do: false
+
+  def offered?(%{payment_required: true, max_participants: max_participants})
+      when is_integer(max_participants) and max_participants > 1,
+      do: false
 
   def offered?(%{user_id: user_id}) do
     case Features.check_access(user_id, @feature) do

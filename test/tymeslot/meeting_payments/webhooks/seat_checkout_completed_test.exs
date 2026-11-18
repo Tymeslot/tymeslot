@@ -289,6 +289,24 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
     assert ParticipantQueries.list_live_for_meeting(meeting.id) == []
   end
 
+  # The hold is deleted (on the booker's erasure, say) while the checkout is
+  # open: the seat payment is refunded, and the group meeting other seats
+  # share is never confirmed by it.
+  test "a payment whose hold is gone is refunded and confirms nothing", ctx do
+    meeting = slot(ctx)
+    {hold, payment} = held_seat(ctx, meeting, email: "payer@example.com")
+    event = completed_event("evt_hold_gone", payment)
+    Repo.delete!(hold)
+
+    assert :ok = CheckoutSessionCompleted.handle(event)
+
+    paid = Repo.reload!(payment)
+    assert %{status: :paid, seat_hold_id: nil} = paid
+    assert_enqueued(worker: RefundLatePayment, args: %{"booking_payment_id" => paid.id})
+    assert Repo.reload!(meeting).status == :awaiting_payment
+    assert calendar_creates(ctx.user, meeting.id) == []
+  end
+
   test "a seat session is found by its reference when its id was never attached", ctx do
     meeting = slot(ctx)
 

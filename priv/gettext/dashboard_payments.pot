@@ -559,3 +559,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Left %{date}"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Not booked, paid %{date}"
+msgstr ""

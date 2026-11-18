@@ -384,9 +384,11 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     }
   end
 
-  # Cancelled or expired bookings whose money the host still holds, and the
+  # Cancelled or expired bookings whose money the host still holds, the
   # paid seats their participants cancelled (the session goes ahead, and a
-  # participant's own cancellation refunds nothing). A moved seat is not
+  # participant's own cancellation refunds nothing), and the seats paid for
+  # but never booked (refused at checkout, their slot full say), which are
+  # owed in full whatever became of the session. A moved seat is not
   # one: its payment points at the live participant it became. A paid
   # booking ends expired when its payment completed after the slot was taken
   # (`CheckoutSessionCompleted`), or when a paid request lapsed unapproved
@@ -418,7 +420,9 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
       as: :participant,
       on: p.id == b.participant_id,
       where: is_nil(b.series_id) or not exists(series_sessions_going_ahead()),
-      where: m.status in ^MeetingState.released() or not is_nil(p.cancelled_at)
+      where:
+        m.status in ^MeetingState.released() or not is_nil(p.cancelled_at) or
+          (b.seat_payment and is_nil(b.participant_id))
   end
 
   # A paid series' one payment is owed back once none of its sessions goes

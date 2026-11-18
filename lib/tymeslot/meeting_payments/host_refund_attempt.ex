@@ -37,8 +37,11 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   rather than failing it, and a payment refunded in full meanwhile leaves
   the job nothing to do: it succeeds, and the host is not emailed.
 
-  Every later attempt sends the pinned amount, never a resized one, under
-  the same key. An attempt whose refund Stripe made but whose transaction
+  Every later attempt that Stripe may have answered sends the pinned amount,
+  never a resized one, under the same key. Only an attempt shown to have
+  made no refund (refused locally, or answered with an error by Stripe)
+  leaves the pin free to shrink: a later attempt finding less remaining than
+  it pins again at what remains, as the first attempt would have. An attempt whose refund Stripe made but whose transaction
   rolled back may since have been recorded by the `charge.refunded`
   webhook, leaving less remaining than the pinned amount (or nothing):
   `Refunds.issue_host_refund/5` still puts the amount to Stripe under the
@@ -62,6 +65,7 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
 
   require Logger
 
+  alias Stripe.Error, as: StripeError
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
@@ -79,6 +83,10 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
 
   # Where a job's `meta` keeps the amount its refund was sized at.
   @pinned_key "refund_cents"
+
+  # Where it records whether Stripe may have been asked for that refund
+  # (1) or was shown not to have made it (0).
+  @asked_key "refund_asked"
 
   @unretryable [
     :not_found,
@@ -174,18 +182,40 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
     end
   end
 
+  # Stripe may be asked from here on, so that is recorded, committed, before
+  # the refund's transaction opens, and only taken back once the attempt has
+  # failed in a way that shows Stripe made no refund. An attempt that raises,
+  # exits or fails after Stripe answered keeps the record, so its retry
+  # replays the pinned amount.
   defp refund(job_id, id, host_user_id, due, opts) do
-    Repo.transaction(fn ->
-      with :claimed <- claim(job_id, opts),
-           {:ok, refunded} <-
-             Refunds.issue_host_refund(id, host_user_id, due, nil, key_opts(job_id, opts)) do
-        refunded
-      else
-        :already_claimed -> :already_made
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+    :ok = record_asked(job_id, 1)
+
+    result =
+      Repo.transaction(fn ->
+        with :claimed <- claim(job_id, opts),
+             {:ok, refunded} <-
+               Refunds.issue_host_refund(id, host_user_id, due, nil, key_opts(job_id, opts)) do
+          refunded
+        else
+          :already_claimed -> :already_made
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+
+    if never_refunded?(result), do: :ok = record_asked(job_id, 0)
+    result
   end
+
+  # A local refusal (an atom: no Stripe call made, or a replay Stripe
+  # rejected) or an error Stripe itself answered with: no refund was made.
+  # A network error may have reached Stripe, and anything else (a changeset
+  # after Stripe's answer) came after it.
+  defp never_refunded?({:error, reason}) when is_atom(reason), do: true
+  defp never_refunded?({:error, %StripeError{source: :stripe}}), do: true
+  defp never_refunded?(_result), do: false
+
+  defp record_asked(nil, _asked), do: :ok
+  defp record_asked(job_id, asked), do: ObanJobQueries.put_meta_integer(job_id, @asked_key, asked)
 
   defp claim(nil, _opts), do: :claimed
   defp claim(job_id, opts), do: DeliveryClaims.claim(job_id, opts[:claim])
@@ -200,19 +230,36 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   # `charge.refunded` webhook recorded that refund would find less remaining
   # and send a different amount under the key, which Stripe refuses.
   # Nothing remaining pins nothing: no refund was asked for.
+  #
+  # A pinned amount Stripe was never asked to refund (the attempt that pinned
+  # it failed before Stripe accepted anything) holds the key to nothing, so a
+  # refund the host made since shrinks it as it would have the first attempt:
+  # it is pinned again at what remains, when that is less.
   defp amount_due(job_id, id, host_user_id, amount) do
     Repo.transaction(fn ->
       case BookingPaymentQueries.get_for_update(id, host_user_id) do
-        {:ok, locked} -> pinned(job_id) || pin(job_id, min(amount, remaining(locked)))
+        {:ok, locked} -> due(job_id, pinned(job_id), amount, remaining(locked))
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
   end
 
+  defp due(job_id, nil, amount, remaining), do: pin(job_id, min(amount, remaining))
+
+  defp due(job_id, pinned, _amount, remaining) when pinned > remaining do
+    if asked?(job_id), do: pinned, else: pin(job_id, remaining)
+  end
+
+  defp due(_job_id, pinned, _amount, _remaining), do: pinned
+
   defp remaining(payment), do: Refunds.refundable_remaining_cents(payment)
 
   defp pinned(nil), do: nil
   defp pinned(job_id), do: ObanJobQueries.meta_value(job_id, @pinned_key)
+
+  # A job pinned before the record existed counts as asked: its pinned
+  # amount is replayed, as it always was.
+  defp asked?(job_id), do: ObanJobQueries.meta_value(job_id, @asked_key) != 0
 
   defp pin(_job_id, 0), do: 0
   defp pin(nil, due), do: due

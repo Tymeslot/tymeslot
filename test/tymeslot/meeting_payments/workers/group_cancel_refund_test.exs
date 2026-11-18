@@ -52,6 +52,12 @@ defmodule Tymeslot.MeetingPayments.Workers.GroupCancelRefundTest do
     |> perform_job([])
   end
 
+  defp refund_by_host(payment, cents) do
+    payment
+    |> Changeset.change(status: :partially_refunded, refunded_amount_cents: cents)
+    |> Repo.update!()
+  end
+
   defp expect_refund do
     expect(StripeAdapterMock, :create_refund, fn params, opts ->
       assert params.charge == "ch_SEAT"
@@ -132,6 +138,45 @@ defmodule Tymeslot.MeetingPayments.Workers.GroupCancelRefundTest do
     assert {:error, :api_error} = run_job()
     refute_enqueued(worker: SendSeriesRefundFailed)
     assert Repo.reload!(payment).refunded_amount_cents == 0
+  end
+
+  describe "a retry after a host refund shrank what remains" do
+    test "refunds what remains when Stripe refused the first attempt", %{payment: payment} do
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, _opts ->
+        {:error, %Stripe.Error{source: :stripe, code: :api_error, message: "try later"}}
+      end)
+
+      assert {:error, %Stripe.Error{source: :stripe}} = run_job()
+      refund_by_host(payment, 500)
+
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 1500}, _opts ->
+        {:ok, %{id: "re_SEAT"}}
+      end)
+
+      assert :ok = run_job(attempt: 2)
+      assert %{refunded_amount_cents: 2000, status: :refunded} = Repo.reload!(payment)
+    end
+
+    test "replays the pinned amount when Stripe may have refunded it", %{payment: payment} do
+      # Stripe's answer never comes back: the refund may have been made.
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, _opts ->
+        exit({:timeout, {GenServer, :call, []}})
+      end)
+
+      assert {:error, {:exit, _timeout}} = run_job()
+      refund_by_host(payment, 500)
+
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, _opts ->
+        {:error,
+         %Stripe.Error{
+           source: :stripe,
+           code: :invalid_request_error,
+           message: "Refund amount is greater than unrefunded amount on charge"
+         }}
+      end)
+
+      assert {:discard, :invalid_amount} = run_job(attempt: 2)
+    end
   end
 
   describe "the host's email when the refund was not made" do
