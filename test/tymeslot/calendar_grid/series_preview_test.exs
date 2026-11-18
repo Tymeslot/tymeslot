@@ -20,6 +20,7 @@ defmodule Tymeslot.CalendarGrid.SeriesPreviewTest do
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
+  alias Tymeslot.CalendarGrid.EventWindow
   alias Tymeslot.FreeBusy
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler
   alias Tymeslot.Integrations.Calendar.CalendarEvent
@@ -271,6 +272,44 @@ defmodule Tymeslot.CalendarGrid.SeriesPreviewTest do
     end
   end
 
+  describe "a booking whose calendar copy was given a repeat rule" do
+    setup do
+      freeze_clock(~U[2026-11-10 12:00:00Z])
+      :ok
+    end
+
+    test "is drawn as the booking on its date, with the later weeks previewed" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "google")
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          calendar_integration_id: integration.id,
+          calendar_uid: "weekly-ical-uid",
+          start_time: @first,
+          end_time: DateTime.add(@first, 3600)
+        )
+
+      stand_in(integration, %{
+        uid: "weekly-ical-uid",
+        provider: "google",
+        provider_calendar_id: "primary",
+        provider_event_id: "master-1"
+      })
+
+      {range_start, range_end} = {DateTime.add(@first, -1, :hour), week(@first, 4)}
+      events = EventWindow.list_events(user.id, [integration], range_start, range_end)
+
+      assert [%{kind: :booking, meeting_id: meeting_id}] =
+               Enum.filter(events, &(Map.get(&1, :kind) == :booking))
+
+      assert meeting_id == meeting.id
+      assert events |> previews() |> Enum.map(& &1.start_at) == Enum.map(1..3, &week(@first, &1))
+      assert length(events) == 4
+    end
+  end
+
   describe "a series on Google or Outlook" do
     setup do
       freeze_clock(~U[2026-11-10 12:00:00Z])
@@ -385,7 +424,7 @@ defmodule Tymeslot.CalendarGrid.SeriesPreviewTest do
         DateTime.add(start, count * 7, :day)
       )
 
-  defp previews(events), do: Enum.reject(events, &is_nil(&1.preview_of))
+  defp previews(events), do: Enum.filter(events, &CalendarGrid.preview?/1)
 
   defp week(start, n), do: DateTime.add(start, n * 7, :day)
 
