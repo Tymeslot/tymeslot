@@ -485,3 +485,8 @@ msgstr "Подію видалено, але скасувати зустріч н
 #, elixir-autogen, elixir-format
 msgid "Event deleted, but the attendees could not be notified."
 msgstr "Подію видалено, але учасників не вдалося сповістити."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Syncing with your calendar. Open the event to change the whole series."
+msgstr "Триває синхронізація з вашим календарем. Відкрийте подію, щоб змінити всю серію."

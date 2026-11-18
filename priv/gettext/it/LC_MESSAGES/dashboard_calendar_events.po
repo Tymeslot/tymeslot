@@ -479,3 +479,8 @@ msgstr "Evento eliminato, ma l'annullamento della riunione non è riuscito. Il p
 #, elixir-autogen, elixir-format
 msgid "Event deleted, but the attendees could not be notified."
 msgstr "Evento eliminato, ma non è stato possibile avvisare i partecipanti."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Syncing with your calendar. Open the event to change the whole series."
+msgstr "Sincronizzazione con il tuo calendario in corso. Apri l'evento per modificare l'intera serie."

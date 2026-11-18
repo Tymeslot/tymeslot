@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [push_event: 3]
 
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
@@ -44,6 +45,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   def open_edit(socket, id) do
     case Map.fetch(socket.assigns.events_by_id, id) do
       {:ok, event} ->
+        # A previewed occurrence of a series no sync has cached yet opens
+        # the series, which is the only part of it there is to change.
+        event = CalendarGrid.preview_series(event)
+        id = EventPayload.id(event)
         held_until = held_until(event)
 
         without_draft(socket, fn socket ->
@@ -132,6 +137,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   end
 
   def give_way(socket), do: socket
+
+  @doc """
+  The event `id` as the surface holds it: a loaded event, or the panel's own
+  when the panel is open on it but the window does not hold it (the series
+  of a previewed occurrence, cached weeks before the visible ones, or an
+  event a reload has dropped).
+  """
+  @spec fetch_event(map(), String.t()) :: {:ok, map()} | :error
+  def fetch_event(%{events_by_id: by_id} = assigns, id) do
+    case {Map.fetch(by_id, id), Map.get(assigns, :panel)} do
+      {{:ok, _event} = found, _panel} -> found
+      {:error, %{event_id: ^id, event: %{} = event}} -> {:ok, event}
+      {:error, _other} -> :error
+    end
+  end
 
   @doc "The panel's event as the surface holds it now; `nil` with no panel open."
   @spec current_event(map()) :: map() | nil

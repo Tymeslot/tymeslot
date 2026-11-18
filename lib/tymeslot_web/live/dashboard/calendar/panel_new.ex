@@ -297,7 +297,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   def duplicate(%{assigns: %{panel: %{mode: :edit, event_id: id}}} = socket) do
     %{integrations: integrations, timezone: timezone} = socket.assigns
 
-    with {:ok, event} <- Map.fetch(socket.assigns.events_by_id, id),
+    with {:ok, event} <- PanelState.fetch_event(socket.assigns, id),
          :ok <- not_moving(socket, id),
          :ok <- EditGuard.writable(integrations, event),
          true <- EditGuard.movable?(integrations, event),

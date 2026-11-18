@@ -11,11 +11,17 @@ defmodule Tymeslot.CalendarGrid.PreferredBookings do
   rule (any shared identifier). A copy on a calendar the organiser has
   deselected still matches: the booking stays on the grid, since it belongs
   to Tymeslot rather than to that calendar.
+
+  The organiser may give a copy a repeat rule. The booking still stands for
+  the copy's own date, but not for the series' later occurrences, previewed
+  until a sync caches them (`Tymeslot.Integrations.Calendar.SeriesPreview`),
+  so those stay.
   """
 
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Selection
+  alias Tymeslot.Integrations.Calendar.SeriesPreview
   alias Tymeslot.Meetings.ExternalCalendar
 
   @doc """
@@ -30,12 +36,19 @@ defmodule Tymeslot.CalendarGrid.PreferredBookings do
     bookings = Enum.map(bookings, &with_copy(&1, copies, integrations))
     mirrored = ExternalCalendar.calendar_identifier_set(bookings)
 
-    Enum.reject(visible, &ExternalCalendar.linked_to_calendar_event?(&1, mirrored)) ++ bookings
+    Enum.reject(visible, &copy_of_booking?(&1, mirrored)) ++ bookings
   end
+
+  defp copy_of_booking?(event, mirrored),
+    do:
+      not SeriesPreview.preview?(event) and
+        ExternalCalendar.linked_to_calendar_event?(event, mirrored)
 
   # Every identifier of every row, pointing at the first row that has it.
   defp index(rows) do
-    Enum.reduce(rows, %{}, fn row, acc ->
+    rows
+    |> Enum.reject(&SeriesPreview.preview?/1)
+    |> Enum.reduce(%{}, fn row, acc ->
       row
       |> ExternalCalendar.calendar_event_identifiers()
       |> Enum.reduce(acc, &Map.put_new(&2, &1, row))

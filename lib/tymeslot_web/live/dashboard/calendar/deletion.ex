@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   @doc "A delete asked for from the preview or the Delete key."
   @spec request(socket(), String.t()) :: socket()
   def request(socket, id) when is_binary(id) do
-    case Map.fetch(socket.assigns.events_by_id, id) do
+    case PanelState.fetch_event(socket.assigns, id) do
       {:ok, event} -> socket |> assign(:preview, nil) |> request_event(event)
       :error -> socket
     end

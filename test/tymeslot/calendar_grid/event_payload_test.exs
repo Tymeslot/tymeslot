@@ -83,6 +83,7 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
              editable: false,
              movable: false,
              locked: false,
+             preview: false,
              calendar: "7:work",
              recurring: false,
              guests: 0,
