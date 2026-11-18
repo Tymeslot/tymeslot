@@ -116,4 +116,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDeleteNoticesTest do
 
     assert settled_html(lv) =~ "Attendees have not been notified."
   end
+
+  test "another tab says a queued delete meant to tell the guests has not told them",
+       %{
+         conn: conn,
+         integration: integration
+       } = context do
+    call =
+      event(integration, "work", "Intro call", ~U[2026-10-15 13:00:00Z], 30,
+        attendees: [%{"email" => "ada@example.com"}]
+      )
+
+    {:ok, tab_b, _html} = live(conn, ~p"/dashboard/calendar")
+    ready_ids(tab_b)
+
+    {:ok, tab_a, _html} = live(conn, ~p"/dashboard/calendar")
+    canvas(tab_a, "calendar:delete", %{"id" => "event-#{call.id}"})
+    tab_a |> element("#calendar-delete-notify") |> render_click()
+    [job] = all_enqueued(worker: CalendarEventDeleteWorker)
+
+    # Tab B hides the event once it hears of the delete.
+    pushed_ids(tab_b)
+    send(tab_b.pid, {:calendar_delete_result, context.user.id, job.id, {:queued, :forbidden}})
+
+    assert settled_html(tab_b) =~
+             "Delete failed - queued to retry on next sync. Attendees have not been notified."
+  end
 end

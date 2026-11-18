@@ -101,10 +101,12 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
 
     case args |> CalendarEventDeleteWorker.new(schedule_in: delay) |> Oban.insert() do
       {:ok, %Oban.Job{id: id}} ->
+        # The other tabs hear whether it tells the attendees, so a delete
+        # queued for the next sync says there too that they were not told.
         SyncBroadcast.broadcast_delete_scheduled(
           user_id,
           id,
-          Map.take(event, @address_fields),
+          event |> Map.take(@address_fields) |> Map.put(:notify_attendees, args.notify_attendees),
           scope
         )
 

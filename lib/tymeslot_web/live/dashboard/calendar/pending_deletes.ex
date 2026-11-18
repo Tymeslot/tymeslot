@@ -51,12 +51,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.PendingDeletes do
 
   @doc """
   The entry for a delete another tab scheduled, from the address it was
-  scheduled with. It is confirmed here (this tab offers no Undo for it) and marked
-  `origin: :elsewhere`, so this tab does not announce its result.
+  scheduled with and whether it tells the attendees (`notify_attendees`). It
+  is confirmed here (this tab offers no Undo for it) and marked
+  `origin: :elsewhere`, so this tab does not announce that it was deleted.
   """
   @spec foreign(map(), :occurrence | :series) :: map()
-  def foreign(address, scope),
-    do: address |> Occurrence.cached_row() |> entry(scope, true) |> Map.put(:origin, :elsewhere)
+  def foreign(address, scope) do
+    address
+    |> Occurrence.cached_row()
+    |> entry(scope, true, Map.get(address, :notify_attendees) == true)
+    |> Map.put(:origin, :elsewhere)
+  end
 
   @doc """
   The undoable entry whose delete the browser tab `tab` scheduled last, with

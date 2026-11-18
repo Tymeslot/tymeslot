@@ -419,7 +419,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   defp report(socket, token, :deleted, _pending), do: Toast.dismiss(socket, {:delete, token})
 
   # Gone, but someone it should have reached was not: the plain "Deleted" the
-  # toast said is not the whole story, whichever tab deleted it.
+  # toast said is not the whole story. The tab that deleted says so; another
+  # tab only drops its toast, as it says nothing of a plain delete either.
   defp report(socket, token, {:deleted, :cancel_failed}, %{origin: :elsewhere}),
     do: Toast.dismiss(socket, {:delete, token})
 
