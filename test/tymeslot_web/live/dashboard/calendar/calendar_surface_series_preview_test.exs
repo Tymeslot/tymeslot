@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeriesPreviewTest do
 
   import TymeslotWeb.CalendarSurfaceHelpers
 
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventDeleteWorker
 
   setup %{conn: conn} = context do
@@ -71,6 +72,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeriesPreviewTest do
 
     assert render(context.lv) =~ "Syncing with your calendar"
     refute_enqueued(worker: CalendarEventDeleteWorker)
+  end
+
+  test "showing the preview alone as free is refused while the calendar syncs", context do
+    canvas(context.lv, "calendar:set_free", %{"id" => preview_id(context), "free" => "true"})
+
+    assert render(context.lv) =~ "Syncing with your calendar"
+    assert Repo.reload!(context.series).transparency == "opaque"
   end
 
   # A preview is drawn unmovable; a move sent all the same is refused.
