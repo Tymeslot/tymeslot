@@ -260,6 +260,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingOptionsTest do
       render_change(new_form(lv), %{"location_choice" => ""})
 
       Repo.delete!(venue)
+
+      # Nor does it refuse the meeting drawn on the grid as the form changes.
+      render_change(new_form(lv), %{"guest_name" => "Ada Lovelace"})
+
+      refute has_element?(
+               lv,
+               "#calendar-panel [role=status]",
+               "That location can no longer be used."
+             )
+
       submit_meeting(lv, %{"guest_name" => "Ada Lovelace", "location_choice" => ""})
 
       assert %{location: nil} = booked()

@@ -424,10 +424,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   # write to it is still drawn, as it may become a meeting; Create says
   # whether an event can be made of it.
   defp cast(socket, form, previous) do
-    case cast_params(socket, form, :optional) do
+    case cast_params(socket, drawn_fields(socket, form), :optional) do
       {:ok, create} -> {create, :idle}
       {:error, field, reason} -> {previous, {:failed, refusal_message(field, reason)}}
     end
+  end
+
+  # A meeting or a group event is drawn without the fields only a plain
+  # event has, which it hides, so a saved location deleted since cannot
+  # refuse it (`cast_form/3` books it the same way).
+  defp drawn_fields(socket, form) do
+    if PanelMeeting.on?(form) or PanelGroupEvent.on?(group_allowed?(socket), form),
+      do: Map.drop(form, @plain_event_fields),
+      else: form
   end
 
   # The video select's "No video call" sends an empty value, which is no

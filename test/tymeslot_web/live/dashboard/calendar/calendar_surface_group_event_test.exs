@@ -218,6 +218,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGroupEventTest do
     as_group_event(lv)
 
     Repo.delete!(office)
+    render_change(new_form(lv), %{"max_participants" => "12"})
+    refute render(lv) =~ "That location can no longer be used."
+
     create(lv, %{"max_participants" => "12", "group_location" => "venue:#{venue.id}"})
 
     assert [_type] = Repo.all(MeetingTypeSchema)
