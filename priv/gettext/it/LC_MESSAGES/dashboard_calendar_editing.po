@@ -750,3 +750,8 @@ msgstr "Hai aggiunto %{email}. L'invito partirà non appena la modifica sarà si
 #, elixir-autogen, elixir-format
 msgid "Removed %{email}. They will be told once the change has synced to your calendar."
 msgstr "Hai rimosso %{email}. L'avviso partirà non appena la modifica sarà sincronizzata con il tuo calendario."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
+msgstr "Il tuo calendario deve essere ricollegato. Ricollegalo dalla pagina Integrazioni."

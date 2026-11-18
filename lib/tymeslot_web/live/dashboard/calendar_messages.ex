@@ -86,8 +86,11 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
           socket
 
         :off_screen ->
-          {kind, message} = Creation.outcome_message(title, result)
-          put_flash(socket, kind, message)
+          Enum.reduce(
+            [Creation.outcome_message(title, result) | Creation.notices(result)],
+            socket,
+            fn {kind, message}, acc -> put_flash(acc, kind, message) end
+          )
       end
 
     rebuild_agenda({:noreply, socket})
