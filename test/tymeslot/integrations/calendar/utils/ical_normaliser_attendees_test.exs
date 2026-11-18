@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliserAttendeesTest do
   @moduletag :calendar
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
   alias Tymeslot.Integrations.Calendar.ICalParser
 
@@ -72,5 +73,88 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliserAttendeesTest do
 
     assert Enum.map(attendees, & &1.response_status) == [:needs_action, :needs_action]
     assert Enum.map(attendees, & &1.display_name) == [nil, nil]
+  end
+
+  describe "guests written as CONTACT lines" do
+    # How a server that would invite an ATTENDEE itself (Zimbra, cPanel, and
+    # SOGo, whose `/SOGo/dav/` URL reads as Zimbra's) holds an event the
+    # calendar created with guests: re-serialised by the server, without the
+    # lines Tymeslot wrote for the server alone.
+    defp cached(uid, property_lines) do
+      ical = """
+      BEGIN:VCALENDAR
+      PRODID:-//Tymeslot//CalDAV Client//EN
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:#{uid}
+      DTSTART:20301119T100000Z
+      DTEND:20301119T110000Z
+      SUMMARY:Planning
+      TRANSP:OPAQUE
+      #{property_lines}
+      CLASS:PUBLIC
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      {:ok, raw_events} = ICalParser.parse(ical)
+      {:ok, [event]} = ICalNormaliser.normalise_events(raw_events, @context, :caldav)
+      event.attendees
+    end
+
+    test "are the guests of an event Tymeslot wrote" do
+      assert [
+               %{email: "ada@example.com", display_name: "Ada Lovelace", response_status: nil},
+               %{email: "grace@example.com", display_name: "Hopper, Grace", response_status: nil},
+               %{email: "ops@example.com", display_name: nil, response_status: nil}
+             ] =
+               cached("planning@tymeslot.com", """
+               CONTACT:Ada Lovelace <ada@example.com>
+               CONTACT:Hopper\\, Grace <grace@example.com>
+               CONTACT:ops@example.com
+               """)
+    end
+
+    test "come back as the guests the calendar wrote them from" do
+      guests = [
+        %{email: "ada@example.com", display_name: "Ada Lovelace"},
+        %{email: "grace@example.com", display_name: nil}
+      ]
+
+      ical =
+        ICalBuilder.build_simple_event(
+          "roundtrip@tymeslot.com",
+          %{
+            summary: "Planning",
+            start_time: ~U[2030-11-19 10:00:00Z],
+            end_time: ~U[2030-11-19 11:00:00Z],
+            attendees: guests
+          },
+          :contact
+        )
+
+      refute ical =~ "ATTENDEE"
+
+      {:ok, raw_events} = ICalParser.parse(ical)
+      {:ok, [event]} = ICalNormaliser.normalise_events(raw_events, @context, :caldav)
+
+      assert Enum.map(event.attendees, &Map.take(&1, [:email, :display_name])) == guests
+    end
+
+    test "are nobody's guests on an event someone else wrote" do
+      assert cached("dentist@example.com", "CONTACT:Front desk <desk@example.com>") == []
+    end
+
+    test "are not read beside the ATTENDEE lines an event names" do
+      assert [%{email: "ada@example.com"}] =
+               cached("planning@tymeslot.com", """
+               ATTENDEE:mailto:ada@example.com
+               CONTACT:Front desk <desk@example.com>
+               """)
+    end
+
+    test "naming no address are left out" do
+      assert cached("planning@tymeslot.com", "CONTACT:Front desk, ext. 12") == []
+    end
   end
 end

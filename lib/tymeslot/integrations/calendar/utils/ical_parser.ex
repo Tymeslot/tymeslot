@@ -181,6 +181,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       location: extract_property(lines, "LOCATION"),
       organizer: extract_organizer(lines),
       attendees: extract_attendees(lines),
+      contacts: extract_contacts(lines),
       transparency: normalize_transp(extract_property(lines, "TRANSP")),
       status: extract_property(lines, "STATUS"),
       class: extract_property(lines, "CLASS"),
@@ -282,6 +283,41 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     |> Enum.filter(&String.starts_with?(&1, "ATTENDEE"))
     |> Enum.map(&parse_attendee_line/1)
     |> Enum.reject(fn a -> is_nil(a["email"]) end)
+  end
+
+  # RFC 5545 §3.8.4.2 — `CONTACT`, as `Properties.build_attendee_lines/2`
+  # writes a guest on a server that would invite an `ATTENDEE` itself
+  # (`CalDAV.Scheduling`'s `:contact` mode): `Name <address>`, or the address
+  # alone. With an attendee's `"email"` and `"name"` but no reply, which a
+  # `CONTACT` cannot carry, so the normaliser can take them for an event's
+  # guests where they are (see `ICalNormaliser`); a value naming no address
+  # is left out.
+  defp extract_contacts(lines) do
+    lines
+    |> Enum.filter(&(String.starts_with?(&1, "CONTACT:") or String.starts_with?(&1, "CONTACT;")))
+    |> Enum.map(fn line ->
+      line |> String.split(":", parts: 2) |> List.last() |> decode_value()
+    end)
+    |> Enum.map(&parse_contact/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp parse_contact(value) do
+    case Regex.run(~r/^(.*?)\s*<([^<>\s]+@[^<>\s]+)>$/, value) do
+      [_match, name, email] ->
+        %{"email" => email, "name" => blank_to_nil(name)}
+
+      nil ->
+        if Regex.match?(~r/^[^<>\s]+@[^<>\s]+$/, value),
+          do: %{"email" => value, "name" => nil}
+    end
+  end
+
+  defp blank_to_nil(name) do
+    case String.trim(name) do
+      "" -> nil
+      trimmed -> trimmed
+    end
   end
 
   # RFC 5545 §3.8.4.3 — a VEVENT carries at most one ORGANIZER. Returns the
