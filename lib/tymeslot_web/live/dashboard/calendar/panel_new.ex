@@ -433,12 +433,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
 
   @doc """
   The New event form cast as a create (`CreateParams.cast/5`), an untitled
-  draft named "New event" first. `PanelMeeting` casts a meeting's draft
-  through it, so the two never disagree on the event's fields; a meeting
-  may have no calendar while the organiser has none to write to.
+  draft named "New event" first.
+  `PanelMeeting` and `PanelGroupEvent` cast their drafts through it, so they
+  never disagree with an event on the fields they share. `calendar` is
+  `:optional` for a meeting, which may have no calendar while the organiser
+  has none to write to, and `:required` for a group event.
   """
-  @spec cast_form(socket(), map()) :: {:ok, CreateParams.t()} | {:error, atom(), term()}
-  def cast_form(socket, form), do: cast_params(socket, form, :optional)
+  @spec cast_form(socket(), map(), :optional | :required) ::
+          {:ok, CreateParams.t()} | {:error, atom(), term()}
+  def cast_form(socket, form, calendar),
+    do: cast_params(socket, form, calendar)
 
   # The draft the payload draws: the form as the domain casts it, or the
   # last accepted one with the reason in the header. Without a calendar to

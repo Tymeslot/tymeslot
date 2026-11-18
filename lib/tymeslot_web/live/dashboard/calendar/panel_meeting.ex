@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
     user = socket.assigns.current_user
     form = panel.form |> titled() |> Map.put("reminders", panel.reminder_picker.reminders)
 
-    with {:ok, create} <- PanelNew.cast_form(socket, form),
+    with {:ok, create} <- PanelNew.cast_form(socket, form, :optional),
          {:ok, params} <- MeetingParams.build(create, form, user.id),
          :ok <- MeetingParams.rate_limit(user.id) do
       send(self(), {:execute_create_ad_hoc_meeting, params})

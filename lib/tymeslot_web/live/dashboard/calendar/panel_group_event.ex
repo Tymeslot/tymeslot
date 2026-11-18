@@ -135,7 +135,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGroupEvent do
 
   # The draft's times and calendar, read as every create reads them.
   defp cast(socket, form) do
-    case PanelNew.cast_form(socket, Map.merge(form, %{"all_day" => false, "guests" => []})) do
+    # A group event is booked through its calendar, so it needs one.
+    case PanelNew.cast_form(
+           socket,
+           Map.merge(form, %{"all_day" => false, "guests" => []}),
+           :required
+         ) do
       {:ok, create} -> {:ok, create}
       {:error, field, reason} -> {:error, Creation.refusal_message(field, reason)}
     end

@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingNoCalendarTest do
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
 
   @task_timeout 5_000
@@ -99,6 +100,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingNoCalendarTest do
 
     assert meeting.calendar_integration_id == nil
     assert meeting.video_integration_id == video.id
+  end
+
+  # A group event is booked on the public page, through its calendar, so
+  # one forged without a calendar is refused.
+  test "a group event sent without a calendar is refused", %{conn: conn, user: user} do
+    insert(:venue, user: user, name: "Main Hall")
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    more_options(lv, %{"guests" => []})
+
+    lv
+    |> element("#calendar-panel-new-form")
+    |> render_submit(%{
+      "intent" => "create",
+      "title" => "Workshop",
+      "group_event" => "true",
+      "max_participants" => "12"
+    })
+
+    assert Repo.all(MeetingTypeSchema) == []
+    assert has_element?(lv, "#calendar-panel [role=status]", "Choose one of your calendars.")
   end
 
   test "a plain event cannot be created, and the note says why", %{conn: conn} do
