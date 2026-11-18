@@ -56,7 +56,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelCalendarField do
   def no_calendar(assigns) do
     ~H"""
     <div id="calendar-panel-no-calendar">
-      <p class="text-token-sm font-medium text-tymeslot-700">
+      <%!-- Styled as the form's other field labels, though no control follows. --%>
+      <p id="calendar-panel-no-calendar-label" class="label mb-0">
         {dgettext("dashboard_calendar_editing", "Calendar")}
       </p>
       <p :if={@meeting} id="calendar-panel-calendar-none" class="mt-1 text-token-sm text-tymeslot-600">

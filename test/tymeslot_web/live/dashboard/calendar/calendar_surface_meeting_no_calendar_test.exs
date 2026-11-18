@@ -134,6 +134,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingNoCalendarTest do
 
     assert has_element?(lv, "#calendar-panel-create[disabled]")
 
+    # Labelled as the panel's other fields are.
+    assert has_element?(lv, "#calendar-panel-no-calendar-label.label", "Calendar")
+
     # Only an event repeats, so with none to make there is no Repeat to offer.
     refute has_element?(lv, "#calendar-panel-new-repeat")
 
