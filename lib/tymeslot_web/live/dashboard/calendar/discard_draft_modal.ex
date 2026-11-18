@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DiscardDraftModal do
   @moduledoc """
   Asks before the side panel's New event state is closed while its draft
   has guests, who have not been invited yet, as the old Quick Add did
-  (`PanelNew.cancel/1`). Discard sends `panel:draft_discard_confirm`; Go
+  (`PanelNewDiscard`). Discard sends `panel:draft_discard_confirm`; Go
   back, Escape and a click outside send `panel:draft_discard_cancel`.
   """
 

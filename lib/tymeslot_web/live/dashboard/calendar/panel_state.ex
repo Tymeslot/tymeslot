@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
 
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
+  alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
 
   @type socket :: Phoenix.LiveView.Socket.t()
@@ -47,6 +48,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
           |> assign(panel: new_panel(socket.assigns, event), preview: nil, open_menu: nil)
           |> push_event("calendar:panel", %{open: true})
         end)
+
+      :error ->
+        socket
+    end
+  end
+
+  @doc """
+  Opens the preview of the loaded event `id` in the panel's place, as the
+  grid's click does; `socket` unchanged for an id that is not loaded.
+  """
+  @spec open_preview(socket(), String.t()) :: socket()
+  def open_preview(socket, id) do
+    case Map.fetch(socket.assigns.events_by_id, id) do
+      {:ok, event} ->
+        preview = Preview.build(event, Preview.context(socket.assigns))
+        socket |> give_way() |> assign(preview: preview, open_menu: nil)
 
       :error ->
         socket

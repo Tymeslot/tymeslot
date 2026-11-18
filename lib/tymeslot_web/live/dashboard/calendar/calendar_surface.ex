@@ -39,6 +39,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.PanelEvents
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewDiscard
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelVideo
   alias TymeslotWeb.Dashboard.Calendar.PhoneHeader
@@ -483,25 +484,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   # Only an event in the loaded window, which holds this organiser's events
   # alone, can be opened; anything else answers `opened: false`.
+  # A New event draft with uninvited guests asks first, and opens the
+  # preview once Discard is chosen (`PanelNewDiscard`).
   def handle_event("calendar:open", %{"id" => id}, socket) when is_binary(id) do
-    case Map.fetch(socket.assigns.events_by_id, id) do
-      {:ok, event} ->
-        preview = Preview.build(event, Preview.context(socket.assigns))
-
-        {:reply, %{opened: true},
-         socket |> PanelState.give_way() |> assign(preview: preview, open_menu: nil)}
-
-      :error ->
-        {:reply, %{opened: false}, assign(socket, :preview, nil)}
-    end
+    if Map.has_key?(socket.assigns.events_by_id, id),
+      do: open_preview(socket, id),
+      else: {:reply, %{opened: false}, assign(socket, :preview, nil)}
   end
 
   def handle_event("calendar:open", _params, socket), do: {:reply, %{opened: false}, socket}
 
   # Opens the side panel on a loaded event: from the hook (E on a focused
   # event) or the preview's Edit button.
-  def handle_event("calendar:edit", %{"id" => id}, socket) when is_binary(id),
-    do: {:noreply, PanelState.open_edit(socket, id)}
+  def handle_event("calendar:edit", %{"id" => id}, socket) when is_binary(id) do
+    case PanelNewDiscard.hold(socket, {:edit, id}) do
+      {:held, socket} -> {:noreply, socket}
+      :go -> {:noreply, PanelState.open_edit(socket, id)}
+    end
+  end
 
   def handle_event("calendar:edit", _params, socket), do: {:noreply, socket}
 
@@ -542,6 +542,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # Quick create's More options: the panel opens in its New event state on
   # the draft (see `PanelNew`); the hook keeps drawing it until the payload.
   # Every path replies, so the popover never waits on its timeout.
+  # Leaving a New event draft with uninvited guests for another asks first;
+  # after Discard the hook is told to choose More options again.
+  def handle_event("calendar:more_options", %{"draft" => draft} = params, socket)
+      when is_binary(draft) do
+    case PanelNewDiscard.hold(socket, {:more_options, draft}) do
+      {:held, socket} ->
+        {:reply, %{opened: false}, socket}
+
+      :go ->
+        {opened, socket} = PanelNew.open(socket, params)
+        {:reply, %{opened: opened}, socket}
+    end
+  end
+
   def handle_event("calendar:more_options", params, socket) do
     {opened, socket} = PanelNew.open(socket, params)
     {:reply, %{opened: opened}, socket}
@@ -616,5 +630,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     if key in PowerEvents.async_keys(),
       do: PowerEvents.async(key, result, socket),
       else: SurfaceBookingEvents.async(key, result, socket)
+  end
+
+  defp open_preview(socket, id) do
+    case PanelNewDiscard.hold(socket, {:open, id}) do
+      {:held, socket} -> {:reply, %{opened: false}, socket}
+      :go -> {:reply, %{opened: true}, PanelState.open_preview(socket, id)}
+    end
   end
 end

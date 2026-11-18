@@ -24,7 +24,9 @@
  * meeting type (calendar_canvas/opening.js), which hides the field and saves
  * through `calendar:open_booking` instead.
  * More options pushes `calendar:more_options` and, once the panel opened,
- * hands the draft to it. Escape, or a press outside, cancels; Escape
+ * hands the draft to it; when the panel first asks about a draft of its own
+ * with uninvited guests, `calendar:more-options-again` chooses it again
+ * after Discard. Escape, or a press outside, cancels; Escape
  * returns focus to where it was. Tab cycles inside the popover. A draft
  * being saved cannot be cancelled: the server is already writing it.
  *
@@ -87,6 +89,11 @@ export const CreateMixin = {
     // (with Undo where it can), so the doubt the notice voiced is over.
     this.handleEvent("calendar:create-settled", ({ draft }) => {
       if (this.notice && this.notice.dataset.draft === draft) this.closeNotice();
+    });
+    // More options waited on the panel's question about a draft with
+    // uninvited guests; the organiser chose Discard, so it is chosen again.
+    this.handleEvent("calendar:more-options-again", ({ draft }) => {
+      if (this.draft?.id === draft) this.moreOptions();
     });
     this.el.addEventListener("scroll", this.quickScroll, true);
     this.el.addEventListener("calendar:quick-create", this.quickCreateEvent);

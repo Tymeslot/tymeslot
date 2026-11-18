@@ -189,6 +189,23 @@ test("More options hands the draft to the panel once it opened", () => {
   expect(drawn(el).querySelector(".cal-ev-saving")).toBeNull();
 });
 
+test("More options is chosen again once the panel's question was answered with Discard", () => {
+  const { hook, handlers } = open();
+  type("Planning");
+  popover().querySelector("[data-qc-more]").click();
+  reply(hook, "calendar:more_options", { opened: false });
+  expect(popover()).not.toBeNull();
+
+  handlers["calendar:more-options-again"]({ draft: "someone-else" });
+  expect(pushes(hook, "calendar:more_options")).toHaveLength(1);
+
+  handlers["calendar:more-options-again"]({ draft: hook.draft.id });
+  expect(pushes(hook, "calendar:more_options")).toHaveLength(2);
+  const calls = hook.pushEventTo.mock.calls.filter(([, pushed]) => pushed === "calendar:more_options");
+  calls.at(-1)[3]({ opened: true });
+  expect(popover()).toBeNull();
+});
+
 test("Escape cancels, drops the draft and returns focus", () => {
   const button = document.createElement("button");
   document.body.appendChild(button);

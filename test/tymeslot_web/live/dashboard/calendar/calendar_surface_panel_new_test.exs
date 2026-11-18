@@ -492,6 +492,70 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
       %{lv: lv, other: other}
     end
 
+    test "opening it in the panel asks first while the draft has guests, then opens it", %{
+      lv: lv,
+      integration: integration,
+      other: other
+    } do
+      more_options(lv, integration, %{"guests" => ["grace@example.com"]})
+      hook(lv, "calendar:edit", %{"id" => "event-#{other.id}"})
+
+      assert has_element?(lv, "#calendar-discard-draft")
+      assert has_element?(lv, "#calendar-panel-new-form")
+
+      lv |> element("#calendar-discard-draft-confirm") |> render_click()
+
+      assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
+      refute has_element?(lv, "#calendar-panel-new-form")
+      assert has_element?(lv, "#calendar-panel")
+    end
+
+    test "opening its preview asks first while the draft has guests, and Go back stays", %{
+      lv: lv,
+      integration: integration,
+      other: other
+    } do
+      more_options(lv, integration, %{"guests" => ["grace@example.com"]})
+      hook(lv, "calendar:open", %{"id" => "event-#{other.id}"})
+
+      assert_reply(lv, %{opened: false})
+      assert has_element?(lv, "#calendar-discard-draft")
+
+      lv |> element("#calendar-discard-draft-cancel") |> render_click()
+
+      refute has_element?(lv, "#calendar-discard-draft")
+      assert has_element?(lv, "#calendar-panel-guests li", "grace@example.com")
+    end
+
+    test "opening its preview after Discard shows the preview", %{
+      lv: lv,
+      integration: integration,
+      other: other
+    } do
+      more_options(lv, integration, %{"guests" => ["grace@example.com"]})
+      hook(lv, "calendar:open", %{"id" => "event-#{other.id}"})
+      lv |> element("#calendar-discard-draft-confirm") |> render_click()
+
+      refute has_element?(lv, "#calendar-panel")
+      assert has_element?(lv, "#calendar-preview")
+    end
+
+    test "More options on another draft asks first, then has the hook choose it again", %{
+      lv: lv,
+      integration: integration
+    } do
+      more_options(lv, integration, %{"guests" => ["grace@example.com"]})
+      more_options(lv, integration, %{"draft" => "d2"})
+
+      assert_reply(lv, %{opened: false})
+      assert has_element?(lv, "#calendar-discard-draft")
+
+      lv |> element("#calendar-discard-draft-confirm") |> render_click()
+
+      assert_push_event(lv, "calendar:more-options-again", %{draft: "d2"})
+      refute has_element?(lv, "#calendar-panel")
+    end
+
     test "opening it in the panel clears the New event draft", %{
       lv: lv,
       integration: integration,
