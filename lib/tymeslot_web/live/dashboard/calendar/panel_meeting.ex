@@ -9,9 +9,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
   (see `Tymeslot.CalendarGrid.MeetingParams`).
 
   The meeting's fields live in the panel's `form` beside the event's own
-  (`"meeting"`, `"guest_name"`, `"locale"`, `"reminders"`), so the form
-  draws what was typed. The box counts only while the draft has a guest
-  (`on?/1`). A meeting has times: ticking it makes an all-day draft timed.
+  (`"meeting"`, `"main_participant"`, `"guest_name"`, `"locale"`,
+  `"reminders"`, `"location_choice"`, `"location_custom"`), so the form
+  draws what was typed. With "Main participant" off the host manages the
+  meeting alone: every guest is an equal guest, no guest name is asked
+  for, and the meeting is known by its title, which it then needs. Its
+  place is none, a saved location, or one typed in. The box counts only
+  while the draft has a guest (`on?/1`). A meeting has times: ticking it
+  makes an all-day draft timed.
 
   Create hands the booking to the dashboard
   (`{:execute_create_ad_hoc_meeting, params}`, answered by
@@ -29,20 +34,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
 
   alias Tymeslot.CalendarGrid.MeetingParams
   alias Tymeslot.Locales
+  alias Tymeslot.Meetings.Guests
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
   alias TymeslotWeb.Dashboard.Calendar.PanelState
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
-  @fields ~w(meeting guest_name locale reminders)
+  @fields ~w(meeting main_participant guest_name locale reminders location_choice location_custom)
 
   @doc "The meeting fields a new draft starts with, for the organiser `user`."
   @spec defaults(map()) :: map()
   def defaults(user),
     do: %{
       "meeting" => false,
+      "main_participant" => true,
       "guest_name" => "",
+      "location_choice" => "",
+      "location_custom" => "",
       "locale" => Locales.guest_default_locale(user),
       "reminders" => []
     }
@@ -59,7 +68,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
     |> timed()
   end
 
-  defp field({"meeting", value}), do: {"meeting", value in [true, "true", "on"]}
+  defp field({key, value}) when key in ["meeting", "main_participant"],
+    do: {key, value in [true, "true", "on"]}
 
   defp field({"reminders", keys}) when is_list(keys),
     do: {"reminders", Enum.filter(keys, &(&1 in MeetingParams.reminder_choices()))}
@@ -128,6 +138,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
         count: MeetingParams.max_guests()
       )
 
+  # Without a main participant every guest counts against the guests'
+  # own limit.
+  def refusal_message(:guests, :too_many_guests),
+    do:
+      dgettext("dashboard_calendar_editing", "You can invite at most %{count} guests at once.",
+        count: Guests.max_guests()
+      )
+
+  def refusal_message(:title, :blank),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "Add a title. A meeting without a main participant is known by its title."
+      )
+
+  def refusal_message(:location, :invalid),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "That location can no longer be used. Please choose another one."
+      )
+
   # Notes allow more than a meeting's note does, so text typed before the box
   # was ticked can be too long.
   def refusal_message(:note, :too_long),
@@ -139,13 +171,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
 
   # The form offers no way to send the rest; they come from forged input.
   def refusal_message(field, reason)
-      when field in [:guests, :guest_name, :note, :locale, :all_day],
+      when field in [:guests, :guest_name, :note, :locale, :all_day, :location],
       do: Creation.refusal_message(:params, reason)
 
   def refusal_message(field, reason), do: Creation.refusal_message(field, reason)
 
   # An untitled meeting is named after its guest, which is what the
-  # organiser will recognise it by.
+  # organiser will recognise it by. Without a main participant there is
+  # no such guest, and the meeting needs a title of its own.
+  defp titled(%{"main_participant" => false} = form), do: form
+
   defp titled(form) do
     name = String.trim(form["guest_name"] || "")
 
