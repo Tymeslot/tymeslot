@@ -120,21 +120,46 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestUpdateHoldTest do
     assert has_element?(lv2, "#calendar-panel-guests-pending")
   end
 
-  test "once the update has gone out the panel stops offering Cancel", %{
-    lv: lv,
-    review: review
-  } do
+  test "a look the panel no longer waits for changes nothing", %{lv: lv, review: review} do
     change_and_tell(lv, review)
     Oban.drain_queue(queue: :emails, with_scheduled: true)
     assert all_enqueued(worker: Worker) == []
 
+    # The panel set a watch of its own; one from an earlier Tell or panel
+    # is stale and is not acted on.
     send_update(lv.pid, CalendarSurface,
       id: "calendar",
       action: :guests_pending_due,
-      event_id: "event-#{review.id}"
+      event_id: "event-#{review.id}",
+      watch: -1,
+      backoff: 1_000
     )
 
-    refute has_element?(lv, "#calendar-panel-guests-pending")
+    assert has_element?(lv, "#calendar-panel-guests-pending")
+  end
+
+  test "an overdue update is looked at again later each time", %{
+    conn: conn,
+    lv: lv,
+    review: review
+  } do
+    change_and_tell(lv, review)
+    Repo.update_all(Oban.Job, set: [scheduled_at: DateTime.add(DateTime.utc_now(), -60)])
+    lv2 = open_panel(conn, review)
+    :erlang.trace(lv2.pid, true, [:receive])
+
+    # Overdue and still waiting: a second, then two.
+    assert_receive {:trace, _pid, :receive,
+                    {:phoenix, :send_update,
+                     {_ref, %{action: :guests_pending_due, backoff: 1_000}}}},
+                   3_000
+
+    assert_receive {:trace, _pid, :receive,
+                    {:phoenix, :send_update,
+                     {_ref, %{action: :guests_pending_due, backoff: 2_000}}}},
+                   4_000
+
+    assert has_element?(lv2, "#calendar-panel-guests-pending")
   end
 
   test "Cancel after the update has gone out says it is too late", %{lv: lv, review: review} do

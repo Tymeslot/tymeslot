@@ -48,8 +48,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
-  # How long after an update is due the panel looks whether it has gone out.
+  # How long after an update is due the panel looks whether it has gone out,
+  # and the longest it waits between looks while the update is overdue.
   @hold_grace_ms 1_000
+  @max_hold_backoff_ms 30_000
 
   @doc "The event's guests in the canonical shape, for the chips and every write."
   @spec of(map()) :: [Attendee.t()]
@@ -227,12 +229,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   end
 
   @doc """
-  The held update for the panel's event `id` is due: the panel stops
-  offering to cancel it once it has gone out, and looks again when it is
-  still waiting.
+  The held update for the panel's event `id` is due (the watch `watch` the
+  panel set, see `watch_hold/4`): the panel stops offering to cancel it once
+  it has gone out, and looks again, later each time, while it is overdue. A
+  watch the panel has since replaced, or one for another event, is ignored.
   """
-  @spec recheck_pending(socket(), String.t()) :: socket()
-  def recheck_pending(%{assigns: %{panel: %{event_id: id, guests_pending: true}}} = socket, id) do
+  @spec recheck_pending(socket(), String.t(), integer(), pos_integer()) :: socket()
+  def recheck_pending(
+        %{assigns: %{panel: %{event_id: id, guests_pending: true, hold_watch: watch}}} = socket,
+        id,
+        watch,
+        backoff
+      ) do
     case panel_event(socket) do
       {:ok, event} ->
         held_until = Changes.guest_update_held_until(event)
@@ -240,35 +248,50 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
         socket
         |> PanelState.update(&%{&1 | guests_pending: held_until != nil})
         |> forget_held_from(id, held_until)
-        |> watch_hold(id, held_until)
+        |> watch_hold(id, held_until, min(backoff * 2, @max_hold_backoff_ms))
 
       :error ->
         socket
     end
   end
 
-  def recheck_pending(socket, _id), do: socket
+  def recheck_pending(socket, _id, _watch, _backoff), do: socket
 
   @doc """
   Asks again once the update held for the event `id` until `held_until` is
-  due (`recheck_pending/2`), so the panel's Cancel does not outlive it.
-  Nothing for no update held (`nil`).
+  due (`recheck_pending/4`), so the panel's Cancel does not outlive it, and
+  after `backoff` milliseconds when it is overdue already. The panel keeps
+  one watch: a new one replaces the one before. Nothing for no update held
+  (`nil`).
   """
-  @spec watch_hold(socket(), String.t(), DateTime.t() | nil) :: socket()
-  def watch_hold(socket, _id, nil), do: socket
+  @spec watch_hold(socket(), String.t(), DateTime.t() | nil, pos_integer()) :: socket()
+  def watch_hold(socket, id, held_until, backoff \\ @hold_grace_ms)
+
+  def watch_hold(socket, _id, nil, _backoff),
+    do: PanelState.update(socket, &Map.put(&1, :hold_watch, nil))
 
   # The job's due time is Oban's, on the system clock, not `Tymeslot.Clock`.
-  def watch_hold(socket, id, %DateTime{} = held_until) do
-    wait =
-      max(DateTime.diff(held_until, DateTime.utc_now(), :millisecond), 0) + @hold_grace_ms
+  def watch_hold(socket, id, %DateTime{} = held_until, backoff) do
+    due_in = DateTime.diff(held_until, DateTime.utc_now(), :millisecond)
+
+    {wait, backoff} =
+      if due_in > 0, do: {due_in + @hold_grace_ms, @hold_grace_ms}, else: {backoff, backoff}
+
+    watch = System.unique_integer([:positive])
 
     send_update_after(
       CalendarSurface,
-      [id: socket.assigns.id, action: :guests_pending_due, event_id: id],
+      [
+        id: socket.assigns.id,
+        action: :guests_pending_due,
+        event_id: id,
+        watch: watch,
+        backoff: backoff
+      ],
       wait
     )
 
-    socket
+    PanelState.update(socket, &Map.put(&1, :hold_watch, watch))
   end
 
   # The panel counts from the event as it is now. While the update is held,

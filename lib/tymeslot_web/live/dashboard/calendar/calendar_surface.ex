@@ -178,8 +178,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def update(%{action: :series_move_failed, moved_event: event}, socket),
     do: {:ok, Transfer.series_failed(socket, event)}
 
-  def update(%{action: :guests_pending_due, event_id: id}, socket),
-    do: {:ok, PanelGuests.recheck_pending(socket, id)}
+  def update(
+        %{action: :guests_pending_due, event_id: id, watch: watch, backoff: backoff},
+        socket
+      ),
+      do: {:ok, PanelGuests.recheck_pending(socket, id, watch, backoff)}
 
   def update(%{action: :delete_settled, token: token, outcome: outcome}, socket),
     do: {:ok, Deletion.settled(socket, token, outcome)}
