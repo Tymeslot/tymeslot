@@ -186,7 +186,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
 
       create_meeting(lv, %{"guest_email" => ""})
 
-      assert has_element?(lv, "#calendar-panel-guests", "Enter a valid email address.")
+      assert has_element?(lv, "#calendar-panel-guests", "Add a guest to send a Tymeslot meeting.")
       assert has_element?(lv, "#calendar-panel-create:not([disabled])")
       refute_received {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}
       refute_received {:provider_call, _task_pid, _payload}

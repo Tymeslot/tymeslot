@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   defp still_a_meeting(%{assigns: %{panel: %{form: form}}} = socket, true) do
     if PanelMeeting.on?(form),
       do: {:ok, socket},
-      else: {:error, refuse(socket, Creation.guest_message(:invalid))}
+      else: {:error, refuse(socket, no_guest())}
   end
 
   defp still_a_meeting(socket, _meeting?), do: {:ok, socket}
@@ -183,6 +183,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
 
   defp room_for_one_more(form),
     do: if(full?(form), do: {:error, :meeting_full}, else: :ok)
+
+  defp no_guest,
+    do: dgettext("dashboard_calendar_editing", "Add a guest to send a Tymeslot meeting.")
 
   defp meeting_full,
     do: dgettext("dashboard_calendar_editing", "No more guests can be added to this meeting.")

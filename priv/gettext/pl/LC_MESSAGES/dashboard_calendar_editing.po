@@ -864,3 +864,8 @@ msgstr "Termin wynika z rezerwacji. Zmień go w sekcji Rezerwacje."
 #, elixir-autogen, elixir-format
 msgid "Colour"
 msgstr "Kolor"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Add a guest to send a Tymeslot meeting."
+msgstr "Dodaj gościa, aby wysłać spotkanie Tymeslot."

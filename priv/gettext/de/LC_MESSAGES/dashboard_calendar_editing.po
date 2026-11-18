@@ -861,3 +861,8 @@ msgstr "Die Uhrzeit gehört zur Buchung. Verschieben Sie die Buchung unter „Bu
 #, elixir-autogen, elixir-format
 msgid "Colour"
 msgstr "Farbe"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Add a guest to send a Tymeslot meeting."
+msgstr "Fügen Sie einen Gast hinzu, um einen Tymeslot-Termin zu senden."

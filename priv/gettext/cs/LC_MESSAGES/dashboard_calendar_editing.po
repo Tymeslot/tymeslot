@@ -864,3 +864,8 @@ msgstr "Čas určuje rezervace. Přesunout ho můžete v sekci Rezervace."
 #, elixir-autogen, elixir-format
 msgid "Colour"
 msgstr "Barva"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Add a guest to send a Tymeslot meeting."
+msgstr "Pro odeslání schůzky Tymeslot přidejte hosta."
