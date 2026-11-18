@@ -47,6 +47,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeriesPreviewTest do
     assert has_element?(context.lv, "#calendar-preview", "Weekly review")
   end
 
+  test "the preview's popover offers Edit, which opens the series, and no Delete", context do
+    canvas(context.lv, "calendar:open", %{"id" => preview_id(context)})
+
+    assert has_element?(context.lv, "#calendar-preview", "Syncing with your calendar")
+    refute has_element?(context.lv, "#calendar-preview-delete")
+
+    context.lv |> element("#calendar-preview-edit") |> render_click()
+
+    assert has_element?(context.lv, "#calendar-panel input[value='Weekly review']")
+    refute has_element?(context.lv, "#calendar-preview")
+  end
+
   test "opening the preview in the panel opens the series", context do
     canvas(context.lv, "calendar:edit", %{"id" => preview_id(context)})
 

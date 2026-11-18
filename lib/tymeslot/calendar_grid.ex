@@ -75,6 +75,10 @@ defmodule Tymeslot.CalendarGrid do
   @spec preview_series(map()) :: map()
   defdelegate preview_series(event), to: SeriesPreview, as: :series
 
+  @doc "Whether `event` is a previewed occurrence. See `Tymeslot.Integrations.Calendar.SeriesPreview`."
+  @spec preview?(map()) :: boolean()
+  defdelegate preview?(event), to: SeriesPreview
+
   # Previewed occurrences join the rows after the read's own limit, so the
   # limit is applied again, keeping the earliest as the read does.
   defp maybe_take(events, nil), do: events

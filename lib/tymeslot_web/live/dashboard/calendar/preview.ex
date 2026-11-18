@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.ColourTokens
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventBlocking
@@ -88,7 +89,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       availability: availability(event, integration, entry),
       sync_note: sync_note(event, integration),
       locked: locked,
-      editable: not locked and EditGuard.editable?(context.integrations, event),
+      # A previewed occurrence of a series no sync has cached yet is edited
+      # as its series, which Edit opens; it has nothing of its own to delete.
+      editable:
+        not locked and
+          EditGuard.editable?(context.integrations, CalendarGrid.preview_series(event)),
+      deletable: not CalendarGrid.preview?(event),
       free_busy: free_busy(event, context.integrations, locked),
       free: Map.get(event, :transparency) == "transparent",
       treat_as: TreatAs.state(event, blocking?(integration, entry), context),
@@ -262,6 +268,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           {dgettext("dashboard_calendar", "Edit")}
         </.action_button>
         <.action_button
+          :if={@preview.deletable}
           id="calendar-preview-delete"
           variant={:danger_soft}
           size={:sm}
@@ -458,6 +465,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       label: dgettext("dashboard_calendar", "Free"),
       note: dgettext("dashboard_calendar", "Guests can book this time")
     }
+
+  defp sync_note(%{preview_of: %{}}, _integration),
+    do: elem(CalendarEditMessages.refusal({:error, :syncing}), 1)
 
   defp sync_note(event, integration) do
     if integration && Map.get(event, :sync_state, "synced") != "synced",
