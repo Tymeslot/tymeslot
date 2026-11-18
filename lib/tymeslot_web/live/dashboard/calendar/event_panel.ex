@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
+  alias TymeslotWeb.Dashboard.Calendar.LinkedText
   alias TymeslotWeb.Dashboard.Calendar.PanelActions
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
@@ -221,19 +222,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
         </form>
         <PanelFields.busy_free :if={@movable} free={free?(@event)} target={@surface} />
         <.input
+          :if={@editable}
           id="calendar-panel-location"
           name="location"
           type="text"
           label={dgettext("dashboard_calendar_editing", "Place")}
           placeholder={dgettext("dashboard_calendar_editing", "Add a place or room")}
           value={Map.get(@event, :location) || ""}
-          disabled={!@editable}
           errors={List.wrap(@panel.errors["location"])}
           data-panel-field="location"
           phx-blur="panel:location"
           phx-keydown="panel:location"
           phx-key="Enter"
           phx-target={@surface}
+        />
+        <LinkedText.read_only_field
+          :if={!@editable}
+          id="calendar-panel-location-text"
+          label={dgettext("dashboard_calendar_editing", "Place")}
+          text={Map.get(@event, :location)}
         />
         <PanelVideoField.video_row
           :if={@event}
@@ -262,6 +269,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           target={@surface}
         />
         <.input
+          :if={@editable}
           id="calendar-panel-notes"
           name="description"
           type="textarea"
@@ -269,11 +277,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           label={dgettext("dashboard_calendar_editing", "Notes")}
           placeholder={dgettext("dashboard_calendar_editing", "Agenda, links, anything else")}
           value={Map.get(@event, :description) || ""}
-          disabled={!@editable}
           errors={List.wrap(@panel.errors["notes"])}
           data-panel-field="notes"
           phx-blur="panel:notes"
           phx-target={@surface}
+        />
+        <LinkedText.read_only_field
+          :if={!@editable}
+          id="calendar-panel-notes-text"
+          label={dgettext("dashboard_calendar_editing", "Notes")}
+          text={Map.get(@event, :description)}
         />
         <PanelActions.edit_actions :if={@event && @editable} movable={@movable} surface={@surface} />
       </div>

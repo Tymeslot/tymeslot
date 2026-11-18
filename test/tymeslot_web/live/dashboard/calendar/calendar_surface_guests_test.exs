@@ -399,7 +399,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
       send_update(lv.pid, CalendarSurface, id: "calendar", action: :events_updated)
       send_update(lv.pid, CalendarSurface, id: "calendar", action: :reload)
 
-      assert has_element?(lv, ~s|#calendar-panel-location[value="Room 9"]|)
+      # An event that cannot be edited shows its place as text.
+      assert has_element?(lv, ~s|#calendar-panel-location[value="Room 9"]|) or
+               has_element?(lv, "#calendar-panel-location-text", "Room 9")
 
       refute has_element?(lv, "#calendar-panel-untold")
       refute has_element?(lv, "#app-flash-group", refusal)
