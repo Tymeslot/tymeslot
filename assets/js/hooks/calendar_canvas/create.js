@@ -66,6 +66,9 @@ export const CreateMixin = {
       // A press on a sheet's scrim is left to the scrim's click, which
       // cancels; the tap then never reaches the grid under it.
       if (e.target.closest?.("[data-sheet-scrim]")) return;
+      // A press in a dialog the popover waits on (the side panel asking
+      // whether to discard its draft before More options) is the dialog's.
+      if (e.target.closest?.('[role="dialog"], dialog')) return;
       if (!this.quick || this.quick.element.contains(e.target) || e.target.closest?.("[data-draft-id]")) return;
       this.cancelQuickCreate({ restoreFocus: false });
     };
