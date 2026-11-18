@@ -47,15 +47,6 @@ defmodule Tymeslot.Bookings.Cancel do
       for a caller that cancels several sessions of it in one transaction
       and closes it once itself (`Tymeslot.BookingSeries.Cancel`). Defaults
       to `true`.
-    * `:on_cancelled` - a function `(Meeting.t() -> {:ok, term()} |
-      {:error, term()})` run in one transaction with step 1, once the
-      meeting row is cancelled (and so locked): the work that must commit
-      with the cancellation or not at all (`Tymeslot.Meetings.Cancellation`
-      releasing seat holds and scheduling seat refunds). `{:error, reason}`
-      rolls the cancellation back and is returned. With it, success is
-      always `{:ok, meeting, result}`: `result` is the callback's, or `nil`
-      for a held request, which is withdrawn without running it.
-
   Returns {:ok, meeting} or {:error, reason}. `{:error, :already_cancelled}`
   means the meeting was cancelled already, whether `meeting` says so or a
   concurrent request cancelled it after `meeting` was read; whoever cancelled
@@ -64,11 +55,37 @@ defmodule Tymeslot.Bookings.Cancel do
   Accepts the same `opts` as `validate_cancellation/2`; see there for
   `:caller`.
   """
-  @spec execute(Meeting.t(), keyword()) ::
-          {:ok, Meeting.t()} | {:ok, Meeting.t(), term()} | {:error, term()}
-  def execute(meeting, opts \\ [])
+  @spec execute(Meeting.t(), keyword()) :: {:ok, Meeting.t()} | {:error, term()}
+  def execute(%Meeting{} = meeting, opts \\ []) do
+    case run(meeting, opts, nil) do
+      {:ok, cancelled, nil} -> {:ok, cancelled}
+      {:error, _reason} = error -> error
+    end
+  end
 
-  def execute(%Meeting{status: :cancelled} = meeting, _opts) do
+  @doc """
+  Cancels a meeting as `execute/2` does, running `on_cancelled` in one
+  transaction with step 1, once the meeting row is cancelled (and so
+  locked): the work that must commit with the cancellation or not at all
+  (`Tymeslot.Meetings.Cancellation` releasing seat holds and scheduling seat
+  refunds). `on_cancelled` returns `{:ok, result}` or `{:error, reason}`;
+  `{:error, reason}` rolls the cancellation back and is returned.
+
+  Returns `{:ok, meeting, result}`, where `result` is the callback's, or
+  `nil` for a held request, which is withdrawn without running it; or
+  `{:error, reason}` as for `execute/2`. Takes the same `opts`.
+  """
+  @spec execute_settling(
+          Meeting.t(),
+          (Meeting.t() -> {:ok, term()} | {:error, term()}),
+          keyword()
+        ) ::
+          {:ok, Meeting.t(), term()} | {:error, term()}
+  def execute_settling(%Meeting{} = meeting, on_cancelled, opts \\ [])
+      when is_function(on_cancelled, 1),
+      do: run(meeting, opts, on_cancelled)
+
+  defp run(%Meeting{status: :cancelled} = meeting, _opts, _on_cancelled) do
     Logger.info("Skipping cancellation for already-cancelled meeting",
       meeting_id: meeting.id
     )
@@ -76,13 +93,13 @@ defmodule Tymeslot.Bookings.Cancel do
     {:error, :already_cancelled}
   end
 
-  def execute(%Meeting{} = meeting, opts) do
+  defp run(meeting, opts, on_cancelled) do
     # Validation covers the Policy time checks plus the group-meeting guard.
     case validate_cancellation(meeting, opts) do
       :ok ->
-        meeting
-        |> execute_permitted(opts)
-        |> close_series(Keyword.get(opts, :close_series, true))
+        result = execute_permitted(meeting, opts, on_cancelled)
+        if Keyword.get(opts, :close_series, true), do: close_series(result)
+        result
 
       {:error, reason} ->
         policy_blocked(meeting, reason)
@@ -91,19 +108,13 @@ defmodule Tymeslot.Bookings.Cancel do
 
   # A series whose last session still to come was just cancelled is over:
   # it is closed with no email of its own, each session having had its own.
-  defp close_series({:ok, %Meeting{series_id: series_id}} = result, true)
-       when is_binary(series_id) do
-    BookingSeries.maybe_close(series_id)
-    result
-  end
+  defp close_series({:ok, %Meeting{series_id: series_id}}) when is_binary(series_id),
+    do: BookingSeries.maybe_close(series_id)
 
-  defp close_series({:ok, %Meeting{series_id: series_id}, _settled} = result, true)
-       when is_binary(series_id) do
-    BookingSeries.maybe_close(series_id)
-    result
-  end
+  defp close_series({:ok, %Meeting{series_id: series_id}, _settled}) when is_binary(series_id),
+    do: BookingSeries.maybe_close(series_id)
 
-  defp close_series(result, _close?), do: result
+  defp close_series(_result), do: :ok
 
   @doc """
   Tells everyone a meeting was cancelled: the cancellation emails, the
@@ -131,24 +142,18 @@ defmodule Tymeslot.Bookings.Cancel do
   # a request that never became a meeting. Only the notification stays here:
   # `Approval.withdraw/2` does not send one, since decline and expire each
   # need their own wording and withdrawal needs neither.
-  defp execute_permitted(meeting, opts) do
+  # Both paths answer `{:ok, meeting, result}`, `result` being `nil` when
+  # no callback ran.
+  defp execute_permitted(meeting, opts, on_cancelled) do
     announce? = Keyword.get(opts, :announce, true)
 
-    on_cancelled = Keyword.get(opts, :on_cancelled)
-
     if MeetingState.awaiting_approval?(meeting) do
-      meeting |> withdraw_held_request(announce?) |> with_no_result(on_cancelled)
+      with {:ok, released} <- withdraw_held_request(meeting, announce?),
+           do: {:ok, released, nil}
     else
       cancel_confirmed_meeting(meeting, announce?, on_cancelled)
     end
   end
-
-  # A caller passing `:on_cancelled` always gets a result back, `nil` when
-  # nothing ran it.
-  defp with_no_result({:ok, meeting}, on_cancelled) when is_function(on_cancelled, 1),
-    do: {:ok, meeting, nil}
-
-  defp with_no_result(result, _on_cancelled), do: result
 
   defp maybe_announce(meeting, true), do: send_cancellation_notifications(meeting)
   defp maybe_announce(_meeting, false), do: :ok
@@ -186,7 +191,7 @@ defmodule Tymeslot.Bookings.Cancel do
          :ok <- Meetings.cancel_calendar_event(updated_meeting),
          :ok <- delete_provider_video_room(updated_meeting),
          :ok <- maybe_announce(updated_meeting, announce?) do
-      if on_cancelled, do: {:ok, updated_meeting, settled}, else: {:ok, updated_meeting}
+      {:ok, updated_meeting, settled}
     end
   end
 
@@ -294,9 +299,9 @@ defmodule Tymeslot.Bookings.Cancel do
   @spec execute_external(Meeting.t()) :: {:ok, Meeting.t()} | {:error, term()}
   def execute_external(%Meeting{} = meeting) do
     if MeetingState.expects_calendar_event?(meeting) do
-      meeting
-      |> auto_cancel_external()
-      |> close_series(true)
+      result = auto_cancel_external(meeting)
+      close_series(result)
+      result
     else
       Logger.info("Skipping auto-cancel for externally deleted meeting",
         meeting_id: meeting.id,

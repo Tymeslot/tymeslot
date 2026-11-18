@@ -274,14 +274,14 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     refute Map.has_key?(args, "seat_refund")
   end
 
-  test "a failing on_cancelled rolls the cancellation back" do
+  test "a failing settlement rolls the cancellation back" do
     ctx = host_and_session()
     paid_seat(ctx, "ada@example.com")
     hold = open_hold(ctx, "late@example.com")
 
     # The seats are settled as the host's cancellation settles them, then
     # the callback fails: nothing of it may commit.
-    on_cancelled = fn cancelled ->
+    settle = fn cancelled ->
       SeatHolds.release_open_for_meeting(cancelled.id, :meeting_cancelled)
 
       Oban.insert!(
@@ -296,11 +296,7 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     end
 
     assert {:error, :boom} =
-             Cancel.execute(ctx.session,
-               caller: :organizer,
-               announce: false,
-               on_cancelled: on_cancelled
-             )
+             Cancel.execute_settling(ctx.session, settle, caller: :organizer, announce: false)
 
     assert status(ctx.session) == :confirmed
     assert SeatHolds.get(hold.id).status == :held

@@ -59,10 +59,9 @@ defmodule Tymeslot.Meetings.Cancellation do
   host later win the dispute, nothing refunds that seat.
 
   The seats are settled in the cancellation's own transaction, once the
-  meeting row is cancelled and so locked (`Cancel.execute/2`'s
-  `:on_cancelled`): every seat hold still open is released as
-  `:meeting_cancelled`, and one `Workers.GroupCancelRefund` job is inserted
-  per paid seat. Read under that lock, the seats include one paid while the
+  meeting row is cancelled and so locked (`Cancel.execute_settling/3`):
+  every seat hold still open is released as `:meeting_cancelled`, and one
+  `Workers.GroupCancelRefund` job is inserted per paid seat. Read under that lock, the seats include one paid while the
   cancellation waited for it. The Stripe calls run in the jobs, never under
   the lock, so a refund that fails leaves the session cancelled, and the job
   tells the host. Once committed, each released hold's checkout is expired
@@ -280,9 +279,9 @@ defmodule Tymeslot.Meetings.Cancellation do
   defp cancel_group(meeting, organizer_user_id, refund?) do
     settle = &settle_seats(&1, organizer_user_id, refund?)
 
-    case Cancel.execute(meeting, caller: :organizer, announce: false, on_cancelled: settle) do
+    case Cancel.execute_settling(meeting, settle, caller: :organizer, announce: false) do
       # A request still awaiting approval is withdrawn, not cancelled, and
-      # runs no `:on_cancelled`: nothing of it was paid for as a seat.
+      # runs no settlement: nothing of it was paid for as a seat.
       {:ok, withdrawn, nil} ->
         Cancel.announce(withdrawn)
         {:ok, withdrawn}
