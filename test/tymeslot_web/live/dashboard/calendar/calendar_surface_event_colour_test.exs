@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceEventColourTest do
 
   @moduletag :calendar
   @moduletag :live
+  @moduletag :meetings
 
   import Tymeslot.Factory
   import TymeslotWeb.CalendarSurfaceHelpers
@@ -162,5 +163,38 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceEventColourTest do
     hook(lv, "panel:colour", %{"colour" => "tomato"})
 
     assert Calendar.overrides_for(user.id) == %{}
+  end
+
+  test "a booking recoloured on the dashboard home shows that colour in the calendar", %{
+    conn: conn,
+    user: user
+  } do
+    meeting =
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        start_time: ~U[2026-10-15 10:00:00Z],
+        end_time: ~U[2026-10-15 10:30:00Z]
+      )
+
+    plain =
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        start_time: ~U[2026-10-15 12:00:00Z],
+        end_time: ~U[2026-10-15 12:30:00Z]
+      )
+
+    {:ok, _override} = Calendar.set_event_colour(user.id, {:meeting, meeting.id}, "grape")
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    hook(lv, "calendar:ready", %{})
+    assert_reply(lv, %{events: events})
+
+    assert %{colour: "calendar-grape"} = Enum.find(events, &(&1.id == "booking-#{meeting.id}"))
+    assert %{colour: "booking"} = Enum.find(events, &(&1.id == "booking-#{plain.id}"))
+
+    hook(lv, "calendar:open", %{"id" => "booking-#{meeting.id}"})
+    assert has_element?(lv, "#calendar-preview .cal-preview-swatch[style*='calendar-grape']")
   end
 end

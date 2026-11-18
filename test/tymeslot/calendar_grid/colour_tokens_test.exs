@@ -129,9 +129,16 @@ defmodule Tymeslot.CalendarGrid.ColourTokensTest do
       assert ColourTokens.with_override(@event, %{}) == @event
     end
 
-    test "a booking keeps painting as a booking" do
-      booking = %{kind: :booking, uid: "u1", calendar_integration_id: 1}
-      assert ColourTokens.with_override(booking, %{{:external, 1, "u1"} => "tomato"}) == booking
+    test "a booking paints in the colour chosen for its meeting, else as a booking" do
+      booking = %{kind: :booking, meeting_id: "m1", uid: "u1", calendar_integration_id: 1}
+
+      recoloured = ColourTokens.with_override(booking, %{{:meeting, "m1"} => "grape"})
+      assert ColourTokens.for_event(recoloured, %{}, %{}) == "calendar-grape"
+
+      # A calendar event's key never reaches a booking that shares its uid.
+      untouched = ColourTokens.with_override(booking, %{{:external, 1, "u1"} => "tomato"})
+      assert untouched == booking
+      assert ColourTokens.for_event(untouched, %{}, %{}) == "booking"
     end
   end
 end
