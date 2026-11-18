@@ -24,6 +24,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler
   alias Tymeslot.Integrations.Calendar.DebugStore
   alias Tymeslot.Integrations.Calendar.ICalParser
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Workers.SyncDebugCalendarWorker
 
@@ -135,6 +136,45 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
       assert Enum.reject(occurrences, &(&1.video_link == link)) == []
       assert Enum.reject(occurrences, &(&1.video_integration_id == video.id)) == []
     end
+
+    # An edit hands no video to a sync of its own (`SeriesCarry.series_created/1`
+    # covers only a create), so the row the edit left is the one place it is.
+    test "a one-off with a video given a repeat rule by an edit gives its occurrences the video",
+         %{integration: integration, first_start: first_start} do
+      video = insert(:video_integration, user: integration.user, provider: "mirotalk")
+      link = "https://video.example.com/join/weekly"
+      one_off = insert_synced_caldav_one_off(integration, first_start, video, link)
+
+      {:ok, _row} =
+        ProviderCalendarEventQueries.apply_local_edit(integration.id, one_off.uid, %{
+          recurrence_rule: "FREQ=WEEKLY;COUNT=3"
+        })
+
+      assert :ok = SyncReconciler.process_tier1(integration, caldav_series(@href), [])
+
+      occurrences = blocks_over_weeks(integration, first_start, 3)
+      assert Enum.map(occurrences, & &1.uid) |> Enum.all?(&(&1 != one_off.uid))
+      assert length(occurrences) == 3
+      assert Enum.reject(occurrences, &(&1.video_link == link)) == []
+      assert Enum.reject(occurrences, &(&1.video_integration_id == video.id)) == []
+    end
+  end
+
+  # A one-off CalDAV event under the series' future UID, as an earlier sync
+  # cached it, before the organiser gave it a repeat rule.
+  defp insert_synced_caldav_one_off(integration, first_start, video, link) do
+    insert(:provider_calendar_event,
+      calendar_integration: integration,
+      uid: "weekly@tymeslot.com",
+      provider: "caldav",
+      provider_calendar_id: "/cal/",
+      provider_event_id: @href,
+      start_at: first_start,
+      end_at: DateTime.add(first_start, 3600),
+      synced_at: ~U[2026-11-01 00:00:00.000000Z],
+      video_link: link,
+      video_integration_id: video && video.id
+    )
   end
 
   # The row the grid caches for a series it has just written to a CalDAV
