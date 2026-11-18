@@ -121,10 +121,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeriesPreviewTest do
       %{far_lv: lv, far_series: series}
     end
 
-    test "the series panel's Delete asks which events to delete", %{far_lv: lv} do
+    test "the series panel's Delete deletes the whole series", %{far_lv: lv} do
       lv |> element("#calendar-panel-delete") |> render_click()
+      lv |> element("#calendar-scope-series") |> render_click()
 
-      assert has_element?(lv, "#calendar-scope-series")
+      assert_enqueued(
+        worker: CalendarEventDeleteWorker,
+        args: %{"uid" => "standup-ical-uid", "scope" => "series"}
+      )
     end
 
     test "the series panel's Duplicate makes a copy", %{far_lv: lv} do
