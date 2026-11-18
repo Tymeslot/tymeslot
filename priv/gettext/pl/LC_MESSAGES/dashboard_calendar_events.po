@@ -481,3 +481,8 @@ msgstr "Wydarzenie usunięte, ale nie udało się odwołać spotkania. Uczestnik
 #, elixir-autogen, elixir-format
 msgid "Event deleted, but the attendees could not be notified."
 msgstr "Usunięto wydarzenie, ale nie udało się powiadomić uczestników."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Syncing with your calendar. Open it to change the whole series."
+msgstr "Trwa synchronizacja z kalendarzem. Otwórz je, aby zmienić całą serię."

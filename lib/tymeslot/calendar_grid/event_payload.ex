@@ -27,6 +27,13 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   create still saving, or the side panel's unsaved "New event") are drawn as
   `kind: "draft"` (`draft/4`), never editable or movable.
 
+  An occurrence previewed from a series no sync has cached yet
+  (`Tymeslot.Integrations.Calendar.SeriesPreview`) has an id of its own
+  (`"preview-<series row id>-<slot key>"`), says so (`preview`) and is drawn
+  waiting to sync (`attention`). It is drawn editable and movable when its
+  series is, so a drag or a delete reaches the server, which refuses it
+  with a word on why (`EditGuard`); opening it opens the series.
+
   A one-to-one booking's title leads with its guest and names its meeting
   type ("Anna Kowalski · Intro call"), or its own title without one, and every event says whether it is a
   booking request awaiting an answer (`request`) and whether that request
@@ -41,6 +48,7 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.GuestReplies
   alias Tymeslot.Integrations.Calendar.Attendee
+  alias Tymeslot.Integrations.Calendar.SeriesPreview
 
   @type context :: %{
           required(:timezone) => String.t(),
@@ -95,6 +103,7 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   @spec event(map(), context()) :: map()
   def event(event, context) do
     locked = EditGuard.seat_locked?(locked_uids(context), event)
+    preview? = SeriesPreview.preview?(event)
 
     Map.merge(
       %{
@@ -106,9 +115,10 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
           |> ColourTokens.with_override(Map.get(context, :colour_overrides, %{}))
           |> ColourTokens.for_event(context.integration_tokens, context.calendar_tokens),
         free: free?(event),
-        attention: Map.get(event, :sync_state, "synced") != "synced",
-        editable: editable?(event, context),
-        movable: not locked and movable?(event, context),
+        attention: preview? or Map.get(event, :sync_state, "synced") != "synced",
+        editable: editable?(SeriesPreview.series(event), context),
+        movable: not locked and movable_drawn?(preview?, event, context),
+        preview: preview?,
         locked: locked,
         calendar: calendar_key(event),
         recurring: recurring?(event),
@@ -171,6 +181,7 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   @doc "The id the hook knows an event by."
   @spec id(map()) :: String.t()
   def id(%{kind: :booking, id: id}), do: id
+  def id(%{preview_of: %{id: id}, preview_key: key}), do: "preview-#{id}-#{key}"
   def id(%{id: id}), do: "event-#{id}"
 
   # An expired request holds no time, so it must not block the next free time.
@@ -260,6 +271,11 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         :ok
 
   defp locked_uids(context), do: Map.get(context, :locked_uids) || MapSet.new()
+
+  # A preview's drag is refused by the server, saying why, when its series
+  # could be moved at all.
+  defp movable_drawn?(true, event, context), do: editable?(SeriesPreview.series(event), context)
+  defp movable_drawn?(false, event, context), do: movable?(event, context)
 
   defp movable?(event, %{movable_ids: ids}), do: MapSet.member?(ids, id(event))
 

@@ -43,7 +43,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   # attach to it.
   @local_edit_fields ~w(summary description location start_at end_at all_day start_date end_date
                         reminders recurrence_rule colour attendees transparency video_link
-                        video_integration_id)a
+                        video_integration_id timezone)a
 
   @doc """
   Returns all cached events for the given integration IDs within a time range.

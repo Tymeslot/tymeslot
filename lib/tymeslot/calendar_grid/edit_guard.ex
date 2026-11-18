@@ -39,6 +39,11 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   `guest_update/3` says whether the organiser may email an event's guests
   (invite, remove, tell them about a change): the event is writable, and
   they organise it.
+
+  An occurrence previewed from a series no sync has cached yet
+  (`Tymeslot.Integrations.Calendar.SeriesPreview`) is refused as `:syncing`
+  by every gate: it has no identity on the calendar to write to. The series
+  itself is changed from its own row, which opening the preview opens.
   """
 
   alias Tymeslot.CalendarGrid.EventDeletion
@@ -48,7 +53,7 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   alias Tymeslot.Security.RateLimiter
 
   @type refusal ::
-          {:error, :booking | :unauthorized | :read_only | :group_booking}
+          {:error, :booking | :unauthorized | :read_only | :group_booking | :syncing}
           | {:error, :rate_limited, String.t()}
 
   @doc "Whether `event` may be changed, for drawing the affordance; no query."
@@ -107,8 +112,10 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   end
 
   @doc "Whether `event` sits on a writable calendar of one of `integrations`."
-  @spec writable([map()], map()) :: :ok | {:error, :booking | :unauthorized | :read_only}
+  @spec writable([map()], map()) ::
+          :ok | {:error, :booking | :unauthorized | :read_only | :syncing}
   def writable(_integrations, %{kind: :booking}), do: {:error, :booking}
+  def writable(_integrations, %{preview_of: %{}}), do: {:error, :syncing}
 
   def writable(integrations, event) do
     case Enum.find(integrations, &(&1.id == Map.get(event, :calendar_integration_id))) do
@@ -137,7 +144,7 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   finds in `locked_uids`.
   """
   @spec drawn_writable([map()], MapSet.t(String.t()), map()) ::
-          :ok | {:error, :booking | :unauthorized | :read_only | :group_booking}
+          :ok | {:error, :booking | :unauthorized | :read_only | :group_booking | :syncing}
   def drawn_writable(integrations, locked_uids, event) do
     with :ok <- writable(integrations, event) do
       if seat_locked?(locked_uids, event), do: {:error, :group_booking}, else: :ok

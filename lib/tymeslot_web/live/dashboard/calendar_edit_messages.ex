@@ -28,6 +28,14 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
 
   def refusal({:error, :group_booking}), do: {:warning, seat_lock_message()}
 
+  def refusal({:error, :syncing}),
+    do:
+      {:warning,
+       dgettext(
+         "dashboard_calendar_events",
+         "Syncing with your calendar. Open it to change the whole series."
+       )}
+
   def refusal({:error, :booking}),
     do:
       {:warning,

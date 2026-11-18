@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [push_event: 3]
 
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
@@ -44,6 +45,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   def open_edit(socket, id) do
     case Map.fetch(socket.assigns.events_by_id, id) do
       {:ok, event} ->
+        # A previewed occurrence of a series no sync has cached yet opens
+        # the series, which is the only part of it there is to change.
+        event = CalendarGrid.preview_series(event)
+        id = EventPayload.id(event)
         held_until = held_until(event)
 
         without_draft(socket, fn socket ->

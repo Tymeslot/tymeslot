@@ -479,3 +479,8 @@ msgstr "Ereignis gelöscht, aber die Absage des Termins ist fehlgeschlagen. Der 
 #, elixir-autogen, elixir-format
 msgid "Event deleted, but the attendees could not be notified."
 msgstr "Ereignis gelöscht, aber die Teilnehmer konnten nicht benachrichtigt werden."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Syncing with your calendar. Open it to change the whole series."
+msgstr "Wird mit Ihrem Kalender synchronisiert. Öffnen Sie das Ereignis, um die gesamte Serie zu ändern."

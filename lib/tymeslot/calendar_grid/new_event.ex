@@ -9,7 +9,9 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
   the calendar it actually wrote to, the identity it reported, the place,
   free/busy and the guests. Nothing is cached for a create that did not
   reach the calendar; a queued CalDAV create is tagged by the offline queue
-  instead.
+  instead. A repeating event is cached as one row for the whole series, with
+  the zone it was written in; its occurrences are previewed from the row
+  until a sync caches them (`Tymeslot.Integrations.Calendar.SeriesPreview`).
   """
 
   alias Tymeslot.CalendarGrid.CreateParams
@@ -50,7 +52,7 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
   def create(user_id, payload) when is_integer(user_id) and is_map(payload) do
     with {:ok, result} <-
            payload |> Map.put(:user_id, user_id) |> EventCreation.run_create_event() do
-      attrs = row_attrs(result)
+      attrs = row_attrs(result, payload[:timezone])
       :ok = cache(attrs)
 
       {:ok,
@@ -91,9 +93,10 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
   # The provider's identity (`provider_event_id`, `etag`) is the only one the
   # row has until a full sync runs; either may be nil, as a CalDAV server is
   # not obliged to answer a PUT with an ETag.
-  defp row_attrs(result) do
+  defp row_attrs(result, timezone) do
     creating = result.creating
     all_day = Map.get(creating, :all_day, false)
+    rule = Map.get(creating, :recurrence_rule)
 
     all_day
     |> timing(result.start_at, result.end_at)
@@ -113,7 +116,10 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
       attendees: Enum.map(result.attendees, &Attendee.new(email: &1.email)),
       all_day: all_day,
       reminders: Map.get(creating, :reminders, []),
-      recurrence_rule: Map.get(creating, :recurrence_rule),
+      recurrence_rule: rule,
+      # The zone a series is written in, which its occurrences are previewed
+      # in until a sync caches them (`SeriesPreview`).
+      timezone: if(is_binary(rule) and rule != "", do: timezone),
       video_link: result.meeting_url,
       video_integration_id: creating[:video_integration_id]
     })
