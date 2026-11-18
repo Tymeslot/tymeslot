@@ -108,6 +108,7 @@ defmodule Tymeslot.CalendarGrid.SeriesPreviewTest do
       ids = Enum.map([series_row | previews], &EventPayload.id/1)
       assert length(Enum.uniq(ids)) == 4
       assert Enum.reject(drawn, &(&1.preview and &1.attention and &1.editable)) == []
+      assert Enum.filter(drawn, & &1.movable) == []
       refute EventPayload.event(series_row, context).preview
     end
 

@@ -30,9 +30,10 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   An occurrence previewed from a series no sync has cached yet
   (`Tymeslot.Integrations.Calendar.SeriesPreview`) has an id of its own
   (`"preview-<series row id>-<slot key>"`), says so (`preview`) and is drawn
-  waiting to sync (`attention`). It is drawn editable and movable when its
-  series is, so a drag or a delete reaches the server, which refuses it
-  with a word on why (`EditGuard`); opening it opens the series.
+  waiting to sync (`attention`). It is never movable: it has no slot of its
+  own on the calendar to move. It is editable when its series is, so E
+  opens the series and Delete reaches the server, which refuses it with a
+  word on why (`EditGuard`).
 
   A one-to-one booking's title leads with its guest and names its meeting
   type ("Anna Kowalski · Intro call"), or its own title without one, and every event says whether it is a
@@ -117,7 +118,7 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         free: free?(event),
         attention: preview? or Map.get(event, :sync_state, "synced") != "synced",
         editable: editable?(SeriesPreview.series(event), context),
-        movable: not locked and movable_drawn?(preview?, event, context),
+        movable: not locked and not preview? and movable?(event, context),
         preview: preview?,
         locked: locked,
         calendar: calendar_key(event),
@@ -271,11 +272,6 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         :ok
 
   defp locked_uids(context), do: Map.get(context, :locked_uids) || MapSet.new()
-
-  # A preview's drag is refused by the server, saying why, when its series
-  # could be moved at all.
-  defp movable_drawn?(true, event, context), do: editable?(SeriesPreview.series(event), context)
-  defp movable_drawn?(false, event, context), do: movable?(event, context)
 
   defp movable?(event, %{movable_ids: ids}), do: MapSet.member?(ids, id(event))
 

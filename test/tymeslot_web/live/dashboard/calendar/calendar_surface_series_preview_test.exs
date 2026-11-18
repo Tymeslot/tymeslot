@@ -73,6 +73,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeriesPreviewTest do
     refute_enqueued(worker: CalendarEventDeleteWorker)
   end
 
+  # A preview is drawn unmovable; a move sent all the same is refused.
   test "moving the preview alone is refused while the calendar syncs, and it stays put",
        context do
     id = preview_id(context)
@@ -86,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeriesPreviewTest do
     assert render(context.lv) =~ "Syncing with your calendar"
     assert_push_event(context.lv, "calendar:events", %{events: events})
 
-    assert [%{preview: true, attention: true, start: "2026-10-14T10:00"}] =
+    assert [%{preview: true, attention: true, movable: false, start: "2026-10-14T10:00"}] =
              Enum.filter(events, &(&1.id == id))
   end
 
