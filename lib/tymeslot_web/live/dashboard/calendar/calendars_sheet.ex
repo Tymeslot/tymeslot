@@ -35,6 +35,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
   attr :reauth_ids, :any, default: MapSet.new()
   attr :bookable, :map, required: true, doc: "see `LayerChoices.rail/2`"
   attr :preferences, :map, required: true, doc: "the organiser's `CalendarPreferencesSchema`"
+  attr :desktop_permission, :map, required: true, doc: "see `DesktopPermission`"
   attr :time_format, :string, required: true, doc: ~s("24h" or "12h")
   attr :timezone, :string, required: true, doc: "the zone the surface reads times in"
   attr :target, :any, required: true
@@ -104,6 +105,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarsSheet do
           <DisplayOptions.display_options
             id_prefix="calendar-sheet"
             preferences={@preferences}
+            desktop_permission={@desktop_permission}
             time_format={@time_format}
             target={@target}
           />

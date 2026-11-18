@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
   import Phoenix.Component, only: [assign: 2]
 
   alias TymeslotWeb.Dashboard.Calendar.CommandSearch
+  alias TymeslotWeb.Dashboard.Calendar.DesktopPermission
   alias TymeslotWeb.Dashboard.Calendar.DisplayPreferences
   alias TymeslotWeb.Dashboard.Calendar.IcsImport
   alias TymeslotWeb.Dashboard.Calendar.ReminderFeed
@@ -32,6 +33,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
     "calendar:set_week_start" => DisplayPreferences,
     "calendar:set_time_format" => DisplayPreferences,
     "calendar:toggle_desktop_reminders" => DisplayPreferences,
+    "calendar:desktop_permission" => DesktopPermission,
+    "calendar:enable_desktop_reminders" => DesktopPermission,
     "calendar:ics_open" => IcsImport,
     "calendar:ics_close" => IcsImport,
     "calendar:ics_validate" => IcsImport,
@@ -81,6 +84,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
       assign(socket,
         reminder_feed: [],
         reminder_ref: nil,
+        desktop_permission: DesktopPermission.initial(),
         ics_import: nil,
         calendar_sets: [],
         active_set: nil,

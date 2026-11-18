@@ -471,3 +471,33 @@ msgstr[2] "%{count} dalších hostů"
 #, elixir-autogen, elixir-format
 msgid "Maybe"
 msgstr "Možná"
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Allow notifications"
+msgstr "Povolit oznámení"
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked in your browser settings. Allow notifications for this site there, then switch reminders on again."
+msgstr "Blokováno v nastavení prohlížeče. Povolte tam oznámení pro tento web a pak připomínky znovu zapněte."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications were not allowed, so reminders are still off."
+msgstr "Oznámení nebyla povolena, takže připomínky zůstávají vypnuté."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser has not allowed notifications yet."
+msgstr "Připomínky jsou zapnuté, ale prohlížeč zatím oznámení nepovolil."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+msgstr "Připomínky jsou zapnuté, ale prohlížeč blokuje oznámení. Povolte oznámení pro tento web v nastavení prohlížeče a připomínky se spustí."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "This browser does not support notifications."
+msgstr "Tento prohlížeč oznámení nepodporuje."

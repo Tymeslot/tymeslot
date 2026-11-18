@@ -6,7 +6,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayPreferences do
 
     * density, the folded night, week numbers and desktop notifications
       only change how the hook draws, so the settings are pushed again
-      (`:settings`);
+      (`:settings`); desktop notifications are only switched off here, as
+      switching them on waits for the browser (`DesktopPermission`);
     * the week start and weekends change the days and the loaded window, so
       the window is reloaded and pushed with a cache reset (`:window`);
     * the clock is also mirrored by `DashboardLive` for the rest of the
@@ -50,10 +51,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayPreferences do
   def handle("calendar:toggle_week_numbers", _params, socket),
     do: {:noreply, toggle(socket, :show_week_numbers, :settings)}
 
-  def handle("calendar:toggle_desktop_reminders", _params, socket),
-    do:
-      {:noreply,
-       socket |> toggle(:desktop_reminders_enabled, :settings) |> ReminderFeed.refresh()}
+  # The plain toggle only turns desktop notifications off. Turning them on
+  # needs the browser's permission, which only `DesktopPermission` hears
+  # about, so a click that reaches here while they are off (the permission
+  # hook not loaded yet, or a stale client) changes nothing.
+  def handle(
+        "calendar:toggle_desktop_reminders",
+        _params,
+        %{assigns: %{preferences: %{desktop_reminders_enabled: true}}} = socket
+      ),
+      do:
+        {:noreply,
+         socket |> save(:desktop_reminders_enabled, false, :settings) |> ReminderFeed.refresh()}
 
   def handle("calendar:set_week_start", %{"option" => week_start}, socket)
       when week_start in @week_starts do
