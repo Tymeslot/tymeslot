@@ -134,6 +134,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     |> unique_constraint(:meeting_id)
     |> unique_constraint(:series_id)
     |> unique_constraint(:seat_hold_id, name: :booking_payments_seat_hold_id_index)
+    |> unique_participant()
     |> check_constraint(:seats, name: :booking_payments_seats_positive)
     |> check_constraint(:series_id, name: :booking_payments_single_owner_check)
     |> unique_constraint(:stripe_checkout_session_id)
@@ -159,6 +160,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
       |> validate_required([:meeting_id, :participant_id])
       |> foreign_key_constraint(:meeting_id)
       |> foreign_key_constraint(:participant_id)
+      |> unique_participant()
 
     if seat_payment,
       do: changeset,
@@ -177,6 +179,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     |> validate_required([:participant_id, :meeting_id])
     |> foreign_key_constraint(:participant_id)
     |> foreign_key_constraint(:meeting_id)
+    |> unique_participant()
   end
 
   @spec valid_statuses() :: [status()]
@@ -192,6 +195,12 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
   """
   @spec refundable_statuses() :: [status()]
   def refundable_statuses, do: @refundable_statuses
+
+  # A participant is the seat one payment bought: a second seat payment
+  # naming them is refused by the partial unique index.
+  defp unique_participant(changeset),
+    do:
+      unique_constraint(changeset, :participant_id, name: :booking_payments_participant_id_index)
 
   # A payment taken for a hold is a seat payment, and stays one when its hold
   # is later deleted; callers cannot set the marker themselves.

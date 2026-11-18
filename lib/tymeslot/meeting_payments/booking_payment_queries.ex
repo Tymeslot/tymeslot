@@ -91,10 +91,10 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   def by_participant_id(participant_id) do
     case cast_id(participant_id) do
       {:ok, uuid} ->
+        # One at most: `booking_payments_participant_id_index` is unique over
+        # seat payments.
         BookingPaymentSchema
         |> where([b], b.participant_id == ^uuid and b.seat_payment)
-        |> order_by([b], asc: b.inserted_at, asc: b.id)
-        |> limit(1)
         |> Repo.one()
 
       {:error, :not_found} ->
@@ -333,7 +333,10 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
     query =
       from [b, m, p] in outstanding_refunds_query(host_user_id),
-        order_by: [asc: coalesce(p.cancelled_at, coalesce(m.cancelled_at, b.paid_at)), asc: b.id],
+        order_by: [
+          asc: fragment("COALESCE(?, ?, ?)", p.cancelled_at, m.cancelled_at, b.paid_at),
+          asc: b.id
+        ],
         limit: ^limit,
         preload: [meeting: m, participant: p]
 

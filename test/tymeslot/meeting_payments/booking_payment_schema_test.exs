@@ -243,5 +243,52 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchemaTest do
 
       assert %{participant_id: [_message]} = errors_on(cs)
     end
+
+    test "convert_changeset/2 refuses a participant another seat payment already paid for" do
+      meeting = insert(:group_meeting)
+      [h1, h2] = insert_pair(:seat_hold, meeting: meeting)
+      participant = insert(:participant, meeting: meeting)
+      {:ok, _paid} = insert_seat_payment(meeting, h1, %{participant_id: participant.id})
+      {:ok, other} = insert_seat_payment(meeting, h2)
+
+      assert {:error, cs} =
+               other
+               |> BookingPaymentSchema.convert_changeset(%{participant_id: participant.id})
+               |> Repo.update()
+
+      assert %{participant_id: ["has already been taken"]} = errors_on(cs)
+    end
+
+    test "move_seat_changeset/2 refuses a participant another seat payment already paid for" do
+      meeting = insert(:group_meeting)
+      [h1, h2] = insert_pair(:seat_hold, meeting: meeting)
+      other = insert(:group_meeting)
+      participant = insert(:participant, meeting: other)
+      {:ok, _paid} = insert_seat_payment(meeting, h1, %{participant_id: participant.id})
+      {:ok, moving} = insert_seat_payment(meeting, h2)
+
+      assert {:error, cs} =
+               moving
+               |> BookingPaymentSchema.move_seat_changeset(%{
+                 meeting_id: other.id,
+                 participant_id: participant.id
+               })
+               |> Repo.update()
+
+      assert %{participant_id: ["has already been taken"]} = errors_on(cs)
+    end
+
+    test "a plain payment may share a participant id with a seat payment" do
+      meeting = insert(:group_meeting)
+      hold = insert(:seat_hold, meeting: meeting)
+      participant = insert(:participant, meeting: meeting)
+      {:ok, _seat} = insert_seat_payment(meeting, hold, %{participant_id: participant.id})
+
+      assert {:ok, _plain} =
+               @valid_attrs
+               |> Map.merge(%{participant_id: participant.id, meeting_id: insert(:meeting).id})
+               |> BookingPaymentSchema.create_changeset()
+               |> Repo.insert()
+    end
   end
 end
