@@ -43,6 +43,7 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
+  alias Tymeslot.Integrations.Calendar.ColourWriteBack
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
@@ -114,13 +115,13 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   defp handle_unsynced_document(result, _meta), do: result
 
   # Microsoft Graph exposes no per-event colour, so there is nothing to push.
-  defp write_back(%{provider: "outlook"}, _integration_id, _user_id, _colour),
-    do: {:discard, @no_event_colour}
-
   defp write_back(event, integration_id, user_id, colour) do
-    event_data = colour_only_event_data(event, colour)
-
-    CalendarEvents.update_event(event.uid, event_data, {integration_id, user_id})
+    if ColourWriteBack.host_colour?(event.provider) do
+      event_data = colour_only_event_data(event, colour)
+      CalendarEvents.update_event(event.uid, event_data, {integration_id, user_id})
+    else
+      {:discard, @no_event_colour}
+    end
   end
 
   # Colour-only payload: just enough for the provider path to identify the

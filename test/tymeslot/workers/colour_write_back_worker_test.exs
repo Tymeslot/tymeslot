@@ -175,6 +175,24 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
       assert_received {:wrote, nil}
     end
 
+    test "a clear on an Outlook event leaves its cached colour and queues nothing", %{
+      user: user
+    } do
+      outlook = insert(:calendar_integration, user: user, provider: "outlook")
+      cached_event(outlook, uid: "uid-o", colour: "blueberry")
+      target = {:external, outlook.id, "uid-o"}
+      {:ok, _override} = ColourOverrideQueries.set_external(user.id, outlook.id, "uid-o", "grape")
+
+      :ok = Calendar.clear_event_colour(user.id, target)
+
+      assert Calendar.overrides_for(user.id) == %{}
+
+      assert {:ok, %{colour: "blueberry"}} =
+               ProviderCalendarEventQueries.get_by_uid(outlook.id, "uid-o")
+
+      refute_enqueued(worker: ColourWriteBackWorker)
+    end
+
     test "a cleared colour is pushed as no colour, the colour alone", %{
       user: user,
       integration: integ

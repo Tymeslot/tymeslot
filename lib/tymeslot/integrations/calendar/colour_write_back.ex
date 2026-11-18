@@ -6,13 +6,22 @@ defmodule Tymeslot.Integrations.Calendar.ColourWriteBack do
 
   Split out of `Tymeslot.Integrations.Calendar` so the context keeps to its
   public API: this is the enqueue mechanism behind `set_event_colour/3`, not a
-  domain entry point of its own, and nothing outside the context calls it.
+  domain entry point of its own; outside the context only `host_colour?/1`
+  is reached, through `Calendar.host_event_colour?/1`.
   """
 
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Workers.ColourWriteBackWorker
+
+  @doc """
+  Whether events of `provider` carry a colour of their own to write back:
+  Microsoft Graph exposes no per-event colour, so Outlook's do not.
+  """
+  @spec host_colour?(String.t() | nil) :: boolean()
+  def host_colour?("outlook"), do: false
+  def host_colour?(_provider), do: true
 
   @doc """
   Enqueues a colour write-back for one external event; `nil` clears it.

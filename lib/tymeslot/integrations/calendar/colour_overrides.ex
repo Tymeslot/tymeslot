@@ -50,7 +50,8 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrides do
   replaces a write-back of the old colour still waiting, which would
   otherwise land after the clear and bring the colour back. The cached
   event's colour is cleared at once, so the event shows its calendar's
-  colour before the next sync.
+  colour before the next sync. An Outlook event keeps no colour of its own,
+  so only its override goes.
   """
   @spec clear_event_colour(user_id(), colour_target()) :: :ok | {:error, :not_found}
   def clear_event_colour(user_id, target) do
@@ -62,10 +63,25 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrides do
   defp remove_event_colour(user_id, {:meeting, meeting_id}),
     do: ColourOverrideQueries.clear_meeting(user_id, meeting_id)
 
+  # An event whose provider keeps no colour of its own (Outlook) has none to
+  # clear: its cached colour is the calendar's, which the next sync brings
+  # back anyway.
   defp remove_event_colour(user_id, {:external, integration_id, uid}) do
     :ok = ColourOverrideQueries.clear_external(user_id, integration_id, uid)
-    :ok = ProviderCalendarEventQueries.clear_colour(integration_id, uid)
-    ColourWriteBack.enqueue(user_id, integration_id, uid, nil)
+
+    if host_colour?(integration_id, uid) do
+      :ok = ProviderCalendarEventQueries.clear_colour(integration_id, uid)
+      ColourWriteBack.enqueue(user_id, integration_id, uid, nil)
+    else
+      :ok
+    end
+  end
+
+  defp host_colour?(integration_id, uid) do
+    case ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
+      {:ok, event} -> ColourWriteBack.host_colour?(event.provider)
+      {:error, :not_found} -> true
+    end
   end
 
   # The target arrives from the browser, so the meeting or integration it

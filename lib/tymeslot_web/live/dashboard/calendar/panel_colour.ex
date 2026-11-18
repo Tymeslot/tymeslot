@@ -97,10 +97,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelColour do
     end
   end
 
-  # A cleared colour is cleared from the cached event as well
-  # (`Calendar.clear_event_colour/2`); the loaded copy follows it.
-  defp shown_cleared(socket, event, nil),
-    do: SurfaceData.show_event(socket, Map.put(event, :colour, nil))
+  # A cleared colour is cleared from the cached event as well, where its
+  # provider keeps one (`Calendar.clear_event_colour/2`); the loaded copy
+  # follows it.
+  defp shown_cleared(socket, event, nil) do
+    if Calendar.host_event_colour?(Map.get(event, :provider)),
+      do: SurfaceData.show_event(socket, Map.put(event, :colour, nil)),
+      else: socket
+  end
 
   defp shown_cleared(socket, _event, _key), do: socket
 
