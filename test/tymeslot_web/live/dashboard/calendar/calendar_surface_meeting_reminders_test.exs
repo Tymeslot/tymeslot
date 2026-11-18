@@ -167,7 +167,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingRemindersTest do
 
     # The draft has a guest, so Cancel asks first.
     lv |> element("#calendar-panel-new-cancel") |> render_click()
-    lv |> element("#calendar-discard-draft-confirm") |> render_click()
+    lv |> element("#calendar-discard-draft button", "Discard") |> render_click()
     refute has_element?(lv, "#calendar-panel")
 
     lv
