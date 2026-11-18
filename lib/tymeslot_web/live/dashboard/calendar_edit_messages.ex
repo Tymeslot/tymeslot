@@ -64,6 +64,24 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
     )
   end
 
+  @doc "The event is gone, but the meeting it belonged to could not be cancelled."
+  @spec deleted_but_meeting_not_cancelled_message() :: String.t()
+  def deleted_but_meeting_not_cancelled_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+    )
+  end
+
+  @doc "The event is gone, but the cancellation for its attendees could not be sent."
+  @spec deleted_but_attendees_not_notified_message() :: String.t()
+  def deleted_but_attendees_not_notified_message,
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "Event deleted, but the attendees could not be notified."
+      )
+
   @doc """
   Why a delete failed. A queued delete will be replayed on the next sync;
   anything else is final. Nobody is notified of a delete that has not

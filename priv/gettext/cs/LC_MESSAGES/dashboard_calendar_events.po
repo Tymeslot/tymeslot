@@ -466,3 +466,13 @@ msgstr "Hlavní účastník může schůzku přesunout nebo zrušit. Vypnutím t
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Tento čas už není k dispozici. Vyberte prosím jiný."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+msgstr "Událost byla smazána, ale schůzku se nepodařilo zrušit. Účastník nemusí být informován."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Událost byla smazána, ale účastníky se nepodařilo informovat."

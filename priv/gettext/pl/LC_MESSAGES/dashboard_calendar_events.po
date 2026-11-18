@@ -462,3 +462,13 @@ msgstr "Główny uczestnik może przełożyć lub odwołać spotkanie. Wyłącz 
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Ten termin nie jest już dostępny. Wybierz inny."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+msgstr "Wydarzenie usunięte, ale nie udało się odwołać spotkania. Uczestnik może nie otrzymać powiadomienia."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Usunięto wydarzenie, ale nie udało się powiadomić uczestników."
