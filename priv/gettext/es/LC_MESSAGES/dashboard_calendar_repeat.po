@@ -565,3 +565,8 @@ msgstr "Termina"
 #, elixir-autogen, elixir-format
 msgid "Repeat until"
 msgstr "Repetir hasta"
+
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Repeat frequency"
+msgstr "Frecuencia de repetición"

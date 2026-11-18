@@ -428,4 +428,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
       assert %{recurrence_rule: "FREQ=WEEKLY"} = Repo.one!(ProviderCalendarEventSchema)
     end
   end
+
+  describe "the repeat editor" do
+    test "Custom… names its frequency apart from the Repeat select", %{
+      lv: lv,
+      integration: integration
+    } do
+      more_options(lv, integration)
+      render_change(new_form(lv), %{"repeat" => "custom"})
+
+      assert has_element?(
+               lv,
+               ~s(#recurrence-editor-form-panel-new-repeat-freq[aria-label="Repeat frequency"])
+             )
+    end
+  end
 end

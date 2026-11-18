@@ -154,7 +154,11 @@ defmodule TymeslotWeb.Components.Calendar.RecurrenceEditor do
           id={"#{@form_id}-freq"}
           name="freq"
           compact
-          aria-label={dgettext("dashboard_calendar_repeat", "Repeat")}
+          aria-label={
+            if @embedded,
+              do: dgettext("dashboard_calendar_repeat", "Repeat frequency"),
+              else: dgettext("dashboard_calendar_repeat", "Repeat")
+          }
           value={to_string(@freq)}
           options={Enum.map(@freq_options, fn {value, label} -> {label, value} end)}
         />
