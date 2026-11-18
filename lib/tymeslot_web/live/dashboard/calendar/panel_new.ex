@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [push_event: 3]
 
+  alias Tymeslot.CalendarGrid.CalendarDirectory
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
@@ -130,6 +131,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
       |> Map.merge(PanelGroupEvent.fields(params))
       |> Map.merge(PanelNewGuests.pending(params, socket.assigns.current_user))
       |> Map.merge(PanelNewRepeat.fields(params))
+      |> Map.merge(PanelNewReminders.fields(params))
       |> PanelMeeting.carry_place(form)
       |> convert_all_day(form)
       |> follow_start(form, params["_target"])
@@ -171,13 +173,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
 
   def submit(
         %{assigns: %{panel: %{mode: :new, status: status}}} = socket,
-        %{"intent" => "add_reminder"} = params
-      )
-      when status != :saving,
-      do: socket |> change(params) |> PanelNewReminders.add(params)
-
-  def submit(
-        %{assigns: %{panel: %{mode: :new, status: status}}} = socket,
         %{"intent" => "create"} = params
       )
       when status != :saving do
@@ -199,13 +194,35 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
 
   def drop_guest(socket, _email), do: socket
 
+  @doc "Adds the event reminder the reminder row holds (`PanelNewReminders.add/2`)."
+  @spec add_reminder(socket()) :: socket()
+  def add_reminder(%{assigns: %{panel: %{mode: :new, status: status, form: form}}} = socket)
+      when status != :saving,
+      do: PanelNewReminders.add(socket, provider(socket, form))
+
+  def add_reminder(socket), do: socket
+
   @doc "Drops the event reminder at `index` from the form."
   @spec drop_reminder(socket(), term()) :: socket()
-  def drop_reminder(%{assigns: %{panel: %{mode: :new, status: status}}} = socket, index)
+  def drop_reminder(
+        %{assigns: %{panel: %{mode: :new, status: status, form: form}}} = socket,
+        index
+      )
       when status != :saving,
-      do: PanelNewReminders.drop(socket, index)
+      do: PanelNewReminders.drop(socket, index, provider(socket, form))
 
   def drop_reminder(socket, _index), do: socket
+
+  @doc "The provider of the calendar the form's draft is going to, if any."
+  @spec provider(socket(), map()) :: String.t() | nil
+  def provider(socket, form) do
+    with {:ok, id, _calendar_id} <- CalendarDirectory.parse_key(form["calendar"]),
+         %{provider: provider} <- Enum.find(socket.assigns.integrations, &(&1.id == id)) do
+      provider
+    else
+      _none -> nil
+    end
+  end
 
   @doc """
   Puts `form` in the New event state: the draft is cast again and the grid
@@ -438,12 +455,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   defp cast_params(socket, form, calendar) do
     %{current_user: user, integrations: integrations, timezone: timezone} = socket.assigns
 
-    # "reminders" reach the form only when `PanelMeeting` books a meeting:
-    # the lead times of its reminder emails, from the panel's reminder
-    # picker. The event's own reminders are `"event_reminders"`.
+    # The reminders the cast writes are the event's own
+    # (`"event_reminders"`). A meeting's reminder emails, which
+    # `PanelMeeting.book/2` puts in the form as "reminders" for
+    # `MeetingParams`, are replaced here, as the event has no use for them.
     params =
       form
-      |> Map.put("reminders", PanelNewReminders.params(form))
+      |> Map.put("reminders", PanelNewReminders.params(form, provider(socket, form)))
       |> Map.put("title", untitled(form["title"]))
       |> Map.reject(fn {key, value} -> key == "video_integration_id" and value in [nil, ""] end)
       |> Map.delete("recurrence_rule")
@@ -453,7 +471,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
     # A repeat rule is composed from the draft's own start, so the draft is
     # cast first and again with the rule, which the domain then checks.
     with {:ok, create} <- cast.(params) do
-      case PanelNewRepeat.rule(form, create, provider(integrations, create), timezone) do
+      case PanelNewRepeat.rule(form, create, create_provider(integrations, create), timezone) do
         {:ok, nil} -> {:ok, create}
         {:ok, rule} -> cast.(Map.put(params, "recurrence_rule", rule))
         {:error, :repeat, message} -> {:error, :repeat, message}
@@ -461,7 +479,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
     end
   end
 
-  defp provider(integrations, create) do
+  defp create_provider(integrations, create) do
     case Enum.find(integrations, &(&1.id == create.integration_id)) do
       nil -> nil
       integration -> integration.provider

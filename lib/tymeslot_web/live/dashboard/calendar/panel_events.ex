@@ -59,6 +59,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   def handle("draft_drop_guest", %{"email" => email}, socket),
     do: PanelNew.drop_guest(socket, email)
 
+  def handle("draft_add_reminder", _params, socket), do: PanelNew.add_reminder(socket)
+
   def handle("draft_drop_reminder", %{"index" => index}, socket),
     do: PanelNew.drop_reminder(socket, index)
 

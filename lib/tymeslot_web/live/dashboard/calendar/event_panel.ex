@@ -305,6 +305,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           reminder_picker={Map.get(@panel, :reminder_picker)}
           timezone={@timezone}
           repeat={@new_repeat}
+          provider={provider(@integrations, @panel.draft)}
           guest_error={@panel.errors["guest"]}
         />
       </div>

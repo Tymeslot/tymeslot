@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
           "start" => "2026-10-15T13:00",
           "end" => "2026-10-15T14:00",
           "all_day" => false,
-          "calendar" => "#{integration.id}:work",
+          "calendar" => integration && "#{integration.id}:work",
           "location" => "",
           "guests" => [],
           "free" => false
@@ -73,12 +73,35 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
     payload
   end
 
+  # The add row's choices reach the form with its changes; Add is a plain
+  # button, so Enter in the form never adds a reminder.
   defp add_reminder(lv, minutes, method) do
-    render_submit(new_form(lv), %{
-      "intent" => "add_reminder",
+    render_change(new_form(lv), %{
       "event_reminder_minutes" => minutes,
       "event_reminder_method" => method
     })
+
+    lv |> element("#calendar-panel-new-reminder-add") |> render_click()
+  end
+
+  defp outlook(user) do
+    insert(:calendar_integration,
+      user: user,
+      name: "Outlook account",
+      provider: "outlook",
+      is_active: true,
+      calendar_list: [%{"id" => "cal", "name" => "Calendar", "selected" => true}]
+    )
+  end
+
+  # Implicit submission (Enter in a field) uses the form's first submit
+  # button.
+  defp first_submit(lv) do
+    lv
+    |> render()
+    |> Floki.parse_document!()
+    |> Floki.find("#calendar-panel-new-form button[type=submit]")
+    |> List.first()
   end
 
   describe "a saved location" do
@@ -298,6 +321,54 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
 
       render_change(new_form(lv), %{"meeting" => "true"})
       refute has_element?(lv, "#calendar-panel-new-repeat")
+    end
+  end
+
+  describe "Enter in the form" do
+    test "submits with the guest field's Add, never Add reminder or Create", %{
+      lv: lv,
+      integration: integration
+    } do
+      more_options(lv, integration)
+
+      assert ["calendar-panel-guest-add"] = Floki.attribute(first_submit(lv), "id")
+      assert has_element?(lv, ~s(#calendar-panel-new-reminder-add[type="button"]))
+    end
+
+    test "does nothing where the guest field gives way", %{lv: lv, integration: integration} do
+      more_options(lv, integration)
+      render_change(new_form(lv), %{"group_event" => "true"})
+
+      button = first_submit(lv)
+      assert ["calendar-panel-new-enter"] = Floki.attribute(button, "id")
+      assert Floki.attribute(button, "disabled") != []
+    end
+  end
+
+  describe "on an Outlook calendar" do
+    test "a single notification is offered, with no method to choose", %{
+      conn: conn,
+      user: user
+    } do
+      outlook = outlook(user)
+      # Read as the calendar loads.
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, nil, %{"calendar" => "#{outlook.id}:cal"})
+
+      refute has_element?(lv, "#calendar-panel-new-reminder-method")
+
+      add_reminder(lv, "10", "email")
+
+      assert has_element?(
+               lv,
+               "#calendar-panel-new-reminders li",
+               "Notification 10 minutes before"
+             )
+
+      refute has_element?(lv, "#calendar-panel-new-reminder-add")
+
+      render_submit(new_form(lv), %{"intent" => "create"})
+      assert created(lv).reminders == [%{method: :popup, minutes_before: 10}]
     end
   end
 end

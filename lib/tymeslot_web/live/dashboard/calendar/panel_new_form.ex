@@ -56,6 +56,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   attr :timezone, :string, default: "Etc/UTC"
   attr :has_accounts, :boolean, default: false, doc: "whether any calendar account is connected"
   attr :guest_error, :string, default: nil, doc: "why the last guest address was not added"
+  attr :provider, :string, default: nil, doc: "the provider of the draft's calendar"
   attr :repeat, :map, default: nil, doc: "the Repeat field, from `PanelNewRepeat.field/4`"
 
   @spec new_form(map()) :: Phoenix.LiveView.Rendered.t()
@@ -214,7 +215,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
       />
       <PanelNewReminders.field
         :if={!@meeting and !@group}
-        reminders={PanelNewReminders.of(@values)}
+        values={@values}
+        provider={@provider}
         surface={@surface}
       />
       <PanelGuestsField.draft_guests
@@ -257,6 +259,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           )}
         </p>
       </div>
+      <%!-- Enter in a field submits with the form's first submit button,
+            the guest field's Add, which adds the typed guest and never
+            creates. Where that field gives way (a group event, a meeting at
+            its guest limit) this disabled stand-in comes first instead, so
+            Enter does nothing rather than create. --%>
+      <.action_button
+        :if={@group or PanelNewGuests.full?(@values)}
+        id="calendar-panel-new-enter"
+        type="submit"
+        disabled
+        class="hidden"
+        aria-hidden="true"
+        tabindex="-1"
+      >
+        {dgettext("dashboard_calendar_editing", "Add")}
+      </.action_button>
       <%!-- Wraps where the labels are longer than the panel is wide, as
             "Create and invite" is in some languages, rather than pushing
             Cancel out of view. --%>

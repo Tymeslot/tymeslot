@@ -8,9 +8,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
 
   The list is the form's `"event_reminders"`, canonical
   `%{method:, minutes_before:}` maps, cast with the rest of the draft
-  (`CreateParams.cast/5` holds it to its own limit). Add submits the New
-  event form with `intent=add_reminder` (`add/2`), the remove buttons send
-  `panel:draft_drop_reminder` (`drop/2`). A Tymeslot meeting sends reminder
+  (`CreateParams.cast/5` holds it to its own limit). The add row's choices
+  reach the form with its changes, and Add sends `panel:draft_add_reminder`
+  (`add/2`), a plain button so that Enter in the form never adds a
+  reminder; the remove buttons send `panel:draft_drop_reminder` (`drop/3`).
+  An Outlook calendar keeps a single lead time and no method, so there the
+  row offers one notification and no method choice. A Tymeslot meeting sends reminder
   emails of its own (`PanelMeetingReminders`) and a group event has none,
   so the field gives way to them.
   """
@@ -27,33 +30,64 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
   # As many as `CreateParams` takes.
   @max 5
 
-  @doc "The reminders a draft's form holds."
-  @spec of(map()) :: [map()]
-  def of(form), do: form["event_reminders"] || []
+  # The add row's fields, kept in the form as they change.
+  @row_fields ~w(event_reminder_minutes event_reminder_method)
 
-  @doc "The form's reminders as `CreateParams.cast/5` reads them."
-  @spec params(map()) :: [map()]
-  def params(form),
+  # Outlook keeps one lead time per event and no method
+  # (`Outlook.EventMapper`): a second reminder, or an email, would never
+  # reach it.
+  @single_reminder_providers ["outlook"]
+
+  @doc "The add row's fields among a form change's `params`."
+  @spec fields(map()) :: map()
+  def fields(params), do: Map.take(params, @row_fields)
+
+  @doc """
+  The reminders the draft will be written with, on a calendar of
+  `provider`: all it holds, or for Outlook the first as a notification.
+  """
+  @spec of(map(), String.t() | nil) :: [map()]
+  def of(form, provider \\ nil) do
+    reminders = form["event_reminders"] || []
+
+    if single?(provider),
+      do: reminders |> Enum.take(1) |> Enum.map(&%{&1 | method: :popup}),
+      else: reminders
+  end
+
+  @doc "Whether a calendar of `provider` takes a single notification only."
+  @spec single?(String.t() | nil) :: boolean()
+  def single?(provider), do: provider in @single_reminder_providers
+
+  @doc "The most reminders a calendar of `provider` takes."
+  @spec max(String.t() | nil) :: pos_integer()
+  def max(provider), do: if(single?(provider), do: 1, else: @max)
+
+  @doc "The form's reminders as `CreateParams.cast/5` reads them, for a calendar of `provider`."
+  @spec params(map(), String.t() | nil) :: [map()]
+  def params(form, provider),
     do:
       Enum.map(
-        of(form),
+        of(form, provider),
         &%{"method" => Atom.to_string(&1.method), "minutes" => &1.minutes_before}
       )
 
   @doc """
-  Adds the reminder the add row holds (`"event_reminder_minutes"`,
-  `"event_reminder_method"`); one the draft already has, one the row does
-  not offer, or one past the limit adds nothing.
+  Adds the reminder the add row holds, as the form last heard it
+  (`"event_reminder_minutes"`, `"event_reminder_method"`; the row's first
+  choices until one changes), on a calendar of `provider`. One the draft
+  already has, one the row does not offer, or one past the limit adds
+  nothing.
   """
-  @spec add(socket(), map()) :: socket()
-  def add(%{assigns: %{panel: %{form: form}}} = socket, params) do
-    reminders = of(form)
+  @spec add(socket(), String.t() | nil) :: socket()
+  def add(%{assigns: %{panel: %{form: form}}} = socket, provider) do
+    reminders = of(form, provider)
 
-    with true <- length(reminders) < @max,
+    with true <- length(reminders) < max(provider),
          {:ok, reminder} <-
            ReminderForm.parse_reminder(%{
-             "method" => params["event_reminder_method"],
-             "minutes" => params["event_reminder_minutes"]
+             "method" => if(single?(provider), do: "popup", else: method(form)),
+             "minutes" => minutes(form)
            }) do
       PanelNew.put_form(
         socket,
@@ -64,25 +98,43 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
     end
   end
 
+  defp minutes(form),
+    do:
+      form["event_reminder_minutes"] ||
+        Integer.to_string(hd(ReminderForm.reminder_minutes_presets()))
+
+  defp method(form), do: form["event_reminder_method"] || "popup"
+
   @doc "Drops the reminder at `index`."
-  @spec drop(socket(), term()) :: socket()
-  def drop(%{assigns: %{panel: %{form: form}}} = socket, index) do
+  @spec drop(socket(), term(), String.t() | nil) :: socket()
+  def drop(%{assigns: %{panel: %{form: form}}} = socket, index, provider) do
     case Integer.parse(to_string(index)) do
       {at, ""} ->
-        PanelNew.put_form(socket, Map.put(form, "event_reminders", List.delete_at(of(form), at)))
+        PanelNew.put_form(
+          socket,
+          Map.put(form, "event_reminders", List.delete_at(of(form, provider), at))
+        )
 
       _invalid ->
         socket
     end
   end
 
-  attr :reminders, :list, required: true
+  attr :values, :map, required: true, doc: "the typed values (`panel.form`)"
+  attr :provider, :string, default: nil, doc: "the provider of the draft's calendar"
   attr :surface, :any, required: true
 
   @doc "The event's reminders, each removable, and the row that adds one."
   @spec field(map()) :: Phoenix.LiveView.Rendered.t()
   def field(assigns) do
-    assigns = assign(assigns, full: length(assigns.reminders) >= @max, max: @max)
+    reminders = of(assigns.values, assigns.provider)
+
+    assigns =
+      assign(assigns,
+        reminders: reminders,
+        full: length(reminders) >= max(assigns.provider),
+        single: single?(assigns.provider)
+      )
 
     ~H"""
     <section id="calendar-panel-new-reminders" class="space-y-2">
@@ -113,6 +165,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
           name="event_reminder_minutes"
           compact
           aria-label={dgettext("dashboard_calendar_editing", "Reminder time")}
+          value={@values["event_reminder_minutes"]}
           options={
             Enum.map(
               ReminderForm.reminder_minutes_presets(),
@@ -121,20 +174,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
           }
         />
         <.select
+          :if={!@single}
           id="calendar-panel-new-reminder-method"
           name="event_reminder_method"
           compact
           aria-label={dgettext("dashboard_calendar_editing", "Reminder method")}
+          value={@values["event_reminder_method"]}
           options={[
             {dgettext("dashboard_calendar_events", "Notification"), "popup"},
             {dgettext("dashboard_calendar_events", "Email"), "email"}
           ]}
         />
+        <%!-- A plain button, not a submit: Enter in the form's fields must
+              reach the guest field's Add, its first submit button. --%>
         <.action_button
           id="calendar-panel-new-reminder-add"
-          type="submit"
-          name="intent"
-          value="add_reminder"
+          type="button"
+          phx-click="panel:draft_add_reminder"
+          phx-target={@surface}
           variant={:secondary}
           size={:sm}
         >
