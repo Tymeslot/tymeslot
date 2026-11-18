@@ -54,15 +54,17 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   @spec put_meta_integer(integer(), String.t(), integer()) :: :ok
   def put_meta_integer(job_id, key, value)
       when is_integer(job_id) and is_binary(key) and is_integer(value) do
-    from(j in Job,
-      where: j.id == ^job_id,
-      update: [
-        set: [
-          meta: fragment("? || jsonb_build_object(?::text, ?::integer)", j.meta, ^key, ^value)
+    query =
+      from(j in Job,
+        where: j.id == ^job_id,
+        update: [
+          set: [
+            meta: fragment("? || jsonb_build_object(?::text, ?::integer)", j.meta, ^key, ^value)
+          ]
         ]
-      ]
-    )
-    |> Repo.update_all([])
+      )
+
+    Repo.update_all(query, [])
 
     :ok
   end
