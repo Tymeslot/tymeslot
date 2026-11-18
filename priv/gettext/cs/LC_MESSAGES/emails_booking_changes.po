@@ -716,34 +716,34 @@ msgstr "Videohovor"
 #, elixir-autogen, elixir-format
 msgid "%{amount} is being refunded to %{count} participant. They get an email once the refund is issued."
 msgid_plural "%{amount} is being refunded to %{count} participants. Each gets an email once their refund is issued."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%{amount} se vrací %{count} účastníkovi. Jakmile bude platba vrácena, dostane e-mail."
+msgstr[1] "%{amount} se vrací %{count} účastníkům. Každý z nich dostane e-mail, jakmile mu bude platba vrácena."
+msgstr[2] "%{amount} se vrací %{count} účastníkům. Každý z nich dostane e-mail, jakmile mu bude platba vrácena."
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "REFUNDS ON THEIR WAY:"
-msgstr ""
+msgstr "PLATBY SE VRACEJÍ:"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "REFUNDS OUTSTANDING:"
-msgstr ""
+msgstr "PLATBY K VRÁCENÍ:"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Refunds on their way"
-msgstr ""
+msgstr "Platby se vracejí"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Refunds outstanding"
-msgstr ""
+msgstr "Platby k vrácení"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} from %{count} participant. Refund it under Payments in your dashboard if you need to."
 msgid_plural "You still hold %{amount} from %{count} participants. Refund them under Payments in your dashboard if you need to."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Stále u vás zůstává %{amount} od %{count} účastníka. Pokud je to potřeba, vraťte platbu v sekci Platby na své nástěnce."
+msgstr[1] "Stále u vás zůstává %{amount} od %{count} účastníků. Pokud je to potřeba, vraťte platby v sekci Platby na své nástěnce."
+msgstr[2] "Stále u vás zůstává %{amount} od %{count} účastníků. Pokud je to potřeba, vraťte platby v sekci Platby na své nástěnce."

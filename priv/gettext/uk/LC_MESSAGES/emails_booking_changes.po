@@ -716,34 +716,34 @@ msgstr "Відеодзвінок"
 #, elixir-autogen, elixir-format
 msgid "%{amount} is being refunded to %{count} participant. They get an email once the refund is issued."
 msgid_plural "%{amount} is being refunded to %{count} participants. Each gets an email once their refund is issued."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Сума %{amount} повертається %{count} учаснику. Учасник отримає лист, щойно кошти буде повернуто."
+msgstr[1] "Сума %{amount} повертається %{count} учасникам. Кожен отримає лист, щойно його кошти буде повернуто."
+msgstr[2] "Сума %{amount} повертається %{count} учасникам. Кожен отримає лист, щойно його кошти буде повернуто."
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "REFUNDS ON THEIR WAY:"
-msgstr ""
+msgstr "КОШТИ ПОВЕРТАЮТЬСЯ:"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "REFUNDS OUTSTANDING:"
-msgstr ""
+msgstr "НЕПОВЕРНЕНІ КОШТИ:"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Refunds on their way"
-msgstr ""
+msgstr "Кошти повертаються"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Refunds outstanding"
-msgstr ""
+msgstr "Неповернені кошти"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} from %{count} participant. Refund it under Payments in your dashboard if you need to."
 msgid_plural "You still hold %{amount} from %{count} participants. Refund them under Payments in your dashboard if you need to."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "У вас досі залишається %{amount} від %{count} учасника. За потреби поверніть кошти в розділі «Платежі» вашої панелі керування."
+msgstr[1] "У вас досі залишається %{amount} від %{count} учасників. За потреби поверніть їм кошти в розділі «Платежі» вашої панелі керування."
+msgstr[2] "У вас досі залишається %{amount} від %{count} учасників. За потреби поверніть їм кошти в розділі «Платежі» вашої панелі керування."

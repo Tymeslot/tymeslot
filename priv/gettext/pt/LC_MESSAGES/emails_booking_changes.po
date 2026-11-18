@@ -712,32 +712,32 @@ msgstr "Chamada de vídeo"
 #, elixir-autogen, elixir-format
 msgid "%{amount} is being refunded to %{count} participant. They get an email once the refund is issued."
 msgid_plural "%{amount} is being refunded to %{count} participants. Each gets an email once their refund is issued."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{amount} está sendo reembolsado a %{count} participante, que receberá um e-mail assim que o reembolso for feito."
+msgstr[1] "%{amount} está sendo reembolsado a %{count} participantes. Cada um receberá um e-mail assim que o seu reembolso for feito."
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "REFUNDS ON THEIR WAY:"
-msgstr ""
+msgstr "REEMBOLSOS A CAMINHO:"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "REFUNDS OUTSTANDING:"
-msgstr ""
+msgstr "REEMBOLSOS EM ABERTO:"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Refunds on their way"
-msgstr ""
+msgstr "Reembolsos a caminho"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Refunds outstanding"
-msgstr ""
+msgstr "Reembolsos em aberto"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} from %{count} participant. Refund it under Payments in your dashboard if you need to."
 msgid_plural "You still hold %{amount} from %{count} participants. Refund them under Payments in your dashboard if you need to."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Você ainda está com %{amount} de %{count} participante. Se precisar, faça o reembolso em Pagamentos, no seu painel."
+msgstr[1] "Você ainda está com %{amount} de %{count} participantes. Se precisar, faça os reembolsos em Pagamentos, no seu painel."

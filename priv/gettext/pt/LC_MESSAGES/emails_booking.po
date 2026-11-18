@@ -759,5 +759,5 @@ msgstr "A lista também vai anexada como arquivo CSV para uma planilha."
 #, elixir-autogen, elixir-format
 msgid "For %{count} seat"
 msgid_plural "For %{count} seats"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Referente a %{count} vaga"
+msgstr[1] "Referente a %{count} vagas"

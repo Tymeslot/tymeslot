@@ -716,34 +716,34 @@ msgstr "Spotkanie wideo"
 #, elixir-autogen, elixir-format
 msgid "%{amount} is being refunded to %{count} participant. They get an email once the refund is issued."
 msgid_plural "%{amount} is being refunded to %{count} participants. Each gets an email once their refund is issued."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Kwota %{amount} jest zwracana %{count} uczestnikowi. Otrzyma on e-mail, gdy zwrot zostanie zrealizowany."
+msgstr[1] "Kwota %{amount} jest zwracana %{count} uczestnikom. Każdy z nich otrzyma e-mail, gdy jego zwrot zostanie zrealizowany."
+msgstr[2] "Kwota %{amount} jest zwracana %{count} uczestnikom. Każdy z nich otrzyma e-mail, gdy jego zwrot zostanie zrealizowany."
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "REFUNDS ON THEIR WAY:"
-msgstr ""
+msgstr "ZWROTY W TOKU:"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "REFUNDS OUTSTANDING:"
-msgstr ""
+msgstr "ZWROTY DO ZREALIZOWANIA:"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Refunds on their way"
-msgstr ""
+msgstr "Zwroty w toku"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Refunds outstanding"
-msgstr ""
+msgstr "Zwroty do zrealizowania"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} from %{count} participant. Refund it under Payments in your dashboard if you need to."
 msgid_plural "You still hold %{amount} from %{count} participants. Refund them under Payments in your dashboard if you need to."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Wciąż masz u siebie %{amount} od %{count} uczestnika. W razie potrzeby zwróć tę kwotę w sekcji Płatności w panelu."
+msgstr[1] "Wciąż masz u siebie %{amount} od %{count} uczestników. W razie potrzeby zrealizuj zwroty w sekcji Płatności w panelu."
+msgstr[2] "Wciąż masz u siebie %{amount} od %{count} uczestników. W razie potrzeby zrealizuj zwroty w sekcji Płatności w panelu."

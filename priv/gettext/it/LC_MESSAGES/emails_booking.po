@@ -759,5 +759,5 @@ msgstr "L'elenco è allegato anche come file CSV per un foglio di calcolo."
 #, elixir-autogen, elixir-format
 msgid "For %{count} seat"
 msgid_plural "For %{count} seats"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Per %{count} posto"
+msgstr[1] "Per %{count} posti"
