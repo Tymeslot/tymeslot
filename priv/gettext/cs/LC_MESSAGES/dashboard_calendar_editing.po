@@ -757,3 +757,8 @@ msgstr "Adresa %{email} byla odebrána. Oznámení bude odesláno, jakmile se zm
 #, elixir-autogen, elixir-format
 msgid "The time belongs to the booking. Reschedule it from Bookings."
 msgstr "Čas určuje rezervace. Přesunout ho můžete v sekci Rezervace."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr "Barva"

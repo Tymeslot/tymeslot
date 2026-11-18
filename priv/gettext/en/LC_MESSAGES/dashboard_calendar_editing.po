@@ -755,3 +755,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "The time belongs to the booking. Reschedule it from Bookings."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr ""

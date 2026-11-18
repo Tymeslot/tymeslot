@@ -757,3 +757,8 @@ msgstr "Видалено %{email}. Сповіщення буде надісла�
 #, elixir-autogen, elixir-format
 msgid "The time belongs to the booking. Reschedule it from Bookings."
 msgstr "Час належить бронюванню. Перенесіть його в розділі «Бронювання»."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr "Колір"

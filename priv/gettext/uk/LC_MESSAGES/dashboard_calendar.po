@@ -825,3 +825,8 @@ msgstr "Спочатку покажіть обліковий запис %{accoun
 #, elixir-autogen, elixir-format
 msgid "%{count}/%{capacity} seats taken"
 msgstr "%{count}/%{capacity} місць зайнято"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save that colour. Please try again."
+msgstr "Не вдалося зберегти цей колір. Спробуйте ще раз."

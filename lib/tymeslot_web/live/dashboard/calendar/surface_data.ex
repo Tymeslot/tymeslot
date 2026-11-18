@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.CalendarGrid.WorkingHours
   alias Tymeslot.CalendarGrid.WriteQueue
   alias Tymeslot.Clock
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.Integrations.Video
@@ -65,6 +66,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       working_hours: WorkingHours.fallback(),
       window_events: [],
       locked_uids: MapSet.new(),
+      colour_overrides: %{},
       events: [],
       events_by_id: %{},
       window: nil,
@@ -149,6 +151,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       video_integrations: Video.list_active_integrations(user_id),
       integration_tokens: ColourTokens.for_integrations(integrations),
       calendar_tokens: ColourTokens.for_calendars(integrations, appearances),
+      colour_overrides: Calendar.overrides_for(user_id),
       manual_hidden_keys: Appearance.hidden_keys(appearances),
       working_hours: WorkingHours.for_profile(socket.assigns[:profile]),
       bookable_types: LayerPreferences.meeting_types(user_id),
@@ -380,6 +383,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       calendar_tokens: assigns.calendar_tokens,
       integrations: assigns.integrations,
       locked_uids: assigns.locked_uids,
+      colour_overrides: assigns.colour_overrides,
       events: assigns.events,
       drafts: drafts(assigns),
       settings: settings(assigns),
@@ -427,6 +431,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
 
     socket |> assign(:window_events, window_events) |> filter_events()
   end
+
+  @doc """
+  After an event's colour was chosen: reads the organiser's colour overrides
+  again (no events query), rebuilds an open preview and pushes the window
+  with a cache reset, so the event repaints at once.
+  """
+  @spec reload_overrides(socket()) :: socket()
+  def reload_overrides(socket),
+    do:
+      socket
+      |> assign(:colour_overrides, Calendar.overrides_for(socket.assigns.current_user.id))
+      |> filter_events()
+      |> push_events(true)
 
   @doc "Applies hidden calendars and pending deletes to the loaded window again, without pushing."
   @spec refilter(socket()) :: socket()

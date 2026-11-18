@@ -53,6 +53,26 @@ defmodule Tymeslot.CalendarGrid.ColourTokens do
     end
   end
 
+  @doc """
+  `event` as the organiser has chosen to see it: with the colour of their
+  override on it (`Calendar.overrides_for/1`, keyed
+  `{:external, integration_id, uid}`), for painting only; an event without
+  one, and a booking, as it is.
+  """
+  @spec with_override(map(), map()) :: map()
+  def with_override(%{kind: :booking} = booking, _overrides), do: booking
+
+  def with_override(event, overrides) when map_size(overrides) == 0, do: event
+
+  def with_override(event, overrides) do
+    key = {:external, Map.get(event, :calendar_integration_id), Map.get(event, :uid)}
+
+    case Map.fetch(overrides, key) do
+      {:ok, colour} -> Map.put(event, :colour, colour)
+      :error -> event
+    end
+  end
+
   @doc "The neutral token for anything without a colour of its own."
   @spec fallback() :: String.t()
   def fallback do

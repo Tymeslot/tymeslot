@@ -57,6 +57,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       calendar_tokens: assigns.calendar_tokens,
       bookability: Map.get(assigns, :bookability, %{}),
       locked_uids: Map.get(assigns, :locked_uids, MapSet.new()),
+      colour_overrides: Map.get(assigns, :colour_overrides, %{}),
       user_id: assigns.current_user.id
     }
   end
@@ -70,7 +71,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
     %{
       id: EventPayload.id(event),
       title: EventPayload.title(event),
-      colour: ColourTokens.for_event(event, context.integration_tokens, context.calendar_tokens),
+      colour:
+        event
+        |> ColourTokens.with_override(Map.get(context, :colour_overrides, %{}))
+        |> ColourTokens.for_event(context.integration_tokens, context.calendar_tokens),
       source: source_label(event, integration, entry),
       when: when_text(event, context),
       relative: relative(event, context.now),

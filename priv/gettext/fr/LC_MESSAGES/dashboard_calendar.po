@@ -822,3 +822,8 @@ msgstr "Affichez d’abord %{account} pour choisir ses calendriers."
 #, elixir-autogen, elixir-format
 msgid "%{count}/%{capacity} seats taken"
 msgstr "%{count}/%{capacity} places prises"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save that colour. Please try again."
+msgstr "Impossible d’enregistrer cette couleur. Veuillez réessayer."

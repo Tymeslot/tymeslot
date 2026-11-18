@@ -22,10 +22,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CalendarGrid.Changes
+  alias Tymeslot.CalendarGrid.ColourTokens
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
   alias TymeslotWeb.Dashboard.Calendar.PanelActions
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
+  alias TymeslotWeb.Dashboard.Calendar.PanelColour
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
   alias TymeslotWeb.Dashboard.Calendar.PanelGuestsField
@@ -253,6 +255,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
             is_binary(Map.get(@event, :recurring_event_id)) or
               is_binary(Map.get(@event, :recurrence_rule))
           }
+          surface={@surface}
+        />
+        <PanelColour.colour_field
+          :if={@event && @editable && Map.get(@event, :kind) != :booking}
+          colour={@event |> ColourTokens.with_override(@context.colour_overrides) |> Map.get(:colour)}
           surface={@surface}
         />
         <PanelFields.reminder_field

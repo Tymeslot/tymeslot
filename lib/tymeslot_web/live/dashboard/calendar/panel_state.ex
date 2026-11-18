@@ -121,6 +121,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       time_format: assigns.time_format,
       integrations: assigns.integrations,
       locked_uids: Map.get(assigns, :locked_uids, MapSet.new()),
+      colour_overrides: Map.get(assigns, :colour_overrides, %{}),
       user_id: assigns.current_user.id
     }
 

@@ -49,6 +49,7 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
           optional(:integrations) => [map()],
           optional(:movable_ids) => MapSet.t(String.t()),
           optional(:locked_uids) => MapSet.t(String.t()),
+          optional(:colour_overrides) => map(),
           optional(atom()) => term()
         }
 
@@ -101,7 +102,9 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         kind: kind(event),
         title: title(event),
         colour:
-          ColourTokens.for_event(event, context.integration_tokens, context.calendar_tokens),
+          event
+          |> ColourTokens.with_override(Map.get(context, :colour_overrides, %{}))
+          |> ColourTokens.for_event(context.integration_tokens, context.calendar_tokens),
         free: free?(event),
         attention: Map.get(event, :sync_state, "synced") != "synced",
         editable: editable?(event, context),

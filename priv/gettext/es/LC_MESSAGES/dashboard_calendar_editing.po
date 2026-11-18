@@ -755,3 +755,8 @@ msgstr "Se quitó a %{email}. Se le avisará cuando el cambio se sincronice con 
 #, elixir-autogen, elixir-format
 msgid "The time belongs to the booking. Reschedule it from Bookings."
 msgstr "La hora corresponde a la reserva. Reprográmala desde Reservas."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr "Color"

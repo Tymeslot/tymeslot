@@ -755,3 +755,8 @@ msgstr "%{email} entfernt. Die Benachrichtigung wird versendet, sobald die Ände
 #, elixir-autogen, elixir-format
 msgid "The time belongs to the booking. Reschedule it from Bookings."
 msgstr "Die Uhrzeit gehört zur Buchung. Verschieben Sie die Buchung unter „Buchungen“."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr "Farbe"
