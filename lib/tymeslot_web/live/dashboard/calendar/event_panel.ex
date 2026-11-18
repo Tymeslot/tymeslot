@@ -22,11 +22,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CalendarGrid.Changes
+  alias Tymeslot.CalendarGrid.ColourTokens
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
   alias TymeslotWeb.Dashboard.Calendar.LinkedText
   alias TymeslotWeb.Dashboard.Calendar.PanelActions
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
+  alias TymeslotWeb.Dashboard.Calendar.PanelColour
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
   alias TymeslotWeb.Dashboard.Calendar.PanelGuestsField
@@ -109,12 +111,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   # (a booking's calendar copy keeps the booking's time), and whether the
   # organiser may email its guests: invite, remove, tell (they organise
   # it; a query or two).
+  # An event a group meeting with live seats sits on opens read only, saying
+  # so (`EditGuard.drawn_writable/3`).
   defp opened(socket, event, %{integrations: integrations} = context) do
-    writable = EditGuard.writable(integrations, event)
+    writable = EditGuard.drawn_writable(integrations, context.locked_uids, event)
 
     assign(socket,
       editable: writable == :ok,
-      movable: EditGuard.movable?(integrations, event),
+      movable: writable == :ok and EditGuard.movable?(integrations, event),
       read_only_reason: read_only_reason(writable),
       emails_guests: EditGuard.guest_update(context.user_id, integrations, event) == :ok
     )
@@ -195,6 +199,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           :if={timed_or_all_day?(@event)}
           timing={PanelTiming.fields(@event, @context.timezone)}
           disabled={!@movable}
+          reason={timing_reason(@editable, @movable)}
           error={@panel.errors["timing"]}
           target={@surface}
         />
@@ -263,6 +268,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           }
           surface={@surface}
         />
+        <PanelColour.colour_field
+          :if={@event && @editable && Map.get(@event, :kind) != :booking}
+          colour={@event |> ColourTokens.with_override(@context.colour_overrides) |> Map.get(:colour)}
+          surface={@surface}
+        />
         <PanelFields.reminder_field
           reminders={Map.get(@event, :reminders) || []}
           disabled={!@editable}
@@ -312,6 +322,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
     do: dgettext("dashboard_calendar_editing", "Nothing is saved until you create it")
 
   defp status_text(%{status: status}), do: PanelStatus.text(status)
+
+  # An event that can be changed but not moved is a booking's calendar copy,
+  # whose time is the booking's. One that cannot be changed at all says why
+  # at the top of the panel already.
+  defp timing_reason(true, false),
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "The time belongs to the booking. Reschedule it from Bookings."
+      )
+
+  defp timing_reason(_editable, _movable), do: nil
 
   defp title_value(%{kind: :booking} = booking), do: EventPayload.title(booking)
   defp title_value(event), do: Map.get(event, :summary) || ""

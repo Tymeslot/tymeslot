@@ -771,3 +771,13 @@ msgstr "Tarde demais para cancelar: os convidados já foram avisados."
 #, elixir-autogen, elixir-format
 msgid "This update is no longer waiting to be sent."
 msgstr "Esta atualização não está mais aguardando envio."
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The time belongs to the booking. Reschedule it from Bookings."
+msgstr "O horário é definido pelo agendamento. Remarque-o em Agendamentos."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr "Cor"

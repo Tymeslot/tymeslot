@@ -345,6 +345,12 @@
   /* A booking request's edge and flag: amber, because it needs an answer. */
   --cal-request: var(--color-warning);
   --cal-on-request: var(--color-neutral-900);
+  /* The grid's reply badge (components/calendar-surface.css): everyone
+     asked is going, or someone declined, each a fill that holds its
+     on-colour at 4.5:1 or more. */
+  --cal-replies-going: #15803d;
+  --cal-replies-declined: #b91c1c;
+  --cal-on-replies: #ffffff;
   /* Booking requests and the bookable layer (components/calendar-booking.css).
      Request text and the pill hold at least 7:1 on their fills; the band label
      is turquoise 800 on white (7.6:1). */
@@ -383,6 +389,11 @@
     --mode-tab-hover-bg: rgba(20, 184, 166, 0.15);
     --color-calendar-fallback: #71717a;
     --color-error-bg: rgba(239, 68, 68, 0.15);
+    /* The calendar surface keeps its light canvas in dark mode, so the reply
+       badge keeps fills that hold white text on it. */
+    --cal-replies-going: #15803d;
+    --cal-replies-declined: #b91c1c;
+    --cal-on-replies: #ffffff;
   }
 }
 

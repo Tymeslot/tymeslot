@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.BookingActions
   alias TymeslotWeb.Dashboard.Calendar.BookingMove
+  alias TymeslotWeb.Dashboard.Calendar.CalendarColours
   alias TymeslotWeb.Dashboard.Calendar.CalendarsSheet
   alias TymeslotWeb.Dashboard.Calendar.Canvas
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
@@ -78,6 +79,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # `calendar:*` events answered by `SurfaceMenus`: which menu is open and
   # which month the mini month shows.
   @menu_events ~w(calendar:toggle_menu calendar:close_menu calendar:mini_shift)
+
+  # `calendar:*` events answered by `CalendarColours`: a calendar's own colour.
+  @colour_events ~w(calendar:calendar_colour_open calendar:set_calendar_colour)
 
   @refresh_actions ReloadQueue.refresh_actions()
 
@@ -343,6 +347,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           problem_ids={@problem_ids}
           reauth_ids={@reauth_ids}
           bookable={LayerChoices.rail(@preferences, @bookable_types)}
+          colours={calendar_colours(assigns)}
           timezone={@timezone}
           target={@myself}
         />
@@ -386,6 +391,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         problem_ids={@problem_ids}
         reauth_ids={@reauth_ids}
         bookable={LayerChoices.rail(@preferences, @bookable_types)}
+        colours={calendar_colours(assigns)}
         preferences={@preferences}
         desktop_permission={@desktop_permission}
         time_format={@time_format}
@@ -530,6 +536,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def handle_event(event, params, socket) when event in @menu_events,
     do: SurfaceMenus.handle(event, params, socket)
 
+  def handle_event(event, params, socket) when event in @colour_events,
+    do: CalendarColours.handle(event, params, socket)
+
   def handle_event(event, params, socket) when event in @view_events,
     do: ViewEvents.handle(event, params, socket)
 
@@ -621,4 +630,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       do: PowerEvents.async(key, result, socket),
       else: SurfaceBookingEvents.async(key, result, socket)
   end
+
+  # What the calendar lists draw each calendar's colour picker from.
+  defp calendar_colours(assigns),
+    do: %{keys: assigns.calendar_colour_keys, open: assigns.calendar_colour_open}
 end

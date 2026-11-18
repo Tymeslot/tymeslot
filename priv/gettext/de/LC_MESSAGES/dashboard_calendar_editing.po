@@ -771,3 +771,13 @@ msgstr "Zu spät zum Abbrechen: Die Gäste wurden bereits benachrichtigt."
 #, elixir-autogen, elixir-format
 msgid "This update is no longer waiting to be sent."
 msgstr "Diese Benachrichtigung steht nicht mehr zum Versand aus."
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The time belongs to the booking. Reschedule it from Bookings."
+msgstr "Die Uhrzeit gehört zur Buchung. Verschieben Sie die Buchung unter „Buchungen“."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr "Farbe"

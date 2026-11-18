@@ -60,4 +60,26 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderColourTest do
       refute String.contains?(ical, "COLOR:")
     end
   end
+
+  describe "replace_colour_property/2" do
+    @raw "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:u1\r\nCOLOR:tomato\r\nRRULE:FREQ=WEEKLY\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+
+    test "a nil colour takes the COLOR property off and leaves the rest" do
+      patched = ICalBuilder.replace_colour_property(@raw, nil)
+
+      refute patched =~ "COLOR:"
+      assert patched =~ "RRULE:FREQ=WEEKLY"
+    end
+
+    test "a palette key replaces the COLOR property" do
+      patched = ICalBuilder.replace_colour_property(@raw, "sage")
+
+      assert patched =~ "COLOR:"
+      refute patched =~ "COLOR:tomato"
+    end
+
+    test "an unrecognised colour leaves the document as it is" do
+      assert ICalBuilder.replace_colour_property(@raw, "11") == @raw
+    end
+  end
 end

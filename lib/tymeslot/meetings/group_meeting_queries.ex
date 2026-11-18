@@ -196,9 +196,9 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   end
 
   @doc """
-  The calendar identities (`calendar_uid`) of the organiser's group meetings
-  with live seats that overlap the UTC window `[from_utc, to_utc)`: the ones
-  the calendar grid shows locked in the range it has loaded.
+  Which of `uids` (calendar event uids) belong to the organiser's group
+  meetings with live seats: the events of a loaded calendar window that the
+  grid draws locked, whenever their meeting is, in one query for them all.
 
   A group meeting has live seats while its slot is live
   (`MeetingState.where_slot_live/1`) and at least one participant has not
@@ -212,14 +212,13 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   provider event carries the meeting's `calendar_uid` (never its `uid`, the
   booking's bearer capability).
   """
-  @spec group_booking_uids_for_user(integer(), DateTime.t(), DateTime.t()) ::
-          MapSet.t(String.t())
-  def group_booking_uids_for_user(user_id, %DateTime{} = from_utc, %DateTime{} = to_utc)
-      when is_integer(user_id) do
+  @spec group_booking_uids_among(integer(), [String.t()]) :: MapSet.t(String.t())
+  def group_booking_uids_among(_user_id, []), do: MapSet.new()
+
+  def group_booking_uids_among(user_id, uids) when is_integer(user_id) and is_list(uids) do
     user_id
     |> live_seats_query()
-    |> where([meeting: m], m.start_time < ^to_utc and m.end_time > ^from_utc)
-    |> where([meeting: m], not is_nil(m.calendar_uid))
+    |> where([meeting: m], m.calendar_uid in ^uids)
     |> select([meeting: m], m.calendar_uid)
     |> Repo.all()
     |> MapSet.new()
@@ -229,8 +228,8 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   Whether the organiser's meeting whose calendar event carries `uid` (its
   `calendar_uid`) is a group meeting with live seats.
 
-  The authoritative form of `group_booking_uids_for_user/3`, for guards that
-  must not act on a set assigned when the range was loaded. Another
+  The authoritative form of `group_booking_uids_among/2`, for guards that
+  must not act on a set assigned when the window was loaded. Another
   organiser's meeting never matches.
   """
   @spec group_booking_uid?(integer(), term()) :: boolean()

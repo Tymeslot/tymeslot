@@ -11,12 +11,12 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
+#: lib/tymeslot/calendar_grid/guest_replies.ex
 #, elixir-autogen, elixir-format
 msgid "%{accepted} of %{total} guests going"
 msgstr "%{accepted} von %{total} Gästen nehmen teil"
 
-#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
+#: lib/tymeslot/calendar_grid/guest_replies.ex
 #, elixir-autogen, elixir-format
 msgid ", %{count} declined"
 msgid_plural ", %{count} declined"
@@ -817,3 +817,24 @@ msgstr "„%{title}“ wird bereits gelöscht."
 #, elixir-autogen, elixir-format
 msgid "“%{title}” is back"
 msgstr "„%{title}“ ist wiederhergestellt"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "Show %{account} first to choose its calendars."
+msgstr "Blenden Sie zuerst %{account} ein, um die zugehörigen Kalender auszuwählen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} Plätze belegt"
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_colours.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save that colour. Please try again."
+msgstr "Die Farbe konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_colour_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Colour of %{calendar}"
+msgstr "Farbe von %{calendar}"

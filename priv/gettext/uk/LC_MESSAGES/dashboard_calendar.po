@@ -11,12 +11,12 @@ msgstr ""
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
+#: lib/tymeslot/calendar_grid/guest_replies.ex
 #, elixir-autogen, elixir-format
 msgid "%{accepted} of %{total} guests going"
 msgstr "%{accepted} з %{total} гостей прийдуть"
 
-#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
+#: lib/tymeslot/calendar_grid/guest_replies.ex
 #, elixir-autogen, elixir-format
 msgid ", %{count} declined"
 msgid_plural ", %{count} declined"
@@ -815,3 +815,24 @@ msgstr "Подія «%{title}» уже видаляється."
 #, elixir-autogen, elixir-format
 msgid "“%{title}” is back"
 msgstr "Подію «%{title}» відновлено"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "Show %{account} first to choose its calendars."
+msgstr "Спочатку покажіть обліковий запис %{account}, щоб вибрати його календарі."
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} місць зайнято"
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_colours.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save that colour. Please try again."
+msgstr "Не вдалося зберегти цей колір. Спробуйте ще раз."
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_colour_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Colour of %{calendar}"
+msgstr "Колір календаря %{calendar}"

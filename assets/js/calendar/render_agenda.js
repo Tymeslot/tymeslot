@@ -7,7 +7,7 @@
  * by the lens: All or only Bookings (`data-agenda-lens`, the one shown
  * pressed). Pure; every string comes from the server and is escaped.
  */
-import { colour, dateLabel, escapeHtml, interpolate, requestAria, requestFlag } from "./render.js";
+import { colour, dateLabel, escapeHtml, interpolate, ownColour, requestAria, requestFlag } from "./render.js";
 import { AGENDA_LENSES } from "./agenda.js";
 import { dayNumber, formatMinutes, isoWeekday } from "./time.js";
 
@@ -54,7 +54,7 @@ function row(item, day, { strings, timeFormat, now }) {
   const flag = requestFlag(e, strings);
   const past = e.endMin <= now;
   const free = e.free && !e.expired;
-  const classes = ["cal-agenda-row", past && "is-past", free && "is-free", e.kind === "booking" && "is-booking", flag && "is-request", e.expired && "is-expired", e.attention && "is-attention"].filter(Boolean).join(" ");
+  const classes = ["cal-agenda-row", past && "is-past", free && "is-free", e.kind === "booking" && "is-booking", ownColour(e) && "has-colour", flag && "is-request", e.expired && "is-expired", e.attention && "is-attention"].filter(Boolean).join(" ");
   const label = [e.title, flag && requestAria(e, strings), dateLabel(day, strings), time, free && strings.shown_as_free, past && strings.ended, e.attention && strings.waiting_to_sync].filter(Boolean).join(", ");
   return (
     `<button type="button" class="${classes}" data-event-id="${escapeHtml(e.id)}" aria-label="${escapeHtml(label)}" style="--cal-ev:${colour(e.colour)}">` +

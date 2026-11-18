@@ -190,13 +190,19 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   never touched. Uses `PATCH` (not `PUT`), which Google only applies to the
   fields present in the request body.
 
-  Returns `:ok` without making a request when `colour` does not map to a
-  known Google `colorId` (see `EventColour.google_color_id/1`) — nothing to
-  patch, matching the outbound-mapper convention of leaving Google's default
-  colour untouched for unrecognised values.
+  A `nil` colour sends `colorId: null`, which gives the event its calendar's
+  colour again. Returns `:ok` without making a request when `colour` does not
+  map to a known Google `colorId` (see `EventColour.google_color_id/1`):
+  nothing to patch, matching the outbound-mapper convention of leaving
+  Google's default colour untouched for unrecognised values.
   """
   @impl CalendarAPIBehaviour
-  @spec patch_event_colour(CalendarIntegrationSchema.t(), String.t(), String.t(), String.t()) ::
+  @spec patch_event_colour(
+          CalendarIntegrationSchema.t(),
+          String.t(),
+          String.t(),
+          String.t() | nil
+        ) ::
           {:ok, calendar_event()} | :ok | api_error()
   def patch_event_colour(
         %CalendarIntegrationSchema{} = integration,
@@ -204,7 +210,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
         event_id,
         colour
       ) do
-    case EventColour.google_color_id(colour) do
+    case colour_patch(colour) do
       nil ->
         :ok
 
@@ -216,7 +222,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
             :patch,
             event_path(calendar_id, google_event_id),
             token,
-            %{"colorId" => color_id},
+            %{"colorId" => color_id(color_id)},
             params: %{"sendUpdates" => "none"}
           )
         end)
@@ -544,4 +550,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   defp handle_http_response(response, path) do
     ApiResponse.handle(response, path, label: "Google Calendar", custom: &ApiStatus.classify/1)
   end
+
+  # A colour to patch: the Google id of a palette key, `:clear` for none.
+  defp colour_patch(nil), do: :clear
+  defp colour_patch(colour), do: EventColour.google_color_id(colour)
+
+  defp color_id(:clear), do: nil
+  defp color_id(color_id), do: color_id
 end
