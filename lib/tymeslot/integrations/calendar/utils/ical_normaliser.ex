@@ -383,7 +383,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
     Attendee.new(
       email: a["email"],
       display_name: a["name"],
-      response_status: map_partstat(a["status"])
+      response_status: reply(map_partstat(a["status"]), a["rsvp"])
     )
   end
 
@@ -395,6 +395,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   defp map_partstat("declined"), do: :declined
   defp map_partstat("tentative"), do: :tentative
   defp map_partstat(_other), do: :needs_action
+
+  # An attendee no reply was asked of (`RSVP=FALSE`, as Tymeslot writes the
+  # guests of a plain calendar event, whose invitation offers no way to
+  # answer) is not waiting to answer: until a reply does arrive there is none
+  # to show (`Attendee`'s `nil`), rather than one pending for ever.
+  defp reply(:needs_action, false), do: nil
+  defp reply(status, _rsvp), do: status
 
   @doc """
   The reminder the sync reads from one VALARM, given as its unfolded content
