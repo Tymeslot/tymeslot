@@ -103,6 +103,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
 
   attr :guests, :list, required: true, doc: "email strings"
   attr :form_key, :integer, required: true
+  attr :full, :boolean, default: false, doc: "whether the draft can take no more guests"
   attr :surface, :any, required: true
 
   @spec draft_guests(map()) :: Phoenix.LiveView.Rendered.t()
@@ -129,7 +130,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
           </button>
         </li>
       </ul>
-      <div class="flex items-end gap-2">
+      <p :if={@full} id="calendar-panel-guests-full" class="text-token-xs text-tymeslot-500">
+        {dgettext("dashboard_calendar_editing", "No more guests can be added to this meeting.")}
+      </p>
+      <div :if={!@full} class="flex items-end gap-2">
         <div class="min-w-0 flex-1">
           <.input
             type="email"

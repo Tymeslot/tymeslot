@@ -760,3 +760,9 @@ msgstr "Seu calendário precisa ser reconectado. Reconecte pela página de Integ
 #, elixir-autogen, elixir-format
 msgid "None (Tymeslot only)"
 msgstr "Nenhum (só no Tymeslot)"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
+#, elixir-autogen, elixir-format
+msgid "No more guests can be added to this meeting."
+msgstr "Não é possível adicionar mais convidados a esta reunião."

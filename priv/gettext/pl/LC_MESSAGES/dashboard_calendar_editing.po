@@ -762,3 +762,9 @@ msgstr "Kalendarz trzeba połączyć ponownie. Zrób to na stronie Integracje."
 #, elixir-autogen, elixir-format
 msgid "None (Tymeslot only)"
 msgstr "Brak (tylko Tymeslot)"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
+#, elixir-autogen, elixir-format
+msgid "No more guests can be added to this meeting."
+msgstr "Do tego spotkania nie można dodać więcej gości."

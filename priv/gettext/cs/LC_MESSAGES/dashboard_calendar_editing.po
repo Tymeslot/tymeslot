@@ -762,3 +762,9 @@ msgstr "Váš kalendář je potřeba připojit znovu. Připojte jej prosím na s
 #, elixir-autogen, elixir-format
 msgid "None (Tymeslot only)"
 msgstr "Žádný (jen Tymeslot)"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
+#, elixir-autogen, elixir-format
+msgid "No more guests can be added to this meeting."
+msgstr "Na tuto schůzku už nelze přidat další hosty."

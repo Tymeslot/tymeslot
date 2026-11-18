@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   alias TymeslotWeb.Dashboard.Calendar.PanelGuestsField
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelMeetingFields
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewGuests
   alias TymeslotWeb.Dashboard.Calendar.PanelVideoField
 
   attr :values, :map, required: true, doc: "the typed values (`panel.form`)"
@@ -165,6 +166,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
       <PanelGuestsField.draft_guests
         :if={!@group}
         guests={@values["guests"]}
+        full={PanelNewGuests.full?(@values)}
         form_key={@guest_form_key}
         surface={@surface}
       />

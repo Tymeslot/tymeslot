@@ -10,11 +10,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   when Create is pressed is added first (`take_pending/2`), as the old
   Quick Add did: a valid one joins the draft, and one that is not, or the
   organiser's own, stops the create with its reason.
+
+  While "Send as a Tymeslot meeting" is ticked the meeting's own limit
+  holds at Add (`max/1`): the guest it is with and `Guests.max_guests/0`
+  others, or that many guests without a main participant. At the limit
+  the guest field gives way (`full?/1`), as in the old Quick Add.
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid.CreateParams
+  alias Tymeslot.CalendarGrid.MeetingParams
   alias Tymeslot.Meetings.Guests
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
@@ -94,6 +102,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
 
     with {:ok, [email]} <- CreateParams.guests(user_id, [raw]),
          :ok <- not_yet_a_guest(guests, email),
+         :ok <- room_for_one_more(form),
          {:ok, _kept} <- CreateParams.guests(user_id, guests ++ [email]) do
       form = Map.merge(form, %{"guests" => guests ++ [email], "guest_pending" => ""})
       socket = PanelNew.put_form(socket, form)
@@ -103,8 +112,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
       {:error, :guests, :too_many} -> {:refused, socket, too_many()}
       {:error, :guests, _invalid} -> {:refused, socket, Creation.guest_message(:invalid)}
       {:error, :already_a_guest, email} -> already(socket, email)
+      {:error, :meeting_full} -> {:refused, socket, meeting_full()}
     end
   end
+
+  @doc """
+  The most guests the draft can have: a meeting's limit while the box is
+  ticked (with a main participant, the guest it is with besides the
+  others), an event's otherwise.
+  """
+  @spec max(map()) :: pos_integer()
+  def max(%{"meeting" => true, "main_participant" => false}), do: Guests.max_guests()
+  def max(%{"meeting" => true}), do: MeetingParams.max_guests()
+  def max(_form), do: CreateParams.max_guests()
+
+  @doc "Whether a meeting draft holds as many guests as it can, so no more can be added."
+  @spec full?(map()) :: boolean()
+  def full?(%{"meeting" => true} = form), do: length(form["guests"] || []) >= max(form)
+  def full?(_form), do: false
+
+  defp room_for_one_more(form),
+    do: if(full?(form), do: {:error, :meeting_full}, else: :ok)
+
+  defp meeting_full,
+    do: dgettext("dashboard_calendar_editing", "No more guests can be added to this meeting.")
 
   # Add says so; a create goes on, as the address is already invited.
   defp already(socket, email),

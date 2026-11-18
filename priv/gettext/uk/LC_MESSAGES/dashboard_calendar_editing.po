@@ -762,3 +762,9 @@ msgstr "Ваш календар потрібно перепідключити. �
 #, elixir-autogen, elixir-format
 msgid "None (Tymeslot only)"
 msgstr "Немає (лише Tymeslot)"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
+#, elixir-autogen, elixir-format
+msgid "No more guests can be added to this meeting."
+msgstr "До цієї зустрічі більше не можна додати гостей."
