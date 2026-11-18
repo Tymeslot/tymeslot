@@ -991,65 +991,65 @@ msgstr "Zwrot nie jest możliwy, ponieważ płatność jest przedmiotem sporu. N
 #: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
 #, elixir-autogen, elixir-format
 msgid "%{amount} paid"
-msgstr ""
+msgstr "Zapłacono %{amount}"
 
 #: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
 #, elixir-autogen, elixir-format
 msgid "%{amount} paid · %{count} seat"
 msgid_plural "%{amount} paid · %{count} seats"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Zapłacono %{amount} · %{count} miejsce"
+msgstr[1] "Zapłacono %{amount} · %{count} miejsca"
+msgstr[2] "Zapłacono %{amount} · %{count} miejsc"
 
 #: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
 #, elixir-autogen, elixir-format
 msgid "%{amount} refunded"
-msgstr ""
+msgstr "Zwrócono %{amount}"
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Don't refund anyone."
-msgstr ""
+msgstr "Bez zwrotu dla nikogo."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Each participant gets back what they paid, and an email once their refund is issued."
-msgstr ""
+msgstr "Każdy uczestnik odzyska całą wpłaconą kwotę i dostanie e-mail, gdy zwrot zostanie zrealizowany."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Refund everyone in full."
-msgstr ""
+msgstr "Pełny zwrot dla wszystkich."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Session cancelled. Refunds are on their way."
-msgstr ""
+msgstr "Sesja odwołana. Zwroty są w trakcie realizacji."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} participant paid for this session (%{amount} still held)."
 msgid_plural "%{count} participants paid for this session (%{amount} still held)."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%{count} uczestnik zapłacił za tę sesję (%{amount} nadal u ciebie)."
+msgstr[1] "%{count} uczestników zapłaciło za tę sesję (%{amount} nadal u ciebie)."
+msgstr[2] "%{count} uczestników zapłaciło za tę sesję (%{amount} nadal u ciebie)."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Each participant's payment stays with you until you refund it from Payments."
-msgstr ""
+msgstr "Płatność każdego uczestnika zostaje u ciebie, dopóki nie zwrócisz jej w sekcji Płatności."
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "I understand the participants get nothing back unless I refund them later from Payments."
-msgstr ""
+msgstr "Rozumiem, że uczestnicy nic nie odzyskają, chyba że później zwrócę im pieniądze w sekcji Płatności."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Someone paid for a seat while this was open. Check the refund choice and confirm again."
-msgstr ""
+msgstr "Gdy to okno było otwarte, ktoś opłacił miejsce. Sprawdź wybrany sposób zwrotu i potwierdź ponownie."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
 msgid "Tick the acknowledgement to cancel without refunding the participants."
-msgstr ""
+msgstr "Zaznacz potwierdzenie, aby odwołać bez zwrotu dla uczestników."

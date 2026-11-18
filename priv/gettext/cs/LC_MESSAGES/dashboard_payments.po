@@ -551,16 +551,16 @@ msgstr "V aktuální měně právě probíhá platba. Zkuste to znovu za několi
 #, elixir-autogen, elixir-format
 msgid "%{count} seat"
 msgid_plural "%{count} seats"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%{count} místo"
+msgstr[1] "%{count} místa"
+msgstr[2] "%{count} míst"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "%{type} · %{date}"
-msgstr ""
+msgstr "%{type} · %{date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
 msgid "Left %{date}"
-msgstr ""
+msgstr "Místo zrušeno %{date}"

@@ -547,15 +547,15 @@ msgstr "Há um pagamento em andamento na sua moeda atual. Tente novamente em alg
 #, elixir-autogen, elixir-format
 msgid "%{count} seat"
 msgid_plural "%{count} seats"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{count} vaga"
+msgstr[1] "%{count} vagas"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "%{type} · %{date}"
-msgstr ""
+msgstr "%{type} · %{date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
 msgid "Left %{date}"
-msgstr ""
+msgstr "Saiu em %{date}"

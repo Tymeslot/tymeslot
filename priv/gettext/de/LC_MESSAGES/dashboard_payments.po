@@ -547,15 +547,15 @@ msgstr "In Ihrer aktuellen Währung läuft gerade ein Bezahlvorgang. Versuchen S
 #, elixir-autogen, elixir-format
 msgid "%{count} seat"
 msgid_plural "%{count} seats"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{count} Platz"
+msgstr[1] "%{count} Plätze"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "%{type} · %{date}"
-msgstr ""
+msgstr "%{type} · %{date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
 msgid "Left %{date}"
-msgstr ""
+msgstr "Abgemeldet am %{date}"
