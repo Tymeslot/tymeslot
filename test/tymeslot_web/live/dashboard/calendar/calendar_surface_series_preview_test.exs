@@ -89,4 +89,50 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceSeriesPreviewTest do
     assert [%{preview: true, attention: true, start: "2026-10-14T10:00"}] =
              Enum.filter(events, &(&1.id == id))
   end
+
+  describe "a series cached weeks before the visible ones" do
+    # Wednesdays at 10:00 in London from 30 September, two weeks before the
+    # week the calendar opens on, so neither the series nor the week after it
+    # is loaded.
+    setup %{integration: integration, conn: conn} do
+      forward_creates(self(), :create)
+
+      series =
+        event(integration, "work", "Standup", ~U[2026-09-30 09:00:00.000000Z], 30,
+          uid: "standup-ical-uid",
+          provider_event_id: "master-2",
+          recurrence_rule: "FREQ=WEEKLY;COUNT=6",
+          timezone: "Europe/London"
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      canvas(lv, "calendar:edit", %{"id" => "preview-#{series.id}-20261014T100000"})
+      assert has_element?(lv, "#calendar-panel input[value='Standup']")
+
+      %{far_lv: lv, far_series: series}
+    end
+
+    test "the series panel's Delete asks which events to delete", %{far_lv: lv} do
+      lv |> element("#calendar-panel-delete") |> render_click()
+
+      assert has_element?(lv, "#calendar-scope-series")
+    end
+
+    test "the series panel's Duplicate makes a copy", %{far_lv: lv} do
+      lv |> element("#calendar-panel-duplicate") |> render_click()
+
+      assert_receive {:provider_call, _task, {:create, %{summary: "Standup"}}}, 5_000
+    end
+
+    test "the series panel offers to move it to another calendar", %{
+      far_lv: lv,
+      integration: integration
+    } do
+      lv
+      |> form("#calendar-panel-calendar-form")
+      |> render_change(%{"calendar" => "#{integration.id}:family"})
+
+      assert has_element?(lv, "#calendar-series-move-confirm")
+    end
+  end
 end
