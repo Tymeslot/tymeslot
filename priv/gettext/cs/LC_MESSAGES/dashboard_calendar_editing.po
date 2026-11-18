@@ -113,6 +113,7 @@ msgstr "U rezervací a jejich kopií v kalendáři se stav obsazeno/volno nas
 msgid "Calendar"
 msgstr "Kalendář"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
@@ -833,3 +834,33 @@ msgstr "Zpět"
 #, elixir-autogen, elixir-format
 msgid "Unsent invitations"
 msgstr "Neodeslané pozvánky"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Guests will be told about these changes"
+msgstr "Hosté budou o těchto změnách informováni"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Guests won't be told."
+msgstr "Hosté nebudou informováni."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Too late to cancel: guests have been told."
+msgstr "Na zrušení je pozdě: hosté už byli informováni."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "This update is no longer waiting to be sent."
+msgstr "Tato aktualizace už nečeká na odeslání."
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The time belongs to the booking. Reschedule it from Bookings."
+msgstr "Čas určuje rezervace. Přesunout ho můžete v sekci Rezervace."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr "Barva"

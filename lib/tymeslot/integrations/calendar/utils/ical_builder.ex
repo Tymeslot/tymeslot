@@ -171,10 +171,15 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   Patching the authoritative `raw_ical` last read from the provider instead
   guarantees no other field is lost.
 
-  Returns the document unchanged when `colour` does not map to a known CSS3
-  colour (see `EventColour.css_colour/1`) — nothing to patch.
+  A `nil` colour removes the `COLOR` property, so the event takes its
+  calendar's colour again. Returns the document unchanged when `colour` does
+  not map to a known CSS3 colour (see `EventColour.css_colour/1`): nothing
+  to patch.
   """
   @spec replace_colour_property(String.t(), String.t() | nil) :: String.t()
+  def replace_colour_property(raw_ical, nil) when is_binary(raw_ical),
+    do: Patcher.patch(raw_ical, %{colour: nil})
+
   def replace_colour_property(raw_ical, colour) when is_binary(raw_ical) do
     case EventColour.css_colour(colour) do
       nil -> raw_ical

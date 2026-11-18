@@ -525,7 +525,7 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
       event = insert(:provider_calendar_event)
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
 
-      :ok = AttendeeNotifications.cancel_pending(event)
+      {:ok, :cancelled} = AttendeeNotifications.cancel_pending(event)
 
       refute AttendeeNotifications.pending?(event)
     end

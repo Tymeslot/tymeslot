@@ -12,6 +12,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
   @moduletag :integration
 
   import Ecto.Query, only: [from: 2]
+  import ExUnit.CaptureLog, only: [capture_log: 1]
   import Mox
   import Tymeslot.Factory
 
@@ -118,6 +119,68 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
     Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
 
     assert_receive {:calendar_delete_result, _user_id, ^token, {:failed, :unauthorized}}
+  end
+
+  test "a delete whose attendees could not be told says so once the event is gone", %{
+    user: user,
+    caldav: caldav
+  } do
+    # An all-day row without its end date makes building the cancellation
+    # raise, as any unexpected row shape could; the delete itself succeeds.
+    event =
+      insert(:provider_calendar_event,
+        calendar_integration: caldav,
+        uid: "offsite-1",
+        provider: "caldav",
+        provider_calendar_id: "/cal/",
+        provider_event_id: "/cal/offsite.ics",
+        attendees: [%{"email" => "guest@example.com"}],
+        all_day: true,
+        start_at: nil,
+        end_at: nil,
+        start_date: ~D[2026-10-15],
+        end_date: nil
+      )
+
+    expect(Tymeslot.CalendarMock, :delete_event, fn "offsite-1", _context, _opts -> :ok end)
+
+    {:ok, token} =
+      Changes.schedule_delete(user.id, event, :occurrence, delay: 0, notify_attendees: true)
+
+    capture_log(fn ->
+      assert %{success: 1} = Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
+    end)
+
+    assert_receive {:calendar_delete_result, _user_id, ^token,
+                    {:deleted, :attendees_not_notified}}
+
+    assert ProviderCalendarEventQueries.get_by_uid(caldav.id, "offsite-1") == {:error, :not_found}
+  end
+
+  test "a delete that told nobody is reported as plainly deleted, guests or not", %{
+    user: user,
+    caldav: caldav
+  } do
+    event =
+      insert(:provider_calendar_event,
+        calendar_integration: caldav,
+        uid: "offsite-2",
+        provider: "caldav",
+        provider_calendar_id: "/cal/",
+        provider_event_id: "/cal/offsite-2.ics",
+        attendees: [%{"email" => "guest@example.com"}],
+        all_day: true,
+        start_at: nil,
+        end_at: nil,
+        start_date: ~D[2026-10-15],
+        end_date: nil
+      )
+
+    expect(Tymeslot.CalendarMock, :delete_event, fn "offsite-2", _context, _opts -> :ok end)
+    {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, delay: 0)
+    assert %{success: 1} = Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
+
+    assert_receive {:calendar_delete_result, _user_id, ^token, :deleted}
   end
 
   test "a group booking that gained seats during the window is not deleted", %{

@@ -475,3 +475,13 @@ msgstr "Tento čas už není k dispozici. Vyberte prosím jiný."
 #, elixir-autogen, elixir-format
 msgid "The place is too long for a meeting. Keep it under 500 characters."
 msgstr "Místo je pro schůzku příliš dlouhé. Použijte méně než 500 znaků."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+msgstr "Událost byla smazána, ale schůzku se nepodařilo zrušit. Účastník nemusí být informován."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Událost byla smazána, ale účastníky se nepodařilo informovat."

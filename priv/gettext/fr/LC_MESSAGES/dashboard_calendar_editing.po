@@ -111,6 +111,7 @@ msgstr "Pour les réservations et leurs copies dans le calendrier, l’état occ
 msgid "Calendar"
 msgstr "Calendrier"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
@@ -830,3 +831,33 @@ msgstr "Retour"
 #, elixir-autogen, elixir-format
 msgid "Unsent invitations"
 msgstr "Invitations non envoyées"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Guests will be told about these changes"
+msgstr "Les invités seront prévenus de ces modifications"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Guests won't be told."
+msgstr "Les invités ne seront pas prévenus."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Too late to cancel: guests have been told."
+msgstr "Trop tard pour annuler : les invités ont déjà été prévenus."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "This update is no longer waiting to be sent."
+msgstr "Cette mise à jour n’est plus en attente d’envoi."
+
+#: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
+#, elixir-autogen, elixir-format
+msgid "The time belongs to the booking. Reschedule it from Bookings."
+msgstr "L’horaire est lié à la réservation. Reportez-la depuis Réservations."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr "Couleur"

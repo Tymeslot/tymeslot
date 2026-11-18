@@ -15,6 +15,8 @@ defmodule Tymeslot.CalendarGrid.GuestReplies do
   `Tymeslot.Integrations.Calendar.Attendee`).
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.Attendee
 
   @type reply :: :accepted | :declined | :tentative | :pending | nil
@@ -61,6 +63,28 @@ defmodule Tymeslot.CalendarGrid.GuestReplies do
           declined: Enum.count(answered, &(&1.reply == :declined))
         }
     end
+  end
+
+  @doc """
+  The words for a `summary/1`: how many are going, and how many declined
+  when anyone did. The preview's guests row and the grid's reply badge
+  both say it this way.
+  """
+  @spec summary_text(summary()) :: String.t()
+  def summary_text(%{accepted: accepted, total: total, declined: declined}) do
+    going =
+      dgettext("dashboard_calendar", "%{accepted} of %{total} guests going",
+        accepted: accepted,
+        total: total
+      )
+
+    if declined > 0,
+      do:
+        going <>
+          dngettext("dashboard_calendar", ", %{count} declined", ", %{count} declined", declined,
+            count: declined
+          ),
+      else: going
   end
 
   # A group meeting's people are its live participants; a one-to-one

@@ -15,11 +15,15 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
   (`EditGuard.editable?/2`); the hook offers dragging, resizing and deleting
   only on those, and the server checks again on every change. `movable`
   narrows that to the events whose time may change (`EditGuard.movable?/2`);
-  `build/1` works it out for the whole window at once.
+  `build/1` works it out for the whole window at once. `locked` says a group
+  meeting with live seats sits on the event (`EditGuard.seat_locked?/2`, from
+  the window's `locked_uids`): such an event is neither editable nor movable,
+  and the grid marks it with a lock.
 
   Each event also names its calendar (`calendar`, `"<integration id>:<calendar
   id>"`, nil for bookings), whether it repeats (`recurring`) and how many
-  guests it has (`guests`). Drafts the organiser has not created yet (a
+  guests it has (`guests`), and how those asked have answered (`replies`,
+  `%{accepted, declined, total, label}` or nil). Drafts the organiser has not created yet (a
   create still saving, or the side panel's unsaved "New event") are drawn as
   `kind: "draft"` (`draft/4`), never editable or movable.
 
@@ -44,6 +48,8 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
           required(:calendar_tokens) => map(),
           optional(:integrations) => [map()],
           optional(:movable_ids) => MapSet.t(String.t()),
+          optional(:locked_uids) => MapSet.t(String.t()),
+          optional(:colour_overrides) => map(),
           optional(atom()) => term()
         }
 
@@ -75,30 +81,42 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
 
   # Which events may be moved is asked of the whole window at once, so the
   # booking-copy lookup behind it costs one query rather than one per event.
+  # An event held by live seats is never among them.
   defp with_movable_ids(input) do
-    movable = EditGuard.movable(Map.get(input, :integrations, []), input.events)
+    locked = locked_uids(input)
+
+    unlocked = Enum.reject(input.events, &EditGuard.seat_locked?(locked, &1))
+    movable = EditGuard.movable(Map.get(input, :integrations, []), unlocked)
+
     Map.put(input, :movable_ids, MapSet.new(movable, &id/1))
   end
 
   @doc "One event in the payload's shape."
   @spec event(map(), context()) :: map()
   def event(event, context) do
+    locked = EditGuard.seat_locked?(locked_uids(context), event)
+
     Map.merge(
       %{
         id: id(event),
         kind: kind(event),
         title: title(event),
         colour:
-          ColourTokens.for_event(event, context.integration_tokens, context.calendar_tokens),
+          event
+          |> ColourTokens.with_override(Map.get(context, :colour_overrides, %{}))
+          |> ColourTokens.for_event(context.integration_tokens, context.calendar_tokens),
         free: free?(event),
         attention: Map.get(event, :sync_state, "synced") != "synced",
-        editable: EditGuard.editable?(Map.get(context, :integrations, []), event),
-        movable: movable?(event, context),
+        editable: editable?(event, context),
+        movable: not locked and movable?(event, context),
+        locked: locked,
         calendar: calendar_key(event),
         recurring: recurring?(event),
         guests: guest_count(event),
+        replies: replies(event),
         request: Map.get(event, :request, false),
-        expired: Map.get(event, :expired, false)
+        expired: Map.get(event, :expired, false),
+        tymeslot: Map.get(event, :created_by_tymeslot) == true
       },
       timing(event, context.timezone)
     )
@@ -126,10 +144,12 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         attention: false,
         editable: false,
         movable: false,
+        locked: false,
         pending: pending?,
         calendar: draft_calendar(params),
         recurring: is_binary(params.recurrence_rule),
-        guests: length(params.guests)
+        guests: length(params.guests),
+        replies: nil
       },
       draft_timing(params, context.timezone)
     )
@@ -213,11 +233,33 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
     |> Enum.count(&(Attendee.normalise(&1).email not in [nil, ""]))
   end
 
+  # How the guests of a booking, or of an event Tymeslot made, have
+  # answered (`GuestReplies.summary/1`, with its words for the badge's
+  # accessible name); nil when nobody has a reply to show. Other events'
+  # attendees are someone else's to chase.
+  defp replies(%{kind: :booking} = booking), do: summarise(booking)
+  defp replies(%{created_by_tymeslot: true} = event), do: summarise(event)
+  defp replies(_event), do: nil
+
+  defp summarise(event) do
+    case event |> GuestReplies.of_event() |> GuestReplies.summary() do
+      nil -> nil
+      summary -> Map.put(summary, :label, GuestReplies.summary_text(summary))
+    end
+  end
+
   defp draft_timing(%CreateParams{all_day: true} = params, timezone),
     do: timing(%{all_day: true, start_date: params.start_at, end_date: params.end_at}, timezone)
 
   defp draft_timing(%CreateParams{} = params, timezone),
     do: timing(%{start_at: params.start_at, end_at: params.end_at}, timezone)
+
+  defp editable?(event, context),
+    do:
+      EditGuard.drawn_writable(Map.get(context, :integrations, []), locked_uids(context), event) ==
+        :ok
+
+  defp locked_uids(context), do: Map.get(context, :locked_uids) || MapSet.new()
 
   defp movable?(event, %{movable_ids: ids}), do: MapSet.member?(ids, id(event))
 

@@ -16,7 +16,9 @@
  * Agenda: the days from its date that the cache holds in a row. When its
  * end comes into sight it asks for the next weeks (`calendar:agenda_more`,
  * one request at a time) and merges the answer into the cache; once the
- * server says it is done, "Show later" moves the date on.
+ * server says it is done, "Show later" moves the date on. Its lens (All or
+ * Bookings, `this.agendaLens`) filters what it lists, and lasts as long as
+ * the hook does.
  *
  * Month and agenda scroll in `[data-view-scroll]`, kept across redraws of
  * the same view and date; the time grid's own position (`[data-scroll]`,
@@ -27,7 +29,7 @@
  * shown (today when it is in it, else the first day), as the toolbar does. M on a focused event belongs to the event: the
  * keyboard move (keys.js) where it can move, nothing where it cannot.
  */
-import { agendaDays, agendaGroups } from "../../calendar/agenda.js";
+import { AGENDA_LENSES, agendaDays, agendaGroups, lensEvents } from "../../calendar/agenda.js";
 import { applyPayload, eventsForDays, isLoaded } from "../../calendar/cache.js";
 import { monthStep } from "../../calendar/month.js";
 import { renderAgenda } from "../../calendar/render_agenda.js";
@@ -56,6 +58,7 @@ export const ViewsMixin = {
   mountViews() {
     this.agendaLoading = 0;
     this.agendaDone = null;
+    this.agendaLens = "all";
     this.agendaObserver = null;
     this.viewScrollTop = 0;
     this.drawnView = null;
@@ -117,12 +120,13 @@ export const ViewsMixin = {
 
     const days = this.viewDays();
     return renderAgenda({
-      groups: agendaGroups(withoutDrafts(eventsForDays(this.cache, days)), days, { today }),
+      groups: agendaGroups(lensEvents(withoutDrafts(eventsForDays(this.cache, days)), this.agendaLens), days, { today }),
       strings: this.strings,
       timeFormat: this.settings.time_format,
       now: model.now,
       done: this.agendaFinished(days),
       loading: this.agendaBusy(),
+      lens: this.agendaLens,
     });
   },
 
@@ -220,6 +224,16 @@ export const ViewsMixin = {
   // Clicks month and agenda add to the hook's own; true when handled.
   viewClick(e) {
     const target = e.target;
+    const lens = target.closest("[data-agenda-lens]");
+    if (lens) {
+      const value = lens.dataset.agendaLens;
+      if (AGENDA_LENSES.includes(value) && value !== this.agendaLens) {
+        this.agendaLens = value;
+        this.render();
+      }
+      return true;
+    }
+
     if (target.closest("[data-agenda-later]")) {
       this.gotoPeriod("agenda", addDays(this.date, AGENDA_MAX_DAYS));
       return true;

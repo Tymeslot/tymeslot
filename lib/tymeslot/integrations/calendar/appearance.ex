@@ -18,9 +18,26 @@ defmodule Tymeslot.Integrations.Calendar.Appearance do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
 
   @type result ::
           {:ok, CalendarAppearanceSchema.t()} | {:error, :not_found | Ecto.Changeset.t()}
+
+  @doc """
+  Sets one calendar's colour (a palette key), or clears it back to the
+  integration's colour when `colour` is `nil`. Charged to the appearance
+  budget (`:integration_appearance`), as recolouring a whole integration is;
+  a refused budget is `{:error, {:rate_limited, message}}`.
+  """
+  @spec set_colour(integer(), integer(), String.t(), String.t() | nil) ::
+          result() | {:error, {:rate_limited, String.t()}}
+  def set_colour(user_id, integration_id, provider_calendar_id, colour) do
+    with :ok <- charge(user_id) do
+      with_owned_integration(user_id, integration_id, fn ->
+        CalendarAppearanceQueries.upsert(integration_id, provider_calendar_id, %{colour: colour})
+      end)
+    end
+  end
 
   @doc "Shows or hides one calendar's events in the organiser's grid."
   @spec set_hidden(integer(), integer(), String.t(), boolean()) :: result()
@@ -76,9 +93,32 @@ defmodule Tymeslot.Integrations.Calendar.Appearance do
     |> MapSet.new(&{&1.calendar_integration_id, &1.provider_calendar_id})
   end
 
+  @doc """
+  The stored palette key per calendar, for the swatch picker to mark one
+  pressed: `{integration_id, provider_calendar_id}` => key.
+
+  Distinct from `Tymeslot.CalendarGrid.calendar_colour_classes/2`, which
+  returns the resolved classes the grid paints with, a calendar without a
+  choice of its own included. The picker compares keys, and marks "Default"
+  for a calendar that has none.
+  """
+  @spec colour_keys([CalendarAppearanceSchema.t()]) :: %{{integer(), String.t()} => String.t()}
+  def colour_keys(appearances) do
+    appearances
+    |> Enum.filter(&chosen?/1)
+    |> Map.new(&{{&1.calendar_integration_id, &1.provider_calendar_id}, &1.colour})
+  end
+
   @doc "Whether this row carries a colour choice, as opposed to only a visibility one."
   @spec chosen?(CalendarAppearanceSchema.t()) :: boolean()
   def chosen?(%{colour: colour}), do: is_binary(colour) and colour != ""
+
+  defp charge(user_id) do
+    case RateLimiter.check(:integration_appearance, user_id) do
+      :ok -> :ok
+      {:error, :rate_limited, message} -> {:error, {:rate_limited, message}}
+    end
+  end
 
   # `owned_by?/2` rather than `get_for_user/2`: the latter decrypts credentials
   # and can answer `:requires_reencryption`, and neither is any business of a

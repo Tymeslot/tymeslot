@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   """
 
   alias Tymeslot.CalendarGrid.EditGuard
+  alias TymeslotWeb.Dashboard.Calendar.PanelColour
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
@@ -74,6 +75,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     do: PanelMeetingReminders.event(socket, name, params)
 
   def handle("duplicate", _params, socket), do: PanelNew.duplicate(socket)
+
+  # A swatch of the event's colour (see `PanelColour`).
+  def handle("colour", %{"colour" => colour}, socket), do: PanelColour.set(socket, colour)
   def handle("delete", _params, socket), do: PanelNew.delete(socket)
 
   # A New event panel has no event: nothing else it could send applies.
@@ -197,6 +201,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   def handle("guest_remove_confirm", _params, socket), do: PanelGuests.confirm_remove(socket)
   def handle("guest_remove_cancel", _params, socket), do: PanelGuests.cancel_remove(socket)
   def handle("tell_guests", _params, socket), do: PanelGuests.tell(socket)
+  def handle("cancel_guest_update", _params, socket), do: PanelGuests.cancel_pending(socket)
 
   def handle(_name, _params, socket), do: socket
 

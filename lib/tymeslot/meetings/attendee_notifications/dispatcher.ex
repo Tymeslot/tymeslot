@@ -36,6 +36,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
 
   @debounce_seconds 120
+  # How far back a cancel looks for the update it came too late for.
+  @sent_window_minutes 15
 
   @type event_kind :: :provider_calendar_event
 
@@ -99,11 +101,30 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
     end
   end
 
-  @spec cancel_pending(integer, event_kind) :: :ok
+  @doc """
+  Deletes the waiting jobs for the event + kind: `{:ok, :cancelled}` when
+  there was one; when nothing was waiting, `{:ok, :sent}` if a job for it
+  started sending in the last `@sent_window_minutes` minutes (a held update
+  is never older), else `{:ok, :none}` (cancelled elsewhere, say).
+  """
+  @spec cancel_pending(integer, event_kind) :: {:ok, :cancelled | :sent | :none}
   def cancel_pending(event_id, kind) when is_integer(event_id) do
-    _count = DispatcherQueries.delete_pending(event_id, Atom.to_string(kind))
-    :ok
+    kind = Atom.to_string(kind)
+
+    cond do
+      DispatcherQueries.delete_pending(event_id, kind) > 0 -> {:ok, :cancelled}
+      DispatcherQueries.sent_since?(event_id, kind, sent_window_start()) -> {:ok, :sent}
+      true -> {:ok, :none}
+    end
   end
+
+  defp sent_window_start,
+    do: DateTime.add(DateTime.utc_now(), -@sent_window_minutes * 60, :second)
+
+  @doc "When the waiting job for the event + kind is due, or nil when none is waiting."
+  @spec pending_due_at(integer, event_kind) :: DateTime.t() | nil
+  def pending_due_at(event_id, kind) when is_integer(event_id),
+    do: DispatcherQueries.pending_due_at(event_id, Atom.to_string(kind))
 
   @spec pending?(integer, event_kind) :: boolean
   def pending?(event_id, kind) when is_integer(event_id) do

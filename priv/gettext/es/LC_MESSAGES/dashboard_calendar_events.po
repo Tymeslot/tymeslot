@@ -468,3 +468,13 @@ msgstr "Este horario ya no está disponible. Elige otro."
 #, elixir-autogen, elixir-format
 msgid "The place is too long for a meeting. Keep it under 500 characters."
 msgstr "El lugar es demasiado largo para una reunión. Usa menos de 500 caracteres."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+msgstr "Se eliminó el evento, pero no se pudo cancelar la reunión. Puede que el asistente no reciba el aviso."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Evento eliminado, pero no se pudo avisar a los asistentes."

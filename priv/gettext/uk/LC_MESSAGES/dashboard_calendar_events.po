@@ -475,3 +475,13 @@ msgstr "Цей час більше недоступний. Виберіть ін
 #, elixir-autogen, elixir-format
 msgid "The place is too long for a meeting. Keep it under 500 characters."
 msgstr "Назва місця задовга для зустрічі. Залишіть менше 500 символів."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+msgstr "Подію видалено, але скасувати зустріч не вдалося. Учасник може не отримати сповіщення."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Подію видалено, але учасників не вдалося сповістити."

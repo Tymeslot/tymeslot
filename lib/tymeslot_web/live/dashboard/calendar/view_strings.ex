@@ -18,6 +18,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.ViewStrings do
       agenda_until: dgettext("dashboard_calendar_views", "Until %{time}", time: "%{time}"),
       agenda_from: dgettext("dashboard_calendar_views", "From %{time}", time: "%{time}"),
       agenda_later: dgettext("dashboard_calendar_views", "Show later"),
+      agenda_lens_label: dgettext("dashboard_calendar_views", "Filter agenda"),
+      agenda_lens_all: dgettext("dashboard_calendar_views", "All"),
+      agenda_lens_bookings: dgettext("dashboard_calendar_views", "Bookings"),
+      agenda_no_bookings: dgettext("dashboard_calendar_views", "No bookings in these weeks."),
       agenda_loading: dgettext("dashboard_calendar_views", "Loading more"),
       month_more:
         dgettext("dashboard_calendar_views", "More on %{date}: %{count}",
