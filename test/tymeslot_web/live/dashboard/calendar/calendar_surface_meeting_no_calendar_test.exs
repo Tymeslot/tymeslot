@@ -134,6 +134,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingNoCalendarTest do
 
     assert has_element?(lv, "#calendar-panel-create[disabled]")
 
+    # Only an event repeats, so with none to make there is no Repeat to offer.
+    refute has_element?(lv, "#calendar-panel-new-repeat")
+
     # A submit that gets through anyway is refused, and nothing is written.
     render_submit(new_form(lv), %{"intent" => "create"})
 
