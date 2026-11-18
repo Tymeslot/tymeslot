@@ -64,13 +64,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingDocument do
         %{provider_type: provider},
         uid,
         event_data,
-        %MeetingSchema{calendar_integration_id: integration_id}
+        %MeetingSchema{calendar_integration_id: integration_id} = meeting
       )
       when is_integer(integration_id) and is_binary(uid) do
     with true <- ProviderConfig.caldav_based?(provider),
          false <- Map.has_key?(event_data, :raw_ical),
          {:ok, %{raw_ical: raw_ical} = cached} when is_binary(raw_ical) and raw_ical != "" <-
-           cached_document(integration_id, uid) do
+           cached_document(integration_id, uid, meeting.calendar_path) do
       {:ok,
        Map.merge(event_data, %{
          raw_ical: raw_ical,
@@ -88,14 +88,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingDocument do
   # A booking whose calendar copy the organiser gave a repeat rule is cached
   # as the series' occurrences, under its UID and each slot's key, with no
   # row under the bare UID once a sync has cached them; each carries the
-  # resource's document, which keeps the rule.
-  defp cached_document(integration_id, uid) do
+  # resource's document, which keeps the rule. They are looked for in the
+  # meeting's calendar, where its event was written.
+  defp cached_document(integration_id, uid, calendar_path) do
     case ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
       {:ok, %{raw_ical: raw_ical}} = found when is_binary(raw_ical) and raw_ical != "" ->
         found
 
       _no_document ->
-        ProviderCalendarSeriesQueries.get_resource_occurrence(integration_id, uid)
+        ProviderCalendarSeriesQueries.get_resource_occurrence(integration_id, uid, calendar_path)
     end
   end
 end

@@ -135,15 +135,17 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries do
   The most recently synced occurrence of the CalDAV series `series_uid` in
   the integration `calendar_integration_id` that carries its resource's
   document: every occurrence is cached with the resource's `raw_ical`, ETag
-  and href, under the series' UID and a slot's key. `{:error, :not_found}`
-  when none is cached.
+  and href, under the series' UID and a slot's key. `provider_calendar_id`,
+  when given, keeps to that calendar of the integration. `{:error,
+  :not_found}` when none is cached.
   """
-  @spec get_resource_occurrence(integer(), String.t()) ::
+  @spec get_resource_occurrence(integer(), String.t(), String.t() | nil) ::
           {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found}
-  def get_resource_occurrence(calendar_integration_id, series_uid) do
+  def get_resource_occurrence(calendar_integration_id, series_uid, provider_calendar_id \\ nil) do
     row =
       ProviderCalendarEventSchema
       |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+      |> in_calendar(provider_calendar_id)
       |> where([e], fragment("?->>'uid' = ?", e.provider_metadata, ^series_uid))
       |> where([e], e.uid != ^series_uid)
       |> where([e], not is_nil(e.raw_ical) and e.raw_ical != "")
@@ -153,6 +155,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries do
 
     if row, do: {:ok, row}, else: {:error, :not_found}
   end
+
+  defp in_calendar(query, calendar_id) when is_binary(calendar_id) and calendar_id != "",
+    do: where(query, [e], e.provider_calendar_id == ^calendar_id)
+
+  defp in_calendar(query, _any_calendar), do: query
 
   @doc """
   The videos the rows cached under the CalDAV series UIDs `series_uids`

@@ -89,19 +89,25 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingUpdatePatchTest do
           "DTEND:20261102T093000Z\r\nRRULE:FREQ=WEEKLY;COUNT=3\r\n"
         )
 
-      for {key, synced_at} <- [
-            {"20261102T090000", ~U[2026-11-01 08:00:00.000000Z]},
-            {"20261109T090000", ~U[2026-11-01 09:00:00.000000Z]}
+      # The latest synced occurrence of the meeting's calendar is patched: not
+      # an older one, whose ETag is stale, nor one of another calendar.
+      for {key, calendar, href, etag, synced_at} <- [
+            {"20261102T090000", @calendar_path, @calendar_path <> "older.ics", "\"etag-older\"",
+             ~U[2026-11-01 08:00:00.000000Z]},
+            {"20261109T090000", @calendar_path, @href, "\"etag-newer\"",
+             ~U[2026-11-01 09:00:00.000000Z]},
+            {"20261116T090000", "/calendars/user/other/", "/calendars/user/other/copy.ics",
+             "\"etag-other\"", ~U[2026-11-01 10:00:00.000000Z]}
           ] do
         insert(:provider_calendar_event,
           calendar_integration: ctx.integration,
           provider: "caldav",
-          provider_calendar_id: @calendar_path,
+          provider_calendar_id: calendar,
           uid: "#{@event_uid}_#{key}",
-          provider_event_id: @href,
+          provider_event_id: href,
           provider_metadata: %{"uid" => @event_uid},
           raw_ical: series,
-          etag: "\"etag-series\"",
+          etag: etag,
           synced_at: synced_at
         )
       end
@@ -110,7 +116,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingUpdatePatchTest do
 
       assert :ok = reschedule(ctx.meeting)
 
-      assert [{"PUT", @href, ["\"etag-series\""], body}] = requests()
+      assert [{"PUT", @href, ["\"etag-newer\""], body}] = requests()
       lines = LineFolder.unfold_lines(body)
 
       assert "RRULE:FREQ=WEEKLY;COUNT=3" in lines
