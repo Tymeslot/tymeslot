@@ -178,7 +178,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
         id={"#{@id_prefix}-desktop-permission-note"}
         state={@desktop_permission}
         enabled={@preferences.desktop_reminders_enabled}
-        target={@target}
       />
     </div>
     """

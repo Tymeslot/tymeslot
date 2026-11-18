@@ -27,9 +27,10 @@
  * a typed date, "Add …", the matching commands. A command runs here
  * (views, Today, next and previous through `gotoPeriod`; New event; the
  * bookable layer; pushes to the surface or, for focus mode and the old
- * calendar, to DashboardLive; desktop notifications, which ask the browser's
- * permission first, desktop_reminder_permission.js). "Add …" opens quick create filled in from the
- * line. A server row reveals its event (reveal.js); the preview then takes focus.
+ * calendar, to DashboardLive; desktop notifications, which ask the
+ * browser's permission first, desktop_reminder_permission.js). "Add …"
+ * opens quick create filled in from the line. A server row reveals its
+ * event (reveal.js); the preview then takes focus.
  */
 import { addRow, commandRows, dateRow } from "../../calendar/commands.js";
 import { applyText } from "../../calendar/draft.js";

@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DesktopPermission do
     do:
       dgettext(
         "dashboard_calendar_power",
-        "Blocked in your browser settings. Allow notifications for this site there, then switch reminders on again."
+        "Blocked in your browser settings. Allow notifications for this site there, then switch desktop notifications on again."
       )
 
   defp refusal("unsupported"),
@@ -85,13 +85,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.DesktopPermission do
     do:
       dgettext(
         "dashboard_calendar_power",
-        "Notifications were not allowed, so reminders are still off."
+        "Your browser did not allow notifications, so desktop notifications are still off."
       )
 
   attr :id, :string, required: true, doc: "the note's id; the grant button's is derived from it"
   attr :state, :map, required: true, doc: "the surface's `desktop_permission`"
   attr :enabled, :boolean, required: true, doc: "whether the preference is on"
-  attr :target, :any, required: true
 
   @doc """
   What the browser's permission means for the switch above it. A `default`
@@ -105,7 +104,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DesktopPermission do
     <p id={@id} role="status" class="text-token-xs text-amber-700">
       {dgettext(
         "dashboard_calendar_power",
-        "Reminders are on, but your browser is blocking notifications. Allow notifications for this site in your browser settings and reminders will start."
+        "Desktop notifications are on, but your browser is blocking them. Allow notifications for this site in your browser settings and they will start."
       )}
     </p>
     """
@@ -117,7 +116,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DesktopPermission do
       <p class="text-token-xs text-amber-700">
         {dgettext(
           "dashboard_calendar_power",
-          "Reminders are on, but your browser has not allowed notifications yet."
+          "Desktop notifications are on, but your browser has not allowed them yet."
         )}
       </p>
       <.action_button
@@ -126,7 +125,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.DesktopPermission do
         size={:sm}
         class="max-sm:min-h-11 pointer-coarse:min-h-11"
         phx-hook="DesktopReminderPermission"
-        phx-target={@target}
         data-report-event="calendar:desktop_permission"
         data-enable-event="calendar:enable_desktop_reminders"
       >

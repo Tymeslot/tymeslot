@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDesktopPermissionTest do
       assert has_element?(
                lv,
                @note,
-               "Notifications were not allowed, so reminders are still off."
+               "Your browser did not allow notifications, so desktop notifications are still off."
              )
     end
 
@@ -177,7 +177,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDesktopPermissionTest do
       assert has_element?(
                lv,
                @note,
-               "Reminders are on, but your browser is blocking notifications."
+               "Desktop notifications are on, but your browser is blocking them."
              )
 
       refute has_element?(lv, "#{@note}-grant")
@@ -200,14 +200,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDesktopPermissionTest do
       assert has_element?(
                lv,
                @note,
-               "Reminders are on, but your browser has not allowed notifications yet."
+               "Desktop notifications are on, but your browser has not allowed them yet."
              )
 
       grant = "#{@note}-grant[phx-hook='DesktopReminderPermission']"
       assert has_element?(lv, grant, "Allow notifications")
 
+      # The hook pushes to the component the button sits in (`pushEventTo`
+      # with the element), which LiveViewTest reaches through `with_target`.
+      assert has_element?(lv, "#calendar-surface #{grant}")
+
       lv
-      |> element(grant)
+      |> with_target("#calendar-surface")
       |> render_hook("calendar:enable_desktop_reminders", %{"permission" => "granted"})
 
       assert enabled?(user)
