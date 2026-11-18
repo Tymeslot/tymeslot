@@ -12,6 +12,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
   @moduletag :integration
 
   import Ecto.Query, only: [from: 2]
+  import ExUnit.CaptureLog, only: [capture_log: 1]
   import Mox
   import Tymeslot.Factory
 
@@ -146,7 +147,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
     {:ok, token} =
       Changes.schedule_delete(user.id, event, :occurrence, delay: 0, notify_attendees: true)
 
-    ExUnit.CaptureLog.capture_log(fn ->
+    capture_log(fn ->
       assert %{success: 1} = Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
     end)
 
