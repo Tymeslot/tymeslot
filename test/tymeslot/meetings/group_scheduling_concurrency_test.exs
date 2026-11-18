@@ -119,14 +119,17 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
 
   # A slot a hold creates is `:awaiting_payment`, outside the confirmed-slot
   # unique index, so nothing but the schedule lock keeps two first holders
-  # from each creating a meeting row.
+  # from each creating a meeting row. Twice as many holders as seats is
+  # enough to overbook without the lock, and few enough that every contender
+  # has a connection of its own while the rest of the suite holds its share.
   test "racing holds never overbook", ctx do
     slot = slot_at(ctx, 13)
     two = 2
+    holders = 2 * two
 
     results =
       race(
-        for n <- 1..10 do
+        for n <- 1..holders do
           fn hold ->
             book(slot, "holder-#{n}@example.com",
               on_booked: hold,
@@ -138,7 +141,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
       )
 
     assert Enum.count(results, &match?({:ok, %{seat_hold: %SeatHoldSchema{}}}, &1)) == two
-    assert Enum.count(results, &match?({:error, :slot_full}, &1)) == 10 - two
+    assert Enum.count(results, &match?({:error, :slot_full}, &1)) == holders - two
 
     assert [%MeetingSchema{status: :awaiting_payment} = meeting] =
              unboxed(fn ->
