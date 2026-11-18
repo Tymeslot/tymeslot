@@ -204,7 +204,9 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
   end
 
   # Posts the checkout session event Stripe sends for `payment`'s session,
-  # signed under the connected-account endpoint's secret.
+  # signed under the connected-account endpoint's secret. The completed
+  # fixture is the fullest session payload, so `type` is overridden for the
+  # other events.
   defp post_webhook(conn, payment, type, object) do
     body =
       StripeWebhookFixtures.body(
@@ -232,7 +234,6 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
       "stripe-signature",
       PaymentTestHelpers.generate_stripe_signature(body, @secret)
     )
-    |> assign(:raw_body, body)
     |> post("/webhooks/stripe/connect", body)
     |> response(200)
   end
@@ -393,6 +394,11 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
 
     assert %{status: :refunded, refunded_amount_cents: 4000} = Repo.reload!(ada_payment)
 
+    assert Enum.any?(
+             sent_to(deliver_emails(), @ada.email),
+             &(&1.subject =~ "Refund Issued - €40.00")
+           )
+
     session_id = Repo.reload!(ben_hold).meeting_id
     assert [%{email: "ben@example.com"}] = live_participants(session_id)
     refute Repo.get_by(ParticipantSchema, email: @ada.email)
@@ -439,6 +445,15 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
     seat = seat_of(@ada.email)
     token = seat.management_token
 
+    # Moving a seat is not a new sale: no new checkout, no refund.
+    expect(StripeAdapterMock, :create_checkout_session, 0, fn _params, _opts ->
+      flunk("a moved seat must not open a checkout")
+    end)
+
+    expect(StripeAdapterMock, :create_refund, 0, fn _params, _opts ->
+      flunk("a moved seat must not be refunded")
+    end)
+
     target = build_conn() |> get(~p"/seat/#{token}/reschedule") |> redirected_to()
     {:ok, move, _html} = live(build_conn(), target <> "&timezone=Etc/UTC")
 
@@ -459,5 +474,6 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
 
     assert participant_id == moved.id
     assert meeting_id == moved.meeting_id
+    refute_enqueued(worker: GroupCancelRefund)
   end
 end

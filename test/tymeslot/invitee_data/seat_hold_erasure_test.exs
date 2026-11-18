@@ -31,6 +31,19 @@ defmodule Tymeslot.InviteeData.SeatHoldErasureTest do
     assert uid == ctx.session.uid
   end
 
+  test "an open checkout naming the email as a guest blocks erasure", %{session: session} do
+    insert(:seat_hold,
+      meeting: session,
+      email: "bob@example.com",
+      seats: 2,
+      status: :held,
+      guests: [%{"name" => nil, "email" => "ADA@example.com"}]
+    )
+
+    assert {:error, {:upcoming_meetings, [uid]}} = InviteeData.erase(@email)
+    assert uid == session.uid
+  end
+
   test "erasure deletes the booker's settled holds", %{session: session} do
     hold =
       insert(:seat_hold,

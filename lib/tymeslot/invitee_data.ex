@@ -37,7 +37,9 @@ defmodule Tymeslot.InviteeData do
   its invitee's address removed could no longer be cancelled, moved or
   reminded about. Cancel them first, then erase. An open seat checkout (a
   seat hold still `held`) is refused the same way, since its payment could
-  still turn it into a seat.
+  still turn it into a seat. A `held` hold on a meeting already past or
+  released, before the sweeper settles it, neither blocks nor is deleted; it
+  settles into the 30-day prune.
 
   Seat holds are deleted rather than anonymised: a settled hold, naming the
   person as its booker or as one of its guests, holds nothing a host's

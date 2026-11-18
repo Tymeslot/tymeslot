@@ -51,8 +51,8 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
 
   @doc """
   The uids of meetings still to take place that `email` is booked into, as
-  the booker, a group seat or a guest, or holds seats on while paying for
-  them (a `held` seat hold: an open checkout).
+  the booker, a group seat or a guest, or is named on, as booker or guest, a
+  held seat hold (an open checkout).
   """
   @spec upcoming_meeting_uids(String.t(), scope(), DateTime.t()) :: [String.t()]
   def upcoming_meeting_uids(email, scope, %DateTime{} = now) do
@@ -75,8 +75,9 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
     paying =
       from(m in Meeting,
         join: h in SeatHold,
+        as: :hold,
         on: h.meeting_id == m.id and h.status == :held,
-        where: fragment("lower(?)", h.email) == ^email
+        where: ^hold_names_email(email)
       )
 
     [booked, seated, invited, paying]
@@ -419,14 +420,9 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   @spec delete_seat_holds_for_email(String.t(), scope()) :: {non_neg_integer(), nil}
   def delete_seat_holds_for_email(email, scope) do
     from(h in SeatHold,
+      as: :hold,
       where: h.status != :held,
-      where:
-        fragment("lower(?)", h.email) == ^email or
-          fragment(
-            "EXISTS (SELECT 1 FROM jsonb_array_elements(?) AS g WHERE lower(g->>'email') = ?)",
-            h.guests,
-            ^email
-          )
+      where: ^hold_names_email(email)
     )
     |> scope_holds(scope)
     |> Repo.delete_all()
@@ -550,6 +546,19 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
 
   defp scope_meetings(query, host_user_id) when is_integer(host_user_id),
     do: where(query, [m], m.organizer_user_id == ^host_user_id)
+
+  # A seat hold names `email` as its booker or as one of its guests.
+  defp hold_names_email(email) do
+    dynamic(
+      [hold: h],
+      fragment("lower(?)", h.email) == ^email or
+        fragment(
+          "EXISTS (SELECT 1 FROM jsonb_array_elements(?) AS g WHERE lower(g->>'email') = ?)",
+          h.guests,
+          ^email
+        )
+    )
+  end
 
   defp scope_holds(query, :all), do: query
 
