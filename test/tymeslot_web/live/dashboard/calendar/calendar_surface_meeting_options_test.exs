@@ -246,6 +246,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingOptionsTest do
              )
     end
 
+    test "a saved location chosen for the event and deleted since does not block the meeting",
+         %{user: user, lv: lv} do
+      venue = insert(:venue, user: user, name: "Head office")
+      render_change(new_form(lv), %{"meeting" => "false"})
+
+      # The panel read the saved locations as it opened, before this one.
+      lv
+      |> element("#calendar-panel-new-form")
+      |> render_change(%{"location_venue" => "#{venue.id}"})
+
+      render_change(new_form(lv), %{"meeting" => "true"})
+      render_change(new_form(lv), %{"location_choice" => ""})
+
+      Repo.delete!(venue)
+      submit_meeting(lv, %{"guest_name" => "Ada Lovelace", "location_choice" => ""})
+
+      assert %{location: nil} = booked()
+    end
+
     test "a meeting location already chosen is kept when the box is ticked again", %{lv: lv} do
       render_change(new_form(lv), %{
         "location_choice" => "custom",

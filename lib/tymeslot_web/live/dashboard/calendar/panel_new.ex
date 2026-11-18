@@ -431,9 +431,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
     end
   end
 
+  # What only a plain calendar event has; hidden while the draft is a
+  # meeting or a group event, so never read for one.
+  @plain_event_fields ~w(location_venue event_reminders repeat repeat_custom)
+
   @doc """
   The New event form cast as a create (`CreateParams.cast/5`), an untitled
-  draft named "New event" first.
+  draft named "New event" first, without the fields only a plain event has.
   `PanelMeeting` and `PanelGroupEvent` cast their drafts through it, so they
   never disagree with an event on the fields they share. `calendar` is
   `:optional` for a meeting, which may have no calendar while the organiser
@@ -442,7 +446,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   @spec cast_form(socket(), map(), :optional | :required) ::
           {:ok, CreateParams.t()} | {:error, atom(), term()}
   def cast_form(socket, form, calendar),
-    do: cast_params(socket, form, calendar)
+    do: cast_params(socket, Map.drop(form, @plain_event_fields), calendar)
 
   # The draft the payload draws: the form as the domain casts it, or the
   # last accepted one with the reason in the header. Without a calendar to

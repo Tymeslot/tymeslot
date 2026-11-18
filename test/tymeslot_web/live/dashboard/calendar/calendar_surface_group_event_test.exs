@@ -206,6 +206,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGroupEventTest do
     assert Repo.aggregate(MeetingSchema, :count) == 1
   end
 
+  test "a saved location chosen for the plain event and deleted since does not block it", %{
+    conn: conn,
+    user: user,
+    integration: integration,
+    venue: venue
+  } do
+    office = insert(:venue, user: user, name: "Head office")
+    lv = open(conn, integration)
+    render_change(new_form(lv), %{"location_venue" => "#{office.id}"})
+    as_group_event(lv)
+
+    Repo.delete!(office)
+    create(lv, %{"max_participants" => "12", "group_location" => "venue:#{venue.id}"})
+
+    assert [_type] = Repo.all(MeetingTypeSchema)
+  end
+
   test "keeps the panel open and says what is missing", %{conn: conn, integration: integration} do
     lv = open(conn, integration)
     as_group_event(lv)
