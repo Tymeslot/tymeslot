@@ -175,6 +175,33 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
                params
     end
 
+    test "is cleared from the field once Add adds it", %{conn: conn, integration: integration} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, integration, %{"guests" => []})
+
+      render_change(new_form(lv), %{"guest_email" => "ada@example.com"})
+
+      lv
+      |> form("#calendar-panel-new-form", %{"guest_email" => "ada@example.com"})
+      |> put_submitter("#calendar-panel-guest-add")
+      |> render_submit()
+
+      assert has_element?(lv, "#calendar-panel-guests li", "ada@example.com")
+      assert has_element?(lv, ~s(#calendar-panel-guests input[name="guest_email"][value=""]))
+    end
+
+    # Enter in the field submits with the form's first submit button, Add.
+    test "is cleared from the field once Enter adds it", %{conn: conn, integration: integration} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, integration, %{"guests" => []})
+
+      render_change(new_form(lv), %{"guest_email" => "ada@example.com"})
+      render_submit(new_form(lv), %{"intent" => "add_guest", "guest_email" => "ada@example.com"})
+
+      assert has_element?(lv, "#calendar-panel-guests li", "ada@example.com")
+      assert has_element?(lv, ~s(#calendar-panel-guests input[name="guest_email"][value=""]))
+    end
+
     test "gone by Create, the meeting is refused under the guest field, not made a plain event",
          %{conn: conn, integration: integration} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
