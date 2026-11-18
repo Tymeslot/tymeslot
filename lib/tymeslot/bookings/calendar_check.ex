@@ -44,7 +44,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.CalendarLinks
 
   # Availability was already checked when the slots were displayed, so a slow
   # calendar must not hold the submit open: past this, the booking proceeds on
@@ -276,7 +276,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
         {:ok,
          events
          |> Bookability.apply_to_busy(organizer_user_id, {start_date, end_date})
-         |> Meetings.reject_calendar_event_mirrors(Keyword.get(opts, :exclude))}
+         |> CalendarLinks.reject_calendar_event_mirrors(Keyword.get(opts, :exclude))}
 
       {:ok, {:error, reason}} ->
         {:error, reason}

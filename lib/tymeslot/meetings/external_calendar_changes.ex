@@ -68,7 +68,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   The same work `apply_change/4` does once it has resolved its identifiers,
   for callers that resolved the meeting themselves. A batch reconciling many
   deletions matches them all in one query (see
-  `Tymeslot.Meetings.list_meetings_by_calendar_identifiers/2`) rather than
+  `Tymeslot.Meetings.CalendarLinks.list_meetings_by_calendar_identifiers/2`) rather than
   paying two lookups per event to learn that most of them link to nothing.
   """
   @spec apply_change_to_meeting(Meeting.t(), signal()) :: :ok | {:error, term()}

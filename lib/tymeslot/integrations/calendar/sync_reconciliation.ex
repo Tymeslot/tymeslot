@@ -24,6 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.Calendar.TimingChange
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.CalendarLinks
   alias Tymeslot.Profiles
 
   @typep integration_id :: integer()
@@ -67,11 +68,11 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
     # CalDAV integration and silently never reconciled a time change.
     identifiers =
       calendar_events
-      |> Meetings.calendar_identifier_set()
+      |> CalendarLinks.calendar_identifier_set()
       |> MapSet.to_list()
 
     meetings_by_identifier =
-      Meetings.list_meetings_by_calendar_identifiers(integration.id, identifiers)
+      CalendarLinks.list_meetings_by_calendar_identifiers(integration.id, identifiers)
 
     # Read once for the batch, and only when an all-day event needs it.
     host_zone =
@@ -139,7 +140,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
   # the upsert path, a `deletion_ref()` from the deletion path.
   defp linked_meeting(record, meetings_by_identifier) when is_map(record) do
     record
-    |> Meetings.calendar_event_identifiers()
+    |> CalendarLinks.calendar_event_identifiers()
     |> Enum.find_value(&Map.get(meetings_by_identifier, &1))
   end
 
@@ -224,10 +225,10 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
     # feeds the shared identity rule directly: no conversion, and the uid
     # fallback a CalDAV deletion depends on comes with it. See
     # `Tymeslot.Meetings.CalendarEventLink`.
-    identifiers = refs |> Meetings.calendar_identifier_set() |> MapSet.to_list()
+    identifiers = refs |> CalendarLinks.calendar_identifier_set() |> MapSet.to_list()
 
     meetings_by_identifier =
-      Meetings.list_meetings_by_calendar_identifiers(integration.id, identifiers)
+      CalendarLinks.list_meetings_by_calendar_identifiers(integration.id, identifiers)
 
     refs
     |> Enum.map(&linked_meeting(&1, meetings_by_identifier))
@@ -287,6 +288,6 @@ defmodule Tymeslot.Integrations.Calendar.SyncReconciliation do
   @spec find_meeting(integration_id(), String.t() | nil, String.t() | nil) ::
           {:ok, term()} | {:error, :not_found}
   def find_meeting(integration_id, provider_event_id, uid) do
-    Meetings.find_meeting_by_calendar_event(integration_id, provider_event_id, uid)
+    CalendarLinks.find_meeting_by_calendar_event(integration_id, provider_event_id, uid)
   end
 end

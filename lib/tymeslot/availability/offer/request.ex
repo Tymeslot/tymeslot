@@ -12,8 +12,8 @@ defmodule Tymeslot.Availability.Offer.Request do
   alias Tymeslot.Availability.Offer.HostCalendar
   alias Tymeslot.BookingSeries
   alias Tymeslot.Demo
-  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.BookingLimits.Checker
+  alias Tymeslot.Meetings.CalendarLinks
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
 
@@ -70,12 +70,12 @@ defmodule Tymeslot.Availability.Offer.Request do
   @spec busy_periods(list(), integer(), Date.t(), Date.t(), map() | nil) :: list()
   def busy_periods(events, user_id, first_date, last_date, moving) do
     events
-    |> Meetings.merge_busy_periods(
+    |> CalendarLinks.merge_busy_periods(
       user_id,
       utc_day_start(Date.add(first_date, -busy_window_padding_days())),
       utc_day_start(Date.add(last_date, 1 + busy_window_padding_days()))
     )
-    |> Meetings.reject_calendar_event_mirrors(moving)
+    |> CalendarLinks.reject_calendar_event_mirrors(moving)
   end
 
   defp utc_day_start(date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")

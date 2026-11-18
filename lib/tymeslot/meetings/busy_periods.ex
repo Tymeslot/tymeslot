@@ -48,7 +48,7 @@ defmodule Tymeslot.Meetings.BusyPeriods do
 
   Both identifiers travel with the projection so that a caller excluding one
   meeting from its own offer, as a reschedule page does through
-  `Tymeslot.Meetings.reject_calendar_event_mirrors/2`, drops the booking as
+  `Tymeslot.Meetings.CalendarLinks.reject_calendar_event_mirrors/2`, drops the booking as
   well as its mirror.
   """
   @spec merge(Enumerable.t(), pos_integer(), DateTime.t(), DateTime.t()) :: [map()]
