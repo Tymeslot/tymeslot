@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewRepeat do
 
   alias Tymeslot.CalendarGrid.CreateParams
   alias TymeslotWeb.Components.Calendar.RecurrenceEditor
+  alias TymeslotWeb.Components.Calendar.RepeatForm
   alias TymeslotWeb.Dashboard.Calendar.PanelGroupEvent
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
@@ -82,15 +83,35 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewRepeat do
 
   def field(form, create, provider, timezone) do
     field = PanelRepeat.field(event(create, provider), timezone)
+    choice = choice(form)
     rule = create.recurrence_rule
 
     %{
       field
-      | current: choice(form),
-        rule: rule,
+      | current: choice,
+        rule: if(choice == "custom", do: typed_rule(form, create, field), else: rule),
         summary: rule && RecurrenceEditor.summary(rule, field.start)
     }
   end
+
+  # The editor draws the pattern its fields hold, refused or not, so a
+  # pattern the calendar refuses stays on screen to be changed rather than
+  # falling back to "Does not repeat" and going out as a one-off.
+  defp typed_rule(form, create, field) do
+    composed =
+      RepeatForm.compose_recurrence_rule(form["repeat_custom"] || %{}, %{
+        all_day: create.all_day,
+        start_date: date_of(field.start),
+        timezone: field.timezone,
+        rule: nil,
+        check_until: false
+      })
+
+    if is_binary(composed), do: composed
+  end
+
+  defp date_of(%DateTime{} = at), do: DateTime.to_date(at)
+  defp date_of(%Date{} = date), do: date
 
   defp choice(form) do
     case form["repeat"] do

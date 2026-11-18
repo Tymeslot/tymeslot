@@ -372,6 +372,42 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
     end
   end
 
+  describe "a repeat the calendar refuses" do
+    test "a repeat Outlook would refuse is refused before anything is written", %{
+      conn: conn,
+      user: user
+    } do
+      outlook = outlook(user)
+      # Read as the calendar loads.
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      # 31 October: a monthly "on day 31" misses the shorter months.
+      more_options(lv, nil, %{
+        "calendar" => "#{outlook.id}:cal",
+        "start" => "2026-10-31T10:00",
+        "end" => "2026-10-31T11:00"
+      })
+
+      render_change(new_form(lv), %{
+        "repeat" => "custom",
+        "freq" => "monthly",
+        "interval" => "1",
+        "on" => "day",
+        "end_type" => "never"
+      })
+
+      render_submit(new_form(lv), %{"intent" => "create"})
+
+      refute_receive {:provider_call, _pid, _payload}, 100
+      assert has_element?(lv, "#calendar-panel [role=status]", "Couldn't save")
+      assert Repo.all(ProviderCalendarEventSchema) == []
+
+      # The pattern stays in the editor to be changed, rather than falling
+      # back to "Does not repeat", which the next Create would make a one-off.
+      assert has_element?(lv, ~s(#calendar-panel-new-repeat input[name="freq"][value="monthly"]))
+    end
+  end
+
   describe "repeat, after the draft stopped being a meeting" do
     test "a guest removed with the box still ticked leaves an event that repeats", %{
       lv: lv,
