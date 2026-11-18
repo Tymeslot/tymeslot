@@ -991,3 +991,64 @@ msgstr "Повернення коштів неможливе, оскільки �
 #, elixir-autogen, elixir-format
 msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
 msgstr "Повернення коштів неможливе, оскільки щодо платежу відкрито спір. Спершу врегулюйте його в Stripe."
+
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} paid"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} paid · %{count} seat"
+msgid_plural "%{amount} paid · %{count} seats"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} refunded"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} participant paid for this session (%{amount} in total)."
+msgid_plural "%{count} participants paid for this session (%{amount} in total)."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
+#, elixir-autogen, elixir-format
+msgid "Disputed"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Don't refund anyone."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each participant gets back what they paid, and an email once their refund is issued."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "I understand the participants keep nothing back unless I refund them later from Payments."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refund everyone in full."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
+#, elixir-autogen, elixir-format
+msgid "Refunded"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Session cancelled. Refunds are on their way."
+msgstr ""

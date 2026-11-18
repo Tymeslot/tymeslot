@@ -414,6 +414,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         decline_request_modal_data={@decline_request_modal_data}
         cancel_meeting_modal_data={@cancel_meeting_modal_data}
         cancel_booking_payment={@cancel_booking_payment}
+        cancel_seat_payments={@cancel_seat_payments}
         reschedule_request_modal_data={@reschedule_request_modal_data}
         calendar_move_modal_data={@calendar_move_modal_data}
         answering_request={@answering_request}

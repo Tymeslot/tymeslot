@@ -106,6 +106,19 @@ defmodule TymeslotWeb.Dashboard.GroupMeetingActionsTest do
     assert seat_job_participants("send_seat_meeting_cancellation") == participant_ids
   end
 
+  test "a free group session's cancel dialog has no refund options", %{
+    conn: conn,
+    meeting: meeting
+  } do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+    view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+    assert has_element?(view, "#cancel-meeting-form")
+    refute has_element?(view, "input[name=cancel_refund_choice]")
+    refute has_element?(view, "#cancel-meeting-form", "paid for this session")
+  end
+
   test "a reschedule request on a group meeting goes to each participant", %{
     conn: conn,
     meeting: meeting,

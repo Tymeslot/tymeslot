@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPayments
+  alias Tymeslot.Profiles
 
   import TymeslotWeb.Dashboard.PaymentsSettings.ConnectCta, only: [connect_cta: 1]
   import TymeslotWeb.Dashboard.PaymentsSettings.CurrencySelector, only: [currency_selector: 1]
@@ -51,6 +52,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      |> assign(:refund_error, nil)
      |> assign(:refund_form, @blank_refund_form)
      |> assign(:connect_account, nil)
+     |> assign(profile: nil, time_format: "24h")
      |> assign(:payments, [])
      |> assign(:outstanding_refunds, [])
      |> assign(:outstanding_refunds_summary, %{count: 0, totals: []})
@@ -102,7 +104,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
         --%>
         <div :if={not needs_onboarding?(@connect_account)} class="space-y-8">
           <.currency_selector account={@connect_account} myself={@myself} />
-          <.payments_table payments={@payments} account={@connect_account} myself={@myself} />
+          <.payments_table
+            payments={@payments}
+            account={@connect_account}
+            timezone={Profiles.timezone(@profile)}
+            time_format={@time_format}
+            myself={@myself}
+          />
           <.lifetime_stats stats={@stats} account={@connect_account} />
         </div>
 

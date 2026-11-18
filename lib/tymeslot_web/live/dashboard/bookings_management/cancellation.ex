@@ -30,10 +30,18 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
 
   @typep reload :: (Phoenix.LiveView.Socket.t() -> Phoenix.LiveView.Socket.t())
 
+  @typedoc """
+  What a cancellation can refund, as the cancel dialog's assigns hold it: a
+  one-to-one booking's payment (nil for a free one), or a group session's
+  paid seats (empty for a free one). Never both.
+  """
+  @type paid :: %{cancel_booking_payment: map() | nil, cancel_seat_payments: [map()]}
+
   @doc """
   Opens the cancel dialog for the host's meeting `params["id"]`, if `policy`
-  allows its cancellation, along with any payment the host took for it (which
-  is what offers the refund options). A refusal is flashed.
+  allows its cancellation, along with any payment the host took for it, or
+  for a group session the seats paid on it (`payments_for/2`), which is what
+  offers the refund options. A refusal is flashed.
   """
   @spec show(Phoenix.LiveView.Socket.t(), map(), (MeetingSchema.t() -> :ok | {:error, term()})) ::
           Phoenix.LiveView.Socket.t()
@@ -44,12 +52,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
       {:ok, meeting} ->
         emit_open(user_id, meeting.id)
 
-        # Scoped to the signed-in host: only a payment they took offers
-        # refund options.
-        booking_payment = BookingPayments.payment_for_meeting(meeting.id, user_id)
-
         socket
-        |> assign(:cancel_booking_payment, booking_payment)
+        |> assign(payments_for(meeting, user_id))
         |> assign(:cancel_refund_error, %{})
         |> assign(:cancel_refund_form, blank_refund_form())
         |> ModalHook.show_modal(:cancel_meeting, meeting)
@@ -68,11 +72,35 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     end
   end
 
+  @doc """
+  What cancelling `meeting` can refund the host `user_id` (`t:paid/0`),
+  scoped to them: only money they took offers refund options. A group
+  session's seats are each their own payment
+  (`BookingPayments.seat_payments_for_meeting/2`); any other meeting has at
+  most one.
+  """
+  @spec payments_for(MeetingSchema.t(), integer()) :: paid()
+  def payments_for(meeting, user_id) do
+    if Meetings.group?(meeting),
+      do: %{
+        cancel_booking_payment: nil,
+        cancel_seat_payments: BookingPayments.seat_payments_for_meeting(meeting.id, user_id)
+      },
+      else: %{
+        cancel_booking_payment: BookingPayments.payment_for_meeting(meeting.id, user_id),
+        cancel_seat_payments: []
+      }
+  end
+
+  @doc "The dialog's assigns before it opens and after it closes: nothing to refund."
+  @spec no_payments() :: paid()
+  def no_payments, do: %{cancel_booking_payment: nil, cancel_seat_payments: []}
+
   @doc "Closes the cancel dialog without cancelling anything."
   @spec hide(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def hide(socket) do
     socket
-    |> assign(:cancel_booking_payment, nil)
+    |> assign(no_payments())
     |> ModalHook.hide_modal(:cancel_meeting)
   end
 
@@ -86,15 +114,15 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   @spec confirm(Phoenix.LiveView.Socket.t(), MeetingSchema.t(), map(), reload()) ::
           Phoenix.LiveView.Socket.t()
   def confirm(socket, meeting, params, reload) when is_function(reload, 1) do
-    booking_payment = socket.assigns.cancel_booking_payment
+    paid = paid(socket.assigns)
     # Kept whatever the outcome: the choice lives in the browser until submit,
     # and a re-render without it would snap the radio back to a full refund.
     socket = assign(socket, :cancel_refund_form, refund_form(params))
 
-    case Meetings.resolve_cancellation_refund(booking_payment, params) do
+    case resolve_refund(meeting, paid, params) do
       {:ok, _refund_action} ->
         {outcome, type, message} =
-          cancel(socket.assigns.current_user.id, meeting, booking_payment, params)
+          cancel(socket.assigns.current_user.id, meeting, paid, params)
 
         socket
         |> assign(:cancel_refund_error, %{})
@@ -111,7 +139,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
 
   @doc """
   Cancels `meeting` for the host `user_id`, with the refund the cancel form's
-  `params` choose against `booking_payment` (nil for a free booking), and
+  `params` choose against what it can refund (`paid`, from `payments_for/2`;
+  `paid/1` reads it back off the dialog's assigns), and
   says how it went as `{outcome, flash_type, message}`, so the Meetings page
   and the calendar's preview (`Calendar.BookingActions`) act and speak alike:
 
@@ -123,10 +152,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     * `:invalid` (a refund choice that does not add up) and `:failed`: the
       dialog stays open for another try.
   """
-  @spec cancel(integer(), map(), map() | nil, map()) ::
+  @spec cancel(integer(), map(), paid(), map()) ::
           {:closed | :refused | :invalid | :failed, :info | :error, String.t()}
-  def cancel(user_id, meeting, booking_payment, params) do
-    case Meetings.resolve_cancellation_refund(booking_payment, params) do
+  def cancel(user_id, meeting, paid, params) do
+    case resolve_refund(meeting, paid, params) do
       {:ok, refund_action} ->
         result = Meetings.cancel_meeting_with_refund(meeting, user_id, refund_action)
         emit_confirm(user_id, meeting.id, result)
@@ -135,6 +164,18 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
       {:error, reason} ->
         {:invalid, :error, refund_error_message(reason)}
     end
+  end
+
+  @doc "What the cancel dialog's assigns say the cancellation can refund (`t:paid/0`)."
+  @spec paid(map()) :: paid()
+  def paid(assigns), do: Map.merge(no_payments(), Map.take(assigns, Map.keys(no_payments())))
+
+  # A group session is settled seat by seat, a one-to-one booking by its one
+  # payment.
+  defp resolve_refund(meeting, paid, params) do
+    if Meetings.group?(meeting),
+      do: Meetings.resolve_seat_refund(paid.cancel_seat_payments, params),
+      else: Meetings.resolve_cancellation_refund(paid.cancel_booking_payment, params)
   end
 
   defp outcome(_meeting, refund_action, {:ok, _cancelled}),
@@ -173,14 +214,15 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   defp settle(socket, :closed, reload) do
     socket
     |> assign(:cancelling_meeting, nil)
-    |> assign(:cancel_booking_payment, nil)
+    |> assign(no_payments())
     |> reload.()
     |> ModalHook.hide_modal(:cancel_meeting)
   end
 
   defp settle(socket, :refused, _reload) do
     socket
-    |> assign(cancelling_meeting: nil, cancel_booking_payment: nil)
+    |> assign(:cancelling_meeting, nil)
+    |> assign(no_payments())
     |> ModalHook.hide_modal(:cancel_meeting)
   end
 
@@ -272,6 +314,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   defp success_message({:refund, _cents}),
     do: dgettext("dashboard_bookings", "Meeting cancelled and refund issued.")
 
+  # Each paid seat's refund is its own job, so the refunds follow.
+  defp success_message(:refund_seats),
+    do: dgettext("dashboard_bookings", "Session cancelled. Refunds are on their way.")
+
   defp success_message(:none),
     do: dgettext("dashboard_bookings", "Meeting cancelled successfully")
 
@@ -294,13 +340,17 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
 
   # The message shown when the meeting had been cancelled elsewhere before the
   # host confirmed. A refund the host chose was not issued, so it says so.
-  defp already_cancelled_message({:refund, _cents}),
-    do:
-      dgettext(
-        "dashboard_bookings",
-        "This booking was already cancelled, so no refund was issued."
-      )
+  defp already_cancelled_message(refund_action) do
+    if refunding?(refund_action),
+      do:
+        dgettext(
+          "dashboard_bookings",
+          "This booking was already cancelled, so no refund was issued."
+        ),
+      else: dgettext("dashboard_bookings", "This booking was already cancelled.")
+  end
 
-  defp already_cancelled_message(_no_refund),
-    do: dgettext("dashboard_bookings", "This booking was already cancelled.")
+  defp refunding?({:refund, _cents}), do: true
+  defp refunding?(:refund_seats), do: true
+  defp refunding?(_no_refund), do: false
 end

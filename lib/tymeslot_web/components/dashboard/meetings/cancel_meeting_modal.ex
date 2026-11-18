@@ -4,8 +4,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   When the meeting has an associated paid `booking_payment`, the modal
   shows three refund options: full refund, partial refund, or cancel
-  without refunding (gated behind a confirmation tickbox). For free
-  bookings the modal preserves the original confirm-or-keep flow.
+  without refunding (gated behind a confirmation tickbox). A group session
+  with paid seats (`seat_payments`) offers two instead: refund everyone in
+  full, or no one (behind the same tickbox); a partial refund is made per
+  payment, from the payments page. For free bookings the modal preserves
+  the original confirm-or-keep flow.
   """
 
   use Phoenix.Component
@@ -14,6 +17,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.Meetings.HostManaged
   alias TymeslotWeb.Components.CoreComponents.Forms
@@ -37,6 +41,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     * `target` - phx-target reference for the confirm event (required)
     * `booking_payment` - Optional booking_payment record. When set and
       refundable, the modal exposes refund options.
+    * `seat_payments` - A group session's paid seats still owed money
+      (`BookingPayments.seat_payments_for_meeting/2`). When any, the modal
+      offers to refund everyone or no one.
   """
   attr :id, :string, required: true
   attr :show, :boolean, required: true
@@ -48,12 +55,17 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   attr :confirm_event, :string, required: true
   attr :target, :any, required: true
   attr :booking_payment, :map, default: nil
+  attr :seat_payments, :list, default: []
   attr :refund_error, :map, default: %{}, doc: "`:amount` and `:acknowledgement` messages"
   attr :refund_form, :map, default: %{choice: "full", amount: "", acknowledged: false}
 
   @spec cancel_meeting_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_meeting_modal(assigns) do
-    assigns = assign(assigns, :paid?, MeetingPayments.refundable?(assigns[:booking_payment]))
+    assigns =
+      assign(assigns,
+        paid?: MeetingPayments.refundable?(assigns[:booking_payment]),
+        seats_paid?: assigns.seat_payments != []
+      )
 
     ~H"""
     <Modal.confirm_modal
@@ -61,7 +73,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
       show={@show}
       title={dgettext("dashboard_bookings", "Cancel meeting")}
       confirm_label={
-        if @paid?,
+        if @paid? or @seats_paid?,
           do: dgettext("dashboard_bookings", "Confirm cancellation"),
           else: dgettext("dashboard_bookings", "Cancel Meeting")
       }
@@ -108,8 +120,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             )}
           </:full>
         </.refund_choices>
+        <.seat_options
+          :if={@seats_paid?}
+          seat_payments={@seat_payments}
+          refund_error={@refund_error}
+          refund_form={@refund_form}
+        />
         <.no_refund_warning booking_payment={@booking_payment} />
-        <p :if={not @paid?} class="text-tymeslot-500">
+        <p :if={not @paid? and not @seats_paid?} class="text-tymeslot-500">
           {if Helpers.group_meeting?(@meeting),
             do:
               dgettext(
@@ -263,6 +281,91 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         <p
           :if={@refund_error[:acknowledgement]}
           id={"#{@id_prefix}-refund-ack-error"}
+          class="form-error ml-6"
+          role="alert"
+        >
+          {@refund_error[:acknowledgement]}
+        </p>
+      </div>
+    </div>
+    """
+  end
+
+  attr :seat_payments, :list, required: true
+  attr :refund_error, :map, default: %{}
+  attr :refund_form, :map, required: true
+
+  # A group session's refund: every paid seat in full, or none behind an
+  # acknowledgement. Posts the same fields as `refund_choices/1`, less the
+  # amount: a partial refund is a per-payment action.
+  defp seat_options(assigns) do
+    summary = BookingPayments.seat_money_summary(assigns.seat_payments)
+
+    assigns =
+      assign(assigns,
+        count: summary.count,
+        total: Enum.map_join(summary.totals, " + ", &format_amount(&1.amount_cents, &1.currency))
+      )
+
+    ~H"""
+    <div class="rounded-token-md border border-tymeslot-200 bg-tymeslot-50 p-3 text-token-sm space-y-3">
+      <p>
+        {dngettext(
+          "dashboard_bookings",
+          "%{count} participant paid for this session (%{amount} in total).",
+          "%{count} participants paid for this session (%{amount} in total).",
+          @count,
+          amount: @total
+        )}
+      </p>
+
+      <div class="space-y-2">
+        <label class="flex items-start gap-2">
+          <Forms.input
+            type="radio"
+            name="cancel_refund_choice"
+            value="full"
+            checked={@refund_form.choice != "none"}
+          />
+          <span>
+            <strong>{dgettext("dashboard_bookings", "Refund everyone in full.")}</strong>
+            {dgettext(
+              "dashboard_bookings",
+              "Each participant gets back what they paid, and an email once their refund is issued."
+            )}
+          </span>
+        </label>
+
+        <label class="flex items-start gap-2">
+          <Forms.input
+            type="radio"
+            name="cancel_refund_choice"
+            value="none"
+            checked={@refund_form.choice == "none"}
+          />
+          <span>
+            <strong>{dgettext("dashboard_bookings", "Don't refund anyone.")}</strong>
+          </span>
+        </label>
+
+        <label class="flex items-start gap-2 ml-6">
+          <%!-- raw-input: acknowledgement checkbox inside its inline label beside the text; <.input> would nest block wrappers inside the label --%>
+          <input
+            type="checkbox"
+            name="cancel_refund_no_refund_ack"
+            value="true"
+            checked={@refund_form.acknowledged}
+          />
+          <span class="text-tymeslot-700">
+            {dgettext(
+              "dashboard_bookings",
+              "I understand the participants keep nothing back unless I refund them later from Payments."
+            )}
+          </span>
+        </label>
+        <p
+          :if={@refund_error[:acknowledgement]}
+          id="cancel-refund-ack-error"
           class="form-error ml-6"
           role="alert"
         >

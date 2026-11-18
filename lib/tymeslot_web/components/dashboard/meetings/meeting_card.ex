@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingActions
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingStatusBadge
+  alias TymeslotWeb.Components.Dashboard.Meetings.ParticipantPaymentPill
   alias TymeslotWeb.Components.Dashboard.Meetings.RemindersSection
 
   attr :meeting, :map, required: true
@@ -227,7 +228,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
           <%!-- Participants panel, group meetings only. The preload keeps to
                live participants, except on a cancelled meeting, where it also
                brings those who left the slot (released or moved their seat),
-               marked as such. --%>
+               marked as such. A paid seat says what its payment stands at. --%>
           <.sub_panel
             :if={@participants != []}
             icon="hero-users"
@@ -252,6 +253,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
                   >
                     {dgettext("dashboard_bookings", "Left this slot")}
                   </Feedback.pill>
+                  <ParticipantPaymentPill.participant_payment_pill payment={
+                    participant.booking_payment
+                  } />
                 </span>
                 <span class="flex flex-wrap items-center gap-x-3 gap-y-2 min-w-0">
                   <a

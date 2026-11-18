@@ -23,7 +23,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
   it back for approval is the exception: declining it refunds nothing, so it
   reads as a cancellation. The card explains each kind it lists in its own
   words, and dates an expired row by its payment, since an expired meeting
-  carries no cancellation date.
+  carries no cancellation date. A paid seat its participant cancelled reads
+  as a cancellation, dated by when the participant left.
 
   Each row offers the same `open_refund_modal` event as the payments table.
   A row only carries that button when both halves of the question say yes:
@@ -183,6 +184,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
   # expired payment `paid_at`, so the bare fallbacks should not arise; they
   # are tolerated rather than raising, because a vaguer cell beats a 500 on
   # the payments screen.
+  # A seat its participant cancelled is dated by when they left: the session
+  # itself may still be going ahead.
+  defp format_date_cell(%{participant: %{cancelled_at: %DateTime{} = left_at}}),
+    do: dgettext("dashboard_payments", "Left %{date}", date: format_date(left_at))
+
   defp format_date_cell(%{meeting: %{status: _status} = meeting} = payment) do
     if MeetingState.expired?(meeting),
       do: expired_date_cell(payment),

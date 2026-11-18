@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceModals do
   attr :decline_request_modal_data, :map, default: nil
   attr :cancel_meeting_modal_data, :map, default: nil
   attr :cancel_booking_payment, :any, default: nil
+  attr :cancel_seat_payments, :list, default: []
   attr :reschedule_request_modal_data, :map, default: nil
   attr :calendar_move_modal_data, :map, default: nil
   attr :answering_request, :any, required: true, doc: "the request ids being answered"
@@ -70,6 +71,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceModals do
       :if={@cancel_meeting_modal_data}
       meeting={@cancel_meeting_modal_data}
       booking_payment={@cancel_booking_payment}
+      seat_payments={@cancel_seat_payments}
       timezone={@timezone}
       time_format={@time_format}
       target={@target}

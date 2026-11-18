@@ -20,7 +20,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.BookingsManagement.Cancellation
   alias TymeslotWeb.Dashboard.BookingsManagement.ModalMeeting
@@ -55,9 +54,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
       answering_request: MapSet.new(),
       moving_booking: MapSet.new(),
       answering_opts: %{},
-      cancel_booking_payment: nil,
       sending_reschedule: nil
     )
+    |> assign(Cancellation.no_payments())
   end
 
   @doc "Handles the `booking:` event `name`. Unknown names and malformed params change nothing."
@@ -99,11 +98,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
         Cancellation.emit_open(user_id, meeting.id)
 
         socket
-        |> assign(
-          preview: nil,
-          # Scoped to the signed-in host: only a payment they took offers refunds.
-          cancel_booking_payment: BookingPayments.payment_for_meeting(meeting.id, user_id)
-        )
+        |> assign(:preview, nil)
+        |> assign(Cancellation.payments_for(meeting, user_id))
         |> ModalHook.show_modal(:cancel_meeting, meeting)
 
       {:error, :policy_blocked, reason} ->
@@ -161,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   def handle("close", %{"modal" => modal}, socket) when is_map_key(@modals, modal) do
     socket
     |> ModalHook.hide_modal(Map.fetch!(@modals, modal))
-    |> assign(:cancel_booking_payment, nil)
+    |> assign(Cancellation.no_payments())
     |> push_event("calendar:preview-closed", %{})
   end
 
@@ -220,7 +216,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
       Cancellation.cancel(
         socket.assigns.current_user.id,
         meeting,
-        socket.assigns.cancel_booking_payment,
+        Cancellation.paid(socket.assigns),
         params
       )
 
@@ -230,7 +226,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
       do:
         socket
         |> ModalHook.hide_modal(:cancel_meeting)
-        |> assign(:cancel_booking_payment, nil)
+        |> assign(Cancellation.no_payments())
         |> SurfaceData.reload(:events),
       else: socket
   end

@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
   alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -261,6 +262,47 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
 
     assert %{status: :refunded, refunded_amount_cents: 5000} =
              BookingPaymentQueries.get(payment.id)
+  end
+
+  test "a paid group session cancelled from the calendar refunds every seat",
+       %{conn: conn, user: user} do
+    session =
+      insert(:group_meeting,
+        organizer_user: user,
+        title: "Group class",
+        start_time: ~U[2026-10-15 15:00:00Z],
+        end_time: ~U[2026-10-15 15:30:00Z],
+        capacity: 4,
+        status: :confirmed
+      )
+
+    for email <- ["ada@example.com", "grace@example.com"] do
+      participant = insert(:participant, meeting: session, email: email)
+
+      insert(:paid_booking_payment,
+        meeting_id: session.id,
+        participant_id: participant.id,
+        seat_payment: true,
+        amount_cents: 2000,
+        host_user_id: user.id,
+        attendee_email: email
+      )
+    end
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open(lv, session)
+    lv |> element("#calendar-preview-cancel") |> render_click()
+
+    assert has_element?(lv, "#cancel-meeting-form", "2 participants paid for this session")
+    refute has_element?(lv, "input[name=cancel_refund_choice][value=partial]")
+
+    lv
+    |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "full"})
+    |> render_submit()
+
+    assert render(lv) =~ "Session cancelled. Refunds are on their way."
+    assert reload(session).status == :cancelled
+    assert length(all_enqueued(worker: GroupCancelRefund)) == 2
   end
 
   describe "the calendar copy a drawn booking hides" do

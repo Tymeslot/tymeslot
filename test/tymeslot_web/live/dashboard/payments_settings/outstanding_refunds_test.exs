@@ -92,4 +92,21 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefundsTest do
       refute html =~ "Showing the"
     end
   end
+
+  describe "a seat its participant cancelled" do
+    test "is dated by when the participant left, not as a cancellation" do
+      html =
+        render_card(
+          payments: [
+            payment(
+              meeting: build(:group_meeting, status: :confirmed),
+              participant: build(:participant, cancelled_at: ~U[2026-11-02 09:00:00Z])
+            )
+          ]
+        )
+
+      assert html =~ "Left 2 Nov 2026"
+      refute html =~ "Cancelled 2 Nov"
+    end
+  end
 end

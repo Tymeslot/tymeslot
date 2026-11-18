@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingCancelModal do
 
   attr :meeting, :map, required: true
   attr :booking_payment, :map, default: nil
+  attr :seat_payments, :list, default: []
   attr :timezone, :string, required: true
   attr :time_format, :string, required: true
   attr :target, :any, required: true
@@ -25,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingCancelModal do
       show
       meeting={@meeting}
       booking_payment={@booking_payment}
+      seat_payments={@seat_payments}
       timezone={@timezone}
       time_format={@time_format}
       cancelling={false}
