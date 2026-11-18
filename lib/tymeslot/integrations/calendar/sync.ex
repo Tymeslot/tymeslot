@@ -30,9 +30,11 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.SeriesRules
   alias Tymeslot.Integrations.Calendar.SyncReconciliation
   alias Tymeslot.Meetings.ExternalCalendar
+  alias Tymeslot.Utils.MapKeys
 
   # How far back and forward a sync reads, for every provider alike, so the
   # dashboard calendar shows one range whichever calendar an event is on.
@@ -287,6 +289,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
       {:ok, count} = ProviderCalendarEventQueries.upsert_batch(attrs_list)
       drop_replaced_masters(integration.id, calendar_events)
+      drop_replaced_series_rows(integration.id, calendar_events)
       count
     end)
   rescue
@@ -330,6 +333,55 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
     ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, master_ids)
   end
+
+  # The CalDAV family (and the debug calendar, which mirrors it) caches each
+  # occurrence of a series under the series' UID and the slot's key
+  # (`ICalNormaliser`), and a row under the bare UID is the one the grid
+  # caches for a series it has just written, or for an event it has just given
+  # a repeat rule: a stand-in for the whole series, drawn on its first date.
+  # Once the series' occurrences arrive it would show that date twice, so it
+  # goes. A full fetch would prune it as absent, but a delta sync only reports
+  # what changed, and the debug sync never prunes. Its video goes to the
+  # occurrences first, as a master's does above.
+  defp drop_replaced_series_rows(integration_id, calendar_events) do
+    batch_uids = MapSet.new(calendar_events, & &1.uid)
+
+    replaced =
+      calendar_events
+      |> Enum.flat_map(&series_of_occurrence/1)
+      |> Enum.reject(fn {series_uid, _href} -> MapSet.member?(batch_uids, series_uid) end)
+      |> Map.new()
+
+    series_uids = Map.keys(replaced)
+
+    integration_id
+    |> ProviderCalendarSeriesQueries.list_series_row_videos(series_uids)
+    |> Enum.each(fn {series_uid, video_integration_id, video_link} ->
+      ProviderCalendarSeriesQueries.put_video(
+        integration_id,
+        {:resource, Map.fetch!(replaced, series_uid)},
+        series_uid,
+        video_integration_id,
+        video_link
+      )
+    end)
+
+    ProviderCalendarEventQueries.delete_by_uids(integration_id, series_uids)
+  end
+
+  # `{series_uid, href}` for an expanded occurrence of a CalDAV-family series,
+  # whose uid is the series' UID, an underscore and the slot's key.
+  defp series_of_occurrence(%CalendarEvent{uid: uid, provider_event_id: href} = event)
+       when is_binary(uid) and is_binary(href) do
+    series_uid = MapKeys.get_binary(event.provider_metadata, :uid)
+
+    if ProviderConfig.resource_series?(event.provider) and is_binary(series_uid) and
+         series_uid != "" and String.starts_with?(uid, series_uid <> "_"),
+       do: [{series_uid, href}],
+       else: []
+  end
+
+  defp series_of_occurrence(_event), do: []
 
   @doc """
   Invalidates all cached availability data for a user after any sync mutation.

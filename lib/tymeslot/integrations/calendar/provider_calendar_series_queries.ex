@@ -61,6 +61,26 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries do
   end
 
   @doc """
+  The videos the rows cached under the CalDAV series UIDs `series_uids`
+  themselves carry, in the integration `calendar_integration_id`: `{uid,
+  video_integration_id, video_link}` for each such row with both a video
+  integration and a link. Those rows stand in for a whole series until a
+  sync caches its occurrences.
+  """
+  @spec list_series_row_videos(integer(), [String.t()]) ::
+          [{String.t(), pos_integer(), String.t()}]
+  def list_series_row_videos(_calendar_integration_id, []), do: []
+
+  def list_series_row_videos(calendar_integration_id, series_uids) do
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+    |> where([e], e.uid in ^series_uids)
+    |> where([e], not is_nil(e.video_integration_id) and e.video_link != "")
+    |> select([e], {e.uid, e.video_integration_id, e.video_link})
+    |> Repo.all()
+  end
+
+  @doc """
   Gives every cached occurrence of the series at `address` that has no video
   of its own the link `video_link` from the video integration
   `video_integration_id`.
