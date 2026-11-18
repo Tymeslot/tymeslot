@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Components.VerificationNotice
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey.Components, as: JourneyComponents
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
@@ -168,6 +169,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     payment_required={@meeting_type.payment_required}
                     stage={:before}
                   />
+
+                  <VerificationNotice.line meeting_type={@meeting_type} />
 
                   <SeriesSummary.price
                     meeting_type={@meeting_type}

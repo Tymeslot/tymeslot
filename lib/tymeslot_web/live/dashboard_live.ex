@@ -499,9 +499,6 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info({:poll_updated, poll_id}, socket),
     do: PollEventHandlers.handle_poll_updated(poll_id, socket)
 
-  def handle_info({:poll_slot_health, poll_id, health}, socket),
-    do: PollEventHandlers.handle_poll_slot_health(poll_id, health, socket)
-
   def handle_info({:poll_deadline_reached, poll_id}, socket),
     do: PollEventHandlers.handle_poll_deadline_reached(poll_id, socket)
 

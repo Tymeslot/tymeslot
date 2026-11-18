@@ -910,3 +910,8 @@ msgstr "Для цього типу зустрічі зараз немає віл
 #, elixir-autogen, elixir-format
 msgid "%{page} with %{name}"
 msgstr "%{page} з %{name}"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "We'll email you a link to confirm this booking."
+msgstr "Ми надішлемо вам листом посилання для підтвердження цього бронювання."

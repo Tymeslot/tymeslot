@@ -317,6 +317,52 @@ defmodule Tymeslot.MeetingTypes.SeriesSettingsTest do
            )
   end
 
+  describe "email confirmation" do
+    @verification_message "Meeting types that ask invitees to confirm their email cannot be booked as a series."
+
+    test "a series cannot be switched on for a type that asks invitees to confirm their email" do
+      stored = %MeetingTypeSchema{
+        name: "Course",
+        duration_minutes: 30,
+        user_id: 1,
+        requires_email_verification: true
+      }
+
+      cs = changeset(recurring(%{}), stored)
+
+      refute cs.valid?
+      assert [{@verification_message, _opts}] = errors(cs, :series_mode)
+      assert errors(cs, :requires_email_verification) == []
+    end
+
+    test "a series type cannot be made to ask invitees to confirm their email" do
+      cs = changeset(%{requires_email_verification: true}, stored_series())
+
+      refute cs.valid?
+      assert [{@verification_message, _opts}] = errors(cs, :requires_email_verification)
+      assert errors(cs, :series_mode) == []
+    end
+
+    test "a new type with both is refused, and either alone is valid" do
+      refute changeset(recurring(%{requires_email_verification: true})).valid?
+      assert changeset(recurring(%{})).valid?
+      assert changeset(%{requires_email_verification: true}).valid?
+    end
+
+    test "turning email confirmation off a type saved with both is valid" do
+      stored = stored_series(%{requires_email_verification: true})
+
+      assert changeset(%{requires_email_verification: false}, stored).valid?
+      assert changeset(%{series_mode: nil}, stored).valid?
+    end
+
+    test "a type saved with both is not offered the series, and books single sessions" do
+      type = stored_series(%{series_required: true, requires_email_verification: true})
+
+      assert SeriesSettings.offer(type) == %{offered?: false, single_allowed?: true}
+    end
+  end
+
   test "turning the series off clears its settings" do
     stored =
       stored_series(%{

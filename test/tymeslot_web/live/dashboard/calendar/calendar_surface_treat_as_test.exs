@@ -1,9 +1,10 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTreatAsTest do
   @moduledoc """
   The preview's "Treat as Busy | Free" for an all-day event on a read-only
-  calendar that blocks bookings: Busy by default even when the calendar
-  marks it free, Free kept in Tymeslot (never written to the calendar), Busy
-  back to the default, and nothing offered or accepted for any other event.
+  calendar that blocks bookings: the default follows how the calendar marks
+  the event, a choice is kept in Tymeslot (never written to
+  the calendar), the default's button clears it, and nothing is offered or
+  accepted for any other event.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -73,17 +74,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTreatAsTest do
       |> element("#calendar-canvas")
       |> render_hook("calendar:bookability", %{"id" => "event-#{event.id}", "busy" => busy})
 
-  test "a read-only all-day event is Busy for bookings by default, even when marked free", %{
+  test "a read-only all-day event its calendar marks free is Free for bookings by default", %{
     conn: conn,
     holiday: holiday
   } do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
     open(lv, holiday)
 
-    assert has_element?(lv, ~s(#calendar-preview-treat-busy[aria-pressed="true"]))
-    assert has_element?(lv, ~s(#calendar-preview-treat-free[aria-pressed="false"]))
+    assert has_element?(lv, ~s(#calendar-preview-treat-free[aria-pressed="true"]))
+    assert has_element?(lv, ~s(#calendar-preview-treat-busy[aria-pressed="false"]))
     assert has_element?(lv, "#calendar-preview-treat-as", "Treat as")
-    assert has_element?(lv, "#calendar-preview-treat-as", "Guests can't book this time")
+    assert has_element?(lv, "#calendar-preview-treat-as", "Guests can book this time")
 
     assert has_element?(
              lv,
@@ -140,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTreatAsTest do
     yearly =
       all_day(feed, "/hol/", "Founders' day",
         provider: "caldav",
-        transparency: "transparent",
+        transparency: "opaque",
         recurrence_rule: "FREQ=YEARLY"
       )
 
@@ -158,7 +159,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTreatAsTest do
            )
   end
 
-  test "Free is kept in Tymeslot, and the preview and toast follow", %{
+  test "Busy is kept in Tymeslot, and the preview and toast follow", %{
     conn: conn,
     user: user,
     holidays: holidays,
@@ -166,35 +167,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTreatAsTest do
   } do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
     open(lv, holiday)
-
-    lv |> element("#calendar-preview-treat-free") |> render_click()
-
-    assert Bookability.for_user(user.id) == %{{holidays.id, holiday.uid} => false}
-    assert has_element?(lv, ~s(#calendar-preview-treat-free[aria-pressed="true"]))
-    assert has_element?(lv, "#calendar-preview-treat-as", "Guests can book this time")
-
-    assert has_element?(
-             lv,
-             "#calendar-toast",
-             "Treated as free for bookings. Guests can book this time."
-           )
-  end
-
-  test "Busy puts a stored choice back to the default", %{
-    conn: conn,
-    user: user,
-    holidays: holidays,
-    holiday: holiday
-  } do
-    Bookability.set(user.id, holidays.id, holiday.uid, false)
-    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    open(lv, holiday)
-    assert has_element?(lv, ~s(#calendar-preview-treat-free[aria-pressed="true"]))
 
     lv |> element("#calendar-preview-treat-busy") |> render_click()
 
-    assert Bookability.for_user(user.id) == %{}
+    assert Bookability.for_user(user.id) == %{{holidays.id, holiday.uid} => true}
     assert has_element?(lv, ~s(#calendar-preview-treat-busy[aria-pressed="true"]))
+    assert has_element?(lv, "#calendar-preview-treat-as", "Guests can't book this time")
 
     assert has_element?(
              lv,
@@ -203,7 +181,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTreatAsTest do
            )
   end
 
-  test "an explicit Busy is stored as one", %{
+  test "Free puts a stored choice back to the default", %{
+    conn: conn,
+    user: user,
+    holidays: holidays,
+    holiday: holiday
+  } do
+    Bookability.set(user.id, holidays.id, holiday.uid, true)
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open(lv, holiday)
+    assert has_element?(lv, ~s(#calendar-preview-treat-busy[aria-pressed="true"]))
+
+    lv |> element("#calendar-preview-treat-free") |> render_click()
+
+    assert Bookability.for_user(user.id) == %{}
+    assert has_element?(lv, ~s(#calendar-preview-treat-free[aria-pressed="true"]))
+
+    assert has_element?(
+             lv,
+             "#calendar-toast",
+             "Treated as free for bookings. Guests can book this time."
+           )
+  end
+
+  test "an explicit Free is stored as one", %{
     conn: conn,
     user: user,
     holidays: holidays,
@@ -211,9 +212,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTreatAsTest do
   } do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
-    send_choice(lv, holiday, "true")
+    send_choice(lv, holiday, "false")
 
-    assert Bookability.for_user(user.id) == %{{holidays.id, holiday.uid} => true}
+    assert Bookability.for_user(user.id) == %{{holidays.id, holiday.uid} => false}
   end
 
   test "a timed event on a read-only calendar gets no control, and a push for it is ignored", %{
@@ -285,7 +286,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTreatAsTest do
     open(lv, holiday)
     for _i <- 1..30, do: RateLimiter.check(:calendar_event_edit, user.id)
 
-    lv |> element("#calendar-preview-treat-free") |> render_click()
+    lv |> element("#calendar-preview-treat-busy") |> render_click()
 
     assert Bookability.for_user(user.id) == %{}
     assert render(lv) =~ "Too many edits. Please wait a moment."

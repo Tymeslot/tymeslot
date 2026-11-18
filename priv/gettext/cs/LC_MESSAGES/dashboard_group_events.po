@@ -108,11 +108,6 @@ msgstr "Videohovor"
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_group_event.ex
 #, elixir-autogen, elixir-format
-msgid "You already have a booking at that time."
-msgstr "V tuto dobu už máte rezervaci."
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_group_event.ex
-#, elixir-autogen, elixir-format
 msgid "An event lasts a multiple of %{step} minutes."
 msgstr "Délka akce je násobkem %{step} minut."
 
@@ -120,3 +115,8 @@ msgstr "Délka akce je násobkem %{step} minut."
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar first: people book the event on your booking page, which needs one."
 msgstr "Nejprve připojte kalendář: akci si lidé rezervují na vaší rezervační stránce a ta ho potřebuje."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_group_event.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr "Tento čas už není k dispozici. Vyberte prosím jiný."

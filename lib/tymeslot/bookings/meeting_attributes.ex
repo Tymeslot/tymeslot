@@ -163,7 +163,9 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
     # than derived later: the meeting type's window can be edited — or the type
     # archived — while a request is outstanding, and the deadline promised to
     # the invitee must not move underneath them.
-    |> Map.merge(approval_attributes(meeting_type_record, params.start_datetime))
+    |> Map.merge(
+      Approval.request_attributes(meeting_type_record, Clock.utc_now(), params.start_datetime)
+    )
     |> Map.merge(meeting_type_attributes(meeting_type_record))
     |> Map.merge(title_attributes(params, meeting_type_name))
     |> Map.merge(attendee_attributes(params, user_timezone))
@@ -344,24 +346,6 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
       series_id: params.series_id,
       series_position: params.series_position
     }
-  end
-
-  # A booking on a meeting type requiring manual approval is held rather than
-  # confirmed, and carries the clock the host is answering against. Everything
-  # else confirms on submission exactly as before, with all three keys nil.
-  defp approval_attributes(meeting_type_record, start_datetime) do
-    if Approval.required?(meeting_type_record) and not is_nil(start_datetime) do
-      requested_at = DateTime.truncate(Clock.utc_now(), :second)
-
-      %{
-        status: :awaiting_approval,
-        approval_requested_at: requested_at,
-        approval_deadline_at:
-          Approval.deadline_for(meeting_type_record, requested_at, start_datetime)
-      }
-    else
-      %{status: :confirmed, approval_requested_at: nil, approval_deadline_at: nil}
-    end
   end
 
   # Snapshots host-uploaded meeting-type attachments as plain maps so the

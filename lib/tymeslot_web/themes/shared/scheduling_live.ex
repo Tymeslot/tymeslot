@@ -79,8 +79,10 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
   @steps [:overview, :schedule, :questions, :booking, :confirmation]
   # A theme without `length` books a meeting type offering several lengths for
-  # its primary one (`Journey.Facts.Length`); one without `series` books single
-  # sessions (`Journey.Facts.Series`).
+  # its primary one (`Journey.Facts.Length`); one without `series` offers single
+  # sessions only (`Journey.Facts.Series`), so a meeting type that requires a
+  # series cannot be booked in it: submitting is refused with
+  # `:series_required`. Every shipped theme declares `series`.
   @optional_steps [:length, :series]
 
   # The generated code names every module in full rather than through an
@@ -206,6 +208,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
           socket
           |> TymeslotWeb.Themes.Shared.Journey.Runtime.navigate_to_step(params)
           |> TymeslotWeb.Themes.Shared.ChoicesInUrl.sync()
+
+      # The confirmation step's "Resend email", for a booking waiting for
+      # its attendee to confirm their email; the flow's, like navigation.
+      def handle_event("resend_verification_email", _params, socket),
+        do: TymeslotWeb.Themes.Shared.VerificationResend.resend(socket)
 
       def handle_event("theme:" <> name, params, socket),
         do: handle_theme_event(name, params, socket)

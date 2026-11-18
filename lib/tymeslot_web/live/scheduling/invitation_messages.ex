@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Live.Scheduling.InvitationMessages do
   def message(:used) do
     dgettext(
       "booking_errors",
-      "This invitation link has already been used to book an appointment. To change it, use the link in your confirmation email."
+      "This invitation link has already been used to book an appointment. To change it, use the link in the email we sent you."
     )
   end
 

@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
           :plan
           | :invitation_only
           | :approval
+          | :email_verification
           | :lengths
           | :offered_times
           | :hidden_offered_times
@@ -45,6 +46,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
 
       assigns.requires_approval ->
         :approval
+
+      # Phase 1 only: seats are not verified yet.
+      assigns.requires_email_verification ->
+        :email_verification
 
       # A group type with fixed dates offers planned sessions, so a
       # one-to-one type's upcoming offered times would silently stop being

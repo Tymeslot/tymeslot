@@ -59,6 +59,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   alias TymeslotWeb.Themes.Shared.Journey.Moment
   alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.Themes.Shared.ReschedulePin
+  alias TymeslotWeb.Themes.Shared.VerificationResend
 
   @type reply :: {:noreply, Socket.t()}
 
@@ -290,6 +291,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     socket
     |> clear(Progress.dependents(:meeting_type, socket.assigns) -- [:meeting_type])
     |> forget_payment_wait()
+    |> VerificationResend.forget()
     |> GuestBooking.assign_defaults()
     |> ReschedulePin.abandon()
     |> assign(selected_date: nil, selected_time: nil, form: nil, paid_payment: nil)

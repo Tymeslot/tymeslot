@@ -116,6 +116,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
     assert CalendarPreferencesQueries.get_or_create(user.id).hidden_integration_ids == []
   end
 
+  test "an event sent without the params it needs leaves the calendar running", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    canvas = element(lv, "#calendar-canvas")
+
+    for event <- ~w(calendar:goto calendar:toggle_account calendar:sync_account calendar:no_such) do
+      render_hook(canvas, event, %{})
+    end
+
+    render_hook(canvas, "calendar:goto", %{"view" => "week"})
+    assert render_hook(canvas, "calendar:open", %{"id" => 42})
+    assert render_hook(canvas, "calendar:open", %{})
+
+    assert Process.alive?(lv.pid)
+    assert has_element?(lv, "#calendar-canvas")
+  end
+
   test "inside a hidden account the calendars keep their own ticks and cannot be toggled", %{
     conn: conn,
     user: user,

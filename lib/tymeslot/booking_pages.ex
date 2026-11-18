@@ -25,12 +25,14 @@ defmodule Tymeslot.BookingPages do
 
   alias Ecto.Changeset
   alias Tymeslot.BookingPages.Access
+  alias Tymeslot.BookingPages.Addresses
   alias Tymeslot.BookingPages.BookingPageQueries
   alias Tymeslot.BookingPages.BookingPageRedirectQueries
   alias Tymeslot.BookingPages.BookingPageSchema
+  alias Tymeslot.BookingPages.Listing
   alias Tymeslot.BookingPages.SlugSuggestion
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.MeetingTypes.PublicListing
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
@@ -155,86 +157,54 @@ defmodule Tymeslot.BookingPages do
     end
   end
 
-  @doc """
-  Whether `page` is public: it offers at least one meeting type
-  (`list_meeting_types/1`). A page that offers none is a draft, which only
-  its owner sees, through the dashboard's preview.
-  """
+  @doc "Whether `page` is public (`Listing.published?/1`)."
   @spec published?(page()) :: boolean()
-  def published?(%BookingPageSchema{} = page), do: list_meeting_types(page) != []
+  defdelegate published?(page), to: Listing
 
-  @doc """
-  The address a profile's start page is at, without the leading slash: its
-  username, or `<username>/<slug>` for a profile resolved through a page.
-  """
+  @doc "The address a profile's start page is at (`Addresses.public_address/1`)."
   @spec public_address(map() | nil) :: String.t() | nil
-  def public_address(%{booking_page: %BookingPageSchema{slug: slug}, username: username})
-      when is_binary(username),
-      do: username <> "/" <> slug
+  defdelegate public_address(profile), to: Addresses
 
-  def public_address(%{username: username}), do: username
-  def public_address(_no_profile), do: nil
-
-  @doc "A page as the dashboard lists it: its name, then its address under `username`."
+  @doc "A page as the dashboard lists it (`Addresses.name_and_address/2`)."
   @spec name_and_address(page(), String.t() | nil) :: String.t()
-  def name_and_address(%BookingPageSchema{name: name, slug: slug}, username),
-    do: "#{name} · /#{username}/#{slug}"
+  defdelegate name_and_address(page, username), to: Addresses
 
-  @doc """
-  The one address `meeting_type` is booked at, as a path: under the oldest
-  page listing it when the profile's own page does not (`home_page/1`),
-  otherwise `/<username>/<slug>`, which also serves a type listed nowhere
-  as its direct link. `profile` is the owner's, through a page or not.
-  """
+  @doc "The one address `meeting_type` is booked at (`Addresses.meeting_type_path/2`)."
   @spec meeting_type_path(map(), map()) :: String.t()
-  def meeting_type_path(%{username: username}, meeting_type),
-    do: path_under(username, home_page(meeting_type), meeting_type)
+  defdelegate meeting_type_path(profile, meeting_type), to: Addresses
 
-  @doc """
-  `meeting_type_path/2` for each of `meeting_types`, by id, from one look at
-  the profile's pages rather than one per type. For a list of types.
-  """
+  @doc "`meeting_type_path/2` for each of `meeting_types` (`Addresses.meeting_type_paths/2`)."
   @spec meeting_type_paths(map(), [map()]) :: %{optional(integer()) => String.t()}
-  def meeting_type_paths(%{id: profile_id} = profile, meeting_types),
-    do: meeting_type_paths(profile, meeting_types, list(profile_id), memberships(profile_id))
+  defdelegate meeting_type_paths(profile, meeting_types), to: Addresses
 
-  @doc """
-  `meeting_type_paths/2` from the profile's pages, oldest first as `list/1`
-  returns them, and their `memberships/1`, for a caller already holding both.
-  """
+  @doc "`meeting_type_paths/2` from pages and memberships in hand (`Addresses.meeting_type_paths/4`)."
   @spec meeting_type_paths(map(), [map()], [page()], map()) ::
           %{optional(integer()) => String.t()}
-  def meeting_type_paths(%{username: username}, meeting_types, pages, memberships) do
-    Map.new(meeting_types, fn type ->
-      listed_on = Map.get(memberships, type.id, MapSet.new())
-      home = if has_page_home?(type), do: Enum.find(pages, &MapSet.member?(listed_on, &1.id))
-      {type.id, path_under(username, home, type)}
-    end)
-  end
+  defdelegate meeting_type_paths(profile, meeting_types, pages, memberships), to: Addresses
 
-  defp path_under(username, nil, type),
-    do: "/#{username}/#{MeetingTypes.effective_slug(type)}"
-
-  defp path_under(username, %BookingPageSchema{slug: page_slug}, type),
-    do: "/#{username}/#{page_slug}/#{MeetingTypes.effective_slug(type)}"
-
-  @doc """
-  The page `meeting_type` belongs to: the oldest page listing it, when it is
-  hidden from the profile's own page (`is_private`). nil for a type the
-  profile's own page lists, one listed on no page at all, and an
-  invitation-only type, which no page offers (`PublicListing.offered/1`) and
-  so lives at `/<username>/<slug>` however it is listed.
-  """
+  @doc "The page `meeting_type` belongs to, or nil (`Addresses.home_page/1`)."
   @spec home_page(map()) :: page() | nil
-  def home_page(%{invitation_only: true}), do: nil
+  defdelegate home_page(meeting_type), to: Addresses
 
-  def home_page(%{is_private: true, id: id}) when is_integer(id),
-    do: BookingPageQueries.first_for_meeting_type(id)
+  @doc "The address to send someone back to for `meeting` (`Addresses.address_for_meeting/2`)."
+  @spec address_for_meeting(map(), String.t() | nil) :: String.t() | nil
+  defdelegate address_for_meeting(meeting, username), to: Addresses
 
-  def home_page(_listed_on_own_page), do: nil
+  @doc "The meeting types `page` alone lists (`Listing.only_listed_on/1`)."
+  @spec only_listed_on(page()) :: [MeetingTypeSchema.t()]
+  defdelegate only_listed_on(page), to: Listing
 
-  defp has_page_home?(%{invitation_only: true}), do: false
-  defp has_page_home?(type), do: type.is_private
+  @doc "The meeting types `page` offers on its start page (`Listing.list_meeting_types/1`)."
+  @spec list_meeting_types(page()) :: [MeetingTypeSchema.t()]
+  defdelegate list_meeting_types(page), to: Listing
+
+  @doc "Whether `page` serves `meeting_type` (`Listing.serves?/2`)."
+  @spec serves?(page(), map()) :: boolean()
+  defdelegate serves?(page, meeting_type), to: Listing
+
+  @doc "Which extra pages each of the profile's meeting types is listed on (`Listing.memberships/1`)."
+  @spec memberships(integer()) :: %{optional(integer()) => MapSet.t(integer())}
+  defdelegate memberships(profile_id), to: Listing
 
   @doc "The page a profile was resolved through, by id, or nil."
   @spec page_id(map() | nil) :: integer() | nil
@@ -483,69 +453,6 @@ defmodule Tymeslot.BookingPages do
   defp write_listing(page_id, meeting_type_id, false),
     do: BookingPageQueries.remove_meeting_type(page_id, meeting_type_id)
 
-  @doc """
-  The meeting types `page` alone lists: hidden from the profile's own page
-  and on no other page, so deleting `page` leaves them unlisted everywhere,
-  bookable only by their direct links. In the profile's order.
-  """
-  @spec only_listed_on(page()) :: [Tymeslot.MeetingTypes.MeetingTypeSchema.t()]
-  def only_listed_on(%BookingPageSchema{id: page_id} = page) do
-    memberships = memberships(page.profile_id)
-    sole = MapSet.new([page_id])
-
-    page.profile_id
-    |> ProfileQueries.user_id_for_profile()
-    |> MeetingTypes.get_all_meeting_types()
-    |> Enum.filter(&(&1.is_private and Map.get(memberships, &1.id) == sole))
-  end
-
-  @doc """
-  The meeting types `page` offers on its start page: listed on it and active,
-  then filtered and ordered as `MeetingTypes.get_public_meeting_types/1` treats
-  the profile's own page (`Tymeslot.MeetingTypes.PublicListing`).
-  """
-  @spec list_meeting_types(page()) :: [Tymeslot.MeetingTypes.MeetingTypeSchema.t()]
-  def list_meeting_types(%BookingPageSchema{id: page_id}) do
-    page_id
-    |> BookingPageQueries.list_meeting_types()
-    |> PublicListing.offered()
-  end
-
-  @doc """
-  Whether `page` serves `meeting_type` at `/<username>/<page>/<slug>`: the
-  type is listed on it, or it is unlisted everywhere (hidden from
-  `/<username>` and on no page), so its direct link is the only way in and
-  any of the host's addresses may carry it. A type listed only on
-  `/<username>` or on other pages belongs to its own address
-  (`meeting_type_path/2`), and booking it here would record this page
-  against a type it does not offer. An invitation-only type is served by no
-  page: no page offers it, and its address is `/<username>/<slug>`.
-  """
-  @spec serves?(page(), map()) :: boolean()
-  def serves?(_page, %{invitation_only: true}), do: false
-
-  def serves?(%BookingPageSchema{id: page_id}, %{id: type_id, is_private: private?})
-      when is_integer(type_id) do
-    case BookingPageQueries.page_ids_for_meeting_type(type_id) do
-      [] -> private? == true
-      page_ids -> page_id in page_ids
-    end
-  end
-
-  def serves?(_page, _meeting_type), do: false
-
-  @doc """
-  Which extra pages each of the profile's meeting types is listed on. A type
-  on none of them has no key.
-  """
-  @spec memberships(integer()) :: %{optional(integer()) => MapSet.t(integer())}
-  def memberships(profile_id) do
-    profile_id
-    |> BookingPageQueries.memberships_for_profile()
-    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Map.new(fn {type_id, page_ids} -> {type_id, MapSet.new(page_ids)} end)
-  end
-
   defp new_changeset(profile, attrs) do
     BookingPageSchema.create_changeset(
       %BookingPageSchema{},
@@ -575,24 +482,6 @@ defmodule Tymeslot.BookingPages do
   end
 
   def for_meeting(profile, _meeting), do: profile
-
-  @doc """
-  The address, without the leading slash, to send someone back to for
-  `meeting`: `<username>/<page>` while the page it came through exists and
-  is public, otherwise `username` (the host's own page).
-  """
-  @spec address_for_meeting(map(), String.t() | nil) :: String.t() | nil
-  def address_for_meeting(%{booking_page_id: page_id}, username)
-      when is_integer(page_id) and is_binary(username) do
-    with %BookingPageSchema{} = page <- BookingPageQueries.get(page_id),
-         true <- published?(page) do
-      username <> "/" <> page.slug
-    else
-      _gone_or_draft -> username
-    end
-  end
-
-  def address_for_meeting(_meeting, username), do: username
 
   @doc """
   Claims `slug` as a meeting type's address for `user_id`'s profile, inside

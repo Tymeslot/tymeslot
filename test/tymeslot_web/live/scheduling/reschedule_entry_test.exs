@@ -349,7 +349,12 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
       profile: profile,
       meeting: meeting
     } do
-      {:ok, _expired} = meeting |> Changeset.change(%{status: :expired}) |> Repo.update()
+      # A lapsed approval request, as `Approval.expire/1` leaves it.
+      {:ok, _expired} =
+        meeting
+        |> Changeset.change(%{status: :expired, approval_resolved_at: DateTime.utc_now(:second)})
+        |> Repo.update()
+
       conn = put_req_header(conn, "accept-language", "de-DE,de;q=0.9")
 
       assert {:error, {_redirect, %{to: to, flash: flash}}} =

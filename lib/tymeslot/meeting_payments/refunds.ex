@@ -21,13 +21,18 @@ defmodule Tymeslot.MeetingPayments.Refunds do
       the original charge had a non-zero application fee. Stripe
       errors if asked to refund a fee that was never collected.
     * Updates the local `booking_payments` row, transitioning status
-      to `partially_refunded` or `refunded` based on the new total.
+      to `partially_refunded` or `refunded` based on the new total. The
+      new total is Stripe's own refunded total for the charge, read from
+      the refund's expanded charge and never lowering the recorded one
+      (the `charge.refunded` webhook's rule), so a refund Stripe answers
+      again for a replayed key is not counted twice.
     * Synchronously enqueues an attendee refund email via
       `Tymeslot.Workers.SendBookingPaymentRefunded`.
   """
 
   require Logger
 
+  alias Stripe.Error, as: StripeError
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -219,6 +224,13 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   the transaction recording it rolled back would refund again, where the
   caller's own key gets that same refund back. Stripe keeps a key for at
   least 24 hours, so the caller's retries must end inside that.
+
+  Under the caller's key, an amount the recorded balance no longer covers
+  may be that very refund, made by an attempt that rolled back and since
+  recorded by the `charge.refunded` webhook. So Stripe is asked anyway: a
+  replayed key returns the refund already made, which records nothing new,
+  and a fresh one Stripe rejects, which returns the local refusal
+  (`:invalid_amount` or `:already_refunded`) as before.
   """
   @spec issue_host_refund(term(), integer(), pos_integer(), String.t() | nil, keyword()) ::
           {:ok, BookingPaymentSchema.t()} | {:error, :not_found | refund_error()}
@@ -249,16 +261,42 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     Repo.transaction(fn ->
       with {:ok, locked} <- lock_payment.(),
            :ok <- refusal(locked),
-           :ok <- validate_amount(locked, amount_cents),
-           :ok <- validate_charge(locked),
-           {:ok, _stripe_refund} <- create_stripe_refund(locked, amount_cents, reason, key),
-           {:ok, updated_payment} <- update_payment_after_refund(locked, amount_cents) do
+           {:ok, stripe_refund} <- refund_at_stripe(locked, amount_cents, reason, key),
+           {:ok, updated_payment} <-
+             update_payment_after_refund(locked, amount_cents, stripe_refund) do
         enqueue_refund_email(updated_payment)
         updated_payment
       else
         {:error, rollback_reason} -> Repo.rollback(rollback_reason)
       end
     end)
+  end
+
+  defp refund_at_stripe(payment, amount_cents, reason, key) do
+    with :ok <- validate_amount(payment, amount_cents),
+         :ok <- validate_charge(payment) do
+      create_stripe_refund(payment, amount_cents, reason, key)
+    else
+      {:error, refused} when refused in [:invalid_amount, :already_refunded] and is_binary(key) ->
+        replay_stripe_refund(payment, amount_cents, reason, key, refused)
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  # The caller's key may name a refund Stripe already made, which the
+  # recorded balance now includes: a replay returns it, and a refund Stripe
+  # was never asked for is rejected there as it was here.
+  defp replay_stripe_refund(payment, amount_cents, reason, key, refused) do
+    with :ok <- validate_charge(payment),
+         {:ok, _stripe_refund} = made <- create_stripe_refund(payment, amount_cents, reason, key) do
+      made
+    else
+      {:error, :missing_charge} -> {:error, refused}
+      {:error, %StripeError{source: :stripe, code: :invalid_request_error}} -> {:error, refused}
+      {:error, _reason} = error -> error
+    end
   end
 
   defp validate_amount(%{status: :refunded}, _amount_cents), do: {:error, :already_refunded}
@@ -283,7 +321,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
       %{
         charge: payment.stripe_charge_id,
         amount: amount_cents,
-        metadata: refund_metadata(payment)
+        metadata: refund_metadata(payment),
+        expand: ["charge"]
       }
       |> maybe_put_reason(reason)
       |> maybe_refund_application_fee(payment)
@@ -321,8 +360,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
 
   defp maybe_refund_application_fee(params, _payment), do: params
 
-  defp update_payment_after_refund(payment, amount_cents) do
-    new_total = payment.refunded_amount_cents + amount_cents
+  defp update_payment_after_refund(payment, amount_cents, stripe_refund) do
+    new_total = refunded_total(payment, amount_cents, stripe_refund)
 
     new_status =
       cond do
@@ -343,6 +382,17 @@ defmodule Tymeslot.MeetingPayments.Refunds do
         err
     end
   end
+
+  # Stripe's refunded total for the charge, which counts this refund once
+  # however often its key is replayed, and never below the recorded total
+  # (the webhook's rule). A response without the expanded charge falls back
+  # to adding the refund to the recorded total.
+  defp refunded_total(payment, _amount_cents, %{charge: %{amount_refunded: stripe_total}})
+       when is_integer(stripe_total),
+       do: max(payment.refunded_amount_cents, stripe_total)
+
+  defp refunded_total(payment, amount_cents, _stripe_refund),
+    do: payment.refunded_amount_cents + amount_cents
 
   defp enqueue_refund_email(payment) do
     case %{booking_payment_id: payment.id}

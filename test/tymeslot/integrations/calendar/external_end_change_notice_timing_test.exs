@@ -7,7 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeNoticeTimingTest do
   rescheduled, cancelled, voided, started or whose host is leaving by the
   time the job runs, hears nothing.
 
-  The end change goes through `Meetings.apply_external_end_change/2`, the
+  The end change goes through `ExternalCalendar.apply_external_end_change/2`, the
   calendar sync's write (`ExternalEndChangeEmailsTest` drives it through the
   Google sync itself). Jobs run through `EmailWorker.perform/1` with their
   stored row, so a retry is the same job id an Oban retry would carry. The
@@ -28,7 +28,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeNoticeTimingTest do
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.EmailServiceMock
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.ExternalCalendar
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingQueries
@@ -163,7 +163,12 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeNoticeTimingTest do
       assert_host_told()
       put_state(first, "completed")
 
-      assert :ok = Meetings.apply_external_end_change(stale_read, at(ctx.meeting, ~T[12:00:00]))
+      assert :ok =
+               ExternalCalendar.apply_external_end_change(
+                 stale_read,
+                 at(ctx.meeting, ~T[12:00:00])
+               )
+
       [second] = Enum.reject(end_change_jobs(), &(&1.id == first.id))
 
       assert :ok = run(second)
@@ -450,7 +455,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeNoticeTimingTest do
 
   defp change_end(meeting, end_time) do
     {:ok, current} = MeetingQueries.get_meeting(meeting.id)
-    assert :ok = Meetings.apply_external_end_change(current, at(meeting, end_time))
+    assert :ok = ExternalCalendar.apply_external_end_change(current, at(meeting, end_time))
   end
 
   defp at(meeting, time), do: DateTime.new!(DateTime.to_date(meeting.start_time), time, "Etc/UTC")

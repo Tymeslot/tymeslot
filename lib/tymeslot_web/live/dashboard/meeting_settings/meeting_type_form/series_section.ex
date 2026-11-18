@@ -9,8 +9,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
   Below them sit the number of sessions (a range, or a fixed number), and
   whether a booker may also book a single session. A mode the type cannot
   offer (`SeriesSettings.conflicts/1`: one-off, invitation-only, recurring on
-  fixed dates, or a paid group type) renders disabled with the reason, and the switch does too when
-  neither mode is possible.
+  fixed dates, email confirmation, or a paid group type) renders disabled with the
+  reason, and the switch does too when neither mode is possible.
 
   The form state is the `:series` assign, and every control dispatches
   `update_series` to the parent `MeetingTypeForm`, which hands it to
@@ -46,6 +46,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesSection do
   attr :allowed, :boolean, required: true
   attr :type, :any, required: true
   attr :fixed_dates, :boolean, default: false
+  attr :requires_email_verification, :boolean, default: false
   attr :booking_window_days, :integer, required: true
   attr :booking_limits, :map, required: true
   attr :group, :boolean, default: false

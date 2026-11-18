@@ -403,11 +403,13 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   # The reason is a domain term, never copy: an atom such as `:time_conflict`
   # would otherwise reach the flash verbatim. `CreateAdHoc`'s own refusals are
   # atoms `BookingErrorMessage` renders, and anything it does not recognise
-  # falls back to a generic sentence there.
+  # falls back to a generic sentence there. A conflict may be with a booking
+  # the host cannot see (one awaiting its attendee's email verification or
+  # payment), so it never claims a meeting is there.
   defp ad_hoc_failed_message(:time_conflict) do
     dgettext(
       "dashboard_calendar_events",
-      "You already have a meeting at this time. Please choose a different time."
+      "This time is no longer available. Please choose another time."
     )
   end
 

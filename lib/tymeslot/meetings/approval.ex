@@ -171,6 +171,34 @@ defmodule Tymeslot.Meetings.Approval do
   end
 
   @doc """
+  The status and approval clock a booking is created with.
+
+  A type requiring approval, with a known start, holds the booking as
+  `:awaiting_approval` and stamps the window the host is answering against;
+  anything else confirms with all three keys nil. `requested_at` is passed in
+  so a booking whose host is only asked later (after the attendee verifies
+  their email) starts the clock then, not at submission.
+  """
+  @spec request_attributes(MeetingType.t() | map() | nil, DateTime.t(), DateTime.t() | nil) :: %{
+          status: :confirmed | :awaiting_approval,
+          approval_requested_at: DateTime.t() | nil,
+          approval_deadline_at: DateTime.t() | nil
+        }
+  def request_attributes(meeting_type, %DateTime{} = requested_at, start_time) do
+    if required?(meeting_type) and not is_nil(start_time) do
+      requested_at = DateTime.truncate(requested_at, :second)
+
+      %{
+        status: :awaiting_approval,
+        approval_requested_at: requested_at,
+        approval_deadline_at: deadline_for(meeting_type, requested_at, start_time)
+      }
+    else
+      %{status: :confirmed, approval_requested_at: nil, approval_deadline_at: nil}
+    end
+  end
+
+  @doc """
   Recomputes a held request's deadline for a clock that starts later than the
   booking did, keeping the window the invitee was already promised.
 

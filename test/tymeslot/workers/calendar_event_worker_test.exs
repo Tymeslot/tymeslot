@@ -152,7 +152,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
       assert_enqueued(
         worker: Tymeslot.Workers.EmailWorker,
-        args: %{"action" => "send_calendar_sync_error", "error_reason" => ":refused"}
+        args: %{"action" => "send_calendar_sync_error", "error_reason" => "refused"}
       )
     end
 

@@ -63,6 +63,8 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
     meeting_cancel: {@ip, ["meeting_cancel:203.0.113.9"]},
     meeting_keep: {@ip, ["meeting_keep:203.0.113.9"]},
     meeting_approval: {@ip, ["meeting_approval:203.0.113.9"]},
+    booking_email_verification: {@ip, ["booking_email_verification:203.0.113.9"]},
+    booking_verification_resend: {@ip, ["booking_verification_resend:203.0.113.9"]},
     guest_rsvp: {@ip, ["guest_rsvp:203.0.113.9"]},
     seat_manage: {@ip, ["seat_manage:203.0.113.9"]},
     booking_invitation: {@ip, ["booking_invitation:203.0.113.9"]},

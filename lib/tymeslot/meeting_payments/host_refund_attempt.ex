@@ -29,12 +29,23 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   afterwards) treats the refund as made. `refunded_before_cents` only names
   the refund for the job's uniqueness and the host's failure email.
 
-  `amount_cents` is the most the job refunds: each attempt refunds the
-  smaller of it and what remains of the payment, read under the payment's
-  row lock in the transaction that makes the refund. A refund the host
-  made in between (a partial one from the payments page) so shrinks the
-  job's rather than failing it, and a payment refunded in full meanwhile
-  leaves the job nothing to do: it succeeds, and the host is not emailed.
+  `amount_cents` is the most the job refunds: the first attempt to reach
+  the refund sizes it at the smaller of that and what remains of the
+  payment, read under the payment's row lock, and pins that size to the
+  job's row (its `meta`) before Stripe is asked. A refund the host made in
+  between (a partial one from the payments page) so shrinks the job's
+  rather than failing it, and a payment refunded in full meanwhile leaves
+  the job nothing to do: it succeeds, and the host is not emailed.
+
+  Every later attempt sends the pinned amount, never a resized one, under
+  the same key. An attempt whose refund Stripe made but whose transaction
+  rolled back may since have been recorded by the `charge.refunded`
+  webhook, leaving less remaining than the pinned amount (or nothing):
+  `Refunds.issue_host_refund/5` still puts the amount to Stripe under the
+  job's key, which answers with the refund already made, and records it as
+  Stripe's refunded total for the charge, so it is counted once. A pinned
+  amount Stripe never refunded and the rest no longer covers is refused
+  there as before, and the job is discarded.
 
   A refund no retry can make (`unretryable/0`: outside the refund window,
   under dispute, not paid, more than remains) is discarded at once; any
@@ -52,6 +63,7 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -64,6 +76,9 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
 
   @base_backoff_seconds 60
   @max_backoff_seconds 3_600
+
+  # Where a job's `meta` keeps the amount its refund was sized at.
+  @pinned_key "refund_cents"
 
   @unretryable [
     :not_found,
@@ -151,20 +166,22 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   # claim waits on it, then finds the refund made. A job with no id (built
   # by hand) cannot run twice, so has nothing to claim and no key of its
   # own: it refunds under the derived key.
-  #
-  # The payment is locked before the refund is sized, and stays locked
-  # through `Refunds.issue_host_refund/5`, which takes the same row lock
-  # again in this transaction: nothing can refund it in between.
   defp refund_once(job_id, id, host_user_id, amount, opts) do
+    case amount_due(job_id, id, host_user_id, amount) do
+      {:ok, 0} -> {:ok, :nothing_left}
+      {:ok, due} -> refund(job_id, id, host_user_id, due, opts)
+      {:error, _reason} = error -> error
+    end
+  end
+
+  defp refund(job_id, id, host_user_id, due, opts) do
     Repo.transaction(fn ->
       with :claimed <- claim(job_id, opts),
-           {:ok, due} <- amount_due(id, host_user_id, amount),
            {:ok, refunded} <-
              Refunds.issue_host_refund(id, host_user_id, due, nil, key_opts(job_id, opts)) do
         refunded
       else
         :already_claimed -> :already_made
-        :nothing_left -> :nothing_left
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
@@ -176,13 +193,33 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   defp key_opts(nil, _opts), do: []
   defp key_opts(job_id, opts), do: [idempotency_key: "#{opts[:key_prefix]}:#{job_id}"]
 
-  defp amount_due(id, host_user_id, amount) do
-    with {:ok, locked} <- BookingPaymentQueries.get_for_update(id, host_user_id) do
-      case min(amount, Refunds.refundable_remaining_cents(locked)) do
-        0 -> :nothing_left
-        due -> {:ok, due}
+  # The refund is sized once per job, under the payment's row lock, and the
+  # size pinned to the job's row before Stripe is asked: every later attempt
+  # sends that same amount under the same key, so Stripe can answer it with
+  # the refund an earlier attempt made. Sized afresh, a retry after the
+  # `charge.refunded` webhook recorded that refund would find less remaining
+  # and send a different amount under the key, which Stripe refuses.
+  # Nothing remaining pins nothing: no refund was asked for.
+  defp amount_due(job_id, id, host_user_id, amount) do
+    Repo.transaction(fn ->
+      case BookingPaymentQueries.get_for_update(id, host_user_id) do
+        {:ok, locked} -> pinned(job_id) || pin(job_id, min(amount, remaining(locked)))
+        {:error, reason} -> Repo.rollback(reason)
       end
-    end
+    end)
+  end
+
+  defp remaining(payment), do: Refunds.refundable_remaining_cents(payment)
+
+  defp pinned(nil), do: nil
+  defp pinned(job_id), do: ObanJobQueries.meta_value(job_id, @pinned_key)
+
+  defp pin(_job_id, 0), do: 0
+  defp pin(nil, due), do: due
+
+  defp pin(job_id, due) do
+    :ok = ObanJobQueries.put_meta_integer(job_id, @pinned_key, due)
+    due
   end
 
   defp ensure_charge(%{stripe_charge_id: charge} = payment)

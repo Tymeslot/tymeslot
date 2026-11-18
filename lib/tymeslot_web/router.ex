@@ -137,6 +137,19 @@ defmodule TymeslotWeb.Router do
     end
   end
 
+  # Confirming a booking from the link in the attendee's verification email.
+  # As above, the signed token is the authorisation and loading the page
+  # confirms nothing; see `TymeslotWeb.BookingVerificationLive`.
+  scope "/", TymeslotWeb do
+    pipe_through :browser
+
+    live_session :booking_verification,
+      session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
+      on_mount: [TymeslotWeb.Hooks.LocaleHook, TymeslotWeb.Hooks.ClientInfoHook] do
+      live "/verify-booking/:token", BookingVerificationLive, :show
+    end
+  end
+
   # =============================================================================
   # Authentication Routes
   # =============================================================================

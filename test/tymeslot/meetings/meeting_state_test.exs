@@ -220,4 +220,54 @@ defmodule Tymeslot.Meetings.MeetingStateTest do
       assert MeetingState.approval_deadline_passed?(%{approval_deadline_at: @deadline})
     end
   end
+
+  describe "awaiting_verification" do
+    test "an unverified booking expects no calendar event and is not active" do
+      meeting = %{status: :awaiting_verification, reschedule_requested_at: nil}
+
+      refute MeetingState.active?(meeting)
+      refute MeetingState.expects_calendar_event?(meeting)
+      assert MeetingState.awaiting_verification?(meeting)
+      assert MeetingState.awaiting_verification_status?(:awaiting_verification)
+      refute MeetingState.awaiting_verification_status?(:confirmed)
+      assert :awaiting_verification in MeetingState.occupying()
+      refute :awaiting_verification in MeetingState.terminal()
+      refute :awaiting_verification in MeetingState.released()
+    end
+
+    test "unverified?/1 and visible_to_organiser?/1 read the columns" do
+      deadline = ~U[2026-11-12 10:00:00Z]
+
+      assert MeetingState.unverified?(%{
+               verification_deadline_at: deadline,
+               email_verified_at: nil
+             })
+
+      refute MeetingState.unverified?(%{verification_deadline_at: nil, email_verified_at: nil})
+
+      refute MeetingState.unverified?(%{
+               verification_deadline_at: deadline,
+               email_verified_at: deadline
+             })
+
+      refute MeetingState.visible_to_organiser?(%{
+               status: :expired,
+               verification_deadline_at: deadline,
+               email_verified_at: nil
+             })
+    end
+
+    test "visible_to_organiser?/1 hides a booking that never got past payment" do
+      gate = %{verification_deadline_at: nil, email_verified_at: nil, approval_resolved_at: nil}
+      resolved = %{gate | approval_resolved_at: ~U[2026-11-12 10:00:00Z]}
+
+      refute MeetingState.visible_to_organiser?(Map.put(gate, :status, :awaiting_payment))
+      # A lapsed checkout: expired with no approval decision on record.
+      refute MeetingState.visible_to_organiser?(Map.put(gate, :status, :expired))
+      # A lapsed approval request, which `Approval` always stamps.
+      assert MeetingState.visible_to_organiser?(Map.put(resolved, :status, :expired))
+      assert MeetingState.visible_to_organiser?(Map.put(gate, :status, :confirmed))
+      assert MeetingState.visible_to_organiser?(Map.put(gate, :status, :cancelled))
+    end
+  end
 end

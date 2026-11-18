@@ -25,6 +25,27 @@ defmodule Tymeslot.MeetingTypes.GroupRulesSchemaTest do
   defp group_with_locations(locations),
     do: changeset(%{max_participants: 5, locations: locations})
 
+  describe "email verification" do
+    test "a group type cannot require email verification" do
+      cs =
+        changeset(%{
+          max_participants: 3,
+          requires_email_verification: true,
+          locations: [@fixed_location]
+        })
+
+      refute cs.valid?
+
+      assert "group bookings cannot require email confirmation" in errors_on(cs).max_participants
+    end
+
+    test "a one-to-one type may require email verification" do
+      cs = changeset(%{max_participants: 1, requires_email_verification: true})
+
+      assert cs.valid?
+    end
+  end
+
   describe "approval" do
     test "a group type cannot require approval" do
       cs =

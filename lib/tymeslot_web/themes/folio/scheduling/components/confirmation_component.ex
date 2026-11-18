@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.Components.CustomAnswers
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
+  alias TymeslotWeb.Themes.Shared.Components.VerificationNotice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
@@ -41,6 +42,9 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
     assigns =
       assign(assigns,
         pending: ApprovalDisplay.awaiting_approval?(assigns),
+        badge_pending: ConfirmationText.pending?(assigns),
+        badge_icon: ConfirmationText.badge_icon(assigns),
+        follow_ups: ConfirmationText.follow_ups?(assigns),
         next_day_end: LocalizationHelpers.booking_next_day_end(assigns),
         series_count: SeriesSummary.booked_count(assigns)
       )
@@ -56,12 +60,11 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
 
       <section class="folio-section folio-outcome" data-testid="folio-confirmation">
         <header class="folio-confirmation">
-          <span class={["folio-badge", @pending && "folio-badge--pending"]} aria-hidden="true">
-            <.icon :if={!@pending} name="hero-check" class="folio-badge__icon" />
-            <.icon :if={@pending} name="hero-clock" class="folio-badge__icon" />
+          <span class={["folio-badge", @badge_pending && "folio-badge--pending"]} aria-hidden="true">
+            <.icon name={@badge_icon} class="folio-badge__icon" />
           </span>
           <h2 class="folio-title" data-testid="confirmation-heading">{headline(assigns)}</h2>
-          <p class="folio-lead">{message(assigns)}</p>
+          <p class="folio-lead" data-testid={!@follow_ups && "check-inbox"}>{message(assigns)}</p>
         </header>
 
         <ApprovalNotice.block
@@ -69,6 +72,8 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
           organizer_name={Profiles.display_name(@organizer_profile)}
           stage={:after}
         />
+
+        <VerificationNotice.resend :if={!@follow_ups} state={assigns[:verification_resend]} />
 
         <GroupSession.confirmation_line meeting_type={@meeting_type} />
 
@@ -156,7 +161,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
 
         <div class="folio-actions folio-actions--in-order">
           <a
-            :if={is_nil(@series_count) and PathHandlers.calendar_ics_path(assigns)}
+            :if={@follow_ups && is_nil(@series_count) && PathHandlers.calendar_ics_path(assigns)}
             href={PathHandlers.calendar_ics_path(assigns)}
             download
             class="folio-button folio-button--primary"
@@ -179,7 +184,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
           </button>
         </div>
 
-        <p class="folio-muted folio-confirmation__help">
+        <p :if={@follow_ups} class="folio-muted folio-confirmation__help">
           {if @pending,
             do:
               dgettext(
@@ -212,6 +217,9 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
     date = LocalizationHelpers.format_date(assigns[:selected_date])
 
     case {ConfirmationText.status(assigns), name} do
+      {:check_inbox, _name} ->
+        ConfirmationText.check_inbox_headline(:folio)
+
       {:held, _name} ->
         dpgettext("booking_voice", "folio", "Thank you. I'll reply to your request soon.")
 
@@ -266,6 +274,9 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.ConfirmationComponent d
 
   defp message(assigns) do
     case ConfirmationText.status(assigns) do
+      :check_inbox ->
+        ConfirmationText.check_inbox_message(assigns, :folio)
+
       :held ->
         ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :folio)
 

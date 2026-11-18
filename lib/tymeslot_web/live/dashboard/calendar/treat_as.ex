@@ -3,14 +3,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.TreatAs do
   The preview's "Treat as Busy | Free" for an all-day event on a read-only
   calendar (a holiday from a feed, a colleague's away day): a choice kept in
   Tymeslot that decides whether guests can book that day, and never changes
-  the calendar.
+  the calendar. On a calendar Tymeslot can write to, the preview's own
+  "Show as Busy | Free" changes the event itself, which bookings follow, so
+  this control is not offered there.
 
-  Such an event counts as Busy for bookings by default, even when its
-  calendar marks it free, unless it is cancelled
-  (`Tymeslot.Availability.Bookability`); the control shows that default
-  until a choice is stored. The button that matches the default clears the
-  choice and the other stores it. It is offered only where it can
-  matter: an all-day event on a read-only calendar that blocks bookings.
+  Without a choice, such an event counts for bookings exactly as its
+  calendar marks it (`Tymeslot.Availability.Bookability`); the control
+  shows that default until a choice is stored. The button that matches the
+  default clears the choice and the other stores it. It is offered only
+  where it can matter: an all-day event on a read-only calendar that blocks
+  bookings.
   A choice sent for anything else is ignored.
   """
 
@@ -21,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.TreatAs do
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventBlocking
   alias Tymeslot.CalendarGrid.Occurrence
+  alias Tymeslot.Integrations.Calendar.Selection
   alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.Calendar.Toast
@@ -45,14 +48,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.TreatAs do
     integration =
       Enum.find(context.integrations, &(&1.id == Map.get(event, :calendar_integration_id)))
 
-    # The engine's own test for "read-only" (Task 4), so the preview and the
-    # booking page agree.
-    # The state shown is the rule's answer, so a cancelled event reads Free
-    # until the organiser says otherwise, as the booking page treats it.
-    if integration && Bookability.read_only?(event, integration) do
+    # The engine's own rule, so the preview and the booking page agree: a
+    # cancelled event reads Free until the organiser says otherwise.
+    if integration && not Selection.event_writable?(event, integration) do
       %{
-        busy: EventBlocking.busy_on_read_only?(event, Map.get(context, :bookability, %{})),
-        default: EventBlocking.busy_on_read_only?(event, %{}),
+        busy:
+          EventBlocking.busy_for_bookings?(
+            event,
+            integration,
+            Map.get(context, :bookability, %{})
+          ),
+        default: EventBlocking.blocks?(event, integration),
         every_repeat: Occurrence.uid_shared_by_series?(event)
       }
     end

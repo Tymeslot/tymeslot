@@ -112,6 +112,32 @@ defmodule Tymeslot.Meetings.ApprovalTest do
     end
   end
 
+  describe "request_attributes/3" do
+    test "stamps the window from the given time" do
+      requested_at = ~U[2026-03-01 10:00:17.500000Z]
+      start_time = ~U[2026-03-04 10:00:00Z]
+
+      assert %{
+               status: :awaiting_approval,
+               approval_requested_at: ~U[2026-03-01 10:00:17Z],
+               approval_deadline_at: ~U[2026-03-02 10:00:17Z]
+             } =
+               Approval.request_attributes(
+                 build(:meeting_type, requires_approval: true, approval_window_hours: 24),
+                 requested_at,
+                 start_time
+               )
+    end
+
+    test "for an ungated type confirms" do
+      assert Approval.request_attributes(
+               build(:meeting_type, requires_approval: false),
+               ~U[2026-03-01 10:00:00Z],
+               ~U[2026-03-04 10:00:00Z]
+             ) == %{status: :confirmed, approval_requested_at: nil, approval_deadline_at: nil}
+    end
+  end
+
   describe "restart_deadline/2" do
     test "replays the window the row was stamped with, from the new start point" do
       # The paid path restarts the host's clock when the money clears. The

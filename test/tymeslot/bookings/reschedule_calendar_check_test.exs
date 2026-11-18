@@ -133,9 +133,10 @@ defmodule Tymeslot.Bookings.RescheduleCalendarCheckTest do
     end
   end
 
-  # The holiday rule (`Bookability`) reaches the submit's re-read through
-  # `apply_to_busy/3`, which the meeting's `exclude:` filter then runs over.
-  describe "a holiday on a read-only subscription" do
+  # The organiser's "Treat as" choices (`Bookability`) reach the submit's
+  # re-read through `apply_to_busy/3`, which the meeting's `exclude:` filter
+  # then runs over.
+  describe "a free all-day event on a read-only subscription" do
     setup %{user: user, date: date, meeting: meeting} do
       feed = insert(:calendar_integration, user: user, provider: "ics_url", is_active: true)
 
@@ -162,22 +163,23 @@ defmodule Tymeslot.Bookings.RescheduleCalendarCheckTest do
       %{feed: feed, holiday: holiday}
     end
 
-    test "refuses a move onto it, and the meeting keeps its time", context do
+    test "lets the move through", context do
       %{user: user, meeting: meeting, date: date} = context
+
+      assert {:ok, moved} = reschedule(meeting, date, "3:00 PM", user.id)
+      assert moved.start_time == DateTime.new!(date, ~T[15:00:00], @timezone)
+    end
+
+    test "refuses a move onto it once Treat as Busy closes the day, and the meeting keeps its time",
+         context do
+      %{user: user, meeting: meeting, date: date, feed: feed, holiday: holiday} = context
+
+      :ok = Bookability.set(user.id, feed.id, holiday.uid, true)
 
       assert {:error, :slot_taken} = reschedule(meeting, date, "3:00 PM", user.id)
 
       assert {:ok, unchanged} = MeetingQueries.get_meeting(meeting.id)
       assert DateTime.compare(unchanged.start_time, meeting.start_time) == :eq
-    end
-
-    test "lets the move through once Treat as Free opens the day", context do
-      %{user: user, meeting: meeting, date: date, feed: feed, holiday: holiday} = context
-
-      :ok = Bookability.set(user.id, feed.id, holiday.uid, false)
-
-      assert {:ok, moved} = reschedule(meeting, date, "3:00 PM", user.id)
-      assert moved.start_time == DateTime.new!(date, ~T[15:00:00], @timezone)
     end
   end
 

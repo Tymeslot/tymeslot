@@ -53,6 +53,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
+  alias TymeslotWeb.Themes.Shared.VerificationResend
 
   require Logger
 
@@ -152,6 +153,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:submitting, false)
       |> assign_booked_identity(meeting, orchestrator)
       |> assign(:meeting_status, meeting.status)
+      |> assign(:verification_deadline_at, Map.get(meeting, :verification_deadline_at))
+      |> VerificationResend.remember(meeting)
       |> BookingLocation.assign_booked(meeting)
       |> assign(:name, validated_data["name"])
       |> assign(:email, validated_data["email"])

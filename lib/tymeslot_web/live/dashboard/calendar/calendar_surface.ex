@@ -491,6 +491,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
     end
   end
 
+  def handle_event("calendar:open", _params, socket), do: {:reply, %{opened: false}, socket}
+
   # Opens the side panel on a loaded event: from the hook (E on a focused
   # event) or the preview's Edit button.
   def handle_event("calendar:edit", %{"id" => id}, socket) when is_binary(id),

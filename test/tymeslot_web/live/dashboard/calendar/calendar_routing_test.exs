@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
       send(lv.pid, {:booking_move_result, UUID.generate(), {:error, :slot_taken}})
 
       assert settled(lv) =~
-               "Tymeslot could not move this booking. Another booking already starts at that time."
+               "This time is no longer available. Please choose another time."
 
       refute_push_event(lv, "calendar:events", %{}, 100)
     end

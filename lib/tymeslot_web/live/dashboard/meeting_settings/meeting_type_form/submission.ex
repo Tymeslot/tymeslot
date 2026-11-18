@@ -55,13 +55,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
         to_param(Map.get(assigns, :selected_availability_schedule_id)),
       "icon" => assigns.selected_icon,
       "allow_guests" => to_string(Map.get(assigns, :allow_guests, false)),
-      "requires_approval" => to_string(Map.get(assigns, :requires_approval, false)),
-      "approval_window_hours" => to_param(Map.get(assigns, :approval_window_hours)),
       "show_as_free" => to_string(Map.get(assigns, :show_as_free, false)),
       "show_seat_availability" => to_string(Map.get(assigns, :show_seat_availability, true)),
       "last_spots_threshold" => to_param(Map.get(assigns, :last_spots_threshold)),
       "reminder_config" => Enum.map(assigns.reminders, &reminder_param/1)
     }
+    |> Map.merge(gate_params(assigns))
     |> Map.merge(booking_limit_params(assigns))
     |> Map.merge(Map.get(assigns, :scheduling_rules) || %{})
     |> maybe_put_custom_fields(assigns)
@@ -70,6 +69,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     |> put_fixed_dates(assigns)
     |> put_series(assigns)
     |> Map.put("max_guests_per_booking", to_param(Map.get(assigns, :guest_limit)))
+  end
+
+  # The settings that decide whether a booking is confirmed on submission.
+  defp gate_params(assigns) do
+    %{
+      "requires_approval" => to_string(Map.get(assigns, :requires_approval, false)),
+      "requires_email_verification" =>
+        to_string(Map.get(assigns, :requires_email_verification, false)),
+      "approval_window_hours" => to_param(Map.get(assigns, :approval_window_hours))
+    }
   end
 
   @doc """

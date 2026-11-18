@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
   alias TymeslotWeb.Themes.Shared.Journey.Progress
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
+  alias TymeslotWeb.Themes.Shared.VerificationResend
 
   @doc """
   Routes a message the scheduling LiveView received to its handler.
@@ -53,6 +54,9 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   def route({:calendar_delete_cancelled, _user_id, _token}, socket), do: {:noreply, socket}
 
   def route(:close_dropdown, socket), do: handle_close_dropdown(socket)
+
+  def route({:verification_resend_ready, token}, socket),
+    do: VerificationResend.ready(socket, token)
 
   def route({:fetch_available_slots, date, duration, timezone}, socket),
     do: handle_fetch_available_slots(socket, date, duration, timezone)

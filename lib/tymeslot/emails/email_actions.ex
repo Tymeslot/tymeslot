@@ -25,6 +25,7 @@ defmodule Tymeslot.Emails.EmailActions do
   alias Tymeslot.Notifications.Email.AdminEmails
   alias Tymeslot.Notifications.Email.AuthEmails
   alias Tymeslot.Notifications.Email.BookingApprovalEmails
+  alias Tymeslot.Notifications.Email.BookingVerificationEmails
   alias Tymeslot.Notifications.Email.CalendarSyncEmails
   alias Tymeslot.Notifications.Email.EndChangeEmails
   alias Tymeslot.Notifications.Email.GroupMeetingEmails
@@ -110,6 +111,8 @@ defmodule Tymeslot.Emails.EmailActions do
     # Booking requests
     "send_booking_request_emails" =>
       {["meeting_id"], {BookingApprovalEmails, :handle_booking_request_emails, :with_job_id}},
+    "send_booking_email_verification" =>
+      {["meeting_id"], {BookingVerificationEmails, :handle_verification_email, :with_job_id}},
     "send_booking_approval_nudge" =>
       {["meeting_id"], {BookingApprovalEmails, :handle_booking_approval_nudge}},
     "send_booking_request_outcome" =>

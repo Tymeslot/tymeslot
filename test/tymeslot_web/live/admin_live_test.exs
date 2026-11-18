@@ -12,6 +12,7 @@ defmodule TymeslotWeb.AdminLiveTest do
   alias Tymeslot.Analytics
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
+  alias Tymeslot.Auth.AdminRoles
   alias TymeslotWeb.Helpers.ClientIP
 
   setup do
@@ -84,7 +85,7 @@ defmodule TymeslotWeb.AdminLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/admin/users")
 
       # Revoke admin_a's admin status via another admin (admin_b acting as the actor)
-      {:ok, _demoted} = Auth.demote_admin(admin_b, admin_a.id)
+      {:ok, _demoted} = AdminRoles.demote(admin_b, admin_a.id)
 
       # Sending any event through the now-demoted socket must be halted and redirected
       assert {:error, {:live_redirect, %{to: redirect_to}}} =
@@ -103,7 +104,7 @@ defmodule TymeslotWeb.AdminLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/admin/settings")
 
       # Revoke admin_a while their socket is still open.
-      {:ok, _demoted} = Auth.demote_admin(admin_b, admin_a.id)
+      {:ok, _demoted} = AdminRoles.demote(admin_b, admin_a.id)
 
       # A live_patch to the users tab runs handle_params → load_data, which
       # would re-query admin-only data for the just-revoked admin unless the

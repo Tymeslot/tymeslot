@@ -195,7 +195,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookableTest do
 
       lv
       |> form("#calendar-rail-bookable-form")
-      |> render_change(%{"id" => to_string(workshop.id)})
+      |> render_change(%{"meeting_type_id" => to_string(workshop.id)})
 
       layer = await_bookable(lv, &(&1.meeting_type == %{id: workshop.id, name: "Workshop"}))
       assert on_day?(layer, "2026-10-15")
@@ -222,7 +222,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookableTest do
 
       lv
       |> form("#calendar-rail-bookable-form")
-      |> render_change(%{"id" => to_string(workshop.id)})
+      |> render_change(%{"meeting_type_id" => to_string(workshop.id)})
 
       refute_receive {:fetching, _task}, 200
       send(first, :go)

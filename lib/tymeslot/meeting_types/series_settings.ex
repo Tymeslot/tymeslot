@@ -20,6 +20,12 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
   (`offered?/1`), so a host who loses Pro keeps the series they set up but
   their type books single sessions.
 
+  A series confirms every session at once, with no step for the booker to
+  confirm their email address, so a type that asks for one
+  (`requires_email_verification`) cannot offer a series (`conflicts/1`). A
+  type saved with both before the rule existed is not offered the series
+  either (`offered?/1`): it books single sessions, verified.
+
   The messages are msgids of the `errors` domain, registered with
   `dgettext_noop/2` and translated where the form shows them.
   """
@@ -68,10 +74,13 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
 
   @doc """
   Whether bookers are offered the series right now: it is configured and the
-  host's plan includes it. A checker failure counts as not offered.
+  host's plan includes it. A checker failure counts as not offered, and so
+  does a type that asks bookers to confirm their email, which a series would
+  skip: its single sessions are verified instead.
   """
   @spec offered?(MeetingTypeSchema.t()) :: boolean()
   def offered?(%{series_mode: nil}), do: false
+  def offered?(%{requires_email_verification: true}), do: false
 
   def offered?(%{user_id: user_id}) do
     case Features.check_access(user_id, @feature) do
@@ -119,8 +128,8 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
 
   @doc """
   The settings of a type (a map with `:series_mode`, `:one_off`,
-  `:invitation_only`, `:fixed_dates`, `:payment_required` and
-  `:max_participants`) that cannot go with a series, as
+  `:invitation_only`, `:fixed_dates`, `:requires_email_verification`,
+  `:payment_required` and `:max_participants`) that cannot go with a series, as
   `{culprit_field, message}`. The culprit is the field that, were it not set,
   would lift the conflict. Empty when there is no series.
   """
@@ -137,6 +146,11 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
        dgettext_noop(
          "errors",
          "Meeting types with fixed dates can offer a series only as sessions the booker picks."
+       )},
+      {:requires_email_verification, settings[:requires_email_verification] == true,
+       dgettext_noop(
+         "errors",
+         "Meeting types that ask invitees to confirm their email cannot be booked as a series."
        )},
       {:payment_required,
        settings[:payment_required] == true and is_integer(settings[:max_participants]) and
@@ -378,6 +392,8 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
   Adds an error for every setting that cannot go with the series mode, read
   with `get_field/2`. For the narrow changesets that can set `one_off`,
   `invitation_only` or `fixed_dates` without running `validate_changeset/1`.
+  The error sits on `:series_mode` when the change turns the series on or
+  changes its mode, and otherwise on the conflicting setting.
   """
   @spec validate_conflicts(Changeset.t()) :: Changeset.t()
   def validate_conflicts(changeset) do
@@ -386,6 +402,7 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
       one_off: get_field(changeset, :one_off),
       invitation_only: get_field(changeset, :invitation_only),
       fixed_dates: get_field(changeset, :fixed_dates),
+      requires_email_verification: get_field(changeset, :requires_email_verification),
       payment_required: get_field(changeset, :payment_required),
       max_participants: get_field(changeset, :max_participants)
     }

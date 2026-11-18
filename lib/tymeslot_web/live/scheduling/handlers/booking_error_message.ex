@@ -215,6 +215,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   def message({:not_cancellable, :expired}),
     do: dgettext("booking_errors", "Cannot cancel an expired meeting")
 
+  def message({:not_cancellable, :awaiting_verification}),
+    do:
+      dgettext(
+        "booking_errors",
+        "This booking is not confirmed yet. If you do not confirm it, it will be released on its own."
+      )
+
   def message({:not_cancellable, :started}),
     do: dgettext("booking_errors", "Cannot cancel a meeting that has already started")
 
@@ -236,6 +243,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
 
   def message({:not_reschedulable, :expired}),
     do: dgettext("booking_errors", "Cannot reschedule an expired meeting")
+
+  def message({:not_reschedulable, :awaiting_verification}),
+    do:
+      dgettext(
+        "booking_errors",
+        "This booking is not confirmed yet. Confirm it from the link in your email first."
+      )
 
   def message({:not_reschedulable, :started}),
     do: dgettext("booking_errors", "Cannot reschedule a meeting that has already started")
@@ -260,6 +274,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
         "booking_errors",
         "A fixed date is moved from its meeting type, together with everyone booked on it"
       )
+
+  def message({:not_reschedulable, :already_requested}),
+    do: dgettext("booking_errors", "A reschedule request is already waiting for an answer")
 
   # Reuses the msgid `localization_helpers.ex` already defines (and every
   # locale already translates) for the same problem.

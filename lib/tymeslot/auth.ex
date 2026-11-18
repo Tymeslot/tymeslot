@@ -5,14 +5,14 @@ defmodule Tymeslot.Auth do
   This module is the public API for all auth-related operations including
   authentication, registration, session management, and user verification.
   It encapsulates the business logic and provides a clean interface for the web layer.
-  """
 
-  alias Tymeslot.Auth.AccountDeletion.{Operator, Policy, Request, Restore, Runner}
+  Deleting accounts has its own entry point, `Tymeslot.Auth.AccountDeletion`,
+  and admin management is `Tymeslot.Auth.AdminRoles`.
+  """
 
   alias Tymeslot.Auth.{
     AccountDeletion,
     AdminRoles,
-    AdminUserQueries,
     Authentication,
     EmailChange,
     ErrorFormatter,
@@ -496,52 +496,6 @@ defmodule Tymeslot.Auth do
   @spec count_users_where((Ecto.Query.t() -> Ecto.Query.t())) :: non_neg_integer()
   defdelegate count_users_where(compose), to: UserQueries, as: :count_where
 
-  @doc "Days between a deletion request and the deletion (0: straight away)."
-  @spec account_deletion_grace_days() :: non_neg_integer()
-  defdelegate account_deletion_grace_days(), to: Policy, as: :grace_days
-
-  @doc "When an account asked to be deleted at `now` will be deleted."
-  @spec account_deletion_due_at(DateTime.t()) :: DateTime.t()
-  defdelegate account_deletion_due_at(now), to: Policy, as: :scheduled_at
-
-  @doc "The date of `at` as the user's own calendar day (profile timezone, else UTC)."
-  @spec deletion_local_date(DateTime.t(), UserSchema.t()) :: Date.t()
-  def deletion_local_date(at, %UserSchema{id: user_id}), do: Policy.user_local_date(at, user_id)
-
-  @doc "Whether the deletion dialog asks why the user is leaving."
-  @spec collect_deletion_feedback?() :: boolean()
-  defdelegate collect_deletion_feedback?(), to: Policy, as: :collect_feedback?
-
-  @doc "The reasons the deletion dialog offers, as stored values."
-  @spec deletion_feedback_reasons() :: [String.t()]
-  defdelegate deletion_feedback_reasons(), to: Policy, as: :feedback_reasons
-
-  @doc "Whether `user` confirms a deletion with its password or its email address."
-  @spec deletion_confirmation_method(UserSchema.t()) :: :password | :email
-  defdelegate deletion_confirmation_method(user), to: Policy, as: :confirmation_method
-
-  @doc """
-  Schedules the deletion of `user`'s own account. See
-  `Tymeslot.Auth.AccountDeletion.Request`. `opts` must carry `:ip`; it may
-  carry `:user_agent` and `:current_session_token`.
-  """
-  @spec request_account_deletion(UserSchema.t(), map(), keyword()) ::
-          {:ok, UserSchema.t()} | Request.error()
-  def request_account_deletion(user, params, opts),
-    do: Request.request(user, params, request_opts!(opts))
-
-  @doc "Whether `user`'s pending deletion can still be cancelled at `now`."
-  @spec account_restorable?(UserSchema.t(), DateTime.t()) :: boolean()
-  defdelegate account_restorable?(user, now), to: Restore, as: :restorable?
-
-  @doc """
-  Cancels the pending deletion of `user`'s account, while its grace period
-  lasts; `{:error, :deletion_in_progress}` once the account is due.
-  """
-  @spec restore_account(UserSchema.t()) ::
-          {:ok, UserSchema.t()} | {:error, :not_pending | :deletion_in_progress | term()}
-  defdelegate restore_account(user), to: Restore, as: :restore
-
   @doc """
   Subscribes the caller to events about one account; currently only
   `{:account_deletion_requested, user_id}`.
@@ -550,26 +504,16 @@ defmodule Tymeslot.Auth do
   defdelegate subscribe_to_account(user_id), to: PubSub
 
   @doc """
-  Deletes another account now, bypassing the grace period, for the admin
-  users tab or a release shell. See `Tymeslot.Auth.AccountDeletion.Operator`.
+  The reasons the deletion dialog offers, as stored values. See
+  `Tymeslot.Auth.AccountDeletion`, the entry point for deleting accounts.
   """
-  @spec delete_account_now(Operator.actor(), pos_integer(), keyword()) ::
-          {:ok, UserSchema.t()} | {:error, Operator.error()}
-  defdelegate delete_account_now(actor, user_id, opts \\ []), to: Operator, as: :delete_now
+  @spec deletion_feedback_reasons() :: [String.t()]
+  defdelegate deletion_feedback_reasons(), to: AccountDeletion
 
-  @doc """
-  Deletes a user account.
-
-  Runs the configured account-deletion hook (e.g. SaaS subscription
-  cancellation) before any database change; if it fails, the deletion is
-  aborted and the user is left intact. On success, anonymises payment
-  records and deletes the user row in a single transaction.
-  """
+  @doc "Deletes a user account. See `Tymeslot.Auth.AccountDeletion.delete_account/1`."
   @spec delete_account(UserSchema.t()) ::
           {:ok, UserSchema.t()} | {:error, Ecto.Changeset.t() | term()}
-  def delete_account(user) do
-    AccountDeletion.delete_account(user)
-  end
+  defdelegate delete_account(user), to: AccountDeletion
 
   @doc """
   Deletes accounts still unverified `days` after sign-up. See
@@ -578,60 +522,7 @@ defmodule Tymeslot.Auth do
   @spec purge_unverified_accounts(integer()) :: {non_neg_integer(), nil}
   defdelegate purge_unverified_accounts(days), to: AccountDeletion
 
-  @doc """
-  Deletes one account if it is pending and due. See
-  `Tymeslot.Auth.AccountDeletion.Runner.run/2` for the outcomes.
-  """
-  @spec run_scheduled_deletion(integer(), keyword()) :: Runner.outcome()
-  defdelegate run_scheduled_deletion(user_id, opts \\ []), to: Runner, as: :run
-
-  @doc "Queues a deletion job for every overdue account; returns how many."
-  @spec enqueue_overdue_account_deletions() :: non_neg_integer()
-  defdelegate enqueue_overdue_account_deletions(), to: Runner, as: :enqueue_overdue
-
-  @doc """
-  Lists all users in the system, ordered by id ascending.
-  """
-  defdelegate list_users(), to: AdminUserQueries, as: :list_all_users
-
-  @doc """
-  Counts all users in the system.
-  """
-  defdelegate count_users(), to: AdminUserQueries
-
-  @doc """
-  Counts admin users in the system.
-  """
-  defdelegate count_admins(), to: AdminUserQueries
-
-  @doc """
-  Returns `true` if at least one admin can sign in via email + password.
-  """
-  defdelegate any_admin_uses_password_auth?(), to: AdminUserQueries
-
-  @doc """
-  Returns `true` if at least one admin account exists.
-  """
-  defdelegate any_admin?(), to: AdminUserQueries
-
-  @doc """
-  Whether at least one admin other than `user` can currently sign in.
-
-  See `Tymeslot.Auth.AdminRoles.remaining_signin_capable_admins?/1`.
-  """
-  defdelegate remaining_signin_capable_admins?(user), to: AdminRoles
-
-  @doc """
-  Promotes the user identified by `user_id` to admin.
-
-  See `Tymeslot.Auth.AdminRoles.promote/2` for the full contract.
-  """
-  defdelegate promote_admin(actor, user_id), to: AdminRoles, as: :promote
-
-  @doc """
-  Demotes the user identified by `user_id` from admin.
-
-  See `Tymeslot.Auth.AdminRoles.demote/3` for the full contract.
-  """
-  defdelegate demote_admin(actor, user_id), to: AdminRoles, as: :demote
+  @doc "Counts all users in the system. See `Tymeslot.Auth.AdminRoles.count_users/0`."
+  @spec count_users() :: non_neg_integer()
+  defdelegate count_users(), to: AdminRoles
 end

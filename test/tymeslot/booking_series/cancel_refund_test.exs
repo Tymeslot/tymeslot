@@ -24,6 +24,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
   alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.Webhooks.ChargeRefunded
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Workers.SeriesHostRefund
   alias Tymeslot.Meetings
@@ -52,6 +53,41 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert params.amount == amount
       {:ok, %{id: "re_SERIES"}}
     end)
+  end
+
+  # Stripe makes the refund, but its answer never comes back.
+  defp timeout_after_stripe_refunds(amount) do
+    expect(StripeAdapterMock, :create_refund, 1, fn %{amount: ^amount}, opts ->
+      send(self(), {:refund_key, opts[:idempotency_key]})
+      exit({:timeout, {GenServer, :call, []}})
+    end)
+  end
+
+  # Stripe answers a replayed key with the refund it made then, its charge
+  # showing the refunded total of that moment.
+  defp expect_replayed_refund(amount, charge_refunded) do
+    assert_received {:refund_key, first_key}
+
+    expect(StripeAdapterMock, :create_refund, 1, fn %{amount: ^amount}, opts ->
+      assert opts[:idempotency_key] == first_key
+      {:ok, %{id: "re_SERIES", amount: amount, charge: %{amount_refunded: charge_refunded}}}
+    end)
+  end
+
+  defp charge_refunded_event(event_id, amount_refunded) do
+    %{
+      "id" => event_id,
+      "account" => Paid.account(),
+      "type" => "charge.refunded",
+      "created" => System.os_time(:second),
+      "data" => %{
+        "object" => %{
+          "id" => "ch_SERIES",
+          "object" => "charge",
+          "amount_refunded" => amount_refunded
+        }
+      }
+    }
   end
 
   defp cancel_as_host(series, host, opts \\ []),
@@ -194,6 +230,146 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
 
       expect_refund(8_000)
       assert :ok = run_refund_job()
+      assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
+      assert refund_failed_jobs() == []
+    end
+
+    test "a refund the webhook recorded before the retry is not recorded again", %{
+      host: host,
+      series: series,
+      payment: payment
+    } do
+      pay(series, 4)
+
+      assert {:ok, %{refund: {:scheduled, 2_000}}} =
+               cancel_as_host(series, host, refund: {:amount, 2_000})
+
+      timeout_after_stripe_refunds(2_000)
+      assert {:error, {:exit, _timeout}} = run_refund_job()
+
+      # Stripe reports the refund it made, so the payment records it.
+      assert :ok = ChargeRefunded.handle(charge_refunded_event("evt_REFUNDED", 2_000))
+      assert Repo.reload!(payment).refunded_amount_cents == 2_000
+
+      # The 2,000 still fits what remains, so the retry asks Stripe again,
+      # which answers with the same refund under the same key.
+      expect_replayed_refund(2_000, 2_000)
+      assert :ok = run_refund_job(attempt: 2)
+
+      assert %{refunded_amount_cents: 2_000, status: :partially_refunded} = Repo.reload!(payment)
+      assert refund_failed_jobs() == []
+    end
+
+    test "a refund the webhook recorded is no failure once the rest no longer covers it", %{
+      host: host,
+      series: series,
+      payment: payment
+    } do
+      pay(series, 4)
+
+      assert {:ok, %{refund: {:scheduled, 20_000}}} = cancel_as_host(series, host)
+
+      timeout_after_stripe_refunds(20_000)
+      assert {:error, {:exit, _timeout}} = run_refund_job()
+
+      assert :ok = ChargeRefunded.handle(charge_refunded_event("evt_REFUNDED", 20_000))
+      assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
+
+      # Nothing remains to refund, yet the refund is this job's own: Stripe
+      # answers the retry with it, and the host is told nothing failed.
+      expect_replayed_refund(20_000, 20_000)
+      assert :ok = run_refund_job(attempt: 2)
+
+      assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
+      assert refund_failed_jobs() == []
+    end
+
+    test "a refund the webhook recorded is no failure once the rest covers only part of it", %{
+      host: host,
+      series: series,
+      payment: payment
+    } do
+      pay(series, 4)
+      [first | _rest] = meetings()
+      into_the_past!(first)
+
+      assert {:ok, %{refund: {:scheduled, 15_000}}} = cancel_as_host(series, host)
+
+      timeout_after_stripe_refunds(15_000)
+      assert {:error, {:exit, _timeout}} = run_refund_job()
+
+      assert :ok = ChargeRefunded.handle(charge_refunded_event("evt_REFUNDED", 15_000))
+      assert Repo.reload!(payment).refunded_amount_cents == 15_000
+
+      # 5,000 remains, less than the 15,000 the job refunds.
+      expect_replayed_refund(15_000, 15_000)
+      assert :ok = run_refund_job(attempt: 2)
+
+      assert %{refunded_amount_cents: 15_000, status: :partially_refunded} =
+               Repo.reload!(payment)
+
+      assert refund_failed_jobs() == []
+    end
+
+    test "an amount the rest no longer covers, and Stripe never refunded, is still a failure", %{
+      host: host,
+      series: series,
+      payment: payment
+    } do
+      pay(series, 4)
+
+      assert {:ok, %{refund: {:scheduled, 20_000}}} = cancel_as_host(series, host)
+
+      # The first attempt sizes the refund at 20,000 and never reaches Stripe.
+      expect(StripeAdapterMock, :create_refund, 1, fn %{amount: 20_000}, _opts ->
+        {:error, %Stripe.Error{source: :network, code: :network_error, message: "closed"}}
+      end)
+
+      assert {:error, %Stripe.Error{source: :network}} = run_refund_job()
+
+      # Refunded elsewhere (the host's Stripe dashboard) before the retry.
+      assert :ok = ChargeRefunded.handle(charge_refunded_event("evt_REFUNDED", 15_000))
+
+      expect(StripeAdapterMock, :create_refund, 1, fn %{amount: 20_000}, _opts ->
+        {:error,
+         %Stripe.Error{
+           source: :stripe,
+           code: :invalid_request_error,
+           message: "Refund amount is greater than unrefunded amount on charge"
+         }}
+      end)
+
+      assert {:discard, :invalid_amount} = run_refund_job(attempt: 2)
+      assert Repo.reload!(payment).refunded_amount_cents == 15_000
+      assert [%{args: %{"amount_cents" => 20_000}}] = refund_failed_jobs()
+    end
+
+    test "a refund shrunk to what remained is replayed at that size after the webhook", %{
+      host: host,
+      series: series,
+      payment: payment
+    } do
+      pay(series, 4)
+      [first | _rest] = meetings()
+      into_the_past!(first)
+
+      assert {:ok, %{refund: {:scheduled, 15_000}}} = cancel_as_host(series, host)
+
+      expect_refund(12_000)
+      assert {:ok, _refunded} = Refunds.issue_host_refund(payment.id, host.user.id, 12_000)
+
+      # The job shrinks to the 8,000 left, which Stripe refunds unanswered.
+      timeout_after_stripe_refunds(8_000)
+      assert {:error, {:exit, _timeout}} = run_refund_job()
+
+      assert :ok = ChargeRefunded.handle(charge_refunded_event("evt_REFUNDED", 20_000))
+      assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
+
+      # Nothing remains, but the retry sends the size it was pinned at, so
+      # Stripe answers it with the refund it made.
+      expect_replayed_refund(8_000, 20_000)
+      assert :ok = run_refund_job(attempt: 2)
+
       assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
       assert refund_failed_jobs() == []
     end

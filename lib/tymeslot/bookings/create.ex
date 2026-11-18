@@ -21,8 +21,10 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Bookings.Create.PaidBooking
   alias Tymeslot.Bookings.Create.Persist
   alias Tymeslot.Bookings.Create.Prepare
+  alias Tymeslot.Bookings.Create.VerifiedBooking
   alias Tymeslot.Bookings.Telemetry
   alias Tymeslot.Meetings.BookingLimits.Checker
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -78,6 +80,13 @@ defmodule Tymeslot.Bookings.Create do
   `:seat_hold`), side effects (calendar, video, email) are deferred until
   payment confirmation, and a Stripe Checkout Session URL is returned
   alongside the meeting via the `{:ok, :payment_required, ...}` tuple.
+
+  When it has `requires_email_verification: true` (and is not paid), the
+  meeting is persisted with status `awaiting_verification`, holding its slot,
+  and only the verification email to the attendee is sent; everything an
+  ungated booking does at creation waits for
+  `Tymeslot.Meetings.EmailVerification.verify/1`
+  (`Tymeslot.Bookings.Create.VerifiedBooking`).
   """
   @spec execute(meeting_params(), form_data(), keyword()) :: execute_result()
   def execute(meeting_params, form_data, opts \\ []) do
@@ -222,6 +231,13 @@ defmodule Tymeslot.Bookings.Create do
           create_guests: &Persist.create_guests/2,
           classify_error: &Errors.classify_creation_error(&1, booking_data),
           on_created: &Telemetry.booking_created/0
+        )
+
+      EmailVerification.required?(Map.get(booking_data, :meeting_type)) ->
+        VerifiedBooking.create(meeting_attrs, booking_data,
+          create_meeting: &Persist.create_meeting/1,
+          create_guests: &Persist.create_guests/2,
+          classify_error: &Errors.classify_creation_error(&1, booking_data)
         )
 
       true ->

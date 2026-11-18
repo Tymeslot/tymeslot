@@ -113,7 +113,7 @@ msgstr "Copia il link del sondaggio negli appunti"
 msgid "Couldn't cancel this poll. Please try again."
 msgstr "Impossibile annullare questo sondaggio. Riprova."
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Couldn't confirm this time. Please try again."
 msgstr "Impossibile confermare questo orario. Riprova."
@@ -256,7 +256,7 @@ msgstr "Questo sondaggio è stato annullato. Le votazioni sono chiuse."
 msgid "This time clashes with an event on your calendar"
 msgstr "Questo orario si sovrappone a un evento nel tuo calendario"
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer free"
 msgstr "Questo orario non è più libero"
@@ -381,7 +381,7 @@ msgstr "Salva modifiche"
 msgid "This time falls within your time off, so it can't be confirmed while that stays in place."
 msgstr "Questo orario rientra nella tua assenza, quindi non può essere confermato finché resta attiva."
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This time falls within your time off. Change or remove the time off to confirm it."
 msgstr "Questo orario rientra nella tua assenza. Modifica o rimuovi l'assenza per confermarlo."
@@ -780,12 +780,12 @@ msgstr[1] "%{count} ospiti hanno già votato. Le loro risposte restano visibili 
 msgid "Removed %{name} from the poll."
 msgstr "%{name} è stato rimosso dal sondaggio."
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Nobody but you has joined this poll yet, so there is nobody to invite."
 msgstr "Nessuno oltre a te si è ancora unito a questo sondaggio, quindi non c'è nessuno da invitare."
 
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#: lib/tymeslot_web/live/dashboard/polls/confirm_slot_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This time has already begun."
 msgstr "Questo orario è già iniziato."
@@ -887,7 +887,7 @@ msgid "The draft “%{title}” will be removed. Nobody was invited to it, so no
 msgstr "La bozza “%{title}” verrà eliminata. Nessuno è stato invitato, quindi nessuno riceverà avvisi. L'operazione non può essere annullata."
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
-#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#: lib/tymeslot_web/live/dashboard/polls/selected_poll.ex
 #, elixir-autogen, elixir-format
 msgid "This draft has already been published or deleted."
 msgstr "Questa bozza è già stata pubblicata o eliminata."

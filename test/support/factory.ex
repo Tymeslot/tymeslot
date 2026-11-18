@@ -96,6 +96,20 @@ defmodule Tymeslot.Factory do
     build(:meeting, status: status)
   end
 
+  @doc """
+  A booking held for email verification, its 30-minute hold just begun.
+  Pass `verification_deadline_at` to place the deadline elsewhere.
+  """
+  @spec awaiting_verification_meeting_factory(map()) :: Tymeslot.Meetings.MeetingSchema.t()
+  def awaiting_verification_meeting_factory(attrs) do
+    %{
+      status: :awaiting_verification,
+      verification_deadline_at: DateTime.add(DateTime.utc_now(:second), 30, :minute)
+    }
+    |> Map.merge(Map.new(attrs))
+    |> meeting_factory()
+  end
+
   @spec past_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def past_meeting_factory do
     start_time = DateTime.utc_now() |> DateTime.add(-1, :day) |> DateTime.truncate(:second)

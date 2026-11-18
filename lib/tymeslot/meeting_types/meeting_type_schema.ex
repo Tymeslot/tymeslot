@@ -9,6 +9,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   import Tymeslot.ChangesetValidators.SchedulingPolicy, only: [validate_scheduling_policy: 2]
 
   alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.MeetingTypes.EmailVerificationRule
   alias Tymeslot.MeetingTypes.GroupValidation
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.LocationOption
@@ -17,6 +18,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   alias Tymeslot.MeetingTypes.PaymentValidation
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.SeriesSettings
+  alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
@@ -52,6 +54,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           last_spots_threshold: pos_integer() | nil,
           max_guests_per_booking: pos_integer() | nil,
           requires_approval: boolean(),
+          requires_email_verification: boolean(),
           approval_window_hours: pos_integer() | nil,
           is_archived: boolean(),
           max_bookings_per_day: pos_integer() | nil,
@@ -116,6 +119,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     # "use `Constraints.default_approval_window_hours/0`", the same way a nil
     # `availability_schedule_id` means "use the profile default".
     field(:requires_approval, :boolean, default: false)
+    field(:requires_email_verification, :boolean, default: false)
     field(:approval_window_hours, :integer)
     field(:is_archived, :boolean, default: false)
     field(:max_bookings_per_day, :integer)
@@ -252,6 +256,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :last_spots_threshold,
       :max_guests_per_booking,
       :requires_approval,
+      :requires_email_verification,
       :approval_window_hours,
       :is_archived,
       :max_bookings_per_day,
@@ -278,10 +283,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     )
     |> normalize_slug()
     |> validate_slug()
+    |> validate_derived_slug()
     |> validate_video_integration()
     |> validate_calendar_destination()
     |> ReminderValidation.validate_changeset()
     |> PaymentValidation.validate_changeset(opts)
+    |> EmailVerificationRule.validate_changeset()
     |> GroupValidation.validate_changeset()
     |> SeriesSettings.validate_changeset()
     |> check_constraint(:series_mode, name: :meeting_types_series_check)
@@ -392,6 +399,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> cast(attrs, [:slug])
     |> normalize_slug()
     |> validate_slug()
+    |> validate_derived_slug()
     |> unique_constraint([:user_id, :slug],
       name: :meeting_types_user_id_slug_index,
       message: dgettext_noop("errors", "is already taken")
@@ -437,7 +445,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           String.length(slug) > @slug_max_length ->
             add_error(changeset, :slug, dgettext_noop("errors", "is too long"))
 
-          Regex.match?(@reserved_slug_format, slug) or slug in @reserved_slugs ->
+          reserved_slug?(slug) ->
             add_error(changeset, :slug, "is reserved")
 
           not Regex.match?(@slug_format, slug) ->
@@ -452,6 +460,36 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
         end
     end
   end
+
+  # Without a custom slug, a type's address comes from its name
+  # (`Slugs.effective_slug/1`), so a name such as "Thank you" would give it an
+  # address a fixed route shadows. Checked only when the name or the slug
+  # changes, so a type saved before the rule keeps saving its other settings.
+  # The error goes on the field the organiser changed: the name, or else the
+  # slug they cleared.
+  defp validate_derived_slug(changeset) do
+    name = get_field(changeset, :name)
+    name_changed? = changed?(changeset, :name)
+
+    if get_field(changeset, :slug) == nil and is_binary(name) and
+         (name_changed? or changed?(changeset, :slug)) and
+         reserved_slug?(Slugs.to_slug(%{name: name})) do
+      add_error(
+        changeset,
+        if(name_changed?, do: :name, else: :slug),
+        dgettext_noop(
+          "errors",
+          "would give a reserved booking link; choose another name or set a custom link"
+        ),
+        validation: :reserved
+      )
+    else
+      changeset
+    end
+  end
+
+  defp reserved_slug?(slug),
+    do: Regex.match?(@reserved_slug_format, slug) or slug in @reserved_slugs
 
   # A location's label is stored with any localised default put back into
   # English (`LocationSelection.stored_label/2`), so a label the editor showed

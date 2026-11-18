@@ -75,6 +75,41 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry do
   end
 
   @doc """
+  Resolves the type a `?duration=` link names, as `maybe_assign_meeting_type/2`
+  does, and sends a link naming a type this address does not offer on to the
+  type's own address, with the rest of the page's query (the day, an embed's
+  parameters), the way a type's own link at the wrong address is
+  (`resolve_slug_meeting_type/4`). `?duration=` resolves by slug, so the
+  redirect tells the visitor nothing their link did not already name. An
+  invitation-only type is not sent on: its address admits no one without an
+  invitation, which a `?duration=` link never carries.
+  """
+  @spec resolve_duration_link(Phoenix.LiveView.Socket.t(), String.t() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def resolve_duration_link(socket, nil), do: socket
+
+  def resolve_duration_link(socket, slug) do
+    socket = maybe_assign_meeting_type(socket, slug)
+
+    with nil <- socket.assigns[:meeting_type],
+         true <- resolves_meeting_type?(socket.assigns),
+         %ProfileSchema{} = profile <- socket.assigns[:organizer_profile],
+         %{invitation_only: false} = meeting_type <-
+           ThemeFlow.resolve_meeting_type_for_slug(socket.assigns.organizer_user_id, slug) do
+      query = Map.drop(socket.assigns[:page_query_params] || %{}, ["duration", "step"])
+
+      redirect(socket,
+        to:
+          profile
+          |> BookingPages.meeting_type_path(meeting_type)
+          |> PathHandlers.with_query(query)
+      )
+    else
+      _resolved_or_unknown -> socket
+    end
+  end
+
+  @doc """
   Whether this page can resolve a meeting type at all: only an organiser's
   page can (a theme preview has no organiser). `maybe_assign_meeting_type/2`
   resolves nothing elsewhere, so a caller waiting for a resolved type must

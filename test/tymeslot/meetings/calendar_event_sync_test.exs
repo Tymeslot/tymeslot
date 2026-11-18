@@ -209,7 +209,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
 
       assert {:error, :calendar_event_not_updatable} = CalendarEventSync.update(meeting_id, 5)
 
-      assert_sync_error_enqueued(meeting_id, ":calendar_event_not_updatable")
+      assert_sync_error_enqueued(meeting_id, "calendar_event_not_updatable")
     end
 
     test "returns {:error, :meeting_not_found} for a non-existent meeting" do

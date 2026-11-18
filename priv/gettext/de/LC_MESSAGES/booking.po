@@ -903,3 +903,8 @@ msgstr "Für diesen Termintyp sind derzeit keine Zeiten buchbar."
 #, elixir-autogen, elixir-format
 msgid "%{page} with %{name}"
 msgstr "%{page} mit %{name}"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "We'll email you a link to confirm this booking."
+msgstr "Wir senden Ihnen per E-Mail einen Link, mit dem Sie diese Buchung bestätigen."

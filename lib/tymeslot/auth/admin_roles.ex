@@ -1,6 +1,8 @@
 defmodule Tymeslot.Auth.AdminRoles do
   @moduledoc """
-  Domain logic for the admin role lifecycle.
+  Domain logic for the admin role lifecycle, and the public entry point for
+  admin management: the user and admin reads the admin UI and the lockout
+  policy need, delegated to `Tymeslot.Auth.AdminUserQueries`.
 
   This module is the single entry point for promoting and demoting admin users.
   Both the LiveView admin UI and the CLI release helpers route through here,
@@ -126,6 +128,28 @@ defmodule Tymeslot.Auth.AdminRoles do
       LockoutPolicy.usable_signin_paths()
     ) > 0
   end
+
+  @doc """
+  Lists all users in the system, ordered by id ascending, profiles preloaded.
+  """
+  @spec list_users() :: [UserSchema.t()]
+  defdelegate list_users(), to: AdminUserQueries, as: :list_all_users
+
+  @doc "Counts all users in the system."
+  @spec count_users() :: non_neg_integer()
+  defdelegate count_users(), to: AdminUserQueries
+
+  @doc "Counts admin users in the system."
+  @spec count_admins() :: non_neg_integer()
+  defdelegate count_admins(), to: AdminUserQueries
+
+  @doc "Returns `true` if at least one admin can sign in via email + password."
+  @spec any_admin_uses_password_auth?() :: boolean()
+  defdelegate any_admin_uses_password_auth?(), to: AdminUserQueries
+
+  @doc "Returns `true` if at least one admin account exists."
+  @spec any_admin?() :: boolean()
+  defdelegate any_admin?(), to: AdminUserQueries
 
   # --- Private helpers ---
 

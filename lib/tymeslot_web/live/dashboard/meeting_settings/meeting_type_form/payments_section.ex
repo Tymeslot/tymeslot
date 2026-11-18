@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
 
   attr :charges_enabled, :boolean, required: true
   attr :group_bookings_enabled, :boolean, required: true
+  attr :requires_email_verification, :boolean, default: false
   attr :payment_required, :boolean, required: true
   attr :payment_price, :string, required: true
   attr :currency, :string, required: true
@@ -52,12 +53,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
         id="payment-required-toggle"
         label={dgettext("dashboard_meeting_form", "Require payment for this meeting type")}
         checked={@payment_required}
-        disabled={not @charges_enabled}
+        disabled={not @charges_enabled or (@requires_email_verification and not @payment_required)}
         on_change="toggle_payment_required"
         target={@myself}
       >
         <:disabled_reason>
           <%= cond do %>
+            <% @charges_enabled -> %>
+              {dgettext(
+                "dashboard_meeting_form",
+                "Turn off email confirmation to require payment."
+              )}
             <% @currency_support == :legacy -> %>
               {raw(
                 dgettext(

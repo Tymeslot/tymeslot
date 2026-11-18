@@ -910,3 +910,8 @@ msgstr "Tento typ schůzky teď nemá žádné volné termíny k rezervaci."
 #, elixir-autogen, elixir-format
 msgid "%{page} with %{name}"
 msgstr "%{page} s %{name}"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "We'll email you a link to confirm this booking."
+msgstr "E-mailem vám pošleme odkaz k potvrzení této rezervace."

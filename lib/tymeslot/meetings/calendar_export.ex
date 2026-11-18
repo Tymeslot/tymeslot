@@ -88,6 +88,10 @@ defmodule Tymeslot.Meetings.CalendarExport do
   Where the booker of `meeting` downloads its calendar file, from the
   booking page's confirmation step:
 
+    * `:none` for a booking still unverified
+      (`Tymeslot.Meetings.MeetingState.unverified?/1`): the booking page must
+      never hold its uid, which opens the public manage pages, before the
+      attendee has confirmed their address;
     * `{:seat, url}` for a seat view (`Tymeslot.Meetings.SeatView`): the
       seat's own file, `seat/1` behind its management token;
     * `:none` for any other group meeting: its uid names the shared slot,
@@ -96,6 +100,10 @@ defmodule Tymeslot.Meetings.CalendarExport do
   """
   @spec for_booker(map()) :: {:seat, String.t()} | {:meeting, String.t()} | :none
   def for_booker(meeting) do
+    if MeetingState.unverified?(meeting), do: :none, else: booker_calendar(meeting)
+  end
+
+  defp booker_calendar(meeting) do
     case SeatView.participant_id(meeting) do
       nil -> meeting_calendar(meeting)
       participant_id -> seat_calendar(participant_id)

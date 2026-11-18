@@ -13,6 +13,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlowSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.OfferedTimeSchema
   alias Tymeslot.Payments.Webhooks.StripeEventSchema
   alias Tymeslot.Repo
@@ -24,6 +25,28 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
   alias Tymeslot.Workers.DataRetentionWorker
 
   import Tymeslot.Test.ClockHelpers
+
+  describe "perform/1 - never-verified bookings" do
+    test "the retention run prunes unverified bookings" do
+      user = insert(:user)
+      deadline = DateTime.add(DateTime.utc_now(:second), -25, :hour)
+
+      lapsed =
+        insert(:awaiting_verification_meeting,
+          organizer_user_id: user.id,
+          status: :expired,
+          verification_deadline_at: deadline
+        )
+
+      kept =
+        insert(:meeting, organizer_user_id: user.id, status: :expired)
+
+      assert :ok = perform_job(DataRetentionWorker, %{"retention_days" => 60})
+
+      refute Repo.get(MeetingSchema, lapsed.id)
+      assert Repo.get(MeetingSchema, kept.id)
+    end
+  end
 
   describe "perform/1 - outgoing webhook delivery cleanup" do
     test "removes delivery records older than the retention period" do

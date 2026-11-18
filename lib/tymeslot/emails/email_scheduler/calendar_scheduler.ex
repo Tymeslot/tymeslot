@@ -6,7 +6,7 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   """
 
   alias Tymeslot.Emails.EmailScheduler.Helpers
-  alias Tymeslot.Emails.Shared.TemplateHelper
+  alias Tymeslot.Emails.Templates.CalendarSyncError
   alias Tymeslot.Workers.EmailWorker
 
   @doc """
@@ -149,8 +149,10 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
 
   @doc """
   Schedules the owner's notice that a booking's calendar event could not be
-  written. The job carries `error_reason` as the email states it, since an
-  arbitrary term does not survive the job's JSON args. Unique per meeting
+  written. The job carries `error_reason` in its stored form
+  (`CalendarSyncError.storable_reason/1`), since an arbitrary term does not
+  survive the job's JSON args and a provider's error can quote credentials or
+  addresses that have no place in `oban_jobs`. Unique per meeting
   for five minutes, so the two ways a create can be given up on cannot both
   send it.
   """
@@ -159,7 +161,7 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
     %{
       "action" => "send_calendar_sync_error",
       "meeting_id" => meeting_id,
-      "error_reason" => TemplateHelper.format_error_reason(error_reason)
+      "error_reason" => CalendarSyncError.storable_reason(error_reason)
     }
     |> EmailWorker.new(
       queue: :emails,

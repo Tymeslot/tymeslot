@@ -34,8 +34,10 @@ defmodule Tymeslot.Repo.Migrations.AddSeriesIdToBookingPayments do
       )
     end
 
-    # Data preparation for the unique index: a re-run over a column an earlier
-    # attempt left behind starts from no series ownership at all.
+    # Data preparation for the unique index, as `CredoChecks.MigrationConstraintSafety`
+    # asks of every one. The column was added empty a moment ago and the
+    # migration runs in one transaction, so this matches no row: it states
+    # that no existing payment can violate the index, rather than repairing one.
     execute("UPDATE booking_payments SET series_id = NULL WHERE series_id IS NOT NULL")
 
     drop_if_exists(

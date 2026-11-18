@@ -186,7 +186,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   defp fetch_meeting(meeting_uid, organizer_user_id) do
     if Auth.deletion_pending?(organizer_user_id),
       do: {:error, :meeting_not_found},
-      else: MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id)
+      else: MeetingQueries.get_meeting_by_uid_for_attendee(meeting_uid, organizer_user_id)
   end
 
   # Everything a committed reschedule sets off outside the meeting row: fresh

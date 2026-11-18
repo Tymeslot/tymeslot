@@ -4,15 +4,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   video conferencing, and meeting lifecycle management.
   """
 
-  use Gettext, backend: TymeslotWeb.Gettext
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
-  alias Tymeslot.ChangesetValidators.TimeOrder
-  alias Tymeslot.ChangesetValidators.TrackingParams
-  alias Tymeslot.Locales
-  alias Tymeslot.Meetings.DerivedFields
+  alias Tymeslot.Meetings.MeetingRules
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.UniqueInvitation
   alias Tymeslot.Meetings.UniqueSlot
@@ -84,6 +79,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           reschedule_requested_at: DateTime.t() | nil,
           approval_requested_at: DateTime.t() | nil,
           approval_deadline_at: DateTime.t() | nil,
+          verification_deadline_at: DateTime.t() | nil,
+          verification_emails_sent: pos_integer() | nil,
+          email_verified_at: DateTime.t() | nil,
           approval_resolved_at: DateTime.t() | nil,
           approval_declined_at: DateTime.t() | nil,
           approval_nudge_sent_at: DateTime.t() | nil,
@@ -139,7 +137,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # `calendar_uid` is what the booking is called in external calendars (the
     # event UID written to the organiser's calendar and to the attendee's
     # `.ics`), and grants nothing. Every calendar create, match, update and
-    # delete goes by `calendar_uid`; see `ensure_calendar_uid/1`.
+    # delete goes by `calendar_uid`, which `MeetingRules` mints.
     field(:uid, :string)
     field(:calendar_uid, :string)
     field(:title, :string)
@@ -256,8 +254,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # Grouped and read by `Tymeslot.Meetings.MeetingState`, which explains each
     # value; closed in the database by `meetings_status_must_be_known`.
     field(:status, Ecto.Enum,
-      values: ~w(pending awaiting_payment awaiting_approval confirmed cancelled completed
-                 expired reschedule_requested)a,
+      values: ~w(pending awaiting_payment awaiting_approval awaiting_verification confirmed
+                 cancelled completed expired reschedule_requested)a,
       default: :pending
     )
 
@@ -289,6 +287,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # through `Meetings.Approval.declined?/1` rather than matching on it.
     field(:approval_declined_at, :utc_datetime)
     field(:approval_nudge_sent_at, :utc_datetime)
+    # Email verification clock; see `Tymeslot.Meetings.EmailVerification`.
+    field(:verification_deadline_at, :utc_datetime)
+    field(:email_verified_at, :utc_datetime)
+    field(:verification_emails_sent, :integer)
     # The host's optional note when declining. Absent whenever they gave no
     # reason, so it marks nothing on its own.
     field(:decline_reason, :string)
@@ -448,6 +450,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :reschedule_requested_at,
     :approval_requested_at,
     :approval_deadline_at,
+    :verification_deadline_at,
+    :email_verified_at,
     :approval_resolved_at,
     :approval_declined_at,
     :approval_nudge_sent_at,
@@ -486,14 +490,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :capacity
   ]
 
-  @organizer_note_max_length 2000
-
-  @doc """
-  The longest note an organiser may leave for the guest. Anything that
-  becomes one (a poll's description) is held to the same limit.
-  """
-  @spec organizer_note_max_length() :: pos_integer()
-  def organizer_note_max_length, do: @organizer_note_max_length
+  @doc "The longest note an organiser may leave for the guest; see `Tymeslot.Meetings.MeetingRules`."
+  defdelegate organizer_note_max_length, to: MeetingRules
 
   @doc """
   Changeset for a solo meeting, and for updates to any meeting.
@@ -524,10 +522,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   confirms it. Any other status is ignored.
 
   An `:awaiting_payment` group meeting is outside
-  `unique_confirmed_meeting_per_organizer_at_time`, which indexes only
-  confirmed and awaiting-approval rows, so its single live row rests on
-  the organiser's schedule lock alone (see
-  `Tymeslot.Meetings.GroupScheduling`).
+  `unique_confirmed_meeting_per_organizer_at_time`, which indexes only the
+  slot-holding statuses (confirmed, awaiting approval, awaiting
+  verification), so its single live row rests on the organiser's schedule
+  lock alone (see `Tymeslot.Meetings.GroupScheduling`).
   """
   @spec group_changeset(t(), map()) :: Ecto.Changeset.t()
   def group_changeset(meeting, attrs) do
@@ -573,39 +571,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> UniqueInvitation.cast_on_insert(attrs)
     |> cast_series_on_insert(attrs)
-    |> DerivedFields.put()
-    |> validate_required([:calendar_uid | required_fields])
-    # Every writer copies `organizer_email` from the host's stored account (or
-    # the operator's configured fallback), never from a form, so it is held
-    # only to presence and length: an account whose address predates the
-    # current format rules must still be able to take bookings.
-    |> EmailChangeset.validate_email(:organizer_email, existing: true)
-    |> EmailChangeset.validate_email(:attendee_email)
-    |> validate_required([:attendee_locale])
-    |> validate_inclusion(:attendee_locale, supported_locale_codes(),
-      message: dgettext_noop("errors", "is not a supported locale")
-    )
-    |> validate_number(:capacity, greater_than: 0)
-    |> TimeOrder.validate_time_order(:start_time, :end_time)
-    |> validate_length(:utm_source, max: 255)
-    |> validate_length(:utm_medium, max: 255)
-    |> validate_length(:utm_campaign, max: 255)
-    |> validate_length(:utm_content, max: 255)
-    |> validate_length(:utm_term, max: 255)
-    |> validate_length(:referrer_host, max: 255)
-    |> validate_length(:decline_reason, max: 500)
-    |> validate_length(:organizer_note, max: @organizer_note_max_length)
-    |> validate_length(:visitor_hash, max: 64)
-    # Google Calendar's documented maximum event id length.
-    |> validate_length(:provider_event_id, max: 1024)
-    |> TrackingParams.validate_tracking_params(:tracking_params)
-    |> unique_constraint(:uid)
-    |> unique_constraint(:calendar_uid)
-    |> UniqueSlot.constrain()
-    |> check_constraint(:end_time, name: :meetings_end_after_start)
-    |> foreign_key_constraint(:venue_id)
-    |> foreign_key_constraint(:booking_page_id)
-    |> UniqueInvitation.constrain()
+    |> MeetingRules.validate(required_fields)
   end
 
   # A booking joins its series when it is made, and nothing later moves it to
@@ -635,6 +601,4 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   @doc "Whether only the host manages the meeting; see `Tymeslot.Meetings.HostManaged`."
   defdelegate managed_by_host?(meeting), to: Tymeslot.Meetings.HostManaged, as: :managed?
-
-  defp supported_locale_codes, do: Locales.supported_codes()
 end

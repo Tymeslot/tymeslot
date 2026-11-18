@@ -4,8 +4,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SlotIntervalFiel
   dropdown offers, when the custom number input opens, and the hint that
   previews the start times the chosen interval produces.
 
-  Extracted from `FormView`, which renders the field and asks this module
-  every question about its state. The event handlers compare submitted
+  Extracted from the form's markup; `DetailsPanel` renders the field and asks
+  this module every question about its state. The event handlers compare submitted
   values against `custom_interval_option/0` to recognise the "Custom" choice.
   """
 

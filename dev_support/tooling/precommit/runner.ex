@@ -117,6 +117,8 @@ defmodule Tymeslot.Precommit.Runner do
   # The checks are not compiled into the build, so the literal is repeated here.
   @warning_marker "Soft limit:"
   @dialyzer_schedulers 8
+  # Schedulers for a static check running beside the suite; see `beside_suite_env/1`.
+  @beside_suite_schedulers 2
 
   @type step :: {name :: String.t(), args :: [String.t()], env :: atom()}
   @type result :: {name :: String.t(), :passed | :failed | :skipped, non_neg_integer()}
@@ -174,7 +176,8 @@ defmodule Tymeslot.Precommit.Runner do
       # the beams the compile steps produce, and a build that does not compile
       # is the case those barriers exist to stop.
       tasks = Enum.map(backgrounded, &start_background(&1, capture_fun, suite_plan_fun))
-      {tail_results, warnings} = run_tail(head, tail, cmd_fun, capture_fun)
+      beside_suite? = backgrounded != []
+      {tail_results, warnings} = run_tail(head, tail, cmd_fun, {capture_fun, beside_suite?})
 
       {order_like(steps, head_results ++ tail_results ++ Enum.map(tasks, &join/1)), warnings}
     end
@@ -185,10 +188,10 @@ defmodule Tymeslot.Precommit.Runner do
   # sequence.
   defp run_tail([], tail, cmd_fun, _capture_fun), do: {run_steps(tail, false, cmd_fun, []), []}
 
-  defp run_tail(_head, tail, cmd_fun, capture_fun) do
+  defp run_tail(_head, tail, cmd_fun, {capture_fun, beside_suite?}) do
     {writers, readers} = Enum.split_with(tail, &writes_build?/1)
     writer_results = run_steps(writers, false, cmd_fun, [])
-    {reader_results, warnings} = run_concurrently(readers, capture_fun)
+    {reader_results, warnings} = run_concurrently(readers, capture_fun, beside_suite?)
     {writer_results ++ reader_results, warnings}
   end
 
@@ -196,9 +199,9 @@ defmodule Tymeslot.Precommit.Runner do
   # so a fast failure is on screen while credo and dialyzer are still running.
   # The suite's task prints its own block at the same time, so each block goes
   # out as one write (`print_block/2`) to keep the two from interleaving.
-  defp run_concurrently([], _capture_fun), do: {[], []}
+  defp run_concurrently([], _capture_fun, _beside_suite?), do: {[], []}
 
-  defp run_concurrently(steps, capture_fun) do
+  defp run_concurrently(steps, capture_fun, beside_suite?) do
     names = Enum.map_join(steps, ", ", fn {name, _args, _env} -> name end)
 
     Mix.shell().info([
@@ -210,7 +213,11 @@ defmodule Tymeslot.Precommit.Runner do
     ])
 
     steps
-    |> Tasks.async_stream(fn {name, args, env} -> {name, args, capture_fun.(args, env, [])} end,
+    |> Tasks.async_stream(
+      fn {name, args, env} ->
+        extra_env = if beside_suite?, do: beside_suite_env(args), else: []
+        {name, args, capture_fun.(args, env, extra_env)}
+      end,
       max_concurrency: length(steps),
       ordered: false,
       timeout: :infinity
@@ -297,7 +304,7 @@ defmodule Tymeslot.Precommit.Runner do
 
   defp capture_suite(args, env, capture_fun, %{partitions: count, schedulers: schedulers}) do
     base = System.get_env("MIX_TEST_PARTITION", "")
-    erl_flags = String.trim("#{System.get_env("ERL_FLAGS")} +S #{schedulers}:#{schedulers}")
+    erl_flags = erl_flags(schedulers)
     partition_args = args ++ ["--partitions", Integer.to_string(count)]
 
     1..count
@@ -391,7 +398,9 @@ defmodule Tymeslot.Precommit.Runner do
   # own modules only, and a warning in a sibling checkout this workspace owns
   # would otherwise scroll past a green step. Warnings in fetched packages are
   # left alone: they are not ours to fix.
-  defp cmd(["compile" | _rest] = args, env) do
+  @doc false
+  @spec cmd([String.t()], atom()) :: non_neg_integer()
+  def cmd(["compile" | _rest] = args, env) do
     {tee, code} =
       System.cmd("mix", args,
         into: %Tee{},
@@ -413,7 +422,13 @@ defmodule Tymeslot.Precommit.Runner do
     end
   end
 
-  defp cmd(args, env) do
+  def cmd(["hex.audit" | _rest] = args, env) do
+    {output, code} = capture(args, env, [])
+    IO.write(output)
+    code
+  end
+
+  def cmd(args, env) do
     {_output, code} =
       System.cmd("mix", args,
         into: IO.stream(:stdio, :line),
@@ -424,17 +439,50 @@ defmodule Tymeslot.Precommit.Runner do
     code
   end
 
+  @registry_attempts 3
+  @registry_pause_ms 5_000
+
   # The concurrent counterpart to `cmd/2`: the same invocation, with the output
   # collected rather than streamed so it can be printed in one block when the
   # step finishes.
-  defp capture(args, env, extra_env) do
+  @doc false
+  @spec capture([String.t()], atom(), [{String.t(), String.t()}]) ::
+          {String.t(), non_neg_integer()}
+  def capture(args, env, extra_env) do
     {command, argv} = launcher(args)
 
-    System.cmd(command, argv,
-      stderr_to_stdout: true,
-      env: [{"MIX_ENV", to_string(env)} | step_env(args)] ++ extra_env
-    )
+    run = fn ->
+      System.cmd(command, argv,
+        stderr_to_stdout: true,
+        env: [{"MIX_ENV", to_string(env)} | step_env(args)] ++ extra_env
+      )
+    end
+
+    if registry_step?(args), do: retry_registry(run, @registry_attempts), else: run.()
   end
+
+  # `hex.audit` asks the live Hex registry, and under the load of a full gate
+  # the requests can time out, which fails the step without any finding. Only
+  # that failure is retried (a real advisory is reported at once), after a
+  # pause that lets the registry or the machine recover.
+  defp registry_step?(["hex.audit" | _rest]), do: true
+  defp registry_step?(_args), do: false
+
+  @doc false
+  @spec retry_registry((-> {String.t(), non_neg_integer()}), pos_integer(), non_neg_integer()) ::
+          {String.t(), non_neg_integer()}
+  def retry_registry(run, attempts_left, pause_ms \\ @registry_pause_ms) do
+    {output, code} = result = run.()
+
+    if code != 0 and attempts_left > 1 and registry_timeout?(output) do
+      Process.sleep(pause_ms)
+      retry_registry(run, attempts_left - 1, pause_ms)
+    else
+      result
+    end
+  end
+
+  defp registry_timeout?(output), do: String.contains?(output, "Failed to fetch record")
 
   # Keyed off the command, as `suite?/1` is, so a niced step can never be the
   # suite's parent: `nice` reaches every process a step starts, and the test
@@ -486,10 +534,38 @@ defmodule Tymeslot.Precommit.Runner do
       System.get_env("MIX_DIALYZER_SCHEDULERS") ||
         Integer.to_string(dialyzer_schedulers(System.schedulers_online()))
 
-    [{"ERL_FLAGS", "+S #{schedulers}:#{schedulers}"}]
+    [{"ERL_FLAGS", erl_flags(schedulers)}]
   end
 
   def step_env(_args), do: []
+
+  # The static checks that run concurrently with the suite each start a BEAM
+  # of their own, and a BEAM starts one scheduler per core it may use. The
+  # suite's partitions are already sized to use those cores between them (see
+  # `Tymeslot.Precommit.CpuBudget`), so credo, sobelow, xref and the rest,
+  # each with a full complement of schedulers on top, oversubscribed the run
+  # several times over: some forty schedulers on a ten-core quota, thrashing
+  # and throttled. Beside the suite they get two each instead; they are mostly
+  # Mix boot plus one tool, and their wall clock hides behind the suite's.
+  # Dialyzer keeps its own measured cap from `step_env/1`, which `capture/3`
+  # already applies, so it is left out here rather than given two ERL_FLAGS.
+  # Without a suite in the run (an `--affected` diff that reaches none), the
+  # checks have the machine to themselves and run uncapped.
+  @doc false
+  @spec beside_suite_env([String.t()]) :: [{String.t(), String.t()}]
+  def beside_suite_env([command | _rest]) when command in ~w[dialyzer dialyzer.incremental],
+    do: []
+
+  def beside_suite_env(_args),
+    do: [{"ERL_FLAGS", erl_flags(min(@beside_suite_schedulers, System.schedulers_online()))}]
+
+  # A scheduler count is appended to the inherited ERL_FLAGS rather than set in
+  # their place, so the flags the workspace `mix.sh` starts every BEAM with
+  # (busy-waiting off) reach the partitions and the capped steps too. The BEAM
+  # takes the last `+S` it is given, so an inherited count is overridden.
+  defp erl_flags(schedulers) do
+    String.trim("#{System.get_env("ERL_FLAGS")} +S #{schedulers}:#{schedulers}")
+  end
 
   @doc false
   @spec dependency_warnings(String.t(), [atom()]) :: [atom()]

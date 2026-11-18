@@ -16,7 +16,7 @@ defmodule Tymeslot.Agenda do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.CalendarLinks
+  alias Tymeslot.Meetings.ExternalCalendar
   alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Utils.DateTimeUtils
@@ -102,10 +102,10 @@ defmodule Tymeslot.Agenda do
   defp booked_identifiers(user, events) do
     identifiers =
       events
-      |> CalendarLinks.calendar_identifier_set()
+      |> ExternalCalendar.calendar_identifier_set()
       |> MapSet.to_list()
 
-    CalendarLinks.organizer_calendar_identifiers(user.id, identifiers)
+    ExternalCalendar.organizer_calendar_identifiers(user.id, identifiers)
   end
 
   # An external event is dropped when it is one of our own synced bookings, a
@@ -114,7 +114,7 @@ defmodule Tymeslot.Agenda do
     event.status == "cancelled" or
       event.transparency == "transparent" or
       (not event.all_day and is_nil(event.start_at)) or
-      CalendarLinks.linked_to_calendar_event?(event, booked_identifiers)
+      ExternalCalendar.linked_to_calendar_event?(event, booked_identifiers)
   end
 
   # The hero is the next *timed* entry; all-day entries stay in their day group.

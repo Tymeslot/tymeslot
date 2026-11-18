@@ -422,6 +422,28 @@ defmodule Tymeslot.BookingSeries.CreateTest do
     assert series_count() == 0
   end
 
+  describe "a type saved with series and email confirmation before the rule" do
+    test "refuses the series", %{host: host, today: today} do
+      type = series_type(host, requires_email_verification: true)
+
+      assert {:error, :series_not_offered} = book_series(host, type, weekly(today, 4))
+      assert meeting_count() == 0
+      assert series_count() == 0
+    end
+
+    test "books a single session awaiting confirmation, even when the series is required", %{
+      host: host,
+      today: today
+    } do
+      type = series_type(host, requires_email_verification: true, series_required: true)
+
+      assert {:ok, %MeetingSchema{status: :awaiting_verification, series_id: nil}} =
+               Create.execute(single(host, type, today), form_data())
+
+      assert series_count() == 0
+    end
+  end
+
   test "an approval type books the series held for approval", %{host: host, today: today} do
     held = series_type(host, requires_approval: true)
 

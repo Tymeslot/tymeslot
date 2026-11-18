@@ -903,3 +903,8 @@ msgstr "Ce type de réunion n’a aucun horaire disponible à la réservation po
 #, elixir-autogen, elixir-format
 msgid "%{page} with %{name}"
 msgstr "%{page} avec %{name}"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "We'll email you a link to confirm this booking."
+msgstr "Nous vous enverrons par e-mail un lien pour confirmer cette réservation."

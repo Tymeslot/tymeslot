@@ -112,7 +112,7 @@ defmodule Tymeslot.Bookings.Orchestrator do
   def get_meeting_for_reschedule(meeting_uid, organizer_user_id)
       when is_integer(organizer_user_id) do
     with {:ok, meeting} <-
-           MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id),
+           MeetingQueries.get_meeting_by_uid_for_attendee(meeting_uid, organizer_user_id),
          :ok <- Policy.can_reschedule_meeting?(meeting),
          :ok <- Policy.can_booker_move_meeting?(meeting) do
       {:ok, meeting}

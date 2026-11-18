@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorkerTest do
   import Tymeslot.TestFixtures
   import Tymeslot.WorkerTestHelpers, only: [insert_unhealthy_health_row: 4]
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationActivationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Profiles.ProfileQueries
@@ -230,7 +231,7 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorkerTest do
       # Re-activate manually so the is_active gate is no longer the guard on
       # the second run. The Oban 90-day uniqueness window is now the only
       # mechanism that must prevent a duplicate notification job.
-      {:ok, reactivated} = CalendarIntegrationQueries.toggle_active(paused)
+      {:ok, reactivated} = CalendarIntegrationActivationQueries.toggle_active(paused)
       assert reactivated.is_active == true
 
       assert :ok = IntegrationAutoPauseWorker.perform(%Oban.Job{})

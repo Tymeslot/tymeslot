@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlersAdHocTest do
     refute_received {:phoenix, :send_update, _update}
   end
 
-  test "a clash with another meeting says so" do
+  test "a clash is refused without naming a meeting the host may not see" do
     assert {:noreply, updated} =
              CalendarEventHandlers.handle_create_ad_hoc_meeting_result(
                {:error, :time_conflict},
@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlersAdHocTest do
              )
 
     assert Flash.get(updated.assigns.flash, :error) ==
-             "You already have a meeting at this time. Please choose a different time."
+             "This time is no longer available. Please choose another time."
   end
 
   test "a reason the calendar has no words for never reaches the flash verbatim" do
