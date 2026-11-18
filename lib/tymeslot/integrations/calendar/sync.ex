@@ -345,6 +345,14 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   # occurrences first, as a master's does above. Only a row the sync has
   # caught up with goes; one holding a queued edit or delete stays until the
   # queue has sent it.
+  #
+  # The row is replaced, not deleted from the calendar, so it is dropped here
+  # rather than through `SyncReconciliation.reconcile_deletions/3`, and a
+  # full fetch no longer finds it missing. That matters for a booking: the
+  # organiser can give its calendar copy a repeat rule (a rule is no change
+  # of timing, `Tymeslot.CalendarGrid.EditGuard.check/3`), the booking is
+  # linked to this row by its UID, and treating the row as gone would cancel
+  # the booking and email both parties.
   defp drop_replaced_series_rows(integration_id, calendar_events) do
     batch_uids = MapSet.new(calendar_events, & &1.uid)
 

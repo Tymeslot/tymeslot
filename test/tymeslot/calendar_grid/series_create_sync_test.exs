@@ -21,12 +21,15 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.Changes
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler
   alias Tymeslot.Integrations.Calendar.DebugStore
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
+  alias Tymeslot.Integrations.Calendar.Sync
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SyncDebugCalendarWorker
 
   @href "/cal/weekly@tymeslot.com.ics"
@@ -158,6 +161,45 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
       assert length(occurrences) == 3
       assert Enum.reject(occurrences, &(&1.video_link == link)) == []
       assert Enum.reject(occurrences, &(&1.video_integration_id == video.id)) == []
+    end
+
+    # The booking's calendar copy can be given a repeat rule from the
+    # calendar (a rule is no change of timing, `EditGuard.check/3`). The row
+    # under its UID is then replaced by the occurrences, not deleted from the
+    # calendar, so the booking must survive a full fetch, which prunes by
+    # absence.
+    test "a booking whose calendar copy was given a repeat rule is not cancelled by a full fetch",
+         %{integration: integration, first_start: first_start} do
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          calendar_uid: "weekly@tymeslot.com",
+          start_time: first_start,
+          end_time: DateTime.add(first_start, 3600)
+        )
+
+      insert_synced_caldav_one_off(integration, first_start, nil, nil)
+
+      {:ok, _row} =
+        ProviderCalendarEventQueries.apply_local_edit(integration.id, "weekly@tymeslot.com", %{
+          recurrence_rule: "FREQ=WEEKLY;COUNT=3"
+        })
+
+      {range_start, range_end} = Sync.window()
+
+      assert :ok =
+               SyncReconciler.process_full_fetch(
+                 integration,
+                 caldav_series(@href),
+                 range_start,
+                 range_end,
+                 Clock.utc_now(),
+                 "/cal/"
+               )
+
+      assert blocks_on(integration, first_start) == ["weekly@tymeslot.com_20261118T180000"]
+      assert Repo.reload!(meeting).status == meeting.status
+      refute_enqueued(worker: EmailWorker)
     end
 
     test "a stand-in with a queued delete stays until the queue has sent it", %{
