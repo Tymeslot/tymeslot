@@ -56,7 +56,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   attr :target, :any, required: true
   attr :booking_payment, :map, default: nil
   attr :seat_payments, :list, default: []
-  attr :refund_error, :map, default: %{}, doc: "`:amount` and `:acknowledgement` messages"
+
+  attr :refund_error, :map,
+    default: %{},
+    doc: "`:amount`, `:acknowledgement` and `:payments` (the paid seats changed) messages"
+
   attr :refund_form, :map, default: %{choice: "full", amount: "", acknowledged: false}
 
   @spec cancel_meeting_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -93,6 +97,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
       >
         <p>
           {confirm_question(@meeting, @timezone, @time_format)}
+        </p>
+
+        <p
+          :if={@refund_error[:payments]}
+          id="cancel-refund-payments-error"
+          class="form-error"
+          role="alert"
+        >
+          {@refund_error[:payments]}
         </p>
 
         <.refund_choices
@@ -201,15 +214,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     assigns = assign(assigns, :remaining, refundable_remaining(assigns.booking_payment))
 
     ~H"""
-    <div class="rounded-token-md border border-tymeslot-200 bg-tymeslot-50 p-3 text-token-sm space-y-3">
-      <p>
-        {dgettext(
-          "dashboard_bookings",
-          "This booking was paid. Choose how to handle the refund - the attendee always receives the full amount you refund."
-        )}
-      </p>
+    <div class="rounded-token-md border border-tymeslot-200 bg-tymeslot-50 p-3 text-token-sm">
+      <fieldset class="space-y-2">
+        <legend class="mb-3">
+          {dgettext(
+            "dashboard_bookings",
+            "This booking was paid. Choose how to handle the refund - the attendee always receives the full amount you refund."
+          )}
+        </legend>
 
-      <div class="space-y-2">
         <label class="flex items-start gap-2">
           <Forms.input
             type="radio"
@@ -247,46 +260,22 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
           />
         </div>
 
-        <label class="flex items-start gap-2">
-          <Forms.input
-            type="radio"
-            name="cancel_refund_choice"
-            value="none"
-            checked={@refund_form.choice == "none"}
-          />
-          <span>
-            <strong>{dgettext("dashboard_bookings", "Cancel without refund.")}</strong>
-            {dgettext(
+        <.no_refund_choice
+          id_prefix={@id_prefix}
+          refund_form={@refund_form}
+          refund_error={@refund_error}
+          label={dgettext("dashboard_bookings", "Cancel without refund.")}
+          detail={
+            dgettext(
               "dashboard_bookings",
               "The attendee keeps no money. Use only if the attendee already agreed."
-            )}
-          </span>
-        </label>
-
-        <label class="flex items-start gap-2 ml-6">
-          <%!-- raw-input: acknowledgement checkbox inside its inline label beside the text; <.input> would nest block wrappers inside the label --%>
-          <input
-            type="checkbox"
-            name="cancel_refund_no_refund_ack"
-            value="true"
-            checked={@refund_form.acknowledged}
-          />
-          <span class="text-tymeslot-700">
-            {dgettext(
-              "dashboard_bookings",
-              "I understand the attendee will not receive a refund."
-            )}
-          </span>
-        </label>
-        <p
-          :if={@refund_error[:acknowledgement]}
-          id={"#{@id_prefix}-refund-ack-error"}
-          class="form-error ml-6"
-          role="alert"
-        >
-          {@refund_error[:acknowledgement]}
-        </p>
-      </div>
+            )
+          }
+          acknowledgement={
+            dgettext("dashboard_bookings", "I understand the attendee will not receive a refund.")
+          }
+        />
+      </fieldset>
     </div>
     """
   end
@@ -308,18 +297,18 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
       )
 
     ~H"""
-    <div class="rounded-token-md border border-tymeslot-200 bg-tymeslot-50 p-3 text-token-sm space-y-3">
-      <p>
-        {dngettext(
-          "dashboard_bookings",
-          "%{count} participant paid for this session (%{amount} in total).",
-          "%{count} participants paid for this session (%{amount} in total).",
-          @count,
-          amount: @total
-        )}
-      </p>
+    <div class="rounded-token-md border border-tymeslot-200 bg-tymeslot-50 p-3 text-token-sm">
+      <fieldset class="space-y-2">
+        <legend class="mb-3">
+          {dngettext(
+            "dashboard_bookings",
+            "%{count} participant paid for this session (%{amount} still held).",
+            "%{count} participants paid for this session (%{amount} still held).",
+            @count,
+            amount: @total
+          )}
+        </legend>
 
-      <div class="space-y-2">
         <label class="flex items-start gap-2">
           <Forms.input
             type="radio"
@@ -336,43 +325,76 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
           </span>
         </label>
 
-        <label class="flex items-start gap-2">
-          <Forms.input
-            type="radio"
-            name="cancel_refund_choice"
-            value="none"
-            checked={@refund_form.choice == "none"}
-          />
-          <span>
-            <strong>{dgettext("dashboard_bookings", "Don't refund anyone.")}</strong>
-          </span>
-        </label>
-
-        <label class="flex items-start gap-2 ml-6">
-          <%!-- raw-input: acknowledgement checkbox inside its inline label beside the text; <.input> would nest block wrappers inside the label --%>
-          <input
-            type="checkbox"
-            name="cancel_refund_no_refund_ack"
-            value="true"
-            checked={@refund_form.acknowledged}
-          />
-          <span class="text-tymeslot-700">
-            {dgettext(
+        <.no_refund_choice
+          id_prefix="cancel"
+          refund_form={@refund_form}
+          refund_error={@refund_error}
+          label={dgettext("dashboard_bookings", "Don't refund anyone.")}
+          detail={
+            dgettext(
               "dashboard_bookings",
-              "I understand the participants keep nothing back unless I refund them later from Payments."
-            )}
-          </span>
-        </label>
-        <p
-          :if={@refund_error[:acknowledgement]}
-          id="cancel-refund-ack-error"
-          class="form-error ml-6"
-          role="alert"
-        >
-          {@refund_error[:acknowledgement]}
-        </p>
-      </div>
+              "Each participant's payment stays with you until you refund it from Payments."
+            )
+          }
+          acknowledgement={
+            dgettext(
+              "dashboard_bookings",
+              "I understand the participants get nothing back unless I refund them later from Payments."
+            )
+          }
+        />
+      </fieldset>
     </div>
+    """
+  end
+
+  attr :id_prefix, :string, required: true, doc: "prefixes the acknowledgement error's id"
+  attr :refund_form, :map, required: true
+  attr :refund_error, :map, required: true
+  attr :label, :string, required: true, doc: "the option's name, in bold"
+  attr :detail, :string, required: true, doc: "what refunding no one means for the payer"
+  attr :acknowledgement, :string, required: true, doc: "what ticking the box agrees to"
+
+  # Cancelling without refunding: the `none` radio and the acknowledgement it
+  # needs, whose error the checkbox is described by. Shared by
+  # `refund_choices/1` and `seat_options/1`, which word it for one attendee
+  # or for every participant.
+  defp no_refund_choice(assigns) do
+    assigns = assign(assigns, :error_id, "#{assigns.id_prefix}-refund-ack-error")
+
+    ~H"""
+    <label class="flex items-start gap-2">
+      <Forms.input
+        type="radio"
+        name="cancel_refund_choice"
+        value="none"
+        checked={@refund_form.choice == "none"}
+      />
+      <span>
+        <strong>{@label}</strong>
+        {@detail}
+      </span>
+    </label>
+
+    <label class="flex items-start gap-2 ml-6">
+      <%!-- raw-input: acknowledgement checkbox inside its inline label beside the text; <.input> would nest block wrappers inside the label --%>
+      <input
+        type="checkbox"
+        name="cancel_refund_no_refund_ack"
+        value="true"
+        checked={@refund_form.acknowledged}
+        aria-describedby={@refund_error[:acknowledgement] && @error_id}
+      />
+      <span class="text-tymeslot-700">{@acknowledgement}</span>
+    </label>
+    <p
+      :if={@refund_error[:acknowledgement]}
+      id={@error_id}
+      class="form-error ml-6"
+      role="alert"
+    >
+      {@refund_error[:acknowledgement]}
+    </p>
     """
   end
 

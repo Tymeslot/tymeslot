@@ -179,16 +179,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
     end
   end
 
-  # An expired meeting carries no cancellation date, so its row is dated by
-  # the payment. A cancelled meeting always carries `cancelled_at`, and an
-  # expired payment `paid_at`, so the bare fallbacks should not arise; they
-  # are tolerated rather than raising, because a vaguer cell beats a 500 on
-  # the payments screen.
   # A seat its participant cancelled is dated by when they left: the session
   # itself may still be going ahead.
   defp format_date_cell(%{participant: %{cancelled_at: %DateTime{} = left_at}}),
     do: dgettext("dashboard_payments", "Left %{date}", date: format_date(left_at))
 
+  # An expired meeting carries no cancellation date, so its row is dated by
+  # the payment. A cancelled meeting always carries `cancelled_at`, and an
+  # expired payment `paid_at`, so the bare fallbacks should not arise; they
+  # are tolerated rather than raising, because a vaguer cell beats a 500 on
+  # the payments screen.
   defp format_date_cell(%{meeting: %{status: _status} = meeting} = payment) do
     if MeetingState.expired?(meeting),
       do: expired_date_cell(payment),

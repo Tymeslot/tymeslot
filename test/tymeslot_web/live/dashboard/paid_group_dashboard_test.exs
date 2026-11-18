@@ -25,9 +25,12 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.Components.CoreComponents.Feedback
 
   setup :verify_on_exit!
   setup :set_mox_from_context
@@ -74,9 +77,10 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
 
       assert Floki.text(pill) =~ "€40.00 paid · 2 seats"
 
-      refute view
-             |> element("li", free.email)
-             |> render() =~ "participant-payment"
+      refute has_element?(
+               view,
+               "li[data-participant-id='#{free.id}'] [data-testid=participant-payment]"
+             )
     end
 
     test "a refunded participant shows refunded", %{conn: conn} = ctx do
@@ -85,6 +89,33 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
 
       assert has_element?(view, "[data-testid=participant-payment]", "Refunded")
+      refute has_element?(view, "[data-testid=participant-payment]", "paid")
+    end
+
+    test "a partly refunded participant shows how much, apart from a full refund",
+         %{conn: conn} = ctx do
+      paid_seat(ctx, "ada@example.com", status: :partially_refunded, refunded_amount_cents: 500)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      assert [pill] =
+               view
+               |> render()
+               |> Floki.parse_document!()
+               |> Floki.find("[data-testid=participant-payment]")
+
+      assert Floki.text(pill) =~ "€5.00 refunded"
+      assert [class] = Floki.attribute(pill, "class")
+      assert class =~ Feedback.pill_tone_class(:warning)
+      refute class =~ Feedback.pill_tone_class(:neutral)
+    end
+
+    test "a disputed participant shows disputed", %{conn: conn} = ctx do
+      paid_seat(ctx, "ada@example.com", status: :disputed)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      assert has_element?(view, "[data-testid=participant-payment]", "Disputed")
       refute has_element?(view, "[data-testid=participant-payment]", "paid")
     end
   end
@@ -99,13 +130,52 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
       assert has_element?(
                view,
                "#cancel-meeting-form",
-               "2 participants paid for this session (€60.00 in total)."
+               "2 participants paid for this session (€60.00 still held)."
              )
 
       assert has_element?(view, "input[name=cancel_refund_choice][value=full][checked]")
       assert has_element?(view, "input[name=cancel_refund_choice][value=none]")
       refute has_element?(view, "input[name=cancel_refund_choice][value=partial]")
       refute has_element?(view, "input[name=cancel_refund_amount]")
+    end
+
+    test "one paid participant is named in the singular", %{conn: conn} = ctx do
+      paid_seat(ctx, "ada@example.com", amount_cents: 3000)
+
+      view = open_cancel_dialog(conn, ctx.session)
+
+      assert has_element?(
+               view,
+               "#cancel-meeting-form",
+               "1 participant paid for this session (€30.00 still held)."
+             )
+    end
+
+    test "a seat paid while the dialog was open is shown before anything is cancelled",
+         %{conn: conn} = ctx do
+      view = open_cancel_dialog(conn, ctx.session)
+      refute has_element?(view, "input[name=cancel_refund_choice]")
+
+      paid_seat(ctx, "ada@example.com")
+      view |> form("#cancel-meeting-form") |> render_submit()
+
+      assert has_element?(
+               view,
+               "#cancel-refund-payments-error",
+               "Someone paid for a seat while this was open."
+             )
+
+      assert has_element?(view, "#cancel-meeting-form", "1 participant paid for this session")
+      assert has_element?(view, "input[name=cancel_refund_choice][value=full][checked]")
+      assert status(ctx.session) == :confirmed
+      assert refund_jobs() == []
+
+      view
+      |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "full"})
+      |> render_submit()
+
+      assert status(ctx.session) == :cancelled
+      assert length(refund_jobs()) == 1
     end
 
     test "with full refunds schedules a refund per seat", %{conn: conn} = ctx do
@@ -132,7 +202,17 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
       |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "none"})
       |> render_submit()
 
-      assert has_element?(view, "#cancel-refund-ack-error")
+      assert has_element?(
+               view,
+               "#cancel-refund-ack-error",
+               "Tick the acknowledgement to cancel without refunding the participants."
+             )
+
+      assert has_element?(
+               view,
+               "input[name=cancel_refund_no_refund_ack][aria-describedby=cancel-refund-ack-error]"
+             )
+
       assert has_element?(view, "input[name=cancel_refund_choice][value=none][checked]")
       assert status(ctx.session) == :confirmed
 
@@ -198,6 +278,46 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
       assert table =~ "Group Class · Thu 4 Mar"
       assert table =~ "10:00"
       assert table =~ "2 seats"
+    end
+
+    test "a seat payment whose session is gone is named by its type alone",
+         %{conn: conn, host: host} do
+      insert(:paid_booking_payment,
+        meeting_id: nil,
+        seat_payment: true,
+        meeting_type_name: "Group Class",
+        host_user_id: host.id,
+        host_email: host.email,
+        stripe_account_id: account()
+      )
+
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
+      table = view |> element("[data-testid=payments-table]") |> render()
+
+      assert table =~ "Group Class"
+      refute table =~ "Group Class ·"
+    end
+
+    # A participant who left keeps their seat's money with the host, and a
+    # full refund of the session's seats refunds only the seats still held.
+    test "a seat its participant left is still owed after the session is cancelled with refunds",
+         %{conn: conn, host: host} = ctx do
+      left = paid_seat(ctx, "ada@example.com")
+      paid_seat(ctx, "grace@example.com")
+
+      ParticipantSchema
+      |> Repo.get!(left.participant_id)
+      |> Changeset.change(cancelled_at: ~U[2027-03-01 09:00:00Z])
+      |> Repo.update!()
+
+      assert {:ok, _cancelled} =
+               Meetings.cancel_meeting_with_refund(ctx.session, host.id, :refund_seats)
+
+      assert length(refund_jobs()) == 1
+
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
+
+      assert has_element?(view, "#outstanding-refund-#{left.id}", "Left 1 Mar 2027")
     end
 
     test "refunding a seat payment from the payments page refunds that seat only",

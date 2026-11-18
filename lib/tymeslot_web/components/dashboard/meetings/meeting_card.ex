@@ -237,6 +237,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
             <ul class="space-y-2.5">
               <li
                 :for={participant <- @participants}
+                data-participant-id={participant.id}
                 class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2"
               >
                 <span class="flex items-center gap-2.5 min-w-[10rem] flex-1">

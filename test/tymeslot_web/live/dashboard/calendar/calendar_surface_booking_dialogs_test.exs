@@ -305,6 +305,52 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
     assert length(all_enqueued(worker: GroupCancelRefund)) == 2
   end
 
+  test "a seat paid while the calendar's cancel dialog was open is shown before anything is cancelled",
+       %{conn: conn, user: user} do
+    session =
+      insert(:group_meeting,
+        organizer_user: user,
+        title: "Group class",
+        start_time: ~U[2026-10-15 15:00:00Z],
+        end_time: ~U[2026-10-15 15:30:00Z],
+        capacity: 4,
+        status: :confirmed
+      )
+
+    insert(:participant, meeting: session, email: "free@example.com")
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    open(lv, session)
+    lv |> element("#calendar-preview-cancel") |> render_click()
+    refute has_element?(lv, "input[name=cancel_refund_choice]")
+
+    participant = insert(:participant, meeting: session, email: "ada@example.com")
+
+    insert(:paid_booking_payment,
+      meeting_id: session.id,
+      participant_id: participant.id,
+      seat_payment: true,
+      amount_cents: 2000,
+      host_user_id: user.id,
+      attendee_email: participant.email
+    )
+
+    lv |> form("#cancel-meeting-form") |> render_submit()
+
+    assert render(lv) =~ "Someone paid for a seat while this was open."
+    assert has_element?(lv, "#cancel-meeting-form", "1 participant paid for this session")
+    assert has_element?(lv, "input[name=cancel_refund_choice][value=full]")
+    assert reload(session).status == :confirmed
+    assert all_enqueued(worker: GroupCancelRefund) == []
+
+    lv
+    |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "full"})
+    |> render_submit()
+
+    assert reload(session).status == :cancelled
+    assert length(all_enqueued(worker: GroupCancelRefund)) == 1
+  end
+
   describe "the calendar copy a drawn booking hides" do
     setup %{user: user, integration: integration} do
       copy = event(integration, "work", "Intro call", ~U[2026-10-15 13:00:00Z], 30)

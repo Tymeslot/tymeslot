@@ -220,16 +220,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
         params
       )
 
-    socket = Flash.put_flash(socket, type, message)
-
-    if outcome in [:closed, :refused],
-      do:
-        socket
-        |> ModalHook.hide_modal(:cancel_meeting)
-        |> assign(Cancellation.no_payments())
-        |> SurfaceData.reload(:events),
-      else: socket
+    socket
+    |> Flash.put_flash(type, message)
+    |> settle_cancel(outcome)
   end
+
+  defp settle_cancel(socket, outcome) when outcome in [:closed, :refused],
+    do:
+      socket
+      |> ModalHook.hide_modal(:cancel_meeting)
+      |> assign(Cancellation.no_payments())
+      |> SurfaceData.reload(:events)
+
+  # What was paid changed while the dialog was open: it stays, showing the
+  # payments as they now stand, for the host to choose again.
+  defp settle_cancel(socket, {:changed, current}), do: assign(socket, current)
+
+  defp settle_cancel(socket, _kept_open), do: socket
 
   # The action is no longer allowed (started, ended, already cancelled): the
   # block on screen is stale, so it is reloaded with the reason.

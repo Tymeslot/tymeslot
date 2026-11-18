@@ -130,6 +130,7 @@ msgstr ""
 msgid "Disconnected"
 msgstr ""
 
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Disputed"
@@ -262,6 +263,7 @@ msgstr ""
 msgid "Refund type"
 msgstr ""
 
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
