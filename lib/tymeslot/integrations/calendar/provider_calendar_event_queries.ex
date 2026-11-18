@@ -424,6 +424,20 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   @doc """
+  Clears the cached colour of the event `uid` on `integration_id`, for a
+  colour the organiser has just taken off it (its write-back is queued), so
+  the calendar shows the calendar's colour without waiting for a sync.
+  """
+  @spec clear_colour(pos_integer(), String.t()) :: :ok
+  def clear_colour(integration_id, uid) do
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id == ^integration_id and e.uid == ^uid)
+    |> Repo.update_all(set: [colour: nil])
+
+    :ok
+  end
+
+  @doc """
   Writes a dashboard edit Tymeslot has just pushed to the provider onto the
   cached row, touching only the columns a user can edit (#{Enum.map_join(@local_edit_fields, ", ", &"`#{&1}`")}).
 

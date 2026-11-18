@@ -416,6 +416,46 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
     end
   end
 
+  describe "patch_event_colour/4" do
+    setup do
+      integration =
+        insert(:calendar_integration,
+          user: insert(:user),
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      %{integration: integration}
+    end
+
+    test "patches the colorId of a palette colour alone", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :patch, _url, body, _headers, _opts ->
+        assert Jason.decode!(body) == %{"colorId" => "11"}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => "event-abc"})}}
+      end)
+
+      assert {:ok, _event} =
+               CalendarAPI.patch_event_colour(integration, "primary", "event-abc", "tomato")
+    end
+
+    test "a nil colour patches colorId to null, the calendar's colour", %{
+      integration: integration
+    } do
+      expect(Tymeslot.HTTPClientMock, :request, fn :patch, _url, body, _headers, _opts ->
+        assert Jason.decode!(body) == %{"colorId" => nil}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => "event-abc"})}}
+      end)
+
+      assert {:ok, _event} =
+               CalendarAPI.patch_event_colour(integration, "primary", "event-abc", nil)
+    end
+
+    test "an unrecognised colour sends nothing", %{integration: integration} do
+      assert :ok = CalendarAPI.patch_event_colour(integration, "primary", "event-abc", "#ff00ff")
+    end
+  end
+
   describe "refresh_token/1" do
     setup do
       prior = Application.get_env(:tymeslot, :google_oauth)

@@ -1,7 +1,8 @@
 defmodule Tymeslot.Integrations.Calendar.ColourWriteBack do
   @moduledoc """
   Enqueues the best-effort provider write-back that follows a colour override
-  being set on an external event.
+  being set on an external event, or cleared from one (a `nil` colour, which
+  takes the host event back to its calendar's colour).
 
   Split out of `Tymeslot.Integrations.Calendar` so the context keeps to its
   public API: this is the enqueue mechanism behind `set_event_colour/3`, not a
@@ -14,19 +15,20 @@ defmodule Tymeslot.Integrations.Calendar.ColourWriteBack do
   alias Tymeslot.Workers.ColourWriteBackWorker
 
   @doc """
-  Enqueues a colour write-back for one external event.
+  Enqueues a colour write-back for one external event; `nil` clears it.
 
   The worker patches only the provider's colour field; Outlook and read-only
   calendars are handled inside it. `replace: [:args]` ensures that when a user
   changes the colour again before the previous job has run, the pending job's
-  args are replaced in place to carry the newest colour — without it, `unique`
-  alone would keep the *older* job (and its stale colour) and silently drop
-  the newer enqueue.
+  args are replaced in place to carry the newest colour, a clearing included:
+  without it, `unique` alone would keep the *older* job (and its stale
+  colour) and silently drop the newer enqueue, so a colour cleared while its
+  write-back still waited would be written to the host later.
 
   Always returns `:ok`: a failed enqueue is logged, never surfaced, because
   the override itself is already persisted and the next sync reconciles.
   """
-  @spec enqueue(pos_integer(), pos_integer(), String.t(), String.t()) :: :ok
+  @spec enqueue(pos_integer(), pos_integer(), String.t(), String.t() | nil) :: :ok
   def enqueue(user_id, integration_id, uid, colour) do
     %{"user_id" => user_id, "integration_id" => integration_id, "uid" => uid, "colour" => colour}
     |> ColourWriteBackWorker.new(replace: [:args])

@@ -9,7 +9,8 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   Outlook has no per-event colour concept, so those jobs are discarded. Read-only
   calendars and transient failures surface as errors and are retried by Oban; the
   durable override remains the display source regardless of write-back outcome.
-  Only *set* enqueues a job — clearing a colour leaves the host untouched.
+  Clearing an override enqueues a job too, with a `nil` colour, which clears
+  the host's colour (Google `colorId: null`, CalDAV without `COLOR`).
 
   `unique` is keyed on `[:integration_id, :uid, :user_id]` with `replace: [:args]`
   set at the enqueue site (`ColourWriteBack.enqueue/4`, called from

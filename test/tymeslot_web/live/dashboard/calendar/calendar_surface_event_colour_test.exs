@@ -89,9 +89,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceEventColourTest do
       event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z], 60, colour: "sage")
 
     id = "event-#{review.id}"
-
-    {:ok, _override} =
-      Calendar.set_event_colour(user.id, {:external, integration.id, review.uid}, "tomato")
+    target = {:external, integration.id, review.uid}
+    {:ok, _override} = Calendar.set_event_colour(user.id, target, "tomato")
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
     hook(lv, "calendar:edit", %{"id" => id})
@@ -104,8 +103,39 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceEventColourTest do
     swatch(lv, "default")
 
     assert Calendar.overrides_for(user.id) == %{}
-    uid = review.uid
-    assert_receive {:written, ^uid, %{colour: nil}}, 1_000
+    refute pushed(lv, id).colour in ["calendar-tomato", "calendar-sage"]
+
+    # The write-back still waiting with the old colour now clears it
+    # instead, and nothing else is written.
+    assert [%{args: %{"uid" => uid, "colour" => nil}}] =
+             all_enqueued(worker: ColourWriteBackWorker)
+
+    assert uid == review.uid
+    refute_receive {:written, _uid, _payload}, 200
+    refute has_element?(lv, "#calendar-undo")
+  end
+
+  test "Default on a member of a series asks no scope question", %{
+    conn: conn,
+    user: user,
+    integration: integration
+  } do
+    standup =
+      event(integration, "work", "Standup", ~U[2026-10-14 08:30:00Z], 15,
+        recurring_event_id: "standup-series",
+        colour: "sage"
+      )
+
+    {:ok, _override} =
+      Calendar.set_event_colour(user.id, {:external, integration.id, standup.uid}, "tomato")
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    hook(lv, "calendar:edit", %{"id" => "event-#{standup.id}"})
+    swatch(lv, "default")
+
+    refute has_element?(lv, "#calendar-series-scope")
+    assert Calendar.overrides_for(user.id) == %{}
+    assert [%{args: %{"colour" => nil}}] = all_enqueued(worker: ColourWriteBackWorker)
   end
 
   test "an event on a read-only calendar offers no colour, and one sent anyway is refused", %{

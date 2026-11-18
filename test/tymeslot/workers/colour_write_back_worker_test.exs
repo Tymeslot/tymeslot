@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
   setup :verify_on_exit!
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Workers.ColourWriteBackWorker
 
   setup do
@@ -49,9 +50,38 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
       )
     end
 
-    test "clear_event_colour does not enqueue a write-back", %{user: user, integration: integ} do
+    test "clear_event_colour enqueues a write-back that clears the colour", %{
+      user: user,
+      integration: integ
+    } do
       :ok = Calendar.clear_event_colour(user.id, {:external, integ.id, "uid-1"})
-      refute_enqueued(worker: ColourWriteBackWorker)
+
+      assert_enqueued(
+        worker: ColourWriteBackWorker,
+        args: %{"integration_id" => integ.id, "uid" => "uid-1", "colour" => nil}
+      )
+    end
+
+    test "a clear replaces a write-back of the old colour still waiting", %{
+      user: user,
+      integration: integ
+    } do
+      target = {:external, integ.id, "uid-1"}
+      {:ok, _override} = Calendar.set_event_colour(user.id, target, "blueberry")
+      :ok = Calendar.clear_event_colour(user.id, target)
+
+      assert [%{args: %{"colour" => nil}}] = all_enqueued(worker: ColourWriteBackWorker)
+    end
+
+    test "clear_event_colour clears the cached event's colour at once", %{
+      user: user,
+      integration: integ
+    } do
+      cached_event(integ, uid: "uid-1", colour: "blueberry")
+      :ok = Calendar.clear_event_colour(user.id, {:external, integ.id, "uid-1"})
+
+      assert {:ok, %{colour: nil}} =
+               ProviderCalendarEventQueries.get_by_uid(integ.id, "uid-1")
     end
   end
 
@@ -83,6 +113,27 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
                  "uid" => "uid-1",
                  "user_id" => user.id,
                  "colour" => "blueberry"
+               })
+    end
+
+    test "a cleared colour is pushed as no colour, the colour alone", %{
+      user: user,
+      integration: integ
+    } do
+      cached_event(integ, uid: "uid-1")
+
+      expect(Tymeslot.CalendarMock, :update_event, fn "uid-1", event_data, _context ->
+        assert %{colour_only: true, colour: nil} = event_data
+        refute Map.has_key?(event_data, :summary)
+        :ok
+      end)
+
+      assert :ok =
+               perform_job(ColourWriteBackWorker, %{
+                 "integration_id" => integ.id,
+                 "uid" => "uid-1",
+                 "user_id" => user.id,
+                 "colour" => nil
                })
     end
 

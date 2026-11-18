@@ -7,22 +7,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelColour do
   (`Calendar.set_event_colour/3`), which the calendar paints with whatever
   its provider holds, and which is written back to the provider where it has
   a per-event colour (Google, CalDAV; Outlook has none). "Default colour"
-  clears the override (`Calendar.clear_event_colour/2`) and, where the
-  provider has a per-event colour, the provider's colour as well, so the
-  event takes its calendar's colour again. The change passes the same guard as any other
-  (`EditGuard.check/3`), then repaints the grid from the overrides read again
-  (`SurfaceData.reload_overrides/1`, no events query).
+  clears the override (`Calendar.clear_event_colour/2`), whose write-back
+  clears the provider's colour too, replacing a write-back of the old colour
+  still waiting. Either way the change is the event's colour alone: no
+  series question, no undo entry. It passes the same guard as any other
+  change, once (`EditGuard.check/3`), then repaints the grid from the
+  overrides read again (`SurfaceData.reload_overrides/1`, no events query).
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CalendarGrid.EditGuard
-  alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.EventColour
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
-  alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
   alias TymeslotWeb.Dashboard.CalendarEditMessages
@@ -58,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelColour do
          {:ok, key} <- parse(colour),
          :ok <- EditGuard.check(user.id, integrations, event),
          :ok <- write(user.id, target, key) do
-      socket |> SurfaceData.reload_overrides() |> clear_provider_colour(event, key)
+      socket |> shown_cleared(event, key) |> SurfaceData.reload_overrides()
     else
       {:error, :rate_limited, _message} = refusal -> refused(socket, refusal)
       {:error, reason} = refusal when reason != :not_found -> refused(socket, refusal)
@@ -98,18 +97,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelColour do
     end
   end
 
-  # Clearing the override leaves the provider's own colour, which an earlier
-  # write-back may have set: where the provider has a per-event colour it is
-  # cleared too, as any other change to the event is written.
-  defp clear_provider_colour(socket, %{provider: "outlook"}, nil), do: socket
+  # A cleared colour is cleared from the cached event as well
+  # (`Calendar.clear_event_colour/2`); the loaded copy follows it.
+  defp shown_cleared(socket, event, nil),
+    do: SurfaceData.show_event(socket, Map.put(event, :colour, nil))
 
-  defp clear_provider_colour(socket, event, nil) do
-    if is_binary(Map.get(event, :colour)),
-      do: PanelEdits.write(socket, EventPayload.id(event), %{colour: nil}, []),
-      else: socket
-  end
-
-  defp clear_provider_colour(socket, _event, _key), do: socket
+  defp shown_cleared(socket, _event, _key), do: socket
 
   defp refused(socket, refusal) do
     {level, message} = CalendarEditMessages.refusal(refusal)
