@@ -90,7 +90,7 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   organiser's guests of a change that is not theirs to announce.
   """
   @spec guest_update(pos_integer(), [map()], map()) ::
-          :ok | {:error, :booking | :unauthorized | :read_only | :not_organiser}
+          :ok | {:error, :booking | :unauthorized | :read_only | :syncing | :not_organiser}
   def guest_update(user_id, integrations, event) do
     with :ok <- writable(integrations, event) do
       if AttendeeNotifications.organised_by?(event, user_id),
