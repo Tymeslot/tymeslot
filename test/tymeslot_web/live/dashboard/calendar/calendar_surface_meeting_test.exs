@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
   alias Tymeslot.CalendarGrid.MeetingParams
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -71,6 +72,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
 
   defp new_form(lv), do: form(lv, "#calendar-panel-new-form")
 
+  defp guests(count), do: Enum.map(1..count, &"guest#{&1}@example.com")
+
   defp add_reminder(lv, preset) do
     lv
     |> element(~s(#calendar-panel-meeting-reminders [data-testid="reminder-preset-#{preset}"]))
@@ -109,6 +112,127 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
            )
 
     refute has_element?(lv, "#calendar-panel-meeting-fields")
+  end
+
+  test "is offered for a guest typed but not added yet, who Create then invites", %{
+    conn: conn,
+    integration: integration
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    more_options(lv, integration, %{"guests" => []})
+
+    render_change(new_form(lv), %{"guest_email" => "ada@example.com"})
+    assert has_element?(lv, "#calendar-panel-meeting", "Send as a Tymeslot meeting")
+
+    render_change(new_form(lv), %{"guest_email" => "ada@example.com", "meeting" => "true"})
+    assert has_element?(lv, "#calendar-panel-meeting-guest-name")
+
+    trace(lv)
+    create_meeting(lv, %{"guest_email" => "ada@example.com", "meeting" => "true"})
+
+    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+    assert %{attendee_email: "ada@example.com", guest_emails: []} = params
+  end
+
+  test "the place quick create parsed becomes the meeting's location", %{
+    conn: conn,
+    integration: integration
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    more_options(lv, integration, %{"location" => "Room 4"})
+    as_meeting(lv)
+
+    trace(lv)
+    create_meeting(lv)
+
+    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+    assert %{location: {:custom, "Room 4"}} = params
+  end
+
+  describe "the guest limit" do
+    test "is the meeting's at Add, and the guest field gives way at it", %{
+      conn: conn,
+      integration: integration
+    } do
+      # The guest the meeting is with, and as many guests as a meeting takes.
+      full = MeetingParams.max_guests()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, integration, %{"guests" => guests(full - 1)})
+      as_meeting(lv)
+
+      assert has_element?(lv, "#calendar-panel-guest-add")
+
+      render_submit(new_form(lv), %{"intent" => "add_guest", "guest_email" => "last@example.com"})
+
+      assert has_element?(lv, "#calendar-panel-guests li", "last@example.com")
+      refute has_element?(lv, "#calendar-panel-guest-add")
+
+      assert has_element?(
+               lv,
+               "#calendar-panel-guests-full",
+               "No more guests can be added to this meeting."
+             )
+    end
+
+    test "is one fewer without a main participant, and Add past it is refused", %{
+      conn: conn,
+      integration: integration
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, integration, %{"guests" => guests(Guests.max_guests() - 1)})
+      as_meeting(lv)
+      render_change(new_form(lv), %{"main_participant" => "false"})
+
+      render_submit(new_form(lv), %{"intent" => "add_guest", "guest_email" => "last@example.com"})
+      refute has_element?(lv, "#calendar-panel-guest-add")
+
+      # Main participant back on, the meeting takes one more.
+      render_change(new_form(lv), %{"main_participant" => "true"})
+      assert has_element?(lv, "#calendar-panel-guest-add")
+
+      render_change(new_form(lv), %{"main_participant" => "false"})
+
+      render_submit(new_form(lv), %{
+        "intent" => "create",
+        "guest_email" => "one-more@example.com",
+        "title" => "Planning"
+      })
+
+      refute has_element?(lv, "#calendar-panel-guests li", "one-more@example.com")
+      assert render(lv) =~ "No more guests can be added to this meeting."
+    end
+
+    test "an address typed before the meeting filled is not counted once the field gives way",
+         %{conn: conn, integration: integration} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, integration, %{"guests" => guests(Guests.max_guests())})
+      as_meeting(lv)
+
+      # With a main participant the meeting takes one more, typed here.
+      render_change(new_form(lv), %{"guest_email" => "one-more@example.com"})
+
+      # Without one it is full: the field goes, and the address with it.
+      render_change(new_form(lv), %{"main_participant" => "false"})
+      refute has_element?(lv, "#calendar-panel-guest-add")
+
+      lv |> element("#calendar-panel-new-cancel") |> render_click()
+
+      assert has_element?(
+               lv,
+               "#calendar-discard-draft",
+               "#{Guests.max_guests()} guests haven't been invited yet."
+             )
+    end
+
+    test "is an event's while the box is not ticked", %{conn: conn, integration: integration} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      more_options(lv, integration, %{"guests" => guests(MeetingParams.max_guests())})
+
+      render_submit(new_form(lv), %{"intent" => "add_guest", "guest_email" => "more@example.com"})
+
+      assert has_element?(lv, "#calendar-panel-guests li", "more@example.com")
+    end
   end
 
   test "the language of its emails starts as the organiser's own", %{

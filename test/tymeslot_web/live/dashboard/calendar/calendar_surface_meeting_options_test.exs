@@ -214,10 +214,116 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingOptionsTest do
       assert meeting.location == "Room 4, second floor"
     end
 
+    test "a Place typed before the box was ticked becomes the meeting's location", %{lv: lv} do
+      render_change(new_form(lv), %{"meeting" => "false"})
+      render_change(new_form(lv), %{"location" => "Café Rose"})
+      render_change(new_form(lv), %{"meeting" => "true", "location" => "Café Rose"})
+
+      assert has_element?(
+               lv,
+               ~s(#calendar-panel-meeting-location-custom[value="Café Rose"])
+             )
+
+      submit_meeting(lv, %{"guest_name" => "Ada Lovelace"})
+
+      assert %{location: {:custom, "Café Rose"}} = booked()
+    end
+
+    test "a Place longer than a meeting takes is refused with the meeting's limit", %{lv: lv} do
+      place = String.duplicate("a", 600)
+      render_change(new_form(lv), %{"meeting" => "false"})
+      render_change(new_form(lv), %{"location" => place})
+      render_change(new_form(lv), %{"meeting" => "true", "location" => place})
+
+      submit_meeting(lv, %{"guest_name" => "Ada Lovelace"})
+
+      nothing_booked()
+
+      assert has_element?(
+               lv,
+               "#calendar-panel [role=status]",
+               "The place is too long for a meeting. Keep it under 500 characters."
+             )
+    end
+
+    test "a saved location chosen for the event and deleted since does not block the meeting",
+         %{user: user, lv: lv} do
+      venue = insert(:venue, user: user, name: "Head office")
+      render_change(new_form(lv), %{"meeting" => "false"})
+
+      # The panel read the saved locations as it opened, before this one.
+      lv
+      |> element("#calendar-panel-new-form")
+      |> render_change(%{"location_venue" => "#{venue.id}"})
+
+      render_change(new_form(lv), %{"meeting" => "true"})
+      render_change(new_form(lv), %{"location_choice" => ""})
+
+      Repo.delete!(venue)
+
+      # Nor does it refuse the meeting drawn on the grid as the form changes.
+      render_change(new_form(lv), %{"guest_name" => "Ada Lovelace"})
+
+      refute has_element?(
+               lv,
+               "#calendar-panel [role=status]",
+               "That location can no longer be used."
+             )
+
+      submit_meeting(lv, %{"guest_name" => "Ada Lovelace", "location_choice" => ""})
+
+      assert %{location: nil} = booked()
+    end
+
+    test "a meeting location already chosen is kept when the box is ticked again", %{lv: lv} do
+      render_change(new_form(lv), %{
+        "location_choice" => "custom",
+        "location_custom" => "Room 4"
+      })
+
+      render_change(new_form(lv), %{"meeting" => "false"})
+      render_change(new_form(lv), %{"meeting" => "true", "location" => "Café Rose"})
+
+      submit_meeting(lv, %{"guest_name" => "Ada Lovelace"})
+
+      assert %{location: {:custom, "Room 4"}} = booked()
+    end
+
     test "no choice, or a place left blank, books it without one", %{lv: lv} do
       submit_meeting(lv, %{"guest_name" => "Ada Lovelace", "location_choice" => "custom"})
 
       assert %{location: nil} = booked()
+    end
+
+    test "a saved location deleted after Create, before the booking read it, is named in the flash",
+         %{user: user, lv: lv} do
+      venue = insert(:venue, user: user, name: "Head office")
+
+      # What the panel hands the dashboard for a meeting at the venue, which
+      # is deleted before the booking reads it.
+      params = %{
+        title: "Meeting with Ada Lovelace",
+        start_time: ~U[2026-10-15 12:00:00Z],
+        end_time: ~U[2026-10-15 13:00:00Z],
+        attendee_name: "Ada Lovelace",
+        attendee_email: "ada@example.com",
+        attendee_timezone: "Europe/London",
+        guest_emails: [],
+        organizer_user_id: user.id,
+        location: {:venue, venue.id}
+      }
+
+      Repo.delete!(venue)
+      send(lv.pid, {:execute_create_ad_hoc_meeting, params})
+
+      eventually(
+        fn ->
+          render(lv) =~ "That location can no longer be used. Please choose another one."
+        end,
+        timeout: @task_timeout
+      )
+
+      assert Repo.all(MeetingSchema) == []
     end
 
     test "someone else's saved location is refused, and nothing is booked", %{lv: lv} do

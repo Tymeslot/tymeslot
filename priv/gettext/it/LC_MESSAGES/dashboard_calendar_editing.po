@@ -22,6 +22,7 @@ msgid "A change to this event is still saving. Please choose the calendar once i
 msgstr "Una modifica a questo evento è ancora in salvataggio. Scegli il calendario a salvataggio completato."
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr "Aggiungi"
@@ -488,6 +489,7 @@ msgstr "Rimuovi il link"
 msgid "Removed %{email}."
 msgstr "Hai rimosso %{email}."
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_repeat.ex
 #, elixir-autogen, elixir-format
 msgid "Repeat"
@@ -751,6 +753,84 @@ msgstr "Hai aggiunto %{email}. L'invito partirà non appena la modifica sarà si
 #, elixir-autogen, elixir-format
 msgid "Removed %{email}. They will be told once the change has synced to your calendar."
 msgstr "Hai rimosso %{email}. L'avviso partirà non appena la modifica sarà sincronizzata con il tuo calendario."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
+msgstr "Il tuo calendario deve essere ricollegato. Ricollegalo dalla pagina Integrazioni."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
+#, elixir-autogen, elixir-format
+msgid "None (Tymeslot only)"
+msgstr "Nessuno (solo Tymeslot)"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
+#, elixir-autogen, elixir-format
+msgid "No more guests can be added to this meeting."
+msgstr "Non è possibile aggiungere altri ospiti a questa riunione."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "None, or type a place"
+msgstr "Nessuno, oppure scrivi un luogo"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
+#, elixir-autogen, elixir-format
+msgid "Saved location"
+msgstr "Luogo salvato"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Add reminder"
+msgstr "Aggiungi promemoria"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder method"
+msgstr "Metodo di promemoria"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder time"
+msgstr "Anticipo del promemoria"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders"
+msgstr "Promemoria"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders are synced to your calendar so it can alert you on your own devices."
+msgstr "I promemoria vengono sincronizzati con il tuo calendario, così può avvisarti sui tuoi dispositivi."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Remove reminder %{label}"
+msgstr "Rimuovi promemoria %{label}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} guest hasn't been invited yet. Discard?"
+msgid_plural "%{count} guests haven't been invited yet. Discard?"
+msgstr[0] "%{count} ospite non è ancora stato invitato. Scartare?"
+msgstr[1] "%{count} ospiti non sono ancora stati invitati. Scartare?"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Discard"
+msgstr "Scarta"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Go back"
+msgstr "Indietro"
+
+#: lib/tymeslot_web/live/dashboard/calendar/discard_draft_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Unsent invitations"
+msgstr "Inviti non inviati"
 
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
 #, elixir-autogen, elixir-format

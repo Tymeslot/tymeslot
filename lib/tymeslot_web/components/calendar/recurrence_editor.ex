@@ -36,7 +36,8 @@ defmodule TymeslotWeb.Components.Calendar.RecurrenceEditor do
   (`discard_event`). `notice` says why the calendar would refuse the rule.
 
   `timezone` reads a timed rule's `UNTIL`, an instant, as the date the
-  organiser sees.
+  organiser sees. With `embedded` the fields sit inside the owner's own form
+  (the side panel's New event form), whose changes carry them.
   """
 
   use TymeslotWeb, :html
@@ -76,6 +77,11 @@ defmodule TymeslotWeb.Components.Calendar.RecurrenceEditor do
     default: nil,
     doc: "why the calendar would refuse the rule shown, if it would"
 
+  attr :embedded, :boolean,
+    default: false,
+    doc:
+      "whether the fields sit inside the owner's own form, whose changes carry them, rather than a form of their own"
+
   @spec recurrence_editor(map()) :: Phoenix.LiveView.Rendered.t()
   def recurrence_editor(assigns) do
     start_date = start_date(assigns.start)
@@ -108,6 +114,15 @@ defmodule TymeslotWeb.Components.Calendar.RecurrenceEditor do
             if(read == :custom, do: :custom, else: elem(read, 1)),
             start_date
           ),
+        form_attrs:
+          if(assigns.embedded,
+            do: [],
+            else: [
+              "phx-change": assigns.change_event,
+              "phx-target": assigns.myself,
+              novalidate: true
+            ]
+          ),
         form_id: "recurrence-editor-form-#{assigns.key || assigns.change_event}",
         custom_id: "recurrence-custom-#{assigns.key || assigns.change_event}"
       )
@@ -129,18 +144,21 @@ defmodule TymeslotWeb.Components.Calendar.RecurrenceEditor do
         </.action_button>
       </div>
 
-      <form
+      <.dynamic_tag
+        tag_name={if @embedded, do: "div", else: "form"}
         id={@form_id}
-        phx-change={@change_event}
-        phx-target={@myself}
         class={["space-y-2", @custom && "hidden"]}
-        novalidate
+        {@form_attrs}
       >
         <.select
           id={"#{@form_id}-freq"}
           name="freq"
           compact
-          aria-label={dgettext("dashboard_calendar_repeat", "Repeat")}
+          aria-label={
+            if @embedded,
+              do: dgettext("dashboard_calendar_repeat", "Repeat frequency"),
+              else: dgettext("dashboard_calendar_repeat", "Repeat")
+          }
           value={to_string(@freq)}
           options={Enum.map(@freq_options, fn {value, label} -> {label, value} end)}
         />
@@ -264,7 +282,7 @@ defmodule TymeslotWeb.Components.Calendar.RecurrenceEditor do
             />
           </div>
         </div>
-      </form>
+      </.dynamic_tag>
 
       <p :if={@summary != nil and not @custom} class="text-token-xs text-tymeslot-400 mt-1.5">
         {@summary}

@@ -14,7 +14,7 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
   manages the meeting alone and every guest is invited as an equal guest,
   so it needs a title of its own: there is no guest whose name could stand
   in for it. The meeting's place is none, one of the organiser's saved
-  locations, or one they typed in (`"location_choice"`,
+  locations, or one they typed in (sanitised as plain text) (`"location_choice"`,
   `"location_custom"`). The draft's notes become the note to the guests, held to the
   meeting's own limit. A meeting has a start and an end time, so an all-day
   draft is refused. Reminders are lead times, `%{value:, unit:}`, held to
@@ -103,7 +103,7 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
     end
   end
 
-  @doc "Spends one meeting from the organiser's budget (20 in 10 minutes)."
+  @doc "Spends one meeting from the organiser's budget (10 in 10 minutes)."
   @spec rate_limit(pos_integer()) :: :ok | {:error, :rate_limited, String.t()}
   def rate_limit(user_id) do
     case RateLimiter.check(:dashboard_quick_add_meeting, user_id) do
@@ -135,20 +135,30 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
     end
   end
 
+  # A place typed in is sanitised as plain text, as the guest's name is.
   defp location("custom", custom, _user_id) when is_binary(custom) do
     case String.trim(custom) do
-      "" ->
-        {:ok, nil}
-
-      place ->
-        if String.length(place) <= CreateAdHoc.custom_location_max_length(),
-          do: {:ok, {:custom, place}},
-          else: {:error, :location, :too_long}
+      "" -> {:ok, nil}
+      place -> clean_place(place)
     end
   end
 
   defp location(choice, _custom, _user_id) when choice in [nil, "", "custom"], do: {:ok, nil}
   defp location(_choice, _custom, _user_id), do: {:error, :location, :invalid}
+
+  defp clean_place(place) do
+    max = CreateAdHoc.custom_location_max_length()
+
+    if String.valid?(place) and String.length(place) > max do
+      {:error, :location, :too_long}
+    else
+      case UniversalSanitizer.sanitize_and_validate(place, mode: :plain_text, max_length: max) do
+        {:ok, ""} -> {:ok, nil}
+        {:ok, clean} -> {:ok, {:custom, clean}}
+        {:error, _reason} -> {:error, :location, :unsafe}
+      end
+    end
+  end
 
   defp guest_name(value) when is_binary(value) do
     case String.trim(value) do

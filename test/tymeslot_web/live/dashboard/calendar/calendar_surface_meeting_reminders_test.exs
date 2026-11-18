@@ -157,4 +157,47 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingRemindersTest do
     create_meeting(lv)
     assert length(booked_reminders()) == 3
   end
+
+  test "a draft opened again after Cancel starts with no reminders", %{
+    lv: lv,
+    integration: integration
+  } do
+    render_click(preset(lv, "1-days"))
+    assert has_element?(lv, "#calendar-panel-meeting-reminders .tag-semantic", "1 day before")
+
+    # The draft has a guest, so Cancel asks first.
+    lv |> element("#calendar-panel-new-cancel") |> render_click()
+    lv |> element("#calendar-discard-draft-confirm") |> render_click()
+    refute has_element?(lv, "#calendar-panel")
+
+    lv
+    |> element("#calendar-canvas")
+    |> render_hook("calendar:more_options", %{
+      "draft" => "d2",
+      "title" => "",
+      "start" => "2026-10-16T13:00",
+      "end" => "2026-10-16T14:00",
+      "all_day" => false,
+      "calendar" => "#{integration.id}:work",
+      "location" => "",
+      "guests" => ["ada@example.com"],
+      "free" => false
+    })
+
+    assert_reply(lv, %{opened: true})
+    render_change(new_form(lv), %{"meeting" => "true", "guest_name" => "Ada Lovelace"})
+
+    refute has_element?(lv, "#calendar-panel-meeting-reminders .tag-semantic")
+    assert has_element?(lv, "#calendar-panel-meeting-reminders", "No reminders configured.")
+
+    create_meeting(lv)
+    assert booked_reminders() == []
+  end
+
+  test "below 640px the picker's controls take a 44px hit area", %{lv: lv} do
+    assert has_element?(
+             lv,
+             "#calendar-panel-meeting-reminders[class~='max-sm:[&_button]:min-h-11'][class~='max-sm:[&_button]:min-w-11']"
+           )
+  end
 end

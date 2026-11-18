@@ -101,12 +101,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
     assert Enum.map(row.attendees, & &1["email"]) == ["ada@example.com", "grace@example.com"]
   end
 
+  test "the reason an address is not invited is said under the field, not in a flash, and typing clears it",
+       %{lv: lv} do
+    invite(lv, "not an email")
+
+    assert has_element?(lv, "#calendar-panel-guest-form", "Enter a valid email address.")
+    refute has_element?(lv, "[id$='flash-group-warning']", "Enter a valid email address.")
+
+    lv
+    |> form("#calendar-panel-guest-form")
+    |> render_change(%{"email" => "grace@"})
+
+    refute has_element?(lv, "#calendar-panel-guest-form", "Enter a valid email address.")
+  end
+
   test "an address that is not an email, or a guest already invited, sends nothing", %{lv: lv} do
     invite(lv, "not an email")
-    assert render(lv) =~ "Enter a valid email address."
+    assert has_element?(lv, "#calendar-panel-guest-form", "Enter a valid email address.")
 
     invite(lv, "ADA@example.com")
-    assert render(lv) =~ "ada@example.com is already a guest."
+    assert has_element?(lv, "#calendar-panel-guest-form", "ada@example.com is already a guest.")
 
     refute_enqueued(worker: EmailWorker)
     refute_receive {:provider_update, _pid, _payload}, 100
@@ -261,7 +275,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
 
     invite(lv, "one-too-many@example.com")
 
-    assert render(lv) =~ "An event can have at most 50 guests."
+    assert has_element?(lv, "#calendar-panel-guest-form", "An event can have at most 50 guests.")
     refute_enqueued(worker: EmailWorker)
     refute_receive {:provider_update, _pid, _payload}, 100
   end

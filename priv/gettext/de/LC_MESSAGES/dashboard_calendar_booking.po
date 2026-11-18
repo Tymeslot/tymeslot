@@ -113,6 +113,7 @@ msgid "Connect a calendar"
 msgstr "Kalender verbinden"
 
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar to add events here."
 msgstr "Verbinden Sie einen Kalender, um hier Ereignisse hinzuzufügen."
@@ -411,6 +412,7 @@ msgid "You have too many time-off periods to block more time. Remove some first.
 msgstr "Sie haben zu viele Abwesenheiten, um weitere Zeit zu blockieren. Entfernen Sie zuerst einige."
 
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
 #, elixir-autogen, elixir-format
 msgid "Your connected calendars are read-only, so events can't be added here."
 msgstr "Ihre verbundenen Kalender sind schreibgeschützt, daher können hier keine Ereignisse hinzugefügt werden."

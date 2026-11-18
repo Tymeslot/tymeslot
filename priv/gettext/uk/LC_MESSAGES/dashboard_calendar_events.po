@@ -327,11 +327,13 @@ msgid "1 hour before"
 msgstr "За 1 годину"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "Електронна пошта"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Notification"
 msgstr "Сповіщення"
@@ -452,7 +454,9 @@ msgstr "Збережені місця"
 msgid "Shown on the calendar entry and in every invitation."
 msgstr "Показується в записі календаря та в кожному запрошенні."
 
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "That location can no longer be used. Please choose another one."
 msgstr "Це місце більше не можна використати. Виберіть інше."
@@ -466,6 +470,11 @@ msgstr "Основний учасник може перенести або ск�
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Цей час більше недоступний. Виберіть інший."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "The place is too long for a meeting. Keep it under 500 characters."
+msgstr "Назва місця задовга для зустрічі. Залишіть менше 500 символів."
 
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format

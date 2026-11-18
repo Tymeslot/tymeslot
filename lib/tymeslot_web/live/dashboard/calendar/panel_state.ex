@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
+  alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
 
   @type socket :: Phoenix.LiveView.Socket.t()
@@ -57,6 +58,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
           |> PanelGuests.watch_hold(id, held_until)
           |> push_event("calendar:panel", %{open: true})
         end)
+
+      :error ->
+        socket
+    end
+  end
+
+  @doc """
+  Opens the preview of the loaded event `id` in the panel's place, as the
+  grid's click does; `socket` unchanged for an id that is not loaded.
+  """
+  @spec open_preview(socket(), String.t()) :: socket()
+  def open_preview(socket, id) do
+    case Map.fetch(socket.assigns.events_by_id, id) do
+      {:ok, event} ->
+        preview = Preview.build(event, Preview.context(socket.assigns))
+        socket |> give_way() |> assign(preview: preview, open_menu: nil)
 
       :error ->
         socket
@@ -211,8 +228,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
 
   # What the panel asked about its event goes when the panel leaves that
   # event: the series question, the question about moving a series to another
-  # calendar and the one about removing a guest (the panel is the only place
-  # they are asked), since an answer would act on an event no longer shown.
+  # calendar, the one about removing a guest and the one about discarding a
+  # draft's guests (the panel is the only place they are asked), since an answer would act on an event no longer shown.
   # The grid's own series question (a drag or resize) stays.
   defp drop_prompts(socket) do
     assign(socket,
@@ -222,7 +239,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
           else: socket.assigns.series_prompt
         ),
       series_move_prompt: nil,
-      remove_guest_prompt: nil
+      remove_guest_prompt: nil,
+      discard_draft_prompt: nil
     )
   end
 end

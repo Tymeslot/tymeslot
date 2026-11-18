@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
   alias TymeslotWeb.Dashboard.Calendar.PanelMeetingReminders
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewDiscard
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
@@ -47,6 +48,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     end
   end
 
+  # A New event draft with guests asks first (`PanelNewDiscard`).
+  def handle("close", _params, %{assigns: %{panel: %{mode: :new}}} = socket),
+    do: PanelNewDiscard.cancel(socket)
+
   def handle("close", _params, socket), do: PanelState.close(socket)
 
   # The New event form (see `PanelNew`).
@@ -56,7 +61,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   def handle("draft_drop_guest", %{"email" => email}, socket),
     do: PanelNew.drop_guest(socket, email)
 
-  def handle("draft_cancel", _params, socket), do: PanelNew.cancel(socket)
+  def handle("draft_add_reminder", _params, socket), do: PanelNew.add_reminder(socket)
+
+  def handle("draft_drop_reminder", %{"index" => index}, socket),
+    do: PanelNew.drop_reminder(socket, index)
+
+  def handle("draft_cancel", _params, socket), do: PanelNewDiscard.cancel(socket)
+  def handle("draft_discard_confirm", _params, socket), do: PanelNewDiscard.discard(socket)
+  def handle("draft_discard_cancel", _params, socket), do: PanelNewDiscard.keep(socket)
 
   # The meeting's reminder picker (see `PanelMeetingReminders`).
   def handle("meeting_" <> _picker_event = name, params, socket),
@@ -181,6 +193,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     do: PanelVideo.change(socket, raw)
 
   def handle("guest_invite", %{"email" => email}, socket), do: PanelGuests.invite(socket, email)
+  def handle("guest_input", _params, socket), do: PanelGuests.typed(socket)
 
   def handle("guest_remove", %{"email" => email}, socket),
     do: PanelGuests.request_remove(socket, email)

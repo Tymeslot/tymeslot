@@ -99,6 +99,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       transfer: nil,
       series_move_prompt: nil,
       remove_guest_prompt: nil,
+      discard_draft_prompt: nil,
       guest_form_key: 0,
       bookable_types: [],
       bookability: %{},

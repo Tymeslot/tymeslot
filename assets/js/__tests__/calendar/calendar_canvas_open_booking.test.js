@@ -242,3 +242,14 @@ test("with no calendar and no meeting types, Enter and Save send nothing", () =>
   expect(pushes(hook, "calendar:create")).toEqual([]);
   expect(hook.draft.status).toBe("editing");
 });
+
+test("with no calendar, More options still opens the panel, where a meeting needs none", () => {
+  const { hook } = open(noCalendar([]));
+
+  expect(q("[data-qc-save]").disabled).toBe(true);
+  expect(q("[data-qc-more]").disabled).toBe(false);
+
+  q("[data-qc-more]").click();
+
+  expect(pushes(hook, "calendar:more_options")).toEqual([expect.objectContaining({ draft: hook.draft.id, calendar: null })]);
+});

@@ -15,7 +15,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
   (`PanelMeetingReminders`). With "Main participant" off the host manages
   the meeting alone: every guest is an equal guest, no guest name is asked
   for, and the meeting is known by its title, which it then needs. Its
-  place is none, a saved location, or one typed in. The box counts only
+  place is none, a saved location, or one typed in; a Place typed before the
+  box was ticked becomes the one typed in (`carry_place/2`). The box counts only
   while the draft has a guest (`on?/1`). A meeting has times: ticking it
   makes an all-day draft timed.
 
@@ -78,10 +79,50 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
   defp timed(%{"meeting" => true} = fields), do: Map.put(fields, "all_day", false)
   defp timed(fields), do: fields
 
-  @doc "Whether the form describes a meeting: the box ticked, and a guest to meet."
+  @doc """
+  A Place typed while the draft was a plain event (in the panel, or in
+  quick create) carries into the meeting's location as a custom one when
+  the box is ticked, and a saved location chosen for it as that saved
+  location, rather than being dropped: a meeting takes its place
+  from its own fields. Only on the change that ticks it, and only while no
+  meeting location has been chosen, so a choice is never overwritten.
+  """
+  @spec carry_place(map(), map()) :: map()
+  def carry_place(
+        %{"meeting" => true, "location_choice" => "", "location_venue" => venue} = form,
+        %{"meeting" => false}
+      )
+      when is_binary(venue) and venue != "",
+      do: %{form | "location_choice" => "venue:" <> venue}
+
+  def carry_place(
+        %{"meeting" => true, "location_choice" => "", "location" => place} = form,
+        %{"meeting" => false}
+      )
+      when is_binary(place) do
+    case String.trim(place) do
+      "" -> form
+      typed -> Map.merge(form, %{"location_choice" => "custom", "location_custom" => typed})
+    end
+  end
+
+  def carry_place(form, _was), do: form
+
+  @doc """
+  Whether the form describes a meeting: the box ticked, and a guest to meet
+  (`guests?/1`).
+  """
   @spec on?(map()) :: boolean()
-  def on?(%{"meeting" => true, "guests" => [_first | _rest]}), do: true
+  def on?(%{"meeting" => true} = form), do: guests?(form)
   def on?(_form), do: false
+
+  @doc """
+  Whether the draft has a guest: one added, or one typed into the guest
+  field and not added yet, which Create adds first
+  (`PanelNewGuests.take_pending/2`).
+  """
+  @spec guests?(map()) :: boolean()
+  def guests?(form), do: form["guests"] not in [nil, []] or (form["guest_pending"] || "") != ""
 
   @doc """
   Creates the panel's meeting: checks it, spends the budget, and hands it to
@@ -100,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
     user = socket.assigns.current_user
     form = panel.form |> titled() |> Map.put("reminders", panel.reminder_picker.reminders)
 
-    with {:ok, create} <- PanelNew.cast_form(socket, form),
+    with {:ok, create} <- PanelNew.cast_form(socket, form, :optional),
          {:ok, params} <- MeetingParams.build(create, form, user.id),
          :ok <- MeetingParams.rate_limit(user.id) do
       send(self(), {:execute_create_ad_hoc_meeting, params})
@@ -165,6 +206,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
         "That location can no longer be used. Please choose another one."
       )
 
+  def refusal_message(:location, :unsafe), do: Creation.refusal_message(:location, :invalid)
+
+  # A Place typed for the event carries into the meeting
+  # (`carry_place/2`), and an event's may run past a meeting's limit
+  # (`CreateAdHoc.custom_location_max_length/0`).
+  def refusal_message(:location, :too_long),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "The place is too long for a meeting. Keep it under 500 characters."
+      )
+
   # Notes allow more than a meeting's note does, so text typed before the box
   # was ticked can be too long.
   def refusal_message(:note, :too_long),
@@ -174,7 +227,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
         "The note to the guest is too long. Keep it to 2,000 characters or fewer."
       )
 
-  # The form offers no way to send the rest; they come from forged input.
+  # The form offers no way to send the rest (a location choice that is
+  # neither a saved location nor a place typed in, say); they come from
+  # forged input.
   def refusal_message(field, reason)
       when field in [:guests, :guest_name, :note, :locale, :all_day, :location],
       do: Creation.refusal_message(:params, reason)

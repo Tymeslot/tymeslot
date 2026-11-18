@@ -323,11 +323,13 @@ msgid "1 hour before"
 msgstr "1 ora prima"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "Email"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Notification"
 msgstr "Notifica"
@@ -446,7 +448,9 @@ msgstr "Luoghi salvati"
 msgid "Shown on the calendar entry and in every invitation."
 msgstr "Mostrato nella voce di calendario e in ogni invito."
 
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "That location can no longer be used. Please choose another one."
 msgstr "Questo luogo non può più essere usato. Scegline un altro."
@@ -460,6 +464,11 @@ msgstr "Il partecipante principale può spostare o annullare la riunione. Disatt
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Questo orario non è più disponibile. Scegline un altro."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "The place is too long for a meeting. Keep it under 500 characters."
+msgstr "Il luogo è troppo lungo per una riunione. Usa meno di 500 caratteri."
 
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format

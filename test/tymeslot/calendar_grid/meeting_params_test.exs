@@ -106,6 +106,19 @@ defmodule Tymeslot.CalendarGrid.MeetingParamsTest do
                MeetingParams.build(create(), Map.put(typed, "location_custom", "  "), 42)
     end
 
+    test "a place typed in is sanitised as plain text" do
+      typed = Map.merge(@fields, %{"guest_name" => "Ada", "location_choice" => "custom"})
+
+      assert {:ok, %{location: {:custom, "Room 4"}}} =
+               MeetingParams.build(create(), Map.put(typed, "location_custom", "Room\x00 4"), 42)
+
+      assert MeetingParams.build(
+               create(),
+               Map.put(typed, "location_custom", <<0xFF, ?R, ?o, ?o, ?m>>),
+               42
+             ) == {:error, :location, :unsafe}
+    end
+
     test "a place longer than a meeting takes is refused" do
       fields =
         Map.merge(@fields, %{

@@ -413,5 +413,14 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     )
   end
 
+  # A saved location deleted after the panel built the meeting, before the
+  # booking read it.
+  defp ad_hoc_failed_message(:invalid_location) do
+    dgettext(
+      "dashboard_calendar_events",
+      "That location can no longer be used. Please choose another one."
+    )
+  end
+
   defp ad_hoc_failed_message(reason), do: BookingErrorMessage.message(reason)
 end
