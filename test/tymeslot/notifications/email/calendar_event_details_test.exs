@@ -10,6 +10,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetailsTest do
   @moduletag :emails
   @moduletag :calendar
 
+  alias Tymeslot.Auth
   alias Tymeslot.Emails.Templates.CalendarInvitation
   alias Tymeslot.Emails.Templates.EventUpdateNotification
   alias Tymeslot.Notifications.Email.CalendarEventDetails
@@ -19,6 +20,8 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetailsTest do
   setup do
     user = insert(:user, locale: "de")
     insert(:profile, user: user, timezone: "Europe/Berlin")
+    # The email handlers load the organiser with their profile.
+    {:ok, user} = Auth.get_user_with_profile(user.id)
     %{user: user}
   end
 
@@ -51,6 +54,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetailsTest do
   describe "the organiser's name" do
     test "is the name on their profile, not their address", %{user: user} do
       Repo.update_all(ProfileSchema, set: [full_name: "Ada Lovelace"])
+      {:ok, user} = Auth.get_user_with_profile(user.id)
       user = %{user | name: nil}
 
       {:ok, details} = CalendarEventDetails.invitation_details(user, invitation_args())
@@ -66,6 +70,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetailsTest do
 
     test "falls back to the account's own name, then to the address", %{user: user} do
       Repo.update_all(ProfileSchema, set: [full_name: nil])
+      {:ok, user} = Auth.get_user_with_profile(user.id)
 
       {:ok, named} =
         CalendarEventDetails.invitation_details(%{user | name: "Grace Hopper"}, invitation_args())
@@ -80,6 +85,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetailsTest do
 
     test "an update is sent in the same name", %{user: user} do
       Repo.update_all(ProfileSchema, set: [full_name: "Ada Lovelace"])
+      {:ok, user} = Auth.get_user_with_profile(user.id)
 
       event = %{
         uid: "uid-1",
