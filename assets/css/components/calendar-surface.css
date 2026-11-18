@@ -155,6 +155,15 @@
   color: var(--cal-on-booking);
 }
 
+/* A booking given a colour of its own (render.js, ownColour) keeps the
+   booking's solid fill in that colour, darkened towards --cal-ink far enough
+   that its white text (--cal-on-booking) holds 4.8:1 for every palette
+   colour. */
+.cal-adbar.is-booking.has-colour,
+.cal-ev.is-booking.has-colour {
+  background: color-mix(in srgb, var(--cal-ev) 55%, var(--cal-ink));
+}
+
 .cal-adbar.is-past {
   background: color-mix(in srgb, var(--cal-ev) 8%, var(--cal-surface));
   color: var(--cal-text-past);
@@ -407,6 +416,10 @@
 .cal-ev.is-booking.is-past {
   background: color-mix(in srgb, var(--cal-booking) 14%, var(--cal-surface));
   color: var(--cal-text-past);
+}
+
+.cal-ev.is-booking.has-colour.is-past {
+  background: color-mix(in srgb, var(--cal-ev) 14%, var(--cal-surface));
 }
 
 /* A booking request: the booking's turquoise with an amber striped edge and

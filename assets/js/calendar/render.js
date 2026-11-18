@@ -164,7 +164,7 @@ function allDayLane({ bars, more, warn, rows }, days, { strings, now, byId, metr
     const span = e.endDay - e.startDay > 1 ? `${first} – ${dateLabel(isoFromDay(e.endDay - 1), strings)}` : first;
     const flag = requestFlag(e, strings);
     const label = [e.title, flag && requestAria(e, strings), strings.all_day, span, e.endMin <= now && strings.ended, ...badgeNotes(e, strings)].filter(Boolean).join(", ");
-    const classes = ["cal-adbar", bar.cutStart && "cut-start", bar.cutEnd && "cut-end", e.endMin <= now && "is-past", e.free && !e.expired && "is-free", e.kind === "booking" && "is-booking", flag && "is-request", e.expired && "is-expired"]
+    const classes = ["cal-adbar", bar.cutStart && "cut-start", bar.cutEnd && "cut-end", e.endMin <= now && "is-past", e.free && !e.expired && "is-free", e.kind === "booking" && "is-booking", ownColour(e) && "has-colour", flag && "is-request", e.expired && "is-expired"]
       .filter(Boolean)
       .join(" ");
     html +=
@@ -386,7 +386,7 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
   const shortWithoutTime = short && !shortRowFits(item, shown, start, measure, inset);
   const time = item.hideTime || shortWithoutTime || (fit && !fit.time) ? "" : short || item.width < 110 ? start : range;
   const tiny = short && item.height < LINE_HEIGHT + 4;
-  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && !event.expired && "is-free", event.kind === "booking" && "is-booking", flag && "is-request", compact && "has-badge", event.expired && "is-expired", event.attention && "is-attention", movingId === event.id && "is-moving", event.locked && "is-locked", event.replies && !short && "has-replies"]
+  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && !event.expired && "is-free", event.kind === "booking" && "is-booking", ownColour(event) && "has-colour", flag && "is-request", compact && "has-badge", event.expired && "is-expired", event.attention && "is-attention", movingId === event.id && "is-moving", event.locked && "is-locked", event.replies && !short && "has-replies"]
     .filter(Boolean)
     .join(" ");
   const label = [event.title, flag && requestAria(event, strings), dateLabel(isoFromDay(event.startDay), strings), range, event.free && !event.expired && strings.shown_as_free, past && strings.ended, event.attention && strings.waiting_to_sync, ...badgeNotes(event, strings)]
@@ -411,6 +411,13 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
     (editable && item.height >= GRIP_MIN_HEIGHT ? GRIPS : "") +
     `</div>`
   );
+}
+
+// A booking the organiser gave a colour of its own (on the dashboard home):
+// it paints in that colour (`has-colour`, calendar-surface.css) instead of
+// the booking colour.
+export function ownColour(event) {
+  return event.kind === "booking" && Boolean(event.colour) && event.colour !== "booking";
 }
 
 // What an event's badges say, for its accessible name: the block is what

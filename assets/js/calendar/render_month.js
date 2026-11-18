@@ -11,7 +11,7 @@
 import { agendaGroups } from "./agenda.js";
 import { chipCapacity, dayDots, eventsOnDay, monthLayout, monthWeeks } from "./month.js";
 import { renderAgendaDay } from "./render_agenda.js";
-import { badgeNotes, colour, repliesTone, dateLabel, escapeHtml, interpolate, requestAria, requestFlag, weekNumberHtml } from "./render.js";
+import { badgeNotes, colour, ownColour, repliesTone, dateLabel, escapeHtml, interpolate, requestAria, requestFlag, weekNumberHtml } from "./render.js";
 import { MINUTES_PER_DAY, dayNumber, formatMinutes, isoFromDay, isoWeekday } from "./time.js";
 
 const HEAD_ROW = 24;
@@ -80,7 +80,7 @@ function cell(iso, column, ctx) {
 }
 
 function eventClasses(base, e, past, flag, extra = []) {
-  return [base, ...extra, past && "is-past", e.free && !e.expired && "is-free", e.kind === "booking" && "is-booking", flag && "is-request", e.expired && "is-expired", e.attention && "is-attention"].filter(Boolean).join(" ");
+  return [base, ...extra, past && "is-past", e.free && !e.expired && "is-free", e.kind === "booking" && "is-booking", ownColour(e) && "has-colour", flag && "is-request", e.expired && "is-expired", e.attention && "is-attention"].filter(Boolean).join(" ");
 }
 
 function monthBar(bar, e, iso, { settings, strings, now }) {
