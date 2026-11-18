@@ -187,7 +187,23 @@
     min-height: 44px;
   }
 
-  /* A guest chip's remove button stays small; its hit area is 44px. */
+  .cal-panel :is(input, select, textarea) {
+    font-size: var(--font-size-base);
+  }
+
+  .cal-preview :is(button, a) {
+    min-height: 44px;
+  }
+
+  .cal-preview .icon-button {
+    min-width: 44px;
+  }
+}
+
+/* A guest chip's remove button stays small; its hit area is 44px wherever
+   a thumb aims at it, on a phone's sheet and on any touch screen, as the
+   compact buttons' is (buttons.css). */
+@media (width < 40rem), (pointer: coarse) {
   #calendar-panel-guests li button {
     position: relative;
   }
@@ -200,18 +216,6 @@
     width: 44px;
     height: 44px;
     transform: translate(-50%, -50%);
-  }
-
-  .cal-panel :is(input, select, textarea) {
-    font-size: var(--font-size-base);
-  }
-
-  .cal-preview :is(button, a) {
-    min-height: 44px;
-  }
-
-  .cal-preview .icon-button {
-    min-width: 44px;
   }
 }
 

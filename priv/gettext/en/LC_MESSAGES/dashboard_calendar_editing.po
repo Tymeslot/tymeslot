@@ -861,3 +861,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Colour"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Add a guest to send a Tymeslot meeting."
+msgstr ""

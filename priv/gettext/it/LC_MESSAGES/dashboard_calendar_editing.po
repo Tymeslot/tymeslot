@@ -861,3 +861,8 @@ msgstr "L'orario è legato alla prenotazione. Riprogrammala da Prenotazioni."
 #, elixir-autogen, elixir-format
 msgid "Colour"
 msgstr "Colore"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Add a guest to send a Tymeslot meeting."
+msgstr "Aggiungi un ospite per inviare una riunione Tymeslot."

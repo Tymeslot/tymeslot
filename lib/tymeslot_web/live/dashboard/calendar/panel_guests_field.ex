@@ -109,6 +109,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
   attr :guests, :list, required: true, doc: "email strings"
   attr :form_key, :integer, required: true
   attr :error, :string, default: nil, doc: "why the last address was not added"
+  attr :typed, :string, default: "", doc: "the address typed into the field and not added yet"
   attr :full, :boolean, default: false, doc: "whether the draft can take no more guests"
   attr :surface, :any, required: true
 
@@ -145,7 +146,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
             type="email"
             id={"calendar-panel-guest-email-#{@form_key}"}
             name="guest_email"
-            value=""
+            value={@typed || ""}
             errors={List.wrap(@error)}
             label={dgettext("dashboard_calendar_editing", "Add a guest")}
             placeholder={dgettext("dashboard_calendar_editing", "name@example.com")}

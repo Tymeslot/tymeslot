@@ -122,6 +122,14 @@ describe("phone full-screen editor, small controls", () => {
     expect(hit).toMatch(/height:\s*44px/);
   });
 
+  test("the guest remove button's hit area is 44px on any touch screen, not only a phone", () => {
+    const touch = mediaBodies(read("calendar-phone.css"), "(width < 40rem), (pointer: coarse)").join("\n");
+    expect(rule(touch, "#calendar-panel-guests li button")).toMatch(/position:\s*relative/);
+    const hit = rule(touch, "#calendar-panel-guests li button::before");
+    expect(hit).toMatch(/width:\s*44px/);
+    expect(hit).toMatch(/height:\s*44px/);
+  });
+
   test("segmented buttons and weekday chips are 44px wide", () => {
     expect(rule(phone(), '.cal-panel [role="group"] button, .cal-preview [role="group"] button')).toMatch(/min-width:\s*44px/);
     const chip = rule(phone(), ".cal-panel #calendar-panel-repeat-custom label");

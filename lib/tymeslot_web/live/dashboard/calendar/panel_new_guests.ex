@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   (`CreateParams.guests/2`: a valid address, not the organiser's, at most
   `CreateParams.max_guests/0`), so the chips never promise an invitation a
   create would drop. An address typed into the guest field but not added
-  when Create is pressed is added first (`take_pending/2`), as the old
+  when Create is pressed is added first (`take_pending/3`), as the old
   Quick Add did: a valid one joins the draft, and one that is not, or the
   organiser's own, stops the create with its reason. A refusal is said
   under the guest field (the panel's `"guest"` error), not in a toast.
@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   alias Tymeslot.CalendarGrid.MeetingParams
   alias Tymeslot.Meetings.Guests
   alias TymeslotWeb.Dashboard.Calendar.Creation
+  alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
   alias TymeslotWeb.Dashboard.Calendar.PanelState
 
@@ -48,18 +49,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
 
   @doc """
   The address typed into the guest field and not added yet, among a form
-  change's `params`, as `"guest_pending"`: a valid address other than the
-  organiser's (`user`) counts as a guest for what the form offers (the
-  meeting box, "Create and invite"), since Create adds it.
+  change's `params`: as `"guest_email"`, the text as typed, which the field
+  draws again so a change elsewhere in the form never empties it; and as
+  `"guest_pending"`, a valid address other than the organiser's (`user`),
+  which counts as a guest for what the form offers (the meeting box,
+  "Create and invite"), since Create adds it.
   """
   @spec pending(map(), map()) :: map()
   def pending(%{"guest_email" => typed}, user) when is_binary(typed) do
-    email = typed |> String.replace("\x00", "") |> String.trim() |> String.downcase()
+    typed = String.replace(typed, "\x00", "")
+    email = typed |> String.trim() |> String.downcase()
     own = String.downcase(user.email || "")
 
     if Guests.valid_email?(email) and email != own,
-      do: %{"guest_pending" => email},
-      else: %{"guest_pending" => ""}
+      do: %{"guest_email" => typed, "guest_pending" => email},
+      else: %{"guest_email" => typed, "guest_pending" => ""}
   end
 
   def pending(_params, _user), do: %{}
@@ -77,9 +81,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   Adds the address left in the guest field, if any, before a create:
   `{:ok, socket}` to go on (nothing typed, the address added, or one the
   draft already has), `{:error, socket}` when it is refused, which says why.
+  `meeting?` is whether the form was a Tymeslot meeting when Create was
+  pressed, its button saying "Create and invite": such a draft is refused
+  rather than made a plain event if it no longer has a guest.
   """
-  @spec take_pending(socket(), term()) :: {:ok, socket()} | {:error, socket()}
-  def take_pending(socket, raw) when is_binary(raw) do
+  @spec take_pending(socket(), term(), boolean()) :: {:ok, socket()} | {:error, socket()}
+  def take_pending(socket, raw, meeting?) do
+    with {:ok, socket} <- add_pending(socket, raw), do: still_a_meeting(socket, meeting?)
+  end
+
+  defp add_pending(socket, raw) when is_binary(raw) do
     if String.trim(raw) == "" do
       {:ok, socket}
     else
@@ -91,7 +102,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
     end
   end
 
-  def take_pending(socket, _raw), do: {:ok, socket}
+  defp add_pending(socket, _raw), do: {:ok, socket}
+
+  defp still_a_meeting(%{assigns: %{panel: %{form: form}}} = socket, true) do
+    if PanelMeeting.on?(form),
+      do: {:ok, socket},
+      else: {:error, refuse(socket, no_guest())}
+  end
+
+  defp still_a_meeting(socket, _meeting?), do: {:ok, socket}
 
   @doc """
   How many guests the draft would invite: those added, and one typed but
@@ -116,7 +135,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
          :ok <- not_yet_a_guest(guests, email),
          :ok <- room_for_one_more(form),
          {:ok, _kept} <- CreateParams.guests(user_id, guests ++ [email]) do
-      form = Map.merge(form, %{"guests" => guests ++ [email], "guest_pending" => ""})
+      form =
+        Map.merge(form, %{
+          "guests" => guests ++ [email],
+          "guest_email" => "",
+          "guest_pending" => ""
+        })
+
       socket = socket |> PanelNew.put_form(form) |> PanelState.put_error("guest", nil)
       {:ok, assign(socket, :guest_form_key, socket.assigns.guest_form_key + 1)}
     else
@@ -145,7 +170,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   """
   @spec without_pending_when_full(map()) :: map()
   def without_pending_when_full(form),
-    do: if(full?(form), do: Map.put(form, "guest_pending", ""), else: form)
+    do:
+      if(full?(form),
+        do: Map.merge(form, %{"guest_email" => "", "guest_pending" => ""}),
+        else: form
+      )
 
   @doc "Whether a meeting draft holds as many guests as it can, so no more can be added."
   @spec full?(map()) :: boolean()
@@ -154,6 +183,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
 
   defp room_for_one_more(form),
     do: if(full?(form), do: {:error, :meeting_full}, else: :ok)
+
+  defp no_guest,
+    do: dgettext("dashboard_calendar_editing", "Add a guest to send a Tymeslot meeting.")
 
   defp meeting_full,
     do: dgettext("dashboard_calendar_editing", "No more guests can be added to this meeting.")

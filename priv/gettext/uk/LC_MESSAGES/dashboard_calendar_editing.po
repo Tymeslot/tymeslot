@@ -864,3 +864,8 @@ msgstr "Час належить бронюванню. Перенесіть йо�
 #, elixir-autogen, elixir-format
 msgid "Colour"
 msgstr "Колір"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Add a guest to send a Tymeslot meeting."
+msgstr "Додайте гостя, щоб надіслати зустріч Tymeslot."

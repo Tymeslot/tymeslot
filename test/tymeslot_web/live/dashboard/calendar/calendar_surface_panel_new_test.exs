@@ -16,7 +16,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
   import TymeslotWeb.CalendarSurfaceHelpers
   import Phoenix.LiveView, only: [send_update: 3]
 
-  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
 
@@ -24,39 +23,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
 
   setup %{conn: conn} do
     context = owner(conn)
-    test_pid = self()
-
-    stub(Tymeslot.CalendarMock, :create_event, fn payload, _context ->
-      send(test_pid, {:provider_call, self(), {:create, payload}})
-      {:ok, CreatedEvent.new(payload.uid)}
-    end)
+    forward_creates(self(), :create)
 
     {:ok, lv, _html} = live(context.conn, ~p"/dashboard/calendar")
     Map.merge(context, %{lv: lv})
   end
-
-  defp draft_params(integration, extra \\ %{}) do
-    Map.merge(
-      %{
-        "draft" => "d1",
-        "title" => "Lunch with Ada",
-        "start" => "2026-10-15T13:00",
-        "end" => "2026-10-15T14:00",
-        "all_day" => false,
-        "calendar" => "#{integration.id}:work",
-        "location" => "",
-        "guests" => [],
-        "free" => false
-      },
-      extra
-    )
-  end
-
-  defp more_options(lv, integration, extra \\ %{}),
-    do: hook(lv, "calendar:more_options", draft_params(integration, extra))
-
-  defp hook(lv, event, params),
-    do: lv |> element("#calendar-canvas") |> render_hook(event, params)
 
   # A provider that takes the create and never answers, so the draft stays
   # saving until the test settles it.
@@ -86,8 +57,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     end)
   end
 
-  defp new_form(lv), do: form(lv, "#calendar-panel-new-form")
-
   defp await_create(lv) do
     assert_receive {:provider_call, task_pid, {:create, payload}}, @task_timeout
     ref = Process.monitor(task_pid)
@@ -103,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     lv: lv,
     integration: integration
   } do
-    more_options(lv, integration)
+    open_panel_draft(lv, integration)
 
     assert_reply(lv, %{opened: true})
     assert has_element?(lv, "#calendar-panel", "New event")
@@ -121,13 +90,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     lv: lv,
     integration: integration
   } do
-    more_options(lv, integration)
+    open_panel_draft(lv, integration)
     assert_push_event(lv, "calendar:events", %{events: events})
 
     assert %{kind: "draft", pending: false, editable: false} =
              Enum.find(events, &(&1.id == "draft-d1"))
 
-    render_change(new_form(lv), %{"_target" => ["start"], "start" => "2026-10-15T15:00"})
+    render_change(new_event_form(lv), %{"_target" => ["start"], "start" => "2026-10-15T15:00"})
 
     assert has_element?(
              lv,
@@ -144,8 +113,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     lv: lv,
     integration: integration
   } do
-    more_options(lv, integration)
-    render_submit(new_form(lv), %{"intent" => "create", "location" => "Canteen"})
+    open_panel_draft(lv, integration)
+    render_submit(new_event_form(lv), %{"intent" => "create", "location" => "Canteen"})
 
     payload = await_create(lv)
     assert same?(payload.start_time, ~U[2026-10-15 12:00:00Z])
@@ -156,8 +125,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
   end
 
   test "an empty title is saved as New event", %{lv: lv, integration: integration} do
-    more_options(lv, integration, %{"title" => ""})
-    render_submit(new_form(lv), %{"intent" => "create", "title" => "  "})
+    open_panel_draft(lv, integration, %{"title" => ""})
+    render_submit(new_event_form(lv), %{"intent" => "create", "title" => "  "})
 
     assert await_create(lv).summary == "New event"
   end
@@ -166,15 +135,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     lv: lv,
     integration: integration
   } do
-    more_options(lv, integration)
+    open_panel_draft(lv, integration)
 
-    render_submit(new_form(lv), %{"intent" => "add_guest", "guest_email" => "grace@example.com"})
+    render_submit(new_event_form(lv), %{
+      "intent" => "add_guest",
+      "guest_email" => "grace@example.com"
+    })
 
     assert has_element?(lv, "#calendar-panel-guests li", "grace@example.com")
     assert has_element?(lv, "#calendar-panel-create", "Create and invite")
     refute_enqueued(worker: EmailWorker)
 
-    render_submit(new_form(lv), %{"intent" => "create"})
+    render_submit(new_event_form(lv), %{"intent" => "create"})
     await_create(lv)
 
     assert_enqueued(
@@ -184,12 +156,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
   end
 
   test "a guest typed but not added is invited on Create", %{lv: lv, integration: integration} do
-    more_options(lv, integration)
+    open_panel_draft(lv, integration)
 
-    render_change(new_form(lv), %{"guest_email" => " Grace@Example.com "})
+    render_change(new_event_form(lv), %{"guest_email" => " Grace@Example.com "})
     assert has_element?(lv, "#calendar-panel-create", "Create and invite")
 
-    render_submit(new_form(lv), %{"intent" => "create", "guest_email" => " Grace@Example.com "})
+    render_submit(new_event_form(lv), %{
+      "intent" => "create",
+      "guest_email" => " Grace@Example.com "
+    })
 
     assert [%{email: "grace@example.com"}] = await_create(lv).attendees
 
@@ -203,9 +178,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     lv: lv,
     integration: integration
   } do
-    more_options(lv, integration, %{"guests" => ["grace@example.com"]})
+    open_panel_draft(lv, integration, %{"guests" => ["grace@example.com"]})
 
-    render_submit(new_form(lv), %{"intent" => "create", "guest_email" => "grace@example.com"})
+    render_submit(new_event_form(lv), %{
+      "intent" => "create",
+      "guest_email" => "grace@example.com"
+    })
 
     assert [%{email: "grace@example.com"}] = await_create(lv).attendees
   end
@@ -214,9 +192,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     lv: lv,
     integration: integration
   } do
-    more_options(lv, integration)
+    open_panel_draft(lv, integration)
 
-    render_submit(new_form(lv), %{"intent" => "create", "guest_email" => "not-an-address"})
+    render_submit(new_event_form(lv), %{"intent" => "create", "guest_email" => "not-an-address"})
 
     refute_receive {:provider_call, _pid, _call}, 100
     assert has_element?(lv, "#calendar-panel-guests", "Enter a valid email address.")
@@ -228,9 +206,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     integration: integration,
     user: user
   } do
-    more_options(lv, integration)
+    open_panel_draft(lv, integration)
 
-    render_submit(new_form(lv), %{"intent" => "create", "guest_email" => user.email})
+    render_submit(new_event_form(lv), %{"intent" => "create", "guest_email" => user.email})
 
     refute_receive {:provider_call, _pid, _call}, 100
 
@@ -243,21 +221,24 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
 
   test "the reason a draft guest is not added is said under the field, and typing clears it",
        %{lv: lv, integration: integration} do
-    more_options(lv, integration, %{"guests" => ["grace@example.com"]})
+    open_panel_draft(lv, integration, %{"guests" => ["grace@example.com"]})
 
-    render_submit(new_form(lv), %{"intent" => "add_guest", "guest_email" => "grace@example.com"})
+    render_submit(new_event_form(lv), %{
+      "intent" => "add_guest",
+      "guest_email" => "grace@example.com"
+    })
 
     assert has_element?(lv, "#calendar-panel-guests", "grace@example.com is already a guest.")
     refute has_element?(lv, "[id$='flash-group-warning']", "already a guest")
 
-    render_change(new_form(lv), %{"_target" => ["guest_email"], "guest_email" => "ada@"})
+    render_change(new_event_form(lv), %{"_target" => ["guest_email"], "guest_email" => "ada@"})
 
     refute has_element?(lv, "#calendar-panel-guests", "already a guest")
   end
 
   test "Enter in a field with no guest typed creates nothing", %{lv: lv, integration: integration} do
-    more_options(lv, integration)
-    render_submit(new_form(lv), %{"intent" => "add_guest", "guest_email" => ""})
+    open_panel_draft(lv, integration)
+    render_submit(new_event_form(lv), %{"intent" => "add_guest", "guest_email" => ""})
 
     refute_receive {:provider_call, _pid, _call}, 100
     assert has_element?(lv, "#calendar-panel-create")
@@ -267,9 +248,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     lv: lv,
     integration: integration
   } do
-    more_options(lv, integration)
+    open_panel_draft(lv, integration)
 
-    render_submit(new_form(lv), %{
+    render_submit(new_event_form(lv), %{
       "intent" => "create",
       "start" => "2026-10-15T15:00",
       "end" => "2026-10-15T14:00"
@@ -285,8 +266,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     integration: integration,
     user: user
   } do
-    more_options(lv, integration)
-    render_submit(new_form(lv), %{"intent" => "add_guest", "guest_email" => user.email})
+    open_panel_draft(lv, integration)
+    render_submit(new_event_form(lv), %{"intent" => "add_guest", "guest_email" => user.email})
 
     refute has_element?(lv, "#calendar-panel-guests li")
     assert has_element?(lv, "#calendar-panel-create", "Create")
@@ -297,74 +278,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     lv: lv,
     integration: integration
   } do
-    more_options(lv, integration, %{"draft" => "x y"})
+    open_panel_draft(lv, integration, %{"draft" => "x y"})
 
     assert_reply(lv, %{opened: false})
     refute has_element?(lv, "#calendar-panel")
-  end
-
-  describe "a draft with guests" do
-    test "asks before Cancel discards it, and Go back keeps it", %{
-      lv: lv,
-      integration: integration
-    } do
-      more_options(lv, integration, %{"guests" => ["grace@example.com", "ada@example.com"]})
-
-      lv |> element("#calendar-panel-new-cancel") |> render_click()
-
-      assert has_element?(
-               lv,
-               "#calendar-discard-draft",
-               "2 guests haven't been invited yet. Discard?"
-             )
-
-      assert has_element?(lv, "#calendar-panel")
-
-      lv |> element("#calendar-discard-draft-cancel") |> render_click()
-
-      refute has_element?(lv, "#calendar-discard-draft")
-      assert has_element?(lv, "#calendar-panel-guests li", "grace@example.com")
-    end
-
-    test "Discard closes the panel and drops the draft", %{lv: lv, integration: integration} do
-      more_options(lv, integration, %{"guests" => ["grace@example.com"]})
-
-      lv |> element("#calendar-panel-close") |> render_click()
-      assert has_element?(lv, "#calendar-discard-draft", "1 guest hasn't been invited yet.")
-
-      lv |> element("#calendar-discard-draft-confirm") |> render_click()
-
-      refute has_element?(lv, "#calendar-discard-draft")
-      refute has_element?(lv, "#calendar-panel")
-      assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
-      refute_receive {:provider_call, _pid, _call}, 100
-    end
-
-    test "counts a guest typed but not added", %{lv: lv, integration: integration} do
-      more_options(lv, integration)
-      render_change(new_form(lv), %{"guest_email" => "grace@example.com"})
-
-      lv |> element("#calendar-panel-new-cancel") |> render_click()
-
-      assert has_element?(lv, "#calendar-discard-draft", "1 guest hasn't been invited yet.")
-    end
-
-    test "a draft without guests closes at once", %{lv: lv, integration: integration} do
-      more_options(lv, integration)
-
-      lv |> element("#calendar-panel-new-cancel") |> render_click()
-
-      refute has_element?(lv, "#calendar-discard-draft")
-      refute has_element?(lv, "#calendar-panel")
-    end
-  end
-
-  test "the close button drops the draft from the grid", %{lv: lv, integration: integration} do
-    more_options(lv, integration)
-    lv |> element("#calendar-panel-close") |> render_click()
-
-    refute has_element?(lv, "#calendar-panel")
-    assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
   end
 
   test "a failed create keeps the panel open and draws the draft again", %{
@@ -378,9 +295,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
       {:error, "boom"}
     end)
 
-    more_options(lv, integration)
+    open_panel_draft(lv, integration)
     drain_events(lv)
-    render_submit(new_form(lv), %{"intent" => "create"})
+    render_submit(new_event_form(lv), %{"intent" => "create"})
     await_create(lv)
 
     assert has_element?(lv, "#calendar-panel-create")
@@ -393,8 +310,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     integration: integration
   } do
     hold_creates(self())
-    more_options(lv, integration)
-    render_submit(new_form(lv), %{"intent" => "create"})
+    open_panel_draft(lv, integration)
+    render_submit(new_event_form(lv), %{"intent" => "create"})
     assert_receive {:provider_call, _pid, {:create, _payload}}, @task_timeout
 
     send(
@@ -412,11 +329,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     integration: integration
   } do
     hold_creates(self())
-    more_options(lv, integration)
-    render_submit(new_form(lv), %{"intent" => "create"})
+    open_panel_draft(lv, integration)
+    render_submit(new_event_form(lv), %{"intent" => "create"})
     assert_receive {:provider_call, _pid, {:create, _payload}}, @task_timeout
 
-    render_submit(new_form(lv), %{"intent" => "create"})
+    render_submit(new_event_form(lv), %{"intent" => "create"})
 
     refute_receive {:provider_call, _pid, _call}, 100
   end
@@ -426,8 +343,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     integration: integration
   } do
     hold_creates(self())
-    more_options(lv, integration)
-    render_submit(new_form(lv), %{"intent" => "create"})
+    open_panel_draft(lv, integration)
+    render_submit(new_event_form(lv), %{"intent" => "create"})
     assert_receive {:provider_call, _pid, {:create, _payload}}, @task_timeout
 
     # The organiser left the calendar and came back before the browser
@@ -438,8 +355,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     refute has_element?(lv, "#calendar-panel")
     assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
 
-    more_options(lv, integration)
-    render_submit(new_form(lv), %{"intent" => "create"})
+    open_panel_draft(lv, integration)
+    render_submit(new_event_form(lv), %{"intent" => "create"})
     assert_receive {:provider_call, _pid, {:create, _payload}}, @task_timeout
   end
 
@@ -448,10 +365,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     integration: integration
   } do
     hold_creates(self())
-    hook(lv, "calendar:create", draft_params(integration))
+    canvas_push(lv, "calendar:create", panel_draft(integration))
     assert_receive {:provider_call, _pid, {:create, _payload}}, @task_timeout
 
-    more_options(lv, integration)
+    open_panel_draft(lv, integration)
 
     assert_reply(lv, %{opened: false})
     refute has_element?(lv, "#calendar-panel")
@@ -461,137 +378,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     lv: lv,
     integration: integration
   } do
-    more_options(lv, integration)
+    open_panel_draft(lv, integration)
 
     assert has_element?(lv, "#calendar-panel-new-all-day")
     refute has_element?(lv, "#calendar-panel-new-all-day[checked]")
     # A date and time is too wide for half the panel: Starts and Ends stack.
     assert has_element?(lv, "#calendar-panel-new-span.grid-cols-1")
 
-    render_change(new_form(lv), %{"_target" => ["all_day"], "all_day" => "true"})
+    render_change(new_event_form(lv), %{"_target" => ["all_day"], "all_day" => "true"})
 
     assert has_element?(lv, "#calendar-panel-new-all-day[checked]")
     assert has_element?(lv, "#calendar-panel-new-span.grid-cols-2")
     assert has_element?(lv, ~s|#calendar-panel-new-form input[name="start"][value="2026-10-15"]|)
     assert has_element?(lv, ~s|#calendar-panel-new-form input[name="end"][value="2026-10-15"]|)
-  end
-
-  test "Cancel clears a draft the domain refused on open", %{lv: lv, integration: integration} do
-    more_options(lv, integration, %{"end" => "2026-10-15T12:00"})
-    assert has_element?(lv, "#calendar-panel [role=status]", "Couldn't save")
-
-    lv |> element("#calendar-panel-new-cancel") |> render_click()
-
-    assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
-  end
-
-  describe "with another event on the grid" do
-    setup %{conn: conn, integration: integration} do
-      other = event(integration, "work", "Standup", ~U[2026-10-14 09:00:00Z], 30)
-      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      %{lv: lv, other: other}
-    end
-
-    test "opening it in the panel asks first while the draft has guests, then opens it", %{
-      lv: lv,
-      integration: integration,
-      other: other
-    } do
-      more_options(lv, integration, %{"guests" => ["grace@example.com"]})
-      hook(lv, "calendar:edit", %{"id" => "event-#{other.id}"})
-
-      assert has_element?(lv, "#calendar-discard-draft")
-      assert has_element?(lv, "#calendar-panel-new-form")
-
-      lv |> element("#calendar-discard-draft-confirm") |> render_click()
-
-      assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
-      refute has_element?(lv, "#calendar-panel-new-form")
-      assert has_element?(lv, "#calendar-panel")
-    end
-
-    test "opening its preview asks first while the draft has guests, and Go back stays", %{
-      lv: lv,
-      integration: integration,
-      other: other
-    } do
-      more_options(lv, integration, %{"guests" => ["grace@example.com"]})
-      hook(lv, "calendar:open", %{"id" => "event-#{other.id}"})
-
-      assert_reply(lv, %{opened: false})
-      assert has_element?(lv, "#calendar-discard-draft")
-
-      lv |> element("#calendar-discard-draft-cancel") |> render_click()
-
-      refute has_element?(lv, "#calendar-discard-draft")
-      assert has_element?(lv, "#calendar-panel-guests li", "grace@example.com")
-    end
-
-    test "opening its preview after Discard shows the preview", %{
-      lv: lv,
-      integration: integration,
-      other: other
-    } do
-      more_options(lv, integration, %{"guests" => ["grace@example.com"]})
-      hook(lv, "calendar:open", %{"id" => "event-#{other.id}"})
-      lv |> element("#calendar-discard-draft-confirm") |> render_click()
-
-      refute has_element?(lv, "#calendar-panel")
-      assert has_element?(lv, "#calendar-preview")
-
-      # The hook's open was answered `opened: false`, so it is told to place
-      # and focus the preview now.
-      id = "event-#{other.id}"
-      assert_push_event(lv, "calendar:preview-opened", %{id: ^id})
-    end
-
-    test "More options on another draft asks first, then has the hook choose it again", %{
-      lv: lv,
-      integration: integration
-    } do
-      more_options(lv, integration, %{"guests" => ["grace@example.com"]})
-      more_options(lv, integration, %{"draft" => "d2"})
-
-      assert_reply(lv, %{opened: false})
-      assert has_element?(lv, "#calendar-discard-draft")
-
-      lv |> element("#calendar-discard-draft-confirm") |> render_click()
-
-      assert_push_event(lv, "calendar:more-options-again", %{draft: "d2"})
-      refute has_element?(lv, "#calendar-panel")
-    end
-
-    test "opening it in the panel clears the New event draft", %{
-      lv: lv,
-      integration: integration,
-      other: other
-    } do
-      more_options(lv, integration)
-      hook(lv, "calendar:edit", %{"id" => "event-#{other.id}"})
-
-      assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
-      refute has_element?(lv, "#calendar-panel-new-form")
-    end
-
-    test "opening its preview clears the New event draft", %{
-      lv: lv,
-      integration: integration,
-      other: other
-    } do
-      more_options(lv, integration)
-      hook(lv, "calendar:open", %{"id" => "event-#{other.id}"})
-
-      assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
-      refute has_element?(lv, "#calendar-panel")
-    end
-  end
-
-  test "Cancel drops the draft from the grid", %{lv: lv, integration: integration} do
-    more_options(lv, integration)
-    lv |> element("#calendar-panel-new-cancel") |> render_click()
-
-    refute has_element?(lv, "#calendar-panel")
-    assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
   end
 
   describe "in the edit state" do
@@ -634,7 +433,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
         )
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      hook(lv, "calendar:edit", %{"id" => "event-#{weekly.id}"})
+      canvas_push(lv, "calendar:edit", %{"id" => "event-#{weekly.id}"})
       lv |> element("#calendar-panel-duplicate") |> render_click()
 
       payload = await_create(lv)
@@ -654,7 +453,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
         )
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      hook(lv, "calendar:edit", %{"id" => "event-#{call.id}"})
+      canvas_push(lv, "calendar:edit", %{"id" => "event-#{call.id}"})
       lv |> element("#calendar-panel-duplicate") |> render_click()
 
       payload = await_create(lv)

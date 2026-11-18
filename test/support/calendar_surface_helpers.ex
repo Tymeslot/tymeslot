@@ -10,10 +10,19 @@ defmodule TymeslotWeb.CalendarSurfaceHelpers do
   Calendar fetches for availability answer "no events"
   (`TestMocks.stub_no_calendar_events/0`), so an organiser with an active
   meeting type gets its bookable layer computed without further stubs.
+
+  Also the steps the side panel's New event tests share: opening a draft
+  through quick create's More options, its form, and sending it as a
+  Tymeslot meeting.
   """
 
+  import ExUnit.Assertions
+  import Mox
+  import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
+
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
 
   alias Plug.Conn
   alias Plug.Test
@@ -86,6 +95,107 @@ defmodule TymeslotWeb.CalendarSurfaceHelpers do
         ],
         attrs
       )
+    )
+  end
+
+  @doc """
+  Has the calendar provider take every create and tell `test_pid`, as
+  `{:provider_call, task_pid, payload}`, or with `tag` given as
+  `{:provider_call, task_pid, {tag, payload}}`.
+  """
+  @spec forward_creates(pid(), atom() | nil) :: :ok
+  def forward_creates(test_pid, tag \\ nil) do
+    stub(Tymeslot.CalendarMock, :create_event, fn payload, _context ->
+      send(test_pid, {:provider_call, self(), if(tag, do: {tag, payload}, else: payload)})
+      {:ok, CreatedEvent.new(payload.uid)}
+    end)
+
+    :ok
+  end
+
+  @doc "Sends the calendar canvas hook's `event` with `params`."
+  @spec canvas_push(term(), String.t(), map()) :: term()
+  def canvas_push(lv, event, params),
+    do: lv |> element("#calendar-canvas") |> render_hook(event, params)
+
+  @doc "The side panel's New event form."
+  @spec new_event_form(term()) :: term()
+  def new_event_form(lv), do: form(lv, "#calendar-panel-new-form")
+
+  @doc "A titled one-hour draft on the Work calendar, as quick create sends it."
+  @spec panel_draft(map(), map()) :: map()
+  def panel_draft(integration, extra \\ %{}) do
+    Map.merge(
+      %{
+        "draft" => "d1",
+        "title" => "Lunch with Ada",
+        "start" => "2026-10-15T13:00",
+        "end" => "2026-10-15T14:00",
+        "all_day" => false,
+        "calendar" => "#{integration.id}:work",
+        "location" => "",
+        "guests" => [],
+        "free" => false
+      },
+      extra
+    )
+  end
+
+  @doc "Opens the New event panel on `panel_draft/2`; the reply is the caller's to read."
+  @spec open_panel_draft(term(), map(), map()) :: term()
+  def open_panel_draft(lv, integration, extra \\ %{}),
+    do: canvas_push(lv, "calendar:more_options", panel_draft(integration, extra))
+
+  @doc """
+  Opens the New event panel on an untitled draft with two guests, Ada and
+  Grace, and checks that it opened.
+  """
+  @spec open_meeting_draft(term(), map(), map()) :: term()
+  def open_meeting_draft(lv, integration, extra \\ %{}) do
+    canvas_push(
+      lv,
+      "calendar:more_options",
+      panel_draft(
+        integration,
+        Map.merge(
+          %{"title" => "", "guests" => ["ada@example.com", "grace@example.com"]},
+          extra
+        )
+      )
+    )
+
+    assert_reply(lv, %{opened: true})
+  end
+
+  @doc "`count` distinct guest addresses."
+  @spec guest_addresses(pos_integer()) :: [String.t()]
+  def guest_addresses(count), do: Enum.map(1..count, &"guest#{&1}@example.com")
+
+  @doc "Ticks \"Send as a Tymeslot meeting\"."
+  @spec tick_meeting(term()) :: String.t()
+  def tick_meeting(lv), do: render_change(new_event_form(lv), %{"meeting" => "true"})
+
+  @doc "Clicks the meeting reminder preset `preset`, such as `\"1-hours\"`."
+  @spec add_meeting_reminder(term(), String.t()) :: String.t()
+  def add_meeting_reminder(lv, preset) do
+    lv
+    |> element(~s(#calendar-panel-meeting-reminders [data-testid="reminder-preset-#{preset}"]))
+    |> render_click()
+  end
+
+  @doc """
+  Traces what the dashboard process receives, so a test sees what the panel
+  hands it (`{:trace, pid, :receive, message}`).
+  """
+  @spec trace_surface(term()) :: non_neg_integer()
+  def trace_surface(lv), do: :erlang.trace(lv.pid, true, [:receive])
+
+  @doc "Presses Create on a meeting draft, with Ada Lovelace as the guest's name."
+  @spec book_meeting(term(), map()) :: String.t()
+  def book_meeting(lv, extra \\ %{}) do
+    render_submit(
+      new_event_form(lv),
+      Map.merge(%{"intent" => "create", "guest_name" => "Ada Lovelace"}, extra)
     )
   end
 end

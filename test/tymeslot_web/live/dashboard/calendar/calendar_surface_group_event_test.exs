@@ -113,6 +113,29 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGroupEventTest do
     refute has_element?(lv, "#calendar-panel-group-event")
   end
 
+  # Ticking the box would hide the guest field, and the group event invites
+  # nobody, so a typed address would be dropped unsent.
+  test "is not offered while a guest address is typed but not added", %{
+    conn: conn,
+    integration: integration
+  } do
+    lv = open(conn, integration)
+
+    render_change(new_form(lv), %{"guest_email" => "ada@example.com"})
+    refute has_element?(lv, "#calendar-panel-group-event")
+
+    # A box ticked meanwhile does not take the draft: the address stays to
+    # be invited, and Create makes no group event of it.
+    as_group_event(lv, %{"guest_email" => "ada@example.com"})
+    refute has_element?(lv, "#calendar-panel-group-event-fields")
+    assert has_element?(lv, ~s(#calendar-panel-guests input[value="ada@example.com"]))
+    assert has_element?(lv, "#calendar-panel-create", "Create and invite")
+
+    create(lv, %{"guest_email" => "ada@example.com"})
+
+    assert Repo.all(MeetingTypeSchema) == []
+  end
+
   # People book a group event on the public page, which needs a calendar.
   test "is not offered without a calendar people can book through", %{
     conn: conn,

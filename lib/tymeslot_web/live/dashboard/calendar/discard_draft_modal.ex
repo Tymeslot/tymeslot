@@ -2,8 +2,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.DiscardDraftModal do
   @moduledoc """
   Asks before the side panel's New event state is closed while its draft
   has guests, who have not been invited yet, as the old Quick Add did
-  (`PanelNewDiscard`). Discard sends `panel:draft_discard_confirm`; Go
-  back, Escape and a click outside send `panel:draft_discard_cancel`.
+  (`PanelNewDiscard`). Discard sends `panel:draft_discard_confirm`; the
+  modal's own Go back, Escape and a click outside send
+  `panel:draft_discard_cancel`.
   """
 
   use TymeslotWeb, :html
@@ -25,7 +26,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.DiscardDraftModal do
       icon="hero-user-group"
       confirm_variant={:danger}
       title={dgettext("dashboard_calendar_editing", "Unsent invitations")}
+      cancel_label={dgettext("dashboard_calendar_editing", "Go back")}
+      confirm_label={dgettext("dashboard_calendar_editing", "Discard")}
       on_cancel={JS.push("panel:draft_discard_cancel", target: @target)}
+      on_confirm={JS.push("panel:draft_discard_confirm", target: @target)}
+      cancel_id="calendar-discard-draft-cancel"
+      confirm_id="calendar-discard-draft-confirm"
     >
       <p>
         {dngettext(
@@ -35,24 +41,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.DiscardDraftModal do
           @prompt.count
         )}
       </p>
-      <:actions>
-        <.action_button
-          id="calendar-discard-draft-cancel"
-          variant={:secondary}
-          phx-click="panel:draft_discard_cancel"
-          phx-target={@target}
-        >
-          {dgettext("dashboard_calendar_editing", "Go back")}
-        </.action_button>
-        <.action_button
-          id="calendar-discard-draft-confirm"
-          variant={:danger}
-          phx-click="panel:draft_discard_confirm"
-          phx-target={@target}
-        >
-          {dgettext("dashboard_calendar_editing", "Discard")}
-        </.action_button>
-      </:actions>
     </Modal.confirm_modal>
     """
   end

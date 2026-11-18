@@ -18,8 +18,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   is created at once.
 
   Without a calendar to write to, only a Tymeslot meeting can be made: its
-  calendar is none (Tymeslot only), and for anything else Create is off
-  beside a note that says why.
+  calendar is none (Tymeslot only), Repeat, which only an event has, gives
+  way, and for anything else Create is off beside a note that says why.
 
   Without guests, and on a plan with group bookings, it offers to make the
   draft a group event instead (`PanelGroupEventFields`, `PanelGroupEvent`).
@@ -136,7 +136,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           label={dgettext("dashboard_calendar_editing", "Ends")}
         />
       </div>
-      <div :if={@repeat && !@meeting && !@group} id="calendar-panel-new-repeat" class="space-y-1">
+      <%!-- Only a plain event repeats, and without a calendar to write to
+            there is none to make. --%>
+      <div
+        :if={@repeat && !@meeting && !@group && @calendar_choices != []}
+        id="calendar-panel-new-repeat"
+        class="space-y-1"
+      >
         <.select
           id="calendar-panel-new-repeat-preset"
           name="repeat"
@@ -223,6 +229,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
       <PanelGuestsField.draft_guests
         :if={!@group}
         guests={@values["guests"]}
+        typed={@values["guest_email"]}
         full={PanelNewGuests.full?(@values)}
         error={@guest_error}
         form_key={@guest_form_key}

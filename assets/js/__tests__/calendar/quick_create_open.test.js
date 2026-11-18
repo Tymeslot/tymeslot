@@ -106,7 +106,7 @@ test("with no calendar to write to, an event explains why it can't be saved", ()
   holder.innerHTML = renderQuickCreate({ draft: { ...event(), calendar: null }, strings, timeFormat: "24h", calendars: [], meetingTypes });
   const popover = holder.firstElementChild;
 
-  expect(popover.querySelector("#calendar-qc-no-calendar").textContent).toBe("Connect a calendar to add events here.");
+  expect(popover.querySelector("#calendar-qc-no-calendar").textContent).toBe("Connect a calendar to add events, or use More options to send a Tymeslot meeting.");
   expect(popover.querySelector("[data-qc-save]").disabled).toBe(true);
   // The panel can still send it as a Tymeslot meeting, which needs no calendar.
   expect(popover.querySelector("[data-qc-more]").disabled).toBe(false);
@@ -141,5 +141,5 @@ test("with a calendar nothing points at a note", () => {
 
 test("connected calendars that are all read-only say so instead of asking to connect one", () => {
   const note = noCalendarView({ hasAccounts: true }).querySelector("#calendar-qc-no-calendar");
-  expect(note.textContent).toBe("Your connected calendars are read-only, so events can't be added here.");
+  expect(note.textContent).toBe("Your calendars are read-only. Connect one you can write to, or use More options to send a Tymeslot meeting.");
 });
