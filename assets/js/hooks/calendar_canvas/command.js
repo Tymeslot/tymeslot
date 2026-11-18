@@ -27,13 +27,16 @@
  * a typed date, "Add …", the matching commands. A command runs here
  * (views, Today, next and previous through `gotoPeriod`; New event; the
  * bookable layer; pushes to the surface or, for focus mode and the old
- * calendar, to DashboardLive). "Add …" opens quick create filled in from the
- * line. A server row reveals its event (reveal.js); the preview then takes focus.
+ * calendar, to DashboardLive; desktop notifications, which ask the
+ * browser's permission first, desktop_reminder_permission.js). "Add …"
+ * opens quick create filled in from the line. A server row reveals its
+ * event (reveal.js); the preview then takes focus.
  */
 import { addRow, commandRows, dateRow } from "../../calendar/commands.js";
 import { applyText } from "../../calendar/draft.js";
 import { escapeHtml } from "../../calendar/render.js";
 import { revealRequest } from "../../calendar/reveal.js";
+import { requestPermission } from "../desktop_reminder_permission.js";
 import { POWER_KEYS, WIDE } from "./power_keys.js";
 import { CORE_MODAL_OPEN, isCommandKey, plainKeyAllowed } from "../../calendar/shortcuts.js";
 
@@ -299,6 +302,13 @@ export const CommandMixin = {
       case "push":
         this.closeCommand();
         return this.pushEventTo(this.el, run.event, run.params);
+      case "permission": {
+        // Asked before the bar closes, while the key or click is still the
+        // gesture the browser requires; only the answer is awaited.
+        const answer = requestPermission();
+        this.closeCommand();
+        return answer.then((permission) => this.pushEventTo(this.el, run.event, { permission, source: "command" }));
+      }
       default:
         return this.closeCommand();
     }

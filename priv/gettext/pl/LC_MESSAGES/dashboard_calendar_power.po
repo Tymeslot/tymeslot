@@ -471,3 +471,33 @@ msgstr[2] "jeszcze %{count} gości"
 #, elixir-autogen, elixir-format
 msgid "Maybe"
 msgstr "Może"
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Allow notifications"
+msgstr "Zezwól na powiadomienia"
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "This browser does not support notifications."
+msgstr "Ta przeglądarka nie obsługuje powiadomień."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked in your browser settings. Allow notifications for this site there, then switch desktop notifications on again."
+msgstr "Zablokowane w ustawieniach przeglądarki. Zezwól tam na powiadomienia z tej witryny, a potem ponownie włącz powiadomienia na pulpicie."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop notifications are on, but your browser has not allowed them yet."
+msgstr "Powiadomienia na pulpicie są włączone, ale przeglądarka jeszcze na nie nie zezwoliła."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop notifications are on, but your browser is blocking them. Allow notifications for this site in your browser settings and they will start."
+msgstr "Powiadomienia na pulpicie są włączone, ale przeglądarka je blokuje. Zezwól na powiadomienia z tej witryny w ustawieniach przeglądarki, a zaczną się pojawiać."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Your browser did not allow notifications, so desktop notifications are still off."
+msgstr "Przeglądarka nie zezwoliła na powiadomienia, więc powiadomienia na pulpicie są nadal wyłączone."

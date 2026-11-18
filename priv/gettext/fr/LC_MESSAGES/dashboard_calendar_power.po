@@ -468,3 +468,33 @@ msgstr[1] "%{count} autres invités"
 #, elixir-autogen, elixir-format
 msgid "Maybe"
 msgstr "Peut-être"
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Allow notifications"
+msgstr "Autoriser les notifications"
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "This browser does not support notifications."
+msgstr "Ce navigateur ne prend pas en charge les notifications."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked in your browser settings. Allow notifications for this site there, then switch desktop notifications on again."
+msgstr "Bloquées dans les paramètres de votre navigateur. Autorisez-y les notifications pour ce site, puis réactivez les notifications de bureau."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop notifications are on, but your browser has not allowed them yet."
+msgstr "Les notifications de bureau sont activées, mais votre navigateur ne les a pas encore autorisées."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop notifications are on, but your browser is blocking them. Allow notifications for this site in your browser settings and they will start."
+msgstr "Les notifications de bureau sont activées, mais votre navigateur les bloque. Autorisez les notifications pour ce site dans les paramètres du navigateur et elles commenceront à s’afficher."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Your browser did not allow notifications, so desktop notifications are still off."
+msgstr "Votre navigateur n’a pas autorisé les notifications : les notifications de bureau restent donc désactivées."
