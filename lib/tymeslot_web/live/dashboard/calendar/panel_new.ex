@@ -138,10 +138,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
 
     socket
     |> assign(:panel, %{panel | form: updated, draft: draft, status: status})
+    |> clear_guest_error(params["_target"])
     |> SurfaceData.push_events(false)
   end
 
   def change(socket, _params), do: socket
+
+  # Typing in the guest field clears what it said about the last address.
+  defp clear_guest_error(socket, ["guest_email"]), do: PanelState.put_error(socket, "guest", nil)
+  defp clear_guest_error(socket, _target), do: socket
 
   @doc """
   The New event form's submit. `intent=add_guest` adds the typed guest to

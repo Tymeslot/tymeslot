@@ -3,6 +3,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   The guests of the event the side panel shows, and telling them about the
   panel's changes.
 
+  An address the panel will not invite (not an email, the organiser's own,
+  a guest already, past the limit) is said under the guest field.
+
   Inviting and removing write the guest list through `Writes.update/5`, to
   the event the panel shows, and email the guest concerned only once the
   calendar has accepted that write: an invitation for a new guest, a
@@ -63,14 +66,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
 
       socket
       |> write(event, guests)
+      |> PanelState.put_error("guest", nil)
       |> assign(:guest_form_key, socket.assigns.guest_form_key + 1)
     else
-      {:invalid, message} -> flash(socket, {:warning, message})
+      {:invalid, message} -> PanelState.put_error(socket, "guest", message)
       refusal -> refuse(socket, refusal)
     end
   end
 
   def invite(socket, _raw), do: socket
+
+  @doc "Typing in the guest field clears what it said about the last address."
+  @spec typed(socket()) :: socket()
+  def typed(%{assigns: %{panel: %{mode: :edit}}} = socket),
+    do: PanelState.put_error(socket, "guest", nil)
+
+  def typed(socket), do: socket
 
   @doc "Asks whether to remove the guest `email` from the event the panel shows."
   @spec request_remove(socket(), String.t()) :: socket()

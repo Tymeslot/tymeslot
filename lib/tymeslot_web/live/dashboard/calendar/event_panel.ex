@@ -262,6 +262,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           :if={@event && @editable}
           guests={PanelGuests.of(@event)}
           organiser={@emails_guests}
+          error={@panel.errors["guest"]}
           form_key={@guest_form_key}
           repeating={
             is_binary(Map.get(@event, :recurring_event_id)) or
@@ -304,6 +305,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           reminder_picker={Map.get(@panel, :reminder_picker)}
           timezone={@timezone}
           repeat={@new_repeat}
+          guest_error={@panel.errors["guest"]}
         />
       </div>
     </aside>

@@ -55,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   attr :reminder_picker, :map, default: nil, doc: "the meeting's `ReminderPickerState`"
   attr :timezone, :string, default: "Etc/UTC"
   attr :has_accounts, :boolean, default: false, doc: "whether any calendar account is connected"
+  attr :guest_error, :string, default: nil, doc: "why the last guest address was not added"
   attr :repeat, :map, default: nil, doc: "the Repeat field, from `PanelNewRepeat.field/4`"
 
   @spec new_form(map()) :: Phoenix.LiveView.Rendered.t()
@@ -220,6 +221,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         :if={!@group}
         guests={@values["guests"]}
         full={PanelNewGuests.full?(@values)}
+        error={@guest_error}
         form_key={@guest_form_key}
         surface={@surface}
       />

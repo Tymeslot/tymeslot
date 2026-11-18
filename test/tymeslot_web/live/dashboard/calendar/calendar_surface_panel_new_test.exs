@@ -219,7 +219,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     render_submit(new_form(lv), %{"intent" => "create", "guest_email" => "not-an-address"})
 
     refute_receive {:provider_call, _pid, _call}, 100
-    assert render(lv) =~ "Enter a valid email address."
+    assert has_element?(lv, "#calendar-panel-guests", "Enter a valid email address.")
     assert has_element?(lv, "#calendar-panel-create:not([disabled])")
   end
 
@@ -233,7 +233,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     render_submit(new_form(lv), %{"intent" => "create", "guest_email" => user.email})
 
     refute_receive {:provider_call, _pid, _call}, 100
-    assert render(lv) =~ "You&#39;re the organiser, so there&#39;s no need to invite yourself."
+
+    assert has_element?(
+             lv,
+             "#calendar-panel-guests",
+             "You're the organiser, so there's no need to invite yourself."
+           )
+  end
+
+  test "the reason a draft guest is not added is said under the field, and typing clears it",
+       %{lv: lv, integration: integration} do
+    more_options(lv, integration, %{"guests" => ["grace@example.com"]})
+
+    render_submit(new_form(lv), %{"intent" => "add_guest", "guest_email" => "grace@example.com"})
+
+    assert has_element?(lv, "#calendar-panel-guests", "grace@example.com is already a guest.")
+    refute has_element?(lv, "[id$='flash-group-warning']", "already a guest")
+
+    render_change(new_form(lv), %{"_target" => ["guest_email"], "guest_email" => "ada@"})
+
+    refute has_element?(lv, "#calendar-panel-guests", "already a guest")
   end
 
   test "Enter in a field with no guest typed creates nothing", %{lv: lv, integration: integration} do

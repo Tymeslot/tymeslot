@@ -8,7 +8,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
   "Create and invite". On an event someone else organises the edit mode
   lists the guests without either control, since both email them. Also the
   "Guests haven't been told" note (`untold_note/1`) the panel shows below
-  its header.
+  its header. An address that is not taken says why under the field, and
+  typing again clears it.
   """
 
   use TymeslotWeb, :html
@@ -20,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
 
   attr :guests, :list, required: true, doc: "normalised attendees"
   attr :form_key, :integer, required: true
+  attr :error, :string, default: nil, doc: "why the last address was not invited"
   attr :repeating, :boolean, default: false
   attr :organiser, :boolean, default: true, doc: "whether the user may email the guests"
   attr :surface, :any, required: true
@@ -66,7 +68,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
         :if={@organiser}
         novalidate
         id="calendar-panel-guest-form"
-        class="flex items-end gap-2"
+        class="flex items-start gap-2"
+        phx-change="panel:guest_input"
         phx-submit="panel:guest_invite"
         phx-target={@surface}
       >
@@ -76,6 +79,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
             id={"calendar-panel-guest-email-#{@form_key}"}
             name="email"
             value=""
+            errors={List.wrap(@error)}
             label={dgettext("dashboard_calendar_editing", "Invite a guest")}
             placeholder={dgettext("dashboard_calendar_editing", "name@example.com")}
           />
@@ -103,6 +107,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
 
   attr :guests, :list, required: true, doc: "email strings"
   attr :form_key, :integer, required: true
+  attr :error, :string, default: nil, doc: "why the last address was not added"
   attr :full, :boolean, default: false, doc: "whether the draft can take no more guests"
   attr :surface, :any, required: true
 
@@ -140,6 +145,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
             id={"calendar-panel-guest-email-#{@form_key}"}
             name="guest_email"
             value=""
+            errors={List.wrap(@error)}
             label={dgettext("dashboard_calendar_editing", "Add a guest")}
             placeholder={dgettext("dashboard_calendar_editing", "name@example.com")}
           />

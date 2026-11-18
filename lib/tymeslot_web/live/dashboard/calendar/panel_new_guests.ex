@@ -9,7 +9,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   create would drop. An address typed into the guest field but not added
   when Create is pressed is added first (`take_pending/2`), as the old
   Quick Add did: a valid one joins the draft, and one that is not, or the
-  organiser's own, stops the create with its reason.
+  organiser's own, stops the create with its reason. A refusal is said
+  under the guest field (the panel's `"guest"` error), not in a toast.
 
   While "Send as a Tymeslot meeting" is ticked the meeting's own limit
   holds at Add (`max/1`): the guest it is with and `Guests.max_guests/0`
@@ -26,6 +27,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   alias Tymeslot.Meetings.Guests
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
+  alias TymeslotWeb.Dashboard.Calendar.PanelState
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -67,7 +69,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   def add(socket, raw) do
     case put(socket, raw) do
       {:ok, socket} -> socket
-      {_refused_or_already, socket, message} -> warn(socket, message)
+      {_refused_or_already, socket, message} -> refuse(socket, message)
     end
   end
 
@@ -84,7 +86,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
       case put(socket, raw) do
         {:ok, socket} -> {:ok, socket}
         {:already, socket, _message} -> {:ok, socket}
-        {:refused, socket, message} -> {:error, warn(socket, message)}
+        {:refused, socket, message} -> {:error, refuse(socket, message)}
       end
     end
   end
@@ -115,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
          :ok <- room_for_one_more(form),
          {:ok, _kept} <- CreateParams.guests(user_id, guests ++ [email]) do
       form = Map.merge(form, %{"guests" => guests ++ [email], "guest_pending" => ""})
-      socket = PanelNew.put_form(socket, form)
+      socket = socket |> PanelNew.put_form(form) |> PanelState.put_error("guest", nil)
       {:ok, assign(socket, :guest_form_key, socket.assigns.guest_form_key + 1)}
     else
       {:ok, []} -> {:refused, socket, Creation.guest_message(:organiser)}
@@ -156,8 +158,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   defp not_yet_a_guest(guests, email),
     do: if(email in guests, do: {:error, :already_a_guest, email}, else: :ok)
 
-  defp warn(socket, message) do
-    send(self(), {:flash, {:warning, message}})
-    socket
-  end
+  # Said under the guest field, where the address was typed; typing again
+  # clears it (`PanelNew.change/2`).
+  defp refuse(socket, message), do: PanelState.put_error(socket, "guest", message)
 end

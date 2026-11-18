@@ -186,6 +186,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     do: PanelVideo.change(socket, raw)
 
   def handle("guest_invite", %{"email" => email}, socket), do: PanelGuests.invite(socket, email)
+  def handle("guest_input", _params, socket), do: PanelGuests.typed(socket)
 
   def handle("guest_remove", %{"email" => email}, socket),
     do: PanelGuests.request_remove(socket, email)
