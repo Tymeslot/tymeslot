@@ -777,3 +777,8 @@ msgstr "«%{title}» volvió"
 #, elixir-autogen, elixir-format
 msgid "Show %{account} first to choose its calendars."
 msgstr "Para elegir sus calendarios, primero muestra la cuenta %{account}."
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} lugares ocupados"

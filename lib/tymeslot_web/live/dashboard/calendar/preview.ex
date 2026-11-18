@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   @moduledoc """
   The preview that opens when an event on the grid is clicked:
   which calendar it sits in, when it is (with how far away), where, who and
-  how each has answered (`PreviewGuests`), whether guests can book over it,
+  how each has answered (`PreviewGuests`), a group booking's seats taken,
+  whether guests can book over it,
   and whether it is still waiting to sync.
 
   Rendered by LiveView rather than by the hook from payload data: it needs
@@ -76,6 +77,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       repeats: EventPayload.recurring?(event),
       location: present(Map.get(event, :location)),
       guests: GuestReplies.of_event(event),
+      seats: seats(event),
       join_url: web_url(Map.get(event, :video_link) || Map.get(event, :join_url)),
       availability: availability(event, integration, entry),
       sync_note: sync_note(event, integration),
@@ -153,6 +155,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
         </.row>
         <.row :if={@preview.location} icon="hero-map-pin">
           <span class="break-words">{@preview.location}</span>
+        </.row>
+        <.row :if={@preview.seats} icon="hero-users">
+          <span id="calendar-preview-seats">
+            {dgettext("dashboard_calendar", "%{count}/%{capacity} seats taken",
+              count: @preview.seats.taken,
+              capacity: @preview.seats.capacity
+            )}
+          </span>
         </.row>
         <PreviewGuests.guests :if={@preview.guests != []} guests={@preview.guests} />
         <.row :if={@preview.availability} icon="hero-shield-check">
@@ -261,6 +271,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
     </div>
     """
   end
+
+  # A group booking's seats: those taken (its people and their guests) of
+  # its capacity. A one-to-one booking has none to count.
+  defp seats(%{kind: :booking, capacity: capacity, seats_taken: taken}) when capacity > 1,
+    do: %{taken: taken, capacity: capacity}
+
+  defp seats(_event), do: nil
 
   defp source(%{kind: :booking}, _integrations), do: {nil, nil}
 

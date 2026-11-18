@@ -811,3 +811,8 @@ msgstr "Evento “%{title}” restaurado"
 #, elixir-autogen, elixir-format
 msgid "Show %{account} first to choose its calendars."
 msgstr "Mostre %{account} para escolher os calendários desta conta."
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} vagas ocupadas"

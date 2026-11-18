@@ -820,3 +820,8 @@ msgstr "Подію «%{title}» відновлено"
 #, elixir-autogen, elixir-format
 msgid "Show %{account} first to choose its calendars."
 msgstr "Спочатку покажіть обліковий запис %{account}, щоб вибрати його календарі."
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} місць зайнято"
