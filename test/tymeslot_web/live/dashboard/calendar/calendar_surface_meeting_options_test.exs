@@ -249,6 +249,37 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingOptionsTest do
       assert %{location: nil} = booked()
     end
 
+    test "a saved location deleted after Create, before the booking read it, is named in the flash",
+         %{user: user, lv: lv} do
+      venue = insert(:venue, user: user, name: "Head office")
+
+      # What the panel hands the dashboard for a meeting at the venue, which
+      # is deleted before the booking reads it.
+      params = %{
+        title: "Meeting with Ada Lovelace",
+        start_time: ~U[2026-10-15 12:00:00Z],
+        end_time: ~U[2026-10-15 13:00:00Z],
+        attendee_name: "Ada Lovelace",
+        attendee_email: "ada@example.com",
+        attendee_timezone: "Europe/London",
+        guest_emails: [],
+        organizer_user_id: user.id,
+        location: {:venue, venue.id}
+      }
+
+      Repo.delete!(venue)
+      send(lv.pid, {:execute_create_ad_hoc_meeting, params})
+
+      eventually(
+        fn ->
+          render(lv) =~ "That location can no longer be used. Please choose another one."
+        end,
+        timeout: @task_timeout
+      )
+
+      assert Repo.all(MeetingSchema) == []
+    end
+
     test "someone else's saved location is refused, and nothing is booked", %{lv: lv} do
       venue = insert(:venue, name: "Someone else's office")
 
