@@ -35,7 +35,15 @@ defmodule Tymeslot.InviteeData do
 
   Upcoming bookings are refused rather than erased: a confirmed meeting with
   its invitee's address removed could no longer be cancelled, moved or
-  reminded about. Cancel them first, then erase.
+  reminded about. Cancel them first, then erase. An open seat checkout (a
+  seat hold still `held`) is refused the same way, since its payment could
+  still turn it into a seat.
+
+  Seat holds are deleted rather than anonymised: a settled hold, naming the
+  person as its booker or as one of its guests, holds nothing a host's
+  history needs (a paid booker's seat lives on as a participant), and the
+  retention worker deletes them a month after they settle anyway
+  (`Tymeslot.Meetings.SeatHolds.prune_settled/1`).
 
   A booking series holds its booker's name and email too. An erasure clears
   the series booked under the address, and the purge clears a series with
@@ -62,6 +70,7 @@ defmodule Tymeslot.InviteeData do
           draft_polls: non_neg_integer(),
           invitations: non_neg_integer(),
           booking_payments: non_neg_integer(),
+          seat_holds: non_neg_integer(),
           series: non_neg_integer(),
           deliveries: non_neg_integer()
         }
@@ -160,6 +169,7 @@ defmodule Tymeslot.InviteeData do
       draft_polls: count(Queries.remove_draft_invitee(email, scope)),
       invitations: count(Queries.scrub_invitations(email, meeting_ids, scope, now)),
       booking_payments: count(Queries.scrub_booking_payments({:email, email, scope}, now)),
+      seat_holds: count(Queries.delete_seat_holds_for_email(email, scope)),
       series: count(Queries.scrub_series_for_email(email, scope, now)),
       deliveries: Queries.delete_deliveries(touched_meetings)
     }

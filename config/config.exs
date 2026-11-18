@@ -658,6 +658,10 @@ config :tymeslot, :payments,
     # after their meeting or poll ends, before it is anonymised. The meeting
     # rows themselves stay for statistics. See Tymeslot.InviteeData.
     invitee_data_days: 730,
+    # What a booker gave while paying for a seat, kept for a month after the
+    # hold converted or lapsed, for payment questions. The participant row
+    # keeps a paid booker's details; see Tymeslot.InviteeData.
+    seat_hold_days: 30,
     # Statutory retention for financial records (booking payments, payment
     # transactions, subscription invoices), in years counted from the end of
     # the financial year a record belongs to. Ten is the longest period common

@@ -222,6 +222,18 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
     |> Repo.exists?()
   end
 
+  @doc """
+  Deletes the converted and released holds last updated before `cutoff`,
+  returning `{deleted_count, nil}`. A hold's `updated_at` is set when it
+  settles, so this counts from settlement.
+  """
+  @spec delete_settled_before(DateTime.t()) :: {non_neg_integer(), nil}
+  def delete_settled_before(%DateTime{} = cutoff) do
+    SeatHold
+    |> where([h], h.status in [:converted, :released] and h.updated_at < ^cutoff)
+    |> Repo.delete_all()
+  end
+
   defp held, do: where(SeatHold, [h], h.status == :held)
 
   defp held_on_live_meetings do

@@ -18,6 +18,7 @@ defmodule Tymeslot.Meetings.SeatHolds do
   it was released. Broadcast only after the change has committed.
   """
 
+  alias Tymeslot.Clock
   alias Tymeslot.Meetings.SeatHoldQueries
   alias Tymeslot.Meetings.SeatHoldSchema
 
@@ -112,6 +113,19 @@ defmodule Tymeslot.Meetings.SeatHolds do
   defdelegate follow_moved_meeting(meeting_id, start_time),
     to: SeatHoldQueries,
     as: :restamp_held_for_meeting
+
+  @doc """
+  Deletes the holds that settled (converted or released) more than `days`
+  days ago, with the booker's details they snapshot, returning
+  `{deleted_count, nil}`. A hold still `held` is never deleted by age.
+  Deleting a hold leaves its payment, whose `seat_hold_id` is nilified.
+  Called by `Tymeslot.Workers.DataRetentionWorker`.
+  """
+  @spec prune_settled(non_neg_integer()) :: {non_neg_integer(), nil}
+  def prune_settled(days) when is_integer(days) and days >= 0 do
+    cutoff = DateTime.add(Clock.utc_now(), -days * 86_400, :second)
+    SeatHoldQueries.delete_settled_before(cutoff)
+  end
 
   @doc "The PubSub topic carrying a hold's payment outcome."
   @spec topic(binary()) :: String.t()

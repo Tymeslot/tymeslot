@@ -2,8 +2,8 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   @moduledoc """
   Finds and scrubs the personal data invitees give a host, across every table
   that holds it: meetings, group seats, guests, poll participants, the
-  invitees a draft poll holds, invitation links, booking payments, booking
-  series and the outgoing delivery logs.
+  invitees a draft poll holds, invitation links, booking payments, seat
+  holds, booking series and the outgoing delivery logs.
 
   Pure data access. Which rows are scrubbed, and when, is decided by
   `Tymeslot.InviteeData`.
@@ -27,6 +27,7 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
+  alias Tymeslot.Meetings.SeatHoldSchema, as: SeatHold
   alias Tymeslot.Polls.PollParticipantSchema, as: PollParticipant
   alias Tymeslot.Polls.PollSchema, as: Poll
   alias Tymeslot.Polls.PollTimeSlotSchema, as: PollTimeSlot
@@ -50,7 +51,8 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
 
   @doc """
   The uids of meetings still to take place that `email` is booked into, as
-  the booker, a group seat or a guest.
+  the booker, a group seat or a guest, or holds seats on while paying for
+  them (a `held` seat hold: an open checkout).
   """
   @spec upcoming_meeting_uids(String.t(), scope(), DateTime.t()) :: [String.t()]
   def upcoming_meeting_uids(email, scope, %DateTime{} = now) do
@@ -70,7 +72,14 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
         where: fragment("lower(?)", g.email) == ^email
       )
 
-    [booked, seated, invited]
+    paying =
+      from(m in Meeting,
+        join: h in SeatHold,
+        on: h.meeting_id == m.id and h.status == :held,
+        where: fragment("lower(?)", h.email) == ^email
+      )
+
+    [booked, seated, invited, paying]
     |> Enum.flat_map(fn query ->
       query
       |> where([m], m.end_time > ^now)
@@ -400,6 +409,30 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   end
 
   @doc """
+  Deletes the settled (converted or released) seat holds that name `email`,
+  as the booker or as one of their guests. A hold still `held` is an open
+  checkout, which `upcoming_meeting_uids/3` refuses the erasure over. A
+  converted hold's booker lives on as a participant, scrubbed with the
+  other seats; its payment is kept, its `seat_hold_id` nilified. Keeps to
+  `scope`'s meetings.
+  """
+  @spec delete_seat_holds_for_email(String.t(), scope()) :: {non_neg_integer(), nil}
+  def delete_seat_holds_for_email(email, scope) do
+    from(h in SeatHold,
+      where: h.status != :held,
+      where:
+        fragment("lower(?)", h.email) == ^email or
+          fragment(
+            "EXISTS (SELECT 1 FROM jsonb_array_elements(?) AS g WHERE lower(g->>'email') = ?)",
+            h.guests,
+            ^email
+          )
+    )
+    |> scope_holds(scope)
+    |> Repo.delete_all()
+  end
+
+  @doc """
   Deletes the webhook, Slack and Telegram delivery logs of `meeting_ids`,
   whose payloads repeat the booking's details.
   """
@@ -517,6 +550,13 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
 
   defp scope_meetings(query, host_user_id) when is_integer(host_user_id),
     do: where(query, [m], m.organizer_user_id == ^host_user_id)
+
+  defp scope_holds(query, :all), do: query
+
+  defp scope_holds(query, host_user_id) when is_integer(host_user_id) do
+    host_meetings = from(m in Meeting, where: m.organizer_user_id == ^host_user_id, select: m.id)
+    where(query, [h], h.meeting_id in subquery(host_meetings))
+  end
 
   defp scope_series(query, :all), do: query
 
