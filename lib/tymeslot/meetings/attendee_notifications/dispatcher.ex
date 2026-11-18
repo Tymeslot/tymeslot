@@ -39,6 +39,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
 
   @type event_kind :: :provider_calendar_event
 
+  @doc "Seconds an update is held before it goes out, so later edits can join it."
+  @spec debounce_seconds() :: pos_integer()
+  def debounce_seconds, do: @debounce_seconds
+
   @spec schedule_update(integer, event_kind) :: {:ok, :scheduled} | {:error, term}
   def schedule_update(event_id, kind) when is_integer(event_id) do
     args = %{

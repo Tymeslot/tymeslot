@@ -12,10 +12,15 @@ defmodule Tymeslot.CalendarGrid.GuestUpdate do
   every following occurrence of a series, or of all of them, drops the
   series' cached rows, which that pipeline would read, so it is sent at once
   from both versions (`AttendeeNotifications.series_updated_confirm/4`).
+
+  The debounced update is held for a while before it goes out, so later
+  edits join it: `pending?/1` says whether one is still held, and `cancel/3`
+  drops it, so the guests are told nothing after all.
   """
 
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.Integrations.Calendar.Attendee
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.AttendeeNotifications
 
   @type refusal :: :booking | :unauthorized | :read_only | :not_organiser
@@ -49,6 +54,33 @@ defmodule Tymeslot.CalendarGrid.GuestUpdate do
 
       {:ok, :no_changes} ->
         {:ok, :noop}
+    end
+  end
+
+  @doc "Seconds an update is held before it goes out."
+  @spec hold_seconds() :: pos_integer()
+  def hold_seconds, do: AttendeeNotifications.hold_seconds()
+
+  @doc """
+  Whether an update for `event`'s guests is still held before it goes out.
+  Only a cached calendar event has one; anything else has none.
+  """
+  @spec pending?(map()) :: boolean()
+  def pending?(%ProviderCalendarEventSchema{} = event), do: AttendeeNotifications.pending?(event)
+  def pending?(_event), do: false
+
+  @doc """
+  Drops the update held for `event`'s guests, so they are told nothing.
+  Refused, like `tell/5`, unless the user organises the event on a calendar
+  they can write. `:ok` when nothing was held, too.
+  """
+  @spec cancel(pos_integer(), [map()], map()) :: :ok | {:error, refusal()}
+  def cancel(user_id, integrations, event) do
+    with :ok <- EditGuard.guest_update(user_id, integrations, event) do
+      case event do
+        %ProviderCalendarEventSchema{} -> AttendeeNotifications.cancel_pending(event)
+        _not_cached -> :ok
+      end
     end
   end
 end

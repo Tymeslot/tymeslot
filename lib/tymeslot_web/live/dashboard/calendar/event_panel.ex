@@ -160,6 +160,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
         saving={@panel.status == :saving}
         surface={@surface}
       />
+      <PanelGuestsField.pending_note
+        :if={@panel.mode == :edit && @emails_guests && @panel.guests_pending && !@untold}
+        surface={@surface}
+      />
       <div
         :if={@panel.mode == :edit}
         class="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4"

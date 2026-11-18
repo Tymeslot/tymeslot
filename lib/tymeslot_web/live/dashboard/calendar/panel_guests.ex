@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
+  import Phoenix.LiveView, only: [send_update_after: 3]
 
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.CreateParams
@@ -36,6 +37,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Meetings.AttendeeNotifications
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
@@ -155,9 +157,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
          true <- untold?(opened_with, event),
          false <- Writes.saving?(socket, event),
          {:ok, _sent_or_noop} <- send_update(socket, panel, event) do
+      held? = Changes.guest_update_pending?(event)
+
       socket
-      |> assign(:panel, %{panel | opened_with: event})
+      |> assign(:panel, told(panel, event, held?))
       |> assign(:untold_moves, Map.delete(socket.assigns.untold_moves, panel.event_id))
+      |> recheck_pending_later(held?, panel.event_id)
       |> Toast.show(dgettext("dashboard_calendar_editing", "Guests will get an update."))
     else
       true ->
@@ -173,6 +178,74 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
       _nothing_to_tell ->
         socket
     end
+  end
+
+  @doc """
+  Cancels the update "Tell guests" sent for the panel's event while it is
+  still held, so the guests are told nothing, and counts the changes as
+  untold again: the panel offers to tell them once more. Only the event's
+  organiser may (`Changes.cancel_guest_update/3`).
+  """
+  @spec cancel_pending(socket()) :: socket()
+  def cancel_pending(socket) do
+    with {:ok, event} <- panel_event(socket),
+         %{guests_pending: true, told_from: told_from} = panel <- socket.assigns.panel,
+         :ok <-
+           Changes.cancel_guest_update(
+             socket.assigns.current_user.id,
+             socket.assigns.integrations,
+             event
+           ) do
+      untold_from = told_from || panel.opened_with
+
+      socket
+      |> assign(:panel, %{panel | guests_pending: false, opened_with: untold_from})
+      |> assign(:untold_moves, Map.put(socket.assigns.untold_moves, panel.event_id, untold_from))
+      |> Toast.show(dgettext("dashboard_calendar_editing", "Guests won't be told."))
+    else
+      {:error, _reason} = refusal -> refuse(socket, refusal)
+      _nothing_held -> socket
+    end
+  end
+
+  @doc """
+  The held update for the panel's event `id` may have gone out: the panel
+  stops offering to cancel it once it has.
+  """
+  @spec recheck_pending(socket(), String.t()) :: socket()
+  def recheck_pending(%{assigns: %{panel: %{event_id: id, guests_pending: true}}} = socket, id) do
+    case panel_event(socket) do
+      {:ok, event} ->
+        PanelState.update(socket, &%{&1 | guests_pending: Changes.guest_update_pending?(event)})
+
+      :error ->
+        socket
+    end
+  end
+
+  def recheck_pending(socket, _id), do: socket
+
+  # The panel counts from the event as it is now, and remembers where it
+  # counted from before, so a cancelled update leaves the changes untold
+  # again. A second Tell while one is held joins it, and keeps the first
+  # starting point.
+  defp told(panel, event, held?) do
+    told_from = if panel.guests_pending, do: panel.told_from, else: panel.opened_with
+    %{panel | opened_with: event, guests_pending: held?, told_from: told_from}
+  end
+
+  # Once the update has had time to go out, the panel asks again
+  # (`recheck_pending/2`), so its Cancel does not outlive the update.
+  defp recheck_pending_later(socket, false, _id), do: socket
+
+  defp recheck_pending_later(socket, true, id) do
+    send_update_after(
+      CalendarSurface,
+      [id: socket.assigns.id, action: :guests_pending_due, event_id: id],
+      (Changes.guest_update_hold_seconds() + 5) * 1000
+    )
+
+    socket
   end
 
   defp send_update(socket, panel, event),

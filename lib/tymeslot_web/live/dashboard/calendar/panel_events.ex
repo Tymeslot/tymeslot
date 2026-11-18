@@ -184,6 +184,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   def handle("guest_remove_confirm", _params, socket), do: PanelGuests.confirm_remove(socket)
   def handle("guest_remove_cancel", _params, socket), do: PanelGuests.cancel_remove(socket)
   def handle("tell_guests", _params, socket), do: PanelGuests.tell(socket)
+  def handle("cancel_guest_update", _params, socket), do: PanelGuests.cancel_pending(socket)
 
   def handle(_name, _params, socket), do: socket
 

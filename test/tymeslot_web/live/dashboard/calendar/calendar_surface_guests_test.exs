@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Meetings.AttendeeNotifications.Dispatcher
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
@@ -399,6 +400,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
       send_update(lv.pid, CalendarSurface, id: "calendar", action: :reload)
 
       assert has_element?(lv, ~s|#calendar-panel-location[value="Room 9"]|)
+
       refute has_element?(lv, "#calendar-panel-untold")
       refute has_element?(lv, "#app-flash-group", refusal)
 
@@ -436,6 +438,85 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
       nothing_sent()
       assert has_element?(lv, "#app-flash-group", "This calendar is read-only.")
       refute has_element?(lv, "#calendar-toast", "Guests will get an update.")
+    end
+  end
+
+  describe "an update that is still held" do
+    defp change_and_tell(lv, review) do
+      review |> Changeset.change(location: "Room 9") |> Repo.update!()
+      send_update(lv.pid, CalendarSurface, id: "calendar", action: :events_updated)
+      send_update(lv.pid, CalendarSurface, id: "calendar", action: :reload)
+      lv |> element("#calendar-panel-tell-guests") |> render_click()
+    end
+
+    test "after Tell guests the panel says they will be told and offers Cancel", %{
+      lv: lv,
+      review: review
+    } do
+      change_and_tell(lv, review)
+
+      assert has_element?(
+               lv,
+               "#calendar-panel-guests-pending",
+               "Guests will be told about these changes"
+             )
+
+      assert has_element?(lv, "#calendar-panel-cancel-guest-update")
+    end
+
+    test "Cancel drops the update and the changes are untold again", %{lv: lv, review: review} do
+      change_and_tell(lv, review)
+
+      lv |> element("#calendar-panel-cancel-guest-update") |> render_click()
+
+      nothing_sent()
+      refute has_element?(lv, "#calendar-panel-guests-pending")
+      assert has_element?(lv, "#calendar-panel-untold", "Guests haven't been told")
+      assert has_element?(lv, "#calendar-toast", "Guests won't be told.")
+    end
+
+    test "the panel reopened on the event still offers Cancel", %{
+      conn: conn,
+      lv: lv,
+      review: review
+    } do
+      change_and_tell(lv, review)
+
+      lv2 = open_panel(conn, review)
+      assert has_element?(lv2, "#calendar-panel-guests-pending")
+    end
+
+    test "once the update has gone out the panel stops offering Cancel", %{
+      lv: lv,
+      review: review
+    } do
+      change_and_tell(lv, review)
+      Oban.drain_queue(queue: :emails, with_scheduled: true)
+      assert all_enqueued(worker: Worker) == []
+
+      send_update(lv.pid, CalendarSurface,
+        id: "calendar",
+        action: :guests_pending_due,
+        event_id: "event-#{review.id}"
+      )
+
+      refute has_element?(lv, "#calendar-panel-guests-pending")
+    end
+
+    test "a forced Cancel on an event someone else organises keeps the update", %{
+      conn: conn,
+      integration: integration
+    } do
+      their = theirs(integration)
+      {:ok, :scheduled} = Dispatcher.schedule_update(their.id, :provider_calendar_event)
+
+      lv = open_panel(conn, their)
+      refute has_element?(lv, "#calendar-panel-guests-pending")
+
+      lv |> element("#calendar-canvas") |> render_hook("panel:cancel_guest_update", %{})
+
+      assert has_element?(lv, "#app-flash-group", "Someone else organises this event")
+      assert_enqueued(worker: Worker, args: %{"event_id" => their.id})
     end
   end
 

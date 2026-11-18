@@ -110,6 +110,7 @@ msgstr ""
 msgid "Calendar"
 msgstr ""
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_form.ex
 #: lib/tymeslot_web/live/dashboard/calendar/rail_sets.ex
 #: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
@@ -749,4 +750,14 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
 #, elixir-autogen, elixir-format
 msgid "Removed %{email}. They will be told once the change has synced to your calendar."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests_field.ex
+#, elixir-autogen, elixir-format
+msgid "Guests will be told about these changes"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Guests won't be told."
 msgstr ""

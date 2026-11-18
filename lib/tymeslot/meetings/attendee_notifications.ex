@@ -515,6 +515,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     Dispatcher.pending?(event_id(event), event_kind(event))
   end
 
+  @doc "Seconds a debounced update is held before it goes out."
+  @spec hold_seconds() :: pos_integer()
+  def hold_seconds, do: Dispatcher.debounce_seconds()
+
   @spec cancel_pending(event) :: :ok
   def cancel_pending(event) do
     Dispatcher.cancel_pending(event_id(event), event_kind(event))

@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [push_event: 3]
 
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
@@ -170,6 +171,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       form: %{},
       scope: nil,
       opened_with: Map.get(assigns.untold_moves, EventPayload.id(event), event),
+      guests_pending: guests_pending?(event),
+      told_from: nil,
       status: opening_status(assigns.integrations, event),
       writes: [],
       errors: %{},
@@ -178,6 +181,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       video_version: 0
     }
   end
+
+  # An update "Tell guests" sent is held a while before it goes out; the
+  # panel offers to cancel it meanwhile. Only an event with guests can have
+  # one, so the others cost no query.
+  defp guests_pending?(event),
+    do:
+      event |> Map.get(:attendees) |> List.wrap() |> Enum.any?() and
+        Changes.guest_update_pending?(event)
 
   defp opening_status(integrations, event),
     do: if(EditGuard.editable?(integrations, event), do: :idle, else: :read_only)
