@@ -912,3 +912,16 @@ msgstr "%{page} z %{name}"
 #, elixir-autogen, elixir-format
 msgid "We'll email you a link to confirm this booking."
 msgstr "Wyślemy ci e-mailem link do potwierdzenia tej rezerwacji."
+
+#: lib/tymeslot_web/themes/shared/booking_text.ex
+#, elixir-autogen, elixir-format
+msgid "%{price} per person"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/submit_price.ex
+#, elixir-autogen, elixir-format
+msgid "%{total} for %{count} seat"
+msgid_plural "%{total} for %{count} seats"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
