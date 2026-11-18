@@ -499,6 +499,54 @@
   height: 10px;
 }
 
+/* How the guests asked have answered: accepted/total in the other bottom
+   corner (calendar/render.js, repliesBadge), and a dot on a month item. */
+.cal-ev-replies {
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  color: var(--cal-on-booking);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  line-height: 14px;
+  cursor: help;
+}
+
+.cal-ev-replies.is-going,
+.cal-mreplies.is-going {
+  background: var(--cal-replies-going);
+}
+
+.cal-ev-replies.is-pending,
+.cal-mreplies.is-pending {
+  background: var(--cal-request);
+  color: var(--cal-on-request);
+}
+
+.cal-ev-replies.is-declined,
+.cal-mreplies.is-declined {
+  background: var(--cal-now);
+}
+
+.cal-ev.has-replies {
+  padding-bottom: 18px;
+}
+
+.cal-mreplies {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  margin-left: 4px;
+  border-radius: var(--radius-full);
+  vertical-align: middle;
+}
+
 .cal-ev.is-tiny .cal-ev-lock {
   top: 1px;
   bottom: auto;

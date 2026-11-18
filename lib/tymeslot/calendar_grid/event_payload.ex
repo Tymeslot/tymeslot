@@ -22,7 +22,8 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
 
   Each event also names its calendar (`calendar`, `"<integration id>:<calendar
   id>"`, nil for bookings), whether it repeats (`recurring`) and how many
-  guests it has (`guests`). Drafts the organiser has not created yet (a
+  guests it has (`guests`), and how those asked have answered (`replies`,
+  `%{accepted, declined, total, label}` or nil). Drafts the organiser has not created yet (a
   create still saving, or the side panel's unsaved "New event") are drawn as
   `kind: "draft"` (`draft/4`), never editable or movable.
 
@@ -109,6 +110,7 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         calendar: calendar_key(event),
         recurring: recurring?(event),
         guests: guest_count(event),
+        replies: replies(event),
         request: Map.get(event, :request, false),
         expired: Map.get(event, :expired, false)
       },
@@ -142,7 +144,8 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
         pending: pending?,
         calendar: CalendarDirectory.key(params.integration_id, params.calendar_id),
         recurring: is_binary(params.recurrence_rule),
-        guests: length(params.guests)
+        guests: length(params.guests),
+        replies: nil
       },
       draft_timing(params, context.timezone)
     )
@@ -218,6 +221,21 @@ defmodule Tymeslot.CalendarGrid.EventPayload do
     |> Map.get(:attendees)
     |> List.wrap()
     |> Enum.count(&(Attendee.normalise(&1).email not in [nil, ""]))
+  end
+
+  # How the guests of a booking, or of an event Tymeslot made, have
+  # answered (`GuestReplies.summary/1`, with its words for the badge's
+  # accessible name); nil when nobody has a reply to show. Other events'
+  # attendees are someone else's to chase.
+  defp replies(%{kind: :booking} = booking), do: summarise(booking)
+  defp replies(%{created_by_tymeslot: true} = event), do: summarise(event)
+  defp replies(_event), do: nil
+
+  defp summarise(event) do
+    case event |> GuestReplies.of_event() |> GuestReplies.summary() do
+      nil -> nil
+      summary -> Map.put(summary, :label, GuestReplies.summary_text(summary))
+    end
   end
 
   defp draft_timing(%CreateParams{all_day: true} = params, timezone),

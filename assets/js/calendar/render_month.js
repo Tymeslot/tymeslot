@@ -11,7 +11,7 @@
 import { agendaGroups } from "./agenda.js";
 import { chipCapacity, dayDots, eventsOnDay, monthLayout, monthWeeks } from "./month.js";
 import { renderAgendaDay } from "./render_agenda.js";
-import { badgeNotes, colour, dateLabel, escapeHtml, interpolate, requestAria, requestFlag, weekNumberHtml } from "./render.js";
+import { badgeNotes, colour, repliesTone, dateLabel, escapeHtml, interpolate, requestAria, requestFlag, weekNumberHtml } from "./render.js";
 import { MINUTES_PER_DAY, dayNumber, formatMinutes, isoFromDay, isoWeekday } from "./time.js";
 
 const HEAD_ROW = 24;
@@ -94,8 +94,14 @@ function monthBar(bar, e, iso, { settings, strings, now }) {
   return (
     `<button type="button" class="${classes}" data-event-id="${escapeHtml(e.id)}" data-day="${iso}" aria-label="${escapeHtml(label)}" ` +
     `style="grid-column:${bar.startIndex + 1} / ${bar.endIndex + 2};grid-row:${bar.lane + 2};--cal-ev:${colour(e.colour)}">` +
-    `${flag ? `<span class="cal-mchip-flag">${escapeHtml(flag)}</span> ` : ""}${escapeHtml(e.title)}</button>`
+    `${flag ? `<span class="cal-mchip-flag">${escapeHtml(flag)}</span> ` : ""}${escapeHtml(e.title)}${repliesDot(e)}</button>`
   );
+}
+
+// The guests' answers as a dot in their tone; the item's accessible name
+// says them (badgeNotes).
+function repliesDot(e) {
+  return e.replies ? `<span class="cal-mreplies ${repliesTone(e.replies)}" aria-hidden="true"></span>` : "";
 }
 
 function monthChip(e, iso, column, row, { settings, strings, now }) {
@@ -112,6 +118,7 @@ function monthChip(e, iso, column, row, { settings, strings, now }) {
     `<span class="cal-mchip-dot" aria-hidden="true"></span>` +
     (start ? `<span class="cal-mchip-time">${escapeHtml(start)}</span>` : "") +
     `<span class="cal-mchip-title">${flag ? `<span class="cal-mchip-flag">${escapeHtml(flag)}</span> ` : ""}${escapeHtml(e.title)}</span>` +
+    repliesDot(e) +
     (e.attention ? `<span class="cal-ev-dot" aria-hidden="true"></span>` : "") +
     `</button>`
   );

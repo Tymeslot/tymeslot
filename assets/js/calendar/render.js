@@ -386,7 +386,7 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
   const shortWithoutTime = short && !shortRowFits(item, shown, start, measure, inset);
   const time = item.hideTime || shortWithoutTime || (fit && !fit.time) ? "" : short || item.width < 110 ? start : range;
   const tiny = short && item.height < LINE_HEIGHT + 4;
-  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && !event.expired && "is-free", event.kind === "booking" && "is-booking", flag && "is-request", compact && "has-badge", event.expired && "is-expired", event.attention && "is-attention", movingId === event.id && "is-moving", event.locked && "is-locked"]
+  const classes = ["cal-ev", short && "is-short", tiny && "is-tiny", item.width < 92 && "is-narrow", past && "is-past", event.free && !event.expired && "is-free", event.kind === "booking" && "is-booking", flag && "is-request", compact && "has-badge", event.expired && "is-expired", event.attention && "is-attention", movingId === event.id && "is-moving", event.locked && "is-locked", event.replies && !short && "has-replies"]
     .filter(Boolean)
     .join(" ");
   const label = [event.title, flag && requestAria(event, strings), dateLabel(isoFromDay(event.startDay), strings), range, event.free && !event.expired && strings.shown_as_free, past && strings.ended, event.attention && strings.waiting_to_sync, ...badgeNotes(event, strings)]
@@ -406,6 +406,7 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
     `<div class="${classes}" role="button" tabindex="-1" data-event-id="${escapeHtml(event.id)}"${editable ? " data-editable" : ""} aria-label="${escapeHtml(label)}" aria-describedby="calendar-keys-hint" style="${style}">` +
     `<span class="cal-ev-title">${flagHtml}${short ? escapeHtml(event.title) : titleHtml(event.title, item.width - inset, measure)}</span>${timeHtml}` +
     (event.attention ? `<span class="cal-ev-dot" aria-hidden="true"></span>` : "") +
+    (short ? "" : repliesBadge(event, strings)) +
     (event.locked ? lockBadge(strings) : "") +
     (editable && item.height >= GRIP_MIN_HEIGHT ? GRIPS : "") +
     `</div>`
@@ -416,7 +417,27 @@ function eventBlock(item, event, { strings, settings, now, measureWidth, movingI
 // keyboard and screen-reader users reach, and its aria-label replaces
 // everything inside it, badges included.
 export function badgeNotes(event, strings) {
-  return [event.locked && strings.seat_locked].filter(Boolean);
+  return [event.replies?.label, event.locked && strings.seat_locked].filter(Boolean);
+}
+
+// How the guests asked have answered (`replies`): red once anyone declined,
+// green when everyone is going, amber while any answer is still owed.
+export function repliesTone(replies) {
+  if (replies.declined > 0) return "is-declined";
+  return replies.accepted === replies.total ? "is-going" : "is-pending";
+}
+
+// The guests' answers as accepted/total in the block's corner, its words in
+// a tooltip, as the lock's are.
+export function repliesBadge(event, strings) {
+  const { replies } = event;
+  if (!replies) return "";
+  const text = escapeHtml(replies.label);
+  return (
+    `<span class="tooltip-anchor" data-tooltip data-tooltip-isolated>` +
+    `<span class="cal-ev-replies ${repliesTone(replies)}" role="img" aria-label="${text}">${strings.icons?.guests ?? ""}${replies.accepted}/${replies.total}</span>` +
+    `<span role="tooltip" popover="manual" class="tooltip-bubble">${text}</span></span>`
+  );
 }
 
 // The seat lock (`locked`: a group meeting with live seats sits on the

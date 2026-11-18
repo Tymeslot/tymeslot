@@ -86,6 +86,7 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
              calendar: "7:work",
              recurring: false,
              guests: 0,
+             replies: nil,
              request: false,
              expired: false
            }
@@ -258,6 +259,46 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
     end
   end
 
+  describe "replies" do
+    @attendees [
+      %{"email" => "ada@example.com", "response_status" => "accepted"},
+      %{"email" => "grace@example.com", "response_status" => "declined"},
+      %{"email" => "alan@example.com", "response_status" => "needs_action"},
+      %{"email" => "linus@example.com"}
+    ]
+
+    test "an event Tymeslot made counts its guests' answers, leaving out those with none" do
+      assert %{
+               replies: %{
+                 accepted: 1,
+                 declined: 1,
+                 total: 3,
+                 label: "1 of 3 guests going, 1 declined"
+               }
+             } =
+               EventPayload.event(
+                 timed(created_by_tymeslot: true, attendees: @attendees),
+                 @context
+               )
+    end
+
+    test "another event's attendees are not counted" do
+      assert %{replies: nil} = EventPayload.event(timed(attendees: @attendees), @context)
+    end
+
+    test "a booking counts its invited guests, never the person who booked" do
+      invited = [
+        %{name: nil, email: "grace@example.com", status: :accepted},
+        %{name: "Alan", email: "alan@example.com", status: :pending}
+      ]
+
+      assert %{replies: %{accepted: 1, declined: 0, total: 2, label: "1 of 2 guests going"}} =
+               EventPayload.event(booking(guests: invited), @context)
+
+      assert %{replies: nil} = EventPayload.event(booking([]), @context)
+    end
+  end
+
   describe "draft/4" do
     test "a pending create is drawn as a saving draft in the organiser's wall clock" do
       assert EventPayload.draft("d1", draft_params([]), true, @context) == %{
@@ -276,7 +317,8 @@ defmodule Tymeslot.CalendarGrid.EventPayloadTest do
                pending: true,
                calendar: "7:work",
                recurring: false,
-               guests: 0
+               guests: 0,
+               replies: nil
              }
     end
 

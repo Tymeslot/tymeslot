@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PreviewGuests do
       <.icon name="hero-user-group" class="mt-0.5 h-4 w-4 shrink-0 text-tymeslot-400" />
       <div class="min-w-0 flex-1 space-y-1">
         <p :if={@summary} id="calendar-preview-guest-summary" class="text-tymeslot-500">
-          {summary_text(@summary)}
+          {GuestReplies.summary_text(@summary)}
         </p>
         <ul class="space-y-1">
           <li :for={guest <- @shown} class="flex min-w-0 items-center gap-2">
@@ -48,22 +48,5 @@ defmodule TymeslotWeb.Dashboard.Calendar.PreviewGuests do
       </div>
     </div>
     """
-  end
-
-  # The badge wording, kept so its existing translations carry over.
-  defp summary_text(%{accepted: accepted, total: total, declined: declined}) do
-    going =
-      dgettext("dashboard_calendar", "%{accepted} of %{total} guests going",
-        accepted: accepted,
-        total: total
-      )
-
-    if declined > 0,
-      do:
-        going <>
-          dngettext("dashboard_calendar", ", %{count} declined", ", %{count} declined", declined,
-            count: declined
-          ),
-      else: going
   end
 end

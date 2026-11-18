@@ -11,12 +11,12 @@ msgstr ""
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n>1);\n"
 
-#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
+#: lib/tymeslot/calendar_grid/guest_replies.ex
 #, elixir-autogen, elixir-format
 msgid "%{accepted} of %{total} guests going"
 msgstr "%{accepted} invités présents sur %{total}"
 
-#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
+#: lib/tymeslot/calendar_grid/guest_replies.ex
 #, elixir-autogen, elixir-format
 msgid ", %{count} declined"
 msgid_plural ", %{count} declined"

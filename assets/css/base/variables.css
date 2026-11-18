@@ -345,6 +345,9 @@
   /* A booking request's edge and flag: amber, because it needs an answer. */
   --cal-request: var(--color-warning);
   --cal-on-request: var(--color-neutral-900);
+  /* Every guest asked is going: a green that holds white text (the grid's
+     reply badge, components/calendar-surface.css). */
+  --cal-replies-going: #15803d;
   /* Booking requests and the bookable layer (components/calendar-booking.css).
      Request text and the pill hold at least 7:1 on their fills; the band label
      is turquoise 800 on white (7.6:1). */

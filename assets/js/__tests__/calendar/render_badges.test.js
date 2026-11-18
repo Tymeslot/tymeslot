@@ -74,3 +74,40 @@ describe("seat lock", () => {
     expect(plain.getAttribute("aria-label")).not.toContain(LOCK);
   });
 });
+
+describe("guest replies", () => {
+  const replies = (extra) => ({ accepted: 1, declined: 0, total: 3, label: "1 of 3 guests going", ...extra });
+
+  test("a block shows accepted/total with its words in a tooltip and its accessible name", () => {
+    const block = week([ev({ replies: replies() })]).querySelector('.cal-ev[data-event-id="event-1"]');
+    const badge = block.querySelector(".cal-ev-replies");
+    expect(badge.textContent).toBe("1/3");
+    expect(badge.getAttribute("role")).toBe("img");
+    expect(badge.getAttribute("aria-label")).toBe("1 of 3 guests going");
+    expect(badge.closest("[data-tooltip]").querySelector('[role="tooltip"]').textContent).toBe("1 of 3 guests going");
+    expect(block.getAttribute("aria-label")).toContain("1 of 3 guests going");
+  });
+
+  test("the badge is red once anyone declined, amber while answers are owed, green when all are going", () => {
+    const tone = (r) => week([ev({ replies: replies(r) })]).querySelector(".cal-ev-replies").className;
+    expect(tone({ declined: 1, label: "x" })).toContain("is-declined");
+    expect(tone({})).toContain("is-pending");
+    expect(tone({ accepted: 3 })).toContain("is-going");
+  });
+
+  test("an event nobody was asked about has no badge", () => {
+    const block = week([ev()]).querySelector('.cal-ev[data-event-id="event-1"]');
+    expect(block.querySelector(".cal-ev-replies")).toBeNull();
+  });
+
+  test("a month chip and an all-day bar carry a dot in the tone, and say it in their names", () => {
+    const held = month([ev({ replies: replies({ declined: 1, label: "1 of 3 guests going, 1 declined" }) }), ev({ id: "event-2", all_day: true, start: "2026-10-13", end: "2026-10-15", replies: replies({ accepted: 3, label: "3 of 3 guests going" }) })]);
+    const chip = held.querySelector('.cal-mchip[data-event-id="event-1"]');
+    expect(chip.querySelector(".cal-mreplies.is-declined")).not.toBeNull();
+    expect(chip.getAttribute("aria-label")).toContain("1 of 3 guests going, 1 declined");
+    const bar = held.querySelector('.cal-mbar[data-event-id="event-2"]');
+    expect(bar.querySelector(".cal-mreplies.is-going")).not.toBeNull();
+    expect(bar.getAttribute("aria-label")).toContain("3 of 3 guests going");
+    expect(month([ev()]).querySelector(".cal-mreplies")).toBeNull();
+  });
+});
