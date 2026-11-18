@@ -466,3 +466,8 @@ msgstr "Główny uczestnik może przełożyć lub odwołać spotkanie. Wyłącz 
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Ten termin nie jest już dostępny. Wybierz inny."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "The place is too long for a meeting. Keep it under 500 characters."
+msgstr "Miejsce jest za długie jak na spotkanie. Maksymalna liczba znaków: 500."

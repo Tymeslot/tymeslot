@@ -208,6 +208,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
 
   def refusal_message(:location, :unsafe), do: Creation.refusal_message(:location, :invalid)
 
+  # A Place typed for the event carries into the meeting
+  # (`carry_place/2`), and an event's may run past a meeting's limit
+  # (`CreateAdHoc.custom_location_max_length/0`).
+  def refusal_message(:location, :too_long),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "The place is too long for a meeting. Keep it under 500 characters."
+      )
+
   # Notes allow more than a meeting's note does, so text typed before the box
   # was ticked can be too long.
   def refusal_message(:note, :too_long),
@@ -217,7 +227,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
         "The note to the guest is too long. Keep it to 2,000 characters or fewer."
       )
 
-  # The form offers no way to send the rest; they come from forged input.
+  # The form offers no way to send the rest (a location choice that is
+  # neither a saved location nor a place typed in, say); they come from
+  # forged input.
   def refusal_message(field, reason)
       when field in [:guests, :guest_name, :note, :locale, :all_day, :location],
       do: Creation.refusal_message(:params, reason)

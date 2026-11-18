@@ -464,3 +464,8 @@ msgstr "Le participant principal peut déplacer ou annuler la réunion. Désacti
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Ce créneau n’est plus disponible. Veuillez choisir un autre horaire."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "The place is too long for a meeting. Keep it under 500 characters."
+msgstr "Le lieu est trop long pour une réunion. Limitez-le à 500 caractères."

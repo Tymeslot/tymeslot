@@ -463,3 +463,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "The place is too long for a meeting. Keep it under 500 characters."
+msgstr ""

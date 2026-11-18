@@ -229,6 +229,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingOptionsTest do
       assert %{location: {:custom, "Café Rose"}} = booked()
     end
 
+    test "a Place longer than a meeting takes is refused with the meeting's limit", %{lv: lv} do
+      place = String.duplicate("a", 600)
+      render_change(new_form(lv), %{"meeting" => "false"})
+      render_change(new_form(lv), %{"location" => place})
+      render_change(new_form(lv), %{"meeting" => "true", "location" => place})
+
+      submit_meeting(lv, %{"guest_name" => "Ada Lovelace"})
+
+      nothing_booked()
+
+      assert has_element?(
+               lv,
+               "#calendar-panel [role=status]",
+               "The place is too long for a meeting. Keep it under 500 characters."
+             )
+    end
+
     test "a meeting location already chosen is kept when the box is ticked again", %{lv: lv} do
       render_change(new_form(lv), %{
         "location_choice" => "custom",
