@@ -153,6 +153,19 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliserAttendeesTest do
                """)
     end
 
+    test "keep their name when a quoted parameter holds a colon" do
+      assert [%{email: "ada@example.com", display_name: "Ada Lovelace"}] =
+               cached(
+                 "planning@tymeslot.com",
+                 ~s(CONTACT;ALTREP="ldap://ldap.example.com:6666/o=ABC":Ada Lovelace <ada@example.com>)
+               )
+    end
+
+    test "are read whatever the case of the property name" do
+      assert [%{email: "ada@example.com", display_name: "Ada Lovelace"}] =
+               cached("planning@tymeslot.com", "Contact:Ada Lovelace <ada@example.com>")
+    end
+
     test "naming no address are left out" do
       assert cached("planning@tymeslot.com", "CONTACT:Front desk, ext. 12") == []
     end
