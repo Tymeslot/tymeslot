@@ -30,6 +30,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.DiscardDraftModal do
       confirm_label={dgettext("dashboard_calendar_editing", "Discard")}
       on_cancel={JS.push("panel:draft_discard_cancel", target: @target)}
       on_confirm={JS.push("panel:draft_discard_confirm", target: @target)}
+      cancel_id="calendar-discard-draft-cancel"
+      confirm_id="calendar-discard-draft-confirm"
     >
       <p>
         {dngettext(

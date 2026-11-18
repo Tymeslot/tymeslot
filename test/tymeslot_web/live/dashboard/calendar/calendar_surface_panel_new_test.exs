@@ -322,7 +322,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
       # Go back is the one way to keep the draft: no second button says the same.
       refute has_element?(lv, "#calendar-discard-draft button", "Cancel")
 
-      lv |> element("#calendar-discard-draft button", "Go back") |> render_click()
+      lv |> element("#calendar-discard-draft-cancel", "Go back") |> render_click()
 
       refute has_element?(lv, "#calendar-discard-draft")
       assert has_element?(lv, "#calendar-panel-guests li", "grace@example.com")
@@ -334,7 +334,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
       lv |> element("#calendar-panel-close") |> render_click()
       assert has_element?(lv, "#calendar-discard-draft", "1 guest hasn't been invited yet.")
 
-      lv |> element("#calendar-discard-draft button", "Discard") |> render_click()
+      lv |> element("#calendar-discard-draft-confirm") |> render_click()
 
       refute has_element?(lv, "#calendar-discard-draft")
       refute has_element?(lv, "#calendar-panel")
@@ -505,7 +505,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
       assert has_element?(lv, "#calendar-discard-draft")
       assert has_element?(lv, "#calendar-panel-new-form")
 
-      lv |> element("#calendar-discard-draft button", "Discard") |> render_click()
+      lv |> element("#calendar-discard-draft-confirm") |> render_click()
 
       assert_push_event(lv, "calendar:draft-cleared", %{draft: "d1"})
       refute has_element?(lv, "#calendar-panel-new-form")
@@ -523,7 +523,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
       assert_reply(lv, %{opened: false})
       assert has_element?(lv, "#calendar-discard-draft")
 
-      lv |> element("#calendar-discard-draft button", "Go back") |> render_click()
+      lv |> element("#calendar-discard-draft-cancel", "Go back") |> render_click()
 
       refute has_element?(lv, "#calendar-discard-draft")
       assert has_element?(lv, "#calendar-panel-guests li", "grace@example.com")
@@ -536,7 +536,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
     } do
       more_options(lv, integration, %{"guests" => ["grace@example.com"]})
       hook(lv, "calendar:open", %{"id" => "event-#{other.id}"})
-      lv |> element("#calendar-discard-draft button", "Discard") |> render_click()
+      lv |> element("#calendar-discard-draft-confirm") |> render_click()
 
       refute has_element?(lv, "#calendar-panel")
       assert has_element?(lv, "#calendar-preview")
@@ -557,7 +557,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
       assert_reply(lv, %{opened: false})
       assert has_element?(lv, "#calendar-discard-draft")
 
-      lv |> element("#calendar-discard-draft button", "Discard") |> render_click()
+      lv |> element("#calendar-discard-draft-confirm") |> render_click()
 
       assert_push_event(lv, "calendar:more-options-again", %{draft: "d2"})
       refute has_element?(lv, "#calendar-panel")

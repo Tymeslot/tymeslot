@@ -220,6 +220,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
 
   attr :confirm_label, :string, default: nil, doc: "defaults to \"Confirm\""
   attr :cancel_label, :string, default: nil, doc: "defaults to \"Cancel\""
+  attr :cancel_id, :string, default: nil, doc: "an id for the Cancel button"
+
+  attr :confirm_id, :string,
+    default: nil,
+    doc: "an id for the Confirm button (`id` is the modal's). Ignored with `:actions`"
+
   attr :confirm_variant, :atom, default: :danger, values: [:danger, :primary]
   attr :icon, :string, default: "hero-exclamation-triangle", doc: "a `hero-…` icon name"
   attr :size, :atom, default: :medium, values: [:small, :medium]
@@ -263,13 +269,19 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
 
       <:footer>
         <div class="flex w-full flex-col-reverse gap-3 *:w-full sm:flex-row sm:flex-wrap sm:justify-end sm:*:w-auto">
-          <Buttons.action_button variant={:secondary} disabled={@loading} phx-click={@on_cancel}>
+          <Buttons.action_button
+            id={@cancel_id}
+            variant={:secondary}
+            disabled={@loading}
+            phx-click={@on_cancel}
+          >
             {@cancel_label || dgettext("common", "Cancel")}
           </Buttons.action_button>
           <%= if @actions != [] do %>
             {render_slot(@actions)}
           <% else %>
             <Buttons.loading_button
+              id={@confirm_id}
               variant={@confirm_variant}
               type={if @confirm_form, do: "submit", else: "button"}
               form={@confirm_form}
