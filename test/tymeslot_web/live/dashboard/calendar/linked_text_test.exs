@@ -38,6 +38,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.LinkedTextTest do
              ]
     end
 
+    test "keeps a closing bracket the address opened itself" do
+      assert LinkedText.parts("See https://en.wikipedia.org/wiki/Foo_(bar).") == [
+               {:text, "See "},
+               {:link, "https://en.wikipedia.org/wiki/Foo_(bar)"},
+               {:text, "."}
+             ]
+
+      assert LinkedText.parts("(https://en.wikipedia.org/wiki/Foo_(bar))") == [
+               {:text, "("},
+               {:link, "https://en.wikipedia.org/wiki/Foo_(bar)"},
+               {:text, ")"}
+             ]
+
+      assert LinkedText.parts("[https://example.com/a]") == [
+               {:text, "["},
+               {:link, "https://example.com/a"},
+               {:text, "]"}
+             ]
+    end
+
     test "links no other scheme and no address without a host" do
       for text <- ["javascript:alert(1)", "ftp://example.com", "mailto:a@example.com", "https://"] do
         assert LinkedText.parts(text) == [{:text, text}]

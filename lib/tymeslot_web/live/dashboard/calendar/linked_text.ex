@@ -13,7 +13,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.LinkedText do
   use TymeslotWeb, :html
 
   @url ~r{https?://[^\s<>"']+}i
-  @trailing ~r/[.,;:!?)\]}]+$/
+  @punctuation ~w(. , ; : ! ?)
+  @brackets %{")" => "(", "]" => "[", "}" => "{"}
 
   @typedoc "A run of plain text, or a web address to link."
   @type part :: {:text, String.t()} | {:link, String.t()}
@@ -36,12 +37,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.LinkedText do
     end
   end
 
-  defp split_trailing(chunk) do
-    case Regex.run(@trailing, chunk, return: :index) do
-      [{at, _length}] -> String.split_at(chunk, at)
-      nil -> {chunk, ""}
-    end
+  # Sentence punctuation after an address is not part of it, nor is a
+  # closing bracket the address does not open itself: "(see
+  # https://example.com)" ends before the bracket, while
+  # "https://en.wikipedia.org/wiki/Foo_(bar)" keeps it.
+  defp split_trailing(chunk, tail \\ "") do
+    {address, last} = String.split_at(chunk, -1)
+
+    if trailing?(address, last),
+      do: split_trailing(address, last <> tail),
+      else: {chunk, tail}
   end
+
+  defp trailing?(_address, last) when last in @punctuation, do: true
+
+  defp trailing?(address, last) when is_map_key(@brackets, last),
+    do: count(address, last) >= count(address, Map.fetch!(@brackets, last))
+
+  defp trailing?(_address, _last), do: false
+
+  defp count(text, char), do: length(String.split(text, char)) - 1
 
   defp web_address?(address) do
     case URI.new(address) do
