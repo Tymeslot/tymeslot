@@ -8,8 +8,11 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
 
   setup :verify_on_exit!
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.ColourWriteBackWorker
 
   setup do
@@ -93,6 +96,9 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
     } do
       cached_event(integ, uid: "uid-1")
 
+      {:ok, _override} =
+        ColourOverrideQueries.set_external(user.id, integ.id, "uid-1", "blueberry")
+
       expect(Tymeslot.CalendarMock, :update_event, fn "uid-1", event_data, {integ_id, user_id} ->
         assert event_data.colour_only == true
         assert event_data.colour == "blueberry"
@@ -116,6 +122,57 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
                  "user_id" => user.id,
                  "colour" => "blueberry"
                })
+    end
+
+    test "writes the colour the override holds when it runs, whatever it was asked", %{
+      user: user,
+      integration: integ
+    } do
+      cached_event(integ, uid: "uid-1")
+      {:ok, _override} = ColourOverrideQueries.set_external(user.id, integ.id, "uid-1", "grape")
+
+      expect(Tymeslot.CalendarMock, :update_event, fn "uid-1", %{colour: "grape"}, _context ->
+        :ok
+      end)
+
+      assert :ok =
+               perform_job(ColourWriteBackWorker, %{
+                 "integration_id" => integ.id,
+                 "uid" => "uid-1",
+                 "user_id" => user.id,
+                 "colour" => "blueberry"
+               })
+    end
+
+    test "a clear made while a write-back runs gets a job of its own, and the last write clears",
+         %{user: user, integration: integ} do
+      cached_event(integ, uid: "uid-1")
+      target = {:external, integ.id, "uid-1"}
+      {:ok, _override} = Calendar.set_event_colour(user.id, target, "blueberry")
+
+      # The set's job has started: it is no longer one a new enqueue may rewrite.
+      [running] = all_enqueued(worker: ColourWriteBackWorker)
+      running |> Changeset.change(state: "executing") |> Repo.update!()
+
+      :ok = Calendar.clear_event_colour(user.id, target)
+
+      assert [%{args: %{"colour" => nil}} = clearing] =
+               all_enqueued(worker: ColourWriteBackWorker)
+
+      refute clearing.id == running.id
+
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :update_event, fn "uid-1", %{colour: colour}, _context ->
+        send(test_pid, {:wrote, colour})
+        :ok
+      end)
+
+      # Whichever of the two runs, it writes what the organiser wants now.
+      assert :ok = perform_job(ColourWriteBackWorker, running.args)
+      assert :ok = perform_job(ColourWriteBackWorker, clearing.args)
+      assert_received {:wrote, nil}
+      assert_received {:wrote, nil}
     end
 
     test "a cleared colour is pushed as no colour, the colour alone", %{

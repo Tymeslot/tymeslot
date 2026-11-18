@@ -9,14 +9,21 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   Outlook has no per-event colour concept, so those jobs are discarded. Read-only
   calendars and transient failures surface as errors and are retried by Oban; the
   durable override remains the display source regardless of write-back outcome.
-  Clearing an override enqueues a job too, with a `nil` colour, which clears
-  the host's colour (Google `colorId: null`, CalDAV without `COLOR`).
+  Clearing an override enqueues a job too, which clears the host's colour
+  (Google `colorId: null`, CalDAV without `COLOR`).
+
+  The colour written is read from the override table when the job runs, not
+  from its args (which record what was asked, for the logs): no override
+  means no colour. So whichever job runs last writes the colour the organiser
+  wants now, and a job that started before a later change cannot leave the
+  older colour on the host.
 
   `unique` is keyed on `[:integration_id, :uid, :user_id]` with `replace: [:args]`
-  set at the enqueue site (`ColourWriteBack.enqueue/4`, called from
-  `Calendar.set_event_colour/3`) so rapid successive colour changes collapse onto
-  one pending job carrying the latest colour, rather than racing to whichever
-  job's PUT/PATCH lands last.
+  set at the enqueue site (`ColourWriteBack.enqueue/4`) so rapid successive
+  colour changes collapse onto one pending job. It leaves `:executing` out: a
+  change made while a job is already running inserts a job of its own, which
+  writes after the running one, rather than rewriting the args of a job that
+  has already read them.
 
   A CalDAV event created from the dashboard grid is cached with `raw_ical` NULL
   by design, for the first read to fill, so a colour set before that sync has no
@@ -30,11 +37,12 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
     priority: 2,
     unique: [
       keys: [:integration_id, :uid, :user_id],
-      states: [:available, :scheduled, :executing, :retryable, :suspended]
+      states: [:available, :scheduled, :retryable, :suspended]
     ]
 
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
@@ -64,14 +72,10 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args, meta: meta}) do
-    %{
-      "integration_id" => integration_id,
-      "uid" => uid,
-      "user_id" => user_id,
-      "colour" => colour
-    } = args
+    %{"integration_id" => integration_id, "uid" => uid, "user_id" => user_id} = args
 
     if CalendarIntegrationQueries.owned_by?(integration_id, user_id) do
+      colour = ColourOverrideQueries.external_colour(user_id, integration_id, uid)
       write_back_cached(integration_id, uid, user_id, colour, meta)
     else
       {:discard, @not_owned}

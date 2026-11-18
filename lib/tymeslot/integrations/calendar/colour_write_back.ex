@@ -6,7 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.ColourWriteBack do
 
   Split out of `Tymeslot.Integrations.Calendar` so the context keeps to its
   public API: this is the enqueue mechanism behind `set_event_colour/3`, not a
-  a domain entry point of its own, and nothing outside the context calls it.
+  domain entry point of its own, and nothing outside the context calls it.
   """
 
   require Logger
@@ -20,10 +20,10 @@ defmodule Tymeslot.Integrations.Calendar.ColourWriteBack do
   The worker patches only the provider's colour field; Outlook and read-only
   calendars are handled inside it. `replace: [:args]` ensures that when a user
   changes the colour again before the previous job has run, the pending job's
-  args are replaced in place to carry the newest colour, a clearing included:
-  without it, `unique` alone would keep the *older* job (and its stale
-  colour) and silently drop the newer enqueue, so a colour cleared while its
-  write-back still waited would be written to the host later.
+  args are replaced in place to carry the newest colour, a clearing included.
+  A job already running is not among the unique states, so a change made
+  meanwhile gets a job of its own; whichever runs last writes the colour the
+  override table holds then (`ColourWriteBackWorker`).
 
   Always returns `:ok`: a failed enqueue is logged, never surfaced, because
   the override itself is already persisted and the next sync reconciles.
