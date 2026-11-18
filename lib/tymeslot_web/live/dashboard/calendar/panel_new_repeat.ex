@@ -17,6 +17,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewRepeat do
 
   alias Tymeslot.CalendarGrid.CreateParams
   alias TymeslotWeb.Components.Calendar.RecurrenceEditor
+  alias TymeslotWeb.Dashboard.Calendar.PanelGroupEvent
+  alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
 
   @custom_fields ~w(freq interval by_day on end_type count until)
@@ -38,20 +40,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewRepeat do
     Map.merge(choice, custom)
   end
 
-  @doc "Whether the form is one that can repeat: a plain calendar event."
-  @spec offered?(map()) :: boolean()
-  def offered?(form), do: form["meeting"] != true and form["group_event"] != true
+  @doc """
+  Whether the form is one that can repeat: a plain calendar event, neither
+  a meeting nor a group event as the form counts them (`PanelMeeting.on?/1`,
+  `PanelGroupEvent.on?/2`, `group_allowed` being the organiser's plan).
+  """
+  @spec offered?(map(), boolean()) :: boolean()
+  def offered?(form, group_allowed),
+    do: not PanelMeeting.on?(form) and not PanelGroupEvent.on?(group_allowed, form)
 
   @doc """
   The rule the form's repeat choice makes for `create`, the draft as cast,
-  on a calendar of `provider`, in the organiser's `timezone`: `{:ok, nil}`
+  on a calendar of `provider`, in the organiser's `timezone`, for an
+  organiser whose plan allows group events or not: `{:ok, nil}`
   for none, or `{:error, :repeat, message}` when the calendar would refuse
   it.
   """
-  @spec rule(map(), CreateParams.t(), String.t() | nil, String.t()) ::
+  @spec rule(map(), CreateParams.t(), String.t() | nil, String.t(), boolean()) ::
           {:ok, String.t() | nil} | {:error, :repeat, String.t()}
-  def rule(form, create, provider, timezone) do
-    with true <- offered?(form),
+  def rule(form, create, provider, timezone, group_allowed) do
+    with true <- offered?(form, group_allowed),
          {:ok, spec} <- spec(form) do
       case PanelRepeat.rule_for(spec, event(create, provider), nil, timezone) do
         {:ok, rule, _opts} -> {:ok, rule}

@@ -480,7 +480,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
     # A repeat rule is composed from the draft's own start, so the draft is
     # cast first and again with the rule, which the domain then checks.
     with {:ok, create} <- cast.(params) do
-      case PanelNewRepeat.rule(form, create, create_provider(integrations, create), timezone) do
+      case PanelNewRepeat.rule(
+             form,
+             create,
+             create_provider(integrations, create),
+             timezone,
+             group_allowed?(socket)
+           ) do
         {:ok, nil} -> {:ok, create}
         {:ok, rule} -> cast.(Map.put(params, "recurrence_rule", rule))
         {:error, :repeat, message} -> {:error, :repeat, message}

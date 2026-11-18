@@ -371,4 +371,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
       assert created(lv).reminders == [%{method: :popup, minutes_before: 10}]
     end
   end
+
+  describe "repeat, after the draft stopped being a meeting" do
+    test "a guest removed with the box still ticked leaves an event that repeats", %{
+      lv: lv,
+      integration: integration
+    } do
+      more_options(lv, integration, %{"guests" => ["ada@example.com"]})
+      render_change(new_form(lv), %{"meeting" => "true"})
+      refute has_element?(lv, "#calendar-panel-new-repeat")
+
+      lv
+      |> element(~s(#calendar-panel-guests button[aria-label="Remove ada@example.com"]))
+      |> render_click()
+
+      render_change(new_form(lv), %{"repeat" => "weekly"})
+      render_submit(new_form(lv), %{"intent" => "create"})
+      created(lv)
+
+      assert %{recurrence_rule: "FREQ=WEEKLY"} = Repo.one!(ProviderCalendarEventSchema)
+    end
+  end
 end
