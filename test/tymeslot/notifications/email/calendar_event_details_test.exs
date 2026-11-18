@@ -10,19 +10,19 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetailsTest do
   @moduletag :emails
   @moduletag :calendar
 
+  alias Ecto.Changeset
   alias Tymeslot.Auth
   alias Tymeslot.Emails.Templates.CalendarInvitation
   alias Tymeslot.Emails.Templates.EventUpdateNotification
   alias Tymeslot.Notifications.Email.CalendarEventDetails
-  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
 
   setup do
     user = insert(:user, locale: "de")
-    insert(:profile, user: user, timezone: "Europe/Berlin")
+    profile = insert(:profile, user: user, timezone: "Europe/Berlin")
     # The email handlers load the organiser with their profile.
     {:ok, user} = Auth.get_user_with_profile(user.id)
-    %{user: user}
+    %{user: user, profile: profile}
   end
 
   # 23:30 UTC on 2 November is 00:30 on 3 November in Berlin.
@@ -52,8 +52,8 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetailsTest do
   end
 
   describe "the organiser's name" do
-    test "is the name on their profile, not their address", %{user: user} do
-      Repo.update_all(ProfileSchema, set: [full_name: "Ada Lovelace"])
+    test "is the name on their profile, not their address", %{user: user, profile: profile} do
+      Repo.update!(Changeset.change(profile, full_name: "Ada Lovelace"))
       {:ok, user} = Auth.get_user_with_profile(user.id)
       user = %{user | name: nil}
 
@@ -68,8 +68,11 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetailsTest do
       assert sender =~ "Ada Lovelace"
     end
 
-    test "falls back to the account's own name, then to the address", %{user: user} do
-      Repo.update_all(ProfileSchema, set: [full_name: nil])
+    test "falls back to the account's own name, then to the address", %{
+      user: user,
+      profile: profile
+    } do
+      Repo.update!(Changeset.change(profile, full_name: nil))
       {:ok, user} = Auth.get_user_with_profile(user.id)
 
       {:ok, named} =
@@ -83,8 +86,8 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetailsTest do
       assert unnamed.organizer_name == user.email
     end
 
-    test "an update is sent in the same name", %{user: user} do
-      Repo.update_all(ProfileSchema, set: [full_name: "Ada Lovelace"])
+    test "an update is sent in the same name", %{user: user, profile: profile} do
+      Repo.update!(Changeset.change(profile, full_name: "Ada Lovelace"))
       {:ok, user} = Auth.get_user_with_profile(user.id)
 
       event = %{
