@@ -198,6 +198,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
         "That location can no longer be used. Please choose another one."
       )
 
+  def refusal_message(:location, :unsafe), do: Creation.refusal_message(:location, :invalid)
+
   # Notes allow more than a meeting's note does, so text typed before the box
   # was ticked can be too long.
   def refusal_message(:note, :too_long),
