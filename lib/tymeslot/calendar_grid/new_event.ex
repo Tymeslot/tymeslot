@@ -10,13 +10,15 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
   free/busy and the guests. Nothing is cached for a create that did not
   reach the calendar; a queued CalDAV create is tagged by the offline queue
   instead. A repeating event is cached as one row for the whole series, with
-  the zone it was written in; its occurrences are previewed from the row
-  until a sync caches them (`Tymeslot.Integrations.Calendar.SeriesPreview`).
+  the zone it was written in, and a sync is asked for to bring its
+  occurrences, which are previewed from the row until it has
+  (`Tymeslot.Integrations.Calendar.SeriesPreview`).
   """
 
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.CalendarGrid.SeriesCarry
+  alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -54,6 +56,7 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
            payload |> Map.put(:user_id, user_id) |> EventCreation.run_create_event() do
       attrs = row_attrs(result, payload[:timezone])
       :ok = cache(attrs)
+      sync_series(attrs)
 
       {:ok,
        %{
@@ -124,6 +127,13 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
       video_integration_id: creating[:video_integration_id]
     })
   end
+
+  # A series is cached as one row until a sync brings its occurrences, which
+  # are previewed meanwhile, so the sync is asked for at once.
+  defp sync_series(%{recurrence_rule: rule} = attrs) when is_binary(rule) and rule != "",
+    do: SeriesEdit.request_sync(attrs.provider, attrs.calendar_integration_id)
+
+  defp sync_series(_attrs), do: :ok
 
   # All-day events store `start_date`/`end_date` (the cache row leaves
   # `start_at`/`end_at` null); timed events store `start_at`/`end_at`.

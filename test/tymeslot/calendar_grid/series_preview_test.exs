@@ -59,6 +59,13 @@ defmodule Tymeslot.CalendarGrid.SeriesPreviewTest do
                Enum.map(1..3, &stamp(week(first_start, &1)))
     end
 
+    test "asks for the sync that brings the occurrences", %{integration: integration} do
+      assert_enqueued(
+        worker: SyncDebugCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
     test "the booking page counts the later weeks as busy", %{
       user: user,
       first_start: first_start
@@ -171,7 +178,7 @@ defmodule Tymeslot.CalendarGrid.SeriesPreviewTest do
   describe "an event given a repeat rule on the debug calendar" do
     setup :debug_calendar
 
-    test "previews its later weeks", %{
+    test "previews its later weeks and asks for a sync", %{
       user: user,
       integration: integration,
       first_start: first_start
@@ -186,6 +193,11 @@ defmodule Tymeslot.CalendarGrid.SeriesPreviewTest do
 
       assert Enum.map(weeks(integration, first_start, 4), & &1.start_at) ==
                Enum.map(0..3, &week(first_start, &1))
+
+      assert_enqueued(
+        worker: SyncDebugCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
     end
   end
 

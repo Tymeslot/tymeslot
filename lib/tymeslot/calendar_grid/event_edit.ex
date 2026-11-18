@@ -190,8 +190,21 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   defp update_single(_user_id, _event, _stored, :following, %{recurrence_rule: _rule}, _opts),
     do: {:error, %{reason: :ends_before, retry: :not_queued}}
 
-  defp update_single(user_id, event, stored, _scope, changes, opts),
-    do: write_edit(user_id, event, stored, changes, opts, :queue_recoverable)
+  defp update_single(user_id, event, stored, _scope, changes, opts) do
+    with {:ok, updated} <- write_edit(user_id, event, stored, changes, opts, :queue_recoverable) do
+      sync_new_series(updated, changes)
+      {:ok, updated}
+    end
+  end
+
+  # An event given a repeat rule is cached as one row for the whole series
+  # until a sync brings its occurrences, which are previewed meanwhile
+  # (`Tymeslot.Integrations.Calendar.SeriesPreview`), so the sync is asked
+  # for at once.
+  defp sync_new_series(updated, %{recurrence_rule: rule}) when is_binary(rule) and rule != "",
+    do: SeriesEdit.request_sync(Map.get(updated, :provider), updated.calendar_integration_id)
+
+  defp sync_new_series(_updated, _changes), do: :ok
 
   @doc """
   How `event` may be edited from the grid: `{:ok, :single}` for an event
