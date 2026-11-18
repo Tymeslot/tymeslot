@@ -752,6 +752,6 @@ msgstr[2] "Stále u vás zůstává %{amount} od %{count} účastníků. Pokud j
 #, elixir-autogen, elixir-format
 msgid "%{amount} from %{count} participant can't be refunded automatically: the payment is older than the 60-day refund window. Refund it from your Stripe dashboard."
 msgid_plural "%{amount} from %{count} participants can't be refunded automatically: their payments are older than the 60-day refund window. Refund them from your Stripe dashboard."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%{amount} od %{count} účastníka nelze vrátit automaticky, protože platba je starší než 60denní lhůta pro vrácení. Vraťte ji v nástěnce Stripe."
+msgstr[1] "%{amount} od %{count} účastníků nelze vrátit automaticky, protože platby jsou starší než 60denní lhůta pro vrácení. Vraťte je v nástěnce Stripe."
+msgstr[2] "%{amount} od %{count} účastníků nelze vrátit automaticky, protože platby jsou starší než 60denní lhůta pro vrácení. Vraťte je v nástěnce Stripe."

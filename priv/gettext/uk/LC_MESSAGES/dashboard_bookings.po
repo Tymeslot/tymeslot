@@ -1062,6 +1062,6 @@ msgstr "Поставте прапорець для підтвердження, �
 #, elixir-autogen, elixir-format
 msgid "Cancelling won't refund %{count} participant (%{amount}): their payment is older than the 60-day refund window. You can refund it from Stripe."
 msgid_plural "Cancelling won't refund %{count} participants (%{amount}): their payments are older than the 60-day refund window. You can refund them from Stripe."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Скасування не поверне коштів %{count} учасникові (%{amount}), оскільки 60-денний строк повернення вже минув. Повернути кошти можна в Stripe."
+msgstr[1] "Скасування не поверне коштів %{count} учасникам (%{amount}), оскільки 60-денний строк повернення вже минув. Повернути їм кошти можна в Stripe."
+msgstr[2] "Скасування не поверне коштів %{count} учасникам (%{amount}), оскільки 60-денний строк повернення вже минув. Повернути їм кошти можна в Stripe."

@@ -568,4 +568,4 @@ msgstr "Místo zrušeno %{date}"
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
 msgid "Not booked, paid %{date}"
-msgstr ""
+msgstr "Nerezervováno, zaplaceno %{date}"

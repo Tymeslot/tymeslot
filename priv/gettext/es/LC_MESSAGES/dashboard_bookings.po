@@ -1050,5 +1050,5 @@ msgstr "Marca la casilla de confirmación para cancelar sin reembolsar a los par
 #, elixir-autogen, elixir-format
 msgid "Cancelling won't refund %{count} participant (%{amount}): their payment is older than the 60-day refund window. You can refund it from Stripe."
 msgid_plural "Cancelling won't refund %{count} participants (%{amount}): their payments are older than the 60-day refund window. You can refund them from Stripe."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Al cancelar no se reembolsará a %{count} participante (%{amount}), ya que su pago tiene más de 60 días y ya no entra en el plazo de reembolso. Puedes reembolsarlo desde Stripe."
+msgstr[1] "Al cancelar no se reembolsará a %{count} participantes (%{amount}), ya que sus pagos tienen más de 60 días y ya no entran en el plazo de reembolso. Puedes reembolsarlos desde Stripe."

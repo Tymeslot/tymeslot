@@ -1062,6 +1062,6 @@ msgstr "Chcete-li setkání zrušit bez vrácení plateb účastníkům, zaškrt
 #, elixir-autogen, elixir-format
 msgid "Cancelling won't refund %{count} participant (%{amount}): their payment is older than the 60-day refund window. You can refund it from Stripe."
 msgid_plural "Cancelling won't refund %{count} participants (%{amount}): their payments are older than the 60-day refund window. You can refund them from Stripe."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Zrušením se %{count} účastníkovi (%{amount}) platba nevrátí, protože je starší než 60denní lhůta pro vrácení. Vrátit ji můžete ve Stripe."
+msgstr[1] "Zrušením se %{count} účastníkům (%{amount}) platby nevrátí, protože jsou starší než 60denní lhůta pro vrácení. Vrátit je můžete ve Stripe."
+msgstr[2] "Zrušením se %{count} účastníkům (%{amount}) platby nevrátí, protože jsou starší než 60denní lhůta pro vrácení. Vrátit je můžete ve Stripe."
