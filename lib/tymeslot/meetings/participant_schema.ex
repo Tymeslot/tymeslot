@@ -84,6 +84,12 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
       preload_order: [asc: :inserted_at]
     )
 
+    # The payment of a paid seat (`seat_payment: true`); none for a free one.
+    # It follows a moved seat to its new participant.
+    has_one(:booking_payment, Tymeslot.MeetingPayments.BookingPaymentSchema,
+      foreign_key: :participant_id
+    )
+
     timestamps(type: :utc_datetime)
   end
 

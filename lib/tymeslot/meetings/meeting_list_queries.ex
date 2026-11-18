@@ -535,12 +535,20 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   # booked it. Whoever released their spot before the meeting was cancelled
   # carries their own `cancelled_at`; those still booked when it was called
   # off do not (cancelling a meeting leaves its participant rows alone).
+  #
+  # Each comes with the payment of their seat, joined in the same query, so a
+  # page of cards costs one query for it. Unscoped by host on purpose: the
+  # cards are the organiser's own meetings, and a seat payment's
+  # `host_user_id` is the organiser of the meeting it paid for.
   defp card_participants_preload do
     from(p in ParticipantSchema,
       join: m in Meeting,
       on: m.id == p.meeting_id,
+      left_join: b in assoc(p, :booking_payment),
+      on: b.seat_payment,
       where: is_nil(p.cancelled_at) or m.status == :cancelled,
-      order_by: [asc: p.inserted_at, asc: p.id]
+      order_by: [asc: p.inserted_at, asc: p.id],
+      preload: [booking_payment: b]
     )
   end
 end

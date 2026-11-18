@@ -176,6 +176,54 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
     end
   end
 
+  # A participant cancelling their own paid seat is never refunded on its
+  # own, and the session it was on goes ahead, so the meeting's status alone
+  # cannot say the money is owed: the seat's participant does.
+  describe "seat payments" do
+    defp seat_payment_for(host_user_id, meeting, participant, attrs \\ %{}) do
+      payment_for(
+        host_user_id,
+        meeting,
+        Map.merge(%{participant_id: participant.id, seat_payment: true}, Map.new(attrs))
+      )
+    end
+
+    test "a participant who cancelled a paid seat appears on outstanding refunds" do
+      session = insert(:group_meeting, status: :confirmed, capacity: 4)
+      left_at = DateTime.add(DateTime.utc_now(:second), -2, :day)
+      left = insert(:participant, meeting: session, cancelled_at: left_at)
+      staying = insert(:participant, meeting: session)
+
+      payment = seat_payment_for(1, session, left, %{amount_cents: 2000})
+      seat_payment_for(1, session, staying, %{amount_cents: 2000})
+
+      assert [found] = BookingPayments.list_outstanding_refunds_for_host(1)
+      assert found.id == payment.id
+      assert found.participant.cancelled_at == left_at
+
+      assert %{count: 1, totals: [%{currency: "eur", amount_cents: 2000}]} =
+               BookingPayments.outstanding_refunds_summary_for_host(1)
+    end
+
+    # A moved seat's payment follows it to the participant it became on the
+    # new session (decision: a moved seat keeps its payment); the participant
+    # it left behind is cancelled, but nothing is owed.
+    test "a moved paid seat is not outstanding" do
+      old_session = insert(:group_meeting, status: :confirmed, capacity: 4)
+      new_session = insert(:group_meeting, status: :confirmed, capacity: 4)
+
+      _left_behind =
+        insert(:participant, meeting: old_session, cancelled_at: DateTime.utc_now(:second))
+
+      moved = insert(:participant, meeting: new_session)
+
+      seat_payment_for(1, new_session, moved)
+
+      assert BookingPayments.list_outstanding_refunds_for_host(1) == []
+      assert %{count: 0} = BookingPayments.outstanding_refunds_summary_for_host(1)
+    end
+  end
+
   describe "outstanding_refunds_summary_for_host/1" do
     test "counts the rows and totals what is still owed" do
       payment_for(1, cancelled_meeting(), %{amount_cents: 5000})

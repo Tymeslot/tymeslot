@@ -9,6 +9,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
 
   @outstanding_refunds_limit 50
@@ -297,7 +298,9 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
           b.host_user_id == ^host_user_id and b.status != :pending and
             not (b.status == :failed and is_nil(b.paid_at)),
         order_by: [desc: b.inserted_at],
-        limit: ^limit
+        limit: ^limit,
+        # A seat payment's row names its session.
+        preload: :meeting
 
     Repo.all(query)
   end
@@ -307,12 +310,14 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   still holds the attendee's money, and those whose meeting expired before
   it was settled: a payment that completed after its slot was taken, or a
   paid request that lapsed unapproved, whose automatic refund has not gone
-  through (yet).
+  through (yet). A paid seat its participant cancelled is listed too, with
+  that participant preloaded: the session goes ahead, so only the
+  participant says the money is owed.
 
   Derived from the meeting's status and the payment's own balance rather than
   from a stored "refund owed" flag, so it cannot drift out of step with either
   side. Oldest first, the longer an attendee has been out of pocket the more
-  urgent the row: a cancelled booking dated by its cancellation, an expired
+  urgent the row: a cancelled booking (or seat) dated by its cancellation, an expired
   one, which has no cancellation date, by its payment. Ties go by id, so the
   bounded window below is the same rows on every read.
 
@@ -327,10 +332,10 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     limit = Keyword.get(opts, :limit, @outstanding_refunds_limit)
 
     query =
-      from [b, m] in outstanding_refunds_query(host_user_id),
-        order_by: [asc: coalesce(m.cancelled_at, b.paid_at), asc: b.id],
+      from [b, m, p] in outstanding_refunds_query(host_user_id),
+        order_by: [asc: coalesce(p.cancelled_at, coalesce(m.cancelled_at, b.paid_at)), asc: b.id],
         limit: ^limit,
-        preload: [meeting: m]
+        preload: [meeting: m, participant: p]
 
     Repo.all(query)
   end
@@ -376,7 +381,10 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     }
   end
 
-  # Cancelled or expired bookings whose money the host still holds. A paid
+  # Cancelled or expired bookings whose money the host still holds, and the
+  # paid seats their participants cancelled (the session goes ahead, and a
+  # participant's own cancellation refunds nothing). A moved seat is not
+  # one: its payment points at the live participant it became. A paid
   # booking ends expired when its payment completed after the slot was taken
   # (`CheckoutSessionCompleted`), or when a paid request lapsed unapproved
   # (`Meetings.Approval`); both owe a full refund and refund it on their own,
@@ -385,28 +393,29 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   # a stored "refund owed" flag, so it cannot drift out of step with either
   # side.
   defp outstanding_refunds_query(host_user_id) do
-    query =
-      from b in BookingPaymentSchema,
-        as: :payment,
-        join: m in MeetingSchema,
-        as: :meeting,
-        # The payment's meeting, or its series' first session still there:
-        # one equality on the meeting id, so the join stays a primary-key
-        # lookup per payment.
-        on:
-          m.id ==
-            fragment(
-              "COALESCE(?, (SELECT sm.id FROM meetings AS sm WHERE sm.series_id = ? ORDER BY sm.series_position LIMIT 1))",
-              b.meeting_id,
-              b.series_id
-            ),
-        where:
-          b.host_user_id == ^host_user_id and
-            b.status in ^BookingPaymentSchema.refundable_statuses() and
-            b.refunded_amount_cents < b.amount_cents,
-        where: is_nil(b.series_id) or not exists(series_sessions_going_ahead())
-
-    MeetingState.where_released(query, :meeting)
+    from b in BookingPaymentSchema,
+      as: :payment,
+      join: m in MeetingSchema,
+      as: :meeting,
+      # The payment's meeting, or its series' first session still there:
+      # one equality on the meeting id, so the join stays a primary-key
+      # lookup per payment.
+      on:
+        m.id ==
+          fragment(
+            "COALESCE(?, (SELECT sm.id FROM meetings AS sm WHERE sm.series_id = ? ORDER BY sm.series_position LIMIT 1))",
+            b.meeting_id,
+            b.series_id
+          ),
+      where:
+        b.host_user_id == ^host_user_id and
+          b.status in ^BookingPaymentSchema.refundable_statuses() and
+          b.refunded_amount_cents < b.amount_cents,
+      left_join: p in ParticipantSchema,
+      as: :participant,
+      on: p.id == b.participant_id,
+      where: is_nil(b.series_id) or not exists(series_sessions_going_ahead()),
+      where: m.status in ^MeetingState.released() or not is_nil(p.cancelled_at)
   end
 
   # A paid series' one payment is owed back once none of its sessions goes
