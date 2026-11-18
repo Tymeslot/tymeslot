@@ -13,35 +13,28 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
   @moduletag :bookings
   @moduletag :integration
 
-  import Ecto.Query, only: [from: 2]
   import Mox
   import Tymeslot.Factory
-  import Tymeslot.Test.RaceConductor, only: [unboxed: 1]
+  import Tymeslot.GroupCancellationTestHelpers
 
   alias Ecto.Changeset
-  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Bookings.Cancel
-  alias Tymeslot.Emails.Templates.AppointmentCancellation
-  alias Tymeslot.EmailServiceMock
   alias Tymeslot.MeetingPayments.BookingPayments
-  alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Repo
   alias Tymeslot.StripeWebhookFixtures
-  alias Tymeslot.Test.RaceConductor
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
 
-  @account "acct_GROUP_CANCEL"
-  @price 2000
+  @account Tymeslot.GroupCancellationTestHelpers.account()
+  @price Tymeslot.GroupCancellationTestHelpers.price_cents()
 
   setup :verify_on_exit!
 
@@ -49,87 +42,6 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     TestMocks.setup_calendar_mocks()
     stub(Tymeslot.CalendarMock, :get_booking_integration_info, fn _context -> {:error, :none} end)
     :ok
-  end
-
-  defp host_and_session(attrs \\ []) do
-    host = insert(:user, email: "host@example.com", name: "Host")
-    insert(:profile, user: host, timezone: "Etc/UTC")
-
-    meeting_type =
-      insert(:meeting_type,
-        user: host,
-        name: "Group Class",
-        max_participants: 6,
-        payment_required: true,
-        price_cents: @price
-      )
-
-    start_time =
-      DateTime.utc_now()
-      |> DateTime.add(5, :day)
-      |> then(&%{&1 | hour: 10, minute: 0, second: 0, microsecond: {0, 0}})
-
-    session =
-      insert(
-        :group_meeting,
-        Keyword.merge(
-          [
-            organizer_user: host,
-            organizer_email: host.email,
-            meeting_type_ref: meeting_type,
-            title: meeting_type.name,
-            start_time: start_time,
-            end_time: DateTime.add(start_time, 30, :minute),
-            duration: 30,
-            capacity: 6,
-            status: :confirmed
-          ],
-          attrs
-        )
-      )
-
-    %{host: host, meeting_type: meeting_type, session: session}
-  end
-
-  defp paid_seat(%{host: host, session: session}, email, payment_attrs \\ []) do
-    participant = insert(:participant, meeting: session, email: email)
-    hold = insert(:seat_hold, meeting: session, email: email, status: :converted)
-
-    insert(
-      :paid_booking_payment,
-      Keyword.merge(
-        [
-          meeting_id: session.id,
-          participant_id: participant.id,
-          seat_hold_id: hold.id,
-          seat_payment: true,
-          seats: 1,
-          amount_cents: @price,
-          host_user_id: host.id,
-          host_email: host.email,
-          attendee_email: email,
-          stripe_account_id: @account
-        ],
-        payment_attrs
-      )
-    )
-  end
-
-  defp open_hold(%{host: host, session: session}, email) do
-    hold = insert(:seat_hold, meeting: session, email: email)
-
-    insert(:booking_payment,
-      meeting_id: session.id,
-      seat_hold_id: hold.id,
-      seat_payment: true,
-      seats: 1,
-      amount_cents: @price,
-      host_user_id: host.id,
-      stripe_account_id: @account,
-      stripe_checkout_session_id: "cs_open_#{hold.id}"
-    )
-
-    hold
   end
 
   defp refund_amounts do
@@ -146,26 +58,6 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
              all_enqueued(worker: EmailWorker, args: %{action: "send_cancellation_emails"})
 
     args["seat_refund"]
-  end
-
-  # Drains the enqueued cancellation email job, returning the organiser's
-  # copy as rendered.
-  defp organiser_email do
-    test = self()
-
-    expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn _email, details ->
-      send(test, {:organiser, details})
-      {:ok, "sent"}
-    end)
-
-    stub(EmailServiceMock, :send_cancellation_email_to_attendee, fn _email, _details ->
-      {:ok, "sent"}
-    end)
-
-    assert %{failure: 0, discard: 0} = Oban.drain_queue(queue: :emails)
-    assert_received {:organiser, details}
-
-    AppointmentCancellation.render(:organizer, "host@example.com", details)
   end
 
   # The shape Stripe delivers, from the recorded fixture, for this seat.
@@ -271,65 +163,6 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
                %{"currency" => "usd", "amount_cents" => 4000}
              ]
            }
-  end
-
-  # The organiser is told of the very seats the cancellation settled, at what
-  # each still held then: a seat partly refunded before the cancel counts at
-  # its balance, and a disputed seat (its money with the card network) is
-  # neither refunded nor counted. Full and none name the same seats and sums.
-  describe "what the organiser's cancellation email is told" do
-    setup do
-      ctx = host_and_session()
-      paid_seat(ctx, "ada@example.com")
-
-      paid_seat(ctx, "alan@example.com",
-        status: :partially_refunded,
-        refunded_amount_cents: 500
-      )
-
-      paid_seat(ctx, "eve@example.com", status: :disputed)
-      ctx
-    end
-
-    for {action, choice, refunds} <- [
-          {:refund_seats, "full", [1500, 2000]},
-          {:none, "none", []}
-        ] do
-      test "for a #{choice} refund, the seats settled and what they held", ctx do
-        assert {:ok, _cancelled} =
-                 Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, unquote(action))
-
-        assert refund_amounts() == unquote(refunds)
-
-        assert seat_refund_arg() == %{
-                 "choice" => unquote(choice),
-                 "count" => 2,
-                 "totals" => [%{"currency" => "eur", "amount_cents" => 3500}]
-               }
-      end
-    end
-
-    test "a full refund renders the seats being refunded in the organiser's email", ctx do
-      assert {:ok, _cancelled} =
-               Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats)
-
-      email = organiser_email()
-
-      assert email.text_body =~ "REFUNDS ON THEIR WAY:"
-      assert email.text_body =~ "€35.00 is being refunded to 2 participants."
-      assert email.html_body =~ "Refunds on their way"
-    end
-
-    test "no refund renders what the organiser still holds in their email", ctx do
-      assert {:ok, _cancelled} =
-               Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :none)
-
-      email = organiser_email()
-
-      assert email.text_body =~ "REFUNDS OUTSTANDING:"
-      assert email.text_body =~ "You still hold €35.00 from 2 participants."
-      refute email.text_body =~ "is being refunded"
-    end
   end
 
   test "a partial choice refunds every seat in full" do
@@ -591,106 +424,6 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
       assert %{failure: 0} = Oban.drain_queue(queue: :payments)
 
       assert %{status: :refunded, refunded_amount_cents: @price} = Repo.reload!(payment)
-    end
-  end
-
-  describe "a seat paid while the cancellation waited" do
-    setup do
-      ctx = unboxed(fn -> host_and_session() end)
-
-      on_exit(fn ->
-        unboxed(fn ->
-          payment_ids =
-            Repo.all(
-              from(p in BookingPaymentSchema,
-                where: p.host_user_id == ^ctx.host.id,
-                select: p.id
-              )
-            )
-
-          Repo.delete_all(
-            from(j in Oban.Job,
-              where:
-                fragment("?->>'meeting_id'", j.args) == ^ctx.session.id or
-                  fragment("?->>'booking_payment_id'", j.args) in ^payment_ids
-            )
-          )
-
-          Repo.delete_all(from(p in BookingPaymentSchema, where: p.host_user_id == ^ctx.host.id))
-          Repo.delete_all(from(m in MeetingSchema, where: m.organizer_user_id == ^ctx.host.id))
-          Repo.delete_all(from(u in UserSchema, where: u.id == ^ctx.host.id))
-        end)
-      end)
-
-      ctx
-    end
-
-    # The conversion holds the meeting's row lock while it books the seat
-    # and settles its payment; the cancellation waits on that lock, then
-    # reads the seat payments, and finds the one just paid.
-    test "is refunded too", ctx do
-      hold =
-        unboxed(fn ->
-          paid_seat(ctx, "ada@example.com")
-          hold = open_hold(ctx, "late@example.com")
-          hold
-        end)
-
-      test_pid = self()
-
-      conversion =
-        Task.async(fn ->
-          unboxed(fn ->
-            Repo.transaction(fn ->
-              {:ok, booking} =
-                GroupScheduling.convert_hold(hold.id,
-                  new_slot: fn _hold, _meeting -> :none end,
-                  on_booked: RaceConductor.park_here(test_pid)
-                )
-
-              payment = BookingPayments.payment_for_seat_hold(hold.id)
-
-              payment
-              |> Changeset.change(
-                status: :paid,
-                paid_at: DateTime.utc_now(:second),
-                stripe_charge_id: "ch_late",
-                participant_id: booking.participant.id
-              )
-              |> Repo.update!()
-            end)
-          end)
-        end)
-
-      assert_receive {:parked, converter}, 5_000
-
-      cancellation =
-        Task.async(fn ->
-          unboxed(fn ->
-            Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats)
-          end)
-        end)
-
-      assert :blocked = RaceConductor.await_finished_or_blocked(cancellation)
-      send(converter, :release)
-
-      assert {:ok, _paid} = Task.await(conversion)
-      assert {:ok, _cancelled} = Task.await(cancellation)
-
-      late_payment = unboxed(fn -> BookingPayments.payment_for_seat_hold(hold.id) end)
-
-      refunded_ids =
-        unboxed(fn ->
-          Repo.all(
-            from(j in Oban.Job,
-              where: j.worker == ^inspect(GroupCancelRefund),
-              select: fragment("?->>'booking_payment_id'", j.args)
-            )
-          )
-        end)
-
-      assert late_payment.id in refunded_ids
-      assert length(refunded_ids) == 2
     end
   end
 end
