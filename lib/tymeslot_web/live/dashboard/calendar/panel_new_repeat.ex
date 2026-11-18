@@ -74,24 +74,39 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewRepeat do
 
   @doc """
   What the field shows for `create`, the draft as cast (see
-  `PanelRepeat.field/2`): the form's choice, and the rule the draft repeats
-  by, which the summary names and the editor draws. Nothing for a draft the
+  `PanelRepeat.field/2`): the form's choice, the rule the editor draws, and
+  a summary of the rule the choice makes, left out while the calendar
+  refuses it. Nothing for a draft the
   domain has not accepted yet.
   """
-  @spec field(map(), CreateParams.t() | nil, String.t() | nil, String.t()) :: map() | nil
-  def field(_form, nil, _provider, _timezone), do: nil
+  @spec field(map(), CreateParams.t() | nil, String.t() | nil, String.t(), boolean()) ::
+          map() | nil
+  def field(_form, nil, _provider, _timezone, _group_allowed), do: nil
 
-  def field(form, create, provider, timezone) do
+  def field(form, create, provider, timezone, group_allowed) do
     field = PanelRepeat.field(event(create, provider), timezone)
     choice = choice(form)
-    rule = create.recurrence_rule
 
     %{
       field
       | current: choice,
-        rule: if(choice == "custom", do: typed_rule(form, create, field), else: rule),
-        summary: rule && RecurrenceEditor.summary(rule, field.start)
+        rule:
+          if(choice == "custom",
+            do: typed_rule(form, create, field),
+            else: create.recurrence_rule
+          ),
+        summary: summary(form, create, provider, timezone, group_allowed, field.start)
     }
+  end
+
+  # What the form's choice repeats by now; none while the calendar refuses
+  # it, rather than the last rule it accepted, which the header's refusal
+  # would then seem to contradict.
+  defp summary(form, create, provider, timezone, group_allowed, start) do
+    case rule(form, create, provider, timezone, group_allowed) do
+      {:ok, rule} when is_binary(rule) -> RecurrenceEditor.summary(rule, start)
+      _none_or_refused -> nil
+    end
   end
 
   # The editor draws the pattern its fields hold, refused or not, so a

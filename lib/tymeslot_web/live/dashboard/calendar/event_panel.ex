@@ -54,7 +54,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
            panel.form,
            panel.draft,
            provider(assigns.integrations, panel.draft),
-           assigns.timezone
+           assigns.timezone,
+           assigns.group_allowed
          ),
        event_id: nil,
        editable: true,

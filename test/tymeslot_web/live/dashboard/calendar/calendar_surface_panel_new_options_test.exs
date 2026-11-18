@@ -393,6 +393,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
         "end" => "2026-10-31T11:00"
       })
 
+      # A pattern Outlook takes is summed up under Repeat.
+      render_change(new_form(lv), %{"repeat" => "weekly"})
+      assert has_element?(lv, "#calendar-panel-new-repeat-summary")
+
       render_change(new_form(lv), %{
         "repeat" => "custom",
         "freq" => "monthly",
@@ -400,6 +404,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
         "on" => "day",
         "end_type" => "never"
       })
+
+      # The refused one is not, nor is the weekly one it replaced.
+      refute has_element?(lv, "#calendar-panel-new-repeat-summary")
 
       render_submit(new_form(lv), %{"intent" => "create"})
 
