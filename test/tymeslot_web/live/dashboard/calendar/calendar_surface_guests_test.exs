@@ -517,6 +517,48 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
       refute has_element?(lv, "#calendar-panel-guests-pending")
     end
 
+    test "Cancel after the update has gone out says it is too late", %{lv: lv, review: review} do
+      change_and_tell(lv, review)
+      Oban.drain_queue(queue: :emails, with_scheduled: true)
+
+      lv |> element("#calendar-panel-cancel-guest-update") |> render_click()
+
+      assert has_element?(lv, "#calendar-toast", "Too late to cancel: guests have been told.")
+      refute has_element?(lv, "#calendar-toast", "Guests won't be told.")
+      refute has_element?(lv, "#calendar-panel-guests-pending")
+      refute has_element?(lv, "#calendar-panel-untold")
+    end
+
+    test "a panel opened on a held update drops its Cancel once the update is due", %{
+      conn: conn,
+      lv: lv,
+      review: review
+    } do
+      change_and_tell(lv, review)
+
+      # The hold is over already, so the reopened panel looks again at once.
+      Repo.update_all(Oban.Job, set: [scheduled_at: DateTime.add(DateTime.utc_now(), -60)])
+      lv2 = open_panel(conn, review)
+      :erlang.trace(lv2.pid, true, [:receive])
+      assert has_element?(lv2, "#calendar-panel-guests-pending")
+
+      Oban.drain_queue(queue: :emails, with_scheduled: true)
+
+      await_recheck(lv2, 3)
+      refute has_element?(lv2, "#calendar-panel-guests-pending")
+    end
+
+    # The panel looks again when the hold is due, and once more a second
+    # later while the update has not gone out yet.
+    defp await_recheck(lv, tries) do
+      assert_receive {:trace, _pid, :receive,
+                      {:phoenix, :send_update, {_ref, %{action: :guests_pending_due}}}},
+                     3_000
+
+      if tries > 1 and has_element?(lv, "#calendar-panel-guests-pending"),
+        do: await_recheck(lv, tries - 1)
+    end
+
     test "a forced Cancel on an event someone else organises keeps the update", %{
       conn: conn,
       integration: integration

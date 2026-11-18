@@ -515,13 +515,19 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     Dispatcher.pending?(event_id(event), event_kind(event))
   end
 
-  @doc "Seconds a debounced update is held before it goes out."
-  @spec hold_seconds() :: pos_integer()
-  def hold_seconds, do: Dispatcher.debounce_seconds()
-
-  @spec cancel_pending(event) :: :ok
+  @doc """
+  Drops the debounced job queued for this event: `{:ok, :cancelled}`, or
+  `{:ok, :none}` when none was waiting any more (it has gone out).
+  """
+  @spec cancel_pending(event) :: {:ok, :cancelled | :none}
   def cancel_pending(event) do
     Dispatcher.cancel_pending(event_id(event), event_kind(event))
+  end
+
+  @doc "When the debounced job queued for this event is due, or nil when none is."
+  @spec pending_due_at(event) :: DateTime.t() | nil
+  def pending_due_at(event) do
+    Dispatcher.pending_due_at(event_id(event), event_kind(event))
   end
 
   ## Internal helpers

@@ -254,15 +254,11 @@ defmodule Tymeslot.CalendarGrid.Changes do
     as: :tell
 
   @doc """
-  Whether an update "Tell guests" sent for the event is still being held
-  before it goes out. See `Tymeslot.CalendarGrid.GuestUpdate.pending?/1`.
+  When the update "Tell guests" sent for the event goes out, or nil when none
+  is held. See `Tymeslot.CalendarGrid.GuestUpdate.held_until/1`.
   """
-  @spec guest_update_pending?(map()) :: boolean()
-  defdelegate guest_update_pending?(event), to: GuestUpdate, as: :pending?
-
-  @doc "Seconds an update \"Tell guests\" sent is held before it goes out."
-  @spec guest_update_hold_seconds() :: pos_integer()
-  defdelegate guest_update_hold_seconds, to: GuestUpdate, as: :hold_seconds
+  @spec guest_update_held_until(map()) :: DateTime.t() | nil
+  defdelegate guest_update_held_until(event), to: GuestUpdate, as: :held_until
 
   @doc """
   Cancels the held update for the event's guests, once the user is found to
@@ -270,6 +266,6 @@ defmodule Tymeslot.CalendarGrid.Changes do
   `Tymeslot.CalendarGrid.GuestUpdate.cancel/3`.
   """
   @spec cancel_guest_update(pos_integer(), [map()], map()) ::
-          :ok | {:error, GuestUpdate.refusal()}
+          {:ok, :cancelled | :already_sent} | {:error, GuestUpdate.refusal()}
   defdelegate cancel_guest_update(user_id, integrations, event), to: GuestUpdate, as: :cancel
 end

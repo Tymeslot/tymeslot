@@ -14,8 +14,8 @@ defmodule Tymeslot.CalendarGrid.GuestUpdate do
   from both versions (`AttendeeNotifications.series_updated_confirm/4`).
 
   The debounced update is held for a while before it goes out, so later
-  edits join it: `pending?/1` says whether one is still held, and `cancel/3`
-  drops it, so the guests are told nothing after all.
+  edits join it: `held_until/1` says until when one is still held, and
+  `cancel/3` drops it, so the guests are told nothing after all.
   """
 
   alias Tymeslot.CalendarGrid.EditGuard
@@ -57,30 +57,35 @@ defmodule Tymeslot.CalendarGrid.GuestUpdate do
     end
   end
 
-  @doc "Seconds an update is held before it goes out."
-  @spec hold_seconds() :: pos_integer()
-  def hold_seconds, do: AttendeeNotifications.hold_seconds()
+  @doc """
+  When the update held for `event`'s guests goes out, or nil when none is
+  held. Only a cached calendar event has one; anything else has none.
+  """
+  @spec held_until(map()) :: DateTime.t() | nil
+  def held_until(%ProviderCalendarEventSchema{} = event),
+    do: AttendeeNotifications.pending_due_at(event)
+
+  def held_until(_event), do: nil
 
   @doc """
-  Whether an update for `event`'s guests is still held before it goes out.
-  Only a cached calendar event has one; anything else has none.
+  Drops the update held for `event`'s guests, so they are told nothing:
+  `{:ok, :cancelled}`, or `{:ok, :already_sent}` when none was held any
+  more, as it has gone out. Refused, like `tell/5`, unless the user
+  organises the event on a calendar they can write.
   """
-  @spec pending?(map()) :: boolean()
-  def pending?(%ProviderCalendarEventSchema{} = event), do: AttendeeNotifications.pending?(event)
-  def pending?(_event), do: false
-
-  @doc """
-  Drops the update held for `event`'s guests, so they are told nothing.
-  Refused, like `tell/5`, unless the user organises the event on a calendar
-  they can write. `:ok` when nothing was held, too.
-  """
-  @spec cancel(pos_integer(), [map()], map()) :: :ok | {:error, refusal()}
+  @spec cancel(pos_integer(), [map()], map()) ::
+          {:ok, :cancelled | :already_sent} | {:error, refusal()}
   def cancel(user_id, integrations, event) do
     with :ok <- EditGuard.guest_update(user_id, integrations, event) do
-      case event do
-        %ProviderCalendarEventSchema{} -> AttendeeNotifications.cancel_pending(event)
-        _not_cached -> :ok
+      case cancel_held(event) do
+        {:ok, :cancelled} -> {:ok, :cancelled}
+        {:ok, :none} -> {:ok, :already_sent}
       end
     end
   end
+
+  defp cancel_held(%ProviderCalendarEventSchema{} = event),
+    do: AttendeeNotifications.cancel_pending(event)
+
+  defp cancel_held(_not_cached), do: {:ok, :none}
 end

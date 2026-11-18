@@ -39,10 +39,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
 
   @type event_kind :: :provider_calendar_event
 
-  @doc "Seconds an update is held before it goes out, so later edits can join it."
-  @spec debounce_seconds() :: pos_integer()
-  def debounce_seconds, do: @debounce_seconds
-
   @spec schedule_update(integer, event_kind) :: {:ok, :scheduled} | {:error, term}
   def schedule_update(event_id, kind) when is_integer(event_id) do
     args = %{
@@ -103,11 +99,23 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
     end
   end
 
-  @spec cancel_pending(integer, event_kind) :: :ok
+  @doc """
+  Deletes the waiting jobs for the event + kind: `{:ok, :cancelled}` when
+  there was one, `{:ok, :none}` when nothing was waiting (it has run, or is
+  running).
+  """
+  @spec cancel_pending(integer, event_kind) :: {:ok, :cancelled | :none}
   def cancel_pending(event_id, kind) when is_integer(event_id) do
-    _count = DispatcherQueries.delete_pending(event_id, Atom.to_string(kind))
-    :ok
+    case DispatcherQueries.delete_pending(event_id, Atom.to_string(kind)) do
+      0 -> {:ok, :none}
+      _count -> {:ok, :cancelled}
+    end
   end
+
+  @doc "When the waiting job for the event + kind is due, or nil when none is waiting."
+  @spec pending_due_at(integer, event_kind) :: DateTime.t() | nil
+  def pending_due_at(event_id, kind) when is_integer(event_id),
+    do: DispatcherQueries.pending_due_at(event_id, Atom.to_string(kind))
 
   @spec pending?(integer, event_kind) :: boolean
   def pending?(event_id, kind) when is_integer(event_id) do

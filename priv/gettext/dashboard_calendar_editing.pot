@@ -761,3 +761,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Guests won't be told."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
+#, elixir-autogen, elixir-format
+msgid "Too late to cancel: guests have been told."
+msgstr ""
