@@ -80,7 +80,7 @@ export const PENDING_GRACE_MS = 1_500;
 const PREVIEW_ESTIMATE = { width: 320, height: 240 };
 // What a redraw can hand focus back to, most specific first. `day` tells the
 // per-column night buttons apart, which share an empty attribute value.
-const FOCUS_ATTRS = ["data-event-id", "data-more", "data-allday-more", "data-goto-day", "data-night-toggle", "data-bookable-label", "data-bookable-show", "data-month-day", "data-month-more", "data-agenda-later"];
+const FOCUS_ATTRS = ["data-event-id", "data-more", "data-allday-more", "data-goto-day", "data-night-toggle", "data-bookable-label", "data-bookable-show", "data-month-day", "data-month-more", "data-agenda-later", "data-agenda-lens"];
 
 function canvasMeasure() {
   let context = null;

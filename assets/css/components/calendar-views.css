@@ -287,6 +287,50 @@
   background: var(--cal-surface);
 }
 
+/* The lens, All or Bookings, stays at the top of the list as it scrolls. */
+.cal-agenda-lens {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  padding: 0 0 8px;
+  background: var(--cal-surface);
+}
+
+.cal-agenda-lens button {
+  min-height: 28px;
+  padding: 2px 12px;
+  border: 1px solid var(--cal-line-strong);
+  background: var(--cal-surface);
+  color: var(--cal-text);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cal-agenda-lens button:first-child {
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+
+.cal-agenda-lens button + button {
+  border-left: 0;
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+}
+
+.cal-agenda-lens button:hover {
+  background: var(--cal-hover);
+}
+
+.cal-agenda-lens button[aria-pressed="true"] {
+  background: var(--cal-text);
+  color: var(--cal-surface);
+}
+
+.cal-agenda-lens button:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: -2px;
+}
+
 .cal-agenda-days,
 .cal-agenda-items {
   margin: 0;
