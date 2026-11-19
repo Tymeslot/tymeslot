@@ -9,7 +9,6 @@ defmodule Tymeslot.Meetings.QueriesTest do
   alias Ecto.UUID
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Repo
 
   describe "get_meeting_for_organizer/2" do
     test "returns meeting when organizer_user_id matches" do
