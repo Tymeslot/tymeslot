@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrides do
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
   alias Tymeslot.Integrations.Calendar.ColourResolver
   alias Tymeslot.Integrations.Calendar.ColourWriteBack
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings
 
   @type user_id :: pos_integer()
@@ -44,7 +45,13 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrides do
 
   @doc """
   Clears a per-event colour override for `user_id` on `target`. For external
-  events the host calendar is left untouched; the next sync reconciles.
+  events the host calendar's colour is cleared too, by the same write-back a
+  set enqueues (`ColourWriteBack`, with a `nil` colour): its unique key
+  replaces a write-back of the old colour still waiting, which would
+  otherwise land after the clear and bring the colour back. The cached
+  event's colour is cleared at once, so the event shows its calendar's
+  colour before the next sync. An Outlook event keeps no colour of its own,
+  so only its override goes.
   """
   @spec clear_event_colour(user_id(), colour_target()) :: :ok | {:error, :not_found}
   def clear_event_colour(user_id, target) do
@@ -56,10 +63,26 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrides do
   defp remove_event_colour(user_id, {:meeting, meeting_id}),
     do: ColourOverrideQueries.clear_meeting(user_id, meeting_id)
 
-  # Clearing drops the override only; the host calendar is left untouched and
-  # the next sync reconciles — so no write-back is enqueued here.
-  defp remove_event_colour(user_id, {:external, integration_id, uid}),
-    do: ColourOverrideQueries.clear_external(user_id, integration_id, uid)
+  # An event whose provider keeps no colour of its own (Outlook) has none to
+  # clear: its cached colour is the calendar's, which the next sync brings
+  # back anyway.
+  defp remove_event_colour(user_id, {:external, integration_id, uid}) do
+    :ok = ColourOverrideQueries.clear_external(user_id, integration_id, uid)
+
+    if host_colour?(integration_id, uid) do
+      :ok = ProviderCalendarEventQueries.clear_colour(integration_id, uid)
+      ColourWriteBack.enqueue(user_id, integration_id, uid, nil)
+    else
+      :ok
+    end
+  end
+
+  defp host_colour?(integration_id, uid) do
+    case ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
+      {:ok, event} -> ColourWriteBack.host_colour?(event.provider)
+      {:error, :not_found} -> true
+    end
+  end
 
   # The target arrives from the browser, so the meeting or integration it
   # names must be the user's own; one that is not is not found.

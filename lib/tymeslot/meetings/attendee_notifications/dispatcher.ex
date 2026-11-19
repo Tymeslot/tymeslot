@@ -21,7 +21,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
 
     * `schedule_update(event_id, kind)` — enqueue (or replace) an `:update`
       job scheduled `@debounce_seconds` in the future.
-    * `cancel_pending/2` — delete any scheduled/available Worker jobs for the
+    * `cancel_pending/3` — delete any scheduled/available Worker jobs for the
       given event + kind, including a legacy `:delete` job.
     * `pending?/2` — whether any scheduled/available Worker job exists for
       the given event + kind.
@@ -99,11 +99,33 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
     end
   end
 
-  @spec cancel_pending(integer, event_kind) :: :ok
-  def cancel_pending(event_id, kind) when is_integer(event_id) do
-    _count = DispatcherQueries.delete_pending(event_id, Atom.to_string(kind))
-    :ok
+  @doc """
+  Deletes the waiting jobs for the event + kind, for the hold the caller
+  knew was due at `due_at` (`pending_due_at/2`): `{:ok, :cancelled}` when
+  there was one. When nothing was waiting, `{:ok, :sent}` if that hold has
+  started sending, else `{:ok, :none}` (cancelled elsewhere, say).
+
+  A job belongs to the hold when it is scheduled for `due_at` or later (a
+  later Tell, or a retry, only ever moves it later). An update sent before
+  the hold began was due earlier, so it does not count: the guests were not
+  told about what the hold was for.
+  """
+  @spec cancel_pending(integer, event_kind, DateTime.t()) ::
+          {:ok, :cancelled | :sent | :none}
+  def cancel_pending(event_id, kind, %DateTime{} = due_at) when is_integer(event_id) do
+    kind = Atom.to_string(kind)
+
+    cond do
+      DispatcherQueries.delete_pending(event_id, kind) > 0 -> {:ok, :cancelled}
+      DispatcherQueries.sent_for?(event_id, kind, due_at) -> {:ok, :sent}
+      true -> {:ok, :none}
+    end
   end
+
+  @doc "When the waiting job for the event + kind is due, or nil when none is waiting."
+  @spec pending_due_at(integer, event_kind) :: DateTime.t() | nil
+  def pending_due_at(event_id, kind) when is_integer(event_id),
+    do: DispatcherQueries.pending_due_at(event_id, Atom.to_string(kind))
 
   @spec pending?(integer, event_kind) :: boolean
   def pending?(event_id, kind) when is_integer(event_id) do

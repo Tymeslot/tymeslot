@@ -14,6 +14,7 @@ defmodule Tymeslot.Notifications.EventsTest do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.Events.Seats
   alias Tymeslot.Workers.{SlackWorker, TelegramWorker}
 
   @doc false
@@ -402,7 +403,7 @@ defmodule Tymeslot.Notifications.EventsTest do
       meeting: meeting
     } do
       assert {{:ok, :not_sendable}, [_fan_out]} =
-               Events.seat_booked_deferred(meeting, %{id: 1})
+               Seats.seat_booked_deferred(meeting, %{id: 1})
     end
 
     test "seat_booked_deferred/3 refuses a seat when the database fails its confirmation", %{
@@ -411,7 +412,7 @@ defmodule Tymeslot.Notifications.EventsTest do
       Application.put_env(:tymeslot, :email_worker_module, DatabaseDownWorker)
 
       assert {{:error, {:notifications_failed, %DBConnection.ConnectionError{}}}, _pending} =
-               Events.seat_booked_deferred(meeting, %{id: 1})
+               Seats.seat_booked_deferred(meeting, %{id: 1})
     end
 
     test "meeting_cancelled/1 still dispatches Telegram and reports the failure", %{

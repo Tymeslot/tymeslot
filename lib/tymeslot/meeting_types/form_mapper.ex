@@ -21,6 +21,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.MeetingTypes.InputValidation
   alias Tymeslot.MeetingTypes.Reminders
+  alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Validation.Constraints
 
   @typedoc "Why form input could not be mapped onto schema attributes."
@@ -54,9 +55,6 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         slot_interval_minutes: parse_optional_integer(params["slot_interval"]),
         description: params["description"],
         icon: ui_state.selected_icon,
-        is_active: params["is_active"] == "true",
-        allow_guests: params["allow_guests"] == "true",
-        requires_approval: params["requires_approval"] == "true",
         approval_window_hours: approval_window_hours,
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         availability_schedule_id: blank_to_nil(params["availability_schedule_id"]),
@@ -67,18 +65,25 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
       attrs =
         attrs
+        |> Map.merge(toggles(params))
         |> Map.merge(optional_integers(params))
         |> Map.merge(seat_display(params))
         |> maybe_put_custom_fields(params)
         |> maybe_put_locations(params)
         |> maybe_put_extra_lengths(params)
         |> maybe_put_fixed_dates(params)
+        |> Map.merge(SeriesSettings.form_attrs(params))
         |> Map.merge(payment)
         |> unpaid_when_group()
 
       {:ok, attrs}
     end
   end
+
+  @toggles ~w(is_active allow_guests requires_approval requires_email_verification)a
+
+  defp toggles(params),
+    do: Map.new(@toggles, &{&1, params[Atom.to_string(&1)] == "true"})
 
   # Only a form that renders the fixed-dates toggle posts it, so an absent key
   # leaves the stored setting alone rather than turning it off.

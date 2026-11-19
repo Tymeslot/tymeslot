@@ -22,6 +22,8 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
   @type t :: %__MODULE__{
           id: binary() | nil,
           meeting_id: binary() | nil,
+          series_id: binary() | nil,
+          series_position: integer() | nil,
           name: String.t() | nil,
           email: String.t() | nil,
           phone: String.t() | nil,
@@ -73,6 +75,11 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
 
+    # The booking series this seat is an occurrence of; read
+    # `series_position` only together with `series_id`.
+    belongs_to(:series, Tymeslot.BookingSeries.SeriesSchema, type: :binary_id)
+    field(:series_position, :integer)
+
     has_many(:guests, Tymeslot.Meetings.GuestSchema,
       foreign_key: :participant_id,
       preload_order: [asc: :inserted_at]
@@ -88,7 +95,9 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
 
   Normalises the email, validates its format the same way `MeetingSchema`
   validates `attendee_email`, and generates an unguessable
-  `management_token` when one is not already present.
+  `management_token` when one is not already present. A seat booked as one
+  session of a series (`Tymeslot.BookingSeries`) carries `series_id` and
+  `series_position`, set here, on insert, and never changed afterwards.
   """
   @spec creation_changeset(t(), map()) :: Ecto.Changeset.t()
   def creation_changeset(participant, attrs) do
@@ -103,7 +112,9 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
       :timezone,
       :locale,
       :custom_field_answers,
-      :management_token
+      :management_token,
+      :series_id,
+      :series_position
     ])
     |> update_change(:email, &normalize_email/1)
     |> validate_required([:meeting_id, :name, :email, :timezone, :locale])
@@ -122,6 +133,18 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
       message: dgettext_noop("errors", "already has a spot at this time")
     )
     |> foreign_key_constraint(:meeting_id)
+    |> foreign_key_constraint(:series_id)
+  end
+
+  @doc """
+  True when `changeset` failed on the one-live-seat-per-address index: the
+  booker already holds a seat at this slot.
+  """
+  @spec duplicate_seat?(Ecto.Changeset.t()) :: boolean()
+  def duplicate_seat?(%Ecto.Changeset{errors: errors}) do
+    Enum.any?(errors, fn {_field, {_message, opts}} ->
+      to_string(opts[:constraint_name] || "") == "meeting_participants_live_email_index"
+    end)
   end
 
   @doc """

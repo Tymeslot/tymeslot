@@ -7,7 +7,7 @@ defmodule Tymeslot.Availability.Offer.Range do
 
   alias Tymeslot.Availability.{BusinessHours, BusyIntervals, Calculate, Intervals, Schedules}
   alias Tymeslot.Availability.Offer
-  alias Tymeslot.Availability.Offer.{HostCalendar, Request}
+  alias Tymeslot.Availability.Offer.{HostCalendar, Moving, Request}
   alias Tymeslot.MeetingTypes.FixedDates
 
   # The longest range `Offer.slots_for_range/4` answers: six weeks, the month
@@ -132,19 +132,21 @@ defmodule Tymeslot.Availability.Offer.Range do
          duration,
          events_source
        ) do
-    moving = Request.moving_meeting(request)
+    request = Moving.with_reach(request)
+    moving = Moving.meeting(request)
 
     with {:ok, events} <- HostCalendar.for_range(request, {start_date, end_date}, events_source) do
       duration_minutes = Request.bounded_duration(duration)
       meeting_type = request[:meeting_type]
 
       limit_checker =
-        Request.limit_checker(request, Request.moving_uid(moving), start_date, end_date)
+        Request.limit_checker(request, Moving.uid(moving), start_date, end_date)
 
       config =
         meeting_type
         |> Schedules.resolve_for(profile)
         |> Request.config(meeting_type, limit_checker, duration_minutes)
+        |> Request.reach_until(request)
 
       config =
         Calculate.prefetch_schedule_data(

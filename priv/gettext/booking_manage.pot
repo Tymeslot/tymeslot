@@ -216,6 +216,7 @@ msgstr ""
 msgid "Link not recognised"
 msgstr ""
 
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #: lib/tymeslot_web/themes/shared/components/meeting_details.ex
 #, elixir-autogen, elixir-format
@@ -333,6 +334,7 @@ msgid "This link is no longer valid. It may have expired, or the request may hav
 msgstr ""
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "This link is not valid"
 msgstr ""
@@ -373,6 +375,7 @@ msgstr ""
 msgid "Too many attempts"
 msgstr ""
 
+#: lib/tymeslot_web/live/booking_verification_live.ex
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Try again in a moment."
@@ -400,6 +403,7 @@ msgstr ""
 msgid "We've let %{name} know you can't make it."
 msgstr ""
 
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "When"
@@ -631,4 +635,160 @@ msgstr ""
 #: lib/tymeslot_web/themes/core/meeting_management.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} will confirm or decline it. We have emailed you the details."
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Book again"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Booking cancelled"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Check your inbox for the confirmation email."
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm booking"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live.ex
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your booking"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "I didn't make this booking"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "It may be incomplete or out of date."
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "The booking was cancelled and the time released."
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking has expired"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is already confirmed"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live.ex
+#, elixir-autogen, elixir-format
+msgid "We could not confirm your booking just now. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "We have emailed you the details and a calendar invitation."
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "With"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is confirmed"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is held until %{time}."
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Your request has been sent"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Checking your link…"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This only takes a moment."
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer available, so the time was released."
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling…"
+msgstr ""
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Confirming…"
+msgstr ""
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session"
+msgid_plural "%{count} sessions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has been sent the confirmation for all %{count} session."
+msgid_plural "%{name} has been sent the confirmation for all %{count} sessions."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "All %{count} session is free again and %{name} has been told."
+msgid_plural "All %{count} sessions are free again and %{name} has been told."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Approve all %{count} session"
+msgid_plural "Approve all %{count} sessions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Decline all %{count} session"
+msgid_plural "Decline all %{count} sessions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
 msgstr ""

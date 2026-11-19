@@ -133,7 +133,15 @@
   color: var(--cal-on-booking);
 }
 
-.cal-mbar.is-past {
+/* A booking given a colour of its own: see calendar-surface.css. */
+.cal-mbar.is-booking.has-colour {
+  background: color-mix(in srgb, var(--cal-ev) 55%, var(--cal-ink));
+}
+
+/* Past, a booking's own colour drops to the same quiet tint as any past bar:
+   see .cal-adbar.is-past in calendar-surface.css. */
+.cal-mbar.is-past,
+.cal-mbar.is-booking.has-colour.is-past {
   background: color-mix(in srgb, var(--cal-ev) 8%, var(--cal-surface));
   color: var(--cal-text-past);
 }
@@ -169,6 +177,11 @@
 
 .cal-mchip.is-booking .cal-mchip-dot {
   background: var(--cal-booking);
+}
+
+.cal-mchip.is-booking.has-colour .cal-mchip-dot,
+.cal-agenda-row.is-booking.has-colour .cal-agenda-swatch {
+  background: var(--cal-ev);
 }
 
 .cal-mchip.is-request .cal-mchip-dot {
@@ -285,6 +298,50 @@
   padding: 8px 16px 24px;
   overflow-y: auto;
   background: var(--cal-surface);
+}
+
+/* The lens, All or Bookings, stays at the top of the list as it scrolls. */
+.cal-agenda-lens {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  padding: 0 0 8px;
+  background: var(--cal-surface);
+}
+
+.cal-agenda-lens button {
+  min-height: 28px;
+  padding: 2px 12px;
+  border: 1px solid var(--cal-line-strong);
+  background: var(--cal-surface);
+  color: var(--cal-text);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cal-agenda-lens button:first-child {
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+
+.cal-agenda-lens button + button {
+  border-left: 0;
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+}
+
+.cal-agenda-lens button:hover {
+  background: var(--cal-hover);
+}
+
+.cal-agenda-lens button[aria-pressed="true"] {
+  background: var(--cal-text);
+  color: var(--cal-surface);
+}
+
+.cal-agenda-lens button:focus-visible {
+  outline: 2px solid var(--cal-focus);
+  outline-offset: -2px;
 }
 
 .cal-agenda-days,

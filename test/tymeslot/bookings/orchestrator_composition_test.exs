@@ -283,7 +283,12 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
     # the submit would then refuse.
     test "refuses an expired booking, as the reschedule submit does", %{user: user} do
       meeting = insert_future_meeting(user, nil)
-      {:ok, expired} = MeetingQueries.update_meeting_status(meeting, %{status: :expired})
+      # A lapsed approval request: `Approval` stamps the resolution.
+      {:ok, expired} =
+        MeetingQueries.update_meeting(meeting, %{
+          status: :expired,
+          approval_resolved_at: DateTime.utc_now(:second)
+        })
 
       assert {:error, {:not_reschedulable, :expired}} =
                Orchestrator.get_meeting_for_reschedule(expired.uid, user.id)

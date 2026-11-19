@@ -11,12 +11,12 @@ msgstr ""
 "Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
-#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
+#: lib/tymeslot/calendar_grid/guest_replies.ex
 #, elixir-autogen, elixir-format
 msgid "%{accepted} of %{total} guests going"
 msgstr "%{accepted} z %{total} hostů se zúčastní"
 
-#: lib/tymeslot_web/live/dashboard/calendar/preview_guests.ex
+#: lib/tymeslot/calendar_grid/guest_replies.ex
 #, elixir-autogen, elixir-format
 msgid ", %{count} declined"
 msgid_plural ", %{count} declined"
@@ -809,3 +809,24 @@ msgstr "Událost „%{title}“ se už maže."
 #, elixir-autogen, elixir-format
 msgid "“%{title}” is back"
 msgstr "Událost „%{title}“ je zpět"
+
+#: lib/tymeslot_web/live/dashboard/calendar/rail.ex
+#, elixir-autogen, elixir-format
+msgid "Show %{account} first to choose its calendars."
+msgstr "Pokud chcete vybrat kalendáře účtu %{account}, nejdřív tento účet zobrazte."
+
+#: lib/tymeslot_web/live/dashboard/calendar/preview.ex
+#, elixir-autogen, elixir-format
+msgid "%{count}/%{capacity} seats taken"
+msgstr "%{count}/%{capacity} míst obsazeno"
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_colours.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_colour.ex
+#, elixir-autogen, elixir-format
+msgid "Couldn't save that colour. Please try again."
+msgstr "Barvu se nepodařilo uložit. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/calendar/calendar_colour_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Colour of %{calendar}"
+msgstr "Barva kalendáře %{calendar}"

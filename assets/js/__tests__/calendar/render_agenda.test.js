@@ -2,7 +2,7 @@
  * Tests for the agenda list's HTML (calendar/render_agenda.js), run against jsdom.
  */
 import { expect, test } from "vitest";
-import { agendaGroups } from "../../calendar/agenda.js";
+import { agendaGroups, lensEvents } from "../../calendar/agenda.js";
 import { renderAgenda, renderAgendaDay } from "../../calendar/render_agenda.js";
 import { normaliseEvent, parseWall } from "../../calendar/time.js";
 
@@ -25,6 +25,10 @@ const strings = {
   agenda_from: "From %{time}",
   agenda_later: "Show later",
   agenda_loading: "Loading more",
+  agenda_lens_label: "Filter agenda",
+  agenda_lens_all: "All",
+  agenda_lens_bookings: "Bookings",
+  agenda_no_bookings: "No bookings in these weeks.",
 };
 const ev = (id, title, start, end, extra = {}) => normaliseEvent({ id, kind: "event", title, all_day: false, start, end, colour: "calendar-2", free: false, attention: false, ...extra });
 const days = ["2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17"];
@@ -116,4 +120,30 @@ test("renderAgendaDay draws one day, or the empty-day note", () => {
   holder.innerHTML = renderAgendaDay(group, { strings, timeFormat: "24h", now });
   expect(holder.querySelectorAll("button[data-event-id]")).toHaveLength(2);
   expect(renderAgendaDay(null, { strings, timeFormat: "24h", now })).toContain("Nothing planned on this day.");
+});
+
+test("the lens heads the list, the one shown pressed", () => {
+  const holder = draw();
+  const lens = holder.querySelector('.cal-agenda-lens[role="group"]');
+  expect(lens.getAttribute("aria-label")).toBe("Filter agenda");
+  expect([...lens.querySelectorAll("button")].map((b) => [b.dataset.agendaLens, b.textContent, b.getAttribute("aria-pressed")])).toEqual([
+    ["all", "All", "true"],
+    ["bookings", "Bookings", "false"],
+  ]);
+  expect(draw({ lens: "bookings" }).querySelector('[data-agenda-lens="bookings"]').getAttribute("aria-pressed")).toBe("true");
+});
+
+test("the bookings lens keeps only bookings, and says so when there are none", () => {
+  expect(lensEvents(events, "bookings").map((e) => e.id)).toEqual(["booking-4"]);
+  expect(lensEvents(events, "all")).toEqual(events);
+
+  const holder = draw({ groups: agendaGroups(lensEvents(events.slice(0, 3), "bookings"), days, { today: "2026-10-14" }), lens: "bookings" });
+  expect(holder.querySelector(".cal-agenda-empty").textContent).toBe("No bookings in these weeks.");
+  expect(draw({ groups: [] }).querySelector(".cal-agenda-empty").textContent).toBe("Nothing planned in these weeks.");
+});
+
+test("the bookings lens keeps the events made in Tymeslot too", () => {
+  const made = ev("event-8", "Intro call", "2026-10-15T10:00", "2026-10-15T10:30", { tymeslot: true });
+  const synced = ev("event-9", "Lunch", "2026-10-15T12:00", "2026-10-15T13:00", { tymeslot: false });
+  expect(lensEvents([...events, made, synced], "bookings").map((e) => e.id)).toEqual(["booking-4", "event-8"]);
 });

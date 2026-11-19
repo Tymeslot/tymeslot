@@ -112,7 +112,7 @@ msgstr "Buchung absagen"
 msgid "Connect a calendar"
 msgstr "Kalender verbinden"
 
-#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar to add events here."
 msgstr "Verbinden Sie einen Kalender, um hier Ereignisse hinzuzufügen."
@@ -410,7 +410,7 @@ msgstr "Was hinzufügen"
 msgid "You have too many time-off periods to block more time. Remove some first."
 msgstr "Sie haben zu viele Abwesenheiten, um weitere Zeit zu blockieren. Entfernen Sie zuerst einige."
 
-#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
 #, elixir-autogen, elixir-format
 msgid "Your connected calendars are read-only, so events can't be added here."
 msgstr "Ihre verbundenen Kalender sind schreibgeschützt, daher können hier keine Ereignisse hinzugefügt werden."
@@ -454,3 +454,13 @@ msgstr "Sie können höchstens eine Woche auf einmal sperren."
 #, elixir-autogen, elixir-format
 msgid "Moving…"
 msgstr "Wird verschoben…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar to add events, or use More options to send a Tymeslot meeting."
+msgstr "Verbinden Sie einen Kalender, um Ereignisse hinzuzufügen, oder senden Sie über „Weitere Optionen“ einen Tymeslot-Termin."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendars are read-only. Connect one you can write to, or use More options to send a Tymeslot meeting."
+msgstr "Ihre Kalender sind schreibgeschützt. Verbinden Sie einen, in den Sie schreiben können, oder senden Sie über „Weitere Optionen“ einen Tymeslot-Termin."

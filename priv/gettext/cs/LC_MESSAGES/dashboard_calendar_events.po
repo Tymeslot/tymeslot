@@ -264,11 +264,6 @@ msgstr "Tuto schůzku organizuje někdo jiný, takže Tymeslot nemůže přesuno
 msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
 msgstr "Toto je skupinová rezervace. Přesunout, zrušit nebo změnit účastníky můžete ve schůzce."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a meeting at this time. Please choose a different time."
-msgstr "V tuto dobu už máte schůzku. Vyberte prosím jiný čas."
-
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This repeat pattern can't be saved to Outlook."
@@ -322,7 +317,6 @@ msgid "%{method} %{minutes}"
 msgstr "%{method} %{minutes}"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "1 day before"
 msgstr "1 den předem"
@@ -333,11 +327,13 @@ msgid "1 hour before"
 msgstr "1 hodinu předem"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-mail"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Notification"
 msgstr "Oznámení"
@@ -407,3 +403,90 @@ msgid_plural "The latest update could not be emailed to these guests. Let them k
 msgstr[0] "Nejnovější změnu se tomuto hostovi nepodařilo odeslat e-mailem. Dejte mu vědět jinak."
 msgstr[1] "Nejnovější změnu se těmto hostům nepodařilo odeslat e-mailem. Dejte jim vědět jinak."
 msgstr[2] "Nejnovější změnu se těmto hostům nepodařilo odeslat e-mailem. Dejte jim vědět jinak."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "Add a title. A meeting without a main participant is known by its title."
+msgstr "Zadejte název. Schůzku bez hlavního účastníka poznáte podle názvu."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "An address, a room or a meeting point"
+msgstr "Adresa, místnost nebo místo setkání"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Custom location"
+msgstr "Vlastní místo"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Custom location…"
+msgstr "Vlastní místo…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone is an equal guest who can accept or decline. Only you can move or cancel the meeting."
+msgstr "Všichni jsou rovnocenní hosté a mohou pozvání přijmout nebo odmítnout. Schůzku můžete přesunout nebo zrušit jen vy."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Location (optional)"
+msgstr "Místo (nepovinné)"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Main participant"
+msgstr "Hlavní účastník"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "No location"
+msgstr "Bez místa"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Saved locations"
+msgstr "Uložená místa"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Shown on the calendar entry and in every invitation."
+msgstr "Zobrazí se v položce kalendáře a v každé pozvánce."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "That location can no longer be used. Please choose another one."
+msgstr "Toto místo už nelze použít. Vyberte prosím jiné."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "The main participant can move or cancel the meeting. Turn this off to invite everyone as an equal guest."
+msgstr "Hlavní účastník může schůzku přesunout nebo zrušit. Vypnutím této možnosti pozvete všechny jako rovnocenné hosty."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr "Tento čas už není k dispozici. Vyberte prosím jiný."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "The place is too long for a meeting. Keep it under 500 characters."
+msgstr "Místo je pro schůzku příliš dlouhé. Použijte méně než 500 znaků."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+msgstr "Událost byla smazána, ale schůzku se nepodařilo zrušit. Účastník nemusí být informován."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Událost byla smazána, ale účastníky se nepodařilo informovat."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Syncing with your calendar. Open the event to change the whole series."
+msgstr "Probíhá synchronizace s vaším kalendářem. Otevřete událost a změňte celou sérii."

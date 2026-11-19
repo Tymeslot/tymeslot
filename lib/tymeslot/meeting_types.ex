@@ -528,7 +528,13 @@ defmodule Tymeslot.MeetingTypes do
 
     with {:ok, attrs} <-
            FormMapper.build_attrs(form_params, ui_state, payment_opts[:currency]),
-         :ok <- FormValidation.check(user_id, attrs, meeting_type.max_participants || 1) do
+         :ok <-
+           FormValidation.check(
+             user_id,
+             attrs,
+             meeting_type.max_participants || 1,
+             meeting_type.series_mode
+           ) do
       update_meeting_type(meeting_type, attrs, payment_opts)
     end
   end
@@ -545,7 +551,13 @@ defmodule Tymeslot.MeetingTypes do
   def update_meeting_type_checked(meeting_type, attrs) do
     user_id = meeting_type.user_id
 
-    with :ok <- FormValidation.check(user_id, attrs, meeting_type.max_participants || 1) do
+    with :ok <-
+           FormValidation.check(
+             user_id,
+             attrs,
+             meeting_type.max_participants || 1,
+             meeting_type.series_mode
+           ) do
       update_meeting_type(meeting_type, attrs, FormMapper.payment_opts(user_id))
     end
   end

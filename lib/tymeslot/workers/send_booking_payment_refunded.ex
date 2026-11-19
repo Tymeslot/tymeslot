@@ -40,7 +40,6 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.TransactionalEmailDelivery
 
@@ -110,7 +109,8 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
     do: {:error, :missing_attendee_email}
 
   defp build_context(%BookingPaymentSchema{} = payment) do
-    meeting = load_meeting(payment.meeting_id)
+    # A series payment is named after its first session.
+    meeting = payment |> MeetingPayments.meetings_for_payment() |> List.first()
 
     context = %RefundContext{
       attendee_email: payment.attendee_email,
@@ -126,15 +126,6 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
     }
 
     {:ok, context}
-  end
-
-  defp load_meeting(nil), do: nil
-
-  defp load_meeting(meeting_id) do
-    case MeetingQueries.get_meeting(meeting_id) do
-      {:ok, meeting} -> meeting
-      {:error, _reason} -> nil
-    end
   end
 
   # The refund notice goes to the booker, so the title is in their language.

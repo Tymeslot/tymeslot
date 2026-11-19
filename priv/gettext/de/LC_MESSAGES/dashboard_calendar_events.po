@@ -262,11 +262,6 @@ msgstr "Diese Besprechung wird von jemand anderem organisiert. Tymeslot kann ein
 msgid "This is a group booking. Move it, cancel it or change who attends from the meeting instead."
 msgstr "Dies ist eine Gruppenbuchung. Verschieben, absagen oder ändern Sie die Teilnehmenden stattdessen über das Meeting."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a meeting at this time. Please choose a different time."
-msgstr "Zu dieser Zeit haben Sie bereits einen Termin. Bitte wählen Sie eine andere Uhrzeit."
-
 #: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
 #, elixir-autogen, elixir-format
 msgid "This repeat pattern can't be saved to Outlook."
@@ -318,7 +313,6 @@ msgid "%{method} %{minutes}"
 msgstr "%{method} %{minutes}"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
 #, elixir-autogen, elixir-format
 msgid "1 day before"
 msgstr "1 Tag vorher"
@@ -329,11 +323,13 @@ msgid "1 hour before"
 msgstr "1 Stunde vorher"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-Mail"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Notification"
 msgstr "Benachrichtigung"
@@ -401,3 +397,90 @@ msgid "The latest update could not be emailed to this guest. Let them know anoth
 msgid_plural "The latest update could not be emailed to these guests. Let them know another way."
 msgstr[0] "Die letzte Änderung konnte diesem Gast nicht per E-Mail zugestellt werden. Informieren Sie ihn auf anderem Weg."
 msgstr[1] "Die letzte Änderung konnte diesen Gästen nicht per E-Mail zugestellt werden. Informieren Sie sie auf anderem Weg."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "Add a title. A meeting without a main participant is known by its title."
+msgstr "Geben Sie einen Titel ein. Ein Termin ohne Hauptteilnehmer wird an seinem Titel erkannt."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "An address, a room or a meeting point"
+msgstr "Eine Adresse, ein Raum oder ein Treffpunkt"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Custom location"
+msgstr "Eigener Ort"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Custom location…"
+msgstr "Eigener Ort…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Everyone is an equal guest who can accept or decline. Only you can move or cancel the meeting."
+msgstr "Alle sind gleichberechtigte Gäste und können zu- oder absagen. Nur Sie können den Termin verschieben oder absagen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Location (optional)"
+msgstr "Ort (optional)"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Main participant"
+msgstr "Hauptteilnehmer"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "No location"
+msgstr "Kein Ort"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Saved locations"
+msgstr "Gespeicherte Orte"
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "Shown on the calendar entry and in every invitation."
+msgstr "Erscheint im Kalendereintrag und in jeder Einladung."
+
+#: lib/tymeslot_web/live/dashboard/calendar/creation.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "That location can no longer be used. Please choose another one."
+msgstr "Dieser Ort kann nicht mehr verwendet werden. Bitte wählen Sie einen anderen."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting_fields.ex
+#, elixir-autogen, elixir-format
+msgid "The main participant can move or cancel the meeting. Turn this off to invite everyone as an equal guest."
+msgstr "Der Hauptteilnehmer kann den Termin verschieben oder absagen. Schalten Sie dies aus, um alle als gleichberechtigte Gäste einzuladen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr "Diese Zeit ist nicht mehr verfügbar. Bitte wählen Sie eine andere."
+
+#: lib/tymeslot_web/live/dashboard/calendar/panel_meeting.ex
+#, elixir-autogen, elixir-format
+msgid "The place is too long for a meeting. Keep it under 500 characters."
+msgstr "Der Ort ist für einen Termin zu lang. Verwenden Sie weniger als 500 Zeichen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+msgstr "Ereignis gelöscht, aber die Absage des Termins ist fehlgeschlagen. Der Teilnehmer wird möglicherweise nicht benachrichtigt."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Ereignis gelöscht, aber die Teilnehmer konnten nicht benachrichtigt werden."
+
+#: lib/tymeslot_web/live/dashboard/calendar_edit_messages.ex
+#, elixir-autogen, elixir-format
+msgid "Syncing with your calendar. Open the event to change the whole series."
+msgstr "Wird mit Ihrem Kalender synchronisiert. Öffnen Sie das Ereignis, um die gesamte Serie zu ändern."

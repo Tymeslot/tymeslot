@@ -95,7 +95,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Recurrence.Series
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.ExternalCalendar
   alias Tymeslot.Meetings.MeetingState
 
   # `sync_last_error` is meant for the account owner, so every value written to
@@ -330,7 +330,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
   defp expects_calendar_event?(row, integration) do
     integration.id
-    |> Meetings.list_meetings_by_calendar_identifiers(Meetings.calendar_event_identifiers(row))
+    |> ExternalCalendar.list_meetings_by_calendar_identifiers(
+      ExternalCalendar.calendar_event_identifiers(row)
+    )
     |> Map.values()
     |> Enum.any?(&MeetingState.expects_calendar_event?/1)
   end

@@ -20,17 +20,23 @@ defmodule Tymeslot.Scheduling.SeatMoveContext do
       hand-edited username).
     * `:form_data` - the booking form's starting values: the participant's
       own details.
+    * `:window_until` - for a seat of a series, the last day it may move to
+      (`Tymeslot.BookingSeries.window_until/1`), which can lie past the
+      booking window; nil otherwise.
   """
 
+  alias Tymeslot.BookingSeries
+
   @enforce_keys [:token, :seat, :start, :form_data]
-  defstruct [:token, :seat, :start, :meeting_type, :form_data]
+  defstruct [:token, :seat, :start, :meeting_type, :form_data, :window_until]
 
   @type t :: %__MODULE__{
           token: String.t(),
           seat: %{participant: struct(), meeting: struct()},
           start: DateTime.t(),
           meeting_type: map() | nil,
-          form_data: %{String.t() => String.t()}
+          form_data: %{String.t() => String.t()},
+          window_until: Date.t() | nil
         }
 
   @doc "The context for the live `seat` behind `token`, committed to `meeting_type`."
@@ -45,7 +51,8 @@ defmodule Tymeslot.Scheduling.SeatMoveContext do
         "name" => participant.name,
         "email" => participant.email,
         "message" => participant.message || ""
-      }
+      },
+      window_until: BookingSeries.window_until(participant)
     }
   end
 end

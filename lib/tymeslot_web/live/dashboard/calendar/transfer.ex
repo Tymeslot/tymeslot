@@ -436,10 +436,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
     )
   end
 
-  # The event as the surface holds it: on the visible grid, or loaded but
-  # filtered out (a move to a hidden calendar lands there).
+  # The event as the surface holds it: a visible one first, then the panel's
+  # own (`PanelState.fetch_event/2`), then one loaded but filtered out (a move
+  # to a hidden calendar lands there).
   defp lookup(socket, id) do
-    case Map.fetch(socket.assigns.events_by_id, id) do
+    case PanelState.fetch_event(socket.assigns, id) do
       {:ok, _event} = found ->
         found
 

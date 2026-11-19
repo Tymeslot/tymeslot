@@ -10,6 +10,7 @@ defmodule Tymeslot.Bookings.Policy do
   `Tymeslot.Bookings.MeetingAttributes`, and its links by
   `Tymeslot.Bookings.MeetingLinks`.
   """
+  alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.Clock
   alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingState
@@ -40,7 +41,17 @@ defmodule Tymeslot.Bookings.Policy do
   layer renders a refusal (`TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage`).
   """
   @type meeting_state ::
-          :cancelled | :completed | :expired | :awaiting_approval | :started | :past | :planned
+          :cancelled
+          | :completed
+          | :expired
+          | :awaiting_approval
+          | :awaiting_verification
+          | :started
+          | :past
+          | :planned
+          | :already_requested
+          | :held_for_series_payment
+          | :held_for_series_approval
   @type cancel_refusal :: :already_cancelled | {:not_cancellable, meeting_state()}
   @type reschedule_refusal :: {:not_reschedulable, meeting_state()}
   @type booker_move_refusal :: :managed_by_host
@@ -71,6 +82,19 @@ defmodule Tymeslot.Bookings.Policy do
       meeting.status == :expired ->
         {:error, {:not_cancellable, :expired}}
 
+      # Cancelling would run the cancellation pipeline, which emails and
+      # notifies the organiser about a booking they must never hear of;
+      # letting the hold lapse releases it silently.
+      meeting.status == :awaiting_verification ->
+        {:error, {:not_cancellable, :awaiting_verification}}
+
+      # A session of a paid series still awaiting payment is held with its
+      # whole series on one checkout. Cancelling it alone would leave the
+      # payment unable to confirm the rest, so a held series is released only
+      # whole, when its checkout expires or is abandoned.
+      held_for_series_payment?(meeting) ->
+        {:error, {:not_cancellable, :held_for_series_payment}}
+
       meeting_is_current?(meeting) ->
         Logger.info("Blocked cancellation: meeting has already started",
           meeting_id: Map.get(meeting, :id)
@@ -89,6 +113,21 @@ defmodule Tymeslot.Bookings.Policy do
         :ok
     end
   end
+
+  defp held_for_series_payment?(%{status: :awaiting_payment, series_id: series_id})
+       when is_binary(series_id),
+       do: true
+
+  defp held_for_series_payment?(_meeting), do: false
+
+  # Only an open series request: a confirmed session the booker moved back
+  # into the approval gate is a request of its own, moved like any single
+  # booking awaiting approval.
+  defp held_for_series_approval?(%{status: :awaiting_approval, series_id: series_id} = meeting)
+       when is_binary(series_id),
+       do: SeriesApproval.series_request?(meeting)
+
+  defp held_for_series_approval?(_meeting), do: false
 
   @doc """
   Determines if a meeting can be rescheduled.
@@ -110,6 +149,18 @@ defmodule Tymeslot.Bookings.Policy do
       # the attendee would be told about a booking anyone else can still take.
       meeting.status == :expired ->
         {:error, {:not_reschedulable, :expired}}
+
+      # As for cancelling: the organiser must never hear of a held booking,
+      # and the host cannot see it to ask for a new time either.
+      meeting.status == :awaiting_verification ->
+        {:error, {:not_reschedulable, :awaiting_verification}}
+
+      # A session of a series held for approval is one part of a request the
+      # host answers whole (`Tymeslot.BookingSeries.Approval`). Moving it
+      # alone would leave that request asking for a time the booker no
+      # longer wants, so it stays put until the host has answered.
+      held_for_series_approval?(meeting) ->
+        {:error, {:not_reschedulable, :held_for_series_approval}}
 
       meeting_is_current?(meeting) ->
         Logger.info("Blocked reschedule: meeting has already started",
@@ -142,6 +193,10 @@ defmodule Tymeslot.Bookings.Policy do
   here would leave a request that still reads as approvable pointing at
   time that no longer holds.
 
+  A meeting already awaiting a new time from an earlier request is refused
+  with `{:not_reschedulable, :already_requested}`: the attendee has been
+  asked, and asking again would void the slot and email them a second time.
+
   A meeting confirmed from a poll (`Tymeslot.Meetings.HostManaged.managed?/1`) has
   nobody to ask for a new time: its host picks one with
   `Tymeslot.Bookings.HostMove.move/3`, so a request is refused with
@@ -159,9 +214,18 @@ defmodule Tymeslot.Bookings.Policy do
   def can_request_reschedule?(%{planned: true}), do: {:error, {:not_reschedulable, :planned}}
 
   def can_request_reschedule?(meeting) do
-    with :ok <- can_booker_move_meeting?(meeting) do
-      can_reschedule_meeting?(meeting)
+    with :ok <- can_booker_move_meeting?(meeting),
+         :ok <- can_reschedule_meeting?(meeting) do
+      refuse_pending_request(meeting)
     end
+  end
+
+  # A request already voided the slot and is waiting on the attendee; a
+  # second one would re-run the voiding and queue a duplicate email.
+  defp refuse_pending_request(meeting) do
+    if MeetingState.awaiting_new_time?(meeting),
+      do: {:error, {:not_reschedulable, :already_requested}},
+      else: :ok
   end
 
   @doc """

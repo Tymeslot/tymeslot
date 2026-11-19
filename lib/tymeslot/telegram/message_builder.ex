@@ -23,9 +23,77 @@ defmodule Tymeslot.Telegram.MessageBuilder do
   @requested EventTypes.to_event_type(:meeting_requested)
   @declined EventTypes.to_event_type(:meeting_declined)
   @request_expired EventTypes.to_event_type(:meeting_request_expired)
+  @series_created EventTypes.to_event_type(:meeting_series_created)
+  @series_cancelled EventTypes.to_event_type(:meeting_series_cancelled)
+  @series_requested EventTypes.to_event_type(:meeting_series_requested)
+  @series_declined EventTypes.to_event_type(:meeting_series_declined)
+  @series_request_expired EventTypes.to_event_type(:meeting_series_request_expired)
 
-  @spec build_message(String.t(), %{atom() => term()}, String.t()) :: String.t()
-  def build_message(@created, meeting, timezone) do
+  @doc """
+  Builds the message for a given event and meeting.
+
+  `series` is the event's `series` object
+  (`Tymeslot.BookingSeries.Automation`); a series event counts its
+  sessions from it, and names the first of them, which `meeting` is.
+  """
+  @spec build_message(String.t(), %{atom() => term()}, String.t(), map() | nil) :: String.t()
+  def build_message(event_type, meeting, timezone, series \\ nil)
+
+  def build_message(@series_created, meeting, timezone, series) do
+    String.trim("""
+    #{emoji(:calendar)} <b>New Series Booked</b>
+
+    <b>#{esc(attendee_name(meeting))}</b> booked #{session_count(series)} sessions of <i>#{esc(type_name(meeting))}</i>, starting #{format_time(meeting, timezone)}
+    #{email_line(meeting)}\
+    #{video_line(meeting, "Join the first session")}\
+    #{details_block(meeting)}\
+    #{link_line(meeting)}\
+    """)
+  end
+
+  def build_message(@series_cancelled, meeting, _timezone, series) do
+    String.trim("""
+    #{emoji(:cancel)} <b>Series Cancelled</b>
+
+    <b>#{esc(attendee_name(meeting))}</b>'s #{session_count(series)} remaining sessions of <i>#{esc(type_name(meeting))}</i> were cancelled
+    #{cancellation_reason(meeting)}\
+    #{link_line(meeting)}\
+    """)
+  end
+
+  def build_message(@series_requested, meeting, timezone, series) do
+    String.trim("""
+    #{emoji(:calendar)} <b>New Series Request</b>
+
+    <b>#{esc(attendee_name(meeting))}</b> asked for #{session_count(series)} sessions of <i>#{esc(type_name(meeting))}</i>, starting #{format_time(meeting, timezone)}
+    #{email_line(meeting)}\
+    #{deadline_line(meeting, timezone)}\
+    #{details_block(meeting)}\
+    #{link_line(meeting)}\
+    """)
+  end
+
+  def build_message(@series_declined, meeting, _timezone, series) do
+    String.trim("""
+    #{emoji(:cancel)} <b>Series Request Declined</b>
+
+    <b>#{esc(attendee_name(meeting))}</b>'s request for #{session_count(series)} sessions of <i>#{esc(type_name(meeting))}</i> was declined
+    #{decline_line(meeting)}\
+    #{link_line(meeting)}\
+    """)
+  end
+
+  def build_message(@series_request_expired, meeting, _timezone, series) do
+    String.trim("""
+    #{emoji(:cancel)} <b>Series Request Expired</b>
+
+    <b>#{esc(attendee_name(meeting))}</b>'s request for #{session_count(series)} sessions of <i>#{esc(type_name(meeting))}</i> expired
+    Nobody responded before the deadline, so the slots were released.
+    #{link_line(meeting)}\
+    """)
+  end
+
+  def build_message(@created, meeting, timezone, _series) do
     String.trim("""
     #{emoji(:calendar)} <b>New Meeting</b>
 
@@ -38,7 +106,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     """)
   end
 
-  def build_message(@cancelled, meeting, timezone) do
+  def build_message(@cancelled, meeting, timezone, _series) do
     String.trim("""
     #{emoji(:cancel)} <b>Meeting Cancelled</b>
 
@@ -49,7 +117,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     """)
   end
 
-  def build_message(@rescheduled, meeting, timezone) do
+  def build_message(@rescheduled, meeting, timezone, _series) do
     String.trim("""
     #{emoji(:reschedule)} <b>Meeting Rescheduled</b>
 
@@ -62,7 +130,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     """)
   end
 
-  def build_message(@requested, meeting, timezone) do
+  def build_message(@requested, meeting, timezone, _series) do
     String.trim("""
     #{emoji(:calendar)} <b>New Booking Request</b>
 
@@ -75,7 +143,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     """)
   end
 
-  def build_message(@declined, meeting, timezone) do
+  def build_message(@declined, meeting, timezone, _series) do
     String.trim("""
     #{emoji(:cancel)} <b>Booking Request Declined</b>
 
@@ -86,7 +154,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     """)
   end
 
-  def build_message(@request_expired, meeting, timezone) do
+  def build_message(@request_expired, meeting, timezone, _series) do
     String.trim("""
     #{emoji(:cancel)} <b>Booking Request Expired</b>
 
@@ -97,7 +165,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     """)
   end
 
-  def build_message(event_type, meeting, timezone) do
+  def build_message(event_type, meeting, timezone, _series) do
     String.trim("""
     #{emoji(:calendar)} <b>Meeting Update</b>
 
@@ -115,6 +183,16 @@ defmodule Tymeslot.Telegram.MessageBuilder do
   end
 
   # Private helpers
+
+  # The sessions a series event is about: those it lists, else the count
+  # the series has.
+  defp session_count(%{"sessions" => [_first | _rest] = sessions}), do: length(sessions)
+  defp session_count(%{"count" => count}) when is_integer(count), do: count
+  defp session_count(_series), do: "several"
+
+  # A series is of a meeting type; the meeting's own title names the
+  # attendee as well.
+  defp type_name(meeting), do: Map.get(meeting, :meeting_type) || meeting_title(meeting)
 
   defp esc(nil), do: ""
 
@@ -177,11 +255,11 @@ defmodule Tymeslot.Telegram.MessageBuilder do
 
   # The organiser's own join link: on providers that issue separate host and
   # guest URLs, `attendee_video_url` would let them in without host controls.
-  defp video_line(meeting) do
+  defp video_line(meeting, label \\ "Join video call") do
     video_url = meeting.organizer_video_url || meeting.meeting_url
 
     if safe_url?(video_url) do
-      "\n#{emoji(:video)} <a href=\"#{esc(video_url)}\">Join video call</a>"
+      "\n#{emoji(:video)} <a href=\"#{esc(video_url)}\">#{label}</a>"
     else
       ""
     end

@@ -371,19 +371,16 @@ msgid "Total"
 msgstr "Усього"
 
 #: lib/tymeslot/notifications/event_options.ex
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
 msgstr "Спрацьовує, коли змінюється час бронювання"
 
 #: lib/tymeslot/notifications/event_options.ex
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
 msgstr "Спрацьовує після успішного створення нового бронювання"
 
 #: lib/tymeslot/notifications/event_options.ex
-#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
 msgstr "Спрацьовує, коли наявне бронювання скасовується"
@@ -710,3 +707,53 @@ msgstr "Призупинено"
 #, elixir-autogen, elixir-format
 msgid "Paused: your plan doesn't include automations. Upgrading resumes it."
 msgstr "Призупинено: ваш тариф не включає автоматизацію. Після переходу на вищий тариф вебхук відновиться автоматично."
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Booked"
+msgstr "Серію заброньовано"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Cancelled"
+msgstr "Серію скасовано"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when someone books a series of sessions, instead of Meeting Created for each session"
+msgstr "Спрацьовує один раз, коли хтось бронює серію сесій, замість «Зустріч створено» для кожної сесії"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when the remaining sessions of a series are cancelled together, instead of Meeting Cancelled for each session"
+msgstr "Спрацьовує один раз, коли решту сесій серії скасовують разом, замість «Зустріч скасовано» для кожної сесії"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Declined"
+msgstr "Серію відхилено"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Request Expired"
+msgstr "Термін запиту на серію минув"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Series Requested"
+msgstr "Серію запитано"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when nobody answers a series request before its deadline, instead of Booking Request Expired for each session"
+msgstr "Спрацьовує один раз, коли на запит на серію ніхто не відповідає до завершення строку, замість «Термін запиту на бронювання минув» для кожної сесії"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when someone requests a series of sessions that needs your approval, instead of Booking Requested for each session"
+msgstr "Спрацьовує один раз, коли хтось запитує серію сесій, що потребує вашого схвалення, замість «Бронювання запитано» для кожної сесії"
+
+#: lib/tymeslot/notifications/event_options.ex
+#, elixir-autogen, elixir-format
+msgid "Triggers once when you decline a series request, instead of Booking Declined for each session"
+msgstr "Спрацьовує один раз, коли ви відхиляєте запит на серію, замість «Бронювання відхилено» для кожної сесії"

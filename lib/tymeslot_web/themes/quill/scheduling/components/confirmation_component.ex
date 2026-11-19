@@ -15,10 +15,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   alias TymeslotWeb.Themes.Shared.Components.GroupSession
   alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
+  alias TymeslotWeb.Themes.Shared.Components.VerificationNotice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PathHandlers
+  alias TymeslotWeb.Themes.Shared.SeriesSummary
   alias TymeslotWeb.Themes.Shared.StepEvents
 
   use TymeslotWeb.Components.CoreComponents
@@ -34,7 +36,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
     assigns =
       assign(assigns,
         navigable_steps: Runtime.navigable_steps(assigns),
-        step_numbers: Runtime.step_numbers(assigns)
+        step_numbers: Runtime.step_numbers(assigns),
+        follow_ups: ConfirmationText.follow_ups?(assigns),
+        series_count: SeriesSummary.booked_count(assigns)
       )
 
     ~H"""
@@ -57,22 +61,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       <div class="relative">
                         <div class={[
                           "confirmation-badge rounded-full flex items-center justify-center",
-                          ApprovalDisplay.awaiting_approval?(assigns) && "confirmation-badge--pending"
+                          ConfirmationText.pending?(assigns) && "confirmation-badge--pending"
                         ]}>
                           <.icon
-                            :if={!ApprovalDisplay.awaiting_approval?(assigns)}
-                            name="hero-check"
-                            class="confirmation-badge-icon stroke-3"
-                          />
-                          <.icon
-                            :if={ApprovalDisplay.awaiting_approval?(assigns)}
-                            name="hero-clock"
+                            name={ConfirmationText.badge_icon(assigns)}
                             class="confirmation-badge-icon stroke-3"
                           />
                         </div>
                         <div class={[
                           "confirmation-badge-dot absolute rounded-full flex items-center justify-center",
-                          ApprovalDisplay.awaiting_approval?(assigns) &&
+                          ConfirmationText.pending?(assigns) &&
                             "confirmation-badge-dot--pending"
                         ]}>
                           <.icon name="hero-bell-mini" class="confirmation-badge-dot-icon" />
@@ -83,7 +81,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       <h1 class="section-header confirmation-title">
                         {headline(assigns)}
                       </h1>
-                      <p class="confirmation-subtitle text-quill-primary">
+                      <p
+                        class="confirmation-subtitle text-quill-primary"
+                        data-testid={!@follow_ups && "check-inbox"}
+                      >
                         {subtitle(assigns)}
                       </p>
                     </div>
@@ -96,10 +97,26 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     class="mt-4"
                   />
 
+                  <VerificationNotice.resend
+                    :if={!@follow_ups}
+                    state={assigns[:verification_resend]}
+                    class="mt-4"
+                  />
+
                   <GroupSession.confirmation_line meeting_type={@meeting_type} class="mt-4" />
 
                   <.meeting_details_card title={@meeting_type && @meeting_type.name}>
+                    <SeriesSummary.booked
+                      :if={@series_count}
+                      series={@series}
+                      meetings={@series_meetings}
+                      timezone={@user_timezone}
+                      organizer_profile={@organizer_profile}
+                      duration={BookingText.duration_label(assigns)}
+                      label_class="booking-detail-label"
+                    />
                     <.booking_details
+                      :if={is_nil(@series_count)}
                       date={@selected_date}
                       time={@selected_time}
                       duration={BookingText.duration_label(assigns)}
@@ -146,7 +163,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           <.icon name="hero-envelope-mini" class="confirmation-email-link w-4 h-4" />
                         </div>
                         <p class="text-sm text-white">
-                          {if ApprovalDisplay.awaiting_approval?(assigns),
+                          {if ConfirmationText.pending?(assigns),
                             do: dgettext("booking_confirmation", "Sent to"),
                             else: dgettext("booking_confirmation", "Confirmation sent to")}
                           <span class="confirmation-email-link font-semibold">
@@ -181,7 +198,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
                   <div class="confirmation-actions">
                     <a
-                      :if={PathHandlers.calendar_ics_path(assigns)}
+                      :if={
+                        @follow_ups && is_nil(@series_count) &&
+                          PathHandlers.calendar_ics_path(assigns)
+                      }
                       href={PathHandlers.calendar_ics_path(assigns)}
                       download
                       class="action-button action-button--primary calendar-download-button"
@@ -204,7 +224,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     </button>
                   </div>
 
-                  <p class="confirmation-help-text mt-3 text-xs">
+                  <p :if={@follow_ups} class="confirmation-help-text mt-3 text-xs">
                     {if ApprovalDisplay.awaiting_approval?(assigns),
                       do:
                         dgettext(
@@ -334,16 +354,26 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   # an invitee sees before the emails arrive, so the heading changes too, not
   # just a note underneath it. Which status applies is decided in
   # ConfirmationText; only the wording is Quill's.
+  defp headline(%{series_count: count} = assigns) when is_integer(count),
+    do: SeriesSummary.headline(assigns, count)
+
   defp headline(assigns) do
     case ConfirmationText.status(assigns) do
+      :check_inbox -> ConfirmationText.check_inbox_headline(:quill)
       :held -> dgettext("booking_confirmation", "Request sent!")
       :rescheduled -> dgettext("booking_confirmation", "Meeting Rescheduled!")
       :confirmed -> dgettext("booking_confirmation", "Meeting Confirmed!")
     end
   end
 
+  defp subtitle(%{series_count: count} = assigns) when is_integer(count),
+    do: SeriesSummary.message(assigns, :quill)
+
   defp subtitle(assigns) do
     case ConfirmationText.status(assigns) do
+      :check_inbox ->
+        ConfirmationText.check_inbox_message(assigns, :quill)
+
       :held ->
         ConfirmationText.held_message(assigns[:name], assigns[:organizer_profile], :quill)
 

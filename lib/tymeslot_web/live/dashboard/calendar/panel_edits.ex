@@ -190,11 +190,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
     end
   end
 
-  defp target_event(%{events_by_id: by_id} = assigns, event_id) do
-    case {Map.fetch(by_id, event_id), assigns.panel} do
-      {{:ok, event}, _panel} -> event
-      {:error, %{event_id: ^event_id, event: event}} -> event
-      {:error, _other} -> nil
+  defp target_event(assigns, event_id) do
+    case PanelState.fetch_event(assigns, event_id) do
+      {:ok, event} -> event
+      :error -> nil
     end
   end
 

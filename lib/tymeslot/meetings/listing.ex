@@ -56,7 +56,9 @@ defmodule Tymeslot.Meetings.Listing do
   def list_user_meeting(user_id, meeting_id) when is_binary(meeting_id) do
     case UUID.cast(String.trim(meeting_id)) do
       {:ok, id} ->
-        items = list_organizer_meetings_internal(user_id, id: id, per_page: 1)
+        items =
+          list_organizer_meetings_internal(user_id, id: id, per_page: 1, series_sessions: true)
+
         {:ok, build_cursor_page(items, 1)}
 
       :error ->
@@ -105,8 +107,9 @@ defmodule Tymeslot.Meetings.Listing do
         "cancelled" ->
           [status: :cancelled]
 
+        # A request card lists every session of a series request.
         "awaiting_approval" ->
-          [status: :awaiting_approval]
+          [status: :awaiting_approval, series_sessions: true]
 
         _other ->
           []
@@ -158,7 +161,8 @@ defmodule Tymeslot.Meetings.Listing do
       after_start: after_start,
       after_id: after_id,
       order: order,
-      booking_page: Keyword.get(opts, :booking_page)
+      booking_page: Keyword.get(opts, :booking_page),
+      series_sessions: Keyword.get(opts, :series_sessions, false)
     )
   end
 

@@ -5,6 +5,24 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Notifications.EventOptions
+
+  # Every event the webhook form offers (`EventOptions.options/0`), each
+  # with its own icon; an event added later shows the generic one.
+  @event_icons %{
+    "meeting.created" => "hero-calendar",
+    "meeting.series_created" => "hero-calendar-days",
+    "meeting.requested" => "hero-inbox-arrow-down",
+    "meeting.series_requested" => "hero-inbox-stack",
+    "meeting.declined" => "hero-hand-raised",
+    "meeting.series_declined" => "hero-hand-raised",
+    "meeting.request_expired" => "hero-clock",
+    "meeting.series_request_expired" => "hero-clock",
+    "meeting.cancelled" => "hero-x-mark",
+    "meeting.series_cancelled" => "hero-calendar-date-range",
+    "meeting.rescheduled" => "hero-arrow-path"
+  }
+
   @spec webhook_documentation(map()) :: Phoenix.LiveView.Rendered.t()
   def webhook_documentation(assigns) do
     ~H"""
@@ -80,36 +98,18 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
             </h3>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 ml-5">
-            <%= for {event, icon_name} <- [
-              {"meeting.created", "hero-calendar"},
-              {"meeting.cancelled", "hero-x-mark"},
-              {"meeting.rescheduled", "hero-arrow-path"}
-            ] do %>
-              <div class="p-4 bg-white rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 hover:shadow-md transition-all">
-                <div class="flex items-center gap-2 mb-2">
-                  <div class="p-1.5 bg-turquoise-50 rounded-token-lg">
-                    <.icon name={icon_name} class="w-4 h-4 text-turquoise-600" />
-                  </div>
-                  <code class="text-token-sm font-black text-tymeslot-900">{event}</code>
+            <div
+              :for={event <- EventOptions.options()}
+              class="p-4 bg-white rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 hover:shadow-md transition-all"
+            >
+              <div class="flex items-center gap-2 mb-2">
+                <div class="p-1.5 bg-turquoise-50 rounded-token-lg">
+                  <.icon name={event_icon(event.value)} class="w-4 h-4 text-turquoise-600" />
                 </div>
-                <p class="text-token-xs text-tymeslot-600 font-medium">
-                  <%= case event do %>
-                    <% "meeting.created" -> %>
-                      {dgettext(
-                        "dashboard_automation",
-                        "Triggers when a new booking is successfully created"
-                      )}
-                    <% "meeting.cancelled" -> %>
-                      {dgettext(
-                        "dashboard_automation",
-                        "Triggers when an existing booking is cancelled"
-                      )}
-                    <% "meeting.rescheduled" -> %>
-                      {dgettext("dashboard_automation", "Triggers when a booking time is changed")}
-                  <% end %>
-                </p>
+                <code class="text-token-sm font-black text-tymeslot-900">{event.value}</code>
               </div>
-            <% end %>
+              <p class="text-token-xs text-tymeslot-600 font-medium">{event.description}</p>
+            </div>
           </div>
         </div>
 
@@ -195,4 +195,6 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
     </.card>
     """
   end
+
+  defp event_icon(value), do: Map.get(@event_icons, value, "hero-bolt")
 end

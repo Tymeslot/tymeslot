@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
   alias TymeslotWeb.Dashboard.Calendar.BookingActions
   alias TymeslotWeb.Dashboard.Calendar.BookingMove
+  alias TymeslotWeb.Dashboard.Calendar.CalendarColours
   alias TymeslotWeb.Dashboard.Calendar.CalendarsSheet
   alias TymeslotWeb.Dashboard.Calendar.Canvas
   alias TymeslotWeb.Dashboard.Calendar.ClientStrings
@@ -29,7 +30,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.DateSheet
   alias TymeslotWeb.Dashboard.Calendar.Deletion
   alias TymeslotWeb.Dashboard.Calendar.EventPanel
-  alias TymeslotWeb.Dashboard.Calendar.FreeBusy
   alias TymeslotWeb.Dashboard.Calendar.IcsImport
   alias TymeslotWeb.Dashboard.Calendar.ImportModal
   alias TymeslotWeb.Dashboard.Calendar.LayerChoices
@@ -37,6 +37,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.Navigation
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelEvents
+  alias TymeslotWeb.Dashboard.Calendar.PanelGuests
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
   alias TymeslotWeb.Dashboard.Calendar.PanelState
@@ -53,6 +54,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   alias TymeslotWeb.Dashboard.Calendar.ShortcutHelp
   alias TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
+  alias TymeslotWeb.Dashboard.Calendar.SurfaceEventActions
   alias TymeslotWeb.Dashboard.Calendar.SurfaceMenus
   alias TymeslotWeb.Dashboard.Calendar.SurfaceModals
   alias TymeslotWeb.Dashboard.Calendar.SyncBanner
@@ -78,12 +80,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   # which month the mini month shows.
   @menu_events ~w(calendar:toggle_menu calendar:close_menu calendar:mini_shift)
 
-  @refresh_actions ReloadQueue.refresh_actions()
+  # `calendar:*` events answered by `CalendarColours`: a calendar's own colour.
+  @colour_events ~w(calendar:calendar_colour_open calendar:set_calendar_colour)
 
-  # What each prompt can send; the module that acts on it parses it again.
-  @timing_scopes ~w(this_only following all)
-  @delete_scopes ~w(occurrence series)
-  @repeat_scopes ~w(following all)
+  # `calendar:*` events on one event or draft, answered by
+  # `SurfaceEventActions`: open, edit, busy or free, create, More options,
+  # the series question and delete.
+  @event_actions ~w(calendar:open calendar:edit calendar:set_free calendar:create
+    calendar:more_options calendar:choose_scope calendar:cancel_scope calendar:delete
+    calendar:confirm_delete calendar:cancel_delete calendar:close_preview)
+
+  @refresh_actions ReloadQueue.refresh_actions()
 
   @impl Phoenix.LiveComponent
   def mount(socket),
@@ -177,6 +184,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def update(%{action: :series_move_failed, moved_event: event}, socket),
     do: {:ok, Transfer.series_failed(socket, event)}
 
+  def update(
+        %{action: :guests_pending_due, event_id: id, watch: watch, backoff: backoff},
+        socket
+      ),
+      do: {:ok, PanelGuests.recheck_pending(socket, id, watch, backoff)}
+
   def update(%{action: :delete_settled, token: token, outcome: outcome}, socket),
     do: {:ok, Deletion.settled(socket, token, outcome)}
 
@@ -207,10 +220,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   # Meeting mode's answer, through the dashboard (see `PanelMeeting`); the
   # booking it made shows after the reload.
-  def update(%{action: :ad_hoc_meeting_created}, socket),
-    do: {:ok, socket |> PanelMeeting.created() |> schedule_reload(:events_updated)}
+  def update(%{action: :ad_hoc_meeting_created, request: request}, socket),
+    do: {:ok, socket |> PanelMeeting.created(request) |> schedule_reload(:events_updated)}
 
-  def update(%{action: :ad_hoc_meeting_failed}, socket), do: {:ok, PanelMeeting.failed(socket)}
+  def update(%{action: :ad_hoc_meeting_failed, request: request}, socket),
+    do: {:ok, PanelMeeting.failed(socket, request)}
 
   # The power layer's actions go to `PowerEvents`; any other action this
   # surface has no clause for is ignored. Its lists are read at run time, so
@@ -299,6 +313,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         mini_cursor={@mini_cursor}
         week_start={Period.week_start(@preferences.week_start_day)}
         preferences={@preferences}
+        desktop_permission={@desktop_permission}
         time_format={@time_format}
         rail_open={@rail_open}
         calendar_focus={@calendar_focus}
@@ -335,6 +350,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           problem_ids={@problem_ids}
           reauth_ids={@reauth_ids}
           bookable={LayerChoices.rail(@preferences, @bookable_types)}
+          colours={calendar_colours(assigns)}
           timezone={@timezone}
           target={@myself}
         />
@@ -354,6 +370,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
           event={@panel_event}
           context={@panel_context}
           calendar_choices={CalendarDirectory.choices(@accounts)}
+          has_accounts={@accounts != []}
+          integrations={@integrations}
           video_integrations={@video_integrations}
           guest_form_key={@guest_form_key}
           moving={not is_nil(@transfer)}
@@ -378,7 +396,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         problem_ids={@problem_ids}
         reauth_ids={@reauth_ids}
         bookable={LayerChoices.rail(@preferences, @bookable_types)}
+        colours={calendar_colours(assigns)}
         preferences={@preferences}
+        desktop_permission={@desktop_permission}
         time_format={@time_format}
         timezone={@timezone}
         target={@myself}
@@ -411,6 +431,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
         delete_prompt={@delete_prompt}
         series_move_prompt={@series_move_prompt}
         remove_guest_prompt={@remove_guest_prompt}
+        discard_draft_prompt={@discard_draft_prompt}
         decline_request_modal_data={@decline_request_modal_data}
         cancel_meeting_modal_data={@cancel_meeting_modal_data}
         cancel_booking_payment={@cancel_booking_payment}
@@ -476,35 +497,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def handle_event("calendar:sync_account", %{"integration-id" => id}, socket),
     do: {:noreply, SyncStatus.sync_account(socket, id)}
 
-  # Only an event in the loaded window, which holds this organiser's events
-  # alone, can be opened; anything else answers `opened: false`.
-  def handle_event("calendar:open", %{"id" => id}, socket) when is_binary(id) do
-    case Map.fetch(socket.assigns.events_by_id, id) do
-      {:ok, event} ->
-        preview = Preview.build(event, Preview.context(socket.assigns))
-
-        {:reply, %{opened: true},
-         socket |> PanelState.give_way() |> assign(preview: preview, open_menu: nil)}
-
-      :error ->
-        {:reply, %{opened: false}, assign(socket, :preview, nil)}
-    end
-  end
-
-  def handle_event("calendar:open", _params, socket), do: {:reply, %{opened: false}, socket}
-
-  # Opens the side panel on a loaded event: from the hook (E on a focused
-  # event) or the preview's Edit button.
-  def handle_event("calendar:edit", %{"id" => id}, socket) when is_binary(id),
-    do: {:noreply, PanelState.open_edit(socket, id)}
-
-  def handle_event("calendar:edit", _params, socket), do: {:noreply, socket}
-
-  def handle_event("calendar:set_free", %{"id" => id, "free" => free}, socket)
-      when is_binary(id) and free in ["true", "false"],
-      do: {:noreply, FreeBusy.set(socket, id, free == "true")}
-
-  def handle_event("calendar:set_free", _params, socket), do: {:noreply, socket}
+  def handle_event(event, params, socket) when event in @event_actions,
+    do: SurfaceEventActions.handle(event, params, socket)
 
   # Everything the side panel sends (see `PanelEvents`).
   def handle_event("panel:" <> name, params, socket),
@@ -521,83 +515,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def handle_event(event, params, socket) when event in @menu_events,
     do: SurfaceMenus.handle(event, params, socket)
 
+  def handle_event(event, params, socket) when event in @colour_events,
+    do: CalendarColours.handle(event, params, socket)
+
   def handle_event(event, params, socket) when event in @view_events,
     do: ViewEvents.handle(event, params, socket)
 
   def handle_event("calendar:move", params, socket),
     do: {:noreply, Manipulation.move(socket, params)}
 
-  # The reply tells the hook whether its draft was accepted, or which field
-  # was refused and why (see `Creation`).
-  def handle_event("calendar:create", params, socket) do
-    {reply, socket} = Creation.create(socket, params)
-    {:reply, reply, socket}
-  end
-
-  # Quick create's More options: the panel opens in its New event state on
-  # the draft (see `PanelNew`); the hook keeps drawing it until the payload.
-  # Every path replies, so the popover never waits on its timeout.
-  def handle_event("calendar:more_options", params, socket) do
-    {opened, socket} = PanelNew.open(socket, params)
-    {:reply, %{opened: opened}, socket}
-  end
-
   def handle_event("calendar:undo", _params, socket), do: {:noreply, Manipulation.undo(socket)}
 
   def handle_event("calendar:dismiss_toast", _params, socket),
     do: {:noreply, Toast.dismiss(socket)}
-
-  # The scope is client input: only the scopes the open prompt offers are
-  # acted on.
-  def handle_event("calendar:choose_scope", %{"scope" => scope}, socket)
-      when is_binary(scope) do
-    case socket.assigns.series_prompt do
-      %{kind: :timing} when scope in @timing_scopes ->
-        {:noreply, Manipulation.choose_scope(socket, scope)}
-
-      %{kind: :panel} when scope in @timing_scopes ->
-        {:noreply, PanelEdits.choose_scope(socket, scope)}
-
-      %{kind: :panel_repeat} when scope in @repeat_scopes ->
-        {:noreply, PanelEdits.choose_scope(socket, scope)}
-
-      %{kind: :delete} when scope in @delete_scopes ->
-        {:noreply, Deletion.choose_scope(socket, scope)}
-
-      _none_or_not_offered ->
-        {:noreply, socket}
-    end
-  end
-
-  def handle_event("calendar:choose_scope", _params, socket), do: {:noreply, socket}
-
-  def handle_event("calendar:cancel_scope", _params, socket),
-    do: {:noreply, Manipulation.cancel_scope(socket)}
-
-  def handle_event("calendar:delete", %{"id" => id}, socket) when is_binary(id),
-    do: {:noreply, Deletion.request(socket, id)}
-
-  def handle_event("calendar:delete", _params, socket), do: {:noreply, socket}
-
-  def handle_event("calendar:confirm_delete", %{"notify" => notify}, socket)
-      when is_binary(notify),
-      do: {:noreply, Deletion.confirm(socket, notify)}
-
-  def handle_event("calendar:confirm_delete", _params, socket), do: {:noreply, socket}
-
-  def handle_event("calendar:cancel_delete", _params, socket),
-    do: {:noreply, Deletion.cancel(socket)}
-
-  # Focus goes back to the event chip only for the Close button and Escape;
-  # a click elsewhere (`refocus: "false"` from the click-away) keeps focus
-  # where the organiser put it.
-  def handle_event("calendar:close_preview", params, socket) do
-    socket = assign(socket, :preview, nil)
-
-    if Map.get(params, "refocus") == "false",
-      do: {:noreply, socket},
-      else: {:noreply, push_event(socket, "calendar:preview-closed", %{})}
-  end
 
   # Every other event is the power layer's (`PowerEvents.events/0`), read at
   # run time for the reason given above `update/2`'s last action clause.
@@ -612,4 +542,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
       do: PowerEvents.async(key, result, socket),
       else: SurfaceBookingEvents.async(key, result, socket)
   end
+
+  # What the calendar lists draw each calendar's colour picker from.
+  defp calendar_colours(assigns),
+    do: %{keys: assigns.calendar_colour_keys, open: assigns.calendar_colour_open}
 end

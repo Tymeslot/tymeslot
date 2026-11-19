@@ -24,7 +24,9 @@
  * meeting type (calendar_canvas/opening.js), which hides the field and saves
  * through `calendar:open_booking` instead.
  * More options pushes `calendar:more_options` and, once the panel opened,
- * hands the draft to it. Escape, or a press outside, cancels; Escape
+ * hands the draft to it; when the panel first asks about a draft of its own
+ * with uninvited guests, `calendar:more-options-again` chooses it again
+ * after Discard. Escape, or a press outside, cancels; Escape
  * returns focus to where it was. Tab cycles inside the popover. A draft
  * being saved cannot be cancelled: the server is already writing it.
  *
@@ -64,6 +66,9 @@ export const CreateMixin = {
       // A press on a sheet's scrim is left to the scrim's click, which
       // cancels; the tap then never reaches the grid under it.
       if (e.target.closest?.("[data-sheet-scrim]")) return;
+      // A press in a dialog the popover waits on (the side panel asking
+      // whether to discard its draft before More options) is the dialog's.
+      if (e.target.closest?.('[role="dialog"], dialog')) return;
       if (!this.quick || this.quick.element.contains(e.target) || e.target.closest?.("[data-draft-id]")) return;
       this.cancelQuickCreate({ restoreFocus: false });
     };
@@ -87,6 +92,11 @@ export const CreateMixin = {
     // (with Undo where it can), so the doubt the notice voiced is over.
     this.handleEvent("calendar:create-settled", ({ draft }) => {
       if (this.notice && this.notice.dataset.draft === draft) this.closeNotice();
+    });
+    // More options waited on the panel's question about a draft with
+    // uninvited guests; the organiser chose Discard, so it is chosen again.
+    this.handleEvent("calendar:more-options-again", ({ draft }) => {
+      if (this.draft?.id === draft) this.moreOptions();
     });
     this.el.addEventListener("scroll", this.quickScroll, true);
     this.el.addEventListener("calendar:quick-create", this.quickCreateEvent);
@@ -469,7 +479,6 @@ export const CreateMixin = {
 
   moreOptions() {
     if (this.draft?.status !== "editing") return;
-    if (!(this.settings.calendars || []).length) return;
     this.updateDraft({ ...this.draft, status: "opening", error: null });
     const { id } = this.draft;
     const unlock = () => {

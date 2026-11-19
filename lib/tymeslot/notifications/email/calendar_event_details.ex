@@ -49,7 +49,10 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
   @type change :: {:title | :location | :description | :video_link | :time, term(), term()}
 
   @doc """
-  Invitation details from the job args of a `send_calendar_invitation` job.
+  Invitation details from the job args of a `send_calendar_invitation` job,
+  for an organiser loaded with their profile
+  (`Tymeslot.Auth.get_user_with_profile/1`), which names them and gives the
+  timezone the event is stated in.
   `:method` is `:cancel` for a cancellation (`:request` otherwise, and for a
   job enqueued before the method was read), `:series` whether that
   cancellation takes every occurrence of a recurring event, and `:removed`
@@ -73,7 +76,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
          video_link: args["event_video_link"],
          description: args["event_description"],
          recurrence_rule: args["event_recurrence_rule"],
-         organizer_name: user.name || user.email,
+         organizer_name: organiser_name(user),
          organizer_email: user.email,
          organizer_user_id: user.id,
          method: parse_method(args["method"]),
@@ -155,7 +158,8 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
   end
 
   @doc """
-  Update details for the cached event. `{:error, :no_timing}` for a row that
+  Update details for the cached event, for an organiser loaded as for
+  `invitation_details/2`. `{:error, :no_timing}` for a row that
   carries neither representation's fields, which nothing can describe.
   `:series` is `:all` or `:following` for the update of a whole series or
   of its occurrences from the edited one on, `nil` for one event.
@@ -175,7 +179,7 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
          location: current_event.location,
          video_link: video_link(current_event),
          description: current_event.description,
-         organizer_name: user.name || user.email,
+         organizer_name: organiser_name(user),
          organizer_email: user.email,
          organizer_user_id: user.id,
          changes: Enum.map(changes, &change_in_zone(&1, view.timezone)),
@@ -226,17 +230,26 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
     }
   end
 
+  # What the guest knows the organiser by, as a booking's emails name them:
+  # the name on their profile, then the one their account was created with
+  # (`Profiles.user_display_name/1`), and only then their address. An account
+  # made with an email and a password has no name of its own, so reading
+  # `user.name` alone named nearly every organiser by their address.
+  defp organiser_name(user), do: Profiles.user_display_name(user) || user.email
+
   # A timed event's instants shifted into the organiser's timezone, with the
   # date taken there, so an event at 00:30 in Berlin is not announced on the
-  # day before. An all-day event has dates only and is left as it is.
+  # day before. An all-day event has dates only and is left as it is. The
+  # zone and the language are read from the user as loaded, profile included,
+  # so one email job reads the organiser once.
   defp in_organiser_view(timing, user) do
-    timezone = Profiles.get_user_timezone(user.id)
+    timezone = Profiles.timezone(Map.get(user, :profile))
 
     timing
     |> shift_timing(timezone)
     |> Map.merge(%{
       timezone: timezone,
-      attendee_locale: RecipientLocale.locale_for_user_id(user.id)
+      attendee_locale: RecipientLocale.locale_for(user)
     })
   end
 

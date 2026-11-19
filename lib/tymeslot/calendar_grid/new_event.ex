@@ -9,12 +9,16 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
   the calendar it actually wrote to, the identity it reported, the place,
   free/busy and the guests. Nothing is cached for a create that did not
   reach the calendar; a queued CalDAV create is tagged by the offline queue
-  instead.
+  instead. A repeating event is cached as one row for the whole series, with
+  the zone it was written in, and a sync is asked for to bring its
+  occurrences, which are previewed from the row until it has
+  (`Tymeslot.Integrations.Calendar.SeriesPreview`).
   """
 
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.CalendarGrid.SeriesCarry
+  alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -50,8 +54,9 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
   def create(user_id, payload) when is_integer(user_id) and is_map(payload) do
     with {:ok, result} <-
            payload |> Map.put(:user_id, user_id) |> EventCreation.run_create_event() do
-      attrs = row_attrs(result)
+      attrs = row_attrs(result, payload[:timezone])
       :ok = cache(attrs)
+      sync_series(attrs)
 
       {:ok,
        %{
@@ -91,9 +96,10 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
   # The provider's identity (`provider_event_id`, `etag`) is the only one the
   # row has until a full sync runs; either may be nil, as a CalDAV server is
   # not obliged to answer a PUT with an ETag.
-  defp row_attrs(result) do
+  defp row_attrs(result, timezone) do
     creating = result.creating
     all_day = Map.get(creating, :all_day, false)
+    rule = Map.get(creating, :recurrence_rule)
 
     all_day
     |> timing(result.start_at, result.end_at)
@@ -113,11 +119,21 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
       attendees: Enum.map(result.attendees, &Attendee.new(email: &1.email)),
       all_day: all_day,
       reminders: Map.get(creating, :reminders, []),
-      recurrence_rule: Map.get(creating, :recurrence_rule),
+      recurrence_rule: rule,
+      # The zone a series is written in, which its occurrences are previewed
+      # in until a sync caches them (`SeriesPreview`).
+      timezone: if(is_binary(rule) and rule != "", do: timezone),
       video_link: result.meeting_url,
       video_integration_id: creating[:video_integration_id]
     })
   end
+
+  # A series is cached as one row until a sync brings its occurrences, which
+  # are previewed meanwhile, so the sync is asked for at once.
+  defp sync_series(%{recurrence_rule: rule} = attrs) when is_binary(rule) and rule != "",
+    do: SeriesEdit.request_sync_unless_backing_off(attrs.provider, attrs.calendar_integration_id)
+
+  defp sync_series(_attrs), do: :ok
 
   # All-day events store `start_date`/`end_date` (the cache row leaves
   # `start_at`/`end_at` null); timed events store `start_at`/`end_at`.

@@ -40,6 +40,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:toggling_type_id, nil)
      |> assign(:custom_questions_allowed, true)
      |> assign(:group_bookings_allowed, true)
+     |> assign(:recurring_bookings_allowed, true)
      |> assign(:payments_accepted, true)
      |> assign(:slug_draft, "")
      |> assign(:delete_sign_ups, {0, 0})
@@ -571,7 +572,12 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   defp duplicate_error_message(reason)
-       when reason in [:insufficient_plan, :group_bookings_not_allowed, :feature_disabled],
+       when reason in [
+              :insufficient_plan,
+              :group_bookings_not_allowed,
+              :recurring_bookings_not_allowed,
+              :feature_disabled
+            ],
        do:
          dgettext(
            "dashboard_integrations",

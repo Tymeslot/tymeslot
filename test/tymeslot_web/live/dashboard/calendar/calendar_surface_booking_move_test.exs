@@ -351,7 +351,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingMoveTest do
 
       await_events(lv, &starts_at?(&1, meeting, "14:00"))
 
-      assert render(lv) =~ "Tymeslot could not move this booking."
+      # Whichever answer lands last owns the flash.
+      assert render(lv) =~
+               ~r/Tymeslot could not move this booking\.|This time is no longer available\./
+
       assert reload(meeting).start_time == @booked
 
       open(lv, meeting)
@@ -460,8 +463,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingMoveTest do
       assert socket.assigns.moving_booking == MapSet.new()
 
       assert_received {:flash,
-                       {:error,
-                        "Tymeslot could not move this booking. Another booking already starts at that time."}}
+                       {:error, "This time is no longer available. Please choose another time."}}
     end
   end
 end

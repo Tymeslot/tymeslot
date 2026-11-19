@@ -199,7 +199,36 @@ defmodule TymeslotWeb.HostManagedMeetingWebTest do
       |> form("[data-testid='host-move-form']", %{})
       |> render_submit(%{"move" => %{"start" => local(taken)}})
 
-    assert html =~ "You already have a meeting at that time."
+    assert html =~ "This time is no longer available. Please choose another time."
+    assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
+  end
+
+  # A booking still awaiting its attendee's email verification holds its
+  # slot but is hidden from the host, so the refusal must not speak of a
+  # meeting they cannot see.
+  test "the dashboard refuses a time held by a hidden booking without naming a meeting", ctx do
+    taken = DateTime.add(ctx.meeting.start_time, 1, :day)
+
+    insert(:awaiting_verification_meeting,
+      organizer_user_id: ctx.user.id,
+      start_time: taken,
+      end_time: DateTime.add(taken, 30, :minute)
+    )
+
+    conn = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(ctx.user)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+    view
+    |> element("[phx-click='show_reschedule_modal'][phx-value-id='#{ctx.meeting.id}']")
+    |> render_click()
+
+    html =
+      view
+      |> form("[data-testid='host-move-form']", %{})
+      |> render_submit(%{"move" => %{"start" => local(taken)}})
+
+    assert html =~ "This time is no longer available. Please choose another time."
+    refute html =~ "You already have a meeting"
     assert Repo.get!(MeetingSchema, ctx.meeting.id).start_time == ctx.meeting.start_time
   end
 

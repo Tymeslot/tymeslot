@@ -12,11 +12,24 @@ defmodule Tymeslot.Notifications.Channel do
   @typedoc "One scheduling outcome per integration the channel tried."
   @type outcome :: {integration_id :: integer(), :ok | {:error, term()}}
 
-  @doc """
-  Schedules a delivery of `event_type` about `meeting` to every active
-  integration of `user_id` subscribed to it. Feature access is the caller's
-  responsibility; this is called only by `ChannelFanout.dispatch/2`.
+  @typedoc """
+  The `series` object the event carries (`Tymeslot.BookingSeries.Automation`):
+  a whole series for a series event, a session's place in its series for an
+  event about one session, nil for a booking outside any series. JSON-safe,
+  as job args store it.
   """
-  @callback schedule_for_event(user_id :: integer(), event_type :: String.t(), meeting :: map()) ::
-              [outcome()]
+  @type series :: %{String.t() => term()} | nil
+
+  @doc """
+  Schedules a delivery of `event_type` about `meeting`, carrying `series`,
+  to every active integration of `user_id` subscribed to it. Feature access
+  is the caller's responsibility; this is called only by
+  `ChannelFanout.dispatch/3`.
+  """
+  @callback schedule_for_event(
+              user_id :: integer(),
+              event_type :: String.t(),
+              meeting :: map(),
+              series :: series()
+            ) :: [outcome()]
 end

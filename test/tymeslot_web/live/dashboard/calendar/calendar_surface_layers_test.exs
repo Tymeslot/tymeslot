@@ -134,7 +134,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceLayersTest do
 
       lv
       |> form("#calendar-rail-bookable-form")
-      |> render_change(%{"id" => to_string(workshop.id)})
+      |> render_change(%{"meeting_type_id" => to_string(workshop.id)})
 
       assert has_element?(lv, "#calendar-rail-bookable-type option[selected]", "Workshop")
       assert preferences(user).bookable_meeting_type_id == workshop.id
@@ -146,7 +146,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceLayersTest do
 
       lv
       |> element("#calendar-canvas")
-      |> render_hook("calendar:bookable_type", %{"id" => to_string(theirs.id)})
+      |> render_hook("calendar:bookable_type", %{"meeting_type_id" => to_string(theirs.id)})
 
       assert has_element?(lv, "#calendar-rail-bookable-type option[selected]", "Intro call")
       assert preferences(user).bookable_meeting_type_id == nil

@@ -11,6 +11,7 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
@@ -124,7 +125,7 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
 
       {:ok, once_requested} = MeetingQueries.get_meeting(meeting.id)
 
-      assert {:error, :already_requested} =
+      assert {:error, {:not_reschedulable, :already_requested}} =
                RescheduleRequest.send_reschedule_request(once_requested)
 
       # Only the first request's email job was queued.
@@ -149,7 +150,9 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
       # Two tabs, or a double click: both hold the copy read before either
       # request, so only the guarded write can tell them apart.
       assert :ok = RescheduleRequest.send_reschedule_request(meeting)
-      assert {:error, :already_requested} = RescheduleRequest.send_reschedule_request(meeting)
+
+      assert {:error, {:not_reschedulable, :already_requested}} =
+               RescheduleRequest.send_reschedule_request(meeting)
 
       assert [_only_one] =
                all_enqueued(
@@ -163,7 +166,7 @@ defmodule Tymeslot.Bookings.RescheduleRequestTest do
       meeting = insert_meeting_for_user(user, %{start_offset: 86_400, duration: 3_600})
 
       {:ok, _cancelled} =
-        MeetingQueries.transition_to_cancelled(meeting.id,
+        MeetingTransitionQueries.transition_to_cancelled(meeting.id,
           cancelled_at: DateTime.utc_now(:second)
         )
 

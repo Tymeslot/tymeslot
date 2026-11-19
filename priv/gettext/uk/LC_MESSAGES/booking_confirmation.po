@@ -196,3 +196,58 @@ msgstr "Усе готово!"
 #, elixir-autogen, elixir-format
 msgid "with %{name}"
 msgstr "з %{name}"
+
+#: lib/tymeslot_web/themes/shared/confirmation_text.ex
+#, elixir-autogen, elixir-format
+msgid "Check your inbox"
+msgstr "Перевірте поштову скриньку"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Resend email"
+msgstr "Надіслати лист ще раз"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sending…"
+msgstr "Надсилання…"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sent"
+msgstr "Надіслано"
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sent again. It can take a minute to arrive."
+msgstr "Надіслано ще раз. Лист може надійти за хвилину."
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "The email could not be sent. Please try again."
+msgstr "Не вдалося надіслати лист. Спробуйте ще раз."
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "The time was released because the booking was not confirmed in time. Please book again."
+msgstr "Слот звільнено, бо бронювання не підтвердили вчасно. Забронюйте ще раз."
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer waiting for your confirmation, so there is nothing to resend."
+msgstr "Це бронювання вже не чекає на ваше підтвердження, тож повторно надсилати нічого."
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Try again in a moment."
+msgstr "Забагато спроб. Спробуйте ще раз за мить."
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "We cannot send the email again. If it has not arrived, check your spam folder."
+msgstr "Ми не можемо надіслати лист ще раз. Якщо він не надійшов, перевірте папку «Спам»."
+
+#: lib/tymeslot_web/themes/shared/confirmation_text.ex
+#, elixir-autogen, elixir-format
+msgid "We have sent a link to %{email}. Click it by %{deadline} to confirm your booking. Until then the time is held for you."
+msgstr "Ми надіслали посилання на %{email}. Натисніть його до %{deadline}, щоб підтвердити бронювання. Доти цей час зарезервовано за вами."

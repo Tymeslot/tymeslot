@@ -22,26 +22,32 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlersAdHocTest do
 
   test "a created meeting is confirmed, and off the calendar page no calendar is updated" do
     assert {:noreply, updated} =
-             CalendarEventHandlers.handle_create_ad_hoc_meeting_result({:ok, %{}}, off_calendar())
+             CalendarEventHandlers.handle_create_ad_hoc_meeting_result(
+               make_ref(),
+               {:ok, %{}},
+               off_calendar()
+             )
 
     assert Flash.get(updated.assigns.flash, :info) == "Meeting created and invitation sent"
     refute_received {:phoenix, :send_update, _update}
   end
 
-  test "a clash with another meeting says so" do
+  test "a clash is refused without naming a meeting the host may not see" do
     assert {:noreply, updated} =
              CalendarEventHandlers.handle_create_ad_hoc_meeting_result(
+               make_ref(),
                {:error, :time_conflict},
                off_calendar()
              )
 
     assert Flash.get(updated.assigns.flash, :error) ==
-             "You already have a meeting at this time. Please choose a different time."
+             "This time is no longer available. Please choose another time."
   end
 
   test "a reason the calendar has no words for never reaches the flash verbatim" do
     assert {:noreply, updated} =
              CalendarEventHandlers.handle_create_ad_hoc_meeting_result(
+               make_ref(),
                {:error, :some_unknown_reason},
                off_calendar()
              )
@@ -53,18 +59,25 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlersAdHocTest do
 
   test "a create that raises still answers, with a generic failure for the organiser" do
     # Every field `CreateAdHoc` reads is missing, so the create raises.
+    request = make_ref()
+
     log =
       capture_log(fn ->
         assert {:noreply, _socket} =
-                 CalendarEventHandlers.handle_execute_create_ad_hoc_meeting(%{}, off_calendar())
+                 CalendarEventHandlers.handle_execute_create_ad_hoc_meeting(
+                   request,
+                   %{},
+                   off_calendar()
+                 )
 
-        assert_receive {:create_ad_hoc_meeting_result, {:error, :crashed}}, 5_000
+        assert_receive {:create_ad_hoc_meeting_result, ^request, {:error, :crashed}}, 5_000
       end)
 
     assert log =~ "Calendar grid task crashed"
 
     assert {:noreply, updated} =
              CalendarEventHandlers.handle_create_ad_hoc_meeting_result(
+               make_ref(),
                {:error, :crashed},
                off_calendar()
              )

@@ -55,6 +55,24 @@ defmodule Tymeslot.CalendarGrid.EditGuardTest do
     assert EditGuard.writable([integration], %{kind: :booking, id: "b1"}) == {:error, :booking}
   end
 
+  test "drawn_writable/3 refuses an event the window's seat lock holds, and nothing else", %{
+    integration: integration
+  } do
+    locked = MapSet.new(["u1"])
+    event = event(integration, "work")
+
+    assert EditGuard.seat_locked?(locked, event)
+    refute EditGuard.seat_locked?(locked, %{event | uid: "u2"})
+    refute EditGuard.seat_locked?(locked, Map.delete(event, :uid))
+
+    assert EditGuard.drawn_writable([integration], locked, event) == {:error, :group_booking}
+    assert EditGuard.drawn_writable([integration], MapSet.new(), event) == :ok
+
+    # A refusal of its own comes first.
+    assert EditGuard.drawn_writable([integration], locked, event(integration, "shared")) ==
+             {:error, :read_only}
+  end
+
   test "check/3 passes a writable, unbooked event within the rate limit", %{
     user: user,
     integration: integration

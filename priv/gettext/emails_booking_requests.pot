@@ -188,6 +188,7 @@ msgstr ""
 msgid "From:"
 msgstr ""
 
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
@@ -261,6 +262,7 @@ msgid "Location:"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
@@ -289,6 +291,7 @@ msgstr ""
 msgid "No longer held"
 msgstr ""
 
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Not confirmed"
@@ -507,4 +510,34 @@ msgstr ""
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
 msgid "withdraw your request"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm booking"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your booking with %{organizer}"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, your booking is not confirmed yet."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "If you did not make this booking, ignore this email. Nothing will be booked."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Please confirm your booking"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold the time for you until then."
 msgstr ""

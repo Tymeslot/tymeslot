@@ -13,9 +13,9 @@ defmodule Tymeslot.Meetings.BusyPeriods do
   offered times the submit then rejected and the booker was told the slot had
   gone only after filling in the form. Merging the two sources here is what
   makes the display path and the submit answer from the same facts, and
-  `MeetingListQueries.list_for_organizer_in_range/3` selects on the same
-  `MeetingState.where_slot_live/1` the submit's count does, so they cannot
-  drift.
+  `MeetingListQueries.list_for_organizer_in_range/4`, with
+  `include_hidden: true`, selects on the same `MeetingState.where_slot_live/1`
+  the submit's count does, so they cannot drift.
 
   ## A booking outranks its own mirror
 
@@ -48,13 +48,19 @@ defmodule Tymeslot.Meetings.BusyPeriods do
 
   Both identifiers travel with the projection so that a caller excluding one
   meeting from its own offer, as a reschedule page does through
-  `Tymeslot.Meetings.reject_calendar_event_mirrors/2`, drops the booking as
+  `Tymeslot.Meetings.ExternalCalendar.reject_calendar_event_mirrors/2`, drops the booking as
   well as its mirror.
   """
   @spec merge(Enumerable.t(), pos_integer(), DateTime.t(), DateTime.t()) :: [map()]
   def merge(calendar_events, organizer_user_id, %DateTime{} = from, %DateTime{} = to)
       when is_integer(organizer_user_id) do
-    meetings = MeetingListQueries.list_for_organizer_in_range(organizer_user_id, from, to)
+    # Unverified and unpaid holds are hidden from the organiser but keep their
+    # slot, so the offer must count them exactly as the submit's check does.
+    meetings =
+      MeetingListQueries.list_for_organizer_in_range(organizer_user_id, from, to,
+        include_hidden: true
+      )
+
     booked_identifiers = CalendarEventLink.identifier_set(meetings)
 
     calendar_events

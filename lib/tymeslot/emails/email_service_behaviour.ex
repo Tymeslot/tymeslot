@@ -10,6 +10,8 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               {:ok, any()} | {:error, any()}
   @callback send_booking_request_received(struct()) :: {:ok, any()} | {:error, any()}
   @callback send_booking_request_received(struct(), keyword()) :: {:ok, any()} | {:error, any()}
+  @callback send_booking_email_verification(struct(), String.t()) ::
+              {:ok, any()} | {:error, any()}
 
   @callback send_booking_approval_request(atom(), struct(), map(), String.t(), keyword()) ::
               {:ok, any()} | {:error, any()}
@@ -31,6 +33,14 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               String.t(),
               appointment_details()
             ) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_series_confirmation(:attendee | :organizer, String.t(), map()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_series_cancellation(:attendee | :organizer, String.t(), map()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_series_request(:attendee | :organizer, String.t(), map()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_series_request_outcome(:declined | :expired, String.t(), map()) ::
               {:ok, any()} | {:error, any()}
   @callback send_registration_closed(
               String.t(),

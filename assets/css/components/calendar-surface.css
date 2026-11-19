@@ -155,7 +155,20 @@
   color: var(--cal-on-booking);
 }
 
-.cal-adbar.is-past {
+/* A booking given a colour of its own (render.js, ownColour) keeps the
+   booking's solid fill in that colour, darkened towards --cal-ink far enough
+   that its white text (--cal-on-booking) holds 4.8:1 for every palette
+   colour. */
+.cal-adbar.is-booking.has-colour,
+.cal-ev.is-booking.has-colour {
+  background: color-mix(in srgb, var(--cal-ev) 55%, var(--cal-ink));
+}
+
+/* Past, a booking's own colour drops to the same quiet tint as any past bar,
+   matching its grey past text; without the longer selector the coloured fill
+   above outranks it and the grey text sits on a dark fill. */
+.cal-adbar.is-past,
+.cal-adbar.is-booking.has-colour.is-past {
   background: color-mix(in srgb, var(--cal-ev) 8%, var(--cal-surface));
   color: var(--cal-text-past);
 }
@@ -409,6 +422,10 @@
   color: var(--cal-text-past);
 }
 
+.cal-ev.is-booking.has-colour.is-past {
+  background: color-mix(in srgb, var(--cal-ev) 14%, var(--cal-surface));
+}
+
 /* A booking request: the booking's turquoise with an amber striped edge and
    a "Request" flag opening its title, the loudest item on the grid because
    it needs an answer. Expired, it goes quiet: the past tint, a grey edge and
@@ -476,6 +493,82 @@
   height: 7px;
   border-radius: var(--radius-full);
   background: var(--cal-warn);
+}
+
+/* A group meeting with live seats sits on the event: a lock in the bottom
+   corner, with its reason in a tooltip (calendar/render.js, lockBadge). */
+.cal-ev-lock {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--cal-ink) 18%, transparent);
+  cursor: help;
+}
+
+.cal-ev-badge-icon {
+  width: 10px;
+  height: 10px;
+}
+
+/* How the guests asked have answered: accepted/total in the other bottom
+   corner (calendar/render.js, repliesBadge), and a dot on a month item. */
+.cal-ev-replies {
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  color: var(--cal-on-replies);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  line-height: 14px;
+  cursor: help;
+}
+
+.cal-ev-replies.is-going,
+.cal-mreplies.is-going {
+  background: var(--cal-replies-going);
+}
+
+.cal-ev-replies.is-pending,
+.cal-mreplies.is-pending {
+  background: var(--cal-request);
+  color: var(--cal-on-request);
+}
+
+.cal-ev-replies.is-declined,
+.cal-mreplies.is-declined {
+  background: var(--cal-replies-declined);
+}
+
+.cal-ev.has-replies {
+  padding-bottom: 18px;
+}
+
+.cal-mreplies {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  margin-left: 4px;
+  border-radius: var(--radius-full);
+  vertical-align: middle;
+}
+
+.cal-ev.is-tiny .cal-ev-lock {
+  top: 1px;
+  bottom: auto;
+  width: 12px;
+  height: 12px;
 }
 
 /* "+N more" */

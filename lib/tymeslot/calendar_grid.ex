@@ -29,10 +29,12 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Reminder
+  alias Tymeslot.Integrations.Calendar.SeriesPreview
   alias Tymeslot.Integrations.Calendar.SyncSchedule
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
@@ -49,15 +51,38 @@ defmodule Tymeslot.CalendarGrid do
 
   Reminders are normalised to the canonical `%{method:, minutes_before:}` shape,
   so callers can read `minutes_before` regardless of how the row was stored.
+
+  A series the calendar has just written is cached as one row until its next
+  sync; its later occurrences in the range are previewed from that row
+  (`Tymeslot.Integrations.Calendar.SeriesPreview`), each saying so in
+  `preview_of`.
   """
   @spec list_events_for_range([integer()], DateTime.t(), DateTime.t(), keyword()) ::
           [ProviderCalendarEventSchema.t()]
   def list_events_for_range(integration_ids, start_dt, end_dt, opts \\ []) do
     integration_ids
     |> ProviderCalendarEventQueries.list_for_range(start_dt, end_dt, opts)
+    |> SeriesPreview.add(integration_ids, {start_dt, end_dt}, except_role: EventRole.busy_only())
+    |> maybe_take(Keyword.get(opts, :limit))
     |> Enum.filter(&placeable?/1)
     |> Enum.map(&normalise_event_reminders/1)
   end
+
+  @doc """
+  The series a previewed occurrence belongs to, as its cached row; any other
+  event as it is. See `Tymeslot.Integrations.Calendar.SeriesPreview`.
+  """
+  @spec preview_series(map()) :: map()
+  defdelegate preview_series(event), to: SeriesPreview, as: :series
+
+  @doc "Whether `event` is a previewed occurrence. See `Tymeslot.Integrations.Calendar.SeriesPreview`."
+  @spec preview?(map()) :: boolean()
+  defdelegate preview?(event), to: SeriesPreview
+
+  # Previewed occurrences join the rows after the read's own limit, so the
+  # limit is applied again, keeping the earliest as the read does.
+  defp maybe_take(events, nil), do: events
+  defp maybe_take(events, limit), do: Enum.take(events, limit)
 
   # The cache's writers refuse a half-timed row, but one stored before they
   # did would crash the grid's layout (a timed event without an end has
@@ -125,9 +150,22 @@ defmodule Tymeslot.CalendarGrid do
       window_end,
       Keyword.put(opts, :visibility_rules, rules)
     )
+    |> SeriesPreview.add(integration_ids, {now, window_end},
+      visibility_rules: rules,
+      except_role: EventRole.busy_only(),
+      timed_only: true
+    )
+    |> Enum.filter(&starts_within?(&1, now, window_end))
     |> Enum.map(&normalise_event_reminders/1)
     |> Enum.reject(&(&1.reminders == []))
   end
+
+  # The feed is of events still to start; a previewed occurrence is computed
+  # over the window it overlaps.
+  defp starts_within?(%{start_at: %DateTime{} = start_at}, now, window_end),
+    do: DateTime.compare(start_at, now) != :lt and DateTime.compare(start_at, window_end) == :lt
+
+  defp starts_within?(_event, _now, _window_end), do: false
 
   # The reminders column is nullable, so a row written without one loads as nil
   # rather than an empty list.

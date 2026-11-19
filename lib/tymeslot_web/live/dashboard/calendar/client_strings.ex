@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Dashboard.Calendar.BadgeStrings
   alias TymeslotWeb.Dashboard.Calendar.BookableStrings
   alias TymeslotWeb.Dashboard.Calendar.PowerStrings
   alias TymeslotWeb.Dashboard.Calendar.ViewStrings
@@ -25,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
       |> Map.merge(request_strings())
       |> Map.merge(opening_strings())
       |> Map.merge(BookableStrings.strings())
+      |> Map.merge(BadgeStrings.strings())
       |> Map.merge(ViewStrings.strings())
       |> Map.merge(PowerStrings.strings())
     end)
@@ -145,12 +147,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
           "dashboard_calendar_booking",
           "Couldn't confirm the change. Check your bookable times."
         ),
+      # Quick create cannot make a meeting, but More options can, without a
+      # calendar.
       no_calendar_note:
-        dgettext("dashboard_calendar_booking", "Connect a calendar to add events here."),
+        dgettext(
+          "dashboard_calendar_booking",
+          "Connect a calendar to add events, or use More options to send a Tymeslot meeting."
+        ),
       read_only_calendars_note:
         dgettext(
           "dashboard_calendar_booking",
-          "Your connected calendars are read-only, so events can't be added here."
+          "Your calendars are read-only. Connect one you can write to, or use More options to send a Tymeslot meeting."
         )
     }
   end

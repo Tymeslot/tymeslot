@@ -34,12 +34,16 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   @role_busy_only EventRole.busy_only()
   @sync_state_locally_deleted "locally_deleted"
 
+  # The states a series' stand-in row may be dropped in once its occurrences
+  # arrive (`delete_series_stand_ins/2`).
+  @stand_in_states ["synced", "locally_created"]
+
   # The columns a dashboard edit may change on a cached row: what a user can
   # edit on an event (free/busy included), plus the video room an edit can
   # attach to it.
   @local_edit_fields ~w(summary description location start_at end_at all_day start_date end_date
                         reminders recurrence_rule colour attendees transparency video_link
-                        video_integration_id)a
+                        video_integration_id timezone)a
 
   @doc """
   Returns all cached events for the given integration IDs within a time range.
@@ -424,6 +428,20 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   @doc """
+  Clears the cached colour of the event `uid` on `integration_id`, for a
+  colour the organiser has just taken off it (its write-back is queued), so
+  the calendar shows the calendar's colour without waiting for a sync.
+  """
+  @spec clear_colour(pos_integer(), String.t()) :: :ok
+  def clear_colour(integration_id, uid) do
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id == ^integration_id and e.uid == ^uid)
+    |> Repo.update_all(set: [colour: nil])
+
+    :ok
+  end
+
+  @doc """
   Writes a dashboard edit Tymeslot has just pushed to the provider onto the
   cached row, touching only the columns a user can edit (#{Enum.map_join(@local_edit_fields, ", ", &"`#{&1}`")}).
 
@@ -486,6 +504,23 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   @spec delete_by_uids(integer(), [String.t()]) :: non_neg_integer()
   def delete_by_uids(calendar_integration_id, uids),
     do: delete_where_in(calendar_integration_id, :uid, uids)
+
+  @doc """
+  Bulk-deletes the rows cached under the CalDAV series UIDs `series_uids`
+  that a sync has caught up with: synced rows, and queued creates (an
+  occurrence arriving from the server proves the create landed). A row with
+  a queued edit or delete is kept, so the local change still reaches the
+  server. Returns the number of rows deleted.
+  """
+  @spec delete_series_stand_ins(integer(), [String.t()]) :: non_neg_integer()
+  def delete_series_stand_ins(calendar_integration_id, series_uids) do
+    series_uids
+    |> Enum.chunk_every(@upsert_chunk_size)
+    |> Enum.reduce(0, fn chunk, total ->
+      condition = dynamic([e], e.uid in ^chunk and e.sync_state in ^@stand_in_states)
+      total + delete_rows(calendar_integration_id, condition)
+    end)
+  end
 
   @doc """
   Bulk-deletes events for the integration whose recurring_event_id is in

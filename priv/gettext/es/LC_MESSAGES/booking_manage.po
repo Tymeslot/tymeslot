@@ -216,6 +216,7 @@ msgstr "Mantener la reunión"
 msgid "Link not recognised"
 msgstr "Enlace no reconocido"
 
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #: lib/tymeslot_web/themes/shared/components/meeting_details.ex
 #, elixir-autogen, elixir-format
@@ -333,6 +334,7 @@ msgid "This link is no longer valid. It may have expired, or the request may hav
 msgstr "Este enlace ya no es válido. Puede haber expirado, o la solicitud puede haberse retirado."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "This link is not valid"
 msgstr "Este enlace no es válido"
@@ -373,6 +375,7 @@ msgstr "Demasiado tarde para responder"
 msgid "Too many attempts"
 msgstr "Demasiados intentos"
 
+#: lib/tymeslot_web/live/booking_verification_live.ex
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Try again in a moment."
@@ -400,6 +403,7 @@ msgstr "Te esperamos a la hora prevista."
 msgid "We've let %{name} know you can't make it."
 msgstr "Avisamos a %{name} de que no puedes asistir."
 
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "When"
@@ -632,3 +636,159 @@ msgstr "Tras tu rechazo, tu lugar se asignó a otra persona. Tu respuesta sigue 
 #, elixir-autogen, elixir-format
 msgid "This meeting was arranged by a poll, so only its host can move or cancel it. If you can't make it, use \"Can't make it\" in your invitation, or reply to it."
 msgstr "Esta reunión se acordó mediante una votación, así que solo el anfitrión puede cambiarla de horario o cancelarla. Si no puedes asistir, usa «No puedo asistir» en tu invitación o responde a ella."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} will confirm or decline it. We have emailed you the details."
+msgstr "%{organizer} la confirmará o la rechazará. Te enviamos los detalles por correo."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Book again"
+msgstr "Reservar de nuevo"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Booking cancelled"
+msgstr "Reserva cancelada"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Check your inbox for the confirmation email."
+msgstr "Busca el correo de confirmación en tu bandeja de entrada."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm booking"
+msgstr "Confirmar reserva"
+
+#: lib/tymeslot_web/live/booking_verification_live.ex
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your booking"
+msgstr "Confirma tu reserva"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "I didn't make this booking"
+msgstr "Yo no hice esta reserva"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "It may be incomplete or out of date."
+msgstr "Puede que esté incompleto o desactualizado."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "The booking was cancelled and the time released."
+msgstr "La reserva se canceló y el horario quedó libre."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser"
+msgstr "El organizador"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking has expired"
+msgstr "Esta reserva expiró"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is already confirmed"
+msgstr "Esta reserva ya está confirmada"
+
+#: lib/tymeslot_web/live/booking_verification_live.ex
+#, elixir-autogen, elixir-format
+msgid "We could not confirm your booking just now. Please try again."
+msgstr "No pudimos confirmar tu reserva en este momento. Inténtalo de nuevo."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "We have emailed you the details and a calendar invitation."
+msgstr "Te enviamos por correo los detalles y una invitación de calendario."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "With"
+msgstr "Con"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is confirmed"
+msgstr "Tu reserva está confirmada"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is held until %{time}."
+msgstr "Guardamos tu reserva hasta %{time}."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Your request has been sent"
+msgstr "Enviamos tu solicitud"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Checking your link…"
+msgstr "Comprobando tu enlace…"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This only takes a moment."
+msgstr "Solo tardará un momento."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer available, so the time was released."
+msgstr "Esta reserva ya no está disponible, así que el horario quedó libre."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling…"
+msgstr "Cancelando…"
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Confirming…"
+msgstr "Confirmando…"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session"
+msgid_plural "%{count} sessions"
+msgstr[0] "%{count} sesión"
+msgstr[1] "%{count} sesiones"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has been sent the confirmation for all %{count} session."
+msgid_plural "%{name} has been sent the confirmation for all %{count} sessions."
+msgstr[0] "Se envió a %{name} la confirmación de %{count} sesión."
+msgstr[1] "Se envió a %{name} la confirmación de las %{count} sesiones."
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "All %{count} session is free again and %{name} has been told."
+msgid_plural "All %{count} sessions are free again and %{name} has been told."
+msgstr[0] "%{count} sesión vuelve a estar libre y ya se avisó a %{name}."
+msgstr[1] "Las %{count} sesiones vuelven a estar libres y ya se avisó a %{name}."
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Approve all %{count} session"
+msgid_plural "Approve all %{count} sessions"
+msgstr[0] "Aprobar %{count} sesión"
+msgstr[1] "Aprobar las %{count} sesiones"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "Decline all %{count} session"
+msgid_plural "Decline all %{count} sessions"
+msgstr[0] "Rechazar %{count} sesión"
+msgstr[1] "Rechazar las %{count} sesiones"
+
+#: lib/tymeslot_web/live/meeting_request_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
+msgstr "Si no respondes antes del %{deadline}, esta solicitud expira y todas las sesiones quedan libres."

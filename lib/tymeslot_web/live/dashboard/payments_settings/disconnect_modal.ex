@@ -50,8 +50,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.DisconnectModal do
         <.info_box :if={@pending_count > 0} variant={:warning}>
           {dngettext(
             "dashboard_payments",
-            "You have %{count} pending booking awaiting payment. Disconnecting will cancel it.",
-            "You have %{count} pending bookings awaiting payment. Disconnecting will cancel them.",
+            "%{count} checkout still in progress will be cancelled when you disconnect.",
+            "%{count} checkouts still in progress will be cancelled when you disconnect.",
             @pending_count
           )}
         </.info_box>

@@ -468,3 +468,33 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "Maybe"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Allow notifications"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "This browser does not support notifications."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked in your browser settings. Allow notifications for this site there, then switch desktop notifications on again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop notifications are on, but your browser has not allowed them yet."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop notifications are on, but your browser is blocking them. Allow notifications for this site in your browser settings and they will start."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Your browser did not allow notifications, so desktop notifications are still off."
+msgstr ""

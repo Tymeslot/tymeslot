@@ -27,7 +27,7 @@ defmodule Tymeslot.AppSettings.LockoutPolicy do
   """
 
   alias Tymeslot.AppSettings.Env
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AdminRoles
   alias Tymeslot.MeetingPayments
 
   @doc """
@@ -46,7 +46,7 @@ defmodule Tymeslot.AppSettings.LockoutPolicy do
   # be locked out — which is also the only way a fresh install can disable
   # everything before its first admin signs in.
   def would_cause_lockout?(merged_row, attrs) do
-    (Auth.any_admin?() and
+    (AdminRoles.any_admin?() and
        currently_has_usable_path?() and
        not password_usable_after?(merged_row, attrs) and
        not sso_usable_after?(merged_row, attrs)) or
@@ -79,7 +79,7 @@ defmodule Tymeslot.AppSettings.LockoutPolicy do
   def pins_blocking_sign_in do
     pins = for key <- @auth_keys, var = Env.pinned_var(key), do: {key, var}
 
-    if pins != [] and Auth.any_admin?() and not currently_has_usable_path?(),
+    if pins != [] and AdminRoles.any_admin?() and not currently_has_usable_path?(),
       do: pins,
       else: []
   end
@@ -103,7 +103,7 @@ defmodule Tymeslot.AppSettings.LockoutPolicy do
   end
 
   defp password_currently_usable? do
-    Env.read(:password_auth_enabled) == true and Auth.any_admin_uses_password_auth?()
+    Env.read(:password_auth_enabled) == true and AdminRoles.any_admin_uses_password_auth?()
   end
 
   defp sso_currently_usable? do
@@ -114,7 +114,7 @@ defmodule Tymeslot.AppSettings.LockoutPolicy do
 
   defp password_usable_after?(merged_row, attrs) do
     next_effective_value(:password_auth_enabled, merged_row, attrs) == true and
-      Auth.any_admin_uses_password_auth?()
+      AdminRoles.any_admin_uses_password_auth?()
   end
 
   defp sso_usable_after?(merged_row, attrs) do

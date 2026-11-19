@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceBookingEvents do
   def handle("calendar:bookable_toggle", params, socket),
     do: {:noreply, LayerChoices.toggle(socket, switched_to(params["on"]))}
 
-  def handle("calendar:bookable_type", %{"id" => id}, socket),
+  def handle("calendar:bookable_type", %{"meeting_type_id" => id}, socket),
     do: {:noreply, LayerChoices.choose_type(socket, id)}
 
   def handle("calendar:bookable_type", _params, socket), do: {:noreply, socket}

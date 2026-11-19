@@ -83,6 +83,23 @@ defmodule TymeslotWeb.AccountDeletion.FrozenPublicPagesTest do
     assert_error_sent(404, fn -> get(conn, "/meeting/#{meeting.uid}/cancel") end)
   end
 
+  test "the series links of a host pending deletion are 404, not a redirect", %{conn: conn} do
+    user = insert(:user)
+    insert(:profile, user: user, username: "frozen-series")
+    series = insert(:booking_series, organizer_user: user)
+
+    assert redirected_to(get(conn, "/series/#{series.uid}")) ==
+             "/frozen-series/series/#{series.uid}"
+
+    freeze(user)
+
+    assert_raise TymeslotWeb.NotFoundError, fn ->
+      live(build_conn(), "/frozen-series/series/#{series.uid}")
+    end
+
+    assert_error_sent(404, fn -> get(build_conn(), "/series/#{series.uid}") end)
+  end
+
   describe "the booking request link in the host's email" do
     test "shows nothing of the request once the host's account is pending deletion",
          %{conn: conn} do

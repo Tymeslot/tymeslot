@@ -190,8 +190,25 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   defp update_single(_user_id, _event, _stored, :following, %{recurrence_rule: _rule}, _opts),
     do: {:error, %{reason: :ends_before, retry: :not_queued}}
 
-  defp update_single(user_id, event, stored, _scope, changes, opts),
-    do: write_edit(user_id, event, stored, changes, opts, :queue_recoverable)
+  defp update_single(user_id, event, stored, _scope, changes, opts) do
+    with {:ok, updated} <- write_edit(user_id, event, stored, changes, opts, :queue_recoverable) do
+      sync_new_series(updated, changes)
+      {:ok, updated}
+    end
+  end
+
+  # An event given a repeat rule is cached as one row for the whole series
+  # until a sync brings its occurrences, which are previewed meanwhile
+  # (`Tymeslot.Integrations.Calendar.SeriesPreview`), so the sync is asked
+  # for at once.
+  defp sync_new_series(updated, %{recurrence_rule: rule}) when is_binary(rule) and rule != "",
+    do:
+      SeriesEdit.request_sync_unless_backing_off(
+        Map.get(updated, :provider),
+        updated.calendar_integration_id
+      )
+
+  defp sync_new_series(_updated, _changes), do: :ok
 
   @doc """
   How `event` may be edited from the grid: `{:ok, :single}` for an event
@@ -401,19 +418,19 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   defp write_to_provider(user_id, event, updated, payload, retry, answered) do
     case CalendarEvents.update_event(event.uid, payload, {event.calendar_integration_id, user_id}) do
       :ok ->
-        result = written(user_id, updated)
+        result = written(user_id, updated, payload)
         answered.(:ok)
         result
 
       {:ok, %{document: document}} = answer ->
-        result = written(user_id, updated)
+        result = written(user_id, updated, payload)
         share_document(event, payload, document)
         answered.(answer)
         result
 
       # A split Google or Outlook series, which shares no document.
       {:ok, %{tail: _tail}} = answer ->
-        result = written(user_id, updated)
+        result = written(user_id, updated, payload)
         answered.(answer)
         result
 
@@ -422,8 +439,8 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     end
   end
 
-  defp written(user_id, updated) do
-    record_local_edit(user_id, updated)
+  defp written(user_id, updated, payload) do
+    record_local_edit(user_id, updated, Map.get(payload, :series_timezone))
     # A no-op unless the event holds a recorded video room whose times the
     # change moved.
     EventVideoRooms.rescheduled(updated)
@@ -525,7 +542,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
       # job: applying the canonical editable-field set to the cached row and
       # invalidating the organiser's availability, which a queued edit has
       # changed locally whether or not it has reached the server yet.
-      record_local_edit(user_id, event)
+      record_local_edit(user_id, event, nil)
       :queued
     else
       _not_queued -> :not_queued
@@ -534,11 +551,20 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   # Deliberately no grid broadcast: the organiser's own grid already shows the
   # edit, and a reload would land in the middle of whatever they do next.
-  defp record_local_edit(user_id, event) do
+  # A timed series is written in a zone of its own
+  # (`ProviderPayload.put_series_zone/2`), recorded on the row so its
+  # occurrences are previewed in it until a sync caches them
+  # (`Tymeslot.Integrations.Calendar.SeriesPreview`).
+  defp record_local_edit(user_id, event, series_zone) do
+    attrs =
+      event
+      |> Map.take(@editable_fields)
+      |> then(&if(is_binary(series_zone), do: Map.put(&1, :timezone, series_zone), else: &1))
+
     case ProviderCalendarEventQueries.apply_local_edit(
            event.calendar_integration_id,
            event.uid,
-           Map.take(event, @editable_fields)
+           attrs
          ) do
       {:ok, _row} ->
         :ok

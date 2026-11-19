@@ -17,6 +17,7 @@ defmodule TymeslotWeb.AccountRestoreController do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar
   alias TymeslotWeb.AccountRestoreHTML
@@ -42,7 +43,7 @@ defmodule TymeslotWeb.AccountRestoreController do
   end
 
   defp restore_user(conn, user) do
-    case Auth.restore_account(user) do
+    case AccountDeletion.restore_account(user) do
       {:ok, restored} ->
         after_restore(conn, Calendar.booking_page_health(restored.id))
 
@@ -89,7 +90,7 @@ defmodule TymeslotWeb.AccountRestoreController do
   end
 
   defp render_page(conn, user, error \\ nil) do
-    if Auth.account_restorable?(user, DateTime.utc_now()) do
+    if AccountDeletion.account_restorable?(user, DateTime.utc_now()) do
       conn
       |> prepare()
       |> render(:show,

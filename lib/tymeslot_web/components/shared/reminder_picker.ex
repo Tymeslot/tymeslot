@@ -1,11 +1,12 @@
 defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   @moduledoc """
   Reminder picker shared by the surfaces that decide when Tymeslot emails a
-  reminder: the meeting type form and the calendar's quick-add meeting.
+  reminder: the meeting type form, a poll, and a Tymeslot meeting booked from
+  the calendar's side panel.
 
-  Both hold the same thing — a list of `%{value: integer, unit: "minutes" |
+  All hold the same thing, a list of `%{value: integer, unit: "minutes" |
   "hours" | "days"}` reminders, capped by `ReminderValidation.max_reminders/0`
-  and checked by `ReminderValidation.check_policy/2` — so both offer the same
+  and checked by `ReminderValidation.check_policy/2`, so all offer the same
   control: the two lead times most reminders use as one-click buttons, and a
   custom value with its unit for anything else.
 
@@ -40,8 +41,8 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
   The reminder picker.
 
   `description` is the caller's own one-line explanation of what the reminders
-  being configured will do — a meeting type and a single quick-added meeting
-  word that differently — and `extra_errors` are messages from the caller's own
+  being configured will do (a meeting type and a single meeting booked from
+  the calendar's side panel word that differently), and `extra_errors` are messages from the caller's own
   validation, shown below the picker's.
   """
   attr :reminders, :list, required: true
@@ -107,7 +108,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
 
       <div class="mt-4 space-y-3">
         <div class="flex flex-wrap items-center gap-2">
-          <%!-- Quick add buttons, one per preset not yet held --%>
+          <%!-- One-click buttons, one per preset not yet held --%>
           <button
             :for={preset <- @presets}
             :if={not held?(@reminders, preset)}

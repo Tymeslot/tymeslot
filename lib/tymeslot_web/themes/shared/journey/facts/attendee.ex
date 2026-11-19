@@ -3,9 +3,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Attendee do
   The attendee: the booking form, its location answer and its guests, and
   the submit that ends the booking.
 
-  Needs the slot, and the answers when the meeting type has questions
-  asked in a moment of their own; answers asked in its own moment go with
-  its submit, which validates them.
+  Needs the slot, the series when the booking needs one, and the answers
+  when the meeting type has questions asked in a moment of their own;
+  answers asked in its own moment go with its submit, which validates them.
   Showing a moment that collects it sets the form up
   (`StepEntry.handle_booking_entry/2`): the submission token, the reschedule
   prefill, and for a `/book` link without a day and a time the redirect to
@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Attendee do
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey.Fact
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Answers
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.Journey.Runtime
   alias TymeslotWeb.Themes.Shared.LiveHelpers.StepEntry
 
@@ -51,11 +52,19 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Facts.Attendee do
   # and names each question that fails (`:refused_questions`),
   # so a screen that shows the questions above the form opens the form with
   # the time, and its submit is never dropped for an answer left blank.
+  #
+  # A series is chosen before the details too, when the booking needs one:
+  # its sessions are what the details book.
   @impl Fact
   def requires(assigns) do
-    if Answers.required?(assigns) and not Answers.beside_attendee?(assigns),
-      do: [:slot, :answers],
-      else: [:slot]
+    answers =
+      if Answers.required?(assigns) and not Answers.beside_attendee?(assigns),
+        do: [:answers],
+        else: []
+
+    series = if Series.required?(assigns), do: [:series], else: []
+
+    [:slot | series ++ answers]
   end
 
   @impl Fact

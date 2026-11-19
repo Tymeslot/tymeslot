@@ -19,7 +19,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
 
   alias ErrorTracker.Error
   alias Tymeslot.Meetings.ApprovalToken
-  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Workers.EmailWorker
 
@@ -355,7 +355,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
       meeting = held_meeting()
 
       {:ok, _declined} =
-        MeetingQueries.transition_from_awaiting_approval(meeting.id, status: :cancelled)
+        MeetingTransitionQueries.transition_from_awaiting_approval(meeting.id, status: :cancelled)
 
       assert {:discard, _reason} = nudge_job(Repo.reload!(meeting))
     end

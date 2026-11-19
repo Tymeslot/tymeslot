@@ -13,6 +13,13 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
       were loaded must count.
     * `rate_limit/1`: the organiser is within the calendar edit rate limit.
 
+  Drawing asks the seat lock of a set instead (`seat_locked?/2`): the
+  `calendar_uid`s of the group meetings with live seats in the window the
+  calendar loaded (`Meetings.group_booking_uids_among/2`), one query for
+  the whole window. `drawn_writable/3` is `writable/2` with that set
+  consulted, so an event held by live seats is drawn as one that cannot be
+  changed, saying why; the change itself still asks `seat_lock/2`.
+
   `check/3` asks those three, in that order, for a change about to be made.
   `movable?/2` (`movable/2` for many events at once) and `check_timing/3`
   add the one more a change of timing needs: the calendar copy of a booking
@@ -32,6 +39,11 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   `guest_update/3` says whether the organiser may email an event's guests
   (invite, remove, tell them about a change): the event is writable, and
   they organise it.
+
+  An occurrence previewed from a series no sync has cached yet
+  (`Tymeslot.Integrations.Calendar.SeriesPreview`) is refused as `:syncing`
+  by every gate: it has no identity on the calendar to write to. The series
+  itself is changed from its own row, which opening the preview opens.
   """
 
   alias Tymeslot.CalendarGrid.EventDeletion
@@ -41,7 +53,7 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   alias Tymeslot.Security.RateLimiter
 
   @type refusal ::
-          {:error, :booking | :unauthorized | :read_only | :group_booking}
+          {:error, :booking | :unauthorized | :read_only | :group_booking | :syncing}
           | {:error, :rate_limited, String.t()}
 
   @doc "Whether `event` may be changed, for drawing the affordance; no query."
@@ -78,7 +90,7 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   organiser's guests of a change that is not theirs to announce.
   """
   @spec guest_update(pos_integer(), [map()], map()) ::
-          :ok | {:error, :booking | :unauthorized | :read_only | :not_organiser}
+          :ok | {:error, :booking | :unauthorized | :read_only | :syncing | :not_organiser}
   def guest_update(user_id, integrations, event) do
     with :ok <- writable(integrations, event) do
       if AttendeeNotifications.organised_by?(event, user_id),
@@ -100,8 +112,10 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   end
 
   @doc "Whether `event` sits on a writable calendar of one of `integrations`."
-  @spec writable([map()], map()) :: :ok | {:error, :booking | :unauthorized | :read_only}
+  @spec writable([map()], map()) ::
+          :ok | {:error, :booking | :unauthorized | :read_only | :syncing}
   def writable(_integrations, %{kind: :booking}), do: {:error, :booking}
+  def writable(_integrations, %{preview_of: %{}}), do: {:error, :syncing}
 
   def writable(integrations, event) do
     case Enum.find(integrations, &(&1.id == Map.get(event, :calendar_integration_id))) do
@@ -110,6 +124,30 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
 
       integration ->
         if Selection.event_writable?(event, integration), do: :ok, else: {:error, :read_only}
+    end
+  end
+
+  @doc """
+  Whether a group meeting with live seats sits on `event`, by `locked_uids`
+  (the window's, see the moduledoc); no query.
+  """
+  @spec seat_locked?(MapSet.t(String.t()), map()) :: boolean()
+  def seat_locked?(locked_uids, event) do
+    case Map.get(event, :uid) do
+      uid when is_binary(uid) -> MapSet.member?(locked_uids, uid)
+      _none -> false
+    end
+  end
+
+  @doc """
+  `writable/2` for drawing, which also refuses an event `seat_locked?/2`
+  finds in `locked_uids`.
+  """
+  @spec drawn_writable([map()], MapSet.t(String.t()), map()) ::
+          :ok | {:error, :booking | :unauthorized | :read_only | :group_booking | :syncing}
+  def drawn_writable(integrations, locked_uids, event) do
+    with :ok <- writable(integrations, event) do
+      if seat_locked?(locked_uids, event), do: {:error, :group_booking}, else: :ok
     end
   end
 

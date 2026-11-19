@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Themes.StepAssignsDocTest do
     :ok
   end
 
-  @row ~r/^\| `([a-z_]+)` \| [^|]+ \| (mount|optional) \|/
+  @row ~r/^\| `([a-z_]+\??)` \| [^|]+ \| (mount|optional) \|/
 
   defp table_rows do
     [_before, rest] = @guide |> File.read!() |> String.split("<!-- step-assigns:start -->")

@@ -41,16 +41,19 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
   alias TymeslotWeb.Themes.Shared.Components.BookingForm
   alias TymeslotWeb.Themes.Shared.Components.GuestField
   alias TymeslotWeb.Themes.Shared.Components.LocationField
-  alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
+  alias TymeslotWeb.Themes.Shared.Components.VerificationNotice
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer, as: InputRenderer
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.SeriesSummary
 
   # The month's selection is cleared by paging, so it is always on screen; a
   # week's is on screen while the chosen day falls in the week shown.
-  defp time_on_screen?(%{view: "week", selected_date: date, current_week_start: start})
-       when is_binary(date) do
+  @doc "Whether the chosen time is in the picker on screen, for \"Change time\" to focus."
+  @spec time_on_screen?(map()) :: boolean()
+  def time_on_screen?(%{view: "week", selected_date: date, current_week_start: start})
+      when is_binary(date) do
     case Date.from_iso8601(date) do
       {:ok, day} ->
         Date.compare(day, start) != :lt and Date.compare(day, Date.add(start, 6)) != :gt
@@ -60,8 +63,8 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
     end
   end
 
-  defp time_on_screen?(%{view: "week"}), do: false
-  defp time_on_screen?(_assigns), do: true
+  def time_on_screen?(%{view: "week"}), do: false
+  def time_on_screen?(_assigns), do: true
 
   @doc "The details part: the heading, the chosen time, the questions and the form."
   @spec book(map()) :: Phoenix.LiveView.Rendered.t()
@@ -70,7 +73,18 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
       assign(assigns,
         next_day_end: LocalizationHelpers.booking_next_day_end(assigns),
         questions: Events.all_questions(assigns),
-        can_change_time: time_on_screen?(assigns)
+        series_count: SeriesSummary.pending_count(assigns)
+      )
+
+    # Where the series part shows above (`Paper...SeriesComponent`), it
+    # names the first session and changes it: the details say only how many
+    # sessions they book, and nothing more for a single session chosen there.
+    series_shown = assigns[:series_shown] == true
+
+    assigns =
+      assign(assigns,
+        series_shown: series_shown,
+        can_change_time: not series_shown and time_on_screen?(assigns)
       )
 
     ~H"""
@@ -103,27 +117,20 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
           {dpgettext("booking_voice", "paper", "Enter your details")}
         </h2>
       </div>
-      <p class="paper-book__when" data-testid="paper-book-when">
-        <.icon name="hero-calendar" class="paper-book__when-icon" />
-        <span>
-          {LocalizationHelpers.format_booking_datetime(@selected_date, @selected_time, @user_timezone)}
-        </span>
-        <button
-          :if={@can_change_time}
-          type="button"
-          class="paper-book__change"
-          data-testid="paper-change-time"
-          phx-click={
-            JS.remove_class("paper-card--booking", to: "#schedule-step")
-            |> JS.focus(
-              to:
-                "#schedule-step .slot-list__slot--selected, #schedule-step [data-fact='slot'][aria-pressed='true']"
-            )
-          }
-        >
-          {dpgettext("booking_voice", "paper", "Change time")}
-        </button>
-      </p>
+      <.chosen_time
+        :if={@series_count || not @series_shown}
+        can_change={@can_change_time}
+        testid={if @series_count, do: "booking-series-summary", else: "paper-book-when"}
+      >
+        {if @series_count,
+          do: SeriesSummary.summary_line(assigns, @series_count),
+          else:
+            LocalizationHelpers.format_booking_datetime(
+              @selected_date,
+              @selected_time,
+              @user_timezone
+            )}
+      </.chosen_time>
       <p
         :if={@next_day_end}
         class="paper-book__when paper-book__when--end"
@@ -135,6 +142,49 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
       <.form_part {assigns} />
     </section>
     """
+  end
+
+  attr :can_change, :boolean, required: true
+  attr :testid, :string, required: true
+  slot :inner_block, required: true
+
+  @doc """
+  The chosen time with its icon and, when `can_change`, "Change time",
+  which brings the picker back and takes the focus to the chosen time
+  there. The series part above the details draws it too.
+  """
+  @spec chosen_time(map()) :: Phoenix.LiveView.Rendered.t()
+  def chosen_time(assigns) do
+    ~H"""
+    <p class="paper-book__when" data-testid={@testid}>
+      <.icon name="hero-calendar" class="paper-book__when-icon" />
+      <span>{render_slot(@inner_block)}</span>
+      <button
+        :if={@can_change}
+        type="button"
+        class="paper-book__change"
+        data-testid="paper-change-time"
+        phx-click={change_time()}
+      >
+        {dpgettext("booking_voice", "paper", "Change time")}
+      </button>
+    </p>
+    """
+  end
+
+  @doc """
+  What "Change time" does: brings the picker back on a wide card and takes
+  the focus to the chosen time in it (the month's selected time, or the
+  week's pressed one). The series part's clash notice does the same.
+  """
+  @spec change_time() :: struct()
+  def change_time do
+    "paper-card--booking"
+    |> JS.remove_class(to: "#schedule-step")
+    |> JS.focus(
+      to:
+        "#schedule-step .slot-list__slot--selected, #schedule-step [data-fact='slot'][aria-pressed='true']"
+    )
   end
 
   # Every question at once, in the definitions' order, each with the error
@@ -236,11 +286,14 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
       stage={:before}
     />
 
-    <SubmitPrice.price
+    <VerificationNotice.line meeting_type={@meeting_type} />
+
+    <SeriesSummary.price
       meeting_type={@meeting_type}
       currency={@host_currency}
       locale={@locale}
       rescheduling={@is_rescheduling}
+      count={@series_count}
       class="paper-book__price"
     />
 
@@ -250,25 +303,30 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
         form="booking-form"
         class="paper-button paper-button--primary"
         data-testid="submit-booking"
-        aria-describedby={
-          SubmitPrice.describedby(@meeting_type, @host_currency, @locale, @is_rescheduling)
-        }
+        aria-describedby={SeriesSummary.price_describedby(assigns, @series_count)}
         data-intent="submit"
-        disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
+        disabled={
+          @submitting || !OrganizerHelpers.form_valid?(@form) ||
+            SeriesSummary.submit_waits?(assigns)
+        }
       >
         <%= if @submitting do %>
           <.spinner class="paper-spinner" aria-hidden="true" />
           <span>{dpgettext("booking_voice", "paper", "Sending…")}</span>
         <% else %>
-          {BookingLabels.submit_label(
-            @is_rescheduling,
-            @meeting_type,
-            dgettext("booking", "Book Meeting"),
-            :paper
-          )}
+          {SeriesSummary.submit_label(assigns, single_label(@is_rescheduling, @meeting_type))}
         <% end %>
       </button>
     </div>
     """
   end
+
+  defp single_label(is_rescheduling, meeting_type),
+    do:
+      BookingLabels.submit_label(
+        is_rescheduling,
+        meeting_type,
+        dgettext("booking", "Book Meeting"),
+        :paper
+      )
 end

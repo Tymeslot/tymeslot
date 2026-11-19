@@ -41,6 +41,15 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrideQueries do
     :ok
   end
 
+  @doc "The colour of `user_id`'s override on the event `uid` of `integration_id`, or nil."
+  @spec external_colour(integer(), integer(), String.t()) :: String.t() | nil
+  def external_colour(user_id, integration_id, uid) do
+    ColourOverride
+    |> external_match({user_id, integration_id, uid})
+    |> select([o], o.colour)
+    |> Repo.one()
+  end
+
   @spec clear_meeting(integer(), Ecto.UUID.t()) :: :ok
   def clear_meeting(user_id, meeting_id) do
     Repo.delete_all(meeting_match(ColourOverride, {user_id, meeting_id}))

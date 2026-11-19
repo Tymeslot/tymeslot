@@ -267,12 +267,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceDisplayTest do
   end
 
   describe "desktop notifications" do
+    # The switch's hook asks the browser and pushes its answer
+    # (`CalendarSurfaceDesktopPermissionTest` covers the refusals).
     test "switching them on is saved and sent to the canvas", %{conn: conn} do
       %{conn: conn, user: user} = owner(conn)
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
       open_display_options(lv)
-      lv |> element("#calendar-desktop-reminders") |> render_click()
+
+      lv
+      |> element("#calendar-desktop-reminders")
+      |> render_hook("calendar:enable_desktop_reminders", %{"permission" => "granted"})
 
       assert_push_event(lv, "calendar:settings", %{desktop_reminders: true})
       assert stored(user).desktop_reminders_enabled

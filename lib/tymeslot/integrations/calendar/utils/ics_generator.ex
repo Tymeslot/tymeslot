@@ -62,7 +62,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   @doc """
   Generates an ICS attachment that cancels an existing event
   (`METHOD:PUBLISH` + `STATUS:CANCELLED`). We deliberately avoid
-  `METHOD:CANCEL` here — see the note on `render_vcalendar/3`.
+  `METHOD:CANCEL` here — see the note on `render_vcalendar/2`.
 
   The `sequence` should be the next value after the last sent invitation so
   calendar clients recognise the cancellation as more recent than the event
@@ -79,9 +79,54 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     build_attachment(meeting_details, :cancel, sequence, locale, filename)
   end
 
-  defp build_attachment(meeting_details, method, sequence, locale, filename) do
-    ics_content = generate_ics_with(meeting_details, method, sequence, locale)
+  @doc """
+  One calendar file holding every session of a booking series: one VEVENT
+  per session in `sessions_details` (each a payload as
+  `generate_ics_attachment/3` takes), with its own UID and SEQUENCE exactly
+  as that session's own attachment would carry them. There is no RRULE: each
+  session is its own entry, rescheduled and cancelled on its own (see
+  `Tymeslot.Emails.Shared.CalendarEventContent` on why emails never carry
+  one).
+  """
+  @spec generate_series_attachment([map()], String.t(), String.t()) :: Swoosh.Attachment.t()
+  def generate_series_attachment([_first | _rest] = sessions_details, locale, filename) do
+    sessions_details
+    |> Enum.map(&{&1, Map.get(&1, :ical_sequence) || 0})
+    |> build_series_attachment(:request, locale, filename)
+  end
 
+  @doc """
+  The cancellation of several sessions of a series in one calendar file:
+  one cancelled VEVENT per session, each on its own UID one revision above
+  the invitation it supersedes, as `generate_ics_cancel_attachment/4` is
+  called for a single meeting.
+  """
+  @spec generate_series_cancel_attachment([map()], String.t(), String.t()) ::
+          Swoosh.Attachment.t()
+  def generate_series_cancel_attachment([_first | _rest] = sessions_details, locale, filename) do
+    sessions_details
+    |> Enum.map(&{&1, (Map.get(&1, :ical_sequence) || 0) + 1})
+    |> build_series_attachment(:cancel, locale, filename)
+  end
+
+  defp build_series_attachment(sessions, method, locale, filename) do
+    ics_content =
+      Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+        sessions
+        |> Enum.map(fn {details, sequence} -> {build_event(details), sequence} end)
+        |> render_vcalendar(method)
+      end)
+
+    calendar_attachment(ics_content, filename)
+  end
+
+  defp build_attachment(meeting_details, method, sequence, locale, filename) do
+    meeting_details
+    |> generate_ics_with(method, sequence, locale)
+    |> calendar_attachment(filename)
+  end
+
+  defp calendar_attachment(ics_content, filename) do
     # Bare `text/calendar`, no inline params. Swoosh splits the attachment
     # content_type on "/", so a value like "text/calendar; method=PUBLISH"
     # lands the params inside the subtype and the MIME encoder emits an
@@ -98,9 +143,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   defp generate_ics_with(meeting_details, method, sequence, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      meeting_details
-      |> build_event()
-      |> render_vcalendar(method, sequence)
+      render_vcalendar([{build_event(meeting_details), sequence}], method)
     end)
   end
 
@@ -151,11 +194,11 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   # The document is built as content lines and written through
   # `ContentLines.join/1`, as the CalDAV writer's is: CRLF line endings and
   # folding to 75 octets (RFC 5545 §3.1).
-  defp render_vcalendar(event, method, sequence) do
+  #
+  # `events` is each event with the SEQUENCE it is sent at (nil to omit it):
+  # one for a meeting's own file, one per session for a series'.
+  defp render_vcalendar(events, method) do
     lang = language_param()
-    summary_text = Format.escape_text(event.summary || dgettext("emails", "Meeting"))
-    description_text = Format.escape_text(event.description)
-    location_text = Format.escape_text(event.location)
 
     [
       "BEGIN:VCALENDAR",
@@ -164,29 +207,35 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       "PRODID:-//Tymeslot//Tymeslot 1.0//EN",
       "CALSCALE:GREGORIAN"
     ]
-    |> Enum.concat(
-      Enum.flat_map(entries(event), fn entry ->
-        [
-          "BEGIN:VEVENT",
-          "UID:#{entry.uid}",
-          "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}",
-          "DTSTART#{format_ical_time(entry.dtstart)}",
-          "DTEND#{format_ical_time(entry.dtend)}",
-          if(is_integer(sequence), do: "SEQUENCE:#{entry.sequence || sequence}"),
-          "SUMMARY#{tag_language(summary_text, lang)}:#{summary_text}",
-          "DESCRIPTION#{tag_language(description_text, lang)}:#{description_text}",
-          "LOCATION#{tag_language(location_text, lang)}:#{location_text}",
-          build_conference_line(event.conference),
-          "ORGANIZER;#{event.organizer}",
-          event.attendee && "ATTENDEE;#{event.attendee}",
-          "STATUS:#{status_for(method, event.status)}",
-          "END:VEVENT"
-        ]
-      end)
-    )
+    |> Enum.concat(Enum.flat_map(events, &vevents(&1, method, lang)))
     |> Enum.concat(["END:VCALENDAR"])
     |> Enum.reject(&is_nil/1)
     |> ContentLines.join()
+  end
+
+  defp vevents({event, sequence}, method, lang) do
+    summary_text = Format.escape_text(event.summary || dgettext("emails", "Meeting"))
+    description_text = Format.escape_text(event.description)
+    location_text = Format.escape_text(event.location)
+
+    Enum.flat_map(entries(event), fn entry ->
+      [
+        "BEGIN:VEVENT",
+        "UID:#{entry.uid}",
+        "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}",
+        "DTSTART#{format_ical_time(entry.dtstart)}",
+        "DTEND#{format_ical_time(entry.dtend)}",
+        if(is_integer(sequence), do: "SEQUENCE:#{entry.sequence || sequence}"),
+        "SUMMARY#{tag_language(summary_text, lang)}:#{summary_text}",
+        "DESCRIPTION#{tag_language(description_text, lang)}:#{description_text}",
+        "LOCATION#{tag_language(location_text, lang)}:#{location_text}",
+        build_conference_line(event.conference),
+        "ORGANIZER;#{event.organizer}",
+        event.attendee && "ATTENDEE;#{event.attendee}",
+        "STATUS:#{status_for(method, event.status)}",
+        "END:VEVENT"
+      ]
+    end)
   end
 
   # The event, then each further entry in the guest's calendar the email

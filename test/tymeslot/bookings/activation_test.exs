@@ -338,4 +338,32 @@ defmodule Tymeslot.Bookings.ActivationTest do
       assert %{announced_at: nil} = Repo.reload!(meeting)
     end
   end
+
+  describe "activate_in_transaction/2 — announce: :series" do
+    test "a failed video-room insert is returned, so the series rolls back" do
+      user = insert(:user)
+      video_integration = insert(:video_integration, user: user, provider: "mirotalk")
+
+      meeting =
+        meeting_for(user, %{status: :confirmed, video_integration_id: video_integration.id})
+
+      :meck.new(Oban, [:passthrough])
+
+      :meck.expect(Oban, :insert, fn changeset ->
+        if Changeset.get_field(changeset, :worker) == "Tymeslot.Workers.VideoRoomWorker" do
+          {:error, :simulated_failure}
+        else
+          :meck.passthrough([changeset])
+        end
+      end)
+
+      # Unlike a booking of its own, which falls back to announcing
+      # without a room, the error comes back for the caller to roll back.
+      try do
+        assert {:error, _reason} = activate(meeting, with_video_room: true, announce: :series)
+      after
+        :meck.unload(Oban)
+      end
+    end
+  end
 end

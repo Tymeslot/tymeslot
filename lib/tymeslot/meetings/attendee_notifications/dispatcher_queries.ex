@@ -35,6 +35,42 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherQueries do
   end
 
   @doc """
+  When the earliest scheduled/available Worker job for the given `event_id` +
+  `kind` is due, or nil when none is waiting.
+  """
+  @spec pending_due_at(integer, binary) :: DateTime.t() | nil
+  def pending_due_at(event_id, kind) when is_integer(event_id) and is_binary(kind) do
+    event_id_str = Integer.to_string(event_id)
+
+    Oban.Job
+    |> where([j], j.worker == ^@worker)
+    |> where([j], j.state in ^@active_states)
+    |> where([j], fragment("?->>'event_id' = ?", j.args, ^event_id_str))
+    |> where([j], fragment("?->>'kind' = ?", j.args, ^kind))
+    |> select([j], min(j.scheduled_at))
+    |> Repo.one()
+  end
+
+  @doc """
+  Returns true if a Worker job for the given `event_id` + `kind`, scheduled
+  for `due_at` or later, has started sending (it is running, has run or is
+  retrying).
+  """
+  @spec sent_for?(integer, binary, DateTime.t()) :: boolean
+  def sent_for?(event_id, kind, %DateTime{} = due_at)
+      when is_integer(event_id) and is_binary(kind) do
+    event_id_str = Integer.to_string(event_id)
+
+    Oban.Job
+    |> where([j], j.worker == ^@worker)
+    |> where([j], j.state in ~w(executing completed retryable))
+    |> where([j], j.scheduled_at >= ^due_at)
+    |> where([j], fragment("?->>'event_id' = ?", j.args, ^event_id_str))
+    |> where([j], fragment("?->>'kind' = ?", j.args, ^kind))
+    |> Repo.exists?()
+  end
+
+  @doc """
   Returns true if a scheduled/available Worker job exists for the given
   `event_id` + `kind`.
   """

@@ -252,4 +252,23 @@ defmodule Tymeslot.CalendarGrid.Changes do
   defdelegate tell_guests(user_id, integrations, opened_with, event, scope),
     to: GuestUpdate,
     as: :tell
+
+  @doc """
+  When the update "Tell guests" sent for the event goes out, or nil when none
+  is held. See `Tymeslot.CalendarGrid.GuestUpdate.held_until/1`.
+  """
+  @spec guest_update_held_until(map()) :: DateTime.t() | nil
+  defdelegate guest_update_held_until(event), to: GuestUpdate, as: :held_until
+
+  @doc """
+  Cancels the update held for the event's guests until `held_until` (as
+  `guest_update_held_until/1` gave it), once the user is found to organise
+  it on a calendar they can write. See
+  `Tymeslot.CalendarGrid.GuestUpdate.cancel/4`.
+  """
+  @spec cancel_guest_update(pos_integer(), [map()], map(), DateTime.t()) ::
+          {:ok, :cancelled | :already_sent | :not_held} | {:error, GuestUpdate.refusal()}
+  defdelegate cancel_guest_update(user_id, integrations, event, held_until),
+    to: GuestUpdate,
+    as: :cancel
 end

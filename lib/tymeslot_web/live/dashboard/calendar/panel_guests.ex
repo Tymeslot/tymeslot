@@ -3,6 +3,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   The guests of the event the side panel shows, and telling them about the
   panel's changes.
 
+  An address the panel will not invite (not an email, the organiser's own,
+  a guest already, past the limit) is said under the guest field.
+
   Inviting and removing write the guest list through `Writes.update/5`, to
   the event the panel shows, and email the guest concerned only once the
   calendar has accepted that write: an invitation for a new guest, a
@@ -18,8 +21,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
 
   Panel edits tell nobody on their own. `untold?/2` says whether the event
   has guests and differs, in anything they would see, from the event as the
-  panel opened on it (`panel.opened_with`); `tell/1` sends one update for
-  all of it and makes the event as it is now the new starting point. Only
+  panel opened on it (`panel.opened_with`), or as it was before a drag or
+  resize nobody was told about (`untold_moves`, see `Manipulation`); `tell/1`
+  sends one update for all of it and makes the event as it is now the new
+  starting point. Only
   the organiser of an event on a calendar they can write may tell its
   guests; the domain refuses anyone else (`Changes.tell_guests/5`).
   """
@@ -27,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
+  import Phoenix.LiveView, only: [send_update_after: 3]
 
   alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.CreateParams
@@ -36,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Validation.AddressList
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
@@ -45,6 +52,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   alias TymeslotWeb.Dashboard.CalendarEditMessages
 
   @type socket :: Phoenix.LiveView.Socket.t()
+
+  # How long after an update is due the panel looks whether it has gone out,
+  # and the longest it waits between looks while the update is overdue.
+  @hold_grace_ms 1_000
+  @max_hold_backoff_ms 30_000
 
   @doc "The event's guests in the canonical shape, for the chips and every write."
   @spec of(map()) :: [Attendee.t()]
@@ -72,14 +84,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
 
       socket
       |> write(event, guests)
+      |> PanelState.put_error("guest", nil)
       |> assign(:guest_form_key, socket.assigns.guest_form_key + 1)
     else
-      {:invalid, message} -> flash(socket, {:warning, message})
+      {:invalid, message} -> PanelState.put_error(socket, "guest", message)
       refusal -> refuse(socket, refusal)
     end
   end
 
   def invite(socket, _raw), do: socket
+
+  @doc "Typing in the guest field clears what it said about the last address."
+  @spec typed(socket()) :: socket()
+  def typed(%{assigns: %{panel: %{mode: :edit}}} = socket),
+    do: PanelState.put_error(socket, "guest", nil)
+
+  def typed(socket), do: socket
 
   @doc "Asks whether to remove the guest `email` from the event the panel shows."
   @spec request_remove(socket(), String.t()) :: socket()
@@ -162,8 +182,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
          true <- untold?(opened_with, event),
          false <- Writes.saving?(socket, event),
          {:ok, _sent_or_noop} <- send_update(socket, panel, event) do
+      held_until = Changes.guest_update_held_until(event)
+
       socket
-      |> assign(:panel, %{panel | opened_with: event})
+      |> count_from_now(panel, event, held_until != nil)
+      |> assign(:untold_moves, Map.delete(socket.assigns.untold_moves, panel.event_id))
+      |> watch_hold(panel.event_id, held_until)
       |> Toast.show(dgettext("dashboard_calendar_editing", "Guests will get an update."))
     else
       true ->
@@ -180,6 +204,165 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
         socket
     end
   end
+
+  @doc """
+  Cancels the update "Tell guests" sent for the panel's event while it is
+  still held, so the guests are told nothing, and counts the changes as
+  untold again: the panel offers to tell them once more. An update that has
+  gone out meanwhile cannot be taken back, and the organiser is told so.
+  Only the event's organiser may (`Changes.cancel_guest_update/3`).
+  """
+  @spec cancel_pending(socket()) :: socket()
+  def cancel_pending(socket) do
+    with {:ok, event} <- panel_event(socket),
+         %{guests_pending: true, held_until: %DateTime{} = held_until} = panel <-
+           socket.assigns.panel,
+         {:ok, outcome} <-
+           Changes.cancel_guest_update(
+             socket.assigns.current_user.id,
+             socket.assigns.integrations,
+             event,
+             held_until
+           ) do
+      socket
+      |> assign(:held_from, Map.delete(socket.assigns.held_from, panel.event_id))
+      |> cancelled(panel, Map.get(socket.assigns.held_from, panel.event_id), outcome)
+    else
+      {:error, _reason} = refusal -> refuse(socket, refusal)
+      _nothing_held -> socket
+    end
+  end
+
+  defp cancelled(socket, panel, told_from, :cancelled),
+    do:
+      socket
+      |> untold_again(panel, told_from)
+      |> Toast.show(dgettext("dashboard_calendar_editing", "Guests won't be told."))
+
+  # Cancelled from another tab, say: the guests were not told either.
+  defp cancelled(socket, panel, told_from, :not_held),
+    do:
+      socket
+      |> untold_again(panel, told_from)
+      |> Toast.show(
+        dgettext("dashboard_calendar_editing", "This update is no longer waiting to be sent.")
+      )
+
+  defp cancelled(socket, panel, _told_from, :already_sent) do
+    socket
+    |> assign(:panel, %{panel | guests_pending: false})
+    |> Toast.show(
+      dgettext("dashboard_calendar_editing", "Too late to cancel: guests have been told.")
+    )
+  end
+
+  defp untold_again(socket, panel, told_from) do
+    untold_from = told_from || panel.opened_with
+
+    socket
+    |> assign(:panel, %{panel | guests_pending: false, opened_with: untold_from})
+    |> assign(:untold_moves, Map.put(socket.assigns.untold_moves, panel.event_id, untold_from))
+  end
+
+  @doc """
+  The held update for the panel's event `id` is due (the watch `watch` the
+  panel set, see `watch_hold/4`): the panel stops offering to cancel it once
+  it has gone out, and looks again, later each time, while it is overdue. A
+  watch the panel has since replaced, or one for another event, is ignored.
+  """
+  @spec recheck_pending(socket(), String.t(), integer(), pos_integer()) :: socket()
+  def recheck_pending(
+        %{assigns: %{panel: %{event_id: id, guests_pending: true, hold_watch: watch}}} = socket,
+        id,
+        watch,
+        backoff
+      ) do
+    case panel_event(socket) do
+      {:ok, event} ->
+        held_until = Changes.guest_update_held_until(event)
+
+        socket
+        |> PanelState.update(&%{&1 | guests_pending: held_until != nil})
+        |> forget_held_from(id, held_until)
+        |> watch_hold(id, held_until, min(backoff * 2, @max_hold_backoff_ms))
+
+      :error ->
+        socket
+    end
+  end
+
+  def recheck_pending(socket, _id, _watch, _backoff), do: socket
+
+  @doc """
+  Asks again once the update held for the event `id` until `held_until` is
+  due (`recheck_pending/4`), so the panel's Cancel does not outlive it, and
+  after `backoff` milliseconds when it is overdue already. The panel keeps
+  one watch: a new one replaces the one before. The panel also keeps
+  `held_until`, which Cancel names the hold by, so that only this hold
+  going out counts as too late to cancel, not an earlier update. Nothing
+  for no update held (`nil`).
+  """
+  @spec watch_hold(socket(), String.t(), DateTime.t() | nil, pos_integer()) :: socket()
+  def watch_hold(socket, id, held_until, backoff \\ @hold_grace_ms)
+
+  def watch_hold(socket, _id, nil, _backoff),
+    do: PanelState.update(socket, &Map.merge(&1, %{hold_watch: nil, held_until: nil}))
+
+  # The job's due time is Oban's, on the system clock, not `Tymeslot.Clock`.
+  def watch_hold(socket, id, %DateTime{} = held_until, backoff) do
+    due_in = DateTime.diff(held_until, DateTime.utc_now(), :millisecond)
+
+    {wait, backoff} =
+      if due_in > 0, do: {due_in + @hold_grace_ms, @hold_grace_ms}, else: {backoff, backoff}
+
+    watch = System.unique_integer([:positive])
+
+    send_update_after(
+      CalendarSurface,
+      [
+        id: socket.assigns.id,
+        action: :guests_pending_due,
+        event_id: id,
+        watch: watch,
+        backoff: backoff
+      ],
+      wait
+    )
+
+    PanelState.update(socket, &Map.merge(&1, %{hold_watch: watch, held_until: held_until}))
+  end
+
+  # The panel counts from the event as it is now. While the update is held,
+  # the surface remembers where it counted from before (`held_from`, by event
+  # id), so a Cancel leaves the changes untold again, also in a panel opened
+  # on the event later. A second Tell while one is held joins it, and keeps
+  # the first starting point.
+  defp count_from_now(socket, panel, event, held?) do
+    held_from =
+      if held?,
+        do: Map.put(socket.assigns.held_from, panel.event_id, told_from(socket, panel)),
+        else: Map.delete(socket.assigns.held_from, panel.event_id)
+
+    socket
+    |> assign(:panel, %{panel | opened_with: event, guests_pending: held?})
+    |> assign(:held_from, held_from)
+  end
+
+  defp told_from(socket, %{guests_pending: true} = panel),
+    do: Map.get(socket.assigns.held_from, panel.event_id, panel.opened_with)
+
+  defp told_from(_socket, panel), do: panel.opened_with
+
+  @doc """
+  Forgets where the held update for the event `id` counted from once none
+  is held (`held_until` nil), so a later hold, from another tab say, is not
+  taken back to a starting point that belonged to an earlier one.
+  """
+  @spec forget_held_from(socket(), String.t(), DateTime.t() | nil) :: socket()
+  def forget_held_from(socket, _id, %DateTime{}), do: socket
+
+  def forget_held_from(socket, id, nil),
+    do: assign(socket, :held_from, Map.delete(socket.assigns.held_from, id))
 
   defp send_update(socket, panel, event),
     do:

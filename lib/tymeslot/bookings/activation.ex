@@ -64,8 +64,18 @@ defmodule Tymeslot.Bookings.Activation do
   Runs the side effects a newly created or newly confirmed meeting needs, in
   the transaction that created or confirmed it.
 
-  A meeting still awaiting the host's approval takes the request fan-out; any
-  other status takes the confirmation one.
+  A meeting still awaiting the host's approval takes the request fan-out
+  (without emails for a session of a series); any other status takes the
+  confirmation one.
+
+  With `announce: :series` the meeting is one occurrence of a booking
+  series (`Tymeslot.BookingSeries`): its reminders are scheduled and its
+  announcement claimed as usual, but no confirmation emails are sent, since
+  the series is confirmed in one email of its own, and its `meeting.created`
+  is left out of the integration fan-out, since the host's automations hear
+  of the series in one `meeting.series_created`. A video room is created
+  without holding anything back. The default, `announce: :meeting`, is a
+  booking of its own.
 
   With `with_video_room: true` the caller asserts the booking flow wants a
   room whenever the meeting has an integration; without it, the provider is
@@ -98,18 +108,27 @@ defmodule Tymeslot.Bookings.Activation do
   #
   # The request still has to reach people — the invitee needs telling their
   # booking is not final, and the host cannot approve what they never heard
-  # about — so it takes the request fan-out instead.
-  def activate_in_transaction(%Meeting{status: :awaiting_approval} = meeting, _opts) do
+  # about — so it takes the request fan-out instead. A session of a series
+  # (`announce: :series`) schedules no request emails, nudge or expiry of its
+  # own: the series is requested once, for all its sessions
+  # (`Tymeslot.BookingSeries.Notifications.schedule_series_request/1`),
+  # which also tells the host's automations once, so no fan-out is
+  # returned for the session either.
+  def activate_in_transaction(%Meeting{status: :awaiting_approval} = meeting, opts) do
+    emails? = Keyword.get(opts, :announce, :meeting) == :meeting
+
     meeting
-    |> Events.meeting_requested_deferred()
+    |> Events.meeting_requested_deferred(emails: emails?)
     |> settle(meeting, "Failed to schedule booking request emails")
   end
 
   def activate_in_transaction(%Meeting{} = meeting, opts) do
+    announce = Keyword.get(opts, :announce, :meeting)
+
     if wants_video_room?(meeting, opts) do
-      schedule_video_room_with_announcement(meeting)
+      schedule_video_room(meeting, announce)
     else
-      notify(meeting)
+      notify(meeting, announce)
     end
   end
 
@@ -151,16 +170,39 @@ defmodule Tymeslot.Bookings.Activation do
 
   # The room job announces the booking itself once it runs, after commit, so
   # nothing is owed from here.
-  defp schedule_video_room_with_announcement(meeting) do
+  defp schedule_video_room(meeting, :meeting) do
     case VideoRoomWorker.schedule_video_room_creation_with_announcement(meeting.id) do
       :ok -> {:ok, []}
-      {:error, _reason} -> notify(meeting)
+      {:error, _reason} -> notify(meeting, :meeting)
     end
   end
 
-  defp notify(meeting) do
+  # A series sends no confirmation per occurrence, so there is nothing for
+  # the room to wait for: the room is created on its own, and the occurrence
+  # is announced now, without emails. Its reminders, composed when they are
+  # sent, carry the room's link by then.
+  #
+  # No `meeting.created` is returned for the occurrence: the host's
+  # automations hear of the whole series in one `meeting.series_created`,
+  # raised once every session's room exists
+  # (`Tymeslot.BookingSeries.Automation`).
+  #
+  # Unlike a booking of its own, which falls back to announcing without a
+  # room, a session whose room job cannot be enqueued fails: the series
+  # rolls back and is retried whole, as for any other job it cannot queue.
+  defp schedule_video_room(meeting, :series) do
+    case VideoRoomWorker.schedule_video_room_creation(meeting.id) do
+      :ok -> notify(meeting, :series)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp notify(meeting, announce) do
     meeting
-    |> Events.meeting_created_deferred()
+    |> Events.meeting_created_deferred(
+      emails: announce == :meeting,
+      integrations: announce == :meeting
+    )
     |> settle(meeting, "Failed to schedule confirmation emails for meeting")
   end
 

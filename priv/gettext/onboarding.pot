@@ -200,6 +200,16 @@ msgstr ""
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
+msgid "Book a whole course of sessions at once"
+msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Clients can now book a series in one go: the same time every week or month, or a set of sessions at times they choose. Each session is a normal booking with its own reminders and links, and a series can be paid upfront. Turn it on for each meeting type, under Series."
+msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
 msgid "Your dashboard calendar, redesigned"
 msgstr ""
 

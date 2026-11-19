@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.Automation.PlanPauseSectionTest do
         automations_allowed: false,
         custom_questions_allowed: true,
         group_bookings_allowed: true,
+        recurring_bookings_allowed: true,
         analytics_allowed: true,
         meeting_payments: false
       ]

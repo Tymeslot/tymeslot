@@ -5,6 +5,7 @@ defmodule Tymeslot.Emails.EmailService do
   This module is a facade that delegates to focused category sub-modules:
 
   - `AppointmentEmails` — confirmations, reminders, cancellations
+  - `SeriesEmails`: a booking series' one confirmation and cancellation
   - `AuthEmails` — email verification, password reset
   - `OnboardingEmails`: mail a new host asks for while setting up (their booking link)
   - `AccountEmails` — email change verification, notification, confirmation
@@ -23,7 +24,8 @@ defmodule Tymeslot.Emails.EmailService do
     AuthEmails,
     CalendarEmails,
     IntegrationEmails,
-    OnboardingEmails
+    OnboardingEmails,
+    SeriesEmails
   }
 
   alias Tymeslot.Workers.SendConfiguredEmail
@@ -98,6 +100,10 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_booking_request_received(meeting, opts), to: AppointmentEmails
 
+  @doc "Asks an attendee to confirm their email address before a booking counts."
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_booking_email_verification(meeting, verify_url), to: AppointmentEmails
+
   @doc "Asks the host to approve or decline a booking request, or reminds them."
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_booking_approval_request(variant, meeting, urls, locale), to: AppointmentEmails
@@ -128,6 +134,18 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_seat_update_to_organizer(variant, organizer_email, appointment_details),
     to: AppointmentEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_series_confirmation(role, email, series_details), to: SeriesEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_series_cancellation(role, email, series_details), to: SeriesEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_series_request(role, email, series_details), to: SeriesEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_series_request_outcome(variant, email, series_details), to: SeriesEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_registration_closed(organizer_email, appointment_details, roster),

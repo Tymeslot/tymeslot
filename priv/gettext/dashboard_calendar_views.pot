@@ -87,3 +87,23 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "More on %{date}: %{count}"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "All"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "No bookings in these weeks."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Filter agenda"
+msgstr ""

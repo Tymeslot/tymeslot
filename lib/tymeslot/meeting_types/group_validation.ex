@@ -12,6 +12,7 @@ defmodule Tymeslot.MeetingTypes.GroupValidation do
     * payment: per-seat payment is out of scope;
     * approval: the approval flow answers one booker's request for a whole
       meeting, and a shared slot has no single booker to answer;
+    * email verification: a held seat has no group flow yet;
     * the location: see `Tymeslot.MeetingTypes.GroupLocationRule`;
     * further lengths: see `Tymeslot.MeetingTypes.Lengths.validate_changeset/1`;
     * invitation-only: an invitation link books one person into one slot.
@@ -75,6 +76,10 @@ defmodule Tymeslot.MeetingTypes.GroupValidation do
       |> refuse_for_group(
         :requires_approval,
         dgettext_noop("errors", "group bookings cannot require approval")
+      )
+      |> refuse_for_group(
+        :requires_email_verification,
+        dgettext_noop("errors", "group bookings cannot require email confirmation")
       )
       |> validate_group_location()
     else

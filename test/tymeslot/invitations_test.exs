@@ -8,7 +8,7 @@ defmodule Tymeslot.InvitationsTest do
   alias Ecto.Changeset
   alias Tymeslot.Invitations
   alias Tymeslot.Invitations.InvitationSchema
-  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.{EmailVerification, MeetingSchema}
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -235,6 +235,26 @@ defmodule Tymeslot.InvitationsTest do
     end
   end
 
+  describe "revoked?/1" do
+    test "is true once revoked and false again once reopened", %{user: user, type: type} do
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+      refute Invitations.revoked?(invitation.id)
+
+      {:ok, _revoked} = Invitations.revoke(user.id, invitation.id)
+      assert Invitations.revoked?(invitation.id)
+
+      {:ok, _reopened} = Invitations.reopen(user.id, invitation.id)
+      refute Invitations.revoked?(invitation.id)
+    end
+
+    test "an invitation that no longer exists is not revoked", %{user: user, type: type} do
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+      Repo.delete!(invitation)
+
+      refute Invitations.revoked?(invitation.id)
+    end
+  end
+
   describe "reopen/2" do
     test "frees a used invitation whose meeting was cancelled", %{user: user, type: type} do
       {:ok, invitation} = Invitations.create(user.id, type, %{release_on_cancel: false})
@@ -305,6 +325,84 @@ defmodule Tymeslot.InvitationsTest do
     end
   end
 
+  describe "a booking held for its attendee's email verification" do
+    setup %{user: user, type: type} do
+      {:ok, invitation} = Invitations.create(user.id, type, %{release_on_cancel: false})
+
+      held =
+        insert(:awaiting_verification_meeting,
+          organizer_user: user,
+          meeting_type_id: type.id,
+          invitation_id: invitation.id
+        )
+
+      {:ok, invitation: invitation, held: held}
+    end
+
+    test "holds a single-use link while it waits, refusing a second booker", %{
+      type: type,
+      invitation: invitation
+    } do
+      assert {:error, :used} = Invitations.resolve(invitation.token)
+
+      assert Invitations.check_claimable(invitation.id, type.id) ==
+               {:error, :invitation_unavailable}
+    end
+
+    test "leaves a single-use link usable once its attendee disowns it", %{
+      user: user,
+      type: type,
+      invitation: invitation,
+      held: held
+    } do
+      assert {:ok, %{status: :cancelled}} = EmailVerification.release(held)
+
+      assert {:ok, _invitation} = Invitations.resolve(invitation.token)
+      assert Invitations.check_claimable(invitation.id, type.id) == :ok
+      assert [%{status: :available, meeting: nil}] = Invitations.list(user.id, type)
+    end
+
+    test "leaves a single-use link usable once it lapses unverified", %{
+      user: user,
+      type: type,
+      invitation: invitation,
+      held: held
+    } do
+      freeze_clock(DateTime.add(held.verification_deadline_at, 1, :second))
+      assert {:ok, %{status: :expired}} = EmailVerification.expire(held)
+
+      assert {:ok, _invitation} = Invitations.resolve(invitation.token)
+      assert Invitations.check_claimable(invitation.id, type.id) == :ok
+      assert [%{status: :available, meeting: nil}] = Invitations.list(user.id, type)
+    end
+
+    test "a verified booking cancelled afterwards still spends the link", %{
+      invitation: invitation,
+      held: held
+    } do
+      held
+      |> Changeset.change(status: :cancelled, email_verified_at: DateTime.utc_now(:second))
+      |> Repo.update!()
+
+      assert {:error, :used} = Invitations.resolve(invitation.token)
+    end
+
+    test "a link revoked during the hold reopens as the list offers, and stays held", %{
+      user: user,
+      type: type,
+      invitation: invitation
+    } do
+      {:ok, _revoked} = Invitations.revoke(user.id, invitation.id)
+      assert [%{status: :revoked}] = Invitations.list(user.id, type)
+
+      assert {:ok, %{revoked_at: nil}} = Invitations.reopen(user.id, invitation.id)
+      refute Invitations.revoked?(invitation.id)
+
+      assert [%{status: :available, meeting: nil}] = Invitations.list(user.id, type)
+      assert {:error, :used} = Invitations.resolve(invitation.token)
+    end
+  end
+
   describe "check_claimable/2" do
     test "is ok only for an available invitation of that type", %{user: user, type: type} do
       other_type = insert(:meeting_type, user: user, invitation_only: true)
@@ -348,6 +446,20 @@ defmodule Tymeslot.InvitationsTest do
     test "is held while the meeting still awaits its payment", %{user: user, type: type} do
       {:ok, invitation} = Invitations.create(user.id, type, %{})
       meeting = book(invitation, user, :awaiting_payment)
+
+      assert Invitations.retry_token(meeting) == :held
+    end
+
+    test "is held while the meeting still awaits its email verification", %{
+      user: user,
+      type: type
+    } do
+      {:ok, invitation} = Invitations.create(user.id, type, %{})
+
+      meeting =
+        book(invitation, user, :awaiting_verification,
+          verification_deadline_at: DateTime.add(DateTime.utc_now(:second), -1, :minute)
+        )
 
       assert Invitations.retry_token(meeting) == :held
     end

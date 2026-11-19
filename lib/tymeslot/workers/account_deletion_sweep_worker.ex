@@ -9,11 +9,11 @@ defmodule Tymeslot.Workers.AccountDeletionSweepWorker do
 
   require Logger
 
-  alias Tymeslot.Auth
+  alias Tymeslot.Auth.AccountDeletion
 
   @impl Oban.Worker
   def perform(_job) do
-    case Auth.enqueue_overdue_account_deletions() do
+    case AccountDeletion.enqueue_overdue_account_deletions() do
       0 -> :ok
       count -> Logger.info("Queued overdue account deletions", count: count)
     end

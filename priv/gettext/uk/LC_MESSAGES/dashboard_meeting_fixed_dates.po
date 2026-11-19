@@ -200,11 +200,6 @@ msgstr "Спершу ввімкніть фіксовані дати та гру�
 msgid "Turn on fixed dates, without group bookings, to offer times."
 msgstr "Щоб пропонувати слоти, увімкніть фіксовані дати без групових бронювань."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a booking at that time."
-msgstr "На цей час у вас уже є бронювання."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/offered_time_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "You already offer that time."
@@ -239,3 +234,8 @@ msgstr "Часу %{time} %{date} не існує, бо годинники пер
 #, elixir-autogen, elixir-format
 msgid "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved."
 msgstr "Час %{time} %{date} настає двічі, бо годинники переводять назад, тож збережено перший із них (%{zone})."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr "Цей час більше недоступний. Виберіть інший."

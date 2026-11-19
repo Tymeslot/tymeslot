@@ -166,10 +166,15 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     end
   end
 
-  # The payload is built for the attendee, in their language, and so carries
-  # the attendee's copies of the meeting type, description, location and
-  # questions (`AttendeeTexts`). The organiser reads their own wording.
-  defp with_original_texts(details),
+  @doc """
+  `details` in the organiser's own wording. The payload is built for the
+  attendee, in their language, and so carries the attendee's copies of the
+  meeting type, description, location and questions (`AttendeeTexts`); the
+  organiser reads the originals. `details` without an attendee copy come
+  back unchanged.
+  """
+  @spec with_original_texts(map()) :: map()
+  def with_original_texts(details),
     do: Map.merge(details, Map.get(details, :original_texts, %{}))
 
   defp organizer_group_links do
@@ -222,8 +227,22 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   # Look up the booking payment row attached to this meeting, if any.
   # Free bookings have no booking_payment row, so this returns nil and the
   # email template short-circuits the receipt block.
-  defp booking_payment_for(%{id: meeting_id}) when is_binary(meeting_id),
-    do: MeetingPayments.payment_for_meeting(meeting_id)
+  #
+  # A session of a paid series shares one payment with every other session,
+  # so its amounts are the series', not the session's: while any session
+  # still goes ahead, a per-session email shows no receipt, payout or
+  # outstanding balance (which share of it has been refunded is not
+  # recorded per session). Once none goes ahead, what is left is owed back
+  # as for any released booking.
+  defp booking_payment_for(%{id: meeting_id}) when is_binary(meeting_id) do
+    case MeetingPayments.payment_for_meeting(meeting_id) do
+      %{series_id: series_id} = payment when is_binary(series_id) ->
+        if MeetingPayments.series_released?(payment), do: payment
+
+      payment ->
+        payment
+    end
+  end
 
   defp booking_payment_for(_meeting), do: nil
 

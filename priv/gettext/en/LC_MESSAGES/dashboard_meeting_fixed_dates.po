@@ -197,11 +197,6 @@ msgstr ""
 msgid "Turn on fixed dates, without group bookings, to offer times."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a booking at that time."
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/offered_time_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "You already offer that time."
@@ -235,4 +230,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
 msgstr ""

@@ -25,9 +25,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   alias Tymeslot.CalendarGrid.WorkingHours
   alias Tymeslot.CalendarGrid.WriteQueue
   alias Tymeslot.Clock
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Meetings
   alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.Calendar.AgendaLoader
   alias TymeslotWeb.Dashboard.Calendar.BookableLayer
@@ -63,6 +65,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       hidden_count: 0,
       working_hours: WorkingHours.fallback(),
       window_events: [],
+      locked_uids: MapSet.new(),
+      colour_overrides: %{},
+      calendar_colour_keys: %{},
+      calendar_colour_open: nil,
       events: [],
       events_by_id: %{},
       window: nil,
@@ -79,6 +85,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       undo: UndoStack.new(),
       tab_id: nil,
       undoing: %{},
+      untold_moves: %{},
+      held_from: %{},
       toast: nil,
       series_prompt: nil,
       delete_prompt: nil,
@@ -91,6 +99,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       transfer: nil,
       series_move_prompt: nil,
       remove_guest_prompt: nil,
+      discard_draft_prompt: nil,
       guest_form_key: 0,
       bookable_types: [],
       bookability: %{},
@@ -147,6 +156,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       video_integrations: Video.list_active_integrations(user_id),
       integration_tokens: ColourTokens.for_integrations(integrations),
       calendar_tokens: ColourTokens.for_calendars(integrations, appearances),
+      colour_overrides: Calendar.overrides_for(user_id),
+      calendar_colour_keys: Appearance.colour_keys(appearances),
       manual_hidden_keys: Appearance.hidden_keys(appearances),
       working_hours: WorkingHours.for_profile(socket.assigns[:profile]),
       bookable_types: LayerPreferences.meeting_types(user_id),
@@ -206,8 +217,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
   def load_window(socket) do
     window = window_for(socket.assigns)
 
+    events = list_events(socket.assigns, window)
+
     socket
-    |> assign(window: window, window_events: list_events(socket.assigns, window))
+    |> assign(
+      window: window,
+      window_events: events,
+      locked_uids: locked_uids(socket.assigns, events)
+    )
     |> filter_events()
     |> BookableLayer.load()
   end
@@ -223,6 +240,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
     # Bookings are drawn as themselves rather than as their calendar copies,
     # and requests that expired unanswered are drawn too (see `EventWindow`).
     EventWindow.list_events(user.id, integrations, start_dt, end_dt, include_expired: true)
+  end
+
+  @doc """
+  The uids among `events` whose group meeting has live seats, which the
+  grid, the preview and the panel draw locked (`EditGuard.seat_locked?/2`):
+  one query for them all, however many there are.
+  """
+  @spec locked_uids(map(), [map()]) :: MapSet.t(String.t())
+  def locked_uids(%{current_user: user}, events) do
+    uids = for %{uid: uid} <- events, is_binary(uid), uniq: true, do: uid
+    Meetings.group_booking_uids_among(user.id, uids)
   end
 
   @doc "`events` without hidden calendars and accounts, or deletes still waiting for their undo."
@@ -360,6 +388,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       integration_tokens: assigns.integration_tokens,
       calendar_tokens: assigns.calendar_tokens,
       integrations: assigns.integrations,
+      locked_uids: assigns.locked_uids,
+      colour_overrides: assigns.colour_overrides,
       events: assigns.events,
       drafts: drafts(assigns),
       settings: settings(assigns),
@@ -406,6 +436,39 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceData do
       Enum.map(socket.assigns.window_events, &if(EventPayload.id(&1) == id, do: event, else: &1))
 
     socket |> assign(:window_events, window_events) |> filter_events()
+  end
+
+  @doc """
+  After an event's colour was chosen: reads the organiser's colour overrides
+  again (no events query), rebuilds an open preview and pushes the window
+  with a cache reset, so the event repaints at once.
+  """
+  @spec reload_overrides(socket()) :: socket()
+  def reload_overrides(socket),
+    do:
+      socket
+      |> assign(:colour_overrides, Calendar.overrides_for(socket.assigns.current_user.id))
+      |> filter_events()
+      |> push_events(true)
+
+  @doc """
+  After a calendar's colour was chosen: reads the calendars' colours again
+  (no events query), rebuilds the rail and an open preview, and pushes the
+  window with a cache reset, so its events repaint at once.
+  """
+  @spec reload_colours(socket()) :: socket()
+  def reload_colours(socket) do
+    %{current_user: user, integrations: integrations} = socket.assigns
+    appearances = Appearance.list_for_user(user.id)
+
+    socket
+    |> assign(
+      calendar_tokens: ColourTokens.for_calendars(integrations, appearances),
+      calendar_colour_keys: Appearance.colour_keys(appearances)
+    )
+    |> assign_accounts()
+    |> filter_events()
+    |> push_events(true)
   end
 
   @doc "Applies hidden calendars and pending deletes to the loaded window again, without pushing."

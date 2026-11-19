@@ -33,6 +33,11 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   views, or with `cached_calendar: true` on the request, as the setup preview
   of the host's week does, so that reloading it costs no provider round trip.
 
+  A request reaching past the booking window (`window_until:`, a series'
+  later sessions) is read fresh over the range itself, padded as the busy
+  set is, since the window fetch stops short of it (`for_window/2` is the
+  same for the reads the cache otherwise serves).
+
   Either way the events come back with the bookability rule applied
   (`Tymeslot.Availability.Bookability`): the host's "Treat as Busy" or
   "Treat as Free" on an all-day event wins over its calendar. The cached entry is stored with
@@ -41,6 +46,7 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   """
 
   alias Tymeslot.Availability.Bookability
+  alias Tymeslot.Availability.Reach
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
 
@@ -66,6 +72,9 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
           {:ok, list()} | {:error, any()}
   def for_range(request, dates, source \\ :fresh)
 
+  def for_range(%{window_until: %Date{}} = request, dates, _source),
+    do: beyond_window(request, dates)
+
   def for_range(%{cached_calendar: true} = request, {first_date, _last_date}, _source),
     do: booking_window(request, first_date)
 
@@ -83,11 +92,33 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   end
 
   @doc """
+  The host's events for a read of `first_date..last_date` that the
+  booking-window cache serves: the cached window entry, or, for a request
+  reaching past the window, the range itself read fresh.
+  """
+  @spec for_window(map(), {Date.t(), Date.t()}) :: {:ok, list()} | {:error, any()}
+  def for_window(%{window_until: %Date{}} = request, dates), do: beyond_window(request, dates)
+  def for_window(request, {first_date, _last_date}), do: booking_window(request, first_date)
+
+  @doc """
   The context map the calendar fetch reads. Its contract names this one key
   only, so the demo provider's extra keys stay out of it.
   """
   @spec context(map()) :: map()
   def context(%{profile: profile}), do: %{organizer_profile: profile}
+
+  defp beyond_window(%{profile: %{user_id: user_id}}, {first_date, last_date} = dates) do
+    padding = Reach.utc_padding_days()
+
+    with {:ok, events} <-
+           CalendarEvents.get_events_for_range_fresh(
+             user_id,
+             Date.add(first_date, -padding),
+             Date.add(last_date, 1 + padding)
+           ) do
+      {:ok, Bookability.apply_to_dates(events, user_id, dates)}
+    end
+  end
 
   defp fresh(%{profile: %{user_id: user_id}} = request, date),
     do: CalendarEvents.get_calendar_events_from_context(date, user_id, context(request))

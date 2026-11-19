@@ -30,6 +30,7 @@ defmodule Tymeslot.Security.RateLimiterIPv6SourceTest do
           booking_submit: 10,
           meeting_cancel: 10,
           meeting_approval: 20,
+          booking_verification_resend: 10,
           meeting_keep: 10,
           guest_rsvp: 60,
           seat_manage: 60,

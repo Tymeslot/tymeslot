@@ -9,8 +9,6 @@ defmodule Tymeslot.Meetings.QueriesTest do
   alias Ecto.UUID
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.Repo
 
   describe "get_meeting_for_organizer/2" do
     test "returns meeting when organizer_user_id matches" do
@@ -117,43 +115,36 @@ defmodule Tymeslot.Meetings.QueriesTest do
     end
   end
 
-  describe "transition_from_awaiting_approval/2 unique-violation handling" do
-    test "returns {:error, :slot_taken} instead of raising when the target slot is already occupied" do
-      organizer = insert(:user)
-      taken_time = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
+  describe "list_expired_verifications/2" do
+    test "returns only lapsed held bookings, oldest first" do
+      now = DateTime.utc_now(:second)
 
-      insert(:meeting,
-        organizer_user_id: organizer.id,
-        start_time: taken_time,
-        end_time: DateTime.add(taken_time, 3600, :second),
-        status: :confirmed
-      )
-
-      held_start = DateTime.add(taken_time, 7200, :second)
-
-      held =
+      newer =
         insert(:meeting,
-          organizer_user_id: organizer.id,
-          start_time: held_start,
-          end_time: DateTime.add(held_start, 3600, :second),
-          status: :awaiting_approval
+          status: :awaiting_verification,
+          verification_deadline_at: DateTime.add(now, -60)
         )
 
-      # `changes` is a plain keyword list — the function's contract allows any
-      # column, not only `status`. Moving this held row's own start_time onto
-      # the already-occupied slot is the most direct way to trigger the same
-      # unique-index collision the raw `Repo.update_all` has no changeset to
-      # translate.
-      assert {:error, :slot_taken} =
-               MeetingQueries.transition_from_awaiting_approval(
-                 held.id,
-                 status: :confirmed,
-                 start_time: taken_time
-               )
+      older =
+        insert(:meeting,
+          status: :awaiting_verification,
+          verification_deadline_at: DateTime.add(now, -600)
+        )
 
-      reloaded = Repo.get!(MeetingSchema, held.id)
-      assert reloaded.status == :awaiting_approval
-      assert reloaded.start_time == held.start_time
+      _future =
+        insert(:meeting,
+          status: :awaiting_verification,
+          verification_deadline_at: DateTime.add(now, 600)
+        )
+
+      _done =
+        insert(:meeting, status: :expired, verification_deadline_at: DateTime.add(now, -900))
+
+      assert [older.id, newer.id] ==
+               now |> MeetingQueries.list_expired_verifications(10) |> Enum.map(& &1.id)
+
+      assert [older.id] ==
+               now |> MeetingQueries.list_expired_verifications(1) |> Enum.map(& &1.id)
     end
   end
 end

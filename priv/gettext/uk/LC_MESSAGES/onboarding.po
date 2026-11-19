@@ -204,6 +204,16 @@ msgstr "Ваша панель керування, сторінки бронюв�
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
+msgid "Book a whole course of sessions at once"
+msgstr "Забронюйте цілий курс сесій одразу"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Clients can now book a series in one go: the same time every week or month, or a set of sessions at times they choose. Each session is a normal booking with its own reminders and links, and a series can be paid upfront. Turn it on for each meeting type, under Series."
+msgstr "Клієнти тепер можуть забронювати серію за один раз: у той самий час щотижня чи щомісяця або кілька сесій у години, які вони оберуть самі. Кожна сесія є звичайним бронюванням зі своїми нагадуваннями та посиланнями, а серію можна оплатити наперед. Увімкніть її для кожного типу зустрічі в розділі Серія."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
 msgid "Your dashboard calendar, redesigned"
 msgstr "Календар на панелі керування в новому вигляді"
 

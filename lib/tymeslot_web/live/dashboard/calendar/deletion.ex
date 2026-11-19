@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   @doc "A delete asked for from the preview or the Delete key."
   @spec request(socket(), String.t()) :: socket()
   def request(socket, id) when is_binary(id) do
-    case Map.fetch(socket.assigns.events_by_id, id) do
+    case PanelState.fetch_event(socket.assigns, id) do
       {:ok, event} -> socket |> assign(:preview, nil) |> request_event(event)
       :error -> socket
     end
@@ -262,6 +262,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
   # A delete that ran leaves a marker in place of its Undo, so the next Ctrl Z
   # says it is too late instead of quietly taking back an older change. One
   # that did not run has nothing to say and is dropped.
+  defp settle_undo(stack, token, {:deleted, _left_behind}),
+    do: settle_undo(stack, token, :deleted)
+
   defp settle_undo(stack, token, :deleted) do
     mine? = &(Map.get(&1, :token) == token)
 
@@ -354,7 +357,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
     case Changes.schedule_delete(socket.assigns.current_user.id, event, scope, opts) do
       {:ok, token} ->
         socket
-        |> hide(token, event, scope, false)
+        |> hide(token, PendingDeletes.entry(event, scope, false))
         |> offer_undo(token, title)
 
       {:error, _reason} ->
@@ -368,7 +371,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
     case Changes.schedule_delete(socket.assigns.current_user.id, event, scope, opts) do
       {:ok, token} ->
         socket
-        |> hide(token, event, scope, true)
+        |> hide(token, PendingDeletes.entry(event, scope, true, notify?))
         |> Toast.show(
           dgettext("dashboard_calendar", "Deleting “%{title}”…",
             title: EventPayload.title(event)
@@ -381,9 +384,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
     end
   end
 
-  defp hide(socket, token, event, scope, confirmed?) do
-    pending = PendingDeletes.entry(event, scope, confirmed?)
-
+  defp hide(socket, token, pending) do
     socket
     |> assign(:pending_deletes, Map.put(socket.assigns.pending_deletes, token, pending))
     |> SurfaceData.refilter()
@@ -417,11 +418,35 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
 
   defp report(socket, token, :deleted, _pending), do: Toast.dismiss(socket, {:delete, token})
 
-  defp report(socket, token, {:queued, _reason}, _pending),
+  # Gone, but someone it should have reached was not: the plain "Deleted" the
+  # toast said is not the whole story. The tab that deleted says so; another
+  # tab only drops its toast, as it says nothing of a plain delete either.
+  defp report(socket, token, {:deleted, :cancel_failed}, %{origin: :elsewhere}),
+    do: Toast.dismiss(socket, {:delete, token})
+
+  defp report(socket, token, {:deleted, :cancel_failed}, _pending),
     do:
       socket
       |> Toast.dismiss({:delete, token})
-      |> flash({:warning, CalendarEditMessages.delete_failed_message(%{retry: :queued}, false)})
+      |> flash({:error, CalendarEditMessages.deleted_but_meeting_not_cancelled_message()})
+
+  defp report(socket, token, {:deleted, :attendees_not_notified}, %{origin: :elsewhere}),
+    do: Toast.dismiss(socket, {:delete, token})
+
+  defp report(socket, token, {:deleted, :attendees_not_notified}, _pending),
+    do:
+      socket
+      |> Toast.dismiss({:delete, token})
+      |> flash({:warning, CalendarEditMessages.deleted_but_attendees_not_notified_message()})
+
+  defp report(socket, token, {:queued, _reason}, pending),
+    do:
+      socket
+      |> Toast.dismiss({:delete, token})
+      |> flash(
+        {:warning,
+         CalendarEditMessages.delete_failed_message(%{retry: :queued}, notify?(pending))}
+      )
 
   defp report(socket, token, {:failed, reason}, _pending),
     do:
@@ -431,6 +456,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
         {:error,
          CalendarEditMessages.delete_failed_message(%{reason: reason, retry: :not_queued}, false)}
       )
+
+  defp notify?(%{notify: notify?}), do: notify?
+  defp notify?(_unknown), do: false
 
   defp not_scheduled(socket),
     do:

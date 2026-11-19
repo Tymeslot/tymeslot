@@ -2,7 +2,8 @@ defmodule Tymeslot.Meetings.UniqueInvitation do
   @moduledoc """
   The single-use invitation index, `meetings_invitation_id_occupying_index`:
   at most one meeting carrying an invitation's id may hold a slot (confirmed,
-  pending, awaiting payment or awaiting approval).
+  pending, awaiting payment, awaiting approval or awaiting email
+  verification).
 
   Every `MeetingSchema` changeset that can write a meeting into a slot-holding
   status declares it (`constrain/1`), so a second live booking on one

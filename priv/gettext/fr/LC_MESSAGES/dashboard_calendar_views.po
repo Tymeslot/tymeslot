@@ -87,3 +87,23 @@ msgstr "contient un élément qui demande votre attention"
 #, elixir-autogen, elixir-format
 msgid "More on %{date}: %{count}"
 msgstr "Autres le %{date} : %{count}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "All"
+msgstr "Tout"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings"
+msgstr "Réservations"
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "No bookings in these weeks."
+msgstr "Aucune réservation ces semaines-ci."
+
+#: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Filter agenda"
+msgstr "Filtrer l’agenda"

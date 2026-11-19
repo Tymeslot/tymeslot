@@ -64,6 +64,78 @@ defmodule Tymeslot.Bookings.CalendarCheckTest do
     assert_received {:fetched, ~D[2026-11-09], ~D[2026-11-12]}
   end
 
+  describe "probe_many/3" do
+    @buffers %{buffer_before_minutes: 15, buffer_after_minutes: 15, owner_timezone: "Etc/UTC"}
+
+    test "reports the busy slots from one fetch over the whole range", %{user: user} do
+      test_pid = self()
+
+      # One event overlapping the second slot, one ending inside the fourth's
+      # before-buffer: the buffers count exactly as they do for `probe/3`.
+      events = [
+        %{uid: "a", start_time: ~U[2026-11-17 10:10:00Z], end_time: ~U[2026-11-17 10:20:00Z]},
+        %{uid: "b", start_time: ~U[2026-12-01 09:00:00Z], end_time: ~U[2026-12-01 09:50:00Z]}
+      ]
+
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, start_date, end_date ->
+        send(test_pid, {:fetched, start_date, end_date})
+        {:ok, events}
+      end)
+
+      starts = [
+        ~U[2026-11-10 10:00:00Z],
+        ~U[2026-11-17 10:00:00Z],
+        ~U[2026-11-24 10:00:00Z],
+        ~U[2026-12-01 10:00:00Z]
+      ]
+
+      assert {:ok, %{busy: busy}} =
+               CalendarCheck.probe_many(Enum.map(starts, &slot(user, &1)), @buffers)
+
+      assert busy == MapSet.new([~U[2026-11-17 10:00:00Z], ~U[2026-12-01 10:00:00Z]])
+
+      # Exactly one fetch, over the whole buffered range, before anything else
+      # in this test reads the calendar.
+      assert_received {:fetched, ~D[2026-11-09], ~D[2026-12-02]}
+      refute_received {:fetched, _start_date, _end_date}
+
+      # Each slot is judged as `probe/3` judges it alone.
+      for start <- starts do
+        expected = if MapSet.member?(busy, start), do: {:error, :slot_unavailable}, else: :ok
+        assert CalendarCheck.probe(slot(user, start), @buffers) == expected
+      end
+    end
+
+    test "an unreadable calendar is an error", %{user: user} do
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        {:error, :some_calendars_unavailable}
+      end)
+
+      slots = [slot(user, ~U[2026-11-10 10:00:00Z]), slot(user, ~U[2026-11-17 10:00:00Z])]
+
+      assert {:error, :some_calendars_unavailable} = CalendarCheck.probe_many(slots, @buffers)
+      assert {:error, :availability_unverifiable} = CalendarCheck.enforce_many(slots, @buffers)
+    end
+
+    test "a transport failure is waved through by enforce_many/3", %{user: user} do
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        {:error, :network_error}
+      end)
+
+      slots = [slot(user, ~U[2026-11-10 10:00:00Z]), slot(user, ~U[2026-11-17 10:00:00Z])]
+
+      assert {:error, :network_error} = CalendarCheck.probe_many(slots, @buffers)
+      assert {:ok, %{busy: busy}} = CalendarCheck.enforce_many(slots, @buffers)
+      assert MapSet.size(busy) == 0
+    end
+
+    test "no slots fetch nothing", %{user: _user} do
+      assert {:ok, %{busy: busy}} = CalendarCheck.probe_many([], @buffers)
+      assert MapSet.size(busy) == 0
+      refute_received {:fetched, _start_date, _end_date}
+    end
+  end
+
   defp slot(user, start_datetime) do
     %{
       organizer_user_id: user.id,

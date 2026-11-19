@@ -132,6 +132,42 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
     end
 
     @tag :capture_log
+    test "a later session of a series reaches a year past its first", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting: meeting,
+      original_start: original_start
+    } do
+      first = DateTime.add(original_start, -6, :day)
+      series = insert(:booking_series, organizer_user: user, first_start_at: first)
+
+      insert(:meeting,
+        organizer_user_id: user.id,
+        meeting_type_id: meeting.meeting_type_id,
+        start_time: first,
+        end_time: DateTime.add(first, 30, :minute),
+        duration: 30,
+        status: :confirmed,
+        series_id: series.id,
+        series_position: 1
+      )
+
+      meeting |> Changeset.change(series_id: series.id, series_position: 2) |> Repo.update!()
+
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
+
+      view |> element("[data-fact='meeting_type']") |> render_click()
+      render(view)
+
+      # The schedule's window is 30 days; the series' year runs out on the
+      # day 365 after its first session, tomorrow.
+      assert :sys.get_state(view.pid).socket.assigns.booking_window_days ==
+               Date.diff(Date.add(DateTime.to_date(first), 365), Date.utc_today()) + 1
+    end
+
+    @tag :capture_log
     test "comes from the meeting's own type, not a duration match", %{
       conn: conn,
       user: user,
@@ -313,7 +349,12 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleEntryTest do
       profile: profile,
       meeting: meeting
     } do
-      {:ok, _expired} = meeting |> Changeset.change(%{status: :expired}) |> Repo.update()
+      # A lapsed approval request, as `Approval.expire/1` leaves it.
+      {:ok, _expired} =
+        meeting
+        |> Changeset.change(%{status: :expired, approval_resolved_at: DateTime.utc_now(:second)})
+        |> Repo.update()
+
       conn = put_req_header(conn, "accept-language", "de-DE,de;q=0.9")
 
       assert {:error, {_redirect, %{to: to, flash: flash}}} =

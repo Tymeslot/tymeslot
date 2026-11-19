@@ -335,16 +335,33 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   and not voided by a pending reschedule request. Past bookings inside the
   window are included — the calendar grid shows history as well as what is
   ahead.
+
+  By default only the bookings the organiser may see
+  (`MeetingState.where_visible_to_organiser/1`): the calendar grid and the
+  time-off warning are the organiser's view. `include_hidden: true` keeps
+  the unverified and unpaid holds too, for callers deciding what the public
+  may still book: a held slot must stay taken there.
   """
-  @spec list_for_organizer_in_range(pos_integer(), DateTime.t(), DateTime.t()) :: [Meeting.t()]
-  def list_for_organizer_in_range(organizer_user_id, %DateTime{} = from_utc, %DateTime{} = to_utc) do
+  @spec list_for_organizer_in_range(pos_integer(), DateTime.t(), DateTime.t(),
+          include_hidden: boolean()
+        ) :: [Meeting.t()]
+  def list_for_organizer_in_range(
+        organizer_user_id,
+        %DateTime{} = from_utc,
+        %DateTime{} = to_utc,
+        opts \\ []
+      ) do
     Meeting
     |> MeetingState.where_slot_live()
+    |> visible_unless(Keyword.get(opts, :include_hidden, false))
     |> where([m], m.organizer_user_id == ^organizer_user_id)
     |> where([m], m.start_time < ^to_utc and m.end_time > ^from_utc)
     |> order_by_start_asc()
     |> Repo.all()
   end
+
+  defp visible_unless(query, true), do: query
+  defp visible_unless(query, false), do: MeetingState.where_visible_to_organiser(query)
 
   @doc """
   Returns the organiser's booking requests that expired unanswered and
@@ -359,6 +376,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
       ) do
     Meeting
     |> MeetingState.where_expired_request()
+    |> MeetingState.where_visible_to_organiser()
     |> where([m], m.organizer_user_id == ^organizer_user_id)
     |> where([m], m.start_time < ^to_utc and m.end_time > ^from_utc)
     |> order_by_start_asc()
@@ -418,6 +436,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
         ilike(m.attendee_email, ^pattern) or ilike(m.meeting_type, ^pattern)
     )
     |> MeetingState.where_drawn()
+    |> MeetingState.where_visible_to_organiser()
   end
 
   # Escapes LIKE/ILIKE wildcard metacharacters so a typed term is matched
@@ -425,8 +444,8 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   defp escape_like(term), do: String.replace(term, ~r/[\\%_]/, "\\\\\\0")
 
   @doc """
-  Get every upcoming meeting the organiser holds, whatever its status, soonest
-  first.
+  Get every upcoming meeting the organiser holds and may see, whatever its
+  status, soonest first.
   """
   @spec list_upcoming_meetings_for_organizer(pos_integer()) :: [Meeting.t()]
   def list_upcoming_meetings_for_organizer(organizer_user_id) do
@@ -434,6 +453,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
     Meeting
     |> for_organizer(organizer_user_id)
+    |> MeetingState.where_visible_to_organiser()
     |> upcoming(now)
     |> order_by_start_asc()
     |> Repo.all()
@@ -445,6 +465,8 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   :id (one meeting only), :order (:desc, the default, newest first; or :asc, soonest first),
   :booking_page (`:main` for bookings through no page, or a booking page id).
   Each meeting comes with the booking page it was booked through.
+  Never returns a meeting the organiser may not see
+  (`MeetingState.where_visible_to_organiser/1`), whatever the filter.
   Returns a list limited to per_page.
   """
   @spec list_meetings_for_organizer_paginated_cursor(pos_integer(), Keyword.t()) :: [Meeting.t()]
@@ -463,6 +485,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
     Meeting
     |> for_organizer(organizer_user_id)
+    |> MeetingState.where_visible_to_organiser()
     |> with_id(Keyword.get(opts, :id))
     |> with_status(status)
     |> without_status(exclude_status)
@@ -471,14 +494,28 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> order_by_start_and_id(order)
     |> cursor_after(after_start, after_id, order)
     |> apply_limit(limit)
-    |> preload([
-      :booking_page,
-      :confirming_poll,
-      guests: ^live_guests_preload(),
-      participants: ^card_participants_preload()
-    ])
+    |> preload(^card_preloads(Keyword.get(opts, :series_sessions, false)))
     |> Repo.all()
   end
+
+  # What a dashboard card shows besides the meeting. Its series is one query
+  # for the page whatever the page holds (the badge reads its session count);
+  # with `series_sessions`, so are the sessions of those series, which a
+  # request card lists.
+  defp card_preloads(series_sessions?) do
+    [
+      :booking_page,
+      :confirming_poll,
+      guests: live_guests_preload(),
+      participants: card_participants_preload(),
+      series: series_preload(series_sessions?)
+    ]
+  end
+
+  defp series_preload(false), do: []
+
+  defp series_preload(true),
+    do: [meetings: from(m in Meeting, order_by: [asc: m.series_position])]
 
   @doc """
   Every meeting id the user organises, past and future, in any status. Read

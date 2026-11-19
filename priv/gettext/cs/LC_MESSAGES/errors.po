@@ -470,11 +470,6 @@ msgstr "Je nutné připojit Stripe"
 msgid "Work hours not found"
 msgstr "Pracovní doba nebyla nalezena"
 
-#: lib/tymeslot/meetings/unique_slot.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a confirmed meeting at this time."
-msgstr "V tuto dobu už máte potvrzenou schůzku."
-
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "already has a spot at this time"
@@ -546,7 +541,7 @@ msgstr "není podporovaný jazyk"
 
 #: lib/tymeslot/auth/user_schema.ex
 #: lib/tymeslot/meetings/guest_schema.ex
-#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/meeting_rules.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
@@ -887,6 +882,31 @@ msgstr "musí být v budoucnosti"
 msgid "invitation links"
 msgstr "odkazy na pozvání"
 
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation-only meeting types cannot be booked as a series."
+msgstr "Typy schůzek pouze na pozvání nelze rezervovat jako sérii."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types with fixed dates can offer a series only as sessions the booker picks."
+msgstr "Typy schůzek s pevně danými termíny mohou nabízet sérii pouze jako schůzky, které si vybírá ten, kdo rezervuje."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "One-off meeting types cannot be booked as a series."
+msgstr "Jednorázové typy schůzek nelze rezervovat jako sérii."
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be between %{min} and %{max}"
+msgstr "musí být mezi %{min} a %{max}"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must not be less than the minimum"
+msgstr "nesmí být menší než minimum"
+
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "cannot list a language twice"
@@ -896,3 +916,33 @@ msgstr "nesmí obsahovat jeden jazyk dvakrát"
 #, elixir-autogen, elixir-format
 msgid "is not a translation language"
 msgstr "není jazyk překladu"
+
+#: lib/tymeslot/meetings/unique_slot.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr "Tento čas už není k dispozici. Vyberte prosím jiný."
+
+#: lib/tymeslot/meeting_types/email_verification_rule.ex
+#, elixir-autogen, elixir-format
+msgid "email confirmation cannot be combined with payment"
+msgstr "potvrzení e-mailu nelze kombinovat s platbou"
+
+#: lib/tymeslot/meeting_types/group_validation.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require email confirmation"
+msgstr "skupinové rezervace nemohou vyžadovat potvrzení e-mailu"
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "would give a reserved booking link; choose another name or set a custom link"
+msgstr "by vytvořil vyhrazený rezervační odkaz; zvolte jiný název nebo nastavte vlastní odkaz"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
+msgstr "smí být při tomto opakování nejvýše %{max}, aby každý termín spadal do jednoho roku"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
+msgstr "Typy schůzek, které žádají pozvané o potvrzení e-mailu, nelze rezervovat jako sérii."

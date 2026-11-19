@@ -18,8 +18,22 @@ defmodule Tymeslot.Notifications.EventTypes do
     * `meeting.request_expired` — nobody answered in time; the slot is free
       again.
     * `meeting.cancelled`, `meeting.rescheduled` — unchanged.
+    * `meeting.series_created` — a booking series is confirmed: one event
+      for all its sessions, in place of a `meeting.created` for each
+      (`Tymeslot.BookingSeries.Automation`).
+    * `meeting.series_cancelled` — "Cancel all remaining" called off the
+      rest of a series: one event, in place of a `meeting.cancelled` for
+      each session.
+    * `meeting.series_requested`, `meeting.series_declined`,
+      `meeting.series_request_expired` — a series held for the host's
+      approval was requested, declined, or left unanswered past its
+      deadline: one event each, in place of the request event for each
+      session.
 
-  Meeting types without approval never emit the three request events, so
+  Every event about one session of a series (a cancellation of that
+  session alone, a reschedule) stays per session.
+
+  Meeting types without approval never emit the request events, so
   existing consumers see no change.
 
   The module depends on nothing, so channels can match on its names at
@@ -33,14 +47,29 @@ defmodule Tymeslot.Notifications.EventTypes do
   # map's enumeration order is an implementation detail, not a guarantee.
   @events [
     meeting_created: "meeting.created",
+    meeting_series_created: "meeting.series_created",
     meeting_requested: "meeting.requested",
+    meeting_series_requested: "meeting.series_requested",
     meeting_declined: "meeting.declined",
+    meeting_series_declined: "meeting.series_declined",
     meeting_request_expired: "meeting.request_expired",
+    meeting_series_request_expired: "meeting.series_request_expired",
     meeting_cancelled: "meeting.cancelled",
+    meeting_series_cancelled: "meeting.series_cancelled",
     meeting_rescheduled: "meeting.rescheduled"
   ]
 
   @events_by_atom Map.new(@events)
+
+  # Each per-booking event and the series event sent in its place for a
+  # series, which a host subscribing to the one wants as well.
+  @series_counterparts %{
+    "meeting.created" => "meeting.series_created",
+    "meeting.requested" => "meeting.series_requested",
+    "meeting.declined" => "meeting.series_declined",
+    "meeting.request_expired" => "meeting.series_request_expired",
+    "meeting.cancelled" => "meeting.series_cancelled"
+  }
 
   @doc """
   Converts an internal event atom to the event-type string channels store and
@@ -66,4 +95,12 @@ defmodule Tymeslot.Notifications.EventTypes do
   """
   @spec all() :: [String.t()]
   def all, do: Enum.map(@events, fn {_atom, wire_name} -> wire_name end)
+
+  @doc """
+  The series event sent in place of `event` for a booking series
+  (`meeting.series_created` for `meeting.created`, and so on), or nil for
+  an event a series sends as it is.
+  """
+  @spec series_counterpart(String.t()) :: String.t() | nil
+  def series_counterpart(event), do: Map.get(@series_counterparts, event)
 end

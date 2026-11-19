@@ -189,6 +189,48 @@ test("More options hands the draft to the panel once it opened", () => {
   expect(drawn(el).querySelector(".cal-ev-saving")).toBeNull();
 });
 
+test("More options is chosen again once the panel's question was answered with Discard", () => {
+  const { hook, handlers } = open();
+  type("Planning");
+  popover().querySelector("[data-qc-more]").click();
+  reply(hook, "calendar:more_options", { opened: false });
+  expect(popover()).not.toBeNull();
+
+  handlers["calendar:more-options-again"]({ draft: "someone-else" });
+  expect(pushes(hook, "calendar:more_options")).toHaveLength(1);
+
+  handlers["calendar:more-options-again"]({ draft: hook.draft.id });
+  expect(pushes(hook, "calendar:more_options")).toHaveLength(2);
+  const calls = hook.pushEventTo.mock.calls.filter(([, pushed]) => pushed === "calendar:more_options");
+  calls.at(-1)[3]({ opened: true });
+  expect(popover()).toBeNull();
+});
+
+test("a press inside the panel's discard question keeps the popover, so More options can follow", () => {
+  const { hook, handlers } = open();
+  type("Planning");
+  popover().querySelector("[data-qc-more]").click();
+  reply(hook, "calendar:more_options", { opened: false });
+
+  const dialog = document.createElement("div");
+  dialog.setAttribute("role", "dialog");
+  const discard = document.createElement("button");
+  dialog.appendChild(discard);
+  document.body.appendChild(dialog);
+  discard.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+
+  expect(popover()).not.toBeNull();
+  handlers["calendar:more-options-again"]({ draft: hook.draft.id });
+  expect(pushes(hook, "calendar:more_options")).toHaveLength(2);
+  dialog.remove();
+});
+
+test("a press elsewhere outside the popover still cancels it", () => {
+  open();
+  document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+  expect(popover()).toBeNull();
+});
+
 test("Escape cancels, drops the draft and returns focus", () => {
   const button = document.createElement("button");
   document.body.appendChild(button);

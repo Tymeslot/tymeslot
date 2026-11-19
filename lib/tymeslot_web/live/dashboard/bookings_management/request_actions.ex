@@ -26,24 +26,72 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
 
   require Logger
 
+  alias Tymeslot.BookingSeries
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingState
   alias TymeslotWeb.Live.Shared.Flash
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
   @doc """
+  Approves the held request `params["id"]` (see `answer/4`). A session of an
+  open series request approves the whole series, and the flash says so.
+  """
+  @spec approve(socket(), map(), (socket() -> socket())) :: {:noreply, socket()}
+  def approve(socket, params, reload) do
+    answer(socket, params, &Approval.approve/1,
+      success: dgettext("dashboard_bookings", "Booking confirmed. The invitee has been told."),
+      series_success: fn count ->
+        dngettext(
+          "dashboard_booking_series",
+          "%{count} session confirmed. The invitee has been told.",
+          "All %{count} sessions confirmed. The invitee has been told.",
+          count
+        )
+      end,
+      failure: dgettext("dashboard_bookings", "That request could not be approved."),
+      reload: reload
+    )
+  end
+
+  @doc """
+  Declines the held request `meeting` with the host's `reason` (see
+  `answer/4`). A session of an open series request declines the whole
+  series, and the flash says so.
+  """
+  @spec decline(socket(), map(), String.t() | nil, (socket() -> socket())) ::
+          {:noreply, socket()}
+  def decline(socket, meeting, reason, reload) do
+    answer(socket, %{"id" => meeting.id}, &Approval.decline(&1, reason),
+      success: dgettext("dashboard_bookings", "Request declined. The slot is free again."),
+      series_success: fn count ->
+        dngettext(
+          "dashboard_booking_series",
+          "Request declined. Its %{count} session is free again.",
+          "Request declined. All %{count} sessions are free again.",
+          count
+        )
+      end,
+      failure: dgettext("dashboard_bookings", "That request could not be declined."),
+      reload: reload
+    )
+  end
+
+  @doc """
   Starts one approval action against a held request off the socket's process.
 
-  `opts` carries the `:success` and `:failure` flash messages and the `:reload`
-  function to refresh the list with. The transition itself, and its
-  calendar/video/notification fan-out, runs inside `start_async/3` so the
-  meeting's id stays in `:answering_request` (a `MapSet` of the requests
-  whose answer is in flight, so answers to two requests never touch each
-  other's buttons) across a render and the row's spinner and disabled state
-  actually paint; `handle_answer/3` reports the outcome once
+  `opts` carries the `:success` and `:failure` flash messages, optionally
+  `:series_success` (the success message for a series request, given its
+  session count), and the `:reload` function to refresh the list with. The
+  transition itself, and its calendar/video/notification fan-out, runs inside
+  `start_async/3` so the meeting's id stays in `:answering_request` (a
+  `MapSet` of the requests whose answer is in flight, so answers to two
+  requests never touch each other's buttons) across a render and the row's
+  spinner and disabled state actually paint; `handle_answer/3` reports the
+  outcome once
   the task completes.
   """
   @spec answer(socket(), map(), (map() -> {:ok, map()} | {:error, atom()}), keyword()) ::
@@ -63,6 +111,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
   # leaves `handle_answer/3` able to report a proper failure and reload
   # instead of losing the reload function along with the crash.
   defp start_answer(socket, meeting, action, opts) do
+    opts = series_opts(opts, BookingSeries.request_sessions(meeting))
+
     socket
     |> assign(:answering_request, MapSet.put(socket.assigns.answering_request, meeting.id))
     |> assign(:answering_opts, Map.put(socket.assigns.answering_opts, meeting.id, opts))
@@ -90,6 +140,16 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
      socket
      |> apply_answer_result(meeting_id, result, opts)
      |> finish(meeting_id, opts)}
+  end
+
+  # Read before answering: once answered, the series is no request any more.
+  defp series_opts(opts, nil), do: opts
+
+  defp series_opts(opts, sessions) do
+    case Keyword.get(opts, :series_success) do
+      nil -> opts
+      message -> Keyword.put(opts, :success, message.(length(sessions)))
+    end
   end
 
   defp pop_answer_opts(socket, meeting_id) do
@@ -171,6 +231,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
   already casts and reports `{:error, :not_found}` on anything that is not a
   UUID, including a non-binary payload, so re-casting it here first would
   only be a second copy of that same check.
+
+  A session of a series arrives with its series' sessions loaded
+  (`BookingSeries.with_request_sessions/1`), so the decline dialog and the
+  flash can speak of the whole request.
   """
   @spec fetch_held_request(socket(), map()) :: {:ok, map()} | {:error, String.t()}
   def fetch_held_request(socket, params) do
@@ -188,7 +252,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
 
   defp held_or_answered(meeting) do
     if MeetingState.awaiting_approval?(meeting) do
-      {:ok, meeting}
+      {:ok, BookingSeries.with_request_sessions(meeting)}
     else
       {:error, dgettext("dashboard_bookings", "That request had already been answered.")}
     end

@@ -14,6 +14,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   an undo whose write fails puts its change back on the stack.
 
   A move never tells the event's guests; the toast says so when it has any.
+  The event as it was before its first untold move is remembered
+  (`untold_moves`, by event id), so the side panel opened on it later still
+  offers to tell them (`PanelState`). A move of several events of a series
+  is not remembered: the panel tells one event's guests.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -262,6 +266,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
 
     socket
     |> remember(undoable?, entry)
+    |> remember_untold(undoable?, event)
     |> Toast.show(timing_message(socket, event, changes, scope),
       undo: undoable?,
       key: entry.key
@@ -272,6 +277,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
 
   defp remember(socket, true, entry),
     do: assign(socket, :undo, UndoStack.push(socket.assigns.undo, entry))
+
+  # The first untold move is the starting point: a later one keeps it.
+  defp remember_untold(socket, true = _one_event?, event) do
+    if guests?(event),
+      do:
+        assign(
+          socket,
+          :untold_moves,
+          Map.put_new(socket.assigns.untold_moves, EventPayload.id(event), event)
+        ),
+      else: socket
+  end
+
+  defp remember_untold(socket, false, _event), do: socket
+
+  defp guests?(event), do: event |> Map.get(:attendees) |> List.wrap() |> Enum.any?()
 
   defp scope_opts(nil), do: []
   defp scope_opts(scope), do: [recurrence_scope: scope]
@@ -312,7 +333,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Manipulation do
   end
 
   defp with_guest_note(text, event) do
-    if event |> Map.get(:attendees) |> List.wrap() |> Enum.any?(),
+    if guests?(event),
       do: text <> " " <> dgettext("dashboard_calendar", "Guests haven't been told."),
       else: text
   end

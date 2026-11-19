@@ -244,6 +244,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   defp blocker_message(:approval),
     do: dgettext("dashboard_meeting_form", "Turn off approval to enable group bookings.")
 
+  defp blocker_message(:email_verification),
+    do:
+      dgettext("dashboard_meeting_form", "Turn off email confirmation to enable group bookings.")
+
   defp blocker_message(:lengths),
     do:
       dgettext(

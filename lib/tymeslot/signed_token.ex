@@ -15,6 +15,7 @@ defmodule Tymeslot.SignedToken do
   @type purpose ::
           :embed_session
           | :meeting_approval
+          | :booking_email_verification
           | :oauth_signup_confirmation
           | :booking_preview
           | :cursor_page
@@ -28,6 +29,13 @@ defmodule Tymeslot.SignedToken do
     # fortnight covers a host coming back from leave to a request that has
     # long since lapsed, so they see "this expired" rather than a broken link.
     meeting_approval: [salt: "meeting approval", max_age: 28 * 24 * 3600],
+    # Two days outlasts the 30-minute hold, so a late click reads "expired"
+    # rather than "invalid", and ends soon after the prune of unverified rows
+    # would make the link unresolvable anyway.
+    booking_email_verification: [
+      salt: "booking email verification",
+      max_age: 2 * 24 * 3600
+    ],
     oauth_signup_confirmation: [
       salt: "oauth typed-email sign-up confirmation",
       max_age: 24 * 3600

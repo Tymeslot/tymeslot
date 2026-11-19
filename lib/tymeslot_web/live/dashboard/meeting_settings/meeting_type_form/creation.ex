@@ -146,6 +146,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Creation do
   defp error_message(:group_bookings_not_allowed),
     do: ContextErrors.group_bookings_not_allowed_message()
 
+  defp error_message(:recurring_bookings_not_allowed),
+    do: ContextErrors.recurring_bookings_not_allowed_message()
+
   defp error_message(:insufficient_plan),
     do: dgettext("dashboard_meeting_form", "Custom booking questions are available on Pro plans.")
 

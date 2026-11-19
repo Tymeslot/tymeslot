@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   require Logger
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.VTimezone
   alias Tymeslot.Timezones
@@ -181,6 +182,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       location: extract_property(lines, "LOCATION"),
       organizer: extract_organizer(lines),
       attendees: extract_attendees(lines),
+      contacts: extract_contacts(lines),
       transparency: normalize_transp(extract_property(lines, "TRANSP")),
       status: extract_property(lines, "STATUS"),
       class: extract_property(lines, "CLASS"),
@@ -284,6 +286,48 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     |> Enum.reject(fn a -> is_nil(a["email"]) end)
   end
 
+  # RFC 5545 §3.8.4.2 — `CONTACT`, as `Properties.build_attendee_lines/2`
+  # writes a guest on a server that would invite an `ATTENDEE` itself
+  # (`CalDAV.Scheduling`'s `:contact` mode): `Name <address>`, or the address
+  # alone. With an attendee's `"email"` and `"name"` but no reply, which a
+  # `CONTACT` cannot carry, so the normaliser can take them for an event's
+  # guests where they are (see `ICalNormaliser`); a value naming no address
+  # is left out. The property name is matched in any case, and the value is
+  # taken after the first colon outside quotes, so a quoted `ALTREP` URI in
+  # the parameters does not end up in the name.
+  defp extract_contacts(lines) do
+    lines
+    |> Enum.filter(&(ContentLines.property_name(&1) == "CONTACT"))
+    |> Enum.map(fn line ->
+      {_name_and_params, value} = ContentLines.split_value(line)
+      decode_value(value)
+    end)
+    |> Enum.map(&parse_contact/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  # The address may come as a `mailto:` URI, as an `ATTENDEE` carries it, in
+  # any case (RFC 3986 §3.1), and is matched without it.
+  defp parse_contact(value) do
+    case Regex.run(~r/^(.*?)\s*<(?:mailto:)?([^<>\s]+@[^<>\s]+)>$/i, value) do
+      [_match, name, email] ->
+        %{"email" => email, "name" => blank_to_nil(name)}
+
+      nil ->
+        case Regex.run(~r/^(?:mailto:)?([^<>\s]+@[^<>\s]+)$/i, value) do
+          [_match, email] -> %{"email" => email, "name" => nil}
+          nil -> nil
+        end
+    end
+  end
+
+  defp blank_to_nil(name) do
+    case String.trim(name) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
   # RFC 5545 §3.8.4.3 — a VEVENT carries at most one ORGANIZER. Returns the
   # same `"email"`/`"name"` shape as an attendee so downstream normalisers can
   # treat the two alike, or `nil` when the property is absent.
@@ -303,7 +347,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     %{
       "email" => calendar_user_address(line),
       "name" => common_name(line),
-      "status" => partstat(line)
+      "status" => partstat(line),
+      "rsvp" => rsvp(line)
     }
   end
 
@@ -317,6 +362,16 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   defp common_name(line) do
     case Regex.run(~r/(?:^|;)CN=([^;:]+)/i, line) do
       [_match, cn] -> cn |> String.trim() |> String.trim("\"")
+      nil -> nil
+    end
+  end
+
+  # RFC 5545 §3.2.17. Only an explicit `RSVP=FALSE` reads as `false`: the
+  # standard makes it the default, but many organisers who do expect a reply
+  # leave the parameter out, so an absent one says nothing either way.
+  defp rsvp(line) do
+    case Regex.run(~r/(?:^|;)RSVP=([^;:]+)/i, line) do
+      [_match, value] -> if String.upcase(String.trim(value)) == "FALSE", do: false, else: true
       nil -> nil
     end
   end

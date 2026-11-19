@@ -5,6 +5,38 @@ defmodule Tymeslot.Bookings.PolicyTest do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings.MeetingSchema
 
+  describe "an unverified booking" do
+    # Verification is held back from the organiser, so a refusal that never
+    # reaches the cancellation pipeline is what keeps it that way. A past
+    # start still reports the verification state, not :past.
+    test "an unverified booking cannot be cancelled" do
+      for offset <- [3600, -7200] do
+        meeting =
+          build(:awaiting_verification_meeting,
+            start_time: DateTime.add(DateTime.utc_now(), offset, :second),
+            end_time: DateTime.add(DateTime.utc_now(), offset + 1800, :second)
+          )
+
+        assert Policy.can_cancel_meeting?(meeting) ==
+                 {:error, {:not_cancellable, :awaiting_verification}}
+      end
+    end
+
+    test "an unverified booking cannot be rescheduled" do
+      meeting =
+        build(:awaiting_verification_meeting,
+          start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
+          end_time: DateTime.add(DateTime.utc_now(), 5400, :second)
+        )
+
+      assert Policy.can_reschedule_meeting?(meeting) ==
+               {:error, {:not_reschedulable, :awaiting_verification}}
+
+      assert Policy.can_request_reschedule?(meeting) ==
+               {:error, {:not_reschedulable, :awaiting_verification}}
+    end
+  end
+
   describe "can_cancel_meeting?/1" do
     test "allows cancellation for future meetings" do
       future_meeting = %MeetingSchema{
@@ -222,6 +254,26 @@ defmodule Tymeslot.Bookings.PolicyTest do
                managed_by_host: false
              }) ==
                {:error, {:not_reschedulable, :awaiting_approval}}
+    end
+
+    test "refuses a second request while the first awaits a new time" do
+      start_time = DateTime.add(DateTime.utc_now(), 7200, :second)
+
+      meeting = %{
+        status: :confirmed,
+        managed_by_host: false,
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 1800, :second),
+        reschedule_requested_at: nil
+      }
+
+      assert Policy.can_request_reschedule?(meeting) == :ok
+
+      assert Policy.can_request_reschedule?(%{
+               meeting
+               | reschedule_requested_at: DateTime.utc_now()
+             }) ==
+               {:error, {:not_reschedulable, :already_requested}}
     end
   end
 

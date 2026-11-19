@@ -16,6 +16,7 @@ defmodule Tymeslot.Bookings.Errors do
   """
 
   alias Tymeslot.Bookings.Refusal
+  alias Tymeslot.BookingSeries.Occurrence
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar
 
@@ -42,6 +43,12 @@ defmodule Tymeslot.Bookings.Errors do
           | :failed_to_update_meeting
           | :invitation_required
           | :invitation_unavailable
+          | :series_not_offered
+          | :series_required
+          | :overlapping_starts
+          | :invalid_count
+          | :guests_not_allowed_on_series
+          | {:occurrences_unavailable, [Occurrence.t()]}
           | refusal()
 
   # Table rather than a clause ladder: every entry is the same behaviour over
@@ -58,6 +65,8 @@ defmodule Tymeslot.Bookings.Errors do
   # `:group_bookings_paused` (a group type whose host has lost access to group
   # bookings) reads to the booker exactly as an inactive type does: the page
   # no longer offers it, and a refresh shows as much.
+  # The series outcomes (`Tymeslot.BookingSeries`) stay their own too: each
+  # asks the booker for a different choice, not another time.
   # `:invitation_required` and `:invitation_unavailable` stay their own
   # outcomes, never `:slot_taken`: another time would be refused the same way,
   # so the booker must not be sent back to pick one.
@@ -83,7 +92,12 @@ defmodule Tymeslot.Bookings.Errors do
     host_not_found: :host_not_found,
     host_missing: :host_not_found,
     invitation_required: :invitation_required,
-    invitation_unavailable: :invitation_unavailable
+    invitation_unavailable: :invitation_unavailable,
+    series_not_offered: :series_not_offered,
+    series_required: :series_required,
+    overlapping_starts: :overlapping_starts,
+    invalid_count: :invalid_count,
+    guests_not_allowed_on_series: :guests_not_allowed_on_series
   }
 
   # `Tymeslot.Bookings.ScheduleCheck` is shared by `Create` and `Reschedule`,
@@ -111,6 +125,12 @@ defmodule Tymeslot.Bookings.Errors do
   def classify_error(reason) when Refusal.is_refusal(reason), do: reason
 
   def classify_error({:custom_field_errors, _errors}), do: :custom_field_errors
+
+  # The sessions of a series that cannot be booked, which the booking page
+  # shows the booker to choose again.
+  def classify_error({:occurrences_unavailable, occurrences} = reason) when is_list(occurrences),
+    do: reason
+
   def classify_error({:checkout_failed, _reason}), do: :checkout_failed
 
   def classify_error(reason) when is_atom(reason),

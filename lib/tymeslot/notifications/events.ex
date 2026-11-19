@@ -14,6 +14,8 @@ defmodule Tymeslot.Notifications.Events do
   alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Notifications.ChannelFanout
   alias Tymeslot.Notifications.DispatchInTransactionError
+  alias Tymeslot.Notifications.Events.Guard
+  alias Tymeslot.Notifications.Events.Seats
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Repo
 
@@ -82,19 +84,36 @@ defmodule Tymeslot.Notifications.Events do
   whose emails were never queued. The integrations are kept out of the
   transaction because a database error inside a dispatcher, rescued here as
   best-effort, would still leave the caller's transaction unable to commit.
+
+  Options:
+
+    * `:emails` - `false` claims the announcement and schedules the
+      reminders, but sends no confirmation emails: an occurrence of a
+      booking series, whose booker and host are told about the whole series
+      in one email instead. The claim still matters, so that a later
+      reschedule of the occurrence is announced as a reschedule.
+    * `:integrations` - `false` drops the `meeting.created` fan-out, for
+      a series occurrence announced whole by `meeting.series_created`
+      (`Tymeslot.BookingSeries.Automation`); a `meeting.rescheduled` stays.
   """
-  @spec meeting_created_deferred(term()) :: {{:ok, term()} | {:error, term()}, pending()}
-  def meeting_created_deferred(meeting) do
+  @spec meeting_created_deferred(term(), keyword()) ::
+          {{:ok, term()} | {:error, term()}, pending()}
+  def meeting_created_deferred(meeting, opts \\ []) do
+    emails? = Keyword.get(opts, :emails, true)
+    created = if integrations?(opts), do: :meeting_created
+
     case MeetingDeliveryQueries.claim_announcement(Map.get(meeting, :id)) do
-      {:ok, :first_announcement} -> announce_meeting_created(meeting, :meeting_created)
-      {:ok, :re_announcement} -> announce_meeting_created(meeting, :meeting_rescheduled)
+      {:ok, :first_announcement} -> announce_meeting_created(meeting, created, emails?)
+      {:ok, :re_announcement} -> announce_meeting_created(meeting, :meeting_rescheduled, emails?)
       :already_announced -> {already_announced(meeting), []}
     end
   end
 
+  defp integrations?(opts), do: Keyword.get(opts, :integrations, true)
+
   @doc """
-  Runs the integration fan-out `meeting_created_deferred/1`,
-  `meeting_requested_deferred/2` or `seat_booked_deferred/3` returned. Never
+  Runs the integration fan-out `meeting_created_deferred/2`,
+  `meeting_requested_deferred/2` or `Tymeslot.Notifications.Events.Seats.seat_booked_deferred/3` returned. Never
   fails the caller: each channel is best-effort, and a failure is logged and
   reported.
 
@@ -119,7 +138,7 @@ defmodule Tymeslot.Notifications.Events do
     case fan_out do
       :per_seat -> dispatch_integrations(event, meeting)
       :once -> dispatch_channels(event, meeting)
-      {:seat, participant} -> dispatch_seat(event, meeting, participant)
+      {:seat, participant} -> Seats.dispatch(event, meeting, participant)
     end
   rescue
     exception ->
@@ -143,101 +162,34 @@ defmodule Tymeslot.Notifications.Events do
     {:ok, :already_announced}
   end
 
-  # `channel_event` is what webhooks, Telegram and Slack are told; the email
-  # and reminder fan-out is the same for both announcements.
-  defp announce_meeting_created(meeting, channel_event) do
+  # `channel_event` is what webhooks, Telegram and Slack are told, nil for
+  # nothing; the email and reminder fan-out is the same for both.
+  defp announce_meeting_created(meeting, channel_event, emails?) do
     result =
       :meeting_created
-      |> send_notifications(meeting, fn ->
-        Orchestrator.schedule_meeting_notifications(meeting)
+      |> Guard.send_notifications(meeting, fn ->
+        schedule_created_notifications(meeting, emails?)
       end)
-      |> retryable_only(:meeting_created, meeting)
+      |> Guard.retryable_only(:meeting_created, meeting)
 
     case result do
       {:error, _reason} = error -> {error, []}
+      result when is_nil(channel_event) -> {result, []}
       result -> {result, [{channel_event, meeting, :per_seat}]}
     end
   end
 
-  # An announcement's caller rolls the booking back on an error, for a retry.
-  # Only a failing queue or database can be helped by one: a fault composing
-  # the emails (a bug, an odd legacy row) fails the same way every time, and
-  # rolling back would refuse the booking for good, or answer a paid
-  # checkout's webhook with a 503 for days. Such a fault is reported where it
-  # was rescued (`send_notifications/3`) and the booking goes ahead without
-  # its emails, as one that cannot be emailed does (`{:ok, :not_sendable}`).
-  defp retryable_only({:error, {:notifications_failed, exception}} = error, event, meeting) do
-    if storage_failure?(exception) do
-      error
-    else
-      Logger.error("Announcing without emails: composing them failed",
-        event: event,
-        meeting_id: Map.get(meeting, :id),
-        error: LogFormat.reason(exception)
-      )
+  defp schedule_created_notifications(meeting, true),
+    do: Orchestrator.schedule_meeting_notifications(meeting)
 
-      {:ok, :not_sendable}
+  # `{:ok, :not_sendable}` (a meeting that cannot be emailed) passes through
+  # as it is, as `schedule_meeting_notifications/1` reports it.
+  defp schedule_created_notifications(meeting, false) do
+    case Orchestrator.schedule_reminder_notifications(meeting) do
+      :ok -> {:ok, :reminders_scheduled}
+      {:ok, _outcome} = outcome -> outcome
+      {:error, _reason} = error -> error
     end
-  end
-
-  defp retryable_only(result, _event, _meeting), do: result
-
-  # The database refused or dropped the write; in a transaction, Postgres has
-  # also aborted it, so nothing could commit anyway.
-  defp storage_failure?(%struct{})
-       when struct in [
-              DBConnection.ConnectionError,
-              DBConnection.OwnershipError,
-              Postgrex.Error,
-              Ecto.ConstraintError,
-              Ecto.StaleEntryError
-            ],
-       do: true
-
-  defp storage_failure?(_exception), do: false
-
-  @doc """
-  Handles a seat being booked on a group meeting.
-
-  Every seat schedules its own confirmation email job (participant plus a
-  per-seat organiser notification). Reminders are meeting-level and scheduled
-  exactly once, by `Tymeslot.Bookings.SeatEffects` at whichever seat's
-  booking created the meeting — not here, so this never needs to know
-  `created_meeting?`.
-
-  The integration dispatchers fire per seat, not per slot, because a booking
-  is a person: a host's webhook, Telegram or Slack automation needs to hear
-  about the fifth booker as much as the first. Each carries that seat's
-  participant (see `Tymeslot.Meetings.SeatView`), since the shared meeting
-  row has no attendee of its own.
-
-  The seat is booked inside a transaction, so, as with
-  `meeting_created_deferred/1`, the emails are scheduled now and the
-  integration fan-out is returned as `pending`, for the caller to hand to
-  `dispatch_deferred/1` once the seat has committed.
-
-  Options:
-    * `:defer_emails?` — the caller has scheduled video-room creation and the
-      room worker will release this seat's confirmation once the join link
-      exists, so scheduling it here would only send a linkless duplicate.
-  """
-  @spec seat_booked_deferred(term(), term(), keyword()) ::
-          {{:ok, term()} | {:error, term()}, pending()}
-  def seat_booked_deferred(meeting, participant, opts \\ []) do
-    result =
-      if Keyword.get(opts, :defer_emails?, false) do
-        {:ok, :deferred_to_video_room}
-      else
-        # As for a solo booking: only a storage failure rolls the seat back;
-        # a fault composing its emails would refuse the seat on every retry.
-        :seat_booked
-        |> send_notifications(meeting, fn ->
-          Orchestrator.schedule_seat_confirmation(meeting, participant)
-        end)
-        |> retryable_only(:seat_booked, meeting)
-      end
-
-    {result, [{:meeting_created, meeting, {:seat, participant}}]}
   end
 
   @doc """
@@ -260,17 +212,30 @@ defmodule Tymeslot.Notifications.Events do
 
   @doc """
   `meeting_requested/2` without its integration fan-out, for a caller inside
-  a transaction; see `meeting_created_deferred/1`.
+  a transaction; see `meeting_created_deferred/2`.
+
+  `emails: false` schedules none of the request's emails, nudge or expiry,
+  and returns no fan-out: a session of a booking series, whose request is
+  sent once for the whole series, to people and automations alike
+  (`Tymeslot.BookingSeries.Notifications.schedule_series_request/1`).
   """
   @spec meeting_requested_deferred(term(), keyword()) ::
           {{:ok, term()} | {:error, term()}, pending()}
   def meeting_requested_deferred(meeting, opts \\ []) do
+    if Keyword.get(opts, :emails, true) do
+      schedule_request(meeting, opts)
+    else
+      {{:ok, :requested_with_series}, []}
+    end
+  end
+
+  defp schedule_request(meeting, opts) do
     result =
       :meeting_requested
-      |> send_notifications(meeting, fn ->
+      |> Guard.send_notifications(meeting, fn ->
         Orchestrator.schedule_request_notifications(meeting, opts)
       end)
-      |> retryable_only(:meeting_requested, meeting)
+      |> Guard.retryable_only(:meeting_requested, meeting)
 
     {result, [{:meeting_requested, meeting, :once}]}
   end
@@ -281,7 +246,7 @@ defmodule Tymeslot.Notifications.Events do
   releasing every live seat's own confirmation email.
 
   A group meeting never raises `meeting_created/1` here.
-  `seat_booked_deferred/3` already fanned its webhook/Telegram/Slack
+  `Seats.seat_booked_deferred/3` already fanned its webhook/Telegram/Slack
   integrations out per seat at booking time, and reminders were already
   scheduled once, at whichever seat's booking created the meeting (see
   `Tymeslot.Bookings.SeatEffects`).
@@ -301,83 +266,10 @@ defmodule Tymeslot.Notifications.Events do
   @spec announce_video_room_outcome(term()) :: :ok | {:error, term()}
   def announce_video_room_outcome(meeting) do
     if MeetingSchema.group?(meeting) do
-      release_seat_confirmations(meeting)
+      Seats.release_confirmations(meeting)
     else
       with {:ok, _result} <- meeting_created(meeting), do: :ok
     end
-  end
-
-  # A room job that finishes after the host cancelled the meeting has no
-  # confirmations left to release: the participants were told it is off.
-  defp release_seat_confirmations(%{status: :cancelled}), do: :ok
-
-  defp release_seat_confirmations(meeting) do
-    meeting.id
-    |> ParticipantQueries.list_live_for_meeting()
-    |> Enum.each(&Orchestrator.schedule_seat_confirmation(meeting, &1))
-  end
-
-  @doc """
-  Handles a participant cancelling their seat on a group meeting.
-
-  Schedules the seat-cancellation emails. `slot_freed: true` marks the last
-  leaver: their leaving cancelled the meeting, and the organiser's email
-  about the seat says so (it is the organiser's only email about it).
-
-  Integrations hear `meeting.cancelled` for this seat. For the last leaver
-  that is the only one: the meeting-level cancellation that follows finds no
-  live seat left to announce, and an empty slot was never a booking.
-  """
-  @spec seat_cancelled(term(), term(), keyword()) :: {:ok, term()} | {:error, term()}
-  def seat_cancelled(meeting, participant, opts \\ []) do
-    result =
-      Orchestrator.schedule_seat_cancellation(
-        meeting,
-        participant,
-        Keyword.get(opts, :slot_freed, false)
-      )
-
-    dispatch_seat(:meeting_cancelled, meeting, participant)
-
-    result
-  end
-
-  @doc """
-  Handles a participant's seat moving to a new slot (move-my-seat).
-
-  Schedules the reschedule email: a confirmation for the new seat whose
-  attachments also cancel the old seat's calendar entry for the participant,
-  and the matching cancellation and invitation for their guests.
-  `old_participant` is the seat row the move cancelled on `old_meeting`;
-  each seat is its own calendar entry, so the old one is named by that row,
-  not by the old meeting. `old_slot_freed: true` says the move emptied, and
-  so cancelled, the old meeting.
-
-  Integrations hear `meeting.rescheduled` for the new seat, the way a solo
-  booking's move is one rescheduled booking rather than a cancellation and a
-  new one. A move gives the seat a new participant row, and usually a new
-  meeting, so the event names the seat it replaced (`SeatView.previous/2`)
-  for a consumer to link the two.
-  """
-  @spec seat_rescheduled(term(), term(), term(), term(), keyword()) ::
-          {:ok, term()} | {:error, term()}
-  def seat_rescheduled(meeting, participant, old_meeting, old_participant, opts \\ []) do
-    result =
-      Orchestrator.schedule_seat_reschedule(
-        meeting,
-        participant,
-        old_participant,
-        Keyword.get(opts, :old_slot_freed, false)
-      )
-
-    dispatch_seat(
-      :meeting_rescheduled,
-      meeting,
-      participant,
-      SeatView.previous(old_meeting, old_participant)
-    )
-
-    result
   end
 
   @doc """
@@ -387,22 +279,33 @@ defmodule Tymeslot.Notifications.Events do
   same. A cancellation tells the invitee a confirmed meeting is off; a decline
   tells them a request was never accepted, and sending the cancellation email
   here would refer to a booking they were explicitly told was not one.
+
+  `emails: false` (here, in `meeting_request_expired/2` and in
+  `meeting_cancelled/2`) skips the emails and runs only the integration
+  fan-out. A booking series released whole calls neither: its people and
+  its automations are told once for the whole series
+  (`Tymeslot.BookingSeries.Approval`).
   """
-  @spec meeting_declined(term()) :: {:ok, term()} | {:error, term()}
-  def meeting_declined(meeting), do: request_ended(meeting, :meeting_declined, :declined)
+  @spec meeting_declined(term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def meeting_declined(meeting, opts \\ []),
+    do: request_ended(meeting, :meeting_declined, :declined, opts)
 
   @doc """
   Handles a booking request nobody answered before its deadline.
   """
-  @spec meeting_request_expired(term()) :: {:ok, term()} | {:error, term()}
-  def meeting_request_expired(meeting),
-    do: request_ended(meeting, :meeting_request_expired, :expired)
+  @spec meeting_request_expired(term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def meeting_request_expired(meeting, opts \\ []),
+    do: request_ended(meeting, :meeting_request_expired, :expired, opts)
 
-  defp request_ended(meeting, event, variant) do
+  defp request_ended(meeting, event, variant, opts) do
     result =
-      send_notifications(event, meeting, fn ->
-        Orchestrator.send_request_outcome_notifications(meeting, variant)
-      end)
+      if Keyword.get(opts, :emails, true) do
+        Guard.send_notifications(event, meeting, fn ->
+          Orchestrator.send_request_outcome_notifications(meeting, variant)
+        end)
+      else
+        {:ok, :announced_with_series}
+      end
 
     dispatch_channels(event, meeting)
 
@@ -416,15 +319,22 @@ defmodule Tymeslot.Notifications.Events do
   still live when it was cancelled: the host calling the whole slot off
   cancels every one of those bookings, and the participant rows are left
   live by it. An emptied slot cancelled by its last leaver has no live seat
-  left, and `seat_cancelled/3` already announced that seat.
+  left, and `Seats.seat_cancelled/3` already announced that seat.
+
+  `integrations: false` tells no integration: a session cancelled with the
+  rest of its series, announced whole by `meeting.series_cancelled`.
   """
-  @spec meeting_cancelled(term()) :: {:ok, term()} | {:error, term()}
-  def meeting_cancelled(meeting) do
+  @spec meeting_cancelled(term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def meeting_cancelled(meeting, opts \\ []) do
     # Send email notifications
     result =
-      send_notifications(:meeting_cancelled, meeting, fn ->
-        Orchestrator.send_cancellation_notifications(meeting)
-      end)
+      if Keyword.get(opts, :emails, true) do
+        Guard.send_notifications(:meeting_cancelled, meeting, fn ->
+          Orchestrator.send_cancellation_notifications(meeting)
+        end)
+      else
+        {:ok, :announced_with_series}
+      end
 
     # Cancel pending reminders — a cancellation event already tells us the
     # slot is void, so call the canceller directly. Failures are logged but
@@ -432,7 +342,7 @@ defmodule Tymeslot.Notifications.Events do
     cancel_reminders(meeting)
 
     # Webhooks, Telegram and Slack; none of them fails the cancellation.
-    dispatch_integrations(:meeting_cancelled, meeting)
+    if integrations?(opts), do: dispatch_integrations(:meeting_cancelled, meeting)
 
     result
   end
@@ -448,7 +358,7 @@ defmodule Tymeslot.Notifications.Events do
   def meeting_rescheduled(updated_meeting, original_meeting, opts \\ []) do
     # Send email notifications
     result =
-      send_notifications(:meeting_rescheduled, updated_meeting, fn ->
+      Guard.send_notifications(:meeting_rescheduled, updated_meeting, fn ->
         Orchestrator.send_reschedule_notifications(updated_meeting, original_meeting, opts)
       end)
 
@@ -475,32 +385,12 @@ defmodule Tymeslot.Notifications.Events do
     cancel_reminders_strict(meeting)
   end
 
-  # The email step is the only one of these dispatches that renders templates
-  # in-process, so a payload the templates don't fit raises instead of
-  # returning `{:error, _}`. Everything sequenced after it — reminder jobs,
-  # webhooks, Telegram, Slack — is best-effort by design, and an escaping
-  # exception used to skip all of them while the meeting change itself stood
-  # (issue #76: a reschedule that never dispatched `meeting.rescheduled`).
-  # Contain it here so one failed channel cannot silence the others; the caller
-  # still learns the emails failed through the error tuple it already handles.
-  defp send_notifications(event, meeting, fun) do
-    fun.()
-  rescue
-    exception ->
-      ErrorTracking.report_error(exception, __STACKTRACE__, %{
-        event: event,
-        meeting_id: Map.get(meeting, :id)
-      })
-
-      {:error, {:notifications_failed, exception}}
-  end
-
   # A meeting-level event on a group meeting reaches integrations once per
   # live seat, each as that seat's booking: the slot row has no attendee, and
   # one event for it would name nobody.
   defp dispatch_integrations(event, %MeetingSchema{} = meeting) do
     if MeetingSchema.group?(meeting) do
-      seat_guard(event, meeting, fn ->
+      Guard.seat_guard(event, meeting, fn ->
         # Every seat's event fires at the same moment, so they share one count.
         seats_taken = ParticipantQueries.count_seats_taken(meeting.id)
 
@@ -514,28 +404,6 @@ defmodule Tymeslot.Notifications.Events do
   end
 
   defp dispatch_integrations(event, meeting), do: dispatch_channels(event, meeting)
-
-  defp dispatch_seat(event, meeting, participant, previous \\ nil) do
-    seat_guard(event, meeting, fn ->
-      dispatch_channels(event, SeatView.at_event(meeting, participant, nil, previous))
-    end)
-  end
-
-  # Building a seat's view reads the database (its live seats, the seat
-  # count), which the per-channel guard below does not cover. It is as
-  # best-effort as the channels themselves, so it gets a guard of its own.
-  defp seat_guard(event, meeting, fun) do
-    fun.()
-  rescue
-    exception ->
-      ErrorTracking.report_error(exception, __STACKTRACE__, %{
-        channel: :seats,
-        event: event,
-        meeting_id: Map.get(meeting, :id)
-      })
-
-      {:error, {:dispatch_failed, exception}}
-  end
 
   # Every event, the request-lifecycle ones (`meeting.requested`,
   # `meeting.declined`, `meeting.request_expired`) included, fans out to all

@@ -453,11 +453,6 @@ msgstr ""
 msgid "Work hours not found"
 msgstr ""
 
-#: lib/tymeslot/meetings/unique_slot.ex
-#, elixir-autogen, elixir-format
-msgid "You already have a confirmed meeting at this time."
-msgstr ""
-
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "already has a spot at this time"
@@ -528,7 +523,7 @@ msgstr ""
 
 #: lib/tymeslot/auth/user_schema.ex
 #: lib/tymeslot/meetings/guest_schema.ex
-#: lib/tymeslot/meetings/meeting_schema.ex
+#: lib/tymeslot/meetings/meeting_rules.ex
 #: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
@@ -868,6 +863,31 @@ msgstr ""
 msgid "invitation links"
 msgstr ""
 
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation-only meeting types cannot be booked as a series."
+msgstr ""
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types with fixed dates can offer a series only as sessions the booker picks."
+msgstr ""
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "One-off meeting types cannot be booked as a series."
+msgstr ""
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be between %{min} and %{max}"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must not be less than the minimum"
+msgstr ""
+
 #: lib/tymeslot/profiles/profile_schema.ex
 #, elixir-autogen, elixir-format
 msgid "cannot list a language twice"
@@ -876,4 +896,34 @@ msgstr ""
 #: lib/tymeslot/content_translations/catalogue.ex
 #, elixir-autogen, elixir-format
 msgid "is not a translation language"
+msgstr ""
+
+#: lib/tymeslot/meetings/unique_slot.ex
+#, elixir-autogen, elixir-format
+msgid "This time is no longer available. Please choose another time."
+msgstr ""
+
+#: lib/tymeslot/meeting_types/email_verification_rule.ex
+#, elixir-autogen, elixir-format
+msgid "email confirmation cannot be combined with payment"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/group_validation.ex
+#, elixir-autogen, elixir-format
+msgid "group bookings cannot require email confirmation"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/meeting_type_schema.ex
+#, elixir-autogen, elixir-format
+msgid "would give a reserved booking link; choose another name or set a custom link"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "must be at most %{max} at this rhythm, so that every session falls within a year"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
 msgstr ""

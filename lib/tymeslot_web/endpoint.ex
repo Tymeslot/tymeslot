@@ -230,6 +230,7 @@ defmodule TymeslotWeb.Endpoint do
     {["seat", :_], false},
     {["free-busy", :_], false},
     {["meeting-request", :_], false},
+    {["verify-booking", :_], false},
     {["invite", :_], false},
     # Stripe's return pages for a paid booking: the meeting id in the path
     # leads to the meeting, and the cancelled page's retry link can carry the
@@ -246,7 +247,11 @@ defmodule TymeslotWeb.Endpoint do
     {[:_, "meeting", :_, "calendar.ics"], false},
     # The same pages linked without a username (`MeetingLinkController`).
     {["meeting", :_, "cancel"], false},
-    {["meeting", :_, "reschedule"], false}
+    {["meeting", :_, "reschedule"], false},
+    # A booking series' page: its uid is the booker's bearer, as a
+    # meeting's is. `/:username/series` alone is a meeting type's page.
+    {[:_, "series", :_], false},
+    {["series", :_], false}
   ]
 
   @request_log_levels @core_request_log_levels ++

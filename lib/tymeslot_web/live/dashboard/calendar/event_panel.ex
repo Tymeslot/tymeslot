@@ -22,14 +22,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CalendarGrid.Changes
+  alias Tymeslot.CalendarGrid.ColourTokens
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
+  alias TymeslotWeb.Dashboard.Calendar.LinkedText
   alias TymeslotWeb.Dashboard.Calendar.PanelActions
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
+  alias TymeslotWeb.Dashboard.Calendar.PanelColour
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
   alias TymeslotWeb.Dashboard.Calendar.PanelGuestsField
   alias TymeslotWeb.Dashboard.Calendar.PanelNewForm
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelStatus
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
@@ -40,11 +44,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   # The New event state draws the draft's form: there is no event to read
   # a guard or a repeat rule from, and every field can be changed.
   @impl Phoenix.LiveComponent
-  def update(%{panel: %{mode: :new}} = assigns, socket) do
+  def update(%{panel: %{mode: :new} = panel} = assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
      |> assign(
+       new_repeat:
+         PanelNewRepeat.field(
+           panel.form,
+           panel.draft,
+           provider(assigns.integrations, panel.draft),
+           assigns.timezone,
+           assigns.group_allowed
+         ),
        event_id: nil,
        editable: true,
        movable: true,
@@ -73,6 +85,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
      |> assign(:event_id, panel.event_id)
      |> assign_booking_copy()
      |> assign_untold()}
+  end
+
+  defp provider(_integrations, nil), do: nil
+
+  defp provider(integrations, draft) do
+    case Enum.find(integrations, &(&1.id == draft.integration_id)) do
+      nil -> nil
+      integration -> integration.provider
+    end
   end
 
   # Asked on every update the panel's event or its starting point changes;
@@ -108,12 +129,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   # (a booking's calendar copy keeps the booking's time), and whether the
   # organiser may email its guests: invite, remove, tell (they organise
   # it; a query or two).
+  # An event a group meeting with live seats sits on opens read only, saying
+  # so (`EditGuard.drawn_writable/3`).
   defp opened(socket, event, %{integrations: integrations} = context) do
-    writable = EditGuard.writable(integrations, event)
+    writable = EditGuard.drawn_writable(integrations, context.locked_uids, event)
 
     assign(socket,
       editable: writable == :ok,
-      movable: EditGuard.movable?(integrations, event),
+      movable: writable == :ok and EditGuard.movable?(integrations, event),
       read_only_reason: read_only_reason(writable),
       emails_guests: EditGuard.guest_update(context.user_id, integrations, event) == :ok
     )
@@ -160,6 +183,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
         saving={@panel.status == :saving}
         surface={@surface}
       />
+      <PanelGuestsField.pending_note
+        :if={@panel.mode == :edit && @emails_guests && @panel.guests_pending && !@untold}
+        surface={@surface}
+      />
       <div
         :if={@panel.mode == :edit}
         class="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4"
@@ -190,6 +217,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           :if={timed_or_all_day?(@event)}
           timing={PanelTiming.fields(@event, @context.timezone)}
           disabled={!@movable}
+          reason={timing_reason(@editable, @movable)}
           error={@panel.errors["timing"]}
           target={@surface}
         />
@@ -217,19 +245,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
         </form>
         <PanelFields.busy_free :if={@movable} free={free?(@event)} target={@surface} />
         <.input
+          :if={@editable}
           id="calendar-panel-location"
           name="location"
           type="text"
           label={dgettext("dashboard_calendar_editing", "Place")}
           placeholder={dgettext("dashboard_calendar_editing", "Add a place or room")}
           value={Map.get(@event, :location) || ""}
-          disabled={!@editable}
           errors={List.wrap(@panel.errors["location"])}
           data-panel-field="location"
           phx-blur="panel:location"
           phx-keydown="panel:location"
           phx-key="Enter"
           phx-target={@surface}
+        />
+        <LinkedText.read_only_field
+          :if={!@editable}
+          id="calendar-panel-location-text"
+          label={dgettext("dashboard_calendar_editing", "Place")}
+          text={Map.get(@event, :location)}
         />
         <PanelVideoField.video_row
           :if={@event}
@@ -245,11 +279,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           :if={@event && @editable}
           guests={PanelGuests.of(@event)}
           organiser={@emails_guests}
+          error={@panel.errors["guest"]}
           form_key={@guest_form_key}
           repeating={
             is_binary(Map.get(@event, :recurring_event_id)) or
               is_binary(Map.get(@event, :recurrence_rule))
           }
+          surface={@surface}
+        />
+        <PanelColour.colour_field
+          :if={@event && @editable && Map.get(@event, :kind) != :booking}
+          colour={@event |> ColourTokens.with_override(@context.colour_overrides) |> Map.get(:colour)}
           surface={@surface}
         />
         <PanelFields.reminder_field
@@ -258,6 +298,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           target={@surface}
         />
         <.input
+          :if={@editable}
           id="calendar-panel-notes"
           name="description"
           type="textarea"
@@ -265,11 +306,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           label={dgettext("dashboard_calendar_editing", "Notes")}
           placeholder={dgettext("dashboard_calendar_editing", "Agenda, links, anything else")}
           value={Map.get(@event, :description) || ""}
-          disabled={!@editable}
           errors={List.wrap(@panel.errors["notes"])}
           data-panel-field="notes"
           phx-blur="panel:notes"
           phx-target={@surface}
+        />
+        <LinkedText.read_only_field
+          :if={!@editable}
+          id="calendar-panel-notes-text"
+          label={dgettext("dashboard_calendar_editing", "Notes")}
+          text={Map.get(@event, :description)}
         />
         <PanelActions.edit_actions :if={@event && @editable} movable={@movable} surface={@surface} />
       </div>
@@ -278,12 +324,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
           values={@panel.form}
           saving={@panel.status == :saving}
           calendar_choices={@calendar_choices}
+          has_accounts={@has_accounts}
           video_integrations={@video_integrations}
           guest_form_key={@guest_form_key}
           surface={@surface}
           group_allowed={@group_allowed}
           venues={Map.get(@panel, :venues, [])}
+          reminder_picker={Map.get(@panel, :reminder_picker)}
           timezone={@timezone}
+          repeat={@new_repeat}
+          provider={provider(@integrations, @panel.draft)}
+          guest_error={@panel.errors["guest"]}
         />
       </div>
     </aside>
@@ -294,6 +345,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
     do: dgettext("dashboard_calendar_editing", "Nothing is saved until you create it")
 
   defp status_text(%{status: status}), do: PanelStatus.text(status)
+
+  # An event that can be changed but not moved is a booking's calendar copy,
+  # whose time is the booking's. One that cannot be changed at all says why
+  # at the top of the panel already.
+  defp timing_reason(true, false),
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "The time belongs to the booking. Reschedule it from Bookings."
+      )
+
+  defp timing_reason(_editable, _movable), do: nil
 
   defp title_value(%{kind: :booking} = booking), do: EventPayload.title(booking)
   defp title_value(event), do: Map.get(event, :summary) || ""

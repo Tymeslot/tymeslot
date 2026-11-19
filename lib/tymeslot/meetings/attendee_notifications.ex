@@ -43,7 +43,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       attendee, from the event as it was, and only for an event the user
       organises. Called once the event has actually been deleted, never
       before: see its docs.
-    * `pending?/1` / `cancel_pending/1` — inspection and cancellation of the
+    * `pending?/1` / `cancel_pending/2` — inspection and cancellation of the
       debounced pipeline for a provider calendar event. Both take the event,
       not its id.
 
@@ -515,9 +515,21 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     Dispatcher.pending?(event_id(event), event_kind(event))
   end
 
-  @spec cancel_pending(event) :: :ok
-  def cancel_pending(event) do
-    Dispatcher.cancel_pending(event_id(event), event_kind(event))
+  @doc """
+  Drops the debounced job queued for this event, the one the caller knew
+  was due at `due_at` (`pending_due_at/1`): `{:ok, :cancelled}`, or, when
+  none was waiting any more, `{:ok, :sent}` when that one has gone out and
+  `{:ok, :none}` otherwise. See `Dispatcher.cancel_pending/3`.
+  """
+  @spec cancel_pending(event, DateTime.t()) :: {:ok, :cancelled | :sent | :none}
+  def cancel_pending(event, %DateTime{} = due_at) do
+    Dispatcher.cancel_pending(event_id(event), event_kind(event), due_at)
+  end
+
+  @doc "When the debounced job queued for this event is due, or nil when none is."
+  @spec pending_due_at(event) :: DateTime.t() | nil
+  def pending_due_at(event) do
+    Dispatcher.pending_due_at(event_id(event), event_kind(event))
   end
 
   ## Internal helpers

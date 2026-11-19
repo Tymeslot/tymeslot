@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.LiveView
   alias Phoenix.PubSub
   alias Tymeslot.BookingPages
+  alias Tymeslot.BookingSeries
   alias Tymeslot.ContentTranslations
   alias Tymeslot.Demo
   alias Tymeslot.Invitations
@@ -113,7 +114,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
     case {Invitations.retry_token(meeting), guest?} do
       {:none, _guest?} ->
         %{
-          rebook_path: rebook_path(profile, meeting),
+          rebook_path: booking_path(profile, meeting),
           invitation_held: false,
           invitation_withheld: false
         }
@@ -125,7 +126,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
         %{rebook_path: nil, invitation_held: true, invitation_withheld: false}
 
       {{:ok, token}, true} ->
-        path = PathHandlers.with_query(rebook_path(profile, meeting), %{"invite" => token})
+        path = PathHandlers.with_query(booking_path(profile, meeting), %{"invite" => token})
         %{rebook_path: path, invitation_held: false, invitation_withheld: false}
     end
   end
@@ -262,8 +263,14 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
 
   defp escape_segment(segment), do: URI.encode(segment, &URI.char_unreserved?/1)
 
-  defp rebook_path(%{username: username}, meeting)
-       when is_binary(username) and username != "" do
+  @doc """
+  The path of the booking page `meeting` was booked through, with no
+  invitation token: the host's page, or the booking page it came through,
+  and its meeting type when that still exists.
+  """
+  @spec booking_path(Tymeslot.Profiles.ProfileSchema.t() | nil, Meeting.t()) :: String.t()
+  def booking_path(%{username: username}, meeting)
+      when is_binary(username) and username != "" do
     address = BookingPages.address_for_meeting(meeting, username)
 
     case meeting_type_slug(meeting) do
@@ -272,7 +279,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
     end
   end
 
-  defp rebook_path(_profile, _meeting), do: "/"
+  def booking_path(_profile, _meeting), do: "/"
 
   defp meeting_type_slug(%{meeting_type_id: id, organizer_user_id: user_id})
        when is_integer(id) and is_integer(user_id) do
@@ -353,6 +360,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
             |> assign_customization(profile)
             |> assign_organizer(profile, meeting)
             |> Component.assign(loading: false, meeting: meeting, payment: payment)
+            |> Component.assign(:series_count, BookingSeries.session_count(meeting))
             |> Component.assign(rebook(profile, meeting, true))
 
           {:ok, socket}
@@ -370,6 +378,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           loading: true,
           meeting: nil,
           payment: nil,
+          series_count: nil,
           rebook_path: nil,
           invitation_held: false,
           invitation_withheld: false
@@ -399,6 +408,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
         {:ok, meeting} ->
           socket
           |> Component.assign(:meeting, meeting)
+          |> Component.assign(:series_count, BookingSeries.session_count(meeting))
           |> Component.assign(rebook(socket.assigns.organizer_profile, meeting, true))
 
         {:error, :not_found} ->

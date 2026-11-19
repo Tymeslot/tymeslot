@@ -68,6 +68,12 @@ defmodule Tymeslot.CalendarGrid.CreateParamsTest do
     do:
       CreateParams.cast(context.user.id, context.integrations, Map.merge(@lunch, changes), @zone)
 
+  defp cast_meeting(user_id, integrations, changes),
+    do:
+      CreateParams.cast(user_id, integrations, Map.merge(@lunch, changes), @zone,
+        calendar: :optional
+      )
+
   test "a timed create resolves the organiser's wall clock to UTC", context do
     assert {:ok, %CreateParams{} = params} = cast(context)
 
@@ -113,6 +119,44 @@ defmodule Tymeslot.CalendarGrid.CreateParamsTest do
     test "must take writes", context do
       assert {:error, :calendar, :read_only} = cast(context, %{"calendar" => "1:shared"})
       assert {:error, :calendar, :read_only} = cast(context, %{"calendar" => "2:feed"})
+    end
+  end
+
+  describe "a meeting with no calendar (calendar: :optional)" do
+    test "is accepted while the organiser has no calendar to write to", context do
+      [_google, feed, _exchange, someone_elses] = context.integrations
+
+      assert {:ok, %CreateParams{integration_id: nil, calendar_id: nil, title: "Lunch"}} =
+               cast_meeting(context.user.id, [feed, someone_elses], %{"calendar" => nil})
+
+      assert {:ok, %CreateParams{integration_id: nil}} =
+               cast_meeting(context.user.id, [], %{"calendar" => ""})
+    end
+
+    test "is refused while the organiser has a writable calendar", context do
+      assert {:error, :calendar, :not_found} =
+               cast_meeting(context.user.id, context.integrations, %{"calendar" => nil})
+    end
+
+    test "still checks a calendar it is given", context do
+      assert {:ok, %CreateParams{integration_id: 1, calendar_id: "work"}} =
+               cast_meeting(context.user.id, context.integrations, %{})
+
+      assert {:error, :calendar, :read_only} =
+               cast_meeting(context.user.id, context.integrations, %{"calendar" => "2:feed"})
+    end
+
+    test "cannot repeat, with no calendar to write the series to", context do
+      assert {:error, :recurrence_rule, :not_repeatable} =
+               cast_meeting(context.user.id, [], %{
+                 "calendar" => nil,
+                 "recurrence_rule" => "FREQ=WEEKLY"
+               })
+    end
+
+    test "is never accepted for a plain event", context do
+      assert {:error, :calendar, :invalid} =
+               CreateParams.cast(context.user.id, [], Map.put(@lunch, "calendar", nil), @zone)
     end
   end
 

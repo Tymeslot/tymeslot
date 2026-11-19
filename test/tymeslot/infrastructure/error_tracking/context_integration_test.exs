@@ -127,13 +127,9 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ContextIntegrationTest do
 
   describe "an Oban job" do
     test "records the user from the job args and the job's correlation id", %{user: user} do
-      # A job enqueued before `colour` joined the args shape raises in `perform/1`.
+      # A job whose args lack the event's `uid` raises in `perform/1`.
       assert_raise MatchError, fn ->
-        perform_job(ColourWriteBackWorker, %{
-          "user_id" => user.id,
-          "integration_id" => 1,
-          "uid" => "event-uid"
-        })
+        perform_job(ColourWriteBackWorker, %{"user_id" => user.id, "integration_id" => 1})
       end
 
       context = occurrence_context!("Elixir.MatchError")

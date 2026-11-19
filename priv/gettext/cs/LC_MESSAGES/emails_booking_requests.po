@@ -188,6 +188,7 @@ msgstr "Pro %{name} je to %{time}."
 msgid "From:"
 msgstr "Od:"
 
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
@@ -261,6 +262,7 @@ msgid "Location:"
 msgstr "Místo:"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
@@ -289,6 +291,7 @@ msgstr "Nová žádost o rezervaci"
 msgid "No longer held"
 msgstr "Termín uvolněn"
 
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #, elixir-autogen, elixir-format
 msgid "Not confirmed"
@@ -508,3 +511,33 @@ msgstr "schůzku"
 #, elixir-autogen, elixir-format
 msgid "withdraw your request"
 msgstr "stáhnout žádost"
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm booking"
+msgstr "Potvrdit rezervaci"
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your booking with %{organizer}"
+msgstr "%{organizer}: potvrďte prosím svou rezervaci"
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, your booking is not confirmed yet."
+msgstr "Dobrý den, %{name}, vaše rezervace zatím není potvrzena."
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "If you did not make this booking, ignore this email. Nothing will be booked."
+msgstr "Pokud tato rezervace není od vás, tento e-mail ignorujte. Nic nebude zarezervováno."
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Please confirm your booking"
+msgstr "Potvrďte prosím svou rezervaci"
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold the time for you until then."
+msgstr "Vaše rezervace ještě není potvrzená. Potvrďte ji kliknutím na tlačítko níže do %{deadline}. Do té doby vám termín podržíme."

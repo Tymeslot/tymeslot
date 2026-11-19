@@ -1,5 +1,6 @@
 // desktop_reminder_permission.js
-// LiveView hook for the calendar settings' "Desktop reminders" controls.
+// LiveView hook for the calendar display options' "Desktop notifications"
+// controls (DisplayOptions and DesktopPermission on the server).
 //
 // Notification.requestPermission() must run inside a user gesture: Firefox
 // (since 72) and Safari ignore a request made from anywhere else, and Chrome
@@ -12,10 +13,12 @@
 // existed. Clicking the switch while it is on is the ordinary toggle, left to
 // phx-click. Any other click is a request for permission: it stops the plain
 // toggle (which would save "on" whatever the browser answers), asks, and
-// pushes the answer to the component named by `data-enable-event`.
+// pushes the answer to the component as the `data-enable-event` event.
+// The command bar asks through `requestPermission` too (calendar_canvas/command.js).
 //
 // On mount it also reports the current permission (`data-report-event`) so the
-// modal can say when notifications are blocked, which the server cannot know.
+// display options can say when notifications are blocked, which the server
+// cannot know.
 
 export function currentPermission() {
   return typeof Notification === "undefined" ? "unsupported" : Notification.permission

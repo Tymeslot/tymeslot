@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   alias Tymeslot.Security.FieldValidators.EmailValidator
   alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Themes.Shared.Components.SeatBadge
+  alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
 
   @doc "Initial assigns for the guest field, set once at scheduling mount."
   @spec assign_defaults(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
@@ -88,7 +89,8 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
 
   Guests are allowed when the meeting type has `allow_guests: true` and the
   current flow is not a reschedule (adding guests to an existing meeting is
-  not supported). Hidden outright once the seat cap has been driven to zero
+  not supported) or a series (whose sessions take no guests yet: the booker
+  who switches to a single session gets the field back). Hidden outright once the seat cap has been driven to zero
   (the last seat on a group slot) — there is no room for a guest at all —
   unless the field was already open: a booker who had typed guests in before
   a seat broadcast dropped the cap to zero must still see the field (now
@@ -96,9 +98,13 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   and the explanation for why their guests vanished, disappear together.
   """
   @spec guests_allowed?(map()) :: boolean()
-  def guests_allowed?(%{max_guests: 0} = assigns), do: assigns[:guests_open] == true
-
   def guests_allowed?(assigns) do
+    if Series.request(assigns), do: false, else: single_guests_allowed?(assigns)
+  end
+
+  defp single_guests_allowed?(%{max_guests: 0} = assigns), do: assigns[:guests_open] == true
+
+  defp single_guests_allowed?(assigns) do
     case assigns[:meeting_type] do
       %{allow_guests: true} -> assigns[:is_rescheduling] != true
       _other -> false

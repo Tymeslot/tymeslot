@@ -47,6 +47,7 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Payments.Config, as: PaymentsConfig
 
   @type account :: ConnectAccountSchema.t()
@@ -295,7 +296,8 @@ defmodule Tymeslot.MeetingPayments do
   # ---------------------------------------------------------------------------
 
   @doc """
-  Lists recent booking payments for a host, newest first.
+  Lists recent booking payments for a host, newest first, leaving out
+  checkouts that never captured anything (`BookingPaymentQueries.for_host/2`).
   """
   @spec list_payments_for_host(integer(), keyword()) :: [booking_payment()]
   def list_payments_for_host(host_user_id, opts \\ []),
@@ -377,13 +379,42 @@ defmodule Tymeslot.MeetingPayments do
   end
 
   @doc """
-  Fetches the booking payment for a given meeting, or `nil`.
+  Fetches the booking payment that paid for a meeting, or `nil`: the
+  meeting's own, or, for a session of a paid series, the series' one
+  payment (with its `series` preloaded), which pays for every session.
+  Every lookup of a meeting's payment goes through here (or
+  `payment_for_meeting/2`), so none forgets the series.
 
   Unscoped: for system rules only. A lookup on behalf of a signed-in user must
   use `payment_for_meeting/2`.
   """
-  @spec payment_for_meeting(Ecto.UUID.t()) :: booking_payment() | nil
-  def payment_for_meeting(meeting_id), do: BookingPaymentQueries.by_meeting_id(meeting_id)
+  @spec payment_for_meeting(term()) :: booking_payment() | nil
+  def payment_for_meeting(meeting_id), do: BookingPaymentQueries.for_meeting(meeting_id)
+
+  @doc """
+  The meetings a booking payment paid for: its meeting, or every session of
+  its series in series order; `[]` once they are gone. See
+  `HeldMeetings.meetings_for/1`.
+  """
+  @spec meetings_for_payment(booking_payment()) :: [MeetingSchema.t()]
+  defdelegate meetings_for_payment(payment), to: HeldMeetings, as: :meetings_for
+
+  @doc """
+  Whether none of the meetings a booking payment paid for goes ahead any
+  more (each cancelled, expired or otherwise released), so whatever of it
+  remains is owed back. The rule the outstanding-refunds list applies.
+  """
+  @spec series_released?(booking_payment()) :: boolean()
+  def series_released?(payment) do
+    case HeldMeetings.meetings_for(payment) do
+      [] -> false
+      meetings -> Enum.all?(meetings, &MeetingState.released_status?(&1.status))
+    end
+  end
+
+  @doc "Fetches the one booking payment of a paid series, or `nil`."
+  @spec payment_for_series(term()) :: booking_payment() | nil
+  def payment_for_series(series_id), do: BookingPaymentQueries.by_series_id(series_id)
 
   @doc """
   Fetches the booking payment for a meeting only if `host_user_id` took it,
@@ -394,7 +425,7 @@ defmodule Tymeslot.MeetingPayments do
   """
   @spec payment_for_meeting(term(), integer()) :: booking_payment() | nil
   def payment_for_meeting(meeting_id, host_user_id),
-    do: BookingPaymentQueries.by_meeting_id_for_host(meeting_id, host_user_id)
+    do: BookingPaymentQueries.for_meeting_for_host(meeting_id, host_user_id)
 
   @doc """
   Returns the remaining refundable balance in cents for a booking payment.
@@ -403,6 +434,23 @@ defmodule Tymeslot.MeetingPayments do
   """
   @spec refundable_remaining_cents(booking_payment()) :: non_neg_integer()
   defdelegate refundable_remaining_cents(payment), to: Refunds
+
+  @doc """
+  What a host's cancellation of one booking refunds unless the host says
+  otherwise: the remaining balance, or, for a session of a paid series, one
+  session's price, never more than remains.
+  """
+  @spec default_cancellation_refund_cents(booking_payment()) :: non_neg_integer()
+  defdelegate default_cancellation_refund_cents(payment), to: Refunds
+
+  @doc """
+  Why `payment` cannot be refunded at all (`:not_paid`,
+  `:outside_refund_window`, `:under_dispute`), or `:ok`; see
+  `Refunds.refusal/1`.
+  """
+  @spec refund_refusal(booking_payment()) ::
+          :ok | {:error, :not_paid | :outside_refund_window | :under_dispute}
+  defdelegate refund_refusal(payment), to: Refunds, as: :refusal
 
   @doc """
   Returns `true` when the payment still owes the attendee money and was paid
@@ -467,6 +515,27 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate create_checkout_session(meeting),
     to: CheckoutSessions,
     as: :create_session_for_booking
+
+  @doc """
+  Opens one Stripe Checkout for every session of a paid series, held
+  `awaiting_payment`, at the series' unit price times its sessions. See
+  `CheckoutSessions.create_session_for_series/1`.
+  """
+  @spec create_checkout_session_for_series(Tymeslot.BookingSeries.SeriesSchema.t()) ::
+          {:ok, CheckoutSessions.create_result()} | {:error, term()}
+  defdelegate create_checkout_session_for_series(series),
+    to: CheckoutSessions,
+    as: :create_session_for_series
+
+  @doc """
+  Expires every session of a paid series still awaiting payment, inside
+  the caller's transaction or its own. See `HeldMeetings.expire_series/1`.
+  """
+  @spec expire_held_series(Tymeslot.BookingSeries.SeriesSchema.t() | binary() | nil) ::
+          {:ok, :expired, MeetingSchema.t()}
+          | {:ok, :unchanged, String.t() | nil}
+          | {:error, term()}
+  defdelegate expire_held_series(series), to: HeldMeetings, as: :expire_series
 
   @doc """
   Whether a checkout-cancelled page's `return_token` proves the visitor came

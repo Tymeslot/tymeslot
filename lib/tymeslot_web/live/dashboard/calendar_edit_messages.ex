@@ -28,6 +28,14 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
 
   def refusal({:error, :group_booking}), do: {:warning, seat_lock_message()}
 
+  def refusal({:error, :syncing}),
+    do:
+      {:warning,
+       dgettext(
+         "dashboard_calendar_events",
+         "Syncing with your calendar. Open the event to change the whole series."
+       )}
+
   def refusal({:error, :booking}),
     do:
       {:warning,
@@ -63,6 +71,24 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
       "Recurring Exchange events cannot be deleted here yet. Please delete this one in your calendar app."
     )
   end
+
+  @doc "The event is gone, but the meeting it belonged to could not be cancelled."
+  @spec deleted_but_meeting_not_cancelled_message() :: String.t()
+  def deleted_but_meeting_not_cancelled_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+    )
+  end
+
+  @doc "The event is gone, but the cancellation for its attendees could not be sent."
+  @spec deleted_but_attendees_not_notified_message() :: String.t()
+  def deleted_but_attendees_not_notified_message,
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "Event deleted, but the attendees could not be notified."
+      )
 
   @doc """
   Why a delete failed. A queued delete will be replayed on the next sync;

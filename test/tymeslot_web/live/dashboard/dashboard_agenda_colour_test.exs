@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
   override and render on the agenda.
   """
   use TymeslotWeb.ConnCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :live
   @moduletag :calendar
@@ -15,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Workers.ColourWriteBackWorker
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))
@@ -62,7 +64,10 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
     assert html =~ EventColour.tailwind_class("blueberry")
   end
 
-  test "user clears a colour override", %{conn: conn, user: user} do
+  test "user clears a colour override, at the calendar provider too", %{
+    conn: conn,
+    user: user
+  } do
     integration = all_day_event(user, "uid-colour-clear")
 
     {:ok, _override} =
@@ -78,6 +83,10 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
     view |> element(~s{button[phx-click="clear_entry_colour"]}) |> render_click()
 
     assert Calendar.overrides_for(user.id) == %{}
+
+    # The write-back the set queued now clears the colour at the provider.
+    assert [%{args: %{"uid" => "uid-colour-clear", "colour" => nil}}] =
+             all_enqueued(worker: ColourWriteBackWorker)
   end
 
   test "user colours a booking entry via the {:meeting, id} target", %{conn: conn, user: user} do

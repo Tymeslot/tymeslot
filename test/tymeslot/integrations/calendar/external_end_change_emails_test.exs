@@ -24,7 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeEmailsTest do
   alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.EmailServiceMock
-  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.ExternalCalendar
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
@@ -224,7 +224,11 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeEmailsTest do
       read = ctx.meeting
       read |> Changeset.change(status: :cancelled) |> Repo.update!()
 
-      assert :ok = Meetings.apply_external_end_change(read, DateTime.add(read.end_time, 1, :hour))
+      assert :ok =
+               ExternalCalendar.apply_external_end_change(
+                 read,
+                 DateTime.add(read.end_time, 1, :hour)
+               )
 
       refute_enqueued(worker: EmailWorker)
     end
