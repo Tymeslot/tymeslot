@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingGuestsTest do
     trace_surface(lv)
     book_meeting(lv, %{"guest_email" => "ada@example.com", "meeting" => "true"})
 
-    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, params}}
     assert %{attendee_email: "ada@example.com", guest_emails: []} = params
   end
 
@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingGuestsTest do
       trace_surface(lv)
       book_meeting(lv)
 
-      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, params}}
       assert %{attendee_email: "ada@example.com", guest_emails: []} = params
     end
 
@@ -105,7 +105,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingGuestsTest do
       trace_surface(lv)
       book_meeting(lv)
 
-      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, params}}
 
       assert %{attendee_email: "ada@example.com", reminders: [%{value: 30, unit: "minutes"}]} =
                params
@@ -156,7 +156,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingGuestsTest do
 
       assert has_element?(lv, "#calendar-panel-guests", "Add a guest to send a Tymeslot meeting.")
       assert has_element?(lv, "#calendar-panel-create:not([disabled])")
-      refute_received {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}
+
+      refute_received {:trace, _pid, :receive,
+                       {:execute_create_ad_hoc_meeting, _request, _params}}
+
       refute_received {:provider_call, _task_pid, _payload}
     end
   end
@@ -279,6 +282,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingGuestsTest do
              "You can invite at most #{max} guests at once."
            )
 
-    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
+    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}},
+                   100
   end
 end

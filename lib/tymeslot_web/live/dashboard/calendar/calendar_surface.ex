@@ -220,10 +220,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
 
   # Meeting mode's answer, through the dashboard (see `PanelMeeting`); the
   # booking it made shows after the reload.
-  def update(%{action: :ad_hoc_meeting_created}, socket),
-    do: {:ok, socket |> PanelMeeting.created() |> schedule_reload(:events_updated)}
+  def update(%{action: :ad_hoc_meeting_created, request: request}, socket),
+    do: {:ok, socket |> PanelMeeting.created(request) |> schedule_reload(:events_updated)}
 
-  def update(%{action: :ad_hoc_meeting_failed}, socket), do: {:ok, PanelMeeting.failed(socket)}
+  def update(%{action: :ad_hoc_meeting_failed, request: request}, socket),
+    do: {:ok, PanelMeeting.failed(socket, request)}
 
   # The power layer's actions go to `PowerEvents`; any other action this
   # surface has no clause for is ignored. Its lists are read at run time, so

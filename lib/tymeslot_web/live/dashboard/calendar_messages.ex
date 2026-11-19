@@ -120,13 +120,13 @@ defmodule TymeslotWeb.Dashboard.CalendarMessages do
   def handle_info({:event_writes_released, release}, socket),
     do: CalendarEventHandlers.handle_event_writes_released(release, socket)
 
-  def handle_info({:execute_create_ad_hoc_meeting, params}, socket),
-    do: CalendarEventHandlers.handle_execute_create_ad_hoc_meeting(params, socket)
+  def handle_info({:execute_create_ad_hoc_meeting, request, params}, socket),
+    do: CalendarEventHandlers.handle_execute_create_ad_hoc_meeting(request, params, socket)
 
-  def handle_info({:create_ad_hoc_meeting_result, result}, socket),
+  def handle_info({:create_ad_hoc_meeting_result, request, result}, socket),
     do:
-      result
-      |> CalendarEventHandlers.handle_create_ad_hoc_meeting_result(socket)
+      request
+      |> CalendarEventHandlers.handle_create_ad_hoc_meeting_result(result, socket)
       |> rebuild_agenda()
 
   def handle_info({:execute_ics_import, payload}, socket),

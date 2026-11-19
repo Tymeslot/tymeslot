@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingRemindersTest do
   end
 
   defp booked_reminders do
-    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, params}}
     params.reminders
   end
 
@@ -117,7 +117,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingRemindersTest do
     })
 
     assert has_element?(lv, "#calendar-panel-meeting-reminders", "3 days before")
-    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
+
+    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}},
+                   100
   end
 
   test "a typed lead time that cannot be added keeps the panel open with the picker's reason",
@@ -126,7 +128,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingRemindersTest do
     type_custom(lv, "0", "minutes")
     create_meeting(lv)
 
-    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
+    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}},
+                   100
+
     assert has_element?(lv, "#calendar-panel-meeting-reminders .form-error")
     assert has_element?(lv, "#calendar-panel-create")
   end

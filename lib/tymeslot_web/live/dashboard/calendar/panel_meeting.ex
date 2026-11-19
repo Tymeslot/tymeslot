@@ -21,13 +21,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
   makes an all-day draft timed.
 
   Create hands the booking to the dashboard
-  (`{:execute_create_ad_hoc_meeting, params}`, answered by
+  (`{:execute_create_ad_hoc_meeting, request, params}`, answered by
   `TymeslotWeb.Dashboard.CalendarEventHandlers`), which flashes the outcome
-  and tells the surface: `created/1` closes the panel, `failed/1` offers
-  Create again beside the flash that says why. The draft stays the panel's
-  while the meeting saves, so a panel closed meanwhile takes it off the grid
-  (`PanelState`); the reload after the booking shows the meeting if it was
-  made.
+  and tells the surface: `created/2` closes the panel, `failed/2` offers
+  Create again beside the flash that says why. `request` is a ref the panel
+  keeps while it saves (`meeting_request`), so only the panel that asked
+  hears the answer: a meeting whose panel was closed meanwhile still flashes
+  its outcome, but neither closes nor re-enables a newer draft's panel. The
+  draft stays the panel's while the meeting saves, so a panel closed
+  meanwhile takes it off the grid (`PanelState`); the reload after the
+  booking shows the meeting if it was made.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -144,8 +147,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
     with {:ok, create} <- PanelNew.cast_form(socket, form, :optional),
          {:ok, params} <- MeetingParams.build(create, form, user.id),
          :ok <- MeetingParams.rate_limit(user.id) do
-      send(self(), {:execute_create_ad_hoc_meeting, params})
-      assign(socket, :panel, %{panel | status: :saving})
+      request = make_ref()
+      send(self(), {:execute_create_ad_hoc_meeting, request, params})
+      assign(socket, :panel, Map.merge(panel, %{status: :saving, meeting_request: request}))
     else
       {:error, :rate_limited, _message} ->
         refuse(
@@ -159,19 +163,33 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelMeeting do
     end
   end
 
-  @doc "The meeting was booked: the panel that asked for it closes."
-  @spec created(socket()) :: socket()
-  def created(%{assigns: %{panel: %{mode: :new, status: :saving} = panel}} = socket),
-    do: if(on?(panel.form), do: PanelState.close(socket), else: socket)
+  @doc """
+  The meeting `request` was booked: the panel that asked for it closes. Any
+  other panel, such as a newer draft saving its own meeting, stays as it is.
+  """
+  @spec created(socket(), reference()) :: socket()
+  def created(
+        %{assigns: %{panel: %{mode: :new, status: :saving, meeting_request: request} = panel}} =
+          socket,
+        request
+      ),
+      do: if(on?(panel.form), do: PanelState.close(socket), else: socket)
 
-  def created(socket), do: socket
+  def created(socket, _request), do: socket
 
-  @doc "The booking refused the meeting: Create is offered again (the flash says why)."
-  @spec failed(socket()) :: socket()
-  def failed(%{assigns: %{panel: %{mode: :new, status: :saving} = panel}} = socket),
-    do: if(on?(panel.form), do: assign(socket, :panel, %{panel | status: :idle}), else: socket)
+  @doc """
+  The booking refused the meeting `request`: the panel that asked for it
+  offers Create again (the flash says why).
+  """
+  @spec failed(socket(), reference()) :: socket()
+  def failed(
+        %{assigns: %{panel: %{mode: :new, status: :saving, meeting_request: request} = panel}} =
+          socket,
+        request
+      ),
+      do: if(on?(panel.form), do: assign(socket, :panel, %{panel | status: :idle}), else: socket)
 
-  def failed(socket), do: socket
+  def failed(socket, _request), do: socket
 
   @doc "What a refusal from `MeetingParams.build/3` or `CreateParams.cast/4` says."
   @spec refusal_message(atom(), atom()) :: String.t()

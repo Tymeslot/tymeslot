@@ -66,12 +66,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingOptionsTest do
   end
 
   defp booked do
-    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, params}}
     params
   end
 
   defp nothing_booked do
-    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
+    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}},
+                   100
   end
 
   describe "main participant" do
@@ -314,7 +315,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingOptionsTest do
       }
 
       Repo.delete!(venue)
-      send(lv.pid, {:execute_create_ad_hoc_meeting, params})
+      send(lv.pid, {:execute_create_ad_hoc_meeting, make_ref(), params})
 
       eventually(
         fn ->

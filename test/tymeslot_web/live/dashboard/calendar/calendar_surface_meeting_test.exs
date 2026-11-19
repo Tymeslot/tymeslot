@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
   desktop and on a phone (where the panel is a sheet): offered once the
   draft has a guest, it turns the draft into an ad hoc booking with the
   guest's name, the language of its emails, a note and reminder emails,
-  and hands it to the dashboard (`{:execute_create_ad_hoc_meeting, params}`),
+  and hands it to the dashboard (`{:execute_create_ad_hoc_meeting, request, params}`),
   which books it, flashes the outcome and tells the panel.
   """
 
@@ -20,11 +20,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.Changeset
+  alias Phoenix.LiveView
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
 
   @task_timeout 5_000
 
@@ -45,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     trace_surface(lv)
     book_meeting(lv)
 
-    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, params}}
     assert %{location: {:custom, "Room 4"}} = params
   end
 
@@ -143,7 +145,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
       "description" => "Agenda: the Q3 roadmap."
     })
 
-    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, params}}
 
     assert %{
              title: "Meeting with Ada Lovelace",
@@ -194,7 +196,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
 
     assert has_element?(lv, "#calendar-panel [role=status]", "Guest name is required")
     assert has_element?(lv, "#calendar-panel-create:not([disabled])")
-    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
+
+    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}},
+                   100
   end
 
   test "a note typed before the box was ticked, past the meeting's limit, is refused as such", %{
@@ -215,7 +219,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
              "The note to the guest is too long. Keep it to 2,000 characters or fewer."
            )
 
-    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
+    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}},
+                   100
   end
 
   test "the guest's name takes at most 255 characters", %{conn: conn, integration: integration} do
@@ -241,7 +246,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     assert_receive {:provider_call, task_pid, %{summary: "New event"}}, @task_timeout
     ref = Process.monitor(task_pid)
     assert_receive {:DOWN, ^ref, :process, ^task_pid, _reason}, @task_timeout
-    refute_received {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}
+    refute_received {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}}
     assert Repo.all(MeetingSchema) == []
   end
 
@@ -265,7 +270,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
              "Too many new meetings. Please wait a moment."
            )
 
-    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
+    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}},
+                   100
   end
 
   test "a slot already taken keeps the panel open with Create offered again, and flashes why", %{
@@ -329,6 +335,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
       0 -> Enum.reverse(acc)
     end
   end
+
+  defp answer(lv, action, request),
+    do:
+      LiveView.send_update(lv.pid, CalendarSurface,
+        id: "calendar",
+        action: action,
+        request: request
+      )
 
   defp draft_drawn?(events), do: Enum.any?(events, &(&1.id == "draft-d1"))
 
@@ -396,6 +410,45 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
       assert Enum.any?(events, &(&1.id == "booking-#{meeting.id}"))
       refute draft_drawn?(events)
     end
+
+    test "its answer leaves the next draft's meeting saving, which hears its own", %{
+      conn: conn,
+      user: user,
+      integration: integration
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_meeting_draft(lv, integration, %{"draft" => "d2"})
+      tick_meeting(lv)
+      holder = hold_schedule(user.id)
+      trace_surface(lv)
+
+      book_meeting(lv)
+      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, request, _params}}
+
+      # An earlier meeting, whose panel was closed while it saved, answers
+      # now, either way, and the calendar is told as the dashboard tells it
+      # (`CalendarRouting.to_mounted/2`); the dashboard's own handling reads
+      # the database, which this meeting's booking holds until `release/1`.
+      earlier = make_ref()
+      answer(lv, :ad_hoc_meeting_failed, earlier)
+      assert has_element?(lv, "#calendar-panel-meeting-fields")
+      assert has_element?(lv, "#calendar-panel-create[disabled]")
+
+      answer(lv, :ad_hoc_meeting_created, earlier)
+      assert has_element?(lv, "#calendar-panel-create[disabled]")
+      release(holder)
+
+      # Its own answer closes it.
+      assert_receive {:trace, _pid, :receive,
+                      {:create_ad_hoc_meeting_result, ^request, {:ok, _}}},
+                     @task_timeout
+
+      eventually(fn -> render(lv) =~ "Meeting created and invitation sent" end,
+        timeout: @task_timeout
+      )
+
+      refute has_element?(lv, "#calendar-panel")
+    end
   end
 
   test "with its last guest removed the draft is an event again, written to the calendar", %{
@@ -417,7 +470,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     assert_receive {:provider_call, task_pid, %{summary: "New event"}}, @task_timeout
     ref = Process.monitor(task_pid)
     assert_receive {:DOWN, ^ref, :process, ^task_pid, _reason}, @task_timeout
-    refute_received {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}
+    refute_received {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}}
   end
 
   describe "on a phone" do
