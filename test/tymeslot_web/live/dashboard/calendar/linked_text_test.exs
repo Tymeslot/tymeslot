@@ -63,17 +63,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.LinkedTextTest do
         small = "https://a.example/" <> String.duplicate(run, 5_000)
         large = "https://a.example/" <> String.duplicate(run, 50_000)
 
-        {small_us, [{:link, "https://a.example/"} | _rest]} =
-          :timer.tc(fn -> LinkedText.parts(small) end)
+        {small_work, [{:link, "https://a.example/"} | _rest]} =
+          reductions(fn -> LinkedText.parts(small) end)
 
-        {large_us, [{:link, "https://a.example/"}, {:text, tail}]} =
-          :timer.tc(fn -> LinkedText.parts(large) end)
+        {large_work, [{:link, "https://a.example/"}, {:text, tail}]} =
+          reductions(fn -> LinkedText.parts(large) end)
 
         assert byte_size(tail) == byte_size(large) - byte_size("https://a.example/")
-        # Ten times the input in well under a hundred times the time: linear,
-        # not quadratic, with room for a busy machine.
-        assert large_us < max(small_us, 5_000) * 40
-        assert large_us < 1_000_000
+        # Ten times the input in about ten times the work; a quadratic pass
+        # would take a hundred times as much.
+        assert large_work < small_work * 15
       end
     end
 
@@ -115,5 +114,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.LinkedTextTest do
       assert html =~ ~s|rel="noopener noreferrer"|
       assert html =~ ">https://example.com/?a=1&amp;b=</a>&quot;2&quot; ok"
     end
+  end
+
+  # The work `fun` does, in reductions, and its result. Unlike wall-clock
+  # time, the count does not move when the machine is busy. A fresh process
+  # keeps the test's own work out of it.
+  defp reductions(fun) do
+    task =
+      Task.async(fn ->
+        {:reductions, before} = Process.info(self(), :reductions)
+        result = fun.()
+        {:reductions, later} = Process.info(self(), :reductions)
+        {later - before, result}
+      end)
+
+    Task.await(task)
   end
 end
