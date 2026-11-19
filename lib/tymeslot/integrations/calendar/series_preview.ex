@@ -13,9 +13,12 @@ defmodule Tymeslot.Integrations.Calendar.SeriesPreview do
   are never stored.
 
   A previewed occurrence is the series' row with the occurrence's timing,
-  its `preview_of` the row itself and its `preview_key` the slot's key, the
-  key the sync will cache it under. The row's own slot is left out, since the
-  row is drawn there. As soon as a sync caches any occurrence of the series,
+  its `preview_of` the row itself and its `preview_key` the slot's key. On
+  the CalDAV family (and the debug calendar) that is the key the sync will
+  cache the occurrence under, after the series' UID; Google and Outlook
+  cache each occurrence under an id of the provider's own, so there it only
+  tells the previews apart. The row's own slot is left out, since the row is
+  drawn there. As soon as a sync caches any occurrence of the series,
   nothing more is previewed (`ProviderCalendarSeriesQueries.list_unsynced_series/4`),
   and the sync drops the row (`Tymeslot.Integrations.Calendar.Sync`), so no
   slot is ever drawn twice.
