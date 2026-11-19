@@ -164,7 +164,11 @@
   background: color-mix(in srgb, var(--cal-ev) 55%, var(--cal-ink));
 }
 
-.cal-adbar.is-past {
+/* Past, a booking's own colour drops to the same quiet tint as any past bar,
+   matching its grey past text; without the longer selector the coloured fill
+   above outranks it and the grey text sits on a dark fill. */
+.cal-adbar.is-past,
+.cal-adbar.is-booking.has-colour.is-past {
   background: color-mix(in srgb, var(--cal-ev) 8%, var(--cal-surface));
   color: var(--cal-text-past);
 }

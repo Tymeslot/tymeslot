@@ -138,7 +138,10 @@
   background: color-mix(in srgb, var(--cal-ev) 55%, var(--cal-ink));
 }
 
-.cal-mbar.is-past {
+/* Past, a booking's own colour drops to the same quiet tint as any past bar:
+   see .cal-adbar.is-past in calendar-surface.css. */
+.cal-mbar.is-past,
+.cal-mbar.is-booking.has-colour.is-past {
   background: color-mix(in srgb, var(--cal-ev) 8%, var(--cal-surface));
   color: var(--cal-text-past);
 }

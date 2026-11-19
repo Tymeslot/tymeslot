@@ -36,6 +36,13 @@ const month = (events) => {
   return holder;
 };
 
+const cssDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../../css/components");
+const css = (readFileSync(resolve(cssDir, "calendar-surface.css"), "utf8") + readFileSync(resolve(cssDir, "calendar-views.css"), "utf8")).replace(/\/\*[\s\S]*?\*\//g, "");
+const rule = (selector) => {
+  const found = css.split("}").find((chunk) => chunk.split("{")[0].split(",").some((s) => s.trim() === selector));
+  return found ? found.split("{")[1] : "";
+};
+
 describe("a booking with a colour of its own", () => {
   test("its block and all-day bar are marked and carry the colour", () => {
     const held = week([booking({ colour: "calendar-grape" }), booking({ id: "booking-2", all_day: true, start: "2026-10-13", end: "2026-10-14", colour: "calendar-grape" })]);
@@ -59,15 +66,24 @@ describe("a booking with a colour of its own", () => {
   });
 
   test("the stylesheets paint the colour, darkened, and the chip dot in it", () => {
-    const dir = resolve(dirname(fileURLToPath(import.meta.url)), "../../../css/components");
-    const css = (readFileSync(resolve(dir, "calendar-surface.css"), "utf8") + readFileSync(resolve(dir, "calendar-views.css"), "utf8")).replace(/\/\*[\s\S]*?\*\//g, "");
-    const rule = (selector) => {
-      const found = css.split("}").find((chunk) => chunk.split("{")[0].split(",").some((s) => s.trim() === selector));
-      return found ? found.split("{")[1] : "";
-    };
     for (const selector of [".cal-ev.is-booking.has-colour", ".cal-adbar.is-booking.has-colour", ".cal-mbar.is-booking.has-colour"]) {
       expect(rule(selector)).toMatch(/background:\s*color-mix\(in srgb, var\(--cal-ev\) 55%, var\(--cal-ink\)\)/);
     }
     expect(rule(".cal-mchip.is-booking.has-colour .cal-mchip-dot")).toMatch(/background:\s*var\(--cal-ev\)/);
+  });
+
+  test("past, its all-day bar and month bar drop to the past tint under the grey past text", () => {
+    const past = booking({ id: "booking-3", all_day: true, start: "2026-10-12", end: "2026-10-13", colour: "calendar-grape" });
+    const bars = [week([past]).querySelector('.cal-adbar[data-event-id="booking-3"]'), month([past]).querySelector('.cal-mbar[data-event-id="booking-3"]')];
+    for (const bar of bars) {
+      expect([...bar.classList]).toEqual(expect.arrayContaining(["is-booking", "has-colour", "is-past"]));
+    }
+
+    // Only a selector carrying all four classes outranks the coloured fill.
+    for (const bar of [".cal-adbar", ".cal-mbar"]) {
+      const body = rule(`${bar}.is-booking.has-colour.is-past`);
+      expect(body).toMatch(/background:\s*color-mix\(in srgb, var\(--cal-ev\) 8%, var\(--cal-surface\)\)/);
+      expect(body).toMatch(/color:\s*var\(--cal-text-past\)/);
+    }
   });
 });
