@@ -35,9 +35,8 @@ defmodule Tymeslot.Infrastructure.RedirectLocation do
   Callers hold a budget of *redirects to follow*, guard their recursive entry
   point on `hops_left < 0`, and recurse with `hops_left - 1` when they follow
   one. A budget of `n` therefore issues up to `n + 1` requests and follows `n`
-  redirects. Guarding on `hops_left == 0` instead follows `n - 1`, which is the
-  off-by-one webhook delivery carried until this module documented the
-  convention; keep new callers on the `< 0` form.
+  redirects. Guarding on `hops_left == 0` instead follows `n - 1`, so new
+  callers use the `< 0` form.
   """
 
   @typedoc "Response headers in either shape a client hands back."

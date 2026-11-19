@@ -30,10 +30,9 @@ defmodule Tymeslot.Infrastructure.ObanRescue do
   draining up to 500 pages at 30 seconds each, a little over four hours, which
   is what `@longest_job_hours` records.
 
-  The check reads the raw application environment rather than Oban's own
-  normalised state, so it has to know the shapes a service key accepts: a
-  keyword list of options, a `{module, options}` tuple, a bare module, or
-  `false` to switch the service off.
+  Like `Tymeslot.Infrastructure.ObanCron`, the check reads the raw application
+  environment rather than Oban's own normalised state, so it has to know the
+  shapes a service key accepts (see that module).
   """
 
   require Logger

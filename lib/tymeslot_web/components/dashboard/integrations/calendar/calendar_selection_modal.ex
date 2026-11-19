@@ -4,9 +4,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
   what colour its events are shown in, and for each of its calendars whether
   Tymeslot uses it and whether its busy time blocks the booking page.
 
-  Hosts the calendar-selection chip grid that previously lived behind the
-  connection row's expand chevron. Surfacing it as an explicit "Manage
-  calendars" action keeps the row itself flat.
+  Hosts the calendar-selection chip grid. Surfacing it as an explicit "Manage
+  calendars" action keeps the connection row itself flat.
 
   Stateless — `show` and the selected integration are owned by the parent
   `CalendarSettingsComponent`. Each control dispatches its event back to

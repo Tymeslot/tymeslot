@@ -1,8 +1,7 @@
 defmodule TymeslotWeb.AdminLive.Components.ConfirmRoleChangeModal do
   @moduledoc """
-  Confirmation modal for promoting a user to admin or demoting an admin.
-  Replaces the browser-native `data-confirm` dialog so the admin flow stays
-  inside the design system.
+  Confirmation modal for promoting a user to admin or demoting an admin,
+  rendered in the design system so the admin flow stays inside the app.
   """
 
   use TymeslotWeb, :html

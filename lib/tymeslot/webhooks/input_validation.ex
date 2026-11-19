@@ -22,11 +22,10 @@ defmodule Tymeslot.Webhooks.InputValidation do
     field(:events, {:array, :string}, default: [])
   end
 
-  # Interactive validation (every blur, every event-checkbox toggle) and the
-  # actual save used to share this one bucket, so typing could spend the
-  # budget the save needed and refuse a save the user never rate-limited
-  # themselves on. Interactive callers pass `bucket: :webhook_form_validate`
-  # for a separate, looser budget; the save path keeps the default.
+  # Interactive validation (every blur, every event-checkbox toggle) must not
+  # spend the budget the save needs, so interactive callers pass
+  # `bucket: :webhook_form_validate` for a separate, looser budget; the save
+  # path keeps the default.
   @default_bucket :webhook_form
 
   @doc """
@@ -107,10 +106,10 @@ defmodule Tymeslot.Webhooks.InputValidation do
     end)
   end
 
-  # `Tymeslot.Security.RateLimiter.Integrations` states the rule this used to
-  # break: never one instance-wide bucket, the actor is always required.
-  # A bare literal key gave every logged-in user of an instance the same 60/min
-  # budget, so one of them could refuse webhook edits for all the others.
+  # Keyed per actor, never one instance-wide bucket (see
+  # `Tymeslot.Security.RateLimiter.Integrations`): a shared key would give every
+  # logged-in user of an instance the same 60/min budget, so one of them could
+  # refuse webhook edits for all the others.
   defp check_rate_limit(bucket, metadata) do
     case RateLimiter.check(bucket, actor(metadata)) do
       :ok -> :ok

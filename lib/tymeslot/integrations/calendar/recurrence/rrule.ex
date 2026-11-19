@@ -516,8 +516,8 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
 
   Used by the iCal builder and Google event mapper to ensure exactly one
   `RRULE:` prefix is emitted regardless of whether the stored rule already
-  carries one (every provider now stores the bare rule body, but rows cached
-  from Google before that carry the prefix).
+  carries one (every provider stores the bare rule body, but some rows cached
+  from Google carry the prefix).
   """
   @spec strip_prefix(String.t()) :: String.t()
   def strip_prefix("RRULE:" <> rest), do: rest

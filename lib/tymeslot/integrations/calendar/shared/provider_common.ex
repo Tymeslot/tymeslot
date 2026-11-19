@@ -23,8 +23,11 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
 
   A revoked or expired grant becomes `:token_expired`, anything else
   `:unauthorized`. Both are permanent credential failures, but only the first
-  tells the owner to look in their provider account, and the health check can
-  tell them apart only if the distinction survives this far as an atom.
+  tells the owner to look in their provider account. The message text does not
+  travel further, so the distinction has to survive as an atom: the health
+  check hands this reason to `ReauthHandling.rejection_cause/1`, which reads
+  `:token_expired` as an expired grant and any other atom as rejected
+  credentials.
   """
   @spec unauthorized_reason(String.t()) :: :token_expired | :unauthorized
   def unauthorized_reason(message) do

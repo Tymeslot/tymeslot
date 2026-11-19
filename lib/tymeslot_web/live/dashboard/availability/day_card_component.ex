@@ -3,10 +3,10 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
   One row per weekday in the availability editor.
 
   Seven days share this surface, so each one is a single line: toggle, name,
-  the two hour selects, and its breaks as inline chips. The bulk actions that
-  used to sit in a per-day footer (copy to other days, clear the day) live in a
-  small menu instead, because they are occasional and were costing every day a
-  permanent two-button bar.
+  the two hour selects, and its breaks as inline chips. The bulk actions (copy
+  to other days, clear the day) live in a small menu rather than a per-day
+  footer, because they are occasional and would cost every day a permanent
+  two-button bar.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext

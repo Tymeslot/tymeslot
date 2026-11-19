@@ -245,8 +245,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
           Tasks.with_context(fn -> {ref, IcsImportFlow.plan(content, timezone)} end)
         )
 
-      # Nothing finished uploading: leave the socket alone, as the old
-      # calendar does (a refused file was reported at validation).
+      # Nothing finished uploading: leave the socket alone (a refused file was
+      # reported at validation).
       :none ->
         socket
     end

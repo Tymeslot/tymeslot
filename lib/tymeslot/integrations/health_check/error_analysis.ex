@@ -49,10 +49,10 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
   The classifier is intentionally conservative: only errors with a strong,
   recognised "permanent failure" signal are classified as `:hard`. Everything
   else — unknown atoms, opaque server-returned strings, bare integers — is
-  classified as `:transient`. This avoids the historical footgun where a
-  single weird response page from a CalDAV server (or an unfamiliar localised
-  error message) would push an integration to `:unhealthy` after only three
-  occurrences when the underlying connection was actually fine.
+  classified as `:transient`, so a single odd response page from a CalDAV
+  server (or an unfamiliar localised error message) cannot push an
+  integration to `:unhealthy` after only three occurrences when the
+  underlying connection is fine.
   """
   @spec classify_error(any()) :: error_class()
   def classify_error({:error, :rate_limited}), do: :transient
@@ -123,9 +123,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
 
   The ramp starts on the first failure after a passing probe, which the state
   records as `last_error_class: nil`; any other failure doubles the current
-  backoff. (It used to be inferred from the backoff equalling the healthy
-  interval, which a first-unhealthy 15-minute probe doubled into, restarting
-  the ramp at 5 minutes.)
+  backoff.
 
   Hard failures (auth errors, bad credentials) always use a fixed 60-minute interval
   since retrying quickly is pointless when credentials are invalid.

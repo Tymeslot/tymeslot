@@ -197,9 +197,10 @@ defmodule Tymeslot.AppSettings do
   String keys are accepted and normalised against `keys/0`; an unrecognised
   key returns an `{:error, %Ecto.Changeset{}}` rather than silently applying.
 
-  The lockout guard is evaluated inside the row-locked update transaction,
-  against the merged row about to be committed — so two concurrent saves
-  cannot each pass the check and jointly disable the last auth path.
+  The lockout guard runs inside the row-locked update transaction, against the
+  merged row about to be committed (see
+  `Tymeslot.AppSettings.AppSettingsQueries` for why that closes the race between
+  concurrent saves).
   """
   @spec update(map()) :: {:ok, AppSettingsSchema.t()} | {:error, update_error()}
   def update(attrs) when is_map(attrs) do

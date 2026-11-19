@@ -46,18 +46,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueQueries do
   **Replaces exactly the columns `attrs` carries.** `{:replace, …}` on an
   upsert replaces with `EXCLUDED`, which for a column the insert omits is
   NULL — so a replace list naming more columns than the write supplies is a
-  list of columns the write silently blanks. That is what used to happen here:
-  the list was `ProviderCalendarEventQueries.replace_fields/0` plus the
-  bookkeeping columns, while `CalDAV.QueueWiring.build_attrs/4` supplied a
-  third of it, so tagging an event for retry nulled its `etag`,
-  `provider_event_id`, `raw_ical`, `attendees`, `reminders` and RRULE. A
-  queued delete, which carries no event data at all, destroyed the identity of
-  the very row it was about to retry the delete for.
+  list of columns the write silently blanks, such as the `etag`,
+  `provider_event_id` and `raw_ical` of a row tagged for a queued delete.
 
-  Deriving the list from the attrs instead makes that shape impossible: a
-  field the caller did not supply is not in the list, so the existing value
-  stands. `CalDAV.QueueWiring` is the only caller, and it supplies a field
-  only when the local change actually carried one.
+  Deriving the list from the attrs makes that impossible: a field the caller did
+  not supply is not in the list, so the existing value stands.
+  `CalDAV.QueueWiring` is the only caller, and it supplies a field only when the
+  local change actually carried one.
 
   Regular server-sourced upserts go through
   `ProviderCalendarEventQueries.upsert_batch/1`, which deliberately protects

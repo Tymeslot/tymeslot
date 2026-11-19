@@ -144,9 +144,11 @@ defmodule Tymeslot.ThemeCustomizations.Options.Palette do
   before the contrast pairs are derived, so filled controls stay legible on
   the override. On a light-seeded group (`seed_mode: :light`), whose pages
   set the primary as text on the card, the override is first fitted to read
-  there (`ContrastTokens.fit_text/3`), as a stored seed already is. Derived from the seed when one is stored, with or without a
-  scheme name beside it (`resolve/2`); both empty when neither a seed nor a
-  scheme resolves.
+  there (`ContrastTokens.fit_text/3`), as a stored seed already is.
+
+  The palette is derived from the seed when one is stored, with or without a
+  scheme name beside it (`resolve/2`); both maps are empty when neither a seed
+  nor a scheme resolves.
   """
   @spec tokens(Spec.settings(), overrides(), group()) :: tokens()
   def tokens(settings, overrides, group) when is_map(settings) and is_map(overrides) do

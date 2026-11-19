@@ -5,11 +5,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   This provider creates Google Meet links via the **Google Meet REST API**
   (`meet.googleapis.com/v2/spaces`), which provisions a standalone meeting
   space. Crucially, a space is *not* a calendar event — so connecting Google
-  Meet no longer writes a second event into the user's Google Calendar
-  alongside the booking event held on their own calendar provider
-  (Radicale/Outlook/Google). This avoids the duplicate-event and
-  orphaned-event problems of the previous approach, which created a throwaway
-  Google Calendar event purely to harvest the Meet link.
+  Meet writes no second event into the user's Google Calendar alongside the
+  booking event held on their own calendar provider
+  (Radicale/Outlook/Google), and leaves no duplicate or orphaned event
+  behind.
 
   Requires the `https://www.googleapis.com/auth/meetings.space.created` OAuth
   scope **and** the *Google Meet API* enabled on the Google Cloud project — the

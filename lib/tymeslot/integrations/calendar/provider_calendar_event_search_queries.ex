@@ -6,8 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSearchQueries do
   moment first: what is ahead in ascending order, then what has passed,
   latest first. It matches the term case-insensitively against `summary`,
   `description` and `location`, scoped to the user's active integrations,
-  and leaves out rows with half their timing. Moved out of
-  `ProviderCalendarEventQueries`, which sits at Core's module-size limit.
+  and leaves out rows with half their timing.
   """
 
   import Ecto.Query, warn: false

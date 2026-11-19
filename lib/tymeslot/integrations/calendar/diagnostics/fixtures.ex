@@ -58,9 +58,9 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics.Fixtures do
   end
 
   @doc """
-  PUTs `ical` over the CalDAV event `uid` under `If-Match: etag`, and fails
-  rather than resolves a rejected precondition: `{:error,
-  :precondition_failed}` is what a stale ETag must answer.
+  PUTs `ical` over the CalDAV event `uid` under `If-Match: etag`. A rejected
+  precondition returns `{:error, :precondition_failed}` rather than being
+  resolved, which is what a stale ETag must answer.
   """
   @spec put_caldav_document(integration(), String.t(), String.t(), String.t()) ::
           :ok | {:error, term()}

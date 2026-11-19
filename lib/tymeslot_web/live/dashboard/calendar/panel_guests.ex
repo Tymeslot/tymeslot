@@ -24,9 +24,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   panel opened on it (`panel.opened_with`), or as it was before a drag or
   resize nobody was told about (`untold_moves`, see `Manipulation`); `tell/1`
   sends one update for all of it and makes the event as it is now the new
-  starting point. Only
-  the organiser of an event on a calendar they can write may tell its
-  guests; the domain refuses anyone else (`Changes.tell_guests/5`).
+  starting point. Only the organiser of an event on a calendar they can write
+  may tell its guests; the domain refuses anyone else (`Changes.tell_guests/5`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -161,9 +160,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   @doc """
   Tells the event's guests about everything changed since the panel opened,
   in one update, and counts from the event as it is now. Waits while a
-  write is saving, since the update reads the saved event. Only the
-  organiser of an event on a calendar they can write may send it
-  (`Changes.tell_guests/5` refuses anything else).
+  write is saving, since the update reads the saved event. Who may send it is
+  in the moduledoc.
   """
   @spec tell(socket()) :: socket()
   def tell(socket) do

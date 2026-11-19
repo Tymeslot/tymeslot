@@ -16,8 +16,8 @@ defmodule Tymeslot.Payments.SubscriptionInvoices do
       upserts on the invoice's own id (`SubscriptionInvoiceQueries.upsert/1`),
       owned by the user `CustomerLookup.find_user_id/1` resolves for it —
       never re-derived from `payment_transactions` heuristics here.
-    * `coordinate_renewal/1` — pre-existing renewal-transaction creation,
-      unrelated to invoice documents beyond sharing the same webhook event.
+    * `coordinate_renewal/1` — renewal-transaction creation, unrelated to
+      invoice documents beyond sharing the same webhook event.
   """
 
   require Logger

@@ -136,8 +136,8 @@ defmodule CredoChecks.RepoCallBoundary do
   end
 
   # The `_schema.ex` suffix earns the exemption only when the file really is an
-  # Ecto schema. Keying on the name alone let any module named that way opt out
-  # of the boundary by filename, with nothing to warn a reader that it had.
+  # Ecto schema, so a module cannot opt out of the boundary merely by being
+  # named that way.
   #
   # The source is stripped of strings, sigils and heredocs first so a `use
   # Ecto.Schema` mentioned inside a `@moduledoc` (or any other string/heredoc)

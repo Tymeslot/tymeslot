@@ -9,9 +9,9 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule.Until do
     * `YYYYMMDDTHHMMSSZ`, for a timed series: an instant in UTC;
     * `YYYYMMDDTHHMMSS`, for a floating series: a wall clock, read in the
       zone the series is shown in;
-    * `YYYYMMDDT235959Z`, which this module once wrote for the organiser's
-      local date and `Outlook.RecurrenceConverter` still writes for a Graph
-      `endDate`: a local date, not an instant (see `local_date/2`).
+    * `YYYYMMDDT235959Z`, which some stored rules carry and
+      `Outlook.RecurrenceConverter` writes for a Graph `endDate`: a local
+      date, not an instant (see `local_date/2`).
 
   The recurrence editor reads a value as the date the organiser picked
   (`local_date/2`) and writes a date back as the instant that ends it

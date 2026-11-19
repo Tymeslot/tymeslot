@@ -1,21 +1,20 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
   @moduledoc """
-  The reminders of a plain calendar event made in the side panel's New
-  event state, as the old Quick Add offered them: several, each a
-  notification or an email at one of the lead times
-  `ReminderForm.reminder_minutes_presets/0` lists, written to the calendar
-  with the event, which then alerts the organiser on their own devices.
+  The reminders of a plain calendar event made in the side panel's New event
+  state: several, each a notification or an email at one of the lead times
+  `ReminderForm.reminder_minutes_presets/0` lists, written to the calendar with
+  the event, which then alerts the organiser on their own devices.
 
   The list is the form's `"event_reminders"`, canonical
   `%{method:, minutes_before:}` maps, cast with the rest of the draft
-  (`CreateParams.cast/5` holds it to its own limit). The add row's choices
-  reach the form with its changes, and Add sends `panel:draft_add_reminder`
-  (`add/2`), a plain button so that Enter in the form never adds a
-  reminder; the remove buttons send `panel:draft_drop_reminder` (`drop/3`).
-  An Outlook calendar keeps a single lead time and no method, so there the
-  row offers one notification and no method choice. A Tymeslot meeting sends reminder
-  emails of its own (`PanelMeetingReminders`) and a group event has none,
-  so the field gives way to them.
+  (`CreateParams.cast/5` holds it to its own limit). The add row's choices reach
+  the form with its changes, and Add sends `panel:draft_add_reminder` (`add/2`),
+  a plain button so that Enter in the form never adds a reminder; the remove
+  buttons send `panel:draft_drop_reminder` (`drop/3`). An Outlook calendar keeps
+  a single lead time and no method, so there the row offers one notification and
+  no method choice. A Tymeslot meeting sends reminder emails of its own
+  (`PanelMeetingReminders`) and a group event has none, so the field gives way
+  to them.
   """
 
   use TymeslotWeb, :html

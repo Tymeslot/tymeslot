@@ -131,7 +131,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     # content_type on "/", so a value like "text/calendar; method=PUBLISH"
     # lands the params inside the subtype and the MIME encoder emits an
     # ambiguous Content-Type that strict gateways defer (Proxmox Mail Gateway
-    # since PSA-2026-00005-1). The method is already carried in the body
+    # among them). The method is already carried in the body
     # (METHOD:PUBLISH) and the part is base64-encoded, so a charset param is
     # moot on the wire.
     %Swoosh.Attachment{
@@ -186,7 +186,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   # attendee RSVP is handled by booking URLs in the email body — iTIP on the
   # wire would cause recipient-side mail servers (Zimbra, Nextcloud/Sabre,
   # Apple iCloud Mail) to auto-import the attachment and emit extra
-  # notifications. See issue #41.
+  # notifications.
   #
   # `SCHEDULE-AGENT=CLIENT` on ORGANIZER/ATTENDEE is defence-in-depth per
   # RFC 6638 §7.1 for the same reason.

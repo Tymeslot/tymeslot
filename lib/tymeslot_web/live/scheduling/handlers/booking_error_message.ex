@@ -185,9 +185,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   end
 
   # Step-requirement refusals: the booker has not chosen enough yet to move on.
-  # `Availability.Calculate` and `MeetingTypes.Duration` used to return this
-  # copy themselves, in English, straight into a flash on a public multi-locale
-  # page.
+  # The copy lives here so the public multi-locale page never flashes an
+  # English string from `Availability.Calculate` or `MeetingTypes.Duration`.
   def message(:duration_required) do
     dgettext("booking_errors", "Please select a meeting duration")
   end

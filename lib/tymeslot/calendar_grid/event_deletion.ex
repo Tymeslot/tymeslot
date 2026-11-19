@@ -46,9 +46,8 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
 
   ## Failure
 
-  A failed delete is queued for replay on the next sync when the error is one
-  a retry can recover (see `Calendar.Events.queueable_error?/1`) and the
-  integration has an offline queue (the CalDAV family). The queue marks the
+  A failed delete is queued for replay on the next sync under the rule
+  stated in `Tymeslot.CalendarGrid.EventCreation`. The queue marks the
   cached row `locally_deleted`, and the replay removes it once the server has
   deleted the event.
 

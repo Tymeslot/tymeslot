@@ -26,9 +26,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
 
   One CalDAV resource is one event but not one `VEVENT`: a recurring event's
   resource holds the master plus one `VEVENT` per occurrence edited on its own,
-  each carrying a `RECURRENCE-ID`. This used to answer with the first of them,
-  and RFC 5545 fixes no order, so a server that listed an override first made
-  it the only event the sync saw for the whole series.
+  each carrying a `RECURRENCE-ID`. Returning only the first would not do:
+  RFC 5545 fixes no order, so a server that listed an override first would
+  make it the only event the sync saw for the whole series.
   """
   @spec parse_ical_events(String.t() | term()) ::
           {:ok,

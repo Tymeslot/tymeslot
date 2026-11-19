@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewRepeat do
   @moduledoc """
   Repeat in the side panel's New event state: the draft can be made a
   series before it is created, so the whole series is written at once and
-  its guests are invited to the series, as the old Quick Add allowed.
+  its guests are invited to the series.
 
   It offers what the edit panel's Repeat field does (`PanelRepeat`): the
   common patterns named for the draft's own start, and Custom…, which

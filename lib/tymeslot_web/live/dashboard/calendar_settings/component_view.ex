@@ -2,8 +2,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
   @moduledoc """
   Markup for the calendar settings component.
 
-  Extracted from `CalendarSettingsComponent` so that module stays focused on
-  lifecycle and event routing. `settings/1` receives the component's assigns
+  `CalendarSettingsComponent` keeps to lifecycle and event routing; the
+  markup lives here. `settings/1` receives the component's assigns
   unchanged (its `render/1` delegates straight to it), so LiveView change
   tracking is preserved.
 

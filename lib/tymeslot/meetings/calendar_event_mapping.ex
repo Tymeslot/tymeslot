@@ -138,8 +138,8 @@ defmodule Tymeslot.Meetings.CalendarEventMapping do
   # writing it to `calendar_uid` would key the meeting by a value no sync ever
   # produces.
   #
-  # A CalDAV create now also reports the resource's href, and that is
-  # deliberately not persisted here. `calendar_event_identifier/1` hands
+  # A CalDAV create also reports the resource's href, which is deliberately
+  # not persisted here. `calendar_event_identifier/1` hands
   # `provider_event_id` back as the uid of the next write, and an href is not
   # one. It belongs on the cached grid row, which addresses events by URL.
   defp put_provider_mapping(attrs, %CreatedEvent{uid: uid}) when is_binary(uid),

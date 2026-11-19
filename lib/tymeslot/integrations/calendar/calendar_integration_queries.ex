@@ -155,9 +155,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
       virtual fields) is included so callers can flag `needs_reauth` without
       needing to re-query.
 
-  Callers that previously only handled `{:ok, _}` and `{:error, :not_found}`
-  must add a `{:error, :requires_reencryption, integration}` clause and route
-  to `Calendar.Management.handle_reauth_required/1` (for background workers) or
+  Callers must handle the `{:error, :requires_reencryption, integration}`
+  clause as well as `{:ok, _}` and `{:error, :not_found}`, and route it to
+  `Calendar.Management.handle_reauth_required/1` (for background workers) or
   surface a reconnect prompt (for the web layer).
   """
   @spec get(integer()) ::
@@ -178,11 +178,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
 
     * `{:ok, integration}` — found and credentials readable
     * `{:error, :not_found}` — no row with that ID for this user
-    * `{:error, :requires_reencryption, integration}` — found but one or more
-      encrypted credentials cannot be decrypted with the current keyring (e.g.
-      after SECRET_KEY_BASE rotation). The raw integration (without decrypted
-      virtual fields) is included so callers can flag `needs_reauth` without
-      needing to re-query.
+    * `{:error, :requires_reencryption, integration}` — as for `get/1`
 
   Callers that only need a two-outcome shape should use
   `Calendar.Management.fetch_integration_for_user/2`, which silently flags the

@@ -6,7 +6,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   ## Why the whole event is sent
 
   Provider updates are full replaces, so a rename that sent only the title
-  used to strip the event's attendees, reminders, repeat rule and colour. The
+  would strip the event's attendees, reminders, repeat rule and colour. The
   payload is therefore always built by `Tymeslot.CalendarGrid.ProviderPayload`
   from the complete event after the change is applied, never from the change
   alone. `changes` speaks the cache's vocabulary; that module is the one place
@@ -64,9 +64,8 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   ## Failure
 
-  A failed provider write is queued for replay when the error is one a retry
-  can recover (see `Calendar.Events.queueable_error?/1`) and the integration
-  has an offline queue (the CalDAV family). A queued edit is also written to
+  A failed provider write is queued for replay under the rule stated in
+  `Tymeslot.CalendarGrid.EventCreation`. A queued edit is also written to
   the cache, so the grid keeps showing what the organiser saved. An edit of a
   series member is never queued (see `Tymeslot.CalendarGrid.SeriesEdit`).
   """

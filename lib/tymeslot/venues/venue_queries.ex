@@ -1,6 +1,7 @@
 defmodule Tymeslot.Venues.VenueQueries do
   @moduledoc """
-  Every database call for `venues`. All reads are scoped to the owner.
+  Every database call for `venues`. All reads are scoped to the
+  owner, except the existence check made while writing a meeting.
   """
   import Ecto.Query, warn: false
 

@@ -3,12 +3,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
   The connected CalDAV client every CalDAV-family provider hands to
   `Base.*` and `Http.*`.
 
-  A struct rather than a plain map for one reason: it carries the
-  integration's decrypted password, and only a struct can refuse to print it.
+  A struct rather than a plain map because it carries the integration's
+  decrypted password, and only a struct can refuse to print it:
   `@derive {Inspect, except: [:password]}` masks the field wherever the client
-  is inspected — an exception message, a `dbg/1`, an OTP crash report that
-  prints a task's arguments — which is what a plain map cannot do however
-  carefully the schema that produced the value marked it `redact: true`.
+  is inspected, however carefully the schema that produced the value marked it
+  `redact: true`. See `Tymeslot.Infrastructure.ProxyCredentials` for the full
+  reasoning.
 
   Build one through `build_client/2`, or `build_provider_client/4` and
   `client_for_integration/1` on top of it (`Providers.CaldavCommon`
@@ -71,9 +71,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
   base URL and calendar paths already put into that provider's own form.
 
   The credentials and `:writable_calendar_paths` are carried over as given.
-  A provider that rebuilt the config by hand used to drop the writable paths,
-  and the client then wrote every event to its booking calendar, whichever
-  calendar the organiser had picked.
+  Dropping the writable paths would make the client write every event to its
+  booking calendar, whichever calendar the organiser had picked.
   """
   @spec build_provider_client(map(), atom(), String.t() | nil, [String.t()]) :: t()
   def build_provider_client(config, provider, base_url, calendar_paths) do

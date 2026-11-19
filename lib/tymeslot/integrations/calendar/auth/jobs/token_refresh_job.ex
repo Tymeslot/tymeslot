@@ -288,9 +288,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
   # integration card translates the stored English by looking it up as one: the
   # refresh reason (an OAuth error code or an exception's text) is for the log
   # line `log_failure/3` writes, not for the owner, and a sentence built from it
-  # could never be translated. The repair migration
-  # `ReactivateCalendarsDeactivatedByTokenRefresh` matched the earlier wording;
-  # it has run, so nothing reads the text back any more.
+  # could never be translated.
   defp refresh_failure_message do
     dgettext_noop(
       "integrations_calendar",

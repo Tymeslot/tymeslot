@@ -35,16 +35,10 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   alias Tymeslot.Repo
 
   @doc """
-  Sends a reschedule request email for a meeting.
-
-  This function:
-  1. Checks the meeting is eligible via `Policy.can_request_reschedule?/1`,
-     which also refuses one already awaiting a new time
-  2. Marks the meeting as awaiting a new time (`reschedule_requested_at`)
-  3. Deletes pending reminder email jobs and queues a high-priority email
-     job to notify the attendee, atomically — either both happen or neither
-     does, so the slot is never voided without the attendee being told
-  4. Schedules deletion of the calendar event (fire-and-forget)
+  Sends a reschedule request email for a meeting, following the steps in the
+  moduledoc. Eligibility is `Policy.can_request_reschedule?/1`, which also
+  refuses a meeting already awaiting a new time. The calendar deletion is
+  fire-and-forget.
 
   ## Parameters
     - meeting: The meeting struct to send reschedule request for

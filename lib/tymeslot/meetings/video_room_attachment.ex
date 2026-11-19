@@ -141,7 +141,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
 
   # A Teams meeting placed on the booking's own calendar event is already on
   # that event, which Graph shows with its join link. Rewriting the event to
-  # add the link would only mail the guest an update (issue #191).
+  # add the link would only mail the guest an update.
   defp rides_booking_event?(%MeetingSchema{video_room_id: event_id, provider_event_id: event_id})
        when is_binary(event_id),
        do: true

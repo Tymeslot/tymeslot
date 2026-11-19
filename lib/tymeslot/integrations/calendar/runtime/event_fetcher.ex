@@ -50,12 +50,12 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventFetcher do
     # Fetch events from all configured calendars
     {all_clients, unreadable_ids} = ClientManager.availability_sources(user_id)
 
-    # Fetch events from each calendar in parallel. Unlinked and individually
-    # timed out via `async_stream_nolink/on_timeout: :kill_task` rather than
-    # `async/await_many`, so one slow calendar can't discard every other
-    # calendar's already-fetched result — it now surfaces as a normal failed
-    # entry that `resolve_availability_fetch/3` classifies, instead of the
-    # whole coalesced fetch dying with `{:error, :timeout}`.
+    # Fetch events from each calendar in parallel. Each calendar runs unlinked
+    # and is timed out individually via `async_stream_nolink/on_timeout:
+    # :kill_task`, so one slow calendar can't discard every other calendar's
+    # already-fetched result: it surfaces as a normal failed entry that
+    # `resolve_availability_fetch/3` classifies, and the coalesced fetch does
+    # not die with `{:error, :timeout}`.
     #
     # Stream over indices, not over the clients themselves. A crashing task
     # makes OTP log a termination report containing the task function's

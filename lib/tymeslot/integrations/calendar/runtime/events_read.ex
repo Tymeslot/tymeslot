@@ -1,7 +1,7 @@
 defmodule Tymeslot.Integrations.Calendar.Runtime.EventsRead do
   @moduledoc """
-  Read-path calendar operations (per-client range fetch with fallback,
-  extracted from runtime operations).
+  Read-path calendar operations: a per-client range fetch with a fallback
+  read when the primary one fails.
   """
 
   require Logger
@@ -61,9 +61,9 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventsRead do
   end
 
   # The fallback reads `ProviderAdapter.default_window/0`, widened to take in
-  # the whole range asked for, and filters the answer to that range. A read
-  # of the default window alone answered a range reaching outside it as
-  # empty, and an empty answer offers slots over the host's real conflicts.
+  # the whole range asked for, and filters the answer to that range. The read
+  # must cover the whole requested range: an empty answer for a part of it
+  # offers slots over the host's real conflicts.
   defp fallback_list_events_for_client(client, start_utc, end_utc, _original_error) do
     {window_start, window_end} = ProviderAdapter.default_window()
 

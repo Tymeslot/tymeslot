@@ -1,7 +1,6 @@
 defmodule Tymeslot.Emails.AppointmentBuilder do
   @moduledoc """
   Builds appointment details payloads for email templates and delivery adapters.
-  Extracted from EmailWorker to keep the worker focused on orchestration.
   """
 
   require Logger

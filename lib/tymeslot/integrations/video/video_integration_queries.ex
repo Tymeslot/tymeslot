@@ -112,19 +112,9 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   WARNING: This function does not check user authorization.
   Use get_for_user/2 instead for secure access.
 
-  Returns:
-
-    * `{:ok, integration}` — found and credentials readable
-    * `{:error, :not_found}` — no row with that ID
-    * `{:error, :requires_reencryption, integration}` — found but one or more
-      encrypted credentials cannot be decrypted with the current keyring (e.g.
-      after SECRET_KEY_BASE rotation). The raw integration (without decrypted
-      virtual fields) is included so callers can flag `needs_reauth` without
-      needing to re-query.
-
-  Callers must add a `{:error, :requires_reencryption, integration}` clause and
-  route to `Tymeslot.Integrations.Video.handle_reauth_required/1` (for background
-  workers) or surface a reconnect prompt (for the web layer).
+  Returns the same results as `get_for_user/2`, which describes the
+  `{:error, :requires_reencryption, integration}` case callers must handle,
+  except that `{:error, :not_found}` means no row with that ID.
   """
   @spec get(integer()) ::
           {:ok, VideoIntegrationSchema.t()}
@@ -150,8 +140,9 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
       virtual fields) is included so callers can flag `needs_reauth` without
       needing to re-query.
 
-  Callers must add a `{:error, :requires_reencryption, integration}` clause and
-  route to `Tymeslot.Integrations.Video.handle_reauth_required/1` (for background
+  Callers must handle the `{:error, :requires_reencryption, integration}`
+  clause as well as `{:ok, _}` and `{:error, :not_found}`, and route it to
+  `Tymeslot.Integrations.Video.handle_reauth_required/1` (for background
   workers) or surface a reconnect prompt (for the web layer).
   """
   @spec get_for_user(integer(), integer()) ::

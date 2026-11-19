@@ -10,12 +10,9 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
      back is churn.
 
      The cutoff is therefore derived from `Sync.window_past_days/0`
-     rather than fixed. It was previously a flat 90 days, justified by a
-     60-day CalDAV window that no longer exists: every provider now reads a
-     year back, so the prune was deleting a year's worth of live rows every
-     night for the next sync to re-insert. The grace period keeps the two
-     bounds from meeting exactly, since they are computed at different times
-     of day.
+     rather than fixed, since every provider reads that far back. The grace
+     period keeps the two bounds from meeting exactly, since they are
+     computed at different times of day.
   2. **Inactive integrations** — removes events belonging to integrations the
      user has deactivated. These events are invisible in the UI and would only
      be cleaned up when the integration is fully deleted (via cascade), so

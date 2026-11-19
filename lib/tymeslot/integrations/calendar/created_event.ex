@@ -4,13 +4,11 @@ defmodule Tymeslot.Integrations.Calendar.CreatedEvent do
 
   A create is the one moment Tymeslot holds a new event's server-side identity
   for free: the resource the provider just wrote, and, on CalDAV, the entity
-  tag the server assigned it. The contract used to be a bare `any()`, a uid
-  string for the CalDAV family and a converted event map for the OAuth
-  providers, with nowhere to put either. So the grid cached the row with
-  `provider_event_id` and `etag` NULL and left the next full sync to repair
-  them, and everything that reads those columns (the conditional update's
-  precondition, the colour write-back, the calendar a write is routed to) was
-  degraded until it did.
+  tag the server assigned it. This struct carries both, so the grid caches the
+  row with `provider_event_id` and `etag` set, and everything that reads
+  those columns (the conditional update's precondition, the colour
+  write-back, the calendar a write is routed to) works before the next full
+  sync.
 
   Fields:
 

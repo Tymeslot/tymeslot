@@ -550,9 +550,9 @@ defmodule Tymeslot.Profiles do
   Same precedence as `display_name/1`, for callers that hold a user rather
   than a profile (the email templates, for instance). `:profile` must be
   preloaded: raises `ArgumentError` when it is an
-  `Ecto.Association.NotLoaded` struct, since silently falling back to the
-  user's own name is indistinguishable from an email/password signup that
-  legitimately has none. Callers must fetch the user via a function that
+  `Ecto.Association.NotLoaded` struct, since a profile that is not loaded
+  would silently yield no name, which looks like an email/password signup
+  that legitimately has none. Callers must fetch the user via a function that
   preloads `:profile`, such as `Auth.UserQueries.get_user_with_profile/1`.
   """
   @spec user_display_name(map() | nil) :: String.t() | nil

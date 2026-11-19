@@ -2,11 +2,11 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   @moduledoc """
   What to call a calendar failure, and what to tell the account owner about it.
 
-  Split from `ErrorHandler` because this is copy, not mechanism. Every function
-  here maps a category (and sometimes a provider) onto a sentence the account
-  owner reads, which means the module is almost entirely `dgettext/2` calls and
-  changes whenever the wording does. Keeping it apart leaves the handler free
-  to be about control flow.
+  The wording lives apart from `ErrorHandler`, which handles the mechanism.
+  Every function here maps a category (and sometimes a provider) onto a
+  sentence the account owner reads, which means the module is almost entirely
+  `dgettext/2` calls and changes whenever the wording does. Keeping it apart
+  leaves the handler free to be about control flow.
 
   `categorize_error/1` sits here rather than with the handler because the
   categories exist to select copy: they are the vocabulary the messages and
@@ -83,10 +83,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   def categorize_error(status) when is_integer(status) and status >= 500, do: :network
 
   # The CalDAV-family `t:Tymeslot.Integrations.Calendar.CalDAV.Base.error_reason/0`
-  # atoms, reached directly now that `validate_config/1` no longer runs its own
-  # network probe ahead of discovery — previously these were caught earlier by
-  # a provider's own `error_formatter`, which happened to embed a recognisable
-  # word ("password", "not found") in the string before it ever reached here.
+  # atoms, reached directly because `validate_config/1` runs no network probe
+  # of its own ahead of discovery, so nothing formats them into a string first.
   def categorize_error(:unauthorized), do: :auth
   def categorize_error(:forbidden), do: :permission
   def categorize_error(:not_found), do: :config

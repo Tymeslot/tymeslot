@@ -3,8 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
   Shared helpers for determining default booking calendars within an integration.
 
   Centralizes logic for deriving a reasonable default calendar ID from
-  provider-specific calendar lists and fields. Keep this module dependency-free
-  from other contexts to allow easy reuse.
+  provider-specific calendar lists and fields.
 
   `ensure_default_booking_calendar/1` is the one write here: it stores the
   derived default on a newly created integration, through

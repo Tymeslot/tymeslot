@@ -131,10 +131,8 @@ defmodule Tymeslot.Workers.TelegramWorker do
   Schedules a message for a meeting event.
 
   `participant_id` names the seat of a group meeting the event is about (see
-  `Tymeslot.Meetings.SeatView`); the message then names that seat's
-  participant. Each seat is its own message, so it is part of the uniqueness
-  key; a solo meeting passes `nil`, which is stored and keyed as well, so a
-  seat's message and the meeting's own are never taken for duplicates (see
+  `Tymeslot.Meetings.SeatView`), or is `nil` for a solo meeting; the seat is
+  part of the uniqueness key (see
   `Tymeslot.Workers.MeetingNotificationJob.schedule/5`).
 
   `series` is the event's `series` object

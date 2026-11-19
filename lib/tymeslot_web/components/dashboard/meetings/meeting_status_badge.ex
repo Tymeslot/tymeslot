@@ -2,18 +2,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingStatusBadge do
   @moduledoc """
   The one badge that says what state a booking is in.
 
-  Split out of `MeetingListComponents` when the approval gate added a fifth
-  state, because the states are mutually exclusive: a held request that also
-  matches "not cancelled and not past" must not render as both "Awaiting your
-  approval" and "Scheduled", which is precisely the contradiction this feature
-  exists to remove.
-
-  Used to be sibling `:if` clauses, each repeating every other state's
-  negation as a guard. That shape silently swallowed `:expired`: it matched
-  none of the guards, so it fell through to the last (unguarded-by-status)
-  clause and rendered "Scheduled". `badge_variant/1` below names every status
-  in `Tymeslot.Meetings.MeetingSchema`'s valid list either its own explicit
-  clause or the time-derived split (scheduled vs completed, the only pair
+  The states are mutually exclusive: a held request that also matches "not
+  cancelled and not past" must not render as both "Awaiting your approval" and
+  "Scheduled". `badge_variant/1` below names every status in
+  `Tymeslot.Meetings.MeetingSchema`'s valid list either as its own explicit
+  clause or via the time-derived split (scheduled vs completed, the only pair
   that genuinely depends on the clock rather than the status column). Only a
   status this module has never heard of falls through the final `true` case.
   """

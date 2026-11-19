@@ -16,8 +16,8 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   makes the arrangement environment-independent. A computation that queries
   the database or meets a `Mox` expectation keeps the caller's sandbox
   connection and its mock allowances, neither of which a separate process
-  gets for free — which is why this path used to be bypassed under test,
-  leaving the coalescing that ships exercised by almost nothing.
+  gets for free, so the coalescing path that runs under test is the same one
+  that runs in production.
 
   ## Invalidation
 
@@ -391,10 +391,10 @@ defmodule Tymeslot.Infrastructure.CacheStore do
 
   @doc false
   # A failing computation resolves to `{:error, :computation_failed}` in every
-  # environment. It used to re-raise under test, which meant the logging and
-  # the failure value the callers actually receive in production were reached
-  # by no test at all; the warning below carries the exception message, so a
-  # test whose cached computation blows up still says so in the log.
+  # environment, so the logging and the failure value callers receive are the
+  # same under test as in production; the warning below carries the exception
+  # message, so a test whose cached computation blows up still says so in the
+  # log.
   #
   # Not recorded through `ErrorTracking.report_error/3`: modules `use` this one,
   # so anything it references becomes a compile-time dependency of each of

@@ -328,9 +328,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   `attendees_added/3`). Addresses are compared trimmed and lower-cased.
 
   Call it only once the calendar has accepted the write, or saved it to
-  sync later, with the event as the write found it and as it left it: an
-  invitation to an event the guest was never put on, or a cancellation
-  while they are still on it, cannot be taken back. Working the change out
+  sync later, with the event as the write found it and as it left it:
+  a notice sent too early cannot be taken back (see
+  `Tymeslot.Meetings.AttendeeNotifications.ReplayWait`). Working the change out
   from the two, rather than from the edit that was asked for, also tells a
   guest added by an earlier edit whose own write failed, when a later write
   carried them on.
@@ -505,10 +505,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   Whether a debounced job is already queued for this event.
 
   Takes the event rather than its id so the kind is derived from the struct:
-  ids are only unique *within* a kind, and an id that matched a job of the
-  other kind used to answer `true` here. That sent the caller down the
-  "already pending" branch, joining a stranger's debounce window instead of
-  asking this event's host, off nothing but a numeric collision.
+  ids are only unique *within* a kind, so an id that matches a job of the
+  other kind must not count as pending: the caller would join a stranger's
+  debounce window on a numeric collision alone.
   """
   @spec pending?(event) :: boolean
   def pending?(event) do

@@ -163,9 +163,9 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
     - room_id: Provider-specific identifier returned by `create_meeting_room/1`.
     - config: The same provider config used to create the room.
 
-  Providers that don't have a server-side meeting object should return `:ok`
-  without performing any action. A "not found" response from the provider
-  should also resolve to `:ok` so cancellation is idempotent.
+  As with `update_meeting_room/2`, providers without a server-side meeting
+  object return `:ok`. A "not found" response from the provider should also
+  resolve to `:ok` so cancellation is idempotent.
 
   Returns `:ok` on success or `{:error, reason}` on failure.
   """
@@ -214,7 +214,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   to the breaker so it still gets recorded.
 
   Optional: providers that don't implement both this and
-  `finish_create_meeting_room/2` keep the old all-in-one behaviour via
+  `finish_create_meeting_room/2` fall back to the single-call path,
   `create_meeting_room/1`.
   """
   @callback precheck_create_meeting_room(config :: map()) ::

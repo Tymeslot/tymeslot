@@ -6,7 +6,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   and
   `reschedule_requested_at` (whether the organizer is currently awaiting the
   attendee to pick a new time). The two axes are orthogonal: an organizer
-  reschedule request no longer overwrites `status`, so a `pending` or
+  reschedule request leaves `status` untouched, so a `pending` or
   `awaiting_payment` meeting keeps that status while a request is pending.
 
   `status: :reschedule_requested` is a legacy value: no code writes it any

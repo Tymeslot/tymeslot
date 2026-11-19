@@ -216,7 +216,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
 
   def handle_ui(_event, _params, _group, _ui, _customization), do: :ignore
 
-  # Event names and rate-limit labels as they were before the single event.
+  # The seed and the scheme each keep their own event name and rate-limit
+  # label rather than the generic `:option_changed`, although both fields are
+  # written through `theme:set_option`, so telemetry consumers and rate-limit
+  # buckets keep telling a seed apart from a scheme.
   @impl Panel
   def telemetry(_group, "seed", value),
     do: {:palette_seed_changed, "palette_seed", %{seed: value}}

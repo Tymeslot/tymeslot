@@ -3,9 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   Microsoft Exchange calendar provider, speaking EWS.
 
   Reads busy time and calendar items, and writes confirmed bookings back
-  through `Exchange.Writes` (`CreateItem`, `UpdateItem`, `DeleteItem`). It was
-  read-only until the write path landed, and nothing in this module should
-  still say otherwise.
+  through `Exchange.Writes` (`CreateItem`, `UpdateItem`, `DeleteItem`).
 
   Targets **on-premises** Exchange Server (2016, 2019, SE). Exchange Online is
   served by the `:outlook` provider over Microsoft Graph instead, and its EWS
@@ -459,8 +457,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
   The item id lands in `provider_event_id`, which is the column the next
   update addresses the item by; Exchange has no iCalendar uid to answer with,
-  so `uid` carries the same id rather than a value nothing on the server
-  would recognise.
+  so the `CreatedEvent` carries no `uid`.
   """
   @impl Tymeslot.Integrations.Calendar.Provider
   def create_event(client, event_data) do

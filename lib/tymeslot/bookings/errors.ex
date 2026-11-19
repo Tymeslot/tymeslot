@@ -110,11 +110,8 @@ defmodule Tymeslot.Bookings.Errors do
   }
 
   @doc """
-  Classifies every failure reason into a semantic atom rather than a display
-  string, so callers can dispatch on the error's identity (e.g. bounce the
-  booker back to the schedule step on `:slot_taken`) without depending on
-  copy text. The web layer owns rendering these atoms to user-facing
-  messages. A `refusal/0` passes through unchanged.
+  Classifies every failure reason into a semantic atom (see the moduledoc).
+  A `refusal/0` passes through unchanged.
 
   Shared by `Tymeslot.Bookings.Create` and `Tymeslot.Bookings.CreateGroup`.
   """
@@ -180,8 +177,6 @@ defmodule Tymeslot.Bookings.Errors do
   `classify_error/1` does, and records in error tracking any reason that
   classifies as nothing better than `:booking_failed` (see the comment
   above `@not_reported`).
-
-  Shared by `Tymeslot.Bookings.Create` and `Tymeslot.Bookings.CreateGroup`.
   """
   @spec classify_creation_error(term(), map()) :: classified_error()
   def classify_creation_error(reason, booking_data) do

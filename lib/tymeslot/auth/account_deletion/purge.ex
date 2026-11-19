@@ -3,7 +3,7 @@ defmodule Tymeslot.Auth.AccountDeletion.Purge do
   Erases an account: the cross-domain delete behind
   `Tymeslot.Auth.AccountDeletion`.
 
-  Runs the external-cleanup hook (e.g. SaaS subscription cancellation) before
+  Runs the configured `:account_deletion_hook` before
   any DB change and, once that succeeds, runs the cross-domain
   anonymise-then-delete transaction spanning `Auth` and the payment records,
   then removes the files the deleted rows pointed at.

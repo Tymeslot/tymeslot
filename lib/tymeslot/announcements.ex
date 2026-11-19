@@ -52,8 +52,8 @@ defmodule Tymeslot.Announcements do
     # Evaluate the in-memory catalog first (expiry + signup-date
     # visibility) — these checks need no database access. Only if some
     # candidate survives do we pay for the per-user seen-keys query. Once
-    # every catalogue entry has expired this short-circuits, so a mount can
-    # no longer trigger a guaranteed-empty `user_seen_announcements` read.
+    # every catalogue entry has expired this short-circuits, so a mount does
+    # not trigger a guaranteed-empty `user_seen_announcements` read.
     candidates =
       catalogs()
       |> Enum.flat_map(&safe_list/1)

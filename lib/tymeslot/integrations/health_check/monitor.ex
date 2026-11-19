@@ -22,7 +22,8 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   # unhealthy regardless of what the scheduled probe says. CalDAV syncs every
   # ~15 minutes, so ten of them is roughly two and a half hours of sustained
   # failure — the same order as the probe's own three-strikes-at-30-to-60-
-  # minutes, and far short of the eleven days integration 97 went unnoticed.
+  # minutes, and far short of the days a silently failing sync would otherwise
+  # go unnoticed.
   @default_sync_failure_threshold 10
   @max_backoff_ms :timer.hours(1)
   # On the very first transition into :unhealthy, override the standard 1 h

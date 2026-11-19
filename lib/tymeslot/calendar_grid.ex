@@ -130,8 +130,7 @@ defmodule Tymeslot.CalendarGrid do
   afterwards, so a busy deselected calendar can't crowd real matches out of
   the feed: the `LIMIT` only ever counts rows the caller can actually see.
 
-  Reminders are normalised to the canonical `%{method:, minutes_before:}` shape,
-  so callers can read `minutes_before` regardless of how the row was stored.
+  Reminders are normalised as in `list_events_for_range/4`.
 
   ## Options
 

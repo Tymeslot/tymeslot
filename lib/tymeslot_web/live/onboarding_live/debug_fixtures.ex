@@ -74,8 +74,8 @@ defmodule TymeslotWeb.OnboardingLive.DebugFixtures do
 
   @doc """
   The sample week the reveal fixtures show: seven days from `today`, with
-  the same open slots and (when `busy` is set) busy blocks on each weekday
-  whatever the date, so it always has 23 slots.
+  the same open slots and (when `busy` is set) busy blocks on Tuesday and
+  Thursday, whatever the date, so it always has 23 slots.
   """
   @spec sample_week(Date.t(), boolean()) :: WeekPreview.t()
   def sample_week(today, busy) do

@@ -28,7 +28,6 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
-    # Get timezone info from profile
     profile = assigns.profile
     timezone_info = Helpers.get_timezone_info(profile)
 
@@ -104,8 +103,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         {:noreply, assign(socket, :form_errors, %{})}
 
       {:error, _errors} ->
-        # Don't show validation errors on change events for dropdown inputs
-        # The actual validation will still happen on submit
+        # Validation runs again on submit.
         {:noreply, socket}
     end
   end
@@ -160,7 +158,6 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
 
   def handle_event("show_delete_break_modal", %{"break_id" => break_id}, socket) do
     break_id = String.to_integer(break_id)
-    # Find the break details from the schedule
     break_info = BreakHelpers.find_break_info(socket.assigns.weekly_schedule, break_id)
 
     {:noreply, ModalHook.show_modal(socket, :delete_break, %{id: break_id, info: break_info})}

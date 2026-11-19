@@ -8,9 +8,8 @@ defmodule TymeslotWeb.Plugs.WebhookBodyCachePlug do
 
   Which requests get their body cached is read off the router rather than
   kept in a separate list: a route opts in with `metadata: %{raw_body: true}`.
-  The list used to live in config beside the router and had to be kept in
-  step by hand; a route missing from it had its signature checked against an
-  empty body and every genuine delivery was refused.
+  A route that does not opt in has its signature checked against an empty
+  body, and every genuine delivery is refused.
 
   The lookup is a runtime route match rather than a list gathered at compile
   time: the endpoint depends on this module at compile time, and a

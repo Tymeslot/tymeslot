@@ -55,10 +55,9 @@ defmodule Tymeslot.Timezones do
   @doc """
   The zone to render in when the user's own is unknown, missing, or invalid.
 
-  Use this instead of spelling a literal at the call site. The dashboard used to
-  carry three: `"UTC"`, `"Etc/UTC"`, and a `nil` that reached `format/1` — which
-  matters because they do not render alike, so the same account could be shown
-  a different zone depending on which surface it was looking at.
+  Use this instead of spelling a literal at the call site: `"UTC"`, `"Etc/UTC"`
+  and `nil` (which reaches `format/1`) do not render alike, so the same account
+  could be shown a different zone depending on which surface it was looking at.
 
   ## Examples
 

@@ -130,9 +130,10 @@ defmodule TymeslotWeb.Themes.Shared.Blocks.AgendaIndex do
     """
   end
 
-  # No booking window known (no organiser resolved) bounds nothing.
   defp next_disabled?(week_start, timezone, days) when is_integer(days),
     do: CalendarNavigation.next_week_disabled?(week_start, timezone, days)
 
+  # A caller that passes no booking window (the attr defaults to `nil`)
+  # bounds nothing, so the next week is never disabled.
   defp next_disabled?(_week_start, _timezone, _days), do: false
 end

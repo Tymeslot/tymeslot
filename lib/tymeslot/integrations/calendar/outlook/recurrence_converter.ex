@@ -73,11 +73,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter do
   @index_to_ordinal Map.new(@ordinal_to_index, fn {ordinal, index} -> {index, ordinal} end)
 
   @doc """
-  Converts an RRULE string into a Microsoft Graph `recurrence` object, or
-  `nil` for no rule or one without a readable `FREQ`, as before; a rule
-  Graph has no pattern for is refused (see "Patterns"), and so is a monthly
-  or yearly series Graph would move onto a month's last day
-  (`{:error, :day_missing_in_some_months}`; see "Days some months lack").
+  Converts an RRULE string into a Microsoft Graph `recurrence` object, or `nil`
+  for no rule or one without a readable `FREQ`; a rule Graph has no pattern for
+  is refused (see "Patterns"), and so is a monthly or yearly series Graph would
+  move onto a month's last day (`{:error, :day_missing_in_some_months}`; see
+  "Days some months lack").
 
   The `start_date` supplies the range `startDate` and anchors monthly/yearly
   patterns (and a weekly pattern that omits `BYDAY`).

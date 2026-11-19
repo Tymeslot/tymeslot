@@ -63,7 +63,8 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
 
   @doc """
   Safely initiates an asynchronous month availability fetch if all requirements are met.
-  Cancels any existing fetch task before starting a new one.
+  Cancels any existing fetch task before starting a new one (see
+  `ensure_month_availability/1` for the exception).
   """
   @spec fetch_month_availability_async(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def fetch_month_availability_async(socket) do
@@ -152,30 +153,24 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   end
 
   # The fetch runs in a linked task, or inline under the deterministic
-  # harness, but *both modes deliver the result identically*: a
+  # harness, and both modes deliver the result identically: a
   # `{ref, {:ok, map}}` / `{ref, {:error, reason}}` message that
   # `TymeslotWeb.Themes.Shared.InfoHandlers` finalises after `mount` and
-  # `handle_params/3` have run. The ref match, the loaded/error
-  # transitions, the landing on the first bookable day and its refetch
-  # hop are therefore one code path with one ordering, whichever mode is
-  # selected — the divergence the two-branch fetch used to introduce was
-  # not the concurrency, it was the second finaliser and the second
-  # ordering that came with it.
+  # `handle_params/3` have run. There is one finaliser and one ordering
+  # whichever mode is selected.
   #
   # `:async_availability_fetch` picks the mode. It defaults to `true`;
   # `config/test.exs` sets it `false` so the result is owned by the test
   # process: a task still in flight when a test ends is killed mid-query
-  # and takes the checked-out sandbox connection down with it, failing
-  # every test that follows. It is a named behavioural flag rather than
-  # an `:environment` comparison so a test can opt *back into* the task
-  # path (`AvailabilityAsyncFetchTest` does) instead of the whole suite
-  # being locked out of the branch that ships.
+  # and takes the checked-out sandbox connection down with it. It is a
+  # named flag rather than an `:environment` comparison so a test can opt
+  # back into the task path.
   #
   # `Task.async/1` links, so the task's lifetime is exactly the
   # LiveView's: a booker who closes the tab cannot leave a calendar fetch
-  # running behind them. The cost of the link is that a fetch which
-  # *raises* takes the page down with it rather than arriving as a
-  # `:DOWN` — which is why `InfoHandlers` has no `:DOWN` handler.
+  # running behind them. The cost is that a fetch which raises takes the
+  # page down with it rather than arriving as a `:DOWN`, which is why
+  # `InfoHandlers` has no `:DOWN` handler.
   defp start_availability_task(socket) do
     # Build the request and the range up front so the closure captures plain
     # values, never the socket.

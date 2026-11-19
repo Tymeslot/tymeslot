@@ -91,9 +91,9 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
   host who reconnects gets their prices back instead of re-entering every one.
   The currency they were set in is recorded on the profile, so a reconnect
   cannot re-denominate them.
-  The form no longer clears them by omission
-  (`Tymeslot.MeetingTypes.FormMapper.build_attrs/3`), the changeset no longer
-  fails unrelated saves over the stored flag
+  The form does not clear them by omission
+  (`Tymeslot.MeetingTypes.FormMapper.build_attrs/3`), the changeset does not
+  fail unrelated saves over the stored flag
   (`MeetingTypeSchema.validate_payment_fields/2`), and `Bookings.Create`
   refuses a paid booking outright while charges are off, so nothing is taken
   in the meantime. Clearing them here, as `MeetingPayments.change_default_currency/2`

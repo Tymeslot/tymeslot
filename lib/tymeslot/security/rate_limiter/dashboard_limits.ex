@@ -2,8 +2,7 @@ defmodule Tymeslot.Security.RateLimiter.DashboardLimits do
   @moduledoc """
   The rate limits for the dashboard's write actions, per organiser: webhooks,
   integrations, calendar edits, meeting types, uploads, theme and embed
-  settings, and the meeting actions. Split out of `Limits` to keep that table
-  under the module size limit; `Limits` merges these entries into its own
+  settings, and the meeting actions. `Limits` merges these entries into its own
   with `merge_disjoint/1`, and its moduledoc describes the shape of an entry.
   """
 

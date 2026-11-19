@@ -56,26 +56,19 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentCompletion do
 
   def host_accepting(_meeting), do: :ok
 
-  # Payment clearing does not always mean the booking is on. The gate
-  # decision is read from the meeting row rather than re-derived from the
-  # live meeting type: `approval_requested_at` being stamped is the record
-  # of the promise shown to the invitee on the booking form
-  # (`Policy.approval_attributes/2` stamps it at submission, even on the
-  # paid path), and a host toggling `requires_approval` while a Stripe
-  # Checkout session sits open — it can stay open 24h — must not silently
-  # change what that invitee was told. Where the row was gated, the paid
-  # booking moves into the approval gate rather than straight to confirmed,
-  # and the host's clock starts here — they are only asked once the money
-  # has actually cleared. Only the clock's *start* moves: its length is the
-  # window stamped on the row at submission, replayed by
-  # `Approval.restart_deadline/2`, so a host who set a 72-hour window still
-  # gets 72 hours on a paid booking. Declining or letting it lapse refunds the full
-  # remaining balance directly (`Meetings.Approval.after_release/1`); there
-  # is no cancellation pipeline involved, because the attendee never got a
-  # confirmed meeting to weigh a partial refund against. The confirm branch
-  # explicitly nulls both approval columns rather than leaving them
-  # untouched, so a row that reaches :confirmed never carries a stale
-  # approval clock alongside it.
+  # Payment clearing does not always mean the booking is on. The gate is read
+  # from the meeting row, not the live meeting type: `approval_requested_at`
+  # records the promise shown to the invitee at submission, and a host
+  # toggling `requires_approval` while a Checkout session sits open (up to
+  # 24h) must not change it. A gated row moves into the approval gate rather
+  # than straight to confirmed, and the host's clock starts here, once the
+  # money has cleared; its length is the window stamped at submission
+  # (`Approval.restart_deadline/2`). Declining or letting it lapse refunds
+  # the full remaining balance directly
+  # (`Meetings.ApprovalRefunds.refund_unapproved_request/1`), with no
+  # cancellation pipeline: the attendee never had a confirmed meeting to weigh
+  # a partial refund against. The confirm branch nulls both approval columns
+  # so a :confirmed row never carries a stale approval clock.
   @spec post_payment_status(map()) :: map()
   def post_payment_status(%{approval_requested_at: %DateTime{}} = meeting) do
     requested_at = DateTime.truncate(Clock.utc_now(), :second)

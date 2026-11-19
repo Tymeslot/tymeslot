@@ -109,9 +109,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     properties = body["extendedProperties"] || %{}
     private = Map.put(properties["private"] || %{}, "createdBy", "tymeslot")
 
-    # The instance that created the event, not the hosted service: a
-    # self-hoster's Google events used to point their attendees at a site
-    # they have nothing to do with.
+    # The instance that created the event, not the hosted service, so a
+    # self-hoster's attendees are pointed at their own site.
     Map.merge(body, %{
       "source" => %{"title" => "Tymeslot", "url" => UrlBuilder.base_url()},
       "extendedProperties" => Map.put(properties, "private", private)

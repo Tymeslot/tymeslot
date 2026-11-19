@@ -110,8 +110,6 @@ defmodule Tymeslot.Integrations.Video.Connection do
           # The one caller is the setup form's save, not the "Test connection"
           # button, and a refusal has to say so: the organiser pressed "Add".
           action: :video_setup,
-          # Video's `config` is always freshly built by a caller, so it really
-          # is untrusted input worth validating before a token is charged.
           validate: fn -> provider_module.validate_config(config) end,
           run: fn -> ProviderAdapter.test_connection(provider_atom, config) end
         })

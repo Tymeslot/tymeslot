@@ -219,7 +219,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   # nothing from here on may report that it was not moved: a raise past this
   # point is reported as `source: :unknown`, since the original may or may not
   # have been deleted by then. A raise before the create returned escapes to
-  # the caller as before, where "nothing moved" is the truth.
+  # the caller, where "nothing moved" is the truth.
   defp settle_move(user_id, event, moved, %CreatedEvent{} = created) do
     integration_id = moved.calendar_integration_id
     cached_uid = CreatedEvent.cache_uid(created) || moved.uid
@@ -303,9 +303,9 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   all, every collection is read-only, or none is selected.
   """
   @spec destination_calendar_id(map(), String.t() | nil) :: String.t() | nil
-  # The chosen calendar first, for every provider: CalDAV writes now honour
-  # `event_data[:calendar_id]` when it names a writable collection, so filing
-  # the row under the booking collection regardless is no longer the truth.
+  # The chosen calendar first, for every provider: CalDAV writes honour
+  # `event_data[:calendar_id]` when it names a writable collection, so the row
+  # is filed under the chosen collection, not the booking one.
   # `booking_calendar_path/1` resolves nothing when the stored booking calendar
   # id matches no discovered collection, which is the state a rediscovery
   # leaves behind; the move then goes to the first writable collection, which
@@ -367,9 +367,10 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   end
 
   defp remove_source(user_id, event) do
-    # The source's own calendar, not the integration's default: a move away
-    # from a secondary Google or Outlook calendar used to address the default
-    # one and 404, leaving the original behind beside the copy.
+    # The source's own calendar, not the integration's default: the event
+    # lives on its source calendar, which on a secondary Google or Outlook
+    # calendar is not the default, so addressing the default would 404 and
+    # leave the original behind beside the copy.
     opts =
       Enum.reject(
         [provider_event_id: event.provider_event_id, calendar_id: event.provider_calendar_id],

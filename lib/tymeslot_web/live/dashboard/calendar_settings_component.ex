@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   # when present; fall back to loading independently otherwise — e.g. when
   # mounted standalone via the `:calendar_integration` dashboard action, or
   # when a `send_update/2` targets us with a partial assign (those always
-  # want a fresh reload, matching prior behaviour).
+  # reload).
   defp maybe_load_integrations(socket, %{
          integrations: _integrations,
          health_states: _health_states,

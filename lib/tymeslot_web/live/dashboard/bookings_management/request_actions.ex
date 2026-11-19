@@ -15,8 +15,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
       actually happened and the list is reloaded.
 
   `reload` is passed in rather than imported so this module stays free of the
-  component's loading pipeline; it is called after every outcome, including the
-  failures, because the row on screen is stale either way.
+  component's loading pipeline; see `handle_answer/3` for when it is called.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

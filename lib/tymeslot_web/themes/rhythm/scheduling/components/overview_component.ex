@@ -1,7 +1,6 @@
 defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   @moduledoc """
   Rhythm theme component for the overview/duration selection step.
-  Extracted from the monolithic RhythmSlidesComponent to improve separation of concerns.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -30,7 +29,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   def render(assigns) do
     profile = assigns.organizer_profile
 
-    # Either line may be unsaid (`nil`), and then is not rendered at all.
     assigns =
       assign(assigns,
         greeting: BookingText.greeting(profile, Profiles.display_name(profile), :rhythm),

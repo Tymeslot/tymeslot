@@ -8,8 +8,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   here, bypassing every cache, before anything is written:
   `Tymeslot.Bookings.Create` for a new booking, `Tymeslot.Bookings.Reschedule`
   for a move. Sharing one check is what stops the two from disagreeing about
-  what "free" means; the reschedule path had no such check at all until it
-  started calling this.
+  what "free" means.
 
   `probe/3` reports what the calendars said and leaves the decision to the
   caller. `enforce/3` adds the refusal policy both submits share: a genuine

@@ -64,7 +64,6 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   def update(assigns, socket) do
-    # Merge new assigns into socket
     socket = assign(socket, assigns)
 
     # Always ensure we have the latest profile data
@@ -341,7 +340,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     user_id = socket.assigns.current_user.id
 
     RateLimit.with_rate_limit(RateLimiter.check(:meeting_type_write, user_id), socket, fn ->
-      # Convert to integers safely
+      # The client may send ids as strings; anything unparsable is dropped.
       meeting_type_ids =
         ids
         |> Enum.map(fn

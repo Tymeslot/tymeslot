@@ -155,11 +155,11 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # Every clause below that discards is a failure no operator or user would
   # otherwise hear about, which is why the verdict they produce is fed to
   # `SyncHealth.record_outcome/2` above rather than dropped; see that module
-  # for why both halves belong at the job boundary. Clearing the streak used to
-  # live in `CalDAV.Sync.State.put/2` instead, which runs once per calendar
-  # path and per tier step, so a healthy first calendar wiped the streak a
-  # failing second calendar was accumulating and the badge stayed green through
-  # an indefinite outage.
+  # for why both halves belong at the job boundary. The streak is not cleared
+  # in `CalDAV.Sync.State.put/2`, which runs once per calendar path and per
+  # tier step: a healthy first calendar would wipe the streak a failing second
+  # calendar was accumulating, and the badge would stay green through an
+  # indefinite outage.
   defp handle_sync_result(:ok, _integration), do: :ok
 
   # The server rejected the stored credentials. The cycle is discarded either
@@ -212,12 +212,12 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     )
   end
 
-  # No calendar is selected, so there is nothing to sync into. This used to
-  # return :ok, which reported a successful sync of nothing: the failure streak
-  # reset every cycle, no badge or notification ever fired, and the fallback
-  # sweep re-enqueued the same no-op indefinitely because the timestamps it
-  # keys off never advanced. Flagging it stops the loop, since the sweep's
-  # population excludes integrations awaiting reconnection.
+  # No calendar is selected, so there is nothing to sync into. Returning :ok
+  # would report a successful sync of nothing: the failure streak would reset
+  # every cycle, no badge or notification would fire, and the fallback sweep
+  # would re-enqueue the same no-op indefinitely because the timestamps it
+  # keys off never advance. Flagging the integration stops the loop, since the
+  # sweep's population excludes integrations awaiting reconnection.
   defp handle_sync_result({:error, :no_calendar_paths}, integration) do
     Logger.warning(
       "CalDAV integration has no calendar selected; flagging integration for reconnection",
@@ -304,15 +304,14 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   defp handle_sync_result({:error, {:free_busy_unreadable, _reason}}, _integration),
     do: {:discard, @free_busy_unreadable}
 
-  # A 4xx there is no talking the request out of (415, 400…, and the modelled
-  # `:method_not_allowed`) is the server
-  # refusing the request itself: the remaining attempts re-send the same bytes
-  # for the same refusal, then page an operator about a server-side condition
-  # no operator action can fix. A 3xx lands here too: the redirect is never
-  # followed, and a provider in maintenance (Framagenda pointing every DAV path
-  # at its status page) answers it on every attempt. `Http` has already logged
-  # the status and the server's own explanation, and the health check surfaces
-  # the integration.
+  # A 4xx there (415, 400…, and the modelled `:method_not_allowed`) is the
+  # server refusing the request itself: the remaining attempts re-send the same
+  # bytes for the same refusal, then page an operator about a server-side
+  # condition no operator action can fix. A 3xx lands here too: the redirect is
+  # never followed, and a provider in maintenance (Framagenda pointing every DAV
+  # path at its status page) answers it on every attempt. `Http` has already
+  # logged the status and the server's own explanation, and the health check
+  # surfaces the integration.
   defp handle_sync_result({:error, reason} = result, _integration) do
     if CalDAVErrors.terminal_error?(reason) do
       {:discard, "#{@server_refused}: #{refusal(reason)}"}

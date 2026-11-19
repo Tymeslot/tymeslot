@@ -186,8 +186,8 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
        when is_integer(failures) do
     threshold = ReauthHandling.password_rejection_threshold()
 
-    # A threshold of 1 is the first rejection, which this check is whatever
-    # state a caller hands over.
+    # A threshold of 1 means the first rejection, whatever state the caller
+    # hands over.
     not ProviderConfig.caldav_based?(provider) or threshold <= 1 or failures >= threshold
   end
 

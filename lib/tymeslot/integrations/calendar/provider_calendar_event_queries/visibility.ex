@@ -5,10 +5,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries.Visibility
   `ProviderCalendarEventQueries` applies, so calendar selection is filtered
   in SQL rather than after a capped fetch.
 
-  Split out of the owning query module purely to keep it under Core's
-  module-size limit; this is not a sanctioned entry point of its own;
-  callers go through `ProviderCalendarEventSearchQueries.search_around/3`
-  and `ProviderCalendarEventQueries.list_upcoming_timed/4`.
+  This is not a sanctioned entry point of its own; callers go through
+  `ProviderCalendarEventSearchQueries.search_around/3` and
+  `ProviderCalendarEventQueries.list_upcoming_timed/4`.
   """
 
   import Ecto.Query, warn: false

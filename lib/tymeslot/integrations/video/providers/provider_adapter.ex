@@ -104,9 +104,9 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   `ProviderBehaviour.shared_join_url/2` describes it.
 
   Providers that do not implement the optional callback answer with the
-  room's own URL, which is what they handed out before it existed, so a
-  provider whose links carry no credential is unaffected by construction
-  rather than by the caller remembering to ask first.
+  room's own URL, so a provider whose links carry no credential is
+  unaffected by construction rather than by the caller remembering to ask
+  first.
   """
   @spec shared_join_url(MeetingContext.t(), DateTime.t() | nil) ::
           {:ok, String.t() | nil} | {:error, term()}
@@ -137,8 +137,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
         room_data: room_data
       }) do
     if callback_exported?(provider_module, :time_bound_join_urls?, 1) do
-      # Optional callback resolved at runtime via the guard above; apply/3
-      # keeps the static type checker from flagging providers that omit it.
       # credo:disable-for-next-line Credo.Check.Refactor.Apply
       apply(provider_module, :time_bound_join_urls?, [room_data.provider_config || %{}])
     else
@@ -223,8 +221,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
         {:ok, provider_module} ->
           if callback_exported?(provider_module, :update_meeting_room, 2) do
             with_breaker(provider_type, config, fn ->
-              # Optional callback resolved at runtime via the guard above; apply/3
-              # keeps the static type checker from flagging providers that omit it.
               # credo:disable-for-next-line Credo.Check.Refactor.Apply
               apply(provider_module, :update_meeting_room, [room_id, config])
             end)
@@ -246,9 +242,9 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   @doc """
   Deletes a meeting room on the provider's side.
 
-  Providers without a server-side meeting object return `:ok` without action,
-  and so does a room the provider no longer has, which is what a delete wants:
-  deleting stays idempotent whichever way a provider words "not found".
+  As with `update_meeting_room/3`, a provider without a server-side meeting
+  object returns `:ok`. A room the provider no longer has returns `:ok` too,
+  keeping deletion idempotent whichever way a provider words "not found".
   """
   @spec delete_meeting_room(atom(), String.t(), map()) :: :ok | {:error, term()}
   def delete_meeting_room(provider_type, room_id, config) do
@@ -263,8 +259,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
           if callback_exported?(provider_module, :delete_meeting_room, 2) do
             result =
               with_breaker(provider_type, config, fn ->
-                # Optional callback resolved at runtime via the guard above; apply/3
-                # keeps the static type checker from flagging providers that omit it.
                 # credo:disable-for-next-line Credo.Check.Refactor.Apply
                 apply(provider_module, :delete_meeting_room, [room_id, config])
               end)

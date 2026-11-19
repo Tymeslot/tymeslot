@@ -98,8 +98,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   wrong (e.g., Zimbra).
 
   Pure I/O: rate limiting the connection test is the caller's job
-  (`Tymeslot.Integrations.Calendar.Connection.test_connection/2`), not this
-  module's — charging a token here as well as there would tax one click twice.
+  (`Tymeslot.Integrations.Calendar.Connection.test_connection/2`, through
+  `ConnectionProbe`), not this module's: that path already charges a token, so
+  charging one here as well would charge one click twice.
   """
   @spec test_connection(Base.client(), keyword()) ::
           {:ok, String.t()} | {:error, Base.error_reason()}
@@ -159,9 +160,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   Attempts the guessed discovery path first; on failure follows the full RFC
   4791 principal chain. Returns `CalendarEntry` structs.
 
-  Pure I/O: rate limiting discovery is the caller's job
-  (`Tymeslot.Integrations.Calendar.Discovery`), not this module's — charging
-  a token here as well as there would tax one discovery request twice.
+  Pure I/O, like `test_connection/2`: rate limiting discovery is the caller's
+  job (`Tymeslot.Integrations.Calendar.Discovery`), which already charges a
+  token, so charging one here as well would charge one request twice.
   """
   @spec discover_calendars(Base.client(), keyword()) ::
           {:ok, [CalendarEntry.t()]} | {:error, Base.error_reason()}
@@ -236,14 +237,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   # The URL the account owner supplied is asked first, because it is the only
   # place we have positive evidence a CalDAV server lives. On a server mounted
   # under a subpath (`https://host/caldav/`) it is also the *only* candidate
-  # that answers at all — the origin root 404s — which is what made a wrong
-  # guessed path unrecoverable there: this fallback existed to rescue a bad
-  # guess and opened by discarding the one path the user had actually given
-  # us. The origin root stays as the second candidate, for servers that answer
-  # at `/` but not at whatever specific collection URL was pasted.
+  # that answers at all — the origin root 404s. The origin root is the second
+  # candidate, for servers that answer at `/` but not at whatever specific
+  # collection URL was pasted.
   #
   # A base URL that already *is* the origin root collapses to a single
-  # candidate, so the common case costs exactly the requests it did before.
+  # candidate, so the common case costs one principal probe, not two.
   defp principal_probe_urls(client) do
     as_supplied = String.trim_trailing(client.base_url, "/") <> "/"
 
@@ -341,13 +340,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
 
     case CalendarCircuitBreaker.with_breaker(provider, opts, fun) do
       {:error, :circuit_breaker_error} = error ->
-        # The breaker now catches a non-local exit from the discovery call
-        # (the breaker process itself dying between calls, or the discovery
-        # task exiting) and folds it into this sentinel rather than letting it
-        # crash the caller. Discovery has always surfaced that as a genuine
-        # crash to callers running it inside an async task (onboarding's
-        # CalDAV step relies on the crash-recovery path), so re-raise it here
-        # rather than let it flatten into an ordinary discovery error.
+        # The breaker folds a non-local exit from the discovery call (the
+        # breaker process dying between calls, or the discovery task exiting)
+        # into this sentinel. Callers running discovery inside an async task
+        # (onboarding's CalDAV step) rely on the crash-recovery path, so exit
+        # here rather than let it flatten into an ordinary discovery error.
         exit(error)
 
       other ->

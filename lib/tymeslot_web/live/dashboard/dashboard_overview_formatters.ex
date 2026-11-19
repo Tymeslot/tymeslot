@@ -25,9 +25,9 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewFormatters do
   @doc """
   The countdown text for an entry `seconds` away.
 
-  Shared with `AppointmentDetails`, which renders the same entry: the two used
-  to carry the same gettext msgid and disagree below a minute, one showing
-  "in 0m" where the other clamped to "in 1m". A countdown that reads zero is
+  Shared with `AppointmentDetails`, which renders the same entry: the two
+  share one gettext msgid and clamp the same way below a minute, so neither
+  shows "in 0m" where the other shows "in 1m". A countdown that reads zero is
   the wrong one.
   """
   @spec countdown(integer()) :: String.t()

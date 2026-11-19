@@ -18,11 +18,8 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
   # the same window as everything else.
   @arbitrary_host_connection_test_limit 5
 
-  # Unchanged from when discovery was keyed on an IP — only the key changed,
-  # so the budget a single actor gets stays what it always was. Discovery
-  # shares `@connection_test_window_ms` with every other bucket (the two
-  # windows happened to already be identical), just its own tighter-than-some
-  # limit.
+  # Discovery shares `@connection_test_window_ms` with every other bucket and
+  # has its own limit.
   @discovery_limit 30
 
   @typedoc """
@@ -31,10 +28,9 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
   Always `{:user, user_id}` — the user who clicked "Test connection" or is
   setting up an integration. Never one instance-wide bucket: the actor is
   always required, a caller with no actor context is a bug at the call site,
-  not a case to fall back to a shared bucket for. A scheduled background
-  health probe never reaches this function at all — it is unmetered by
-  construction, see `Tymeslot.Integrations.Shared.ConnectionProbe`'s
-  `:background` clause — so there is no competing "integration" actor here.
+  not a case to fall back to a shared bucket for. Scheduled background
+  health probes are unmetered, so there is no "integration" actor here; see
+  `Tymeslot.Integrations.Shared.ConnectionProbe`'s `:background` clause.
   """
   @type connection_scope :: {:user, pos_integer()}
 

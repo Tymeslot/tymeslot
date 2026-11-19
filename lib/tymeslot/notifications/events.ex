@@ -22,7 +22,8 @@ defmodule Tymeslot.Notifications.Events do
   @doc """
   Handles meeting creation event.
 
-  Raised at most once per meeting. A booking with a video room defers this
+  Raised once per booking (a reschedule into the approval gate is the one
+  exception, below). A booking with a video room defers this
   event to `Tymeslot.Workers.VideoRoomWorker` so the payload can carry the join
   link, and that job announces the booking without one if the room is taking
   too long — a room that then arrives on a later attempt would otherwise fan
@@ -246,11 +247,10 @@ defmodule Tymeslot.Notifications.Events do
   releasing every live seat's own confirmation email.
 
   A group meeting never raises `meeting_created/1` here.
-  `Seats.seat_booked_deferred/3` already fanned its webhook/Telegram/Slack
-  integrations out per seat at booking time, and reminders were already
-  scheduled once, at whichever seat's booking created the meeting (see
-  `Tymeslot.Bookings.SeatEffects`).
-  Re-raising the full event on top of that duplicated it with a payload
+  `Seats.seat_booked_deferred/3` fans its webhook/Telegram/Slack integrations
+  out per seat at booking time, and `Tymeslot.Bookings.SeatEffects` schedules
+  the reminders once, at whichever seat's booking created the meeting.
+  Raising the full event on top of that would duplicate both, with a payload
   carrying no attendee at all, since a group meeting row has none of its own.
 
   Only the confirmation email was ever waiting on this: exactly one seat's,
@@ -341,7 +341,6 @@ defmodule Tymeslot.Notifications.Events do
     # never fail the cancellation itself.
     cancel_reminders(meeting)
 
-    # Webhooks, Telegram and Slack; none of them fails the cancellation.
     if integrations?(opts), do: dispatch_integrations(:meeting_cancelled, meeting)
 
     result
@@ -365,7 +364,6 @@ defmodule Tymeslot.Notifications.Events do
     # Reminders were re-pinned to the new time in the reschedule's own
     # transaction (`Tymeslot.Bookings.Reschedule`), so they committed with it.
 
-    # Webhooks, Telegram and Slack; none of them fails the reschedule.
     dispatch_integrations(:meeting_rescheduled, updated_meeting)
 
     result
@@ -385,7 +383,8 @@ defmodule Tymeslot.Notifications.Events do
     cancel_reminders_strict(meeting)
   end
 
-  # A meeting-level event on a group meeting reaches integrations once per
+  # Webhooks, Telegram and Slack; none of them fails the event that raised
+  # it. A meeting-level event on a group meeting reaches integrations once per
   # live seat, each as that seat's booking: the slot row has no attendee, and
   # one event for it would name nobody.
   defp dispatch_integrations(event, %MeetingSchema{} = meeting) do

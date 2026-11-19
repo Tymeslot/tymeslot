@@ -13,8 +13,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerSettings do
     * `focus`: whether focus mode hides the dashboard menu,
     * `desktop_reminders`: whether desktop notifications are on.
 
-  Every key is always sent, at its default until the task that gives it a
-  control fills it, so the hook never meets a missing one.
+  Every key is always sent, at its default when nothing sets it, so the hook
+  never meets a missing one.
   """
 
   import Phoenix.Component, only: [assign: 2]

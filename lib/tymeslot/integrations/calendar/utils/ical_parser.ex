@@ -25,15 +25,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     start_time = System.monotonic_time()
     size = byte_size(ical_content)
 
-    # Parsing iCal content
-
     # Normalize line endings and trim
     content = normalize_content(ical_content)
 
     result =
       if valid_ical_format?(content) do
         events = extract_events(content)
-        # Successfully parsed events
         {:ok, events}
       else
         Logger.error("Invalid iCal format")

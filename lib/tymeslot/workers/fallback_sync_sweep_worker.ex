@@ -41,10 +41,9 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   @batch_stagger_seconds 1
 
   # Forced full fetch: every 24 hours to recover events missed by Tier 1/2
-  # delta-based optimisations. Was 12 hours before the reconcile transaction
-  # was made atomic (see SyncReconciler.process_full_fetch/6) — with the
-  # cache now guaranteed to commit cleanly, the safety-net cadence can be
-  # slower without increasing the risk of persistent drift.
+  # delta-based optimisations. The reconcile transaction is atomic (see
+  # SyncReconciler.process_full_fetch/6), so the cache always commits cleanly
+  # and a slow safety-net cadence does not risk persistent drift.
   @forced_full_fetch_interval_seconds 24 * 3600
 
   # Spread forced full-fetch jobs over the next 15 minutes to avoid thundering

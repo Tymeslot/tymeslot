@@ -1,7 +1,6 @@
 defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   @moduledoc """
   Rhythm theme component for the booking/contact form step.
-  Updated to use form struct and shared patterns.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -214,10 +213,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
   defp guests_allowed?(assigns), do: GuestBooking.guests_allowed?(assigns)
 
-  # "Submit" is vague enough to survive a gated meeting type, but naming the
-  # action makes the difference visible at the moment of committing —
-  # including on a reschedule, which re-enters the approval gate on a gated
-  # type just as a fresh submission does.
+  # Naming the action makes a gated meeting type's request visible at the
+  # moment of committing; a reschedule re-enters the approval gate too.
   defp single_label(is_rescheduling, meeting_type) do
     BookingLabels.submit_label(
       is_rescheduling,

@@ -220,9 +220,9 @@ config :tymeslot, :email_service, Tymeslot.EmailServiceMock
 config :tymeslot, :transcoder, Tymeslot.Media.TranscoderMock
 config :tymeslot, :health_check_module, Tymeslot.Integrations.HealthCheckMock
 
-# Flag a CalDAV integration on the first rejected sync, as before the
-# threshold existed, so tests about what flagging does need not first fail
-# the sync three times. The threshold itself is tested with its own value.
+# Flag a CalDAV integration on the first rejected sync, so tests about what
+# flagging does need not first fail the sync three times. The threshold itself
+# is tested with its own value.
 config :tymeslot, :caldav_reauth_after_failed_cycles, 1
 
 # MiroTalk test configuration
@@ -336,8 +336,8 @@ config :tymeslot, Tymeslot.Integrations.HealthCheck,
 # so it respects the TEST_PORT env var.
 # Failure screenshots go to the system temp directory, not into the checkout:
 # they are disposable artefacts of a failed run, and writing them under test/
-# left untracked PNGs behind after every red e2e run. Wallaby mkdir_p's the
-# directory itself, so nothing has to create it.
+# would leave untracked PNGs behind. Wallaby mkdir_p's the directory itself,
+# so nothing has to create it.
 # CHROME_BINARY names the browser on machines without the snap, as in SaaS.
 # Wallaby's own lookup of google-chrome on PATH does not help: a configured
 # binary replaces whatever it found, even when the path does not exist.
