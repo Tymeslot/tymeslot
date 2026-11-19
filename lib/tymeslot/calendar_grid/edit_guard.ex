@@ -30,6 +30,16 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
       booking refuses as it refuses a change of timing, under the move rate
       limit (`move_rate_limit/1`) rather than the edit one.
 
+  `write_gates/3` is what the domain asks itself before every write it
+  makes (`EventEdit.update_event/4`, `ScheduledDelete.schedule/4` and the
+  delete when it runs), whoever called it: `writable/2` against the
+  organiser's own integration, loaded by the event's
+  `calendar_integration_id`, the booking copy's rule when the change is one
+  of timing, and `seat_lock/2`. The rate limits stay with the callers, which
+  count an organiser's actions rather than the writes they turn into; the
+  calendar asks `check/3` first anyway, so it can refuse before drawing the
+  change.
+
   `free_busy_editable?/2` says whether the organiser may change an event's
   Busy/Free: a booking, and the calendar copy of one, follow their meeting
   type's "show as free" setting, so neither may. `free_busy_change/1` is
@@ -47,10 +57,14 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   """
 
   alias Tymeslot.CalendarGrid.EventDeletion
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.RateLimiter
+
+  # The fields a change of timing writes.
+  @timing_fields [:all_day, :start_at, :end_at, :start_date, :end_date]
 
   @type refusal ::
           {:error, :booking | :unauthorized | :read_only | :group_booking | :syncing}
@@ -213,6 +227,37 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
     case RateLimiter.check(:calendar_event_move, user_id) do
       :ok -> :ok
       {:error, :rate_limited, message} -> {:error, :rate_limited, message}
+    end
+  end
+
+  @doc """
+  Whether `changes` (cache fields to their new values) change the event's
+  timing, which the copy of a booking refuses (`check_timing/3`).
+  """
+  @spec timing_change?(map()) :: boolean()
+  def timing_change?(changes), do: Enum.any?(@timing_fields, &is_map_key(changes, &1))
+
+  @doc """
+  The gates the domain asks before writing to, or deleting, `event` for
+  `user_id`: it sits on a writable calendar of an active integration of
+  theirs (`writable/2`), is not the copy of a booking when the change is
+  one of `:timing`, and is not held by live seats. No rate limit; see the
+  moduledoc. An integration that is not theirs refuses as `:unauthorized`.
+  """
+  @spec write_gates(pos_integer(), map(), :change | :timing) ::
+          :ok | {:error, :booking | :unauthorized | :read_only | :group_booking | :syncing}
+  def write_gates(user_id, event, kind) when kind in [:change, :timing] do
+    with :ok <- writable(own_integration(user_id, event), event),
+         :ok <- if(kind == :timing, do: not_booking_copy(event), else: :ok),
+         do: seat_lock(user_id, event)
+  end
+
+  defp own_integration(user_id, event) do
+    with id when is_integer(id) <- Map.get(event, :calendar_integration_id),
+         {:ok, %{is_active: true} = integration} <- Calendar.get_integration(id, user_id) do
+      [integration]
+    else
+      _not_theirs -> []
     end
   end
 

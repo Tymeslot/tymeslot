@@ -188,7 +188,6 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
     caldav: caldav
   } do
     meeting = insert(:meeting, organizer_user: user, organizer_user_id: user.id, capacity: 2)
-    insert(:participant, meeting: meeting)
 
     event =
       insert(:provider_calendar_event,
@@ -198,6 +197,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
       )
 
     {:ok, token} = Changes.schedule_delete(user.id, event, :occurrence, delay: 0)
+    insert(:participant, meeting: meeting)
     assert %{success: 1} = Oban.drain_queue(queue: :calendar_events, with_scheduled: true)
 
     assert_receive {:calendar_delete_result, _user_id, ^token, {:failed, :group_booking}}
@@ -211,8 +211,11 @@ defmodule Tymeslot.CalendarGrid.ScheduledDeleteTest do
       event: event
     } do
       second = insert(:provider_calendar_event, calendar_integration: caldav, provider: "caldav")
-      third = insert(:provider_calendar_event, calendar_integration: caldav, provider: "caldav")
       other = insert(:user)
+      other_caldav = insert(:calendar_integration, user: other, provider: "caldav")
+
+      third =
+        insert(:provider_calendar_event, calendar_integration: other_caldav, provider: "caldav")
 
       {:ok, first_token} = Changes.schedule_delete(user.id, event, :occurrence, [])
       {:ok, second_token} = Changes.schedule_delete(user.id, second, :series, [])

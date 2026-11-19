@@ -37,10 +37,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
-  # A change of any of these is a change of timing, which the calendar copy
-  # of a booking also refuses (`EditGuard.check_timing/3`).
-  @timing_fields [:all_day, :start_at, :end_at, :start_date, :end_date]
-
   @doc """
   Writes `changes` (fields `Tymeslot.CalendarGrid.EventEdit` takes) to the
   event `event_id`: a loaded event, or the panel's own when a reload has
@@ -299,7 +295,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEdits do
   defp guard(socket, event, changes) do
     %{current_user: user, integrations: integrations} = socket.assigns
 
-    if Enum.any?(Map.keys(changes), &(&1 in @timing_fields)),
+    if EditGuard.timing_change?(changes),
       do: EditGuard.check_timing(user.id, integrations, event),
       else: EditGuard.check(user.id, integrations, event)
   end

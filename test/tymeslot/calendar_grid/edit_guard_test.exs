@@ -270,4 +270,13 @@ defmodule Tymeslot.CalendarGrid.EditGuardTest do
                {:error, :read_only}
     end
   end
+
+  describe "timing_change?/1" do
+    test "a change of any timing field is one of timing, anything else is not" do
+      for field <- [:all_day, :start_at, :end_at, :start_date, :end_date],
+          do: assert(EditGuard.timing_change?(%{field => nil}), "#{field}")
+
+      refute EditGuard.timing_change?(%{summary: "Renamed", reminders: []})
+    end
+  end
 end
