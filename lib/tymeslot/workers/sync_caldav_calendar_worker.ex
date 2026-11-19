@@ -56,10 +56,12 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.ProviderBreakers
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Management
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Workers.CalendarSyncJob
@@ -91,8 +93,9 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   @behaviour ExpectedJobOutcome
 
   # The integration is gone, or only its owner can fix it by reconnecting.
-  # A server error or a server that never answered is retried by the next sync. The deletion circuit breaker
-  # refusing a sync is recorded.
+  # A server error or a server that never answered is retried by the next
+  # sync, and a refusal (`@server_refused`) is the owner's server
+  # configuration. The deletion circuit breaker refusing a sync is recorded.
   @integration_gone "Integration not found"
   @rejections [:unauthorized, :forbidden]
 
@@ -104,6 +107,12 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   @server_unreachable "CalDAV server did not respond; the next scheduled sync will retry"
   @too_large "CalDAV server returned more data than Tymeslot can process at once"
   @free_busy_unreadable "A CalDAV calendar shared as busy times only could not be read; its last busy times are kept and the next scheduled sync will retry"
+  @server_refused "CalDAV server refused the sync request"
+
+  # An open breaker is waited out with a snooze, which from Oban 2.24 costs no
+  # attempt; without a bound a host whose breaker never closes would keep the
+  # job snoozing for ever, with no alert.
+  @max_circuit_open_snoozes 12
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
@@ -118,12 +127,21 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         @server_unreachable,
         @too_large,
         @free_busy_unreadable
-      ] or reason == ReauthHandling.discard_reason()
+      ] or reason == ReauthHandling.discard_reason() or refusal?(reason)
+
+  defp refusal?(reason) when is_binary(reason),
+    do: String.starts_with?(reason, @server_refused <> ": ")
+
+  defp refusal?(_reason), do: false
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
     force_full_fetch? = Map.get(args, "force_full_fetch", false) == true
-    CalendarSyncJob.run(job, &sync(&1, force_full_fetch?))
+
+    CalendarSyncJob.run(job, &sync(&1, force_full_fetch?),
+      max_snoozes: @max_circuit_open_snoozes,
+      exhausted_reason: "CalDAV server's circuit breaker did not close within the maximum wait"
+    )
   end
 
   defp sync(integration, force_full_fetch?) do
@@ -240,6 +258,23 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     {:discard, @server_error}
   end
 
+  # The host's breaker refused the cycle because the server had already been
+  # failing, so nothing was sent and nothing about this integration was
+  # learnt. The breaker is keyed by host, not by integration: on a shared
+  # host one account's outage opens it for every account there. Retrying
+  # inside Oban's minute would only be refused again and then page an
+  # operator once the attempts ran out; the job snoozes past the breaker's
+  # recovery window instead, as the Google, Outlook and Exchange sync workers
+  # do, and is neither recorded against the integration nor counted by its
+  # health state.
+  defp handle_sync_result({:error, :circuit_open}, integration) do
+    Logger.warning("CalDAV circuit breaker open; snoozing sync",
+      calendar_integration_id: integration.id
+    )
+
+    {:snooze, circuit_open_snooze_seconds()}
+  end
+
   # The remote never answered: a read that timed out, a connection that failed,
   # or a server that took the connection and then went quiet. Same shape as the
   # 5xx above (the remote's condition, not the request's), and `Base` has
@@ -280,7 +315,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # the integration.
   defp handle_sync_result({:error, reason} = result, _integration) do
     if CalDAVErrors.terminal_error?(reason) do
-      {:discard, "CalDAV server refused the sync request: #{refusal(reason)}"}
+      {:discard, "#{@server_refused}: #{refusal(reason)}"}
     else
       result
     end
@@ -288,7 +323,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   # The failures that flag the integration for reconnection record their own
   # reason with the flag, and the deletion breaker's refusal resolves itself
-  # without the owner. Every other failure is stored as the owner-facing
+  # without the owner, as does an open host breaker, which sent nothing to
+  # learn from. Every other failure is stored as the owner-facing
   # sentence, which the integration card shows while the sync is unhealthy.
   # A successful cycle clears it in `SyncHealth.record_outcome/2`.
   @recorded_elsewhere [
@@ -296,7 +332,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     :forbidden,
     :booking_calendar_missing,
     :no_calendar_paths,
-    :suspicious_bulk_deletion
+    :suspicious_bulk_deletion,
+    :circuit_open
   ]
 
   defp record_failure(integration, {:error, reason}) when reason not in @recorded_elsewhere do
@@ -308,11 +345,24 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # A cycle that synced, or failed any other way, ends the run of rejections
   # the threshold counts: a 401 after it starts a new run rather than
   # confirming the old one.
-  defp break_rejection_streak(_integration, {:error, reason}) when reason in @rejections,
-    do: :ok
+  defp break_rejection_streak(_integration, {:error, reason})
+       when reason in [:circuit_open | @rejections],
+       do: :ok
 
   defp break_rejection_streak(integration, _result),
     do: HealthCheck.clear_credential_rejections(:calendar, integration.id)
+
+  # Long enough to clear the longest `recovery_timeout` any CalDAV-based
+  # breaker has (see `ProviderBreakers`), so the snoozed job wakes to a breaker
+  # that will at least let it probe rather than to a second refusal.
+  defp circuit_open_snooze_seconds do
+    longest_ms =
+      ProviderConfig.caldav_based_providers()
+      |> Enum.map(&ProviderBreakers.config(:calendar, &1).recovery_timeout)
+      |> Enum.max()
+
+    div(longest_ms, 1_000) + 10
+  end
 
   # The discard reason is what an operator reads on the job record, so it keeps
   # the status the owner-facing sentence leaves out.
