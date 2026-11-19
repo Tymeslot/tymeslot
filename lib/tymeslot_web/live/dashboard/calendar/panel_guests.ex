@@ -78,9 +78,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
          :ok <- new_guest(event, email),
          :ok <- room_for_one_more(event),
          :ok <- gates(socket, event) do
-      [%{name: name}] = Guests.with_names([email], %{email => typed.name})
-      added = Attendee.new(email: email, display_name: name)
-      guests = of(event) ++ [added]
+      guests = of(event) ++ [invitee(email, typed.name)]
 
       socket
       |> write(event, guests)
@@ -93,6 +91,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   end
 
   def invite(socket, _raw), do: socket
+
+  # The guest added, with the name typed if it is one a guest can be given.
+  defp invitee(email, name) do
+    [%{name: name}] = Guests.with_names([email], %{email => name})
+    Attendee.new(email: email, display_name: name)
+  end
 
   @doc "Typing in the guest field clears what it said about the last address."
   @spec typed(socket()) :: socket()
