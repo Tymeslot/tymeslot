@@ -54,7 +54,6 @@ defmodule TymeslotWeb.Plugs.EnsureLocalAccessPlug do
 
     case conn.remote_ip do
       {127, 0, 0, 1} -> true
-      # IPv6 localhost
       {0, 0, 0, 0, 0, 0, 0, 1} -> true
       # Docker internal networks (if enabled)
       {172, second, _c, _d} when allow_docker and second >= 16 and second <= 31 -> true

@@ -52,17 +52,18 @@ defmodule Mix.Tasks.Precommit do
   tracks per-module hashes and re-analyses only what changed (timings are in
   `Mix.Tasks.Dialyzer.Incremental`). Both modes give the same warnings, skips
   and exit status, so `mix dialyzer` remains the cross-check to run when a
-  warning here looks wrong. `--list-unused-filters`
-  is passed explicitly because the incremental task takes it as an argument
-  rather than reading `:list_unused_filters` from the `dialyzer:` config.
+  warning here looks wrong. `--list-unused-filters` is passed explicitly
+  because the incremental task takes it as an argument rather than reading
+  `:list_unused_filters` from the `dialyzer:` config.
 
   ## Why the suite is partitioned
 
   Synchronous modules dominate the suite's wall clock, so it is split into
   `mix test --partitions` runs sized to the cores the run may use: on an idle
   16-core host that takes it from 126s to about 60s.
-  `PRECOMMIT_TEST_PARTITIONS` forces the count. See `Tymeslot.Precommit.CpuBudget` for the sizing and
-  `Tymeslot.Precommit.Runner` for how partitions get their own databases.
+  `PRECOMMIT_TEST_PARTITIONS` forces the count. See
+  `Tymeslot.Precommit.CpuBudget` for the sizing and `Tymeslot.Precommit.Runner`
+  for how partitions get their own databases.
 
   ## Why each step is a separate process
 

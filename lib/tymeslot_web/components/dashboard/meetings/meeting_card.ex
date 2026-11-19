@@ -505,10 +505,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   defp registration_closed?(_meeting), do: false
 
   # A solo card is titled after its attendee. A group card has no single
-  # attendee, and a meeting from a poll has no such attendee either, so they are named
-  # after what was booked: `title` is a required field on every meeting,
-  # snapshotted at creation, so it survives the meeting type being edited or
-  # deleted.
+  # attendee, and a meeting from a poll has no booker (its attendee is a guest
+  # like the others, `HostManaged`), so they are named after what was booked:
+  # `title` is a required field on every meeting, snapshotted at creation, so
+  # it survives the meeting type being edited or deleted.
   defp meeting_title(meeting) do
     if Helpers.group_meeting?(meeting) or HostManaged.managed?(meeting),
       do: group_title(meeting),

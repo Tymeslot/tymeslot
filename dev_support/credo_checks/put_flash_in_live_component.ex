@@ -11,10 +11,10 @@ defmodule CredoChecks.PutFlashInLiveComponent do
   `send/2` a `{:flash, {type, message}}` message to the current process, which
   the parent LiveView forwards to the real flash via `handle_info/2`.
 
-  `lib/tymeslot_web/live/dashboard/payments_settings_component.ex:17-19`
-  documents the same precedent in its own moduledoc: "Flash messages are
-  forwarded to the parent LiveView via `Flash` (a bare `put_flash/3` inside a
-  LiveComponent never reaches the rendered flash group)."
+  `TymeslotWeb.Dashboard.PaymentsSettingsComponent` documents the same
+  precedent in its moduledoc: "Flash messages are forwarded to the parent
+  LiveView via `Flash` (a bare `put_flash/3` inside a LiveComponent never
+  reaches the rendered flash group)."
 
   ## What to do instead
 

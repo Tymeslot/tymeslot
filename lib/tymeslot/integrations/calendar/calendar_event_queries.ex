@@ -124,8 +124,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueries do
   and are allowed to block availability.
 
   This is the **availability** read at row level: `display_only` rows are
-  excluded, as `list_for_range/4`'s sibling read explains above, and
-  `busy_only` rows, which the display read excludes, are returned here.
+  excluded, for the reason `in_range/3`'s doc gives, and `busy_only` rows,
+  which the display read excludes, are returned here.
 
   `in_range/2` is the same read in canonical `CalendarEvent` terms and is
   defined in terms of this one, so the two cannot disagree about which rows may

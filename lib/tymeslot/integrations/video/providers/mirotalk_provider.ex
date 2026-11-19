@@ -333,7 +333,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     config = room_data.provider_config
 
     if room_id != "" and participant_name != "" and config do
-      # The join API expects only the room name; see `extract_room_id/1`.
+      # The stored room id can be the full meeting URL (MiroTalk's `meeting`
+      # field), but the join API and its token take only the room name, the
+      # URL's last path segment.
       room_name = extract_room_id(room_id)
 
       # We prefer using the MiroTalk API to generate the join URL.

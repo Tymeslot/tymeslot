@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Components.CoreComponents.Buttons do
   @moduledoc """
-  Button components extracted from CoreComponents.
+  The core button components (`action_button/1`, `action_link/1`,
+  `loading_button/1`, `icon_button/1`), and `button_classes/2` for an element
+  that cannot be one of them.
 
   `action_button/1` and `action_link/1` share one look: the same variants and
   sizes, so a control that navigates and one that pushes an event sit side by

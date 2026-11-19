@@ -12,8 +12,7 @@ defmodule Tymeslot.Availability.Window do
 
   Every reader of a window goes through here (the schemas, the break rules,
   the slot engine and the editor's wire format), so what "+1" means has one
-  answer. A same-day window (`ends_next_day` false) has its end after its start
-  on the same date.
+  answer.
   """
 
   alias Tymeslot.Utils.DateTimeUtils

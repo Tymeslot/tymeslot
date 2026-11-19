@@ -140,8 +140,9 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
       virtual fields) is included so callers can flag `needs_reauth` without
       needing to re-query.
 
-  Callers must add a `{:error, :requires_reencryption, integration}` clause and
-  route to `Tymeslot.Integrations.Video.handle_reauth_required/1` (for background
+  Callers must handle the `{:error, :requires_reencryption, integration}`
+  clause as well as `{:ok, _}` and `{:error, :not_found}`, and route it to
+  `Tymeslot.Integrations.Video.handle_reauth_required/1` (for background
   workers) or surface a reconnect prompt (for the web layer).
   """
   @spec get_for_user(integer(), integer()) ::

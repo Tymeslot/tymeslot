@@ -90,10 +90,10 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
   the flag could not be recorded. When they do not decrypt because their key
   is missing from the keyring, the answer is the same
   `{:error, :requires_reencryption}`, but nothing is flagged: the operator is
-  alerted instead (`Tymeslot.Integrations.Shared.ReauthHandling.flag/3`). An integration deleted before the re-read
-  is `{:error, :integration_not_found}`, distinct from an event's
-  `:not_found`. A wait for another holder of the lock that outlasts the lock
-  timeout is `{:error, :lock_timeout}`.
+  alerted instead (`Tymeslot.Integrations.Shared.ReauthHandling.flag/3`). An
+  integration deleted before the re-read is `{:error, :integration_not_found}`,
+  distinct from an event's `:not_found`. A wait for another holder of the lock
+  that outlasts the lock timeout is `{:error, :lock_timeout}`.
 
   ## Options
 

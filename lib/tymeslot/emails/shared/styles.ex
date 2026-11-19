@@ -1,6 +1,6 @@
 defmodule Tymeslot.Emails.Shared.Styles do
   @moduledoc """
-  Public facade for the Tymeslot email design system — 2026 redesign.
+  Public facade for the Tymeslot email design system.
 
   The system is split across three focused sub-modules:
 

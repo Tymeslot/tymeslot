@@ -163,10 +163,9 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
     do: dgettext("auth", "You must be logged in to access this page.")
 
   # The login path lives in the same `:tymeslot, :auth` keyword list the
-  # post-login redirect reads. Config exposes no
-  # public reader for this key (only `success_redirect_path/0`), so the
-  # lookup stays here, guarded the same way `Config.success_redirect_path/0`
-  # guards its own read.
+  # post-login redirect reads. Config exposes no public reader for this key
+  # (only `success_redirect_path/0`), so the lookup stays here, guarded the
+  # same way `Config.success_redirect_path/0` guards its own read.
   defp login_path do
     case Application.get_env(:tymeslot, :auth) do
       config when is_list(config) -> Keyword.get(config, :login_path, "/auth/login")

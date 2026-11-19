@@ -442,10 +442,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   # one the row is filed under, then the integration's booking collection,
   # which is where `ClientManager.booking_client/1` writes and so where a
   # Tymeslot-created event with no href yet actually lives, and only then the
-  # first configured path. Taking the first path unconditionally is what built
+  # first configured path. Taking the first path unconditionally would build
   # the wrong URL for every integration whose booking calendar is not its
-  # first, and a CalDAV DELETE counts 404 as success, so that wrong URL
-  # reported the event deleted while it stayed on the server.
+  # first, and since a CalDAV DELETE counts 404 as success, would report the
+  # event deleted while it stays on the server.
   defp collection_path(row, integration) do
     case row.provider_calendar_id || CalendarPathResolver.resolve(integration) do
       path when is_binary(path) and path != "" -> {:ok, path}

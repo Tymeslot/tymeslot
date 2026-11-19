@@ -144,8 +144,9 @@ defmodule Tymeslot.Bookings.Policy do
 
       # As for cancelling, an expired meeting has already released its slot:
       # `MeetingState`'s `@occupying_statuses` excludes :expired, so conflict
-      # detection ignores it. Rescheduling would move it to a new time it does not reserve, and
-      # the attendee would be told about a booking anyone else can still take.
+      # detection ignores it. Rescheduling would move it to a new time it does
+      # not reserve, and the attendee would be told about a booking anyone else
+      # can still take.
       meeting.status == :expired ->
         {:error, {:not_reschedulable, :expired}}
 

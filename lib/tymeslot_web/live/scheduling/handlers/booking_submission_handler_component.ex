@@ -469,8 +469,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   #      blocks the submission with an explicit error.
   #
   #      The claim must therefore only ever come from a parameter a visitor
-  #      cannot trip over by accident, such as `?theme=`;
-  #      `PreviewMode.claimed?/1` alone owns that rule.
+  #      cannot trip over by accident (`?preview=`, never `?theme=`, which any
+  #      visitor's URL may carry); `PreviewMode.claimed?/1` alone owns that
+  #      rule.
   #
   #   3. Neither flag set — a normal public booking; dispatch to the real
   #      (or SaaS-demo-mode) orchestrator.

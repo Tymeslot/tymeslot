@@ -16,7 +16,8 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   makes the arrangement environment-independent. A computation that queries
   the database or meets a `Mox` expectation keeps the caller's sandbox
   connection and its mock allowances, neither of which a separate process
-  gets for free, so the computation always runs in the caller.
+  gets for free, so the coalescing path that runs under test is the same one
+  that runs in production.
 
   ## Invalidation
 

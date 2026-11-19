@@ -5,8 +5,8 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
 
   It sits behind `DashboardOverviewComponent`, which keeps the agenda view
   model and the events that rebuild it, as `CalendarSettings.ComponentView`
-  sits behind `CalendarSettingsComponent`. `agenda/1` receives the component's assigns
-  unchanged, so LiveView change tracking is preserved.
+  sits behind `CalendarSettingsComponent`. `agenda/1` receives the component's
+  assigns unchanged, so LiveView change tracking is preserved.
 
   The private function components here are the rail's vocabulary (cockpit,
   spine row, rail) and are only ever rendered from `agenda/1`; the rows

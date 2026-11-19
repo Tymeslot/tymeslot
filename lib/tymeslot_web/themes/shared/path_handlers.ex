@@ -310,7 +310,9 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # (a full redirect) and the patch that keeps the address bar in step with
   # every choice (`ChoicesInUrl`), whose URL a reconnect remounts from. The
   # route stays the one the visit started on, which is what
-  # `entered_via_overview` is read from.
+  # `entered_via_overview` is read from: a type chosen on the overview goes
+  # as `duration` only on the overview route (`overview_choice/1`), and a
+  # meeting type's own link names its type in the path.
   #
   # A time no longer free is dropped on arrival, as a deep link's is. The day
   # and time are wall clock in the visitor's timezone, so a zone the visitor
@@ -320,9 +322,9 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # screen goes as `step`. The series chosen for the slot goes as `series`
   # (`Journey.Facts.Series.to_param/1`), which the page checks again on
   # arrival. The answers and the details are not carried (the details form is
-  # recovered by LiveView's form recovery), nor is anything on an outcome:
-  # carried, a reload of the confirmation would land on the details for the
-  # slot just booked.
+  # recovered by LiveView's form recovery), nor is anything on an outcome,
+  # whose choices are a booking already made: carried, they would land a
+  # reload of the confirmation on the details for the slot just booked.
   defp put_choices(params, assigns) do
     if assigns[:current_state] in [:confirmation, :awaiting_payment] do
       params
@@ -367,9 +369,11 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   defp route(assigns), do: assigns[:live_action]
 
-  # `theme` is emitted here and on a demo page (`demo_theme_param/1`, only for
-  # a theme the visitor chose), never from `:theme_id`: the dispatcher always
-  # sets that assign, so it says nothing about whether anyone is previewing.
+  # `theme` is emitted only for a preview (here), an embed
+  # (`put_embed_params/2`) and a demo page (`demo_theme_param/1`, only for a
+  # theme the visitor chose), never for every switch just because `:theme_id`
+  # is set: the dispatcher always sets that assign, so it says nothing about
+  # whether anyone is previewing.
   #
   # The preview parameters have to be rebuilt as a set, not one by one. A locale
   # switch is a full external redirect, so the LiveView that comes back has no
@@ -397,8 +401,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # Every value comes from what the page already validated, never from the raw
   # params: `:embedded` and `:embed_parent_origin` from the verified embed
   # token, the rest from the theme context. Carrying `theme` is safe here
-  # because a bare `theme=` is no longer a preview claim
-  # (`PreviewMode.claimed?/1`); the embed selected it and must keep it.
+  # because a bare `theme=` is never a preview claim (`PreviewMode.claimed?/1`);
+  # the embed selected it and must keep it.
   @doc """
   Adds the embed parameters of a verified embedded page to `params`; a page
   that is not embedded leaves them untouched.

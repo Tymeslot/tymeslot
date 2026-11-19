@@ -42,9 +42,10 @@ defmodule TymeslotWeb.CustomInputModeHelper do
   # value differently ("24 hours" vs "1 day") and translate in different gettext
   # domains. Only the values are shared.
   #
-  # The lists are the union of the values the two surfaces offer, so no value
-  # is missing from either; in particular the schema's own defaults are always
-  # presets, so a new user never opens in custom-input mode.
+  # Every value must pass the changeset that validates the field, or a
+  # one-click choice is rejected on submit, and each schedule default must be
+  # in its field's list, or that setting opens in custom-input mode for every
+  # new user with no tag highlighted. The module's tests check both.
   @buffer_presets [0, 5, 10, 15, 30, 45, 60]
 
   @presets %{

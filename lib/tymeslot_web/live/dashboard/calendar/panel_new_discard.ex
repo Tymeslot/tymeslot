@@ -1,12 +1,11 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PanelNewDiscard do
   @moduledoc """
   Leaving the side panel's New event state while its draft has guests,
-  who have not been invited yet: the panel asks first
-  (`DiscardDraftModal`), whether the organiser
-  pressed Cancel or the close button, or did something that takes the
-  panel's place: opened another event's preview (`calendar:open`), opened
-  one in the panel (`calendar:edit`), or chose More options on a new quick
-  create draft (`calendar:more_options`).
+  who have not been invited yet: the panel asks first (`DiscardDraftModal`),
+  whatever caused it, be it Cancel, the close button, or something that
+  takes the panel's place: the organiser opened another event's
+  preview (`calendar:open`), opened one in the panel (`calendar:edit`), or
+  chose More options on a new quick create draft (`calendar:more_options`).
 
   `hold/2` asks, keeping what was asked for in the prompt; Discard
   (`discard/1`) drops the draft and then carries it out, and Go back

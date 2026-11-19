@@ -98,8 +98,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   wrong (e.g., Zimbra).
 
   Pure I/O: rate limiting the connection test is the caller's job
-  (`Tymeslot.Integrations.Calendar.Connection.test_connection/2`), not this
-  module's.
+  (`Tymeslot.Integrations.Calendar.Connection.test_connection/2`, through
+  `ConnectionProbe`), not this module's: that path already charges a token, so
+  charging one here as well would charge one click twice.
   """
   @spec test_connection(Base.client(), keyword()) ::
           {:ok, String.t()} | {:error, Base.error_reason()}
@@ -160,7 +161,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   4791 principal chain. Returns `CalendarEntry` structs.
 
   Pure I/O, like `test_connection/2`: rate limiting discovery is the caller's
-  job (`Tymeslot.Integrations.Calendar.Discovery`).
+  job (`Tymeslot.Integrations.Calendar.Discovery`), which already charges a
+  token, so charging one here as well would charge one request twice.
   """
   @spec discover_calendars(Base.client(), keyword()) ::
           {:ok, [CalendarEntry.t()]} | {:error, Base.error_reason()}
