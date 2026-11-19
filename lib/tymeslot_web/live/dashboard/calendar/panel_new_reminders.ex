@@ -10,9 +10,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
   (`CreateParams.cast/5` holds it to its own limit). The add row's choices reach
   the form with its changes, and Add sends `panel:draft_add_reminder` (`add/2`),
   a plain button so that Enter in the form never adds a reminder; the remove
-  buttons send `panel:draft_drop_reminder` (`drop/3`). An Outlook calendar keeps
-  a single lead time and no method, so there the row offers one notification and
-  no method choice. A Tymeslot meeting sends reminder emails of its own
+  buttons send `panel:draft_drop_reminder` (`drop/3`). How many reminders the
+  draft's calendar keeps, and by which methods, is the domain's rule
+  (`CreateParams.reminder_capacity/1`): on Outlook, which keeps one
+  notification, the row offers one and no method choice. A Tymeslot meeting sends reminder emails of its own
   (`PanelMeetingReminders`) and a group event has none, so the field gives way
   to them.
   """
@@ -30,35 +31,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
   # The add row's fields, kept in the form as they change.
   @row_fields ~w(event_reminder_minutes event_reminder_method)
 
-  # Outlook keeps one lead time per event and no method
-  # (`Outlook.EventMapper`): a second reminder, or an email, would never
-  # reach it.
-  @single_reminder_providers ["outlook"]
-
   @doc "The add row's fields among a form change's `params`."
   @spec fields(map()) :: map()
   def fields(params), do: Map.take(params, @row_fields)
 
   @doc """
   The reminders the draft will be written with, on a calendar of
-  `provider`: all it holds, or for Outlook the first as a notification.
+  `provider`: those it holds that the calendar keeps
+  (`CreateParams.fit_reminders/2`).
   """
   @spec of(map(), String.t() | nil) :: [map()]
-  def of(form, provider \\ nil) do
-    reminders = form["event_reminders"] || []
+  def of(form, provider \\ nil),
+    do: CreateParams.fit_reminders(form["event_reminders"] || [], provider)
 
-    if single?(provider),
-      do: reminders |> Enum.take(1) |> Enum.map(&%{&1 | method: :popup}),
-      else: reminders
-  end
-
-  @doc "Whether a calendar of `provider` takes a single notification only."
+  @doc "Whether a calendar of `provider` keeps a single reminder method only."
   @spec single?(String.t() | nil) :: boolean()
-  def single?(provider), do: provider in @single_reminder_providers
+  def single?(provider), do: match?({_max, [_one]}, CreateParams.reminder_capacity(provider))
 
   @doc "The most reminders a calendar of `provider` takes."
   @spec max(String.t() | nil) :: pos_integer()
-  def max(provider), do: if(single?(provider), do: 1, else: CreateParams.max_reminders())
+  def max(provider), do: provider |> CreateParams.reminder_capacity() |> elem(0)
 
   @doc "The form's reminders as `CreateParams.cast/5` reads them, for a calendar of `provider`."
   @spec params(map(), String.t() | nil) :: [map()]
@@ -83,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
     with true <- length(reminders) < max(provider),
          {:ok, reminder} <-
            ReminderForm.parse_reminder(%{
-             "method" => if(single?(provider), do: "popup", else: method(form)),
+             "method" => method(form, provider),
              "minutes" => minutes(form)
            }) do
       PanelNew.put_form(
@@ -100,7 +92,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
       form["event_reminder_minutes"] ||
         Integer.to_string(hd(ReminderForm.reminder_minutes_presets()))
 
-  defp method(form), do: form["event_reminder_method"] || "popup"
+  # A calendar with one method takes that one, whatever the row last held.
+  defp method(form, provider) do
+    case CreateParams.reminder_capacity(provider) do
+      {_max, [only]} -> Atom.to_string(only)
+      _several -> form["event_reminder_method"] || "popup"
+    end
+  end
 
   @doc "Drops the reminder at `index`."
   @spec drop(socket(), term(), String.t() | nil) :: socket()
