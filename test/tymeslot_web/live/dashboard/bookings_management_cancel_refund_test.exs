@@ -5,6 +5,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
   would snap the choice back to a full refund. And a payment past the refund
   window, or under dispute: the dialog says up front that cancelling will
   not refund it, and the cancellation goes through without one, saying why.
+  And the ordinary choices: a full refund, and no refund only once the host
+  acknowledges it.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -71,6 +73,153 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
     refute has_element?(view, "#cancel-refund-ack-error")
     assert Repo.get(MeetingSchema, meeting.id).status == :confirmed
     assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 0
+  end
+
+  describe "cancelling a paid booking" do
+    setup :verify_on_exit!
+
+    setup do
+      stub(Tymeslot.EmailServiceMock, :send_cancellation_email_to_organizer, fn _email,
+                                                                                _details ->
+        {:ok, nil}
+      end)
+
+      stub(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, fn _email, _details ->
+        {:ok, nil}
+      end)
+
+      :ok
+    end
+
+    test "cancelling a paid booking with full refund issues the refund and cancels",
+         %{conn: conn, user: user} do
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          attendee_name: "Paid Customer"
+        )
+
+      payment =
+        insert(:booking_payment,
+          meeting_id: meeting.id,
+          host_user_id: user.id,
+          host_email: user.email,
+          stripe_account_id: "acct_PAID",
+          stripe_charge_id: "ch_PAID_#{System.unique_integer([:positive])}",
+          amount_cents: 5000,
+          application_fee_cents: 25,
+          currency: "eur",
+          status: :paid,
+          paid_at: DateTime.utc_now(:second),
+          refunded_amount_cents: 0
+        )
+
+      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
+        assert params.amount == 5000
+        {:ok, %{id: "re_cancel_full"}}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+      view
+      |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "full"})
+      |> render_submit()
+
+      assert render(view) =~ "Meeting cancelled and refund issued"
+
+      updated = BookingPaymentQueries.get(payment.id)
+      assert updated.status == :refunded
+      assert updated.refunded_amount_cents == 5000
+
+      assert Repo.get(MeetingSchema, meeting.id).status == :cancelled
+    end
+
+    test "cancelling a paid booking without refund requires the acknowledgement",
+         %{conn: conn, user: user} do
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          attendee_name: "Paid Customer"
+        )
+
+      payment =
+        insert(:booking_payment,
+          meeting_id: meeting.id,
+          host_user_id: user.id,
+          host_email: user.email,
+          stripe_account_id: "acct_PAID2",
+          stripe_charge_id: "ch_PAID_#{System.unique_integer([:positive])}",
+          amount_cents: 5000,
+          application_fee_cents: 25,
+          currency: "eur",
+          status: :paid,
+          paid_at: DateTime.utc_now(:second),
+          refunded_amount_cents: 0
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+      # No acknowledgement: must error and leave meeting confirmed.
+      view
+      |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "none"})
+      |> render_submit()
+
+      assert has_element?(view, "#cancel-refund-ack-error", "Tick the acknowledgement")
+      # The choice survives the refusal: snapping back to Full would refund.
+      assert has_element?(view, "input[name=cancel_refund_choice][value=none][checked]")
+      refute has_element?(view, "input[name=cancel_refund_choice][value=full][checked]")
+      assert Repo.get(MeetingSchema, meeting.id).status == :confirmed
+
+      reloaded = BookingPaymentQueries.get(payment.id)
+      assert reloaded.status == :paid
+      assert reloaded.refunded_amount_cents == 0
+    end
+
+    test "cancelling a paid booking without refund acks succeeds without calling Stripe",
+         %{conn: conn, user: user} do
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          attendee_name: "Paid No Refund"
+        )
+
+      payment =
+        insert(:booking_payment,
+          meeting_id: meeting.id,
+          host_user_id: user.id,
+          host_email: user.email,
+          stripe_account_id: "acct_PAID3",
+          stripe_charge_id: "ch_PAID_#{System.unique_integer([:positive])}",
+          amount_cents: 5000,
+          application_fee_cents: 25,
+          currency: "eur",
+          status: :paid,
+          paid_at: DateTime.utc_now(:second),
+          refunded_amount_cents: 0
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+      view
+      |> form("#cancel-meeting-form", %{
+        "cancel_refund_choice" => "none",
+        "cancel_refund_no_refund_ack" => "true"
+      })
+      |> render_submit()
+
+      assert render(view) =~ "Meeting cancelled successfully"
+      assert Repo.get(MeetingSchema, meeting.id).status == :cancelled
+
+      reloaded = BookingPaymentQueries.get(payment.id)
+      assert reloaded.status == :paid
+      assert reloaded.refunded_amount_cents == 0
+    end
   end
 
   describe "a payment past the refund window" do
