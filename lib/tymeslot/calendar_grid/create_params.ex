@@ -353,6 +353,10 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   @spec max_guests() :: pos_integer()
   def max_guests, do: @max_guests
 
+  @doc "The most reminders an event can have."
+  @spec max_reminders() :: pos_integer()
+  def max_reminders, do: @max_reminders
+
   @doc """
   Checks a list of guest addresses for `user_id`, as a create checks its
   own: each is trimmed and lower-cased, every one must be a valid email,

@@ -21,14 +21,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CalendarGrid.CreateParams
   alias TymeslotWeb.Components.Calendar.ReminderForm
   alias TymeslotWeb.Components.Calendar.RemindersEditor
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
 
   @type socket :: Phoenix.LiveView.Socket.t()
-
-  # As many as `CreateParams` takes.
-  @max 5
 
   # The add row's fields, kept in the form as they change.
   @row_fields ~w(event_reminder_minutes event_reminder_method)
@@ -61,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
 
   @doc "The most reminders a calendar of `provider` takes."
   @spec max(String.t() | nil) :: pos_integer()
-  def max(provider), do: if(single?(provider), do: 1, else: @max)
+  def max(provider), do: if(single?(provider), do: 1, else: CreateParams.max_reminders())
 
   @doc "The form's reminders as `CreateParams.cast/5` reads them, for a calendar of `provider`."
   @spec params(map(), String.t() | nil) :: [map()]
