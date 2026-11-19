@@ -865,4 +865,4 @@ msgstr "Cor"
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
 #, elixir-autogen, elixir-format
 msgid "Add a guest to send a Tymeslot meeting."
-msgstr "Adicione um convidado para enviar como reunião Tymeslot."
+msgstr "Adicione um convidado para enviar uma reunião Tymeslot."

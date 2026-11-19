@@ -853,7 +853,7 @@ msgstr "Na zrušení je pozdě: hosté už byli informováni."
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
 #, elixir-autogen, elixir-format
 msgid "This update is no longer waiting to be sent."
-msgstr "Tato aktualizace už nečeká na odeslání."
+msgstr "Toto oznámení o změnách už nečeká na odeslání."
 
 #: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
 #, elixir-autogen, elixir-format
