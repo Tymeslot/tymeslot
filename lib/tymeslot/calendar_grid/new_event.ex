@@ -131,7 +131,7 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
   # A series is cached as one row until a sync brings its occurrences, which
   # are previewed meanwhile, so the sync is asked for at once.
   defp sync_series(%{recurrence_rule: rule} = attrs) when is_binary(rule) and rule != "",
-    do: SeriesEdit.request_sync(attrs.provider, attrs.calendar_integration_id)
+    do: SeriesEdit.request_sync_unless_backing_off(attrs.provider, attrs.calendar_integration_id)
 
   defp sync_series(_attrs), do: :ok
 

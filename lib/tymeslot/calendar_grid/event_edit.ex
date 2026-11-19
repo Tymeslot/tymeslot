@@ -202,7 +202,11 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   # (`Tymeslot.Integrations.Calendar.SeriesPreview`), so the sync is asked
   # for at once.
   defp sync_new_series(updated, %{recurrence_rule: rule}) when is_binary(rule) and rule != "",
-    do: SeriesEdit.request_sync(Map.get(updated, :provider), updated.calendar_integration_id)
+    do:
+      SeriesEdit.request_sync_unless_backing_off(
+        Map.get(updated, :provider),
+        updated.calendar_integration_id
+      )
 
   defp sync_new_series(_updated, _changes), do: :ok
 
