@@ -142,6 +142,9 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
                  "user_id" => user.id,
                  "colour" => "blueberry"
                })
+
+      # The override still holds the colour written, so nothing follows.
+      refute_enqueued(worker: ColourWriteBackWorker)
     end
 
     test "a clear made while a write-back runs gets a job of its own, and the last write clears",
@@ -173,6 +176,43 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
       assert :ok = perform_job(ColourWriteBackWorker, clearing.args)
       assert_received {:wrote, nil}
       assert_received {:wrote, nil}
+    end
+
+    test "a write that lands after a newer colour was written queues one more job, which writes the newer colour",
+         %{user: user, integration: integ} do
+      cached_event(integ, uid: "uid-1")
+
+      {:ok, _override} =
+        ColourOverrideQueries.set_external(user.id, integ.id, "uid-1", "blueberry")
+
+      args = %{"integration_id" => integ.id, "uid" => "uid-1", "user_id" => user.id}
+      test_pid = self()
+
+      # While the first job's blueberry request is in flight, the organiser
+      # picks grape and a second job reads it and finishes first.
+      stub(Tymeslot.CalendarMock, :update_event, fn "uid-1", %{colour: colour}, _context ->
+        if colour == "blueberry" do
+          {:ok, _override} =
+            ColourOverrideQueries.set_external(user.id, integ.id, "uid-1", "grape")
+
+          assert :ok = perform_job(ColourWriteBackWorker, Map.put(args, "colour", "grape"))
+        end
+
+        send(test_pid, {:wrote, colour})
+        :ok
+      end)
+
+      assert :ok = perform_job(ColourWriteBackWorker, Map.put(args, "colour", "blueberry"))
+      assert_received {:wrote, "grape"}
+      assert_received {:wrote, "blueberry"}
+
+      assert [%{args: %{"colour" => "grape"} = follow_up}] =
+               all_enqueued(worker: ColourWriteBackWorker)
+
+      assert :ok = perform_job(ColourWriteBackWorker, follow_up)
+      assert_received {:wrote, "grape"}
+      refute_received {:wrote, _colour}
+      assert [_only_the_follow_up] = all_enqueued(worker: ColourWriteBackWorker)
     end
 
     test "a clear on an Outlook event leaves its cached colour and queues nothing", %{

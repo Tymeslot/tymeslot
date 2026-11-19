@@ -31,8 +31,8 @@ defmodule Tymeslot.Integrations.Calendar.ColourWriteBack do
   changes the colour again before the previous job has run, the pending job's
   args are replaced in place to carry the newest colour, a clearing included.
   A job already running is not among the unique states, so a change made
-  meanwhile gets a job of its own; whichever runs last writes the colour the
-  override table holds then (`ColourWriteBackWorker`).
+  meanwhile gets a job of its own, and a job whose write lands after a newer
+  colour was chosen enqueues one more (`ColourWriteBackWorker`).
 
   Always returns `:ok`: a failed enqueue is logged, never surfaced, because
   the override itself is already persisted and the next sync reconciles.

@@ -14,16 +14,22 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
 
   The colour written is read from the override table when the job runs, not
   from its args (which record what was asked, for the logs): no override
-  means no colour. So whichever job runs last writes the colour the organiser
-  wants now, and a job that started before a later change cannot leave the
-  older colour on the host.
+  means no colour.
 
   `unique` is keyed on `[:integration_id, :uid, :user_id]` with `replace: [:args]`
   set at the enqueue site (`ColourWriteBack.enqueue/4`) so rapid successive
   colour changes collapse onto one pending job. It leaves `:executing` out: a
-  change made while a job is already running inserts a job of its own, which
-  writes after the running one, rather than rewriting the args of a job that
-  has already read them.
+  change made while a job is already running inserts a job of its own, rather
+  than rewriting the args of a job that has already read them.
+
+  The queue runs jobs concurrently, so that second job can start, read the
+  newer colour and finish while the first one's request is still in flight,
+  leaving the first job's older colour to land last. Each job therefore reads
+  the override again once its write has succeeded, and enqueues one more job
+  when it no longer holds the colour just written. The last write to finish
+  is always followed by that check, so the host ends on the colour the
+  organiser wants now; further changes meanwhile collapse onto the one
+  pending job.
 
   A CalDAV event created from the dashboard grid is cached with `raw_ical` NULL
   by design, for the first read to fill, so a colour set before that sync has no
@@ -77,9 +83,32 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
 
     if CalendarIntegrationQueries.owned_by?(integration_id, user_id) do
       colour = ColourOverrideQueries.external_colour(user_id, integration_id, uid)
-      write_back_cached(integration_id, uid, user_id, colour, meta)
+
+      integration_id
+      |> write_back_cached(uid, user_id, colour, meta)
+      |> catch_up({user_id, integration_id, uid}, colour)
     else
       {:discard, @not_owned}
+    end
+  end
+
+  # A job that started and finished while this one's request was in flight
+  # may already have written a newer colour, which this write has just
+  # overwritten. Only a successful write needs the check: a failure is
+  # retried, and a retry reads the override afresh.
+  defp catch_up(result, target, written) do
+    if succeeded?(result), do: enqueue_if_changed(target, written)
+    result
+  end
+
+  defp succeeded?(:ok), do: true
+  defp succeeded?({:ok, _value}), do: true
+  defp succeeded?(_result), do: false
+
+  defp enqueue_if_changed({user_id, integration_id, uid}, written) do
+    case ColourOverrideQueries.external_colour(user_id, integration_id, uid) do
+      ^written -> :ok
+      current -> ColourWriteBack.enqueue(user_id, integration_id, uid, current)
     end
   end
 
