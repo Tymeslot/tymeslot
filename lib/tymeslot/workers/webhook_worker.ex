@@ -11,8 +11,8 @@ defmodule Tymeslot.Workers.WebhookWorker do
     a deploy still gets the event
   - Circuit breaker (auto-disable after consecutive failures)
   - Delivery logging and metrics
-  - Each attempt's post is claimed once, with a stable delivery id on the
-    wire for receivers to dedupe on
+  - The post is claimed once per job, with a stable delivery id on the wire
+    for receivers to dedupe on
 
   ## Duplicate deliveries
 

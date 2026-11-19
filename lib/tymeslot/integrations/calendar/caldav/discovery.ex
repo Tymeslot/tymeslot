@@ -242,7 +242,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   # collection URL was pasted.
   #
   # A base URL that already *is* the origin root collapses to a single
-  # candidate, so the common case costs exactly the requests it did before.
+  # candidate, so the common case costs one principal probe, not two.
   defp principal_probe_urls(client) do
     as_supplied = String.trim_trailing(client.base_url, "/") <> "/"
 

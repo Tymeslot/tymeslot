@@ -261,7 +261,6 @@ config :tymeslot, :feature_access_checker, Tymeslot.Features.DefaultAccessChecke
 config :tymeslot, :oban_queues,
   default: 10,
   # Email sending (confirmations, reminders, auth emails)
-  # Concurrency of 10 covers peak confirmation and reminder volume.
   # Note: Monitor SMTP provider rate limits. Most providers (Gmail, Postmark, etc.)
   # handle this concurrency well, but adjust if you encounter rate limiting.
   emails: 10,

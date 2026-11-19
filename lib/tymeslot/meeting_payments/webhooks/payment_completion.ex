@@ -64,9 +64,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentCompletion do
   # than straight to confirmed, and the host's clock starts here, once the
   # money has cleared; its length is the window stamped at submission
   # (`Approval.restart_deadline/2`). Declining or letting it lapse refunds
-  # the full remaining balance directly (`Meetings.Approval.after_release/1`),
-  # with no cancellation pipeline. The confirm branch nulls both approval
-  # columns so a :confirmed row never carries a stale approval clock.
+  # the full remaining balance directly
+  # (`Meetings.ApprovalRefunds.refund_unapproved_request/1`), with no
+  # cancellation pipeline: the attendee never had a confirmed meeting to weigh
+  # a partial refund against. The confirm branch nulls both approval columns
+  # so a :confirmed row never carries a stale approval clock.
   @spec post_payment_status(map()) :: map()
   def post_payment_status(%{approval_requested_at: %DateTime{}} = meeting) do
     requested_at = DateTime.truncate(Clock.utc_now(), :second)

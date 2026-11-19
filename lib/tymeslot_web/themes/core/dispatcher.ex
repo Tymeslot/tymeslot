@@ -34,8 +34,6 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     # Which start page the URL is for (the username's, or one of its booking
     # pages), settled once by the `PageAddress` hook so the themes never see
     # the difference. Routes without the hook mount their params as they are.
-    # The organiser it found is used as resolved; without one (a username
-    # nobody holds, a demo persona), the address is resolved instead.
     {params, organiser} =
       case socket.assigns do
         %{page_address: %{params: settled, organiser: organiser}} -> {settled, organiser}
@@ -45,6 +43,9 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     # For all routes with username (including meeting management), resolve the
     # organiser (the username's, or `<username>/<page>`'s) first
     if params["username"] do
+      # The organiser `PageAddress` found is passed on as it stands; without
+      # one (a username nobody holds, a demo persona), the address is passed
+      # instead.
       socket =
         OrganizerHelpers.handle_username_resolution(
           socket,

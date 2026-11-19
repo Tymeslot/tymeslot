@@ -247,10 +247,10 @@ defmodule Tymeslot.Notifications.Events do
   releasing every live seat's own confirmation email.
 
   A group meeting never raises `meeting_created/1` here.
-  `Seats.seat_booked_deferred/3` already fanned its webhook/Telegram/Slack
-  integrations out per seat at booking time, and reminders were already
-  scheduled once (see `Tymeslot.Notifications.Events.Seats.seat_booked_deferred/3`).
-  Re-raising the full event on top of that duplicated it with a payload
+  `Seats.seat_booked_deferred/3` fans its webhook/Telegram/Slack integrations
+  out per seat at booking time, and `Tymeslot.Bookings.SeatEffects` schedules
+  the reminders once, at whichever seat's booking created the meeting.
+  Raising the full event on top of that would duplicate both, with a payload
   carrying no attendee at all, since a group meeting row has none of its own.
 
   Only the confirmation email was ever waiting on this: exactly one seat's,

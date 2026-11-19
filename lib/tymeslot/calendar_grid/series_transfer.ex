@@ -45,8 +45,8 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
 
   A failed delete is never queued for offline replay (see
   `Tymeslot.CalendarGrid.EventDeletion` for why a series member's delete is
-  not), and Google and Outlook have no queue. The copy on the destination is kept,
-  since deleting it again would lose the move the organiser asked for, and
+  not), and Google and Outlook have no queue. The copy on the destination is
+  kept, since deleting it again would lose the move the organiser asked for, and
   the result says the original was left behind.
 
   The CalDAV family's writer copies the series' resource, the cached

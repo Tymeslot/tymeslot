@@ -85,8 +85,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
   The server also silently drops an update that names a different
   `ORGANIZER` from the stored one, so `ORGANIZER` is written on create only:
   the patcher never touches it, and an update with no cached copy reads the
-  server's first (`CalDAV.Events.update_calendar_event/5`). Events created
-  earlier keep the organiser they were created with.
+  server's first (`CalDAV.Events.update_calendar_event/5`). An existing event
+  therefore keeps the organiser it was created with.
 
   The mode carries the addresses `Discovery.calendar_user_addresses/1`
   answers, read per write; a failed lookup carries none, and the organiser is

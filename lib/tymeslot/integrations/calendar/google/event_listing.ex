@@ -98,8 +98,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
         end
 
       # Not an error tuple: the success clause is guarded on a map, so this
-      # fires when `decode_body/1` decoded a JSON array or string rather than
-      # an object. The raw term is returned as the result and the case is logged.
+      # fires when the shared response handler (`ApiResponse`) decoded a JSON
+      # array or string rather than an object. The raw term is returned as the
+      # result and the case is logged.
       {:ok, body} ->
         Logger.warning("Google events listing returned a non-object body",
           path: path,

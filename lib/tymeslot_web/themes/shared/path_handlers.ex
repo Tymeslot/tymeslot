@@ -319,12 +319,13 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   # chose over their browser's goes too (`visitor_timezone`); their browser's
   # own zone is left out, since every browser reports its own again on
   # connect. A paged journey does not move on by itself, so the moment on
-  # screen goes as `step`. The series chosen for the slot goes as `series`
-  # (`Journey.Facts.Series.to_param/1`), which the page checks again on
-  # arrival. The answers and the details are not carried (the details form is
-  # recovered by LiveView's form recovery), nor is anything on an outcome,
-  # whose choices are a booking already made: carried, they would land a
-  # reload of the confirmation on the details for the slot just booked.
+  # screen goes as `step` (`Navigators.Paged` resumes on it). The series
+  # chosen for the slot goes as `series` (`Journey.Facts.Series.to_param/1`),
+  # which the page checks again on arrival. The answers and the details are
+  # not carried (the details form is recovered by LiveView's form recovery),
+  # nor is anything on an outcome, whose choices are a booking already made:
+  # carried, they would land a reload of the confirmation on the details for
+  # the slot just booked.
   defp put_choices(params, assigns) do
     if assigns[:current_state] in [:confirmation, :awaiting_payment] do
       params
@@ -371,9 +372,9 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   # `theme` is emitted only for a preview (here), an embed
   # (`put_embed_params/2`) and a demo page (`demo_theme_param/1`, only for a
-  # theme the visitor chose), never for every switch just because `:theme_id`
-  # is set: the dispatcher always sets that assign, so it says nothing about
-  # whether anyone is previewing.
+  # theme the visitor chose), never for every locale switch just because
+  # `:theme_id` is set: the dispatcher always sets that assign, so it says
+  # nothing about whether anyone is previewing.
   #
   # The preview parameters have to be rebuilt as a set, not one by one. A locale
   # switch is a full external redirect, so the LiveView that comes back has no

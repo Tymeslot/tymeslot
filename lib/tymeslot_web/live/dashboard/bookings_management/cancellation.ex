@@ -4,8 +4,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   confirming it (with whatever refund the host chose), and the telemetry and
   user-facing copy that go with it.
 
-  The reload is passed in rather than reached for: the list belongs
-  to the component, and this module only says when it should be refreshed.
+  The reload is passed in rather than reached for: the list belongs to the
+  component, and this module only says when it should be refreshed.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

@@ -51,8 +51,8 @@ defmodule Tymeslot.Availability.AvailabilityBreakSchema do
 
   # Inside a same-day window the rules are that the break ends after it starts
   # and that both ends fall within the hours, each reported independently.
-  # Inside an overnight window the order is read through midnight, so 23:30 to 00:30
-  # is a valid break.
+  # Inside an overnight window the order is read through midnight, so 23:30 to
+  # 00:30 is a valid break.
   defp validate_against_window(changeset, opts) do
     with %Time{} = start_time <- get_field(changeset, :start_time),
          %Time{} = end_time <- get_field(changeset, :end_time),

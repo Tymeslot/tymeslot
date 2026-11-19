@@ -2,12 +2,11 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   @moduledoc """
   What to call a calendar failure, and what to tell the account owner about it.
 
-  Copy for calendar failures, kept apart from `ErrorHandler` because it is
-  copy, not mechanism. Every function
-  here maps a category (and sometimes a provider) onto a sentence the account
-  owner reads, which means the module is almost entirely `dgettext/2` calls and
-  changes whenever the wording does. Keeping it apart leaves the handler free
-  to be about control flow.
+  The wording lives apart from `ErrorHandler`, which handles the mechanism.
+  Every function here maps a category (and sometimes a provider) onto a
+  sentence the account owner reads, which means the module is almost entirely
+  `dgettext/2` calls and changes whenever the wording does. Keeping it apart
+  leaves the handler free to be about control flow.
 
   `categorize_error/1` sits here rather than with the handler because the
   categories exist to select copy: they are the vocabulary the messages and

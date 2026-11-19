@@ -587,10 +587,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   # as the default. Its absence here is a decision, not an oversight.
   #
   # `full_refresh_for_role/3` writes the field, and its absence from this list
-  # is what keeps it insert-time identity: a
-  # server-sourced upsert that omits `:role` (every provider but Exchange does)
-  # cannot re-file an existing row, and one that supplies it cannot move a row
-  # from one read path to the other.
+  # is what keeps it insert-time identity: a server-sourced upsert that omits
+  # `:role` (every provider but Exchange does) cannot re-file an existing row,
+  # and one that supplies it cannot move a row from one read path to the other.
   @doc """
   The columns a server-sourced upsert is allowed to overwrite on an existing
   row. Public because `CalDAV.QueueQueries` extends it for a queue entry, which

@@ -17,9 +17,9 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
       plain display selector on a public page, reachable by anyone who types
       it, so it must never be read as a claim about who is viewing.
 
-  That last point is the reason this module exists: counting a bare `?theme=`
-  as a preview would reclassify any visitor whose URL carries it as a previewer
-  and fail their booking closed. One named predicate, used by
+  That last point is the reason this module exists: counting a bare `?theme=` as
+  a preview would reclassify any visitor whose URL carries it as a previewer and
+  fail their booking closed. One named predicate, used by
   `ThemeUtils.assign_theme_with_preview/2` and
   `Themes.Core.Context.from_params/2`, owns the rule.
   """

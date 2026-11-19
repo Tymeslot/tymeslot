@@ -6,7 +6,8 @@ defmodule Tymeslot.Meetings.MeetingRules do
   changeset declares.
 
   The schema casts and chooses the required fields, then hands the changeset
-  here (`validate/2`). `MeetingSchema.status_changeset/2` deliberately bypasses it.
+  here (`validate/2`). `MeetingSchema.status_changeset/2` deliberately bypasses
+  it.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

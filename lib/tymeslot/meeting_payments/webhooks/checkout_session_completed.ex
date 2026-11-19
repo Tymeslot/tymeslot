@@ -286,10 +286,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
     end
   end
 
-  # The booking is not confirmed: the meeting is left (or put) `expired` and
-  # the payment, which truly was taken, is recorded paid and refunded in full
-  # by `RefundLatePayment`, which also emails the attendee once Stripe has
-  # accepted the refund. No Stripe call is made here; see `refund_late_payment/3`.
+  # The booking is not confirmed: the meeting is left (or put) `expired` and the
+  # payment, which truly was taken, is recorded paid and refunded in full by
+  # `RefundLatePayment`, which also emails the attendee once Stripe has accepted
+  # the refund. No Stripe call is made here; see `refund_late_payment/3`.
   defp refuse(payment, meeting, event_id, object) do
     with {:ok, paid} <- PaymentCompletion.mark_paid(payment, event_id, object),
          {:ok, expired} <- expire(meeting),

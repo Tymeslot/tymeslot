@@ -4,10 +4,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   video, and any file an option group of a theme's own declares.
 
   Uploading has its own lifecycle, apart from choosing options in
-  `ThemeCustomizationComponent`: declare the
-  sockets up front, receive progress callbacks as bytes arrive, consume the
-  finished entry, which hands the file to `ThemeCustomizations.attach_asset/4`
-  and gets the saved customisation back.
+  `ThemeCustomizationComponent`: declare the sockets up front, receive progress
+  callbacks as bytes arrive, consume the finished entry, which hands the file to
+  `ThemeCustomizations.attach_asset/4` and gets the saved customisation back.
 
   One upload per asset field of the theme's spec
   (`ThemeCustomizations.asset_fields/1`), named after the field

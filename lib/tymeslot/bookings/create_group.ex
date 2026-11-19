@@ -3,10 +3,10 @@ defmodule Tymeslot.Bookings.CreateGroup do
   Books a seat on a group meeting type (`max_participants > 1`) through
   `Tymeslot.Meetings.GroupScheduling.book_seat/3`.
 
-  Kept apart from `Tymeslot.Bookings.Create`, which remains the sole entry
-  point booking callers use: it resolves the meeting type and builds the (pre-booker)
-  meeting attributes, then dispatches here once `applicable?/1` says the
-  meeting type holds more than one seat.
+  Kept apart from `Tymeslot.Bookings.Create`, which remains the sole entry point
+  booking callers use: it resolves the meeting type and builds the (pre-booker)
+  meeting attributes, then dispatches here once `applicable?/1` says the meeting
+  type holds more than one seat.
   """
 
   alias Tymeslot.Bookings.Activation

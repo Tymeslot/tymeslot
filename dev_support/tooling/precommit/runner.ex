@@ -507,8 +507,10 @@ defmodule Tymeslot.Precommit.Runner do
   # how much of the analysis runs at once.
   #
   # The number is a speed setting, not a memory guard: a warm run holds 4.2G to
-  # 5.4G whether it is handed 4 schedulers or 16. The memory guard is the
-  # systemd scope in the workspace `mix.sh`, which bounds the whole process tree.
+  # 5.4G whether it is handed 4 schedulers or 16. Building a PLT from scratch,
+  # which this step does when a dependency or the toolchain moves, peaks near
+  # 13G, so the memory guard is the systemd scope in the workspace `mix.sh`,
+  # which bounds the whole process tree however much dialyzer asks for.
   # Measured on Core on a 16-core host, median wall clock of three runs: 92s at
   # 4, 77s at 8, 92s at 16, the last losing to coordination overhead. The cap is
   # never more than the cores the run may use (`System.schedulers_online/0`,
@@ -520,9 +522,9 @@ defmodule Tymeslot.Precommit.Runner do
   # matching the flag of the same name in the workspace `mix.sh`.
   #
   # Both task names are matched. The gate runs `dialyzer.incremental`, while
-  # `dialyzer` remains available as the cross-check the incremental mode was
-  # adopted against, and a cap that quietly stopped applying to either would be
-  # invisible: the run would simply get slower.
+  # `dialyzer` remains available as a cross-check of the incremental mode, and
+  # a cap that quietly stopped applying to either would be invisible: the run
+  # would simply get slower.
   @doc false
   @spec step_env([String.t()]) :: [{String.t(), String.t()}]
   def step_env([command | _rest]) when command in ~w[dialyzer dialyzer.incremental] do

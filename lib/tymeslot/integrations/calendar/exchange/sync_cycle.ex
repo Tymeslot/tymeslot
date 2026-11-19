@@ -86,9 +86,9 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SyncCycle do
   the one failure that recovers rather than being reported. The token is
   dropped and this cycle falls through to the full read, which re-bootstraps
   it. Reporting it instead would stall the folder permanently: the refusal
-  would repeat every cycle, `last_external_sync_at` would never advance so the
-  fallback sweep re-enqueued it, and the availability half would be re-read in
-  full each time for a grid half that could never succeed.
+  would repeat every cycle, `last_external_sync_at` would never advance, so
+  the fallback sweep would keep re-enqueueing it, and the availability half
+  would be re-read in full each time for a grid half that could never succeed.
 
   The busy half has no incremental form — `GetUserAvailability` takes a window
   and answers intervals, with no token and no change feed — so it re-reads and

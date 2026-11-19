@@ -391,15 +391,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   # document says, leaves them alone.
   #
   # An unmarked change leaves the reminders alone, unless the row was queued
-  # before the mark existed and so is unmarked whatever it changed. For that
-  # row an unmarked replay compares the row's reminders with the ones the
-  # document's master holds (a series' document holds a VEVENT per edited
-  # occurrence beside the master, the VEVENT the patcher edits) and sends
-  # them when they differ. That comparison cannot
-  # tell a removal of every reminder from a row cached before the sync read
-  # alarms, so it never replays `[]`, and a document without exactly one
-  # master keeps the server's alarms too. A row with no document is rebuilt
-  # from the row, reminders and all.
+  # before the mark existed and so is unmarked whatever it changed. For that row
+  # an unmarked replay compares the row's reminders with the ones the document's
+  # master holds (a series' document holds a VEVENT per edited occurrence beside
+  # the master, the VEVENT the patcher edits) and sends them when they differ.
+  # That comparison cannot tell a removal of every reminder from a row cached
+  # before the sync read alarms, so it never replays `[]`, and a document
+  # without exactly one master keeps the server's alarms too. A row with no
+  # document is rebuilt from the row, reminders and all.
   defp replayed_reminders(%{reminders: reminders}, true = _changed), do: %{reminders: reminders}
 
   defp replayed_reminders(%{raw_ical: raw_ical, reminders: reminders}, _unmarked)

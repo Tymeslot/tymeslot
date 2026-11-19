@@ -243,8 +243,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   Deletes a meeting room on the provider's side.
 
   As with `update_meeting_room/3`, a provider without a server-side meeting
-  object returns `:ok`. So does a room the provider no longer has, so
-  deleting stays idempotent whichever way a provider words "not found".
+  object returns `:ok`. A room the provider no longer has returns `:ok` too,
+  keeping deletion idempotent whichever way a provider words "not found".
   """
   @spec delete_meeting_room(atom(), String.t(), map()) :: :ok | {:error, term()}
   def delete_meeting_room(provider_type, room_id, config) do
