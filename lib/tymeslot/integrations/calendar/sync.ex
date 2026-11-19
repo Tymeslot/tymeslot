@@ -379,6 +379,20 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     ProviderCalendarEventQueries.delete_series_stand_ins(integration_id, series_uids)
   end
 
+  @doc """
+  The UIDs of the CalDAV-family series whose expanded occurrences are in
+  `calendar_events`. A row cached under one of them stands in for a series
+  the server has returned, so a full fetch must not count it as missing:
+  either the sync has just replaced it, or it holds a queued edit or delete
+  that it keeps for the queue to send.
+  """
+  @spec series_uids([CalendarEvent.t()]) :: MapSet.t(String.t())
+  def series_uids(calendar_events) do
+    calendar_events
+    |> Enum.flat_map(&series_of_occurrence/1)
+    |> MapSet.new(fn {series_uid, _href} -> series_uid end)
+  end
+
   # `{series_uid, href}` for an expanded occurrence of a CalDAV-family series,
   # whose uid is the series' UID, an underscore and the slot's key.
   defp series_of_occurrence(%CalendarEvent{uid: uid, provider_event_id: href} = event)

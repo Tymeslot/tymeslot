@@ -99,12 +99,16 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
   describe "on a CalDAV calendar synced by delta" do
     setup do
       # The window the CalDAV expansion reads is measured from this clock.
-      freeze_clock(~U[2026-11-10 12:00:00Z])
+      # The series lies far ahead of the real clock too: an external deletion
+      # of a meeting whose slot has elapsed by it is ignored
+      # (`ExternalCalendarChanges`), so a past slot would let a booking test
+      # pass whether or not the booking is cancelled.
+      freeze_clock(~U[2099-11-10 12:00:00Z])
 
       integration =
         insert(:calendar_integration, provider: "caldav", calendar_paths: ["/cal/"])
 
-      %{integration: integration, first_start: ~U[2026-11-18 18:00:00Z]}
+      %{integration: integration, first_start: ~U[2099-11-18 18:00:00Z]}
     end
 
     test "the row cached at create time goes once the series' occurrences arrive", %{
@@ -115,7 +119,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
 
       assert :ok = SyncReconciler.process_tier1(integration, caldav_series(@href), [])
 
-      assert blocks_on(integration, first_start) == ["weekly@tymeslot.com_20261118T180000"]
+      assert blocks_on(integration, first_start) == ["weekly@tymeslot.com_20991118T180000"]
       assert length(blocks_over_weeks(integration, first_start, 3)) == 3
     end
 
@@ -197,8 +201,51 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
                  "/cal/"
                )
 
-      assert blocks_on(integration, first_start) == ["weekly@tymeslot.com_20261118T180000"]
+      assert blocks_on(integration, first_start) == ["weekly@tymeslot.com_20991118T180000"]
       assert Repo.reload!(meeting).status == meeting.status
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    # The rule was given while the provider failed, or a later edit was
+    # queued: the row under the series' UID holds that change and stays for
+    # the queue to send. The server returns only the series' occurrences, so a
+    # full fetch must not read the row as gone, delete it and cancel the
+    # booking linked to it.
+    test "a booking copy holding a queued edit survives a full fetch, and so does the booking",
+         %{integration: integration, first_start: first_start} do
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          calendar_uid: "weekly@tymeslot.com",
+          start_time: first_start,
+          end_time: DateTime.add(first_start, 3600)
+        )
+
+      insert_synced_caldav_one_off(integration, first_start, nil, nil)
+
+      {:ok, _row} =
+        ProviderCalendarEventQueries.apply_local_edit(integration.id, "weekly@tymeslot.com", %{
+          recurrence_rule: "FREQ=WEEKLY;COUNT=3"
+        })
+
+      set_sync_state(integration, "weekly@tymeslot.com", "locally_modified")
+
+      {range_start, range_end} = Sync.window()
+
+      assert :ok =
+               SyncReconciler.process_full_fetch(
+                 integration,
+                 caldav_series(@href),
+                 range_start,
+                 range_end,
+                 Clock.utc_now(),
+                 "/cal/"
+               )
+
+      assert {:ok, %{sync_state: "locally_modified"}} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "weekly@tymeslot.com")
+
+      assert Repo.reload!(meeting).status == :confirmed
       refute_enqueued(worker: EmailWorker)
     end
 
@@ -226,7 +273,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
 
       assert :ok = SyncReconciler.process_tier1(integration, caldav_series(@href), [])
 
-      assert blocks_on(integration, first_start) == ["weekly@tymeslot.com_20261118T180000"]
+      assert blocks_on(integration, first_start) == ["weekly@tymeslot.com_20991118T180000"]
     end
   end
 
@@ -241,7 +288,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
       provider_event_id: @href,
       start_at: first_start,
       end_at: DateTime.add(first_start, 3600),
-      synced_at: ~U[2026-11-01 00:00:00.000000Z],
+      synced_at: ~U[2099-11-01 00:00:00.000000Z],
       video_link: link,
       video_integration_id: video && video.id
     )
@@ -324,9 +371,9 @@ defmodule Tymeslot.CalendarGrid.SeriesCreateSyncTest do
       PRODID:-//Test//EN
       BEGIN:VEVENT
       UID:weekly@tymeslot.com
-      DTSTAMP:20261101T000000Z
-      DTSTART:20261118T180000Z
-      DTEND:20261118T190000Z
+      DTSTAMP:20991101T000000Z
+      DTSTART:20991118T180000Z
+      DTEND:20991118T190000Z
       RRULE:FREQ=WEEKLY;COUNT=3
       SUMMARY:Weekly review
       END:VEVENT

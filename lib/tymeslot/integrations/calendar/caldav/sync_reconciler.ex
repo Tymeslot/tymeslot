@@ -343,7 +343,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
          sync_started_at,
          calendar_path
        ) do
-    fetched_uids = MapSet.new(calendar_events, fn %CalendarEvent{uid: uid} -> uid end)
+    # A row under a series' bare UID whose occurrences came back is not
+    # missing: the server only ever returns the occurrences. A synced
+    # stand-in went in `Sync.upsert_cache/2`; one still here holds a queued
+    # edit or delete and waits for the queue. Pruning it would lose that
+    # change and, through `Sync.reconcile_deletions/3`, cancel a booking
+    # linked to it by its UID.
+    fetched_uids =
+      calendar_events
+      |> MapSet.new(fn %CalendarEvent{uid: uid} -> uid end)
+      |> MapSet.union(Sync.series_uids(calendar_events))
 
     cached_uids =
       ProviderCalendarEventQueries.list_uids_in_range(
