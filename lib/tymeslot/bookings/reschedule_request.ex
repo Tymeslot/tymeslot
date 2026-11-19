@@ -30,6 +30,7 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
 
@@ -164,7 +165,7 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   # meeting is read again and checked again, so the refusal names what
   # actually happened to it.
   defp mark_requested(meeting, requested_at) do
-    case MeetingQueries.mark_reschedule_requested(meeting.id, requested_at) do
+    case MeetingTransitionQueries.mark_reschedule_requested(meeting.id, requested_at) do
       {:ok, updated_meeting} -> {:ok, updated_meeting}
       {:error, :not_requestable} -> {:error, {:refused, refusal_for_current(meeting.id)}}
     end

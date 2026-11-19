@@ -6,7 +6,7 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
   `Tymeslot.Meetings.Approval` is the entry point and delegates these
   functions here; its moduledoc explains what each exit means and why they
   all race one another. Every release goes through the same single guarded
-  write as an approval, `MeetingQueries.transition_from_awaiting_approval/2`,
+  write as an approval, `MeetingTransitionQueries.transition_from_awaiting_approval/2`,
   so exactly one exit wins.
   """
 
@@ -20,8 +20,8 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.ApprovalRefunds
   alias Tymeslot.Meetings.CommittedStep
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Validation.Constraints
@@ -121,7 +121,7 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
   end
 
   defp with_released_meeting(meeting, changes, after_fun) do
-    case MeetingQueries.transition_from_awaiting_approval(meeting.id, changes) do
+    case MeetingTransitionQueries.transition_from_awaiting_approval(meeting.id, changes) do
       {:ok, released} ->
         Logger.info("Booking request released",
           meeting_id: released.id,

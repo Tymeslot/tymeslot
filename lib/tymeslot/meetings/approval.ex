@@ -18,7 +18,7 @@ defmodule Tymeslot.Meetings.Approval do
   host accepted.
 
   So the status change is a single guarded `UPDATE ... WHERE status =
-  'awaiting_approval'` (`MeetingQueries.transition_from_awaiting_approval/2`).
+  'awaiting_approval'` (`MeetingTransitionQueries.transition_from_awaiting_approval/2`).
   Every exit from the gate goes through it — including the invitee's own
   withdrawal and an external actor (the host deleting the tentative hold from
   their own calendar), both reached through `Bookings.Cancel`, which
@@ -99,9 +99,9 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.ApprovalRelease
   alias Tymeslot.Meetings.CommittedStep
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Notifications.Orchestrator
@@ -321,7 +321,7 @@ defmodule Tymeslot.Meetings.Approval do
   defp confirm(meeting, now) do
     Repo.transaction(fn ->
       with {:ok, confirmed} <-
-             MeetingQueries.transition_from_awaiting_approval(meeting.id,
+             MeetingTransitionQueries.transition_from_awaiting_approval(meeting.id,
                status: :confirmed,
                approval_resolved_at: DateTime.truncate(now, :second)
              ),

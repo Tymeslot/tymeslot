@@ -11,7 +11,7 @@ defmodule Tymeslot.Meetings.EmailVerification do
   held for the host's approval.
 
   Every exit from the gate (verifying, expiring) is a guarded transition,
-  `Tymeslot.Meetings.MeetingQueries.transition_from_awaiting_verification/2`,
+  `Tymeslot.Meetings.MeetingTransitionQueries.transition_from_awaiting_verification/2`,
   so the exits race one another safely and only one wins.
 
   A manual-approval type's approval clock starts at verification, not at
@@ -52,6 +52,7 @@ defmodule Tymeslot.Meetings.EmailVerification do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
   alias Tymeslot.MeetingTypes.SeriesSettings
@@ -163,7 +164,7 @@ defmodule Tymeslot.Meetings.EmailVerification do
       with {:ok, held} <- MeetingQueries.get_meeting_for_update(meeting.id),
            {:ok, meeting_type} <- still_wanted(held),
            {:ok, verified} <-
-             MeetingQueries.transition_from_awaiting_verification(
+             MeetingTransitionQueries.transition_from_awaiting_verification(
                held.id,
                verified_changes(held, meeting_type, now),
                deadline_after: now
@@ -304,7 +305,7 @@ defmodule Tymeslot.Meetings.EmailVerification do
     changes = [status: status, cancelled_at: DateTime.truncate(Clock.utc_now(), :second)]
 
     with {:ok, released} <-
-           MeetingQueries.transition_from_awaiting_verification(meeting.id, changes) do
+           MeetingTransitionQueries.transition_from_awaiting_verification(meeting.id, changes) do
       Availability.changed(released.organizer_user_id)
       EmailVerificationJobs.cancel(released)
       Logger.info(message, meeting_id: released.id)
@@ -357,7 +358,11 @@ defmodule Tymeslot.Meetings.EmailVerification do
     counted =
       Repo.transaction(fn ->
         with {:ok, counted} <-
-               MeetingQueries.count_verification_email(meeting.id, now, @max_resends + 1),
+               MeetingTransitionQueries.count_verification_email(
+                 meeting.id,
+                 now,
+                 @max_resends + 1
+               ),
              :ok <-
                EmailScheduler.schedule_verification_email(
                  counted.id,
