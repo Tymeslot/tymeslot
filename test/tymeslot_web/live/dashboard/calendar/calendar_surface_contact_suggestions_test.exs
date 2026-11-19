@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceContactSuggestionsTest d
       trace(lv)
       render_submit(new_form(lv), %{"intent" => "create"})
 
-      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, params}}
 
       assert %{
                attendee_name: "Ada Lovelace",
@@ -121,6 +121,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceContactSuggestionsTest d
                %{email: "grace@example.com", name: "Hopper, Grace"},
                %{email: "ops@example.com", name: nil}
              ] = meeting.id |> GuestQueries.list_for_meeting() |> Enum.sort_by(& &1.email)
+    end
+
+    test "a contact left in the guest field goes in with Create, with its name", %{lv: lv} do
+      add_guest(lv, "Ada Lovelace <ada@example.com>")
+
+      render_change(new_form(lv), %{
+        "meeting" => "true",
+        "guest_email" => "Grace Hopper <grace@example.com>"
+      })
+
+      trace(lv)
+
+      render_submit(new_form(lv), %{
+        "intent" => "create",
+        "guest_email" => "Grace Hopper <grace@example.com>"
+      })
+
+      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, params}}
+
+      assert %{
+               attendee_name: "Ada Lovelace",
+               guest_emails: ["grace@example.com"],
+               guest_names: %{"grace@example.com" => "Grace Hopper"}
+             } = params
     end
 
     test "a guest name already typed is kept", %{lv: lv} do
@@ -144,7 +168,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceContactSuggestionsTest d
       trace(lv)
       render_submit(new_form(lv), %{"intent" => "create"})
 
-      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, params}}
       assert params.guest_names == %{}
     end
   end
