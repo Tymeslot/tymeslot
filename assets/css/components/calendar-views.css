@@ -508,6 +508,55 @@
   }
 }
 
+/* Compact density. The month's row heights come from render_month.js (head 20px,
+   lanes 16px); these fit the day number and chips into them. The agenda keeps
+   its 44px touch rows on a phone and tightens only the spacing around them. */
+
+.cal-month[data-density="compact"] .cal-mday-num {
+  height: 18px;
+}
+
+.cal-month[data-density="compact"] :is(.cal-mbar, .cal-mchip, .cal-mmore) {
+  height: 14px;
+  line-height: 14px;
+}
+
+:is(.cal-agenda, .cal-month)[data-density="compact"] .cal-agenda-day {
+  gap: 8px;
+  padding: 4px 0;
+}
+
+/* The date on one line, level with the first row, instead of stacked. */
+:is(.cal-agenda, .cal-month)[data-density="compact"] .cal-agenda-date {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: start;
+  align-items: baseline;
+  column-gap: 4px;
+  padding-top: 4px;
+}
+
+:is(.cal-agenda, .cal-month)[data-density="compact"] .cal-agenda-num {
+  font-size: var(--font-size-base);
+}
+
+:is(.cal-agenda, .cal-month)[data-density="compact"] .cal-agenda-items {
+  gap: 0;
+}
+
+/* Wide enough for the one-line date; a phone keeps the narrow column and
+   lets the date wrap, so titles keep their room. */
+@media (width >= 40rem) {
+  .cal-agenda[data-density="compact"] .cal-agenda-day {
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+  }
+
+  .cal-agenda[data-density="compact"] .cal-agenda-row {
+    min-height: 24px;
+    padding: 2px 8px;
+  }
+}
+
 /* Focus, for every control above. */
 
 .cal-mday-num:focus-visible,

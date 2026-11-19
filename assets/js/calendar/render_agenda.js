@@ -5,13 +5,13 @@
  * load the next weeks, or, once the agenda has gone as far as it goes, in
  * "Show later". The list is its own scroller (`data-view-scroll`), headed
  * by the lens: All or only Bookings (`data-agenda-lens`, the one shown
- * pressed). Pure; every string comes from the server and is escaped.
+ * pressed). Compact density (`data-density`) tightens the rows. Pure; every string comes from the server and is escaped.
  */
 import { colour, dateLabel, escapeHtml, interpolate, ownColour, requestAria, requestFlag } from "./render.js";
 import { AGENDA_LENSES } from "./agenda.js";
 import { dayNumber, formatMinutes, isoWeekday } from "./time.js";
 
-export function renderAgenda({ groups, strings, timeFormat, now, done, loading = false, lens = "all" }) {
+export function renderAgenda({ groups, strings, timeFormat, now, done, loading = false, lens = "all", density = "comfortable" }) {
   const opts = { strings, timeFormat, now };
   const empty = lens === "bookings" ? strings.agenda_no_bookings : strings.agenda_empty;
   const list = groups.length
@@ -20,7 +20,8 @@ export function renderAgenda({ groups, strings, timeFormat, now, done, loading =
   const end = done
     ? `<button type="button" class="cal-agenda-later" data-agenda-later>${escapeHtml(strings.agenda_later)}</button>`
     : `<p class="cal-agenda-more" data-agenda-sentinel>${escapeHtml(strings.agenda_loading)}</p>`;
-  return `<div class="cal-agenda" data-view-scroll role="region" aria-label="${escapeHtml(strings.agenda_label)}"${loading ? ' aria-busy="true"' : ""}>${lensBar(lens, strings)}${list}${end}</div>`;
+  const tight = density === "compact" ? "compact" : "comfortable";
+  return `<div class="cal-agenda" data-density="${tight}" data-view-scroll role="region" aria-label="${escapeHtml(strings.agenda_label)}"${loading ? ' aria-busy="true"' : ""}>${lensBar(lens, strings)}${list}${end}</div>`;
 }
 
 function lensBar(lens, strings) {

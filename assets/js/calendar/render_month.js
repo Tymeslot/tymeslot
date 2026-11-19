@@ -14,8 +14,9 @@ import { renderAgendaDay } from "./render_agenda.js";
 import { badgeNotes, colour, ownColour, repliesTone, dateLabel, escapeHtml, interpolate, requestAria, requestFlag, weekNumberHtml } from "./render.js";
 import { MINUTES_PER_DAY, dayNumber, formatMinutes, isoFromDay, isoWeekday } from "./time.js";
 
-const HEAD_ROW = 24;
-const LANE = 20;
+// Row heights per density: compact tightens the day-number row and each lane,
+// so a cell fits more chips before its "+N".
+const ROWS = { comfortable: { head: 24, row: 20 }, compact: { head: 20, row: 16 } };
 
 export function renderMonth({ days, date, today, events, settings, strings, phone = false, cellHeight = 96, now }) {
   const weeks = monthWeeks(days);
@@ -26,9 +27,10 @@ export function renderMonth({ days, date, today, events, settings, strings, phon
   const label = `${strings.months[monthNumber - 1]} ${year}`;
   const head = weeks[0].map((iso) => `<span class="cal-month-weekday">${escapeHtml(strings.weekdays[isoWeekday(dayNumber(iso)) - 1])}</span>`).join("");
   const body = phone ? weeks.map((week) => phoneWeek(week, ctx)).join("") : wideWeeks(weeks, cellHeight, ctx);
+  const density = ROWS[settings.density] ? settings.density : "comfortable";
 
   return (
-    `<div class="cal-month${phone ? " is-phone" : ""}${settings.show_week_numbers ? " has-weeknums" : ""}" data-view-scroll role="region" aria-label="${escapeHtml(label)}">` +
+    `<div class="cal-month${phone ? " is-phone" : ""}${settings.show_week_numbers ? " has-weeknums" : ""}" data-density="${density}" data-view-scroll role="region" aria-label="${escapeHtml(label)}">` +
     `<div class="cal-month-head" aria-hidden="true">${head}</div>` +
     `<div class="cal-month-weeks">${body}</div>` +
     (phone ? chosenDay(ctx) : "") +
@@ -45,11 +47,12 @@ export function dotsHtml(dots, extra = "") {
 }
 
 function wideWeeks(weeks, cellHeight, ctx) {
-  const lanes = chipCapacity(cellHeight, { head: HEAD_ROW, row: LANE });
+  const rows = ROWS[ctx.settings.density] ?? ROWS.comfortable;
+  const lanes = chipCapacity(cellHeight, rows);
   const byId = new Map(ctx.events.map((e) => [e.id, e]));
   return monthLayout(weeks, ctx.events, { maxLanes: lanes })
     .map((week) => {
-      let html = `<div class="cal-mweek" style="grid-template-rows:${HEAD_ROW}px repeat(${lanes}, ${LANE}px) minmax(0, 1fr)">${weekNumberHtml(week.days, ctx.settings, ctx.strings)}`;
+      let html = `<div class="cal-mweek" style="grid-template-rows:${rows.head}px repeat(${lanes}, ${rows.row}px) minmax(0, 1fr)">${weekNumberHtml(week.days, ctx.settings, ctx.strings)}`;
       // Each day's cell is followed by its bars (from the day they start on),
       // chips and "+N", so the document reads day by day; the grid placement
       // is explicit, so the picture does not depend on this order.
