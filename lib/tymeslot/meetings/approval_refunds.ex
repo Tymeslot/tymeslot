@@ -13,7 +13,7 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.ApprovalRelease
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   @doc """
@@ -42,7 +42,7 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   (`Bookings.Reschedule`), and reading the claim here would therefore find it
   empty on exactly the meetings this rule is about.
 
-  `Tymeslot.Meetings.Approval` calls it for every way a held request stops
+  `Tymeslot.Meetings.ApprovalRelease` calls it for every way a held request stops
   being held: `decline/2` and `expire/1` (via its `after_release/1`), and
   `withdraw/2`, for an invitee's own withdrawal and for an externally-deleted
   hold. A failed
@@ -76,7 +76,7 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   def refund_unapproved_series(%SeriesSchema{id: series_id}, [first | _rest] = released) do
     case MeetingPayments.payment_for_series(series_id) do
       %{paid_at: %DateTime{}} = payment ->
-        case Enum.reject(released, &Approval.refunds_on_release?/1) do
+        case Enum.reject(released, &ApprovalRelease.refunds_on_release?/1) do
           [] -> refund_remaining(payment, first)
           [announced | _rest] -> refund_or_defer(payment, announced)
         end
@@ -87,7 +87,7 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   end
 
   defp refund_or_defer(payment, meeting) do
-    if Approval.refunds_on_release?(meeting) do
+    if ApprovalRelease.refunds_on_release?(meeting) do
       refund_remaining(payment, meeting)
     else
       Logger.info(
