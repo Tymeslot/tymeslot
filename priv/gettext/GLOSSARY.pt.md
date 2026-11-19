@@ -172,6 +172,11 @@ flow and in the dashboard.
 | Copy free times | Copiar horários livres |
 | Request · Expired (calendar pill for a booking request) | Pedido · Expirado (masculine, agreeing with *pedido*) |
 | put back (bookable times restored by undo) | restaurados |
+| tell guests (send guests an update about a changed event) | **avisar os convidados**; the button is **Avisar convidados**, and after another verb it keeps the article, *Excluir e avisar os convidados*, parallel to *Excluir e cancelar o agendamento*. Never *notificar*, which is the notifications feature. Failure: *Não foi possível avisar os convidados.* |
+| update (what guests receive about a changed event) | **atualização** · *Os convidados receberão uma atualização.*; the held update that can still be called off *está aguardando envio* (*não está mais aguardando envio* once it is not) |
+| Tymeslot meeting (a booking sent from the calendar) | **reunião Tymeslot**, never *reunião do Tymeslot* or *evento Tymeslot* · *Enviar como reunião Tymeslot*, *enviar uma reunião Tymeslot*. It stays apart from **evento**, the plain calendar entry: *Conecte um calendário para adicionar eventos ou … enviar uma reunião Tymeslot*. |
+| Syncing (a calendar write the provider has not yet confirmed) | **Sincronizando** (gender-free gerund; also *Sincronizando com seu calendário.*) |
+| Preview · Live Preview | **Prévia** · **Prévia ao vivo**; the noun is always *prévia*, never *visualização* (which is *view*) or *pré-visualização*; the verb in running text is *ver a prévia* or *pré-visualizar* |
 | translation (noun; booking-page languages) | tradução (pl. traduções); *"%{language} translations"* → *"Traduções: %{language}"*, *"Your %{language} translations"* → *"Suas traduções (%{language})"*: `%{language}` is filled with the language's own name, so it goes after a colon or in brackets, never after *em* or *para* |
 | translate | traduzir; the participle agrees with *textos* (*"%{translated}/%{total} traduzidos"*) |
 | original language (the language the host writes their texts in) | idioma original; *"in %{language}"* → *"no idioma original (%{language})"*; the original text is *o original*, and the badge beside that language reads *original* |
