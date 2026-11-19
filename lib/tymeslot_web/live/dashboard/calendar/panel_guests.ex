@@ -206,12 +206,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   @spec cancel_pending(socket()) :: socket()
   def cancel_pending(socket) do
     with {:ok, event} <- panel_event(socket),
-         %{guests_pending: true} = panel <- socket.assigns.panel,
+         %{guests_pending: true, held_until: %DateTime{} = held_until} = panel <-
+           socket.assigns.panel,
          {:ok, outcome} <-
            Changes.cancel_guest_update(
              socket.assigns.current_user.id,
              socket.assigns.integrations,
-             event
+             event,
+             held_until
            ) do
       socket
       |> assign(:held_from, Map.delete(socket.assigns.held_from, panel.event_id))
@@ -286,14 +288,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   Asks again once the update held for the event `id` until `held_until` is
   due (`recheck_pending/4`), so the panel's Cancel does not outlive it, and
   after `backoff` milliseconds when it is overdue already. The panel keeps
-  one watch: a new one replaces the one before. Nothing for no update held
-  (`nil`).
+  one watch: a new one replaces the one before. The panel also keeps
+  `held_until`, which Cancel names the hold by, so that only this hold
+  going out counts as too late to cancel, not an earlier update. Nothing
+  for no update held (`nil`).
   """
   @spec watch_hold(socket(), String.t(), DateTime.t() | nil, pos_integer()) :: socket()
   def watch_hold(socket, id, held_until, backoff \\ @hold_grace_ms)
 
   def watch_hold(socket, _id, nil, _backoff),
-    do: PanelState.update(socket, &Map.put(&1, :hold_watch, nil))
+    do: PanelState.update(socket, &Map.merge(&1, %{hold_watch: nil, held_until: nil}))
 
   # The job's due time is Oban's, on the system clock, not `Tymeslot.Clock`.
   def watch_hold(socket, id, %DateTime{} = held_until, backoff) do
@@ -316,7 +320,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
       wait
     )
 
-    PanelState.update(socket, &Map.put(&1, :hold_watch, watch))
+    PanelState.update(socket, &Map.merge(&1, %{hold_watch: watch, held_until: held_until}))
   end
 
   # The panel counts from the event as it is now. While the update is held,

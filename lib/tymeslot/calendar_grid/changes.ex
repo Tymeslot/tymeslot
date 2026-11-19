@@ -261,11 +261,14 @@ defmodule Tymeslot.CalendarGrid.Changes do
   defdelegate guest_update_held_until(event), to: GuestUpdate, as: :held_until
 
   @doc """
-  Cancels the held update for the event's guests, once the user is found to
-  organise it on a calendar they can write. See
-  `Tymeslot.CalendarGrid.GuestUpdate.cancel/3`.
+  Cancels the update held for the event's guests until `held_until` (as
+  `guest_update_held_until/1` gave it), once the user is found to organise
+  it on a calendar they can write. See
+  `Tymeslot.CalendarGrid.GuestUpdate.cancel/4`.
   """
-  @spec cancel_guest_update(pos_integer(), [map()], map()) ::
+  @spec cancel_guest_update(pos_integer(), [map()], map(), DateTime.t()) ::
           {:ok, :cancelled | :already_sent | :not_held} | {:error, GuestUpdate.refusal()}
-  defdelegate cancel_guest_update(user_id, integrations, event), to: GuestUpdate, as: :cancel
+  defdelegate cancel_guest_update(user_id, integrations, event, held_until),
+    to: GuestUpdate,
+    as: :cancel
 end

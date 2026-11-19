@@ -57,8 +57,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestUpdateHoldTest do
     assert all_enqueued(worker: EmailWorker) == []
   end
 
-  defp change_and_tell(lv, review) do
-    review |> Changeset.change(location: "Room 9") |> Repo.update!()
+  defp change_and_tell(lv, review, location \\ "Room 9") do
+    review |> Changeset.change(location: location) |> Repo.update!()
     send_update(lv.pid, CalendarSurface, id: "calendar", action: :events_updated)
     send_update(lv.pid, CalendarSurface, id: "calendar", action: :reload)
     lv |> element("#calendar-panel-tell-guests") |> render_click()
@@ -209,7 +209,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestUpdateHoldTest do
     review: review
   } do
     change_and_tell(lv, review)
-    {:ok, :cancelled} = Dispatcher.cancel_pending(review.id, :provider_calendar_event)
+
+    {:ok, :cancelled} =
+      Dispatcher.cancel_pending(review.id, :provider_calendar_event, due(review))
 
     lv |> element("#calendar-panel-cancel-guest-update") |> render_click()
 
@@ -217,6 +219,41 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestUpdateHoldTest do
     refute has_element?(lv, "#calendar-toast", "Too late to cancel")
     assert has_element?(lv, "#calendar-panel-untold", "Guests haven't been told")
   end
+
+  # Told at t0 (out at t0+2m), told again at t0+5m, that second hold
+  # cancelled in another tab: the update that went out at t0+2m told the
+  # guests nothing about the second change.
+  test "Cancel after another tab cancelled a later hold does not count an earlier update", %{
+    lv: lv,
+    review: review
+  } do
+    change_and_tell(lv, review)
+    two_minutes_ago = DateTime.add(DateTime.utc_now(), -120)
+
+    Repo.update_all(Oban.Job,
+      set: [
+        state: "completed",
+        scheduled_at: DateTime.add(two_minutes_ago, -1),
+        attempted_at: two_minutes_ago,
+        completed_at: two_minutes_ago
+      ]
+    )
+
+    close_and_reopen(lv, review)
+    change_and_tell(lv, review, "Room 10")
+
+    {:ok, :cancelled} =
+      Dispatcher.cancel_pending(review.id, :provider_calendar_event, due(review))
+
+    lv |> element("#calendar-panel-cancel-guest-update") |> render_click()
+
+    refute has_element?(lv, "#calendar-toast", "Too late to cancel")
+    assert has_element?(lv, "#calendar-toast", "This update is no longer waiting to be sent.")
+    assert has_element?(lv, "#calendar-panel-untold", "Guests haven't been told")
+    assert has_element?(lv, "#calendar-panel-tell-guests")
+  end
+
+  defp due(event), do: Dispatcher.pending_due_at(event.id, :provider_calendar_event)
 
   test "a panel opened on a held update drops its Cancel once the update is due", %{
     conn: conn,

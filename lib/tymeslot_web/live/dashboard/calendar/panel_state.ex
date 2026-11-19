@@ -220,6 +220,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       scope: nil,
       opened_with: Map.get(assigns.untold_moves, EventPayload.id(event), event),
       guests_pending: held_until != nil,
+      held_until: nil,
       hold_watch: nil,
       status: opening_status(assigns, event),
       writes: [],

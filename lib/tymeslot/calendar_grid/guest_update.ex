@@ -68,17 +68,19 @@ defmodule Tymeslot.CalendarGrid.GuestUpdate do
   def held_until(_event), do: nil
 
   @doc """
-  Drops the update held for `event`'s guests, so they are told nothing:
+  Drops the update held for `event`'s guests, the hold the caller knew was
+  due at `held_until` (`held_until/1`), so they are told nothing:
   `{:ok, :cancelled}`; when none was held any more, `{:ok, :already_sent}`
-  when it has gone out, or `{:ok, :not_held}` when it went some other way
-  (cancelled from another tab). Refused, like `tell/5`, unless the user
-  organises the event on a calendar they can write.
+  when that hold has gone out, or `{:ok, :not_held}` when it went some other
+  way (cancelled from another tab), even if an earlier update went out
+  before it. Refused, like `tell/5`, unless the user organises the event on
+  a calendar they can write.
   """
-  @spec cancel(pos_integer(), [map()], map()) ::
+  @spec cancel(pos_integer(), [map()], map(), DateTime.t()) ::
           {:ok, :cancelled | :already_sent | :not_held} | {:error, refusal()}
-  def cancel(user_id, integrations, event) do
+  def cancel(user_id, integrations, event, %DateTime{} = held_until) do
     with :ok <- EditGuard.guest_update(user_id, integrations, event) do
-      case cancel_held(event) do
+      case cancel_held(event, held_until) do
         {:ok, :cancelled} -> {:ok, :cancelled}
         {:ok, :sent} -> {:ok, :already_sent}
         {:ok, :none} -> {:ok, :not_held}
@@ -86,8 +88,8 @@ defmodule Tymeslot.CalendarGrid.GuestUpdate do
     end
   end
 
-  defp cancel_held(%ProviderCalendarEventSchema{} = event),
-    do: AttendeeNotifications.cancel_pending(event)
+  defp cancel_held(%ProviderCalendarEventSchema{} = event, held_until),
+    do: AttendeeNotifications.cancel_pending(event, held_until)
 
-  defp cancel_held(_not_cached), do: {:ok, :none}
+  defp cancel_held(_not_cached, _held_until), do: {:ok, :none}
 end
