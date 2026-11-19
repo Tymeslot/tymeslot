@@ -308,6 +308,47 @@ defmodule Tymeslot.CalendarGrid.SeriesPreviewTest do
       assert events |> previews() |> Enum.map(& &1.start_at) == Enum.map(1..3, &week(@first, &1))
       assert length(events) == 4
     end
+
+    # After the sync the copy's own date is an occurrence cached under the
+    # series' UID and the slot's key, and under the series' href, neither of
+    # which the booking carries: a CalDAV booking knows its copy by the bare
+    # UID alone.
+    test "on CalDAV is drawn once on its date after the sync, beside the later weeks" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          calendar_integration_id: integration.id,
+          calendar_uid: "weekly@tymeslot.com",
+          start_time: @first,
+          end_time: DateTime.add(@first, 3600)
+        )
+
+      stand_in(integration, %{
+        uid: "weekly@tymeslot.com",
+        provider: "caldav",
+        provider_calendar_id: "/cal/",
+        provider_event_id: "/cal/weekly@tymeslot.com.ics"
+      })
+
+      assert :ok = SyncReconciler.process_tier1(integration, caldav_series(), [])
+
+      {range_start, range_end} = {DateTime.add(@first, -1, :hour), week(@first, 4)}
+      events = EventWindow.list_events(user.id, [integration], range_start, range_end)
+
+      assert [%{meeting_id: meeting_id, copy: copy}] =
+               Enum.filter(events, &(Map.get(&1, :kind) == :booking))
+
+      assert meeting_id == meeting.id
+      assert copy.calendar_integration_id == integration.id
+
+      assert events |> Enum.reject(&(Map.get(&1, :kind) == :booking)) |> Enum.map(& &1.uid) ==
+               Enum.map(1..3, &("weekly@tymeslot.com_" <> stamp(week(@first, &1))))
+    end
   end
 
   describe "the occurrences previewed" do
