@@ -15,6 +15,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesTest do
   alias Tymeslot.Clock
   alias Tymeslot.Meetings.ExternalCalendarChanges
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.TestMocks
 
   @armed_key :cancel_after_sync_status_update
@@ -81,7 +82,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChangesTest do
         Process.delete(@armed_key)
 
         {:ok, _cancelled} =
-          MeetingQueries.transition_to_cancelled(meeting_id,
+          MeetingTransitionQueries.transition_to_cancelled(meeting_id,
             cancelled_at: DateTime.truncate(Clock.utc_now(), :second)
           )
 

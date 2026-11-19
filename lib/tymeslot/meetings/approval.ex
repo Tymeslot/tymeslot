@@ -18,7 +18,7 @@ defmodule Tymeslot.Meetings.Approval do
   host accepted.
 
   So the status change is a single guarded `UPDATE ... WHERE status =
-  'awaiting_approval'` (`MeetingQueries.transition_from_awaiting_approval/2`).
+  'awaiting_approval'` (`MeetingTransitionQueries.transition_from_awaiting_approval/2`).
   Every exit from the gate goes through it — including the invitee's own
   withdrawal and an external actor (the host deleting the tentative hold from
   their own calendar), both reached through `Bookings.Cancel`, which
@@ -40,7 +40,7 @@ defmodule Tymeslot.Meetings.Approval do
     * `decline/2` — the host says no. The meeting becomes `:cancelled`, which
       is not a compromise but the accurate status: the slot is released, the
       tentative calendar event removed, and the attendee told. A booking that
-      was paid for but never approved gave the attendee nothing, so `release/3`
+      was paid for but never approved gave the attendee nothing, so `ApprovalRelease`
       refunds the full remaining balance itself rather than deferring to the
       cancellation pipeline, which exists for a meeting the attendee actually
       got to have and offers the host no such choice here — unless the request
@@ -96,20 +96,17 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.Clock
-  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.ApprovalRefunds
-  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.ApprovalRelease
+  alias Tymeslot.Meetings.CommittedStep
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
-  alias Tymeslot.Notifications.DispatchInTransactionError
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Repo
   alias Tymeslot.Validation.Constraints
-  alias Tymeslot.Workers.VideoSyncWorker
 
   @typedoc "Why a transition out of the approval gate did not happen."
   @type error :: :not_awaiting_approval | :meeting_started | :slot_taken | :not_scheduled
@@ -324,7 +321,7 @@ defmodule Tymeslot.Meetings.Approval do
   defp confirm(meeting, now) do
     Repo.transaction(fn ->
       with {:ok, confirmed} <-
-             MeetingQueries.transition_from_awaiting_approval(meeting.id,
+             MeetingTransitionQueries.transition_from_awaiting_approval(meeting.id,
                status: :confirmed,
                approval_resolved_at: DateTime.truncate(now, :second)
              ),
@@ -368,139 +365,48 @@ defmodule Tymeslot.Meetings.Approval do
   """
   @spec activate_confirmed(Meeting.t(), Events.pending()) :: :ok
   def activate_confirmed(%Meeting{} = confirmed, pending) do
-    best_effort(confirmed, "cancel request notifications", fn ->
+    CommittedStep.run(confirmed, "cancel request notifications", fn ->
       Orchestrator.cancel_request_notifications(confirmed)
     end)
 
-    best_effort(confirmed, "confirm calendar event", fn ->
+    CommittedStep.run(confirmed, "confirm calendar event", fn ->
       confirm_calendar_event(confirmed)
     end)
 
-    best_effort(confirmed, "announce to integrations", fn ->
+    CommittedStep.run(confirmed, "announce to integrations", fn ->
       Activation.after_commit(pending)
     end)
 
-    best_effort(confirmed, "send reschedule notifications", fn ->
+    CommittedStep.run(confirmed, "send reschedule notifications", fn ->
       Orchestrator.send_reapproval_notifications(confirmed)
     end)
 
     :ok
   end
 
-  @doc """
-  Declines a held booking, releasing the slot.
-
-  `reason` is the host's optional note to the invitee; `nil` and an empty
-  string both mean "no reason given" and are stored as `nil` so the templates
-  have one absence to test rather than two.
-  """
+  @doc "Declines a held booking, releasing the slot. See `ApprovalRelease.decline/2`."
   @spec decline(Meeting.t(), String.t() | nil) :: {:ok, Meeting.t()} | {:error, error()}
-  def decline(%Meeting{} = meeting, reason \\ nil) do
-    case SeriesApproval.for_session(meeting, {:decline, reason}) do
-      :not_in_series -> release(meeting, :cancelled, decline_changes(reason, Clock.utc_now()))
-      answered -> answered
-    end
-  end
+  defdelegate decline(meeting, reason \\ nil), to: ApprovalRelease
 
-  @doc "What a decline writes besides its status: the reason, capped, and when."
+  @doc "What a decline writes besides its status. See `ApprovalRelease.decline_changes/2`."
   @spec decline_changes(String.t() | nil, DateTime.t()) :: keyword()
-  def decline_changes(reason, %DateTime{} = now) do
-    [
-      decline_reason: normalise_reason(reason),
-      approval_declined_at: DateTime.truncate(now, :second)
-    ]
-  end
+  defdelegate decline_changes(reason, now), to: ApprovalRelease
 
-  @doc """
-  Releases a held booking whose deadline has passed.
-
-  Distinct from `decline/2` only in the status recorded and, downstream, in
-  what the invitee is told. Both free the slot identically.
-  """
+  @doc "Releases a held booking whose deadline has passed. See `ApprovalRelease.expire/1`."
   @spec expire(Meeting.t()) :: {:ok, Meeting.t()} | {:error, error()}
-  def expire(%Meeting{} = meeting) do
-    case SeriesApproval.for_session(meeting, :expire) do
-      :not_in_series -> release(meeting, :expired, [])
-      answered -> answered
-    end
-  end
+  defdelegate expire(meeting), to: ApprovalRelease
 
-  @doc """
-  Withdraws a held request outside of the host's own decision: the invitee
-  changed their mind, or an external actor (the host deleting the tentative
-  hold from their own calendar) is treated as having withdrawn it on their
-  behalf. `Bookings.Cancel` is the only caller.
-
-  Guarded exactly like `decline/2` and `expire/1` — the same
-  `transition_from_awaiting_approval/2` — so a withdrawal cannot race a
-  host's answer or the expiry sweep into overwriting `:confirmed` back to
-  `:cancelled`, and cannot double-refund a request the sweep already
-  released. Neither `approval_resolved_at` nor `approval_declined_at` is set:
-  the first means "the host decided" and the second "the host refused", and a
-  withdrawal is neither. `declined?/1` is what the request page and the
-  webhook payload ask, so leaving both unset is what keeps a withdrawal from
-  being reported as a decline.
-
-  `extra_changes` lets `Bookings.Cancel` record why (e.g. an external
-  calendar deletion) without this module knowing about that reason itself,
-  and say who withdrew it: `withdrawn_by: :calendar` for an external
-  deletion, which a series is told as the host's cancellation, and the
-  default `:attendee` otherwise.
-  Notification is deliberately not sent from here: `Bookings.Cancel` sends
-  its own ordinary cancellation email for every exit it owns, and decline/
-  expire's host-facing wording would be wrong for a withdrawal.
-  """
+  @doc "Withdraws a held request without the host refusing it. See `ApprovalRelease.withdraw/2`."
   @spec withdraw(Meeting.t(), keyword()) :: {:ok, Meeting.t()} | {:error, error()}
-  def withdraw(%Meeting{} = meeting, extra_changes \\ []) do
-    {withdrawn_by, extra_changes} = Keyword.pop(extra_changes, :withdrawn_by, :attendee)
+  defdelegate withdraw(meeting, extra_changes \\ []), to: ApprovalRelease
 
-    case SeriesApproval.for_session(meeting, {:withdraw, withdrawn_by, extra_changes}) do
-      :not_in_series -> withdraw_one(meeting, extra_changes)
-      answered -> answered
-    end
-  end
+  @doc "Clears a committed release's jobs, calendar hold and video room. See `ApprovalRelease.clear_released_request/1`."
+  @spec clear_released_request(Meeting.t()) :: :ok
+  defdelegate clear_released_request(meeting), to: ApprovalRelease
 
-  defp withdraw_one(meeting, extra_changes) do
-    now = DateTime.truncate(Clock.utc_now(), :second)
-    changes = [status: :cancelled, cancelled_at: now] ++ extra_changes
-
-    with_released_meeting(meeting, changes, fn released ->
-      clear_released_request(released)
-
-      best_effort(released, "refund unapproved request", fn ->
-        ApprovalRefunds.refund_unapproved_request(released)
-      end)
-    end)
-  end
-
-  defp release(meeting, status, extra_changes) do
-    now = DateTime.truncate(Clock.utc_now(), :second)
-    changes = [status: status, approval_resolved_at: now, cancelled_at: now] ++ extra_changes
-
-    with_released_meeting(meeting, changes, fn released -> after_release(released) end)
-  end
-
-  defp with_released_meeting(meeting, changes, after_fun) do
-    case MeetingQueries.transition_from_awaiting_approval(meeting.id, changes) do
-      {:ok, released} ->
-        Logger.info("Booking request released",
-          meeting_id: released.id,
-          status: released.status
-        )
-
-        Availability.changed(released.organizer_user_id)
-        after_fun.(released)
-        {:ok, released}
-
-      {:error, :not_awaiting_approval} = error ->
-        Logger.info("Release skipped: request no longer held",
-          meeting_id: meeting.id,
-          status: meeting.status
-        )
-
-        error
-    end
-  end
+  @doc "Whether releasing this request refunds its payment. See `ApprovalRelease.refunds_on_release?/1`."
+  @spec refunds_on_release?(Meeting.t() | map()) :: boolean()
+  defdelegate refunds_on_release?(meeting), to: ApprovalRelease
 
   # The booking already wrote a tentative event to hold the slot; approving it
   # has to turn that event into a real one. Without this the host's calendar
@@ -545,120 +451,10 @@ defmodule Tymeslot.Meetings.Approval do
     end
   end
 
-  # Everything that must happen once the slot is genuinely free again, in the
-  # order that matters: stop the jobs that would contradict the outcome, take
-  # the hold off the host's calendar, take the video room off the provider,
-  # refund whatever the attendee paid for a booking that never got approved,
-  # then tell the invitee, and any guests a reschedule had invited, from email
-  # jobs (`Orchestrator.send_request_outcome_notifications/2`). Each step runs through `best_effort/3` so a crash
-  # in one cannot stop the next; none of them may fail the transition, which
-  # has already been committed and cannot be undone.
-  defp after_release(%Meeting{status: status} = meeting) do
-    clear_released_request(meeting)
-
-    best_effort(meeting, "refund unapproved request", fn ->
-      ApprovalRefunds.refund_unapproved_request(meeting)
-    end)
-
-    best_effort(meeting, "announce release", fn -> announce_release(meeting, status) end)
-
-    :ok
-  end
-
-  @doc """
-  Takes a committed release off its request jobs, the host's calendar and
-  the video provider, each step best-effort (see `after_release/1`).
-  """
-  @spec clear_released_request(Meeting.t()) :: :ok
-  def clear_released_request(%Meeting{} = meeting) do
-    best_effort(meeting, "cancel request notifications", fn ->
-      Orchestrator.cancel_request_notifications(meeting)
-    end)
-
-    best_effort(meeting, "cancel calendar event", fn ->
-      Meetings.cancel_calendar_event(meeting)
-    end)
-
-    best_effort(meeting, "release video room", fn -> release_video_room(meeting) end)
-    :ok
-  end
-
-  defp announce_release(meeting, :expired), do: Events.meeting_request_expired(meeting)
-  defp announce_release(meeting, _declined), do: Events.meeting_declined(meeting)
-
-  # Mirrors `Bookings.Cancel`'s own video cleanup. A held request's video
-  # room used to depend entirely on the daily orphan sweep
-  # (`OrphanedVideoRoomScanWorker`, via `MeetingListQueries.list_cancelled_with_video_room/2`),
-  # which only looks at `status == :cancelled` — so a request released as
-  # `:expired` left its room behind forever. Enqueuing the delete directly
-  # here, for every release regardless of status, means the room's fate no
-  # longer depends on which of the two statuses this happened to end in.
-  defp release_video_room(%Meeting{video_room_id: nil}), do: :ok
-  defp release_video_room(%Meeting{organizer_user_id: nil}), do: :ok
-
-  defp release_video_room(%Meeting{} = meeting) do
-    case VideoSyncWorker.enqueue(meeting.id, "delete") do
-      {:ok, _status} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to enqueue provider video deletion on request release",
-          meeting_id: meeting.id,
-          reason: LogFormat.reason(reason)
-        )
-
-        :ok
-    end
-  end
-
-  @doc """
-  Whether releasing this request refunds its payment automatically.
-
-  False only for a request that was a confirmed meeting before a reschedule
-  sent it back through the gate (see `ApprovalRefunds.refund_unapproved_request/1`). The
-  attendee return page asks this too, so what it promises cannot drift from
-  what the release does.
-  """
-  @spec refunds_on_release?(Meeting.t() | map()) :: boolean()
-  def refunds_on_release?(%{first_announced_at: %DateTime{}}), do: false
-  def refunds_on_release?(_meeting), do: true
-
   defp started?(%Meeting{start_time: nil}, _now), do: false
 
   defp started?(%Meeting{start_time: start_time}, now),
     do: DateTime.compare(now, start_time) != :lt
 
   defp earliest(a, b), do: if(DateTime.compare(a, b) == :lt, do: a, else: b)
-
-  # Capped here rather than only in the form, because the reason is quoted
-  # verbatim into an email to a third party and the two places a host can type
-  # one are both client-side limits a request can simply not honour.
-  defp normalise_reason(nil), do: nil
-
-  defp normalise_reason(reason) when is_binary(reason) do
-    case String.trim(reason) do
-      "" -> nil
-      trimmed -> String.slice(trimmed, 0, Constraints.decline_reason_max_length())
-    end
-  end
-
-  # Every step wrapped in this runs against a meeting whose row is already
-  # committed — confirmed by `do_approve/2`, released by `release/3` and
-  # `withdraw/2` — and cannot be undone by a caller retrying. A crash in one
-  # step must not stop the next, nor turn a real approval or release into an
-  # `{:error, ...}` the caller has to explain: the transition already
-  # succeeded, and each of these is independently retried or logged by its
-  # own module on an ordinary `{:error, _}`. This only guards against the
-  # unexpected raise; `{:error, _}` returns are each module's own job to log.
-  # A fan-out dispatched inside a transaction is not one: it is a caller
-  # wired up wrong, and is let through to fail loudly.
-  defp best_effort(meeting, step, fun) do
-    fun.()
-  rescue
-    exception in DispatchInTransactionError ->
-      reraise exception, __STACKTRACE__
-
-    exception ->
-      ErrorTracking.report_error(exception, __STACKTRACE__, %{step: step, meeting_id: meeting.id})
-  end
 end

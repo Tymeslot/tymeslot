@@ -18,6 +18,7 @@ defmodule Tymeslot.Bookings.Cancel do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -381,7 +382,7 @@ defmodule Tymeslot.Bookings.Cancel do
     end
   end
 
-  # The status flip is guarded (see `MeetingQueries.transition_to_cancelled/2`):
+  # The status flip is guarded (see `MeetingTransitionQueries.transition_to_cancelled/2`):
   # `meeting` may be a copy read before a concurrent cancellation committed,
   # and only the caller whose write actually cancelled the row goes on to
   # delete the calendar event and tell everyone. The loser gets
@@ -396,7 +397,7 @@ defmodule Tymeslot.Bookings.Cancel do
         fn {_key, value} -> is_nil(value) end
       )
 
-    case MeetingQueries.transition_to_cancelled(meeting.id, changes) do
+    case MeetingTransitionQueries.transition_to_cancelled(meeting.id, changes) do
       {:ok, updated_meeting} ->
         Logger.info("Meeting status updated to cancelled",
           meeting_id: meeting.id,

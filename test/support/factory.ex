@@ -4,6 +4,8 @@ defmodule Tymeslot.Factory do
   """
 
   use ExMachina.Ecto, repo: Tymeslot.Repo
+  use Tymeslot.Factory.IntegrationDeliveryFactories
+  use Tymeslot.Factory.PollFactories
   use Tymeslot.Factory.VideoIntegrationFactories
 
   alias Ecto.UUID
@@ -16,6 +18,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.BookingPages.BookingPageMeetingTypeSchema
   alias Tymeslot.BookingPages.BookingPageSchema
   alias Tymeslot.BookingSeries.SeriesSchema
+  alias Tymeslot.Factory.TokenHash
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -25,23 +28,13 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Payments.PaymentTransactionSchema
-  alias Tymeslot.Polls.PollParticipantSchema
-  alias Tymeslot.Polls.PollSchema
-  alias Tymeslot.Polls.PollTimeSlotSchema
-  alias Tymeslot.Polls.PollVoteSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
-  alias Tymeslot.Slack.SlackDeliverySchema
-  alias Tymeslot.Slack.SlackIntegrationSchema
-  alias Tymeslot.Telegram.TelegramDeliverySchema
-  alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Venues.VenueSchema
-  alias Tymeslot.Webhooks.WebhookDeliverySchema
-  alias Tymeslot.Webhooks.WebhookSchema
 
   # Every factory user carries the same password, so hashing it per insert buys
   # nothing: bcrypt is deliberately slow, and the suite builds users in the
@@ -172,7 +165,7 @@ defmodule Tymeslot.Factory do
     }
     |> merge_attributes(attrs)
     |> evaluate_lazy_attributes()
-    |> put_token_hash(:management_token, :management_token_hash)
+    |> TokenHash.put(:management_token, :management_token_hash)
   end
 
   @doc "A weekly two-session booking series without its sessions; pass `organizer_user`."
@@ -445,88 +438,6 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec webhook_factory() :: Tymeslot.Webhooks.WebhookSchema.t()
-  def webhook_factory do
-    %WebhookSchema{
-      name: sequence(:webhook_name, &"Webhook #{&1}"),
-      url: sequence(:webhook_url, &"https://example.com/webhook/#{&1}"),
-      events: ["meeting.created", "meeting.cancelled"],
-      is_active: true,
-      webhook_token_encrypted: <<1, 2, 3>>,
-      user: build(:user)
-    }
-  end
-
-  # Takes the attrs so a `link_token` given to the factory is stored as the
-  # hash the row is looked up by, as the changeset would store it.
-  @spec telegram_integration_factory(map()) :: TelegramIntegrationSchema.t()
-  def telegram_integration_factory(attrs) do
-    %TelegramIntegrationSchema{
-      name: sequence(:telegram_name, &"Telegram #{&1}"),
-      bot_mode: :own,
-      bot_token_encrypted: Encryption.encrypt("1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789"),
-      chat_id: sequence(:telegram_chat_id, &"#{&1 + 100_000}"),
-      events: ["meeting.created", "meeting.cancelled"],
-      is_active: true,
-      user: build(:user)
-    }
-    |> merge_attributes(attrs)
-    |> evaluate_lazy_attributes()
-    |> put_token_hash(:link_token, :link_token_hash)
-  end
-
-  @spec slack_integration_factory() :: SlackIntegrationSchema.t()
-  def slack_integration_factory do
-    %SlackIntegrationSchema{
-      name: sequence(:slack_name, &"Slack #{&1}"),
-      app_mode: :oauth,
-      bot_token_encrypted: Encryption.encrypt("xoxb-test-token"),
-      team_id: sequence(:slack_team_id, &"T#{&1 + 100_000}"),
-      team_name: "Test Workspace",
-      channel_id: sequence(:slack_channel_id, &"C#{&1 + 100_000}"),
-      channel_name: "#bookings",
-      events: ["meeting.created", "meeting.cancelled", "meeting.rescheduled"],
-      is_active: true,
-      user: build(:user)
-    }
-  end
-
-  @spec telegram_delivery_factory() :: TelegramDeliverySchema.t()
-  def telegram_delivery_factory do
-    %TelegramDeliverySchema{
-      integration: build(:telegram_integration),
-      event_type: "meeting.created",
-      message_text: "Test message",
-      response_status: 200,
-      attempt_count: 1,
-      inserted_at: DateTime.utc_now()
-    }
-  end
-
-  @spec slack_delivery_factory() :: SlackDeliverySchema.t()
-  def slack_delivery_factory do
-    %SlackDeliverySchema{
-      integration: build(:slack_integration),
-      event_type: "meeting.created",
-      message_blocks: %{"blocks" => []},
-      response_status: 200,
-      attempt_count: 1,
-      inserted_at: DateTime.utc_now()
-    }
-  end
-
-  @spec webhook_delivery_factory() :: Tymeslot.Webhooks.WebhookDeliverySchema.t()
-  def webhook_delivery_factory do
-    %WebhookDeliverySchema{
-      webhook: build(:webhook),
-      event_type: "meeting.created",
-      payload: %{"test" => true},
-      response_status: 200,
-      attempt_count: 1,
-      inserted_at: DateTime.utc_now()
-    }
-  end
-
   @spec payment_transaction_factory() :: Tymeslot.Payments.PaymentTransactionSchema.t()
   def payment_transaction_factory do
     %PaymentTransactionSchema{
@@ -580,81 +491,5 @@ defmodule Tymeslot.Factory do
       status: :paid,
       paid_at: DateTime.utc_now(:second)
     )
-  end
-
-  @spec poll_factory(map()) :: Tymeslot.Polls.PollSchema.t()
-  def poll_factory(attrs) do
-    %PollSchema{
-      title: "Team sync",
-      duration_minutes: 30,
-      timezone: "Etc/UTC",
-      status: :open,
-      token: Token.generate(24),
-      user: build(:user)
-    }
-    |> merge_attributes(attrs)
-    |> evaluate_lazy_attributes()
-    |> put_token_hash(:token, :token_hash)
-  end
-
-  @spec poll_time_slot_factory() :: Tymeslot.Polls.PollTimeSlotSchema.t()
-  def poll_time_slot_factory do
-    start_time = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
-    end_time = DateTime.add(start_time, 1, :hour)
-
-    %PollTimeSlotSchema{
-      start_time: start_time,
-      end_time: end_time,
-      position: sequence(:poll_slot_position, & &1),
-      poll: build(:poll)
-    }
-  end
-
-  # Someone the host invited, unless the test says otherwise: confirmed at once
-  # and still owing a vote, which is the participant nearly every test wants.
-  # The app confirms anyone else only when they vote, so a confirmed
-  # participant always has `invited_at` or `voted_at`:
-  #
-  #   * `confirmed_at: nil` (with a `link_sent_at`) is a pending link request,
-  #     never invited either;
-  #   * `invited_at: nil` with a `voted_at` is someone who asked for their link
-  #     and voted;
-  #   * `invited_at: nil` alone is a participant from before confirmation, whom
-  #     the confirmation migration confirmed without a vote. Only legacy rows
-  #     have that shape; say so where a test builds one.
-  @spec poll_participant_factory(map()) :: Tymeslot.Polls.PollParticipantSchema.t()
-  def poll_participant_factory(attrs) do
-    confirmed_at = Map.get(attrs, :confirmed_at, DateTime.utc_now(:second))
-
-    %PollParticipantSchema{
-      name: sequence(:poll_participant_name, &"Participant #{&1}"),
-      email: sequence(:poll_participant_email, &"participant#{&1}@example.com"),
-      token: Token.generate(24),
-      locale: "en",
-      confirmed_at: confirmed_at,
-      invited_at: confirmed_at,
-      poll: build(:poll)
-    }
-    |> merge_attributes(attrs)
-    |> evaluate_lazy_attributes()
-    |> put_token_hash(:token, :token_hash)
-  end
-
-  @spec poll_vote_factory() :: Tymeslot.Polls.PollVoteSchema.t()
-  def poll_vote_factory do
-    %PollVoteSchema{
-      response: :yes,
-      participant: build(:poll_participant),
-      time_slot: build(:poll_time_slot)
-    }
-  end
-
-  # A token is looked up by its hash, which factories bypassing the changeset
-  # have to store themselves. An explicit hash in the attrs wins.
-  defp put_token_hash(record, field, hash_field) do
-    case {Map.fetch!(record, field), Map.fetch!(record, hash_field)} do
-      {token, nil} when is_binary(token) -> Map.put(record, hash_field, Token.hash_token(token))
-      _no_token_or_hash_given -> record
-    end
   end
 end

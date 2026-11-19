@@ -256,7 +256,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
 
       # Another booking took the slot while this request was held, and the
       # partial unique index refused the confirmation
-      # (`MeetingQueries.transition_from_awaiting_approval/2`). The request is
+      # (`MeetingTransitionQueries.transition_from_awaiting_approval/2`). The request is
       # still awaiting an answer, so it is reloaded rather than resolved: the
       # host can still decline it, and approving is what has become
       # impossible.
