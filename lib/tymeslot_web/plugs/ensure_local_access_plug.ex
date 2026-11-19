@@ -53,7 +53,6 @@ defmodule TymeslotWeb.Plugs.EnsureLocalAccessPlug do
     allow_docker = Keyword.get(opts, :allow_docker, false)
 
     case conn.remote_ip do
-      # IPv4 localhost
       {127, 0, 0, 1} -> true
       # IPv6 localhost
       {0, 0, 0, 0, 0, 0, 0, 1} -> true

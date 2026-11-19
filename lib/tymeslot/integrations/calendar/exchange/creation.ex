@@ -13,10 +13,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
   Discovered folders are persisted writable, which is the same thing
   `Exchange.FolderDiscovery` says by declining to set `read_only` at all:
   `FindFolder` reports no rights, so a flag either way would assert something
-  the server never said. They were forced `read_only: true` here while the
-  provider refused every write, to keep such a folder out of the booking-target
-  pickers; the write path now exists, so the override is gone and the flag is
-  back to meaning only what a server states.
+  the server never said, so the flag means only what a server states.
 
   What the server does not state is still not known here. A folder the account
   can read but not write is offered as a booking target like any other, and the

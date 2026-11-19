@@ -3,19 +3,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   The guests of the side panel's New event draft (see `PanelNew`). Nobody
   is emailed until the draft is created; until then a guest is only a chip.
 
-  Every address is checked with the domain's own rules
-  (`CreateParams.guests/2`: a valid address, not the organiser's, at most
-  `CreateParams.max_guests/0`), so the chips never promise an invitation a
-  create would drop. An address typed into the guest field but not added
-  when Create is pressed is added first (`take_pending/3`), as the old
-  Quick Add did: a valid one joins the draft, and one that is not, or the
-  organiser's own, stops the create with its reason. A refusal is said
-  under the guest field (the panel's `"guest"` error), not in a toast.
+  Every address is checked with the domain's own rules (`CreateParams.guests/2`:
+  a valid address, not the organiser's, at most `CreateParams.max_guests/0`), so
+  the chips never promise an invitation a create would drop. An address typed
+  into the guest field but not added when Create is pressed is added first
+  (`take_pending/3`): a valid one joins the draft, and one that is not, or the
+  organiser's own, stops the create with its reason. A refusal is said under the
+  guest field (the panel's `"guest"` error), not in a toast.
 
   While "Send as a Tymeslot meeting" is ticked the meeting's own limit
   holds at Add (`max/1`): the guest it is with and `Guests.max_guests/0`
   others, or that many guests without a main participant. At the limit
-  the guest field gives way (`full?/1`), as in the old Quick Add.
+  the guest field gives way (`full?/1`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

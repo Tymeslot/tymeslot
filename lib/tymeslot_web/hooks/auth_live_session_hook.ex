@@ -162,9 +162,8 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
   defp unauthenticated_message(_session),
     do: dgettext("auth", "You must be logged in to access this page.")
 
-  # The login path lived under OTP app `:auth`, which neither repo configures,
-  # so the inline default always won. It belongs in the same `:tymeslot, :auth`
-  # keyword list the post-login redirect already reads. Config exposes no
+  # The login path lives in the same `:tymeslot, :auth` keyword list the
+  # post-login redirect reads. Config exposes no
   # public reader for this key (only `success_redirect_path/0`), so the
   # lookup stays here, guarded the same way `Config.success_redirect_path/0`
   # guards its own read.

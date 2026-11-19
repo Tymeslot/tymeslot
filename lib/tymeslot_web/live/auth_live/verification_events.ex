@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.AuthLive.VerificationEvents do
   @moduledoc """
-  Resending the verification email, lifted out of `TymeslotWeb.AuthLive`.
+  Resending the verification email.
 
   ## The cooldown starts on every click
 

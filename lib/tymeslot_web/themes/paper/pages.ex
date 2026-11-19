@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Themes.Paper.Pages do
   @moduledoc """
   Paper's page shell: its wrapper and one card, with the organiser's logo
-  above the body, around each default meeting, poll and payment page body
+  above the body, around each default meeting and poll page body
   (`Shared.DefaultPages`). The poll page takes the wide card, for its grid
   of times. The payment pages have no customisation (`theme_tokens` is nil
   there), so they show Paper's default look and no logo, and none of the

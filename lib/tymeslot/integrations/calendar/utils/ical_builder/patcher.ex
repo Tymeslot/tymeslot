@@ -42,8 +42,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     * A guest who stays keeps their stored line verbatim, `PARTSTAT`, `ROLE`,
       `RSVP`, `CN` and `SCHEDULE-AGENT` included. The cached attendee map does
       not hold those parameters for CalDAV, so rebuilding the line from it
-      would reset every reply, which is how the original full rewrite lost
-      them.
+      would reset every reply.
     * A guest who is gone loses their line. Addresses are compared without
       regard to case, as the grid compares them.
     * A guest who is new is written the way the caller's `mode` says (see
@@ -57,12 +56,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
       owner (`Scheduling.owner_attendee_address/2`, read from the stored
       `ORGANIZER`) is kept whatever the list says, and in Tymeslot's own
       block is added when missing: that server adds its calendar's owner
-      back under their primary address the moment the line goes (issue
-      #151). In Tymeslot's own block an `ATTENDEE` naming the organiser is
-      dropped when the owner line carries another address, which is how an
-      event written by the first fix for #151, listing the organiser beside
-      the owner the server added, loses the duplicate. An event someone else
-      organised keeps the line naming its organiser.
+      back under their primary address the moment the line goes. In
+      Tymeslot's own block an `ATTENDEE` naming the organiser is dropped when
+      the owner line carries another address, so an event listing the
+      organiser beside the owner the server added loses the duplicate. An
+      event someone else organised keeps the line naming its organiser.
 
   ## Reminders
 

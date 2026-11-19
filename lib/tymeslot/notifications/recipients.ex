@@ -18,7 +18,7 @@ defmodule Tymeslot.Notifications.Recipients do
   reschedule) also needs the calendar event's `calendar_uid` and the start
   time. A group meeting's row carries no attendee of its own (its people are
   its participants, emailed per seat), so its attendee fields are not asked
-  for. A field is missing when it is nil or false, as before.
+  for. A field is missing when it is nil or false.
   """
   @spec validate(map(), :booking | :recipients) :: :ok | {:error, String.t()}
   def validate(meeting, scope \\ :booking) do

@@ -17,11 +17,8 @@ defmodule Tymeslot.Jobs do
 
   @doc """
   Returns the args currently stored on a job's row, or `nil` when no row exists.
-
-  A worker whose uniqueness covers `:executing` with `replace: [:args]` can have
-  its row's args rewritten by a conflicting insert while it runs; the running
-  process only ever sees the args it started with. Rereading the row is how such
-  a worker notices the replacement before it finishes.
+  See `Tymeslot.Jobs.ObanJobQueries.get_current_args/1` for why a running worker
+  rereads them.
   """
   defdelegate get_current_args(job), to: ObanJobQueries
 

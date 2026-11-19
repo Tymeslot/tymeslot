@@ -571,8 +571,8 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   @impl GenServer
   def handle_info(msg, state) do
-    # Nothing routes replies here any more now that protected work runs in the
-    # caller, but a stray message must not take the breaker down with it.
+    # No reply is routed here, because protected work runs in the caller; a
+    # stray message must not take the breaker down.
     Logger.debug("Circuit breaker received unexpected message",
       name: state.name,
       message: LogFormat.reason(msg)

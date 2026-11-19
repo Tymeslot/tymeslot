@@ -252,9 +252,9 @@ defmodule Tymeslot.ContentTranslations do
   end
 
   @doc """
-  The text at `path` of `record` in `locale`: the translation when there is a
-  non-blank one written against the current original, which is not blank,
-  otherwise the original.
+  The text at `path` of `record` in `locale`: the translation when one is
+  stored against the current original and is not blank, otherwise the
+  original.
   """
   @spec text(struct(), path(), String.t() | nil) :: String.t() | nil
   def text(record, path, locale) do

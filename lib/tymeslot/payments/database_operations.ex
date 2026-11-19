@@ -131,9 +131,8 @@ defmodule Tymeslot.Payments.DatabaseOperations do
     end
   end
 
-  # Error handling utility for future expansion of payment processing
-  # capabilities. This function will be used when we implement more
-  # sophisticated error handling strategies.
+  # Logs a failed processing step, reports it through `ErrorHandler`, and
+  # returns the error message for the caller.
   @spec handle_payment_processing_error(transaction(), any()) ::
           {:error, binary()}
   defp handle_payment_processing_error(transaction, error) do

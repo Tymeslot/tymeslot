@@ -506,17 +506,13 @@ defmodule Tymeslot.Precommit.Runner do
   # consumed by the regulator in `dialyzer_coordinator`), so the count decides
   # how much of the analysis runs at once.
   #
-  # It was pinned to 4 as a memory guard, on a 13G figure measured while
-  # building a PLT from scratch. This step does that on the days a dependency or
-  # the toolchain moves and on no others; the warm run it performs the rest of
-  # the time holds 4.2G to 5.4G whether it is handed 4 schedulers or 16. So the
-  # number is a speed setting, and the memory guard is the systemd scope in the
-  # workspace `mix.sh`, which bounds the whole process tree however much
-  # dialyzer asks for. Measured on Core on a 16-core host, three runs each,
-  # median wall clock: 92s at 4, 77s at 8, 92s at 16, the last losing to
-  # coordination overhead. The cap is never more than the cores the run may use
-  # (`System.schedulers_online/0`, which honours a CPU quota), so a smaller
-  # machine is not handed more schedulers than it has.
+  # The number is a speed setting, not a memory guard: a warm run holds 4.2G to
+  # 5.4G whether it is handed 4 schedulers or 16. The memory guard is the
+  # systemd scope in the workspace `mix.sh`, which bounds the whole process tree.
+  # Measured on Core on a 16-core host, median wall clock of three runs: 92s at
+  # 4, 77s at 8, 92s at 16, the last losing to coordination overhead. The cap is
+  # never more than the cores the run may use (`System.schedulers_online/0`,
+  # which honours a CPU quota).
   #
   # The cap is keyed off the command rather than the step's display name, and set
   # here rather than for the run as a whole, so the test suite in the same

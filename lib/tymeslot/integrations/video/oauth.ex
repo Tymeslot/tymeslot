@@ -6,10 +6,10 @@ defmodule Tymeslot.Integrations.Video.OAuth do
   for an authorisation URL, and turn a misconfiguration into a message naming
   the environment variable the operator has to set.
 
-  That last part used to be three near-identical clause ladders differing only
-  in a brand name and an env-var prefix, which is what `@providers` replaces.
-  The messages are operator-facing and name concrete variables, so they are the
-  kind of text that is easy to get subtly wrong in one copy and not the others.
+  That last part differs between providers only in a brand name and an env-var
+  prefix, so `@providers` holds it in one place. The messages are
+  operator-facing and name concrete variables, so they are the kind of text
+  that is easy to get subtly wrong in one copy and not the others.
 
   What is *not* tabled is the call into each helper: Google needs its scopes
   passed explicitly and Teams and Zoom do not, so those keep a clause each

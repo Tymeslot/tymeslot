@@ -24,8 +24,6 @@ defmodule Tymeslot.Polls.Editing do
       passed, the announcement would ask people to answer what they no
       longer can, so the same edit has to move the deadline first.
 
-  Subscribers are told once the edit has committed.
-
   Existing times are never changed or removed here: they are what guests
   voted against. A meeting type set here only chooses the calendar the
   confirmed meeting uses, and its location while the poll has none of its

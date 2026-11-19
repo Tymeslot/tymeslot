@@ -1,6 +1,6 @@
 defmodule Tymeslot.Emails.Shared.MjmlEmail do
   @moduledoc """
-  Base MJML template for Tymeslot transactional emails (2026 redesign).
+  Base MJML template for Tymeslot transactional emails.
 
   ## Anatomy
 
@@ -196,8 +196,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   Renders the full MJML document for a transactional email.
 
   `organizer_details` carries the sender identity (organizer name, avatar,
-  optional title) and, new in 2026, an optional `:intent` and `:eyebrow` to
-  drive the stage band.
+  optional title) and the required `:intent` and `:eyebrow` that drive the
+  stage band.
   """
   @spec base_mjml_template(String.t(), organizer_details()) :: String.t()
   def base_mjml_template(content, organizer_details) when is_map(organizer_details) do

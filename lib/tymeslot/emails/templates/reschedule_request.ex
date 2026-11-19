@@ -42,7 +42,6 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
       # reads them in theirs.
       meeting = AttendeeTexts.attendee_view(meeting, locale)
 
-      # Convert time to attendee's timezone if available
       attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)
 
       # The appointment is cancelled, so there is no address left to arrange.

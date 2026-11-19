@@ -118,7 +118,6 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   def clear_day_settings(schedule_id, day_of_week) do
     case get_day_availability(schedule_id, day_of_week) do
       nil ->
-        # Day doesn't exist, create an unavailable day
         create_day_availability(schedule_id, day_of_week, %{is_available: false})
 
       existing ->

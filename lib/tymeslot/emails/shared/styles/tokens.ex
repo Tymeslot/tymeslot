@@ -1,6 +1,6 @@
 defmodule Tymeslot.Emails.Shared.Styles.Tokens do
   @moduledoc """
-  The design-token primitives for the 2026 email redesign.
+  The design-token primitives for the emails.
 
   This module carries the raw values — colour palette, intent map, type scale,
   spacing, radii — and the lookup functions that turn token keys into values.
@@ -73,13 +73,12 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
 
   # `deep` backs the stage band and the button surface for each family, so it
   # carries text and has to clear 4.5:1 against it, the same floor
-  # `BrandPalette` clamps derived families to. Rose's `deep` was darkened from
-  # "#c44d3d" (4.41:1 against band text, a hair under) to reach it.
+  # `BrandPalette` clamps derived families to. Rose's `deep` reads at 4.5:1 or
+  # better under band text.
   #
-  # Amber's `deep` was darkened from "#d97706" (2.99:1 against the near-white
-  # band text) to a burnt amber that reads at 4.72:1 under the band text and
-  # 4.51:1 as link text on the amber `tint`. It stays in the amber hue, so the
-  # alert band still reads as "act on this" rather than as rose's alarm.
+  # Amber's `deep` is a burnt amber that reads at 4.72:1 under the band text
+  # and 4.51:1 as link text on the amber `tint`. It stays in the amber hue, so
+  # the alert band still reads as "act on this" rather than as rose's alarm.
   @amber %{accent: "#f59e0b", deep: "#b45309", ink: "#78350f", tint: "#fef3c7"}
   @rose %{accent: "#e26d5c", deep: "#bd493a", ink: "#7a2b22", tint: "#fbeeeb"}
 

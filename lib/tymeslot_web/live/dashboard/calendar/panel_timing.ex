@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
 
   @doc """
   The change toggling all day makes to `event`, and the write's options; an
-  all-day event longer than a timed one may be cannot become timed.
+  all-day event longer than a timed one cannot become timed.
   """
   @spec toggle_all_day(map(), String.t()) :: {:ok, map(), keyword()} | {:error, String.t()}
   def toggle_all_day(event, timezone) do

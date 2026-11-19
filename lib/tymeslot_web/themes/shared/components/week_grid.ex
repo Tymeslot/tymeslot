@@ -295,7 +295,6 @@ defmodule TymeslotWeb.Themes.Shared.Components.WeekGrid do
   defp selected?(selected_date, selected_time, date, slot),
     do: selected_date == date and selected_time == slot
 
-  # No booking window known (no organiser resolved) bounds nothing.
   defp next_disabled?(week_start, timezone, days) when is_integer(days),
     do: CalendarNavigation.next_week_disabled?(week_start, timezone, days)
 

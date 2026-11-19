@@ -11,8 +11,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
   checkout still charges it (`Tymeslot.MeetingPayments.currency_support/1`),
   and is told why. A type that is already paid keeps its price in those
   states, so the stored amount is stated in words, in the account's currency,
-  where the price input cannot be rendered. Payments and group bookings are mutually exclusive:
-  while group bookings is enabled the toggle renders disabled with a hint.
+  where the price input cannot be rendered. Payments and group bookings are
+  mutually exclusive: while group bookings are enabled the toggle renders disabled with a hint.
 
   The toggle and price input dispatch `toggle_payment_required` and
   `change_payment_price` events back to the parent form component

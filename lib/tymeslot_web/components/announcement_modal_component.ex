@@ -11,8 +11,8 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
   end) marks **every** announcement seen — not just the current one — so a
   user who waves the modal away is not nagged with the rest on next login.
 
-  Per the gotcha in `CLAUDE.md`, navigation/flash from a LiveComponent does
-  not propagate; the component sends an `{:external_redirect, url}` message to
+  Navigation and flash raised from a LiveComponent do not reach the parent
+  LiveView, so the component sends an `{:external_redirect, url}` message to
   the parent for CTA navigation (the docs live outside the app) rather than
   navigating directly.
   """

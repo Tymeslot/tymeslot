@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal do
   @moduledoc """
   Shared delete confirmation modal for integration components.
-  Now implemented as a LiveComponent to handle its own state and deletion logic.
+  A LiveComponent that owns its own state and deletion logic.
   """
 
   use TymeslotWeb, :live_component

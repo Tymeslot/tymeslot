@@ -110,9 +110,10 @@ defmodule Tymeslot.MeetingTypes do
   def get_all_meeting_types(user_id), do: MeetingTypeQueries.list_all_meeting_types(user_id)
 
   @doc """
-  Gets the publicly listed meeting types for a user (active and not private).
-  This feeds the public booking overview; private types are excluded and
-  reachable only by their direct link.
+  Gets the publicly listed meeting types for a user (active, neither private
+  nor invitation-only). This feeds the public booking overview; private types
+  are excluded and reachable only by their direct link, and invitation-only
+  types only through a personal invitation link.
 
   A pure read, like the two owner-facing listings above: a host with no
   meeting types shows the booking page's empty state.
@@ -564,13 +565,7 @@ defmodule Tymeslot.MeetingTypes do
 
   @doc """
   Seeds the default meeting type for a new user, once, as the profile is
-  created (`Tymeslot.Profiles.create_profile/1` and the OAuth sign-up, which
-  passes its transaction's `repo`). A host who later deletes it keeps none:
-  nothing seeds it again.
-
-  A new account has no calendar and no username yet, so the default carries
-  no booking calendar and there is no booking page to publish. A seed that
-  meets types already there (a retried sign-up) inserts nothing.
+  created; see `Tymeslot.MeetingTypes.Defaults.seed_default_meeting_types/2`.
   """
   @spec seed_default_meeting_types(integer(), Ecto.Repo.t()) :: :ok
   defdelegate seed_default_meeting_types(user_id, repo \\ Repo), to: Defaults

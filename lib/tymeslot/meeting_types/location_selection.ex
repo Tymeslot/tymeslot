@@ -34,11 +34,9 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
 
   ## Meeting types with no stored list
 
-  `locations` was added after meeting types existed, and rows can still
-  reach this module without one: bulk-inserted defaults, seeds, an import.
-  Those fall back to the single option their `allow_video` /
-  `video_integration_id` pair already describes, which is exactly what such
-  a type offered before the list existed.
+  Rows can reach this module without a `locations` list: bulk-inserted
+  defaults, seeds, an import. Those fall back to the single option their
+  `allow_video` / `video_integration_id` pair describes.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

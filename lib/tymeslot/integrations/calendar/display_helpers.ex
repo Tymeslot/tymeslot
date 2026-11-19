@@ -127,7 +127,6 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
   defp present(value) when is_binary(value), do: {:ok, value}
   defp present(_value), do: :error
 
-  # Check if a string looks like a UUID
   defp uuid_like?(str) when is_binary(str) do
     String.match?(str, ~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
   end

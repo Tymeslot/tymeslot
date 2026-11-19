@@ -187,7 +187,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # Uniqueness keys on the id of whatever the job acts on: keyed on an absent
   # `meeting_id`, every event room's jobs for one action would count as
   # duplicates, a released room is keyed by the room itself, and a room
-  # deleted by its provider id by that id and its integration.
+  # deleted by its provider id is keyed by that id and its integration.
   defp insert_job(args, unique_keys) do
     job_changeset =
       new(args,

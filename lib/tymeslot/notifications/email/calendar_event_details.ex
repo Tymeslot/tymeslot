@@ -298,9 +298,8 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetails do
     }
   end
 
-  # Invitations enqueued before all-day events were supported carry nil
-  # timestamps for one. Reading nil as a malformed value discards the job,
-  # which is what the old crash ended in anyway, without five raising retries.
+  # An all-day event's job can carry nil timestamps. A nil is read as a
+  # malformed value and the job is discarded, without raising through retries.
   defp parse_datetime(iso) when is_binary(iso) do
     case DateTime.from_iso8601(iso) do
       {:ok, dt, _offset} -> {:ok, dt}

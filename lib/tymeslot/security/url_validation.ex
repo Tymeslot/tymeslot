@@ -9,14 +9,12 @@ defmodule Tymeslot.Security.UrlValidation do
   is never local by that rule alone, since only DNS knows where it points.
 
   `internal_names_local: true` additionally treats a host that is shaped like an
-  internal name as local, for the https rule only: a single label (a Docker
-  service name such as `nextcloud`) or a name under `.local`, `.lan`,
-  `.internal` or `.home.arpa`. Callers pass it only when the operator has opted
-  into private addresses for that integration domain. The decision is made
-  from the name's shape and never by resolving it: DNS can answer differently
-  between validation and use, and the SSRF guard already pins resolution for
-  each request. `block_private_ips` is unaffected, so no name ever counts as
-  private for that check.
+  internal name (`internal_name?/1`) as local, for the https rule only. Callers
+  pass it only when the operator has opted into private addresses for that
+  integration domain. The decision is made from the name's shape and never by
+  resolving it: DNS can answer differently between validation and use, and the
+  SSRF guard already pins resolution for each request. `block_private_ips` is
+  unaffected, so no name ever counts as private for that check.
 
   The shape is only a claim about where a name points: a single label can be
   completed to a public name by a resolver search domain, and `.lan` is not

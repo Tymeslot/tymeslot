@@ -195,8 +195,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
 
   @doc """
   Changeset for demoting an active OAuth integration back to `:pending_oauth`
-  by clearing its channel selection. The stored bot token and workspace info
-  are preserved so the user can pick a new channel without redoing OAuth.
+  by clearing its channel selection; see `Tymeslot.Slack.disconnect/1`.
   Bypasses `validate_by_mode` so that the resulting `channel_id: nil` state
   is acceptable.
   """

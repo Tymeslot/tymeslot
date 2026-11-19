@@ -43,9 +43,9 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
     * `:source`, `:removed` once the series is gone from the source, or
       `:left_behind` when the delete failed and the original is still there.
 
-  A failed delete is never queued for offline replay: the CalDAV queue
-  replays a series member's delete as a delete of the whole resource, and
-  Google and Outlook have no queue. The copy on the destination is kept,
+  A failed delete is never queued for offline replay (see
+  `Tymeslot.CalendarGrid.EventDeletion` for why a series member's delete is
+  not), and Google and Outlook have no queue. The copy on the destination is kept,
   since deleting it again would lose the move the organiser asked for, and
   the result says the original was left behind.
 

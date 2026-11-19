@@ -198,7 +198,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   Graph mails the attendees of an organiser's event on every write to it.
   Created without the meeting, the event is written again to switch the
   meeting on, so the guest gets an invitation without the meeting and then
-  an update with it (issue #191). Created with it, the one invitation carries
+  an update with it. Created with it, the one invitation carries
   the meeting, and the Teams provider finds it there
   (`teams_room_placement/1`'s `{:calendar_event, id}`) instead of writing.
 

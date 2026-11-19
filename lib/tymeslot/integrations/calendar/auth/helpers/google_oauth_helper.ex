@@ -26,7 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   @doc """
   Generates the OAuth authorization URL for Google Calendar.
 
-  Now requests full calendar scope to support Google Meet creation.
+  The URL requests the full calendar scope, which Google Meet creation needs.
   """
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec authorization_url(pos_integer(), String.t()) :: String.t()

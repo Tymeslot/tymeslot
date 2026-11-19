@@ -176,9 +176,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
 
   For a control that is unavailable but should say why, keep `label` naming
   the action ("Copy link"), put the reason in `tooltip` and pass `disabled`
-  or `aria-disabled="true"`. The button then renders `aria-disabled`, so it
-  stays focusable and the reason stays reachable, and its `phx-click` is
-  dropped so it cannot fire.
+  or `aria-disabled="true"`. It then behaves as a disabled `action_button/1`
+  with a tooltip (see the `:tooltip` option there).
 
   ## Options
     * `:icon` - The `hero-…` icon name

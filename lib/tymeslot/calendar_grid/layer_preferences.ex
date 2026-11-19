@@ -51,8 +51,8 @@ defmodule Tymeslot.CalendarGrid.LayerPreferences do
 
   @doc """
   Makes `id` (an integer or its decimal string) the meeting type the layer
-  shows. Only one of `meeting_types/1` can be chosen; anything else, another organiser's type included, is
-  `{:error, :not_found}`.
+  shows. Only a type that `meeting_types/1` lists can be chosen; anything else,
+  another organiser's type included, is `{:error, :not_found}`.
   """
   @spec choose_meeting_type(pos_integer(), term()) ::
           {:ok, choice()} | {:error, :not_found | Ecto.Changeset.t()}

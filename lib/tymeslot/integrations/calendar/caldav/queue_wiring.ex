@@ -132,7 +132,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
 
   # The columns a local change may describe. Everything else on the cache row —
   # notably `organiser`, `attachments`, `links` and `provider_metadata` — is
-  # server-sourced, so the queue neither writes it nor, now, erases it.
+  # server-sourced, so the queue neither writes nor erases it.
   @content_fields ~w(summary description location timezone visibility colour
                      attendees reminders recurrence_rule recurrence_exceptions
                      provider_event_id etag raw_ical)a
@@ -141,8 +141,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
   # exactly the columns present here and leaves every other one on the existing
   # row untouched. So a field is supplied only when the local change actually
   # carried one. A queued delete, whose callers pass `%{}`, therefore writes
-  # nothing but the queue marker, where it used to null the `etag`,
-  # `provider_event_id` and `raw_ical` the replay needs to address the event.
+  # nothing but the queue marker, leaving the `etag`, `provider_event_id` and
+  # `raw_ical` the replay needs to address the event.
   #
   # The retry bookkeeping is reset deliberately: a new tag is a new intent, and
   # the attempt count and last error belong to the intent it replaces.
@@ -155,10 +155,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
       calendar_integration_id: integration.id,
       provider: integration.provider,
       # Only meaningful on a first insert, since the upsert never replaces it.
-      # The booking collection is where `ClientManager.booking_client/1` wrote
-      # the event this tag is retrying, so it is the collection the row belongs
-      # in; the integration's first configured path is not the same thing
-      # whenever the booking calendar is not the first one.
+      # The booking collection, not the first configured path (see
+      # `OfflineQueue`'s `collection_path/2`).
       provider_calendar_id: CalendarPathResolver.resolve(integration),
       synced_at: now,
       sync_state: sync_state_for(action),

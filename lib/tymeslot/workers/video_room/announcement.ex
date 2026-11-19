@@ -133,7 +133,7 @@ defmodule Tymeslot.Workers.VideoRoom.Announcement do
 
   A booking whose emails could not be queued is not announced at all, and
   `{:error, {:announcement_failed, reason}}` tells the job to retry; a
-  reschedule's failures are only logged, as before.
+  reschedule's failures are logged and not retried.
   """
   @spec deliver(t(), MeetingSchema.t(), boolean()) :: :ok | {:error, term()}
   def deliver(:none, _meeting, _fallback_attempted?), do: :ok

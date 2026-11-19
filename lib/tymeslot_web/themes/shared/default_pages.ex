@@ -12,8 +12,8 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   `organizer_profile` (`nil` on that dead render too), the organiser's
   `legal_links` (which the shell hands to its wrapper), `locale`,
   `language_dropdown_open` and `offered_locales` (the languages the
-  organiser offers, nil for every one, which the shell hands to its wrapper
-  for the switcher), and the body as its inner block; it draws the
+  organiser offers, with nil meaning every supported locale, which the shell
+  hands to its wrapper for the switcher), and the body as its inner block; it draws the
   theme's wrapper and card (with the `booker-card` hook class) around it. A
   shell is free to ignore any of them but `page`: only Folio's draws the
   organiser, so a shell that has no use for the profile declares no attr

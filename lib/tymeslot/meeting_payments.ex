@@ -428,17 +428,15 @@ defmodule Tymeslot.MeetingPayments do
     do: BookingPaymentQueries.for_meeting_for_host(meeting_id, host_user_id)
 
   @doc """
-  Returns the remaining refundable balance in cents for a booking payment.
-
-  Computes `max(amount_cents - refunded_amount_cents, 0)`.
+  Returns the remaining refundable balance in cents for a booking payment; see
+  `Refunds.refundable_remaining_cents/1`.
   """
   @spec refundable_remaining_cents(booking_payment()) :: non_neg_integer()
   defdelegate refundable_remaining_cents(payment), to: Refunds
 
   @doc """
   What a host's cancellation of one booking refunds unless the host says
-  otherwise: the remaining balance, or, for a session of a paid series, one
-  session's price, never more than remains.
+  otherwise; see `Refunds.default_cancellation_refund_cents/1`.
   """
   @spec default_cancellation_refund_cents(booking_payment()) :: non_neg_integer()
   defdelegate default_cancellation_refund_cents(payment), to: Refunds
@@ -453,25 +451,23 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate refund_refusal(payment), to: Refunds, as: :refusal
 
   @doc """
-  Returns `true` when the payment still owes the attendee money and was paid
-  within the 60-day refund window.
+  Returns `true` when the payment can still be refunded in-app; see
+  `Refunds.refundable?/1`.
   """
   @spec refundable?(booking_payment() | nil) :: boolean()
   defdelegate refundable?(payment), to: Refunds
 
   @doc """
   Returns `true` when the host still holds money the attendee has not been
-  given back, regardless of whether the 60-day window has passed.
+  given back, whether or not the refund window has passed; see
+  `Refunds.refund_outstanding?/1`.
   """
   @spec refund_outstanding?(booking_payment() | nil) :: boolean()
   defdelegate refund_outstanding?(payment), to: Refunds
 
   @doc """
   Parses raw refund-form params into a validated `{:ok, pos_integer()}` or
-  a tagged `{:error, atom()}`.
-
-  Accepts the standard `"refund_type"` param shape used by the payments UI.
-  Error atoms: `:choose_type`, `:invalid_amount`, `:exceeds_remaining`.
+  a tagged `{:error, atom()}`; see `Refunds.parse_refund_amount/2`.
   """
   @spec parse_refund_amount(booking_payment(), map()) ::
           {:ok, pos_integer()} | {:error, :invalid_amount | :exceeds_remaining | :choose_type}
@@ -480,9 +476,8 @@ defmodule Tymeslot.MeetingPayments do
   @doc """
   Issues a full or partial refund for a booking payment, whoever took it.
 
-  Unscoped: for system rules that refund with no acting user, such as
-  releasing the payment for a request that was never approved. A refund a
-  signed-in user asks for must go through `refund_payment_for_host/4`.
+  Unscoped; see `Refunds.issue_refund/3`. A refund a signed-in user asks for
+  must go through `refund_payment_for_host/4`.
   """
   @spec issue_refund(booking_payment(), pos_integer(), String.t() | nil) ::
           {:ok, booking_payment()} | {:error, Refunds.refund_error()}

@@ -5,9 +5,7 @@ defmodule Tymeslot.Integrations.Video.EventDetails do
 
   All three provisioning call sites — the dashboard create flow, the dashboard
   edit flow, and the meetings context — produce a `%EventDetails{}` before
-  calling into the video provider. This removes the three-shape problem that
-  previously forced `GoogleMeetProvider.normalise_attendee/1` to compensate
-  for divergent upstream shapes.
+  calling into the video provider, so providers receive a single shape.
 
   Attendees take the canonical `Tymeslot.Integrations.Calendar.Attendee`
   shape, with the email trimmed and downcased, whichever source they came

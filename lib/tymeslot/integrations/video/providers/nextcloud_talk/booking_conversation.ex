@@ -124,8 +124,9 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
 
   @doc """
   The longest `find_or_create/2` can wait on the network, in milliseconds: a
-  lookup, then either the creation it did not make unnecessary or the lobby
-  move, rename and permissions that bring an adopted conversation up to date.
+  lookup, then either the creation (which an adopted conversation makes
+  unnecessary) or the lobby move, rename and permissions update that bring
+  an adopted conversation up to date.
   """
   @spec budget_ms() :: pos_integer()
   def budget_ms do

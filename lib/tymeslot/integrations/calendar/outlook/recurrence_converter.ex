@@ -74,7 +74,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter do
 
   @doc """
   Converts an RRULE string into a Microsoft Graph `recurrence` object, or
-  `nil` for no rule or one without a readable `FREQ`, as before; a rule
+  `nil` for no rule or one without a readable `FREQ`; a rule
   Graph has no pattern for is refused (see "Patterns"), and so is a monthly
   or yearly series Graph would move onto a month's last day
   (`{:error, :day_missing_in_some_months}`; see "Days some months lack").

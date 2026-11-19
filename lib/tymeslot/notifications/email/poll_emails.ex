@@ -306,7 +306,7 @@ defmodule Tymeslot.Notifications.Email.PollEmails do
 
   Sent from what the job carries (`PollScheduler.schedule_cancellation/1`),
   so it goes out even when the host deleted the poll straight after
-  cancelling it. A job queued before jobs carried that reads the poll
+  cancelling it. A job queued before jobs carried that content reads the poll
   instead, and is discarded once the poll is gone.
   """
   @spec handle_cancelled(%{String.t() => term()}, DeliveryClaims.job_id()) ::

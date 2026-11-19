@@ -220,8 +220,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConnectionRow do
 
   # Always-visible reconnect control: oauth providers re-trigger
   # `connect_provider`, everything else opens the CalDAV reconnect modal.
-  # `:attention` is the promoted (amber) style used when the integration needs
-  # re-authentication; `:normal` is the subtle default.
+  # `variant` picks the tile style: `:attention` when the integration needs
+  # re-authentication, `:normal` otherwise (see `reconnect_button_class/1`).
   attr :provider, :string, required: true
   attr :integration_id, :any, required: true
   attr :myself, :any, required: true

@@ -232,8 +232,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   The fallback runs when the first lookup *misses*, not merely when the ID is
   absent: a CalDAV event carries an href in `provider_event_id`, while the
   meeting it mirrors carries no provider event ID at all and is only reachable
-  by UID. Falling back on `nil` alone left those meetings unfindable whenever
-  the caller had an href to offer. See `Tymeslot.Meetings.CalendarEventLink`
+  by UID. See `Tymeslot.Meetings.CalendarEventLink`
   for the identity rule this implements.
   """
   @spec find_linked_meeting(integer(), String.t() | nil, String.t() | nil) ::

@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
   A theme's own `theme:<name>` events never reach this module. With
   `Navigators.Paged` only the current moment is visible, so a canonical
-  event sent from another step is dropped, as it always was. A page without
+  event sent from another step is dropped. A page without
   a journey (the meeting and poll pages the same LiveView serves) handles
   none of them, and its step indicator moves nothing.
 

@@ -3,8 +3,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.CalendarMove do
   Moving a booking to the time its calendar event now has, from the bookings
   dashboard.
 
-  Split out of `BookingsManagementComponent` to keep that module inside the
-  size limit. Whether a move is allowed is `Tymeslot.Meetings`' decision; this
+  Whether a move is allowed is `Tymeslot.Meetings`' decision; this
   module opens the confirmation from a fresh offer, so the host agrees to the
   time the calendar has now rather than the one the list was drawn with,
   moves the booking only to the time the dialog showed, and turns the outcome

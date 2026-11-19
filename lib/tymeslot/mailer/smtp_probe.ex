@@ -194,11 +194,10 @@ defmodule Tymeslot.Mailer.SmtpProbe do
   end
 
   # Taken from the send path whole rather than restated option by option, so
-  # that a setting `SMTPConfig` adds reaches the probe with it. Restating them
-  # drifted exactly once, and silently: `middlebox_comp_mode: false` was set
-  # for the sender and missed here, leaving the probe demanding a TLS 1.3
-  # record the sender had stopped requiring. A probe that verified more
-  # strictly than the sender would refuse to boot a working relay; one that
+  # that a setting `SMTPConfig` adds reaches the probe with it. The probe must
+  # share the sender's options: one that verified more strictly (for example
+  # demanding a TLS 1.3 record when `middlebox_comp_mode: false` lets the
+  # sender go without) would refuse to boot a working relay, and one that
   # verified less strictly would report a relay healthy that cannot deliver a
   # single email.
   defp ssl_options(host, config) do

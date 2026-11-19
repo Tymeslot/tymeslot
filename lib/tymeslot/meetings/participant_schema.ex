@@ -3,7 +3,7 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
   Ecto schema for a participant on a group meeting.
 
   Solo meeting types (`max_participants == 1`) keep the `attendee_*` fields
-  on the meeting row exactly as before. Group meetings instead carry one
+  on the meeting row. Group meetings instead carry one
   participant row per booker; each participant manages their own seat via an
   unguessable `management_token` and is soft-cancelled through
   `cancelled_at` so freed seats become bookable again.

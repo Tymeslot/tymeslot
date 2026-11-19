@@ -19,7 +19,6 @@ defmodule Tymeslot.Availability.Breaks do
   @spec add_break(integer(), Time.t(), Time.t(), String.t() | nil) ::
           {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t()}
   def add_break(weekly_availability_id, start_time, end_time, label) do
-    # Get the next sort order
     next_sort_order = AvailabilityBreakQueries.get_next_sort_order(weekly_availability_id)
 
     attrs = %{
@@ -186,8 +185,7 @@ defmodule Tymeslot.Availability.Breaks do
     end)
   end
 
-  # Without hours to measure from, a break is compared on its own clock, as
-  # before.
+  # Without hours to measure from, a break is compared on its own clock.
   defp offsets(%{start_time: %Time{}, end_time: %Time{}} = window, start_time, end_time),
     do: Window.break_offsets(window, start_time, end_time)
 

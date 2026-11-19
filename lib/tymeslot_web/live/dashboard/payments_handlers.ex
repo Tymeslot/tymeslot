@@ -21,8 +21,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsHandlers do
 
   @doc """
   Enqueues the Stripe capability resync when the host has just connected Stripe
-  (`?return=1` from the OAuth callback; `?refresh=1` is only still accepted for
-  old links), and returns the socket unchanged.
+  (see the module doc for the return markers), and returns the socket unchanged.
 
   Safe to call on every `:integrations` render: the resync only runs on the
   connected socket and only when a return marker is present, so ordinary hub

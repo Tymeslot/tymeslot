@@ -7,7 +7,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
 
   "Schedule with" and the organiser's name are the heading of the step it
   heads (`Journey.Components.moment_heading/1`), so the step takes the focus
-  there when the visitor moves on to it; it looks as the two lines did.
+  there when the visitor moves on to it; it shows as two lines, "Schedule with"
+  above the name.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext

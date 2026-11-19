@@ -291,10 +291,8 @@ defmodule Tymeslot.Bookings.Cancel do
   # from their own calendar is, for a held request, indistinguishable from
   # the invitee withdrawing it — nobody answered, the slot is simply free
   # again — so it goes through the same guarded `Approval.withdraw/2` rather
-  # than the plain changeset write, and for the same reason: without it this
-  # auto-cancel skipped the approval clock entirely, leaving the nudge and
-  # the expiry sweep armed against a meeting already gone, and refunding
-  # nothing for a request that was paid for.
+  # than the plain changeset write: the withdrawal disarms the nudge and the
+  # expiry sweep and refunds a request that was paid for.
   defp auto_cancel_external(meeting) do
     if MeetingState.awaiting_approval?(meeting) do
       withdraw_held_request_external(meeting)
@@ -416,24 +414,11 @@ defmodule Tymeslot.Bookings.Cancel do
     end
   end
 
-  # Note: the cancellation email produced by this pipeline carries a
-  # `STATUS:CANCELLED` ICS attachment (see `Tymeslot.Emails.Templates.AppointmentCancellation`)
-  # so the attendee's calendar client marks the event as cancelled. We deliberately
-  # do NOT route bookings cancellation through
-  # `Tymeslot.Meetings.AttendeeNotifications.event_deleted_confirm/2`: the bookings
-  # cancellation email carries user-facing context (cancellation reason, custom copy)
-  # that the calendar-update template cannot replicate, and double-routing would
-  # deliver two cancellation emails. Sequence tracking on `Meeting` rows is handled
-  # directly by the template via `ical_sequence` when needed.
-  # Enqueues a supervised, retrying video-sync job so the provider-side meeting
-  # (e.g. Zoom) is deleted and doesn't linger in the organiser's account after
-  # cancellation. Routed through Oban — not done inline — so a transient Zoom
-  # 5xx/429 retries instead of leaving an orphaned meeting. Providers without a
-  # server-side meeting object (Google Meet, MiroTalk, Custom) resolve to
-  # :ok inside the job. Whether an integration can still reach the room is
-  # decided inside the job by `IntegrationResolver`, not here: a severed
-  # `video_integration_id` does not mean the room stopped existing. Never blocks
-  # cancellation.
+  # Enqueues the video-sync job that deletes the provider-side meeting (e.g.
+  # Zoom) so it does not linger in the organiser's account. Whether an
+  # integration can still reach the room is decided inside the job, not here:
+  # a severed `video_integration_id` does not mean the room stopped existing.
+  # Never blocks cancellation. See `Reschedule` for why this goes through Oban.
   defp delete_provider_video_room(%Meeting{video_room_id: nil}), do: :ok
   defp delete_provider_video_room(%Meeting{organizer_user_id: nil}), do: :ok
 
@@ -452,6 +437,12 @@ defmodule Tymeslot.Bookings.Cancel do
     end
   end
 
+  # The cancellation email carries a `STATUS:CANCELLED` ICS attachment (see
+  # `Tymeslot.Emails.Templates.AppointmentCancellation`) so the attendee's
+  # calendar client marks the event as cancelled. It is deliberately not
+  # routed through `Tymeslot.Meetings.AttendeeNotifications.event_deleted_confirm/2`:
+  # that calendar-update template cannot carry the cancellation reason or
+  # custom copy, and double-routing would send two cancellation emails.
   defp send_cancellation_notifications(meeting, opts \\ []) do
     case Events.meeting_cancelled(meeting, opts) do
       {:ok, _result} ->
@@ -468,7 +459,6 @@ defmodule Tymeslot.Bookings.Cancel do
           reason: LogFormat.reason(reason)
         )
 
-        # Don't fail cancellation if notifications fail
         :ok
     end
   end

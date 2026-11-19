@@ -77,7 +77,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     do: {:ok, RescheduleRequest.close_host_move(socket, result, &load_meetings/1)}
 
   def update(assigns, socket) do
-    # Apply incoming assigns first
     socket = assign(socket, assigns)
 
     new_filter = socket.assigns.filter

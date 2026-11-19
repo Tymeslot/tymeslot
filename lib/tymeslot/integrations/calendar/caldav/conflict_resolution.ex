@@ -11,7 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ConflictResolution do
                        `{:error, :precondition_failed}`. The local change is
                        not retried; the caller is expected to re-read the
                        server version, decide what to do, and try again.
-                       Safe default — matches the pre-existing behaviour.
+                       Safe default: nothing is overwritten.
 
     * `:keep_server` — silently treat the conflict as success and return
                        `:ok`. The next sync will pull the server version

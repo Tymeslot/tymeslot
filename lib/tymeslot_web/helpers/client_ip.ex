@@ -259,8 +259,8 @@ defmodule TymeslotWeb.Helpers.ClientIP do
     # Unreachable or not, it applies the same hop filtering as the socket path
     # and as RemoteIp: leftmost-entry semantics here would mean a deployment
     # that ever does fall through to this branch resolves the head of a
-    # client-supplied `X-Forwarded-For`, the exact divergence between the two
-    # paths that issue #96 was about.
+    # client-supplied `X-Forwarded-For`; the socket and conn paths must agree
+    # on which hop is the client.
     rule = hop_rule(trust_private_clients?(), configured_trusted_proxies())
 
     connecting_ip = conn |> first_req_header("cf-connecting-ip") |> usable_forwarded_ip(rule)
@@ -465,11 +465,11 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   # talking about itself, not a visitor. Accepting one collapses every IP-keyed
   # rate limit into a single bucket shared by the whole deployment, which is
   # how a two-tier proxy (`proxy_set_header X-Real-IP $remote_addr` on the
-  # inner hop) locked one self-hoster out of their own booking page — the
-  # limiter kept refusing bookings keyed on `192.168.1.254` (issue #96).
+  # inner hop) locks a self-hoster out of their own booking page: the limiter
+  # keeps refusing bookings keyed on `192.168.1.254`.
   #
-  # This matches `Plug.RemoteIp`, which skips reserved blocks on the conn path;
-  # before this the two paths disagreed, and only the socket path was wrong.
+  # This matches `Plug.RemoteIp`, which skips reserved blocks on the conn path,
+  # so the two paths agree.
   #
   # A deployment whose visitors genuinely are on a private network (an
   # intranet-only self-host) is the case this gets wrong, and it resolves every

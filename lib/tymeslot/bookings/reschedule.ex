@@ -101,8 +101,8 @@ defmodule Tymeslot.Bookings.Reschedule do
   6. Sending rescheduling notifications, which a room being created sends
      instead once its join link exists
 
-  The `organizer_user_id` is required. The meeting lookup is scoped to that
-  owner, preventing IDOR attacks from the public booking flow.
+  The `organizer_user_id` is required and scopes the meeting lookup, as in
+  `Tymeslot.Bookings.Orchestrator.get_meeting_for_reschedule/2`.
 
   Returns `{:ok, meeting}` or `{:error, reason}`, where `reason` is either a
   semantic atom (`Tymeslot.Bookings.Errors.classified_error/0` — currently
@@ -207,48 +207,28 @@ defmodule Tymeslot.Bookings.Reschedule do
          location_attrs,
          opts
        ) do
-    # Booking a new time settles any pending organizer reschedule request, so
-    # the slot becomes live again — clear the timestamp.
-    #
-    # Reminder sent-tracking is reset too: the reminder(s) already sent were
-    # pinned to the old time, so they must not suppress the re-pinned
-    # reminder jobs scheduled for the new time.
-    #
-    # An external-change flag, and the host's dismissal of it, described the
-    # old time, so the new time starts without either.
+    # Booking a new time settles any pending organizer reschedule request
+    # (`reschedule_requested_at` is cleared), and the reminder tracking and
+    # external-change flags described the old time, so they are reset.
     #
     # The location lands in the same write as the times, so the calendar job
     # scheduled below already carries it.
     #
     # Join links that expire relative to the meeting time (Jitsi tokens) are
-    # rebuilt for the new time here, before the write, rather than in
-    # `VideoSyncWorker`: the reschedule emails below are rendered from the
-    # meeting this write returns, and the calendar and webhook jobs read the
-    # row it commits, so a link refreshed any later would already have been
-    # sent out stale. Writing them with the new time also leaves no moment
-    # where the row pairs the new time with the old links. Building them is
-    # local computation, and a failure keeps the stored links rather than
-    # failing the reschedule.
+    # rebuilt here, before the write, rather than in `VideoSyncWorker`: the
+    # reschedule emails are rendered from the meeting this write returns, and
+    # the calendar and webhook jobs read the row it commits, so a link
+    # refreshed later would already have gone out stale. A failure to build
+    # them keeps the stored links rather than failing the reschedule.
     #
     # The new time is a new revision of the calendar entry, so `ical_sequence`
-    # moves on. It records the revision of the last calendar entry sent out,
-    # the same meaning `AttendeeNotifications.Worker` gives it when the host
-    # moves the event in their own calendar: the reschedule email carries this
-    # value, and anything sent later (another reschedule, a cancellation, a
-    # host-side change) goes past it. Left at 0, every reschedule sent
-    # SEQUENCE 1 again and calendar clients had only DTSTAMP to tell the
-    # entries apart.
-    #
-    # A reschedule that re-enters the approval gate sends no calendar entry at
-    # all (see `announce/3`), so the bump reserves the revision rather than
-    # announcing it: the confirmation ICS the host's approval sends carries
-    # this value, and nothing else has used it in the meantime. A request that
-    # is declined or expires simply leaves the revision unspent, which costs
-    # nothing: SEQUENCE has to rise, not to run consecutively.
-    #
-    # The bump is taken from the locked row (see `update_meeting/2`), not from
-    # `meeting`: a host-side change committed while the calendar was being
-    # checked may have advanced it, and the new value must go past that one.
+    # rises (SEQUENCE has to rise, not run consecutively). A reschedule that
+    # re-enters the approval gate sends no calendar entry (see `announce/3`),
+    # so the bump only reserves the revision for the confirmation ICS the
+    # host's approval sends; a declined or expired request leaves it unspent.
+    # The bump is taken from the locked row (see `update_meeting/2`), not
+    # from `meeting`, because a host-side change committed while the calendar
+    # was being checked may have advanced it.
     attrs =
       %{
         start_time: start_dt,
@@ -530,12 +510,13 @@ defmodule Tymeslot.Bookings.Reschedule do
     CalendarJobs.schedule_job(updated, "update")
   end
 
-  # Enqueues a supervised, retrying video-sync job so the provider-side meeting
-  # (e.g. Zoom) is updated to match the new booking time. Routed through Oban —
-  # not done inline — so a transient Zoom 5xx/429 retries instead of permanently
-  # desyncing. Never blocks the reschedule: the booking is already updated
-  # locally, and its join URLs either stay valid across the move or were
-  # already rebuilt for the new time by
+  # Enqueues the video-sync job that updates the provider-side meeting (e.g.
+  # Zoom) to the new booking time. It goes through Oban rather than running
+  # inline so a transient provider 5xx/429 retries instead of leaving the
+  # meeting permanently out of step; providers without a server-side meeting
+  # object resolve to :ok inside the job. Never blocks the reschedule: the
+  # booking is already updated locally, and its join URLs either stay valid
+  # across the move or were already rebuilt for the new time by
   # `apply_time_update_and_schedule_job/5`. Whether an integration can still
   # reach the room is decided inside the job by `IntegrationResolver`, so a
   # meeting whose integration was disconnected is still synced rather than left

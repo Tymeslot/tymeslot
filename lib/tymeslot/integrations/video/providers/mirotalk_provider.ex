@@ -93,7 +93,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     api_key = Map.get(config, :api_key)
 
     case validate_base_url(base_url) do
-      # Proceed with API connection test
       :ok -> test_api_connection(base_url, api_key)
       {:error, message} -> {:error, {:unreachable, message}}
     end
@@ -334,8 +333,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     config = room_data.provider_config
 
     if room_id != "" and participant_name != "" and config do
-      # MiroTalk API returns the full meeting URL, but the 'room' parameter
-      # for the join API expects only the room name (UUID).
+      # The join API expects only the room name; see `extract_room_id/1`.
       room_name = extract_room_id(room_id)
 
       # We prefer using the MiroTalk API to generate the join URL.

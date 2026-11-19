@@ -466,7 +466,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   defp delete_event_for_meeting(meeting, meeting_id) do
     case CalendarEvents.delete_event(calendar_event_identifier(meeting), meeting) do
       {:error, :not_found} ->
-        # Event already deleted, consider it success
+        # A missing event is already the state a delete asks for.
         Logger.info("Calendar event already deleted", meeting_id: meeting_id)
         :ok
 
@@ -563,12 +563,10 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
           reason: reason
         )
 
-        # On final attempt, send error notification
         if attempt >= 5 do
           send_calendar_error_notification(meeting, reason)
         end
 
-        # Return error to trigger retry
         {:error, reason}
     end
   end

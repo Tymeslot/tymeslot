@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
   @moduledoc """
   The reminders of a plain calendar event made in the side panel's New
-  event state, as the old Quick Add offered them: several, each a
+  event state: several, each a
   notification or an email at one of the lead times
   `ReminderForm.reminder_minutes_presets/0` lists, written to the calendar
   with the event, which then alerts the organiser on their own devices.

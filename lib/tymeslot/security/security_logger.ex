@@ -284,10 +284,9 @@ defmodule Tymeslot.Security.SecurityLogger do
   @doc """
   Logs rate limiting violations.
 
-  The identifier names the rejected attempt: an email address is carried
-  under `:email` and masked before it reaches Logger, a user id under
-  `:user_id` as-is. `nil` when the rejection identifies no account, which
-  carries neither key.
+  The identifier names the rejected attempt: an email address is carried under
+  `:email`, a user id under `:user_id` as-is. `nil` when the rejection
+  identifies no account, which carries neither key.
   """
   @spec log_rate_limit_violation(String.t() | integer() | nil, String.t(), event_metadata()) ::
           :ok
@@ -322,8 +321,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   @doc """
   Logs account lockout events.
 
-  The identifier is an email address, so it is carried under `:email` and
-  masked before it reaches Logger.
+  The identifier is an email address, carried under `:email`.
   """
   @spec log_account_lockout(String.t(), String.t(), event_metadata()) :: :ok
   def log_account_lockout(identifier, lockout_type, metadata) do

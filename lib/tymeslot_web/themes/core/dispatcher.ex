@@ -29,14 +29,13 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   @impl Phoenix.LiveView
   def mount(params, session, socket) do
-    # Initialize locale dropdown state
     socket = assign(socket, :language_dropdown_open, false)
 
     # Which start page the URL is for (the username's, or one of its booking
     # pages), settled once by the `PageAddress` hook so the themes never see
     # the difference. Routes without the hook mount their params as they are.
-    # The organiser it found is resolved from as it is; without one (a
-    # username nobody holds, a demo persona), the address is.
+    # The organiser it found is used as resolved; without one (a username
+    # nobody holds, a demo persona), the address is resolved instead.
     {params, organiser} =
       case socket.assigns do
         %{page_address: %{params: settled, organiser: organiser}} -> {settled, organiser}
@@ -264,7 +263,6 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
         # Add theme_id to socket assigns if not present
         args = ensure_theme_id_in_socket(args, theme_id)
 
-        # Use error boundary for safe execution
         ErrorBoundary.wrap_callback(theme_id, module, function, args)
     end
   end

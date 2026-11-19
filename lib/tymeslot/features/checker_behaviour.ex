@@ -2,8 +2,9 @@ defmodule Tymeslot.Features.CheckerBehaviour do
   @moduledoc """
   Behaviour contract for feature access checker implementations.
 
-  Core provides `Tymeslot.Features.DefaultAccessChecker` which always
-  returns `:ok`. SaaS overrides the configured checker to gate features
+  Core provides `Tymeslot.Features.DefaultAccessChecker`, which returns
+  `:ok` for almost every feature and gates a few on a runtime config flag.
+  SaaS overrides the configured checker to gate features
   behind subscription tiers.
   """
 

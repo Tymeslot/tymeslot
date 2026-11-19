@@ -241,8 +241,8 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
 
   @doc """
   Sends a reschedule notice to a meeting guest, asking again whether they can
-  attend. `appointment_details` must carry `:guest_name`, `:guest_accept_url`
-  and `:guest_decline_url`, plus the reschedule context of
+  attend. `appointment_details` must carry the guest keys named at
+  `send_guest_confirmation/2`, plus the reschedule context of
   `Tymeslot.Emails.AppointmentBuilder.for_reschedule/2`.
   """
   @spec send_guest_reschedule(String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::

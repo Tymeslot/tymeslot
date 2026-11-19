@@ -51,7 +51,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           | {:custom, String.t()}
           | {:meeting_type, LocationOption.kind(), String.t()}
 
-  # As long as the details of a custom location on a meeting type
+  # Same limit as the details of a custom location on a meeting type
   # (`Tymeslot.MeetingTypes.LocationOption`).
   @custom_location_max_length 500
   @no_location %{location: nil, location_kind: nil, venue_id: nil}
@@ -302,16 +302,13 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           # matches this flow's own semantics: the organiser picked the video
           # integration explicitly, so its presence alone decides whether a room is
           # created, the same as a paid checkout confirming a booking.
-          # `Activation` is the whole of it. A second, generic calendar invitation used
-          # to go out beside the confirmation, leaving the guest with two emails for
-          # one booking: the confirmation in their language, carrying the ICS file, the
-          # accept/decline links and the video link, and a bare "You're Invited" with
-          # none of those. It was not initialising anything either, whatever the
-          # comment here claimed — `AttendeeNotifications.event_created/2` only sends,
-          # and `last_notified_state` is written after a dispatch by the debounce
-          # worker, never on create. The baseline stays empty here exactly as it does
-          # for every other booking path, which `LastNotifiedState.to_event/2` is built
-          # to handle: the people on the event are the people this path already
+          # `Activation` is the whole of it: the guest gets one email, the
+          # confirmation in their language with the ICS file, the accept/decline
+          # links and the video link, and no separate generic invitation.
+          # `last_notified_state` is written by the debounce worker after a
+          # dispatch, never on create, so the baseline stays empty here as on
+          # every other booking path, which `LastNotifiedState.to_event/2`
+          # handles: the people on the event are the people this path already
           # invited. A booking whose emails cannot be queued rolls back with them.
           {meeting, pending}
         else

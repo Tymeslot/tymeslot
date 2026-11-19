@@ -7,9 +7,8 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
 
   The rules live here as data (`rules/0`) rather than as a hand-written
   `cond`, because they have two audiences: this module enforces them, and the
-  on-screen checklist has to state them. Those drifted apart once already, and
-  the special-character rule was enforced while going unmentioned, so a
-  password satisfying every rule the user could see was still rejected.
+  on-screen checklist has to state them. One source drives both, so a password
+  satisfying every rule the user can see is never rejected by a hidden one.
 
   Every message returned here reaches the person typing the password — the
   reset form, the signup form, the account security page — so each one resolves

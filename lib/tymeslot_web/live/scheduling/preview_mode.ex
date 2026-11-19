@@ -17,13 +17,11 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
       plain display selector on a public page, reachable by anyone who types
       it, so it must never be read as a claim about who is viewing.
 
-  That last point is the reason this module exists. The rule used to be spelled
-  out twice, in `ThemeUtils.assign_theme_with_preview/2` and in
-  `Themes.Core.Context.from_params/2`, and both copies counted a bare `?theme=`
-  as a preview. Because the locale switcher put `theme=` into every redirect,
-  any visitor who changed the language was silently reclassified as a previewer
-  and their booking was failed closed (issue #84). One named predicate, used by
-  both call sites, is what keeps that from drifting back.
+  That last point is the reason this module exists: counting a bare `?theme=`
+  as a preview would reclassify any visitor whose URL carries it as a previewer
+  and fail their booking closed. One named predicate, used by
+  `ThemeUtils.assign_theme_with_preview/2` and
+  `Themes.Core.Context.from_params/2`, owns the rule.
   """
 
   alias Tymeslot.Utils.UrlBuilder
@@ -55,9 +53,8 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
 
   Carries both halves of the contract: the display claim and a freshly signed,
   owner-bound token, so the page renders as a preview *and* simulates bookings
-  instead of persisting them. Building only one half is the bug this replaces;
-  the two dashboard entry points used to link `?theme=<id>` with no token, so
-  the owner's own test booking hit the fail-closed branch and vanished.
+  instead of persisting them. A link with only the display claim would send the
+  owner's own test booking into the fail-closed branch.
 
   Pass `:theme` to preview a theme other than the stored one, and
   `handoff: true` for the link the onboarding's last step shows as a QR code:

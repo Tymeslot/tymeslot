@@ -1,7 +1,6 @@
 defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   @moduledoc """
   Rhythm theme component for the schedule (date/time selection) step.
-  Extracted from the monolithic RhythmSlidesComponent to improve separation of concerns.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext

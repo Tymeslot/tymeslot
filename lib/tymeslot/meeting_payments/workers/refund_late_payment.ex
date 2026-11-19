@@ -6,8 +6,8 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
 
   `CheckoutSessionCompleted` records such a payment as paid, leaves the
   meeting expired and inserts this job in the same transaction, so the
-  webhook no longer waits on Stripe and a lasting Stripe failure no longer
-  rolls back every delivery while the money sits unseen. Until the refund
+  webhook never waits on Stripe, and a lasting Stripe failure cannot roll
+  back every delivery while the money sits unseen. Until the refund
   goes through, the booking is on the host's outstanding-refunds list, where
   the host can also refund it by hand.
 

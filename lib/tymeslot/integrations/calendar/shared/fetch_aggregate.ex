@@ -104,13 +104,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.FetchAggregate do
   end
 
   @doc """
-  Fail-closed availability semantics: a clean outcome (no hard failures —
-  whether every source succeeded, every source was confirmed absent, or none
-  was attempted at all) returns its events, which is `[]` for the absent/
-  nothing-attempted cases rather than an error: a source we know to be empty
-  is not a source we failed to read. Any hard failure with no successful
-  source at all fails closed as `:all_calendars_unavailable`; any other hard
-  failure fails closed as `:some_calendars_unavailable`.
+  A clean outcome (no hard failures) returns its events, possibly `[]`. Any
+  hard failure with no successful source at all fails closed as
+  `:all_calendars_unavailable`; any other hard failure fails closed as
+  `:some_calendars_unavailable`.
   """
   @spec require_complete(Outcome.t()) ::
           {:ok, list()}

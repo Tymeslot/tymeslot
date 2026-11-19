@@ -118,12 +118,12 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   # `extendedProperties.private.createdBy`, and the iCal normaliser recognises a
   # `…@tymeslot.com` UID. Neither reaches a booking on a CalDAV or Outlook
   # calendar — a booking's UID is a bare `UUID.uuid4()` (`Bookings.Create`), so
-  # `created_by_tymeslot` stayed false on every mirrored booking those providers
-  # hold.
+  # `created_by_tymeslot` would stay false on every mirrored booking those
+  # providers hold.
   #
   # That flag is load-bearing: `CalDAV.OfflineQueue` grants the `:keep_local`
-  # force-write only to rows carrying it, so the recovery a conflicting write
-  # depends on was inert for exactly the events it was written for.
+  # force-write only to rows carrying it, so mirrored bookings must carry it
+  # for the recovery a conflicting write depends on to apply to them.
   #
   # Callers writing through `upsert_cache/2` get this for free and must not call
   # it themselves; the one caller that needs it explicitly is
@@ -259,14 +259,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   No broadcast and no meeting reconciliation. Safe to call inside a
   `Repo.transaction`; a rollback unwinds the upsert cleanly.
 
-  Ownership is flagged here rather than by the caller, because every sync path
-  writes through this function. It used to be flagged a level up in
-  `persist_normalised_events/2`, which the CalDAV reconciler does not call:
-  it writes under a transaction and so goes to this function directly
-  (`SyncReconciler.run_atomic_full_fetch/6` and `run_atomic_tier1/3`), and
-  those are every tier CalDAV runs. The result was that no CalDAV row ever
-  carried `created_by_tymeslot`, and the `:keep_local` recovery
-  `CalDAV.OfflineQueue` grants on the strength of it applied to nothing.
+  Ownership is flagged here rather than in `persist_normalised_events/2`,
+  because every sync path writes through this function, including the CalDAV
+  reconciler, which writes under a transaction and so skips that wrapper
+  (`SyncReconciler.run_atomic_full_fetch/6` and `run_atomic_tier1/3`).
 
   The cost is one meeting lookup per batch; `flag_tymeslot_owned/2` reads
   only, so it is safe inside the caller's transaction.

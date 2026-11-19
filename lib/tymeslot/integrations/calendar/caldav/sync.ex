@@ -323,8 +323,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   # element's presence at face value, and a server that does not support it
   # lists it under a 404 propstat all the same. Fetching without a token would
   # leave the path tokenless for good, and every cycle would repeat this full
-  # fetch where Tier 2 costs one CTag PROPFIND. Before the probe existed the
-  # REPORT's refusal did the demoting; the empty probe has to do it now.
+  # fetch where Tier 2 costs one CTag PROPFIND. The empty probe is what
+  # demotes the path.
   defp tier1_initial(integration, client, path, calendar_url) do
     case SyncCollectionReport.fetch_sync_token(calendar_url, client) do
       {:ok, nil} ->

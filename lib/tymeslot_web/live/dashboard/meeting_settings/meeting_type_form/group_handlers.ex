@@ -3,8 +3,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupHandlers do
   The group bookings section's events for `MeetingTypeForm`: turning group
   bookings on and off, the participant limit, and the seat-availability and
   last-spots display options.
-
-  Split out of the form to keep it inside the size limit.
   """
 
   import Phoenix.Component, only: [assign: 3]
@@ -39,10 +37,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupHandlers do
     # or forged event. Turning them off is refused only while planned dates
     # hold a fixed-date type on (`SessionHandlers.dates_planned?/1`).
     #
-    # A host who has lost charge capability cannot reach the payments toggle,
-    # so a required payment does not block them; enabling clears
-    # `payment_required` instead, keeping the two mutually exclusive without
-    # a dead end.
+    # Enabling clears `payment_required`, keeping the two mutually exclusive;
+    # `GroupRules.enable_blocker/1` explains why that is not a dead end for a
+    # host who cannot reach the payments toggle.
     turning_on? = not socket.assigns.group_bookings_enabled
 
     if (turning_on? and GroupRules.enable_blocker(socket.assigns) == nil) or

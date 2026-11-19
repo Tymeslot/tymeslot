@@ -218,9 +218,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   # The post-commit work the webhook path gets through
   # `Sync.persist_normalised_events/2`: fresh availability, the cache
   # broadcast, and the reconciliation of every linked meeting whose time
-  # moved. Broadcasting alone left a booking moved in Outlook unnoticed
-  # whenever this sweep saw the change first, which for an integration
-  # without a Graph subscription is every time.
+  # moved. The reconciliation is needed because a broadcast alone would leave
+  # a booking moved in Outlook unnoticed whenever this sweep sees the change
+  # first, which for an integration without a Graph subscription is every time.
   #
   # It runs before the delta link is persisted: a crash in it leaves the link
   # where it was, so the next sweep receives the same changes again and

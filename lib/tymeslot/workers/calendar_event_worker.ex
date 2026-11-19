@@ -39,7 +39,8 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   require Logger
 
   # Configuration
-  # 90 seconds for CalDAV operations (increased for background retries).
+  # 90 seconds for CalDAV operations, which are slow enough to need the room
+  # when a background job retries.
   #
   # Read at runtime rather than through `Application.compile_env/3`, which is
   # this project's default: a compiled-in constant cannot be lowered by the test
@@ -309,8 +310,8 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     end
   end
 
-  # A successful write leaves the meeting's offline queue tag to clear and,
-  # for a create, the organiser's availability cache to invalidate.
+  # A successful write clears the meeting's offline queue tag and, for a
+  # create, invalidates the organiser's availability cache.
   defp tidy_after_write(%Oban.Job{args: %{"action" => action, "meeting_id" => meeting_id}}) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->

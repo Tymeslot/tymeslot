@@ -1,7 +1,6 @@
 defmodule TymeslotWeb.AuthLive.StateHelper do
   @moduledoc """
   Helper module for managing authentication state transitions and path mappings.
-  Extracted from AuthLive to separate concerns and improve maintainability.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

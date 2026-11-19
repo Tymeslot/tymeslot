@@ -1,6 +1,10 @@
 defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   @moduledoc """
   Helper functions for generating consistent text body content in email templates.
+
+  Functions that take no locale argument (`location_note_line/1`,
+  `format_guest_answers/3`) read the process's Gettext locale, so they must be
+  called within a `Gettext.with_locale` block.
   """
 
   alias Tymeslot.CustomFields.AnswerRenderer
@@ -36,7 +40,6 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   The note under an in-person location whose address is arranged after
   booking, as a line of its own to append straight to a text body's location
   line; empty for any other location.
-  Must be called within a `Gettext.with_locale` block.
   """
   @spec location_note_line(map()) :: String.t()
   def location_note_line(details) do
@@ -99,7 +102,6 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   closing `footer`: one line per answer the payload carries a linkable URL
   for, or `""` when there is none, so no heading asks a question the email
   gives no way to answer. Mirrors `TemplateHelper.guest_answer_actions/1`.
-  Must be called within a `Gettext.with_locale` block.
   """
   @spec format_guest_answers(map(), String.t(), String.t() | nil) :: String.t()
   def format_guest_answers(appointment_details, heading, footer \\ nil) do

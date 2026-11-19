@@ -1,7 +1,6 @@
 defmodule TymeslotWeb.AuthLive.SecurityHelper do
   @moduledoc """
   Security utilities for AuthLive: CSRF validation and its failure message.
-  Extracted from AuthLive to separate security concerns and improve maintainability.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

@@ -142,8 +142,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurface do
   def update(%{action: :bookable_reload}, socket),
     do: {:ok, socket |> assign(:bookable_pending, false) |> BookableLayer.reload()}
 
-  # A write's answer, routed here by `CalendarRouting` (see `Writes`). A
-  # failed write is taken back off the grid by the queue itself.
+  # A write's answer, routed here by `CalendarRouting` (see `Writes`).
   def update(%{action: :event_write_settled, write: ref, outcome: outcome}, socket),
     do:
       {:ok,

@@ -459,10 +459,6 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   own locale decides here. `LocaleFormat` holds that mapping and is what the
   confirmation email already uses, so the page and the email agree.
 
-  This previously resolved the clock through a `"time_format_type"` msgid, which
-  meant any translator could change how times render by editing what looked like
-  a normal string, and several catalogues had: "24 Std.", "24 год".
-
   Takes anything with a clock face, `Time` as readily as `DateTime`: an hour
   label and a bare interval example carry no date, and only the clock fields
   are read.

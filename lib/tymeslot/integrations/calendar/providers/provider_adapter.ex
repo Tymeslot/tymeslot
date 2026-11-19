@@ -374,7 +374,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             deleted_occurrence
 
           {:ok, _deleted} ->
-            # Be tolerant of providers that return {:ok, payload}
             Logger.info("Successfully deleted event", uid: uid)
             :ok
 

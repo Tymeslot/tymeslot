@@ -157,8 +157,8 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   # event and patch its colour (Google `colorId` via PATCH, CalDAV `COLOR` via
   # a patched copy of `raw_ical`). Deliberately excludes summary/timing/
   # description/location — a full-field payload would only be safe to send
-  # via a full REPLACE, which is exactly what silently wiped recurrence,
-  # attendees, alarms, and conference data before this fix.
+  # via a full REPLACE, which silently wipes recurrence, attendees, alarms
+  # and conference data.
   #
   # `etag` is the cached ETag for the event. The CalDAV path uses it as the
   # `If-Match` precondition on the colour PUT so that, if the host event has

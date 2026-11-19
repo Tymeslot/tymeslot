@@ -367,9 +367,8 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   defp integrations_current(action) when action in @integration_actions, do: :integrations
   defp integrations_current(action), do: action
 
-  # The single Integrations item stands in for the separate Calendar and Video
-  # items that used to carry their own badges, so it flags "needs attention"
-  # when either is still unconnected. Which of the two is outstanding has to
+  # The single Integrations item covers both calendar and video, so it flags
+  # "needs attention" when either is still unconnected. Which of the two is outstanding has to
   # travel with the marker: once one is connected, a badge that only says
   # "something is missing" reads as if the connection never registered.
   #

@@ -160,7 +160,6 @@ defmodule Tymeslot.Mailer.SMTPConfig do
     config
   end
 
-  # Validates SMTP host is present and non-empty
   defp validate_host!(nil) do
     raise ArgumentError, "SMTP host is required (set SMTP_HOST environment variable)"
   end
@@ -184,7 +183,6 @@ defmodule Tymeslot.Mailer.SMTPConfig do
     raise ArgumentError, "SMTP host must be a string, got: #{inspect(host)}"
   end
 
-  # Validates SMTP port is a valid integer in range 1-65535
   defp validate_port!(port) when is_integer(port) and port >= 1 and port <= 65_535 do
     port
   end

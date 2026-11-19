@@ -213,7 +213,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   # The place the organiser gave the event, written as the provider's own
-  # location field. None leaves the key out, as before, so a provider never
+  # location field. None leaves the key out, so a provider never
   # receives an empty one.
   defp put_location(event_data, location) when is_binary(location) and location != "",
     do: Map.put(event_data, :location, location)
@@ -381,7 +381,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
   # A video integration was asked for but is not one the user can use
   # (another user's, switched off, disconnected): the event is written without
-  # a room, as before, and the refusal is still logged.
+  # a room, and the refusal is logged.
   defp warn_unusable_video(:none, video_id, user_id) when is_integer(video_id) do
     Logger.warning("Video integration not usable; event created without a video room",
       user_id: user_id,

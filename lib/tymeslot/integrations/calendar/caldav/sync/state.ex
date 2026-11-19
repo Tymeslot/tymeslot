@@ -55,13 +55,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.State do
   `:sync_token` is a `{calendar_path, token}` pair, and a `nil` token forgets
   that path's token. `clear_sync_tokens: true` forgets every path's at once.
 
-  This records bookkeeping and nothing else. It used to clear the integration's
-  health streak too, which looked equivalent and was not: it runs per path and
-  per tier step rather than once per job, so on a multi-calendar integration a
-  first calendar syncing normally cleared the streak that a second calendar's
-  repeated failure had just added, and the badge could never reach the
-  threshold that raises it. `SyncCalDavCalendarWorker` owns that signal now,
-  at the job boundary, where every other provider's worker already puts it.
+  This records bookkeeping and nothing else. It does not touch the
+  integration's health streak: it runs per path and per tier step rather than
+  once per job, so on a multi-calendar integration a first calendar syncing
+  normally would clear the streak that a second calendar's repeated failure
+  had just added, and the badge could never reach the threshold that raises
+  it. `SyncCalDavCalendarWorker` owns that signal at the job boundary, where
+  every other provider's worker puts it.
   """
   @spec put(struct(), keyword()) :: :ok
   def put(integration, opts) do

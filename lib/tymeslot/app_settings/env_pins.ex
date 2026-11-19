@@ -11,8 +11,8 @@ defmodule Tymeslot.AppSettings.EnvPins do
   fallback), so a value such as `1` or `abc` is silently read as something
   the operator did not mean; pinning it as well would stop the admin settings
   page from correcting it. Such a value is reported as unrecognised instead,
-  leaving the setting as it was before pins existed: the strictly parsed
-  config value, which a value saved on the admin page still overrides.
+  so the setting keeps the strictly parsed config value, which a value saved
+  on the admin page still overrides.
 
   Values are compared untrimmed, as the parses read them: `"true "` is not
   `"true"` to them, so it is not recognised here either. Blank counts as

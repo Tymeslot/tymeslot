@@ -4,9 +4,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload do
 
   Resolves the meeting's start/end times from the request config, builds the
   Zoom `POST /meetings` request body, and reads Zoom's success and error
-  responses. None of these functions perform I/O or touch OAuth state — they
-  exist as a focused, side-effect-free slice extracted from
-  `Tymeslot.Integrations.Video.Providers.ZoomProvider`.
+  responses for `Tymeslot.Integrations.Video.Providers.ZoomProvider`. None
+  of these functions perform I/O or touch OAuth state.
   """
 
   @doc """

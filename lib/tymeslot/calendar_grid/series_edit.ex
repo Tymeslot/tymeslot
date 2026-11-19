@@ -119,10 +119,8 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   whose place a new repeat rule no longer has cannot be carried. A
   write that fails after the split is logged, and the edit still succeeds.
 
-  The series' rows are then deleted and a sync requested, as for an edit of
-  every occurrence, which brings back both halves; the series' recorded video
-  rooms move to the new series, whose occurrences carry its join link on
-  (`Tymeslot.CalendarGrid.EventVideoRooms.series_split/3`).
+  The rows, the sync and the video rooms are handled as for the CalDAV
+  split above.
 
   ## Failure
 

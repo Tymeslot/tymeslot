@@ -5,9 +5,8 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   Windows are read per owner date, in the owner's own timezone, and resolved
   to instants (`owner_windows/4`); time off is read as instants too
-  (`time_off_intervals/4`). The booker's timezone is no longer this module's
-  concern: which of those instants a booker's date offers is decided by
-  `Tymeslot.Availability.SlotGrid`.
+  (`time_off_intervals/4`). Which of those instants a booker's date offers,
+  in the booker's timezone, is decided by `Tymeslot.Availability.SlotGrid`.
   """
 
   alias Tymeslot.Availability.AvailabilityOverrideQueries
@@ -50,7 +49,7 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   @doc """
   The windows in effect on each of `dates` (owner dates), as instants in
-  `owner_timezone`. An override outranks the weekly pattern, as before; a day
+  `owner_timezone`. An override outranks the weekly pattern; a day
   that is closed, names no hours, or holds hours that are not a valid window
   contributes nothing. Time off is not applied here; see
   `time_off_intervals/4`.
@@ -129,7 +128,7 @@ defmodule Tymeslot.Availability.BusinessHours do
   that between them cover the whole of it leave nothing to book, and a day
   offering nothing must not be drawn as one that does.
 
-  Breaks deliberately do not count, as before: this is the cheap answer the
+  Breaks deliberately do not count: this is the cheap answer the
   calendar shows before the real slot map arrives.
 
   Accepts preloaded data via `config` to avoid per-date DB queries.

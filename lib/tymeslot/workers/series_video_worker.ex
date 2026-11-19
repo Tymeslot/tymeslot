@@ -28,7 +28,7 @@ defmodule Tymeslot.Workers.SeriesVideoWorker do
   while the job runs replaces its args, and the job, once that run has
   succeeded, runs once more with them (`SyncRequest.rerun_if_requested/2`).
   An `:executing` row left behind by a node that stopped is not folded into
-  past half an hour (`SyncRequest.insert_unique/3`): the write gets a job of
+  a row older than half an hour (`SyncRequest.insert_unique/3`): the write gets a job of
   its own rather than waiting hours for the row's rescue, or being lost with
   it when the rescue finds its attempts spent.
   """

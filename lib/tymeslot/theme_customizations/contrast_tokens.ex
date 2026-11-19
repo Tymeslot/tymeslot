@@ -4,9 +4,9 @@ defmodule Tymeslot.ThemeCustomizations.ContrastTokens do
   directly on a palette colour: filled controls, where the palette colour is
   the surface and something has to be legible on top of it.
 
-  White was hard-coded there once, and it fails WCAG AA against six of the
-  eight shipped primaries (2.43:1 for the default turquoise) and against every
-  accent, with a custom seed free to be worse still.
+  White ink fails WCAG AA against six of the eight shipped primaries (2.43:1
+  for the default turquoise) and against every accent, with a custom seed free
+  to be worse still.
 
   Two tokens per family fix that without discarding the organiser's colour:
 

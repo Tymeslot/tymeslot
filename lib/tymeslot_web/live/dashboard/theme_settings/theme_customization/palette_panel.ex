@@ -216,7 +216,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.PalettePanel do
 
   def handle_ui(_event, _params, _group, _ui, _customization), do: :ignore
 
-  # Event names and rate-limit labels as they were before the single event.
+  # The telemetry event name and rate-limit label for each palette field.
   @impl Panel
   def telemetry(_group, "seed", value),
     do: {:palette_seed_changed, "palette_seed", %{seed: value}}

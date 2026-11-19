@@ -129,8 +129,8 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
 
   # Parse the slot via the shared booking validation so the simulated start time
   # matches exactly how the real orchestrator interprets it. The booking flow's
-  # slot values aren't always plain ISO `HH:MM`, so a naive parse rejected real
-  # slots — which broke simulated bookings from a live preview.
+  # slot values aren't always plain ISO `HH:MM`, so a naive parse would reject
+  # real slots.
   defp parse_start_time(%{date: date, time: time, user_timezone: tz} = meeting_params) do
     case Validation.parse_meeting_times(date, time, meeting_params[:duration], tz) do
       {:ok, {start_datetime, _end_datetime}} -> {:ok, start_datetime}
@@ -251,7 +251,6 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
          start_time,
          end_time
        ) do
-    # Generate UID
     uid = UUID.generate()
 
     %{

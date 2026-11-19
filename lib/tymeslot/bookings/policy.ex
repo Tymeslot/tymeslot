@@ -142,10 +142,9 @@ defmodule Tymeslot.Bookings.Policy do
       meeting.status == :completed ->
         {:error, {:not_reschedulable, :completed}}
 
-      # An expired meeting (a lapsed approval request or an abandoned paid
-      # checkout) has already released its slot: `MeetingState`'s
-      # `@occupying_statuses` excludes :expired, so conflict detection ignores
-      # it. Rescheduling would move it to a new time it does not reserve, and
+      # As for cancelling, an expired meeting has already released its slot:
+      # `MeetingState`'s `@occupying_statuses` excludes :expired, so conflict
+      # detection ignores it. Rescheduling would move it to a new time it does not reserve, and
       # the attendee would be told about a booking anyone else can still take.
       meeting.status == :expired ->
         {:error, {:not_reschedulable, :expired}}
@@ -253,8 +252,8 @@ defmodule Tymeslot.Bookings.Policy do
   end
 
   @doc """
-  Checks if a meeting is currently happening.
-  Pure function that compares meeting times with current UTC time.
+  Checks if a meeting is currently happening, comparing its times with the
+  current UTC time.
   """
   @spec meeting_is_current?(%{
           required(:start_time) => DateTime.t(),

@@ -97,8 +97,7 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
 
   ## Options
 
-    * `:buffer_seconds` — refresh a token expiring within this many seconds
-      (5 minutes).
+    * `:buffer_seconds` — as for `with_access_token/4`.
     * `:lock_timeout` — how long to wait for another refresh's lock, in
       milliseconds (`Tymeslot.Integrations.Shared.OAuth.Refresh.run/3`).
   """
