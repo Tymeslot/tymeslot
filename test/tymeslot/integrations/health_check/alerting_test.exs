@@ -169,6 +169,36 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
       assert :ok = Alerting.check_signal(:availability_refusals, at(hour, 1))
       refute_received {:send_alert, _type, _payload}
     end
+
+    test "leaves out an organiser flagged for reconnection in the window, even once reconnected",
+         %{user: user, hour: hour} do
+      [integration] = flag_integrations(user, 1, at(hour, 0))
+      CalendarIntegrationQueries.clear_reauth_flag(integration)
+      insert_refusals(user, hour, 6)
+
+      assert :ok = Alerting.check_signal(:availability_refusals, at(hour, 1))
+      refute_received {:send_alert, _type, _payload}
+    end
+
+    test "leaves out an organiser still awaiting a reconnection asked for before the window",
+         %{user: user, hour: hour} do
+      flag_integrations(user, 1, DateTime.add(hour, -5, :hour))
+      insert_refusals(user, hour, 6)
+
+      assert :ok = Alerting.check_signal(:availability_refusals, at(hour, 1))
+      refute_received {:send_alert, _type, _payload}
+    end
+
+    test "counts an organiser reconnected before the window whose calendar fails again",
+         %{user: user, hour: hour} do
+      [integration] = flag_integrations(user, 1, DateTime.add(hour, -5, :hour))
+      CalendarIntegrationQueries.clear_reauth_flag(integration)
+      insert_refusals(user, hour, 6)
+
+      assert :alerted = Alerting.check_signal(:availability_refusals, at(hour, 1))
+      assert_received {:send_alert, :integration_health_failure, %{affected_user_ids: [user_id]}}
+      assert user_id == user.id
+    end
   end
 
   describe "reauth flag signal" do
