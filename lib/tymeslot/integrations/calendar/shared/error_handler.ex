@@ -205,8 +205,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   # it; `ErrorMessages` words that case, and every other provider keeps the
   # generic sentence.
   def sanitize_error_message(:timeout, provider) do
-    ErrorMessages.specific_message(:timeout, provider) ||
-      dgettext("integrations_calendar", "The request timed out. Please try again.")
+    case ErrorMessages.specific_message(:timeout, provider) do
+      message when is_binary(message) -> message
+      nil -> dgettext("integrations_calendar", "The request timed out. Please try again.")
+    end
   end
 
   # A body that would not decode is the service answering wrongly, not the

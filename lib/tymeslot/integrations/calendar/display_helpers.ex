@@ -74,7 +74,10 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
         {:error, :unknown} -> nil
       end
 
-    specific || connection_error_message(reason)
+    case specific do
+      message when is_binary(message) -> message
+      nil -> connection_error_message(reason)
+    end
   end
 
   @doc """

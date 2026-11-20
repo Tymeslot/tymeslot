@@ -20,8 +20,9 @@ defmodule Tymeslot.MeetingPayments.RefundedTotal do
 
   @doc "The refunds made at Stripe, without what a lost dispute took."
   @spec stripe_refunded_cents(BookingPaymentSchema.t()) :: non_neg_integer()
-  def stripe_refunded_cents(%{refunded_amount_cents: refunded, disputed_lost_cents: lost}),
-    do: max(refunded - lost, 0)
+  def stripe_refunded_cents(%{refunded_amount_cents: refunded, disputed_lost_cents: lost})
+      when is_integer(refunded) and is_integer(lost),
+      do: max(refunded - lost, 0)
 
   @doc """
   The whole once Stripe reports `stripe_total` refunded on the charge.
@@ -60,5 +61,6 @@ defmodule Tymeslot.MeetingPayments.RefundedTotal do
     }
   end
 
-  defp whole(%{amount_cents: amount}, refunds, lost), do: min(refunds + lost, amount)
+  defp whole(%{amount_cents: amount}, refunds, lost) when is_integer(amount),
+    do: min(refunds + lost, amount)
 end
