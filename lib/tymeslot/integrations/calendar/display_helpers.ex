@@ -10,6 +10,8 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.Shared.ErrorMessages
   alias Tymeslot.Integrations.Shared.Providers.Directory
 
   @doc """
@@ -57,6 +59,23 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
         "integrations_calendar",
         "Failed to connect to calendar. Please try again or reconnect."
       )
+
+  @doc """
+  `connection_error_message/1` for a failure on `provider`'s connection,
+  except where `ErrorMessages.specific_message/2` has advice for that
+  provider (a timeout from a server its owner runs, say). Takes the provider
+  as an atom or as the string an integration row stores.
+  """
+  @spec connection_error_message(term(), atom() | String.t()) :: String.t()
+  def connection_error_message(reason, provider) do
+    specific =
+      case ProviderConfig.parse_known(provider) do
+        {:ok, provider_atom} -> ErrorMessages.specific_message(reason, provider_atom)
+        {:error, :unknown} -> nil
+      end
+
+    specific || connection_error_message(reason)
+  end
 
   @doc """
   Format provider display name for UI consumption.
