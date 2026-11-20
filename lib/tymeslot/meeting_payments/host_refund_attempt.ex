@@ -16,7 +16,11 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   the payment landed in between (a key derived from the payment's refunded
   total would have changed with it, and refunded twice). The retries end
   within about four hours (`backoff/1`), well inside the 24 hours Stripe
-  keeps a key.
+  keeps a key. The one exception is a job whose pinned amount shrinks
+  (below): Stripe keeps an answer under a key even when it was an error, so
+  a different amount sent under the old key would be refused for good. The
+  job moves to a key of its own (`<prefix>:<job id>:<n>`), and only when no
+  refund can sit under the old one.
 
   Whether the refund is already made is the job's own record, never the
   payment's running total: other refunds of the same payment can land
@@ -88,6 +92,10 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   # Where it records whether Stripe may have been asked for that refund
   # (1) or was shown not to have made it (0).
   @asked_key "refund_asked"
+
+  # Bumped each time a never-asked pin shrinks, moving the job to a fresh
+  # Stripe idempotency key.
+  @key_rev_key "refund_key_rev"
 
   @unretryable [
     :not_found,
@@ -222,7 +230,13 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   defp claim(job_id, opts), do: DeliveryClaims.claim(job_id, opts[:claim])
 
   defp key(nil, opts), do: "#{opts[:key_prefix]}:#{UUID.generate()}"
-  defp key(job_id, opts), do: "#{opts[:key_prefix]}:#{job_id}"
+
+  defp key(job_id, opts) do
+    case ObanJobQueries.meta_value(job_id, @key_rev_key) do
+      rev when is_integer(rev) and rev > 0 -> "#{opts[:key_prefix]}:#{job_id}:#{rev}"
+      _never_resized -> "#{opts[:key_prefix]}:#{job_id}"
+    end
+  end
 
   # The refund is sized once per job, under the payment's row lock, and the
   # size pinned to the job's row before Stripe is asked: every later attempt
@@ -235,7 +249,9 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   # A pinned amount Stripe was never asked to refund (the attempt that pinned
   # it failed before Stripe accepted anything) holds the key to nothing, so a
   # refund the host made since shrinks it as it would have the first attempt:
-  # it is pinned again at what remains, when that is less.
+  # it is pinned again at what remains, when that is less, and under a key
+  # of its own: Stripe may hold an error under the old key, and refuses a
+  # different amount sent under it.
   defp amount_due(job_id, id, host_user_id, amount) do
     Repo.transaction(fn ->
       case BookingPaymentQueries.get_for_update(id, host_user_id) do
@@ -248,7 +264,7 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   defp due(job_id, nil, amount, remaining), do: pin(job_id, min(amount, remaining))
 
   defp due(job_id, pinned, _amount, remaining) when pinned > remaining do
-    if asked?(job_id), do: pinned, else: pin(job_id, remaining)
+    if asked?(job_id), do: pinned, else: repin(job_id, remaining)
   end
 
   defp due(_job_id, pinned, _amount, _remaining), do: pinned
@@ -268,6 +284,12 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   defp pin(job_id, due) do
     :ok = ObanJobQueries.put_meta_integer(job_id, @pinned_key, due)
     due
+  end
+
+  defp repin(job_id, due) do
+    rev = ObanJobQueries.meta_value(job_id, @key_rev_key) || 0
+    :ok = ObanJobQueries.put_meta_integer(job_id, @key_rev_key, rev + 1)
+    pin(job_id, due)
   end
 
   defp ensure_charge(%{stripe_charge_id: charge} = payment)

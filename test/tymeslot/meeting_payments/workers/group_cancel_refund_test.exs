@@ -142,18 +142,48 @@ defmodule Tymeslot.MeetingPayments.Workers.GroupCancelRefundTest do
 
   describe "a retry after a host refund shrank what remains" do
     test "refunds what remains when Stripe refused the first attempt", %{payment: payment} do
-      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, _opts ->
+      test_pid = self()
+
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, opts ->
+        send(test_pid, {:key, opts[:idempotency_key]})
         {:error, %Stripe.Error{source: :stripe, code: :api_error, message: "try later"}}
       end)
 
       assert {:error, %Stripe.Error{source: :stripe}} = run_job()
+      assert_received {:key, first_key}
       refund_by_host(payment, 500)
 
-      expect(StripeAdapterMock, :create_refund, fn %{amount: 1500}, _opts ->
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 1500}, opts ->
+        send(test_pid, {:key, opts[:idempotency_key]})
         {:ok, %{id: "re_SEAT"}}
       end)
 
       assert :ok = run_job(attempt: 2)
+      # Stripe keeps its error under the first key and would refuse 1500
+      # sent under it: the resized refund goes under a key of its own.
+      assert_received {:key, retry_key}
+      assert is_binary(first_key) and retry_key != first_key
+      assert %{refunded_amount_cents: 2000, status: :refunded} = Repo.reload!(payment)
+    end
+
+    test "a retry after an unanswered attempt keeps its key and amount", %{payment: payment} do
+      test_pid = self()
+
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, opts ->
+        send(test_pid, {:key, opts[:idempotency_key]})
+        exit({:timeout, {GenServer, :call, []}})
+      end)
+
+      assert {:error, {:exit, _timeout}} = run_job()
+      assert_received {:key, first_key}
+
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, opts ->
+        send(test_pid, {:key, opts[:idempotency_key]})
+        {:ok, %{id: "re_SEAT"}}
+      end)
+
+      assert :ok = run_job(attempt: 2)
+      assert_received {:key, ^first_key}
       assert %{refunded_amount_cents: 2000, status: :refunded} = Repo.reload!(payment)
     end
 
