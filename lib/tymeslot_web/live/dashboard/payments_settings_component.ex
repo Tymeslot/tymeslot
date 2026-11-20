@@ -21,7 +21,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Ecto.UUID
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.MeetingPayments
 
@@ -252,15 +251,19 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     )
   end
 
-  # Each opening of the dialog is one decision to refund, so a retry from
-  # the same dialog, after a refund that failed or timed out, asks Stripe
-  # under the same key and gets back any refund the first try made.
+  # A refund is decided against the balance the dialog shows, so the attempt
+  # names the payment and the total refunded when the dialog opened. A retry
+  # after a refund that failed or timed out (from the same dialog, after
+  # closing and reopening it, or after reloading the page) finds the same
+  # total while nothing new is recorded, asks Stripe under the same key, and
+  # gets back any refund the first try made. Once a refund is recorded the
+  # total moves, so a deliberate further refund is a new key.
   defp open_refund_modal(socket, payment) do
     if MeetingPayments.refundable?(payment) do
       {:noreply,
        socket
        |> reset_refund_form()
-       |> assign(:refund_attempt, UUID.generate())
+       |> assign(:refund_attempt, "#{payment.id}:#{payment.refunded_amount_cents}")
        |> ModalHook.show_modal(:refund, payment)}
     else
       Flash.error(
