@@ -415,6 +415,11 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   # carry reminders only when the edit changes them. Google and Outlook read
   # their reminders back on sync and treat a missing key as a reset (Google's
   # calendar defaults, Outlook's reminder switched off), so they keep it.
+  # Google reads an empty list as "the calendar's defaults" (see
+  # `Google.EventMapper`), so taking every reminder off is said explicitly.
+  defp scope_reminders(payload, _event, %{reminders: []}),
+    do: Map.put(payload, :reminders_cleared, true)
+
   defp scope_reminders(payload, _event, %{reminders: _reminders}), do: payload
 
   defp scope_reminders(payload, event, _changes) do
