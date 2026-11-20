@@ -83,6 +83,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
     calendar:LegacyFreeBusyStatus
     calendar:IsCancelled
     calendar:StartTimeZone
+    item:ReminderIsSet
+    item:ReminderMinutesBeforeStart
   )
 
   @item_properties_xml Enum.map_join(@item_properties, &~s(<t:FieldURI FieldURI="#{&1}"/>))

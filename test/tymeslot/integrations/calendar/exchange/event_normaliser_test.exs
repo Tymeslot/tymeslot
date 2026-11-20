@@ -255,6 +255,41 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       assert CalendarEvent.blocking?(event)
     end
 
+    test "reads the item's reminder as a pop-up at its lead time" do
+      item =
+        String.replace(
+          @timed_item,
+          "<t:Subject>Standup</t:Subject>",
+          "<t:Subject>Standup</t:Subject>\n<t:ReminderIsSet>true</t:ReminderIsSet>\n" <>
+            "<t:ReminderMinutesBeforeStart>15</t:ReminderMinutesBeforeStart>"
+        )
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(items([item]), @context)
+
+      assert event.reminders == [%{method: :popup, minutes_before: 15}]
+    end
+
+    # EWS keeps the lead time of a reminder that was switched off.
+    test "reads a switched-off reminder as none" do
+      item =
+        String.replace(
+          @timed_item,
+          "<t:Subject>Standup</t:Subject>",
+          "<t:Subject>Standup</t:Subject>\n<t:ReminderIsSet>false</t:ReminderIsSet>\n" <>
+            "<t:ReminderMinutesBeforeStart>15</t:ReminderMinutesBeforeStart>"
+        )
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(items([item]), @context)
+
+      assert event.reminders == []
+    end
+
+    test "reads no reminder when the server omits it" do
+      assert {:ok, [event]} = EventNormaliser.normalise_events(items([@timed_item]), @context)
+
+      assert event.reminders == []
+    end
+
     test "maps a Free busy status to transparent so it does not block availability" do
       item = String.replace(@timed_item, "LegacyFreeBusyStatus>Busy", "LegacyFreeBusyStatus>Free")
 

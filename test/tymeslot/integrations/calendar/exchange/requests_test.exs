@@ -23,6 +23,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
     calendar:LegacyFreeBusyStatus
     calendar:IsCancelled
     calendar:StartTimeZone
+    item:ReminderIsSet
+    item:ReminderMinutesBeforeStart
   )
 
   # Every `t:` element `Exchange.EventNormaliser` reads off a calendar item,
@@ -38,7 +40,9 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.RequestsTest do
     "CalendarItemType" => "calendar:CalendarItemType",
     "LegacyFreeBusyStatus" => "calendar:LegacyFreeBusyStatus",
     "IsCancelled" => "calendar:IsCancelled",
-    "StartTimeZone" => "calendar:StartTimeZone"
+    "StartTimeZone" => "calendar:StartTimeZone",
+    "ReminderIsSet" => "item:ReminderIsSet",
+    "ReminderMinutesBeforeStart" => "item:ReminderMinutesBeforeStart"
   }
 
   describe "find_folder/0" do
