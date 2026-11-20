@@ -117,7 +117,12 @@ defmodule Tymeslot.Availability.BookableWindows do
            MeetingTypes.get_meeting_type(meeting_type_id, user_id),
          {:ok, profile} <- Profiles.get_profile_by_user_id(user_id) do
       {:ok,
-       %{profile: profile, user_timezone: Profiles.timezone(profile), meeting_type: meeting_type}}
+       %{
+         profile: profile,
+         user_timezone: Profiles.timezone(profile),
+         meeting_type: meeting_type,
+         organiser_view: true
+       }}
     else
       _missing -> {:error, :not_found}
     end

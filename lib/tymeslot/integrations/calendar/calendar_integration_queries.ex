@@ -407,6 +407,23 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
+  Which of `user_ids` have a calendar integration awaiting reconnection, or
+  flagged for it at or after `since` even if since reconnected.
+  """
+  @spec user_ids_flagged_for_reauth([pos_integer()], DateTime.t()) :: MapSet.t(pos_integer())
+  def user_ids_flagged_for_reauth([], _since), do: MapSet.new()
+
+  def user_ids_flagged_for_reauth(user_ids, %DateTime{} = since) do
+    CalendarIntegrationSchema
+    |> where([c], c.user_id in ^user_ids)
+    |> where([c], c.needs_reauth or c.reauth_flagged_at >= ^since)
+    |> distinct(true)
+    |> select([c], c.user_id)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  @doc """
   Counts the integrations newly flagged `needs_reauth` within `[from, to)`,
   per provider, whether or not the flag has since been cleared.
   """

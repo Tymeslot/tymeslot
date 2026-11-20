@@ -66,7 +66,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
           |> Enum.map(&booking_calendar_missing(&1, integration))
 
         deselect_missing_calendars(integration, results)
-        collect_events(results)
+        collect_events(results, integration)
     end
   end
 
@@ -98,7 +98,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
   # de-selected above, so an empty contribution is correct, not a gap), or a
   # hard failure whose busy time we simply don't know (timeout, auth error,
   # network error, killed task). This module does not apply fail-closed
-  # policy itself (see `collect_events/1` below); that is reserved for the
+  # policy itself (see `collect_events/2` below); that is reserved for the
   # outermost availability boundary, `EventQueries.resolve_availability_fetch/3`.
   defp classify_calendar_result({{:ok, {:ok, events}}, _calendar}), do: {:ok, events}
   defp classify_calendar_result({{:ok, {:error, :not_found, _message}}, _calendar}), do: :absent
@@ -123,9 +123,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
   # `FetchAggregate.collect/3`'s `{:aggregate, outcome}` classification —
   # instead of being flattened into an opaque atom that discards which
   # calendar failed and why.
-  defp collect_events(results) do
+  defp collect_events(results, integration) do
     results
-    |> FetchAggregate.collect(&classify_calendar_result/1)
+    |> FetchAggregate.collect(&classify_calendar_result/1,
+      calendar_integration_id: Map.get(integration, :id),
+      provider: Map.get(integration, :provider)
+    )
     |> dedupe_outcome_events()
     |> to_result()
   end

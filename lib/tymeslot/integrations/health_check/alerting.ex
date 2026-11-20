@@ -14,7 +14,10 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
       computed because a selected calendar could not be read, at least
       `:refusals_per_user` times within the window. Their booking pages offer
       nothing, which is the revenue-affecting symptom. Recorded durably by
-      `track_availability/2` from the availability path.
+      `track_availability/2` from the reads that serve a guest. An organiser
+      with a calendar flagged for reconnection since the window began is left
+      out: the organiser has been asked to reconnect, and a burst of such
+      flags is the `"reauth_flags"` signal's to report.
     * `"reauth_flags"`: calendar integrations newly flagged `needs_reauth`
       within the window. A handful a day is churn; a burst in one hour means a
       rotated client secret or a provider outage.
@@ -303,12 +306,21 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
   end
 
   defp measure(:availability_refusals, window_end, config) do
-    users =
+    from = window_start(window_end, config)
+
+    refused =
       AvailabilityRefusalQueries.users_refused_at_least(
-        window_start(window_end, config),
+        from,
         window_end,
         Keyword.fetch!(config, :refusals_per_user)
       )
+
+    awaiting_reconnect =
+      refused
+      |> Enum.map(&elem(&1, 0))
+      |> CalendarIntegrationQueries.user_ids_flagged_for_reauth(from)
+
+    users = Enum.reject(refused, fn {user_id, _refusals} -> user_id in awaiting_reconnect end)
 
     %{
       count: length(users),

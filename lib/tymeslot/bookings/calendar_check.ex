@@ -43,6 +43,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Integrations.HealthCheck.Alerting
   alias Tymeslot.Meetings.ExternalCalendar
 
   # Availability was already checked when the slots were displayed, so a slow
@@ -263,11 +264,15 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   # One fresh read of the organiser's calendars over `{start_date, end_date}`,
   # less the mirrors of the meetings `opts[:exclude]` names. The fetch runs in
   # an unlinked task, so a provider adapter that raises is reported as
-  # `:fetch_crashed` instead of taking the caller down with it.
+  # `:fetch_crashed` instead of taking the caller down with it. A read refused
+  # because the calendars could not all be read turns the booker away, so it
+  # is counted for `HealthCheck.Alerting`.
   defp fetch_blocking(organizer_user_id, {start_date, end_date}, timeout_ms, opts) do
     fetch =
       Tasks.async_nolink(Tymeslot.TaskSupervisor, fn ->
-        CalendarEvents.get_events_for_range_fresh(organizer_user_id, start_date, end_date)
+        organizer_user_id
+        |> CalendarEvents.get_events_for_range_fresh(start_date, end_date)
+        |> Alerting.track_availability(organizer_user_id)
       end)
 
     case Task.yield(fetch, timeout_ms) || Task.shutdown(fetch) do

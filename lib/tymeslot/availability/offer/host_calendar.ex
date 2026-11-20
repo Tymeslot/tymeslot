@@ -43,12 +43,18 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   "Treat as Free" on an all-day event wins over its calendar. The cached entry is stored with
   the rule already applied; an override and a calendar's settings both call
   `Tymeslot.Availability.changed/1`, which drops it.
+
+  A read refused because the host's calendars could not all be read is
+  counted for `Tymeslot.Integrations.HealthCheck.Alerting` as a guest offered
+  nothing, unless the request is the organiser's own view of their offer
+  (`organiser_view: true`), where nobody was turned away.
   """
 
   alias Tymeslot.Availability.Bookability
   alias Tymeslot.Availability.Reach
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Integrations.HealthCheck.Alerting
 
   @doc "The host's events across the booking window, through the cache."
   @spec booking_window(map(), Date.t()) :: {:ok, list()} | {:error, any()}
@@ -107,19 +113,28 @@ defmodule Tymeslot.Availability.Offer.HostCalendar do
   @spec context(map()) :: map()
   def context(%{profile: profile}), do: %{organizer_profile: profile}
 
-  defp beyond_window(%{profile: %{user_id: user_id}}, {first_date, last_date} = dates) do
+  defp beyond_window(%{profile: %{user_id: user_id}} = request, {first_date, last_date} = dates) do
     padding = Reach.utc_padding_days()
 
     with {:ok, events} <-
-           CalendarEvents.get_events_for_range_fresh(
-             user_id,
+           user_id
+           |> CalendarEvents.get_events_for_range_fresh(
              Date.add(first_date, -padding),
              Date.add(last_date, 1 + padding)
-           ) do
+           )
+           |> track(request) do
       {:ok, Bookability.apply_to_dates(events, user_id, dates)}
     end
   end
 
-  defp fresh(%{profile: %{user_id: user_id}} = request, date),
-    do: CalendarEvents.get_calendar_events_from_context(date, user_id, context(request))
+  defp fresh(%{profile: %{user_id: user_id}} = request, date) do
+    date
+    |> CalendarEvents.get_calendar_events_from_context(user_id, context(request))
+    |> track(request)
+  end
+
+  defp track(result, %{organiser_view: true}), do: result
+
+  defp track(result, %{profile: %{user_id: user_id}}),
+    do: Alerting.track_availability(result, user_id)
 end
