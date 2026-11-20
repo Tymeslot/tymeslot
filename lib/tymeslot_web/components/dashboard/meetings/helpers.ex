@@ -31,9 +31,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   def participants(_meeting), do: []
 
   @doc """
-  Whether the meeting is over. A meeting awaiting a new time never is: the
-  reschedule request voided its slot, and the host can still withdraw the
-  request after the original time has gone by.
+  Whether the meeting is over. A meeting awaiting a new time is not: the
+  reschedule request voided its slot, and the request stays open after the
+  original time has gone by, until it lapses and the meeting expires.
   """
   @spec past_meeting?(Ecto.Schema.t()) :: boolean()
   def past_meeting?(meeting) do

@@ -44,6 +44,7 @@ defmodule Tymeslot.Bookings.Policy do
           :cancelled
           | :completed
           | :expired
+          | :request_lapsed
           | :awaiting_approval
           | :awaiting_verification
           | :started
@@ -68,6 +69,12 @@ defmodule Tymeslot.Bookings.Policy do
 
       meeting.status == :completed ->
         {:error, {:not_cancellable, :completed}}
+
+      # See `slot_elapsing?/2`: an unanswered reschedule request stays open
+      # only until its deadline, and is refused from then on even before the
+      # expiry job has ended the meeting.
+      MeetingState.reschedule_request_lapsed?(meeting) ->
+        {:error, {:not_cancellable, :request_lapsed}}
 
       # An expired meeting (a lapsed approval request or an abandoned paid
       # checkout) has already been released: its slot was freed, the attendee
@@ -116,7 +123,8 @@ defmodule Tymeslot.Bookings.Policy do
 
   # A reschedule request has voided the slot, so its original time no longer
   # says when the meeting happens: the attendee may still answer the request,
-  # and the host withdraw it, after that time has gone by. A confirmed
+  # and the host withdraw it, after that time has gone by, until the request's
+  # own deadline (`MeetingState.reschedule_request_deadline/1`). A confirmed
   # meeting whose time has passed stays refused.
   defp slot_elapsing?(meeting, time_check),
     do: not MeetingState.awaiting_new_time?(meeting) and time_check.(meeting)
@@ -148,6 +156,9 @@ defmodule Tymeslot.Bookings.Policy do
 
       meeting.status == :completed ->
         {:error, {:not_reschedulable, :completed}}
+
+      MeetingState.reschedule_request_lapsed?(meeting) ->
+        {:error, {:not_reschedulable, :request_lapsed}}
 
       # As for cancelling, an expired meeting has already released its slot:
       # `MeetingState`'s `@occupying_statuses` excludes :expired, so conflict

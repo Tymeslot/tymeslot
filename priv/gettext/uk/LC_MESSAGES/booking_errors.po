@@ -330,3 +330,8 @@ msgstr "Ця сесія належить до запиту, який очіку�
 #, elixir-autogen, elixir-format
 msgid "Guests can only be added to a single booking. Please remove your guests to book a series."
 msgstr "Гостей можна додати лише до одиничного бронювання. Щоб забронювати серію, видаліть своїх гостей."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "The request to pick a new time for this meeting has lapsed, so it is no longer booked. You're welcome to book a new time."
+msgstr "Запит на вибір нового часу для цієї зустрічі втратив чинність, тому вона більше не заброньована. Ви можете забронювати новий час."

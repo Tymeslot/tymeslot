@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
 
       <div
         :if={
-          @meeting.status != :cancelled && !MeetingState.awaiting_approval?(@meeting) &&
+          !MeetingState.terminal?(@meeting) && !MeetingState.awaiting_approval?(@meeting) &&
             !Helpers.past_meeting?(@meeting)
         }
         class="contents"
@@ -158,7 +158,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingActions do
       </div>
       <div
         :if={
-          (@meeting.status == :cancelled or Helpers.past_meeting?(@meeting)) and
+          (MeetingState.terminal?(@meeting) or Helpers.past_meeting?(@meeting)) and
             not MeetingState.awaiting_approval?(@meeting)
         }
         class="hidden lg:block"

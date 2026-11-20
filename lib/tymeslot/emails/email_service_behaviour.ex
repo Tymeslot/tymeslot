@@ -96,6 +96,9 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
   @callback send_email_change_confirmations(user_map(), String.t(), String.t()) ::
               {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   @callback send_reschedule_request(map()) :: {:ok, any()} | {:error, any()}
+  @callback send_reschedule_request_unanswered(map(), String.t()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_reschedule_request_lapsed(map()) :: {:ok, any()} | {:error, any()}
   @callback send_integration_unhealthy_notification(
               user_map(),
               %{required(:provider) => atom(), optional(atom()) => term()},

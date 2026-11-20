@@ -212,4 +212,35 @@ defmodule Tymeslot.Meetings.MeetingTransitionQueries do
       {0, _none} -> {:error, :not_requestable}
     end
   end
+
+  @doc """
+  Moves a meeting whose reschedule request lapsed unanswered to `:expired`,
+  atomically, keeping `reschedule_requested_at` as the record of why.
+
+  The guard (`MeetingState.where_reschedule_request_lapsed/2` at `now`, and
+  the request still being the one stamped at `requested_at`) is in the
+  `WHERE` clause: the attendee picking a new time clears the request under
+  the meeting's row lock, so of the two, whichever commits first wins and the
+  other finds nothing to change. A later request on the same meeting carries
+  its own deadline and is not ended by an earlier one's expiry.
+  `{:error, :not_lapsed}` when nothing matched.
+  """
+  @spec expire_reschedule_request(Ecto.UUID.t(), DateTime.t(), DateTime.t()) ::
+          {:ok, Meeting.t()} | {:error, :not_lapsed}
+  def expire_reschedule_request(meeting_id, %DateTime{} = requested_at, %DateTime{} = now) do
+    now = DateTime.truncate(now, :second)
+
+    request =
+      from(m in Meeting,
+        where: m.id == ^meeting_id and m.reschedule_requested_at == ^requested_at,
+        select: m
+      )
+
+    query = MeetingState.where_reschedule_request_lapsed(request, now)
+
+    case Repo.update_all(query, set: [status: :expired, cancelled_at: now, updated_at: now]) do
+      {1, [meeting]} -> {:ok, meeting}
+      {0, _none} -> {:error, :not_lapsed}
+    end
+  end
 end
