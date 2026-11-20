@@ -16,10 +16,10 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
 
   Both ends ask `EditGuard.write_gates/3`: `schedule/4` refuses an event the
   organiser may not change before anything is stored, and when it runs
-  (`perform/1`) the gates are asked again, since the calendar may have been
-  disconnected or a seat booked during the window; a refusal then is
-  reported as `{:failed, reason}`. Otherwise the event is
-  deleted through `EventDeletion.delete_event/4`, and the outcome is
+  (`perform/1`) the delete goes through `EventDeletion.delete_event/4`,
+  which asks the gates again, since the calendar may have been disconnected
+  or a seat booked during the window; a refusal then is reported as
+  `{:failed, reason}`. The outcome is
   broadcast on the organiser's calendar topic as
   `{:calendar_delete_result, user_id, token, outcome}`: `:deleted`;
   `{:deleted, :cancel_failed}` when the event is gone but its linked meeting
@@ -263,13 +263,9 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   defp delete(user_id, event, args) do
     notify? = args["notify_attendees"] == true
 
-    with :ok <- EditGuard.write_gates(user_id, event, :change),
-         {:ok, deleted} <-
-           EventDeletion.delete_event(user_id, event, scope(args), notify_attendees: notify?) do
-      deleted_outcome(deleted)
-    else
-      {:error, refusal} when is_atom(refusal) ->
-        {:failed, refusal}
+    case EventDeletion.delete_event(user_id, event, scope(args), notify_attendees: notify?) do
+      {:ok, deleted} ->
+        deleted_outcome(deleted)
 
       # The calendar says it is gone already; the cached row has to follow it
       # or the event would reappear until the next sync.

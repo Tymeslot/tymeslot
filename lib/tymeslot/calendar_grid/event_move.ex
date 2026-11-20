@@ -67,6 +67,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
 
   alias Tymeslot.Availability
   alias Tymeslot.CalendarGrid.CreateParams
+  alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.ProviderPayload
@@ -186,7 +187,10 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   `{:error, reason}`, with nothing written anywhere, when the event cannot be
   moved or the destination refused it, including
   `{:error, :no_destination_calendar}` when the destination integration has no
-  calendar to write to.
+  calendar to write to. An event `EditGuard.write_gates/3` refuses as a
+  change of timing is refused with its reason before anything else: one not
+  on a writable calendar of the organiser's own, the calendar copy of a
+  booking, or one held by live seats.
   """
   @spec move_event(pos_integer(), map(), destination()) ::
           {:ok, moved()}
@@ -198,12 +202,14 @@ defmodule Tymeslot.CalendarGrid.EventMove do
              | :invalid_timing
              | term()}
   def move_event(user_id, event, destination) do
-    stored = Occurrence.cached_row(event)
+    with :ok <- EditGuard.write_gates(user_id, event, :timing) do
+      stored = Occurrence.cached_row(event)
 
-    case movable(stored) do
-      :ok -> move_single(user_id, event, stored, destination)
-      {:ok, :series} -> SeriesTransfer.move(user_id, stored, destination)
-      {:error, _reason} = refused -> refused
+      case movable(stored) do
+        :ok -> move_single(user_id, event, stored, destination)
+        {:ok, :series} -> SeriesTransfer.move(user_id, stored, destination)
+        {:error, _reason} = refused -> refused
+      end
     end
   end
 

@@ -30,15 +30,20 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
       booking refuses as it refuses a change of timing, under the move rate
       limit (`move_rate_limit/1`) rather than the edit one.
 
-  `write_gates/3` is what the domain asks itself before every write it
-  makes (`EventEdit.update_event/4`, `ScheduledDelete.schedule/4` and the
-  delete when it runs), whoever called it: `writable/2` against the
-  organiser's own integration, loaded by the event's
-  `calendar_integration_id`, the booking copy's rule when the change is one
-  of timing, and `seat_lock/2`. The rate limits stay with the callers, which
-  count an organiser's actions rather than the writes they turn into; the
-  calendar asks `check/3` first anyway, so it can refuse before drawing the
-  change.
+  `write_gates/3` is what the domain asks itself before it changes, moves
+  or deletes an existing event, whoever called it: `EventEdit.update_event/4`,
+  `EventMove.move_event/3` (a series' move included) as a change of timing,
+  and `EventDeletion.delete_event/4` and `ScheduledDelete.schedule/4`. It
+  asks `writable/2` against the organiser's own integration, loaded by the
+  event's `calendar_integration_id`, the booking copy's rule when the change
+  is one of timing, and `seat_lock/2`. The rate limits stay with the
+  callers, which count an organiser's actions rather than the writes they
+  turn into; the calendar asks `check/3` first anyway, so it can refuse
+  before drawing the change.
+
+  An event's colour is not gated here: it is the organiser's own override
+  in Tymeslot (`Calendar.set_event_colour/3`), kept whatever the calendar
+  allows, and the calendar's side panel asks `check/3` before offering it.
 
   `free_busy_editable?/2` says whether the organiser may change an event's
   Busy/Free: a booking, and the calendar copy of one, follow their meeting
@@ -238,8 +243,8 @@ defmodule Tymeslot.CalendarGrid.EditGuard do
   def timing_change?(changes), do: Enum.any?(@timing_fields, &is_map_key(changes, &1))
 
   @doc """
-  The gates the domain asks before writing to, or deleting, `event` for
-  `user_id`: it sits on a writable calendar of an active integration of
+  The gates the domain asks before changing, moving or deleting `event` for
+  `user_id` (see the moduledoc for which writes ask them): it sits on a writable calendar of an active integration of
   theirs (`writable/2`), is not the copy of a booking when the change is
   one of `:timing`, and is not held by live seats. No rate limit; see the
   moduledoc. An integration that is not theirs refuses as `:unauthorized`.
