@@ -58,6 +58,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Events
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig, as: CalendarProviders
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviders
@@ -194,12 +195,16 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   * `:own_event`: any other combination, including a video account that is
     not the calendar's (a host can connect several accounts): the room is
     made by the video provider on its own.
+  * `{:error, :calendar_unavailable}`: the booking's Google event could not
+    be read. Whether it carries a Meet is unknown, and a room of its own
+    could be a second one, so the caller retries rather than make one.
   """
   @spec booking_room_placement(MeetingSchema.t()) ::
           {:calendar_event, String.t()}
           | {:calendar_meet, String.t(), String.t()}
           | :awaiting_calendar_event
           | :own_event
+          | {:error, :calendar_unavailable}
   def booking_room_placement(%MeetingSchema{} = meeting) do
     case video_on_booking_calendar(meeting) do
       {:ok, :attach, _video, %{integration_id: cal_id}} ->
@@ -260,7 +265,48 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
     do: %{online_meeting: TeamsProvider.online_meeting_fields(video)}
 
   defp event_video_fields(:inline, _video),
-    do: %{conference_data: ConferenceData.create_request()}
+    do: %{conference_data: ConferenceData.booking_create_request()}
+
+  @doc """
+  The fields a booking's calendar update carries to take a Meet conference
+  off its Google event, or an empty map.
+
+  An ordinary update leaves an event's conference as it is. A conference the
+  event was created asking for (`booking_event_video_fields/1`) that the
+  booking no longer holds as its room, and no longer waits for, would then
+  stay on the event: a booking moved to another location before the video
+  job took the Meet would keep offering it. Such a conference is taken off
+  (`%{conference_data: :remove}`). It is recognised on the cached copy of the
+  event by its request id, so a conference the organiser added in Google
+  Calendar is never touched; an event not cached yet keeps its conference.
+  """
+  @spec booking_event_update_fields(MeetingSchema.t()) :: map()
+  def booking_event_update_fields(%MeetingSchema{
+        provider_event_id: event_id,
+        video_room_id: event_id
+      })
+      when is_binary(event_id),
+      do: %{}
+
+  def booking_event_update_fields(%MeetingSchema{provider_event_id: event_id} = meeting)
+      when is_binary(event_id) and event_id != "" do
+    with false <- match?({:ok, :inline, _video, _calendar}, video_on_booking_calendar(meeting)),
+         {:ok, cached} <-
+           ProviderCalendarEventQueries.get_by_identifiers(meeting.calendar_integration_id, [
+             event_id
+           ]),
+         true <- ConferenceData.booking_conference?(cached.provider_metadata) do
+      Logger.info("Taking the booking's Meet conference off its calendar event",
+        meeting_id: meeting.id
+      )
+
+      %{conference_data: ConferenceData.remove()}
+    else
+      _keep -> %{}
+    end
+  end
+
+  def booking_event_update_fields(_meeting), do: %{}
 
   # The booking's video integration, how the calendar it is written to
   # carries its room (`@same_account_rules`), and that calendar, when both
@@ -289,8 +335,9 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   # Google never finishes is given a room of its own once the wait is over.
   defp with_event_meet({:calendar_event, event_id}, meeting, calendar) do
     case event_meet_url(meeting, event_id, calendar) do
-      url when is_binary(url) -> {:calendar_meet, event_id, url}
-      nil -> waiting_or_own_event(meeting, @calendar_event_grace_seconds)
+      {:ok, url} -> {:calendar_meet, event_id, url}
+      :none -> waiting_or_own_event(meeting, @calendar_event_grace_seconds)
+      {:error, _reason} -> {:error, :calendar_unavailable}
     end
   end
 
@@ -298,21 +345,29 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   # The event is addressed by its Google id within the booking calendar; the
   # booking's own `uid` is its cancel and reschedule capability and is never
-  # sent to a provider.
+  # sent to a provider. Only an answer from Google about the event says it
+  # has no Meet: an event Google no longer has, or one read without one. A
+  # read that failed says nothing either way.
   defp event_meet_url(meeting, event_id, %{integration_id: cal_id, calendar_id: calendar_id}) do
     ref = %{provider_event_id: event_id, calendar_id: calendar_id}
 
     case Events.fetch_event(ref, {cal_id, meeting.organizer_user_id}) do
       {:ok, [event | _rest]} ->
-        ConferenceData.meet_url_from_google_event(Map.get(event, :provider_metadata) || %{})
+        case ConferenceData.meet_url_from_google_event(Map.get(event, :provider_metadata) || %{}) do
+          url when is_binary(url) -> {:ok, url}
+          nil -> :none
+        end
+
+      {:error, :not_found} ->
+        :none
 
       other ->
-        Logger.info("Booking's Google event could not be read for its Meet link",
+        Logger.warning("Booking's Google event could not be read for its Meet link",
           meeting_id: meeting.id,
           reason: LogFormat.reason(other)
         )
 
-        nil
+        {:error, :calendar_unavailable}
     end
   end
 

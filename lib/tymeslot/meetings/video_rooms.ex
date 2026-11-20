@@ -381,9 +381,6 @@ defmodule Tymeslot.Meetings.VideoRooms do
       {:calendar_event, event_id} ->
         {:ok, [calendar_event_id: event_id, adopt_calendar_meeting: true]}
 
-      {:calendar_meet, _event_id, _meet_url} = calendar_meet ->
-        calendar_meet
-
       :awaiting_calendar_event ->
         Logger.info("Video room waits for the booking's calendar event",
           meeting_id: meeting.id
@@ -393,6 +390,10 @@ defmodule Tymeslot.Meetings.VideoRooms do
 
       :own_event ->
         {:ok, []}
+
+      # `{:calendar_meet, ...}`, or `{:error, :calendar_unavailable}` retried
+      calendar_meet_or_error ->
+        calendar_meet_or_error
     end
   end
 

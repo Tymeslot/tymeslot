@@ -27,7 +27,8 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
   import Mox
   import Tymeslot.AvailabilityTestHelpers
 
-  alias Tymeslot.Bookings.Orchestrator
+  alias Ecto.Changeset
+  alias Tymeslot.Bookings.{Orchestrator, RescheduleLocation}
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Meetings.MeetingSchema
@@ -105,14 +106,75 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     use_runtime_calendar()
     report_google_requests()
 
-    assert :ok = run_video_job(meeting)
+    # The booking's own video job runs before the calendar's, and hands over to
+    # a fresh job a few seconds out, still owing the booking its announcement.
+    assert %{success: 1, failure: 0, discard: 0} = Oban.drain_queue(queue: :video_rooms)
     assert google_requests() == []
 
+    assert_enqueued(
+      worker: VideoRoomWorker,
+      args: %{"meeting_id" => meeting.id, "announce" => true}
+    )
+
     run_calendar_jobs()
-    assert :ok = run_video_job(meeting)
+
+    assert %{success: 1, failure: 0, discard: 0} =
+             Oban.drain_queue(queue: :video_rooms, with_scheduled: true)
+
     run_calendar_jobs()
 
     assert_one_event_carrying_the_meet(meeting)
+  end
+
+  test "moving the booking off Meet takes the Meet off its event, rather than replacing the event",
+       %{meeting: meeting} do
+    use_runtime_calendar()
+    report_google_requests()
+
+    run_calendar_jobs()
+    assert :ok = run_video_job(meeting)
+    run_calendar_jobs()
+    assert_one_event_carrying_the_meet(meeting)
+
+    original = Repo.get!(MeetingSchema, meeting.id)
+
+    moved =
+      original
+      |> Changeset.change(
+        video_room_id: nil,
+        meeting_url: nil,
+        video_integration_id: nil,
+        location: "Somewhere in person"
+      )
+      |> Repo.update!()
+
+    assert :ok = RescheduleLocation.release_abandoned_room(moved, original)
+    run_calendar_jobs()
+
+    # Written in place, with the conference left out at
+    # `conferenceDataVersion=1`: a new event at the booking's id would be
+    # refused by Google as a duplicate of the old one.
+    assert [{:put, put_uri, put_body}] =
+             for({method, _uri, _body} = req <- google_requests(), method != :get, do: req)
+
+    assert put_uri.path =~ "/events/#{original.provider_event_id}"
+    assert URI.decode_query(put_uri.query)["conferenceDataVersion"] == "1"
+    refute Map.has_key?(put_body, "conferenceData")
+  end
+
+  test "a calendar refusing the Meet still gets the booking's event, without it", %{
+    meeting: meeting
+  } do
+    use_runtime_calendar()
+    report_google_requests(refuse_conference: true)
+
+    run_calendar_jobs()
+
+    assert [{:post, _refused, %{"conferenceData" => _asked}}, {:post, _created, created}] =
+             for({method, _uri, _body} = req <- google_requests(), method != :get, do: req)
+
+    refute Map.has_key?(created, "conferenceData")
+    assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == created["id"]
   end
 
   defp assert_one_event_carrying_the_meet(meeting) do
@@ -183,8 +245,11 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
   # Meet's link is there on the next read. A write without
   # `conferenceDataVersion=1` leaves the event's conference as it is, and
   # times come back with their offset in the event's time zone.
-  defp report_google_requests do
+  # A calendar created with `refuse_conference: true` refuses a Meet the way a
+  # calendar that allows no Meet conferences does: the whole create.
+  defp report_google_requests(opts \\ []) do
     test_pid = self()
+    refuse_conference? = Keyword.get(opts, :refuse_conference, false)
     {:ok, events} = Agent.start_link(fn -> %{} end)
 
     stub(Tymeslot.HTTPClientMock, :request, fn method, url, body, _headers, _opts ->
@@ -193,9 +258,22 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
       send(test_pid, {:google, method, uri, sent})
 
       case {method, uri.host} do
-        {:get, "www.googleapis.com"} -> read_event(events, uri)
-        {_write, "www.googleapis.com"} -> write_event(events, method, uri, sent)
-        _other -> {:ok, %Req.Response{status: 404, body: ~s({"error":{"message":"unexpected"}})}}
+        {:get, "www.googleapis.com"} ->
+          read_event(events, uri)
+
+        {:post, "www.googleapis.com"}
+        when refuse_conference? and is_map_key(sent, "conferenceData") ->
+          {:ok,
+           %Req.Response{
+             status: 400,
+             body: ~s({"error":{"message":"Invalid conference type value."}})
+           }}
+
+        {_write, "www.googleapis.com"} ->
+          write_event(events, method, uri, sent)
+
+        _other ->
+          {:ok, %Req.Response{status: 404, body: ~s({"error":{"message":"unexpected"}})}}
       end
     end)
   end
@@ -209,27 +287,42 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     end
   end
 
+  # As Google does, an insert at an id an event already has is refused, and a
+  # write at `conferenceDataVersion=1` sets the conference to what it carries,
+  # which may be none.
   defp write_event(events, method, uri, sent) do
     id = if method == :post, do: sent["id"], else: uri.path |> String.split("/") |> List.last()
     with_conference? = URI.decode_query(uri.query || "")["conferenceDataVersion"] == "1"
 
-    event =
-      Agent.get_and_update(events, fn stored ->
-        previous = Map.get(stored, id, %{})
-        written = if with_conference?, do: sent, else: Map.delete(sent, "conferenceData")
+    if method == :post and Agent.get(events, &Map.has_key?(&1, id)) do
+      {:ok,
+       %Req.Response{
+         status: 409,
+         body: ~s({"error":{"message":"The requested identifier already exists."}})
+       }}
+    else
+      event =
+        Agent.get_and_update(events, fn stored ->
+          previous = Map.get(stored, id, %{})
 
-        event =
-          previous
-          |> Map.merge(written)
-          |> Map.merge(%{"id" => id, "iCalUID" => "#{id}@google.com", "status" => "confirmed"})
-          |> keep_conference(previous, with_conference?)
-          |> with_offsets()
-          |> pending_meet()
+          {base, written} =
+            if with_conference?,
+              do: {Map.delete(previous, "conferenceData"), sent},
+              else: {previous, Map.delete(sent, "conferenceData")}
 
-        {event, Map.put(stored, id, event)}
-      end)
+          event =
+            base
+            |> Map.merge(written)
+            |> Map.merge(%{"id" => id, "iCalUID" => "#{id}@google.com", "status" => "confirmed"})
+            |> keep_conference(previous, with_conference?)
+            |> with_offsets()
+            |> pending_meet()
 
-    {:ok, %Req.Response{status: 200, body: Jason.encode!(event)}}
+          {event, Map.put(stored, id, event)}
+        end)
+
+      {:ok, %Req.Response{status: 200, body: Jason.encode!(event)}}
+    end
   end
 
   defp keep_conference(event, %{"conferenceData" => conference}, false),

@@ -34,6 +34,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Calendar.Management, as: CalendarManagement
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Meetings
@@ -140,9 +141,11 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     )
 
     event_data =
-      CalendarEventBuilder.build_event_data(meeting,
+      meeting
+      |> CalendarEventBuilder.build_event_data(
         attendees: Meetings.attendees_for_calendar(meeting)
       )
+      |> Map.merge(MeetingProvisioning.booking_event_update_fields(meeting))
 
     meeting
     |> update_or_create_calendar_event(event_data, attempt)
@@ -252,9 +255,42 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
   defp replace_event(meeting, event_id, attempt) do
     case replacement_step(meeting, event_id) do
-      :replace -> create_replacement(meeting, event_id, attempt)
+      :replace -> replace_or_clear(meeting, event_id, attempt)
       step -> run_replacement_step(step, meeting, event_id, attempt)
     end
+  end
+
+  # A Google event has its Meet conference taken off in place: a replacement
+  # would be refused as the old event's duplicate, since a Google event's id
+  # is derived from the booking's calendar UID. Outlook keeps a Teams meeting
+  # on its event for good, so an Outlook event is replaced.
+  defp replace_or_clear(meeting, event_id, attempt) do
+    if google_calendar?(meeting),
+      do: clear_conference(meeting),
+      else: create_replacement(meeting, event_id, attempt)
+  end
+
+  defp google_calendar?(%{calendar_integration_id: cal_id, organizer_user_id: user_id})
+       when is_integer(cal_id) and is_integer(user_id) do
+    match?(
+      {:ok, %{provider: "google"}},
+      CalendarManagement.fetch_integration_for_user(cal_id, user_id)
+    )
+  end
+
+  defp google_calendar?(_meeting), do: false
+
+  defp clear_conference(meeting) do
+    Logger.info("Taking the Meet conference off the calendar event", meeting_id: meeting.id)
+
+    event_data =
+      meeting
+      |> CalendarEventBuilder.build_event_data(
+        attendees: Meetings.attendees_for_calendar(meeting)
+      )
+      |> Map.put(:conference_data, ConferenceData.remove())
+
+    update_existing_event(meeting, event_data)
   end
 
   # What replacing `event_id` still takes, judged from `meeting` as it stands.
@@ -413,11 +449,15 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   defp handle_missing_event(meeting_id, event_data, meeting, attempt) do
     Logger.info("Calendar event not found, creating new one", meeting_id: meeting_id)
 
-    # Use the organizer_user_id to create in the correct calendar
-    case CalendarEvents.create_event(
-           with_creation_key(event_data, meeting),
-           meeting.organizer_user_id
-         ) do
+    # Created as a first create would be, with the room its calendar carries
+    # and in the booking's own calendar, since this may be the booking's first
+    # event: an update that ran before the create finds nothing to update.
+    create_data =
+      event_data
+      |> Map.merge(MeetingProvisioning.booking_event_video_fields(meeting))
+      |> with_creation_key(meeting)
+
+    case CalendarEvents.create_event(create_data, meeting) do
       {:ok, created} ->
         CalendarEventMapping.persist_or_compensate(meeting, created)
 
@@ -494,7 +534,11 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       |> Map.merge(MeetingProvisioning.booking_event_video_fields(meeting))
       |> with_creation_key(meeting)
 
-    # Use the meeting context to create in the correct calendar
+    create_with_event_data(event_data, meeting, meeting_id, attempt)
+  end
+
+  # Use the meeting context to create in the correct calendar
+  defp create_with_event_data(event_data, meeting, meeting_id, attempt) do
     case CalendarEvents.create_event(event_data, meeting) do
       {:ok, created} ->
         Logger.info("Calendar event created successfully", meeting_id: meeting_id)
@@ -513,6 +557,19 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         )
 
         update(meeting_id, attempt)
+
+      # Google decides per calendar which conferences an event may carry, and
+      # refuses the whole event for one it does not allow. The booking still
+      # needs its event: it is created without the Meet, and the video job
+      # makes a Meet of its own once it stops waiting for one on the event.
+      {:error, :refused} when is_map_key(event_data, :conference_data) ->
+        Logger.warning("Calendar refused the event's Meet conference, creating it without one",
+          meeting_id: meeting_id
+        )
+
+        event_data
+        |> Map.delete(:conference_data)
+        |> create_with_event_data(meeting, meeting_id, attempt)
 
       {:error, error_type} ->
         handle_create_event_error(error_type, meeting, meeting_id, attempt)
