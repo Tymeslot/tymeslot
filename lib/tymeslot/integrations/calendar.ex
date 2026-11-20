@@ -608,11 +608,11 @@ defmodule Tymeslot.Integrations.Calendar do
   defdelegate clear_event_colour(user_id, target), to: ColourOverrides
 
   @doc "See `Tymeslot.Integrations.Calendar.ColourOverrides.overrides_for/1`."
-  @spec overrides_for(user_id()) :: %{optional(tuple()) => String.t()}
+  @spec overrides_for(user_id()) :: %{optional(tuple()) => String.t() | nil}
   defdelegate overrides_for(user_id), to: ColourOverrides
 
-  @doc "See `Tymeslot.Integrations.Calendar.ColourOverrides.resolve_event_colour/2`."
-  @spec resolve_event_colour(override :: String.t() | nil, provider_colour :: String.t() | nil) ::
+  @doc "See `Tymeslot.Integrations.Calendar.ColourOverrides.resolve_event_colour/3`."
+  @spec resolve_event_colour(map(), tuple(), provider_colour :: String.t() | nil) ::
           String.t() | nil
-  defdelegate resolve_event_colour(override, provider_colour), to: ColourOverrides
+  defdelegate resolve_event_colour(overrides, target, provider_colour), to: ColourOverrides
 end

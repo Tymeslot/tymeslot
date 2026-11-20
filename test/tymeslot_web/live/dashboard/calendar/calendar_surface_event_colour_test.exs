@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceEventColourTest do
 
   alias Tymeslot.CalendarMock
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Workers.ColourWriteBackWorker
 
   setup %{conn: conn} do
@@ -103,7 +104,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceEventColourTest do
 
     swatch(lv, "default")
 
-    assert Calendar.overrides_for(user.id) == %{}
+    # Kept as cleared until the write-back has cleared the host.
+    assert Calendar.overrides_for(user.id) == %{target => nil}
     refute pushed(lv, id).colour in ["calendar-tomato", "calendar-sage"]
 
     # The write-back still waiting with the old colour now clears it
@@ -135,7 +137,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceEventColourTest do
     swatch(lv, "default")
 
     refute has_element?(lv, "#calendar-series-scope")
-    assert Calendar.overrides_for(user.id) == %{}
+
+    assert Calendar.overrides_for(user.id) == %{
+             {:external, integration.id, standup.uid} => nil
+           }
+
     assert [%{args: %{"colour" => nil}}] = all_enqueued(worker: ColourWriteBackWorker)
   end
 
@@ -196,5 +202,54 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceEventColourTest do
 
     hook(lv, "calendar:open", %{"id" => "booking-#{meeting.id}"})
     assert has_element?(lv, "#calendar-preview .cal-preview-swatch[style*='calendar-grape']")
+  end
+
+  test "a colour taken off stays off when the provider refuses the clear and a sync reads it back",
+       %{conn: conn, user: user, integration: integration} do
+    review =
+      event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z], 60, colour: "sage")
+
+    id = "event-#{review.id}"
+
+    {:ok, _override} =
+      Calendar.set_event_colour(user.id, {:external, integration.id, review.uid}, "tomato")
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    hook(lv, "calendar:edit", %{"id" => id})
+    swatch(lv, "default")
+
+    Mox.stub(CalendarMock, :update_event, fn _uid, _payload, _context -> {:error, :forbidden} end)
+    [clearing] = all_enqueued(worker: ColourWriteBackWorker)
+    assert {:error, :forbidden} = perform_job(ColourWriteBackWorker, clearing.args)
+
+    # The host still has the colour, so the next sync caches it again.
+    {:ok, 1} =
+      ProviderCalendarEventQueries.upsert_batch([
+        review
+        |> Map.take([
+          :calendar_integration_id,
+          :uid,
+          :provider,
+          :provider_event_id,
+          :provider_calendar_id,
+          :summary,
+          :start_at,
+          :end_at,
+          :all_day,
+          :sync_state
+        ])
+        |> Map.merge(%{colour: "sage", synced_at: DateTime.utc_now()})
+      ])
+
+    assert {:ok, %{colour: "sage"}} =
+             ProviderCalendarEventQueries.get_by_uid(integration.id, review.uid)
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    hook(lv, "calendar:edit", %{"id" => id})
+
+    assert has_element?(
+             lv,
+             "#calendar-panel-colour button[phx-value-colour='default'][aria-pressed='true']"
+           )
   end
 end

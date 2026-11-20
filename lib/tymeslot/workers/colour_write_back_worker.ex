@@ -13,8 +13,11 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   (Google `colorId: null`, CalDAV without `COLOR`).
 
   The colour written is read from the override table when the job runs, not
-  from its args (which record what was asked, for the logs): no override
-  means no colour.
+  from its args (which record what was asked, for the logs): no override,
+  or a cleared one (a `nil` colour), means no colour. A cleared override
+  keeps the old colour, which syncs read back from the host, off the event
+  until the host is clear, so a successful clear deletes it; a clear that
+  never succeeds leaves it in place.
 
   `unique` is keyed on `[:integration_id, :uid, :user_id]` with `replace: [:args]`
   set at the enqueue site (`ColourWriteBack.enqueue/4`) so rapid successive
@@ -97,9 +100,18 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   # overwritten. Only a successful write needs the check: a failure is
   # retried, and a retry reads the override afresh.
   defp catch_up(result, target, written) do
-    if succeeded?(result), do: enqueue_if_changed(target, written)
+    if succeeded?(result) do
+      if is_nil(written), do: delete_cleared(target)
+      enqueue_if_changed(target, written)
+    end
+
     result
   end
+
+  # The host is clear, so syncs no longer bring the old colour back. A colour
+  # chosen since is not a cleared override, and stays.
+  defp delete_cleared({user_id, integration_id, uid}),
+    do: ColourOverrideQueries.delete_external_cleared(user_id, integration_id, uid)
 
   defp succeeded?(:ok), do: true
   defp succeeded?({:ok, _value}), do: true
