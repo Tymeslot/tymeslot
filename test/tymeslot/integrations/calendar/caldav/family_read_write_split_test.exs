@@ -56,6 +56,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.FamilyReadWriteSplitTest do
         assert write_client == ClientManager.booking_client({integration.id, user.id})
         assert write_client in reads
         refute Enum.any?(write_client.client.calendar_paths, &(&1 =~ "/cal/rota"))
+
+        # Carried for the log line a failed read writes.
+        assert Enum.map(reads, & &1.client.calendar_integration_id) == [
+                 integration.id,
+                 integration.id
+               ]
       end
     end
 

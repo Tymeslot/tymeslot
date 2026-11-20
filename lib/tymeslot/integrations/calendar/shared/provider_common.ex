@@ -330,7 +330,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       calendar_path: path,
       calendar_paths: [path],
       writable_calendar_paths: writable_paths,
-      free_busy_paths: Enum.filter(caldav_free_busy_paths(integration), &(&1 == path))
+      free_busy_paths: Enum.filter(caldav_free_busy_paths(integration), &(&1 == path)),
+      calendar_integration_id: Map.get(integration, :id)
     }
   end
 

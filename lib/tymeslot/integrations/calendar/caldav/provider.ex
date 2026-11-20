@@ -88,7 +88,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
       calendar_paths: MapKeys.get(config, :calendar_paths) || [],
       writable_calendar_paths: MapKeys.get(config, :writable_calendar_paths),
       free_busy_paths: MapKeys.get(config, :free_busy_paths),
-      skip_breaker: MapKeys.get(config, :skip_breaker) || false
+      skip_breaker: MapKeys.get(config, :skip_breaker) || false,
+      calendar_integration_id: MapKeys.get(config, :calendar_integration_id)
     }
 
     CaldavCommon.build_client(common_config, provider: detected_provider)
