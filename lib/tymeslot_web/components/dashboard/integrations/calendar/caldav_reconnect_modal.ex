@@ -101,7 +101,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
       {:error, reason} ->
         {:noreply,
          socket
-         |> assign(:form_errors, %{generic: [DisplayHelpers.connection_error_message(reason)]})
+         |> assign(:form_errors, %{
+           generic: [DisplayHelpers.connection_error_message(reason, integration.provider)]
+         })
          |> assign(:form_values, params)
          |> assign(:is_submitting, false)}
     end

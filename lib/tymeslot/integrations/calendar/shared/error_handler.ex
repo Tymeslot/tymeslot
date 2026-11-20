@@ -201,8 +201,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     )
   end
 
-  def sanitize_error_message(:timeout, _provider),
-    do: dgettext("integrations_calendar", "The request timed out. Please try again.")
+  # A server the owner runs may time out because the internet cannot reach
+  # it; `ErrorMessages` words that case, and every other provider keeps the
+  # generic sentence.
+  def sanitize_error_message(:timeout, provider) do
+    ErrorMessages.specific_message(:timeout, provider) ||
+      dgettext("integrations_calendar", "The request timed out. Please try again.")
+  end
 
   # A body that would not decode is the service answering wrongly, not the
   # network failing to carry it.

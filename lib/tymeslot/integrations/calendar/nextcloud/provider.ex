@@ -134,6 +134,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
       calendar_paths: build_nextcloud_calendar_paths(config),
       writable_calendar_paths: config[:writable_calendar_paths],
       skip_breaker: config[:skip_breaker] || false,
+      calendar_integration_id: config[:calendar_integration_id],
       provider: :nextcloud
     }
 

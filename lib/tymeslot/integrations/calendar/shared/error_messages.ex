@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Family
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
 
   @typedoc "Coarse buckets a calendar failure falls into."
   @type error_category ::
@@ -223,7 +224,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   # does. Retrying cannot fix that, so the message names the cause the owner
   # can act on. Providers with a fixed address keep the category's wording.
   def specific_message(:timeout, provider) do
-    if Family.own_server?(provider) do
+    if own_server?(provider) do
       dgettext(
         "integrations_calendar",
         "%{provider} did not respond in time. If the server is only reachable from your organisation's network or over a VPN, Tymeslot cannot connect to it: ask your administrator to make its calendar address reachable from the internet. Otherwise the server may be busy, so try again in a few minutes.",
@@ -235,6 +236,11 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   def specific_message({:error, reason}, provider), do: specific_message(reason, provider)
 
   def specific_message(_error, _provider), do: nil
+
+  # Exchange is reached over EWS only on premises (Exchange Online is the
+  # Outlook provider), so its owner always enters the address of a server
+  # their organisation runs, the classic one sitting behind a VPN.
+  defp own_server?(provider), do: ProviderConfig.ews?(provider) or Family.own_server?(provider)
 
   @doc """
   Gets a user-friendly error message for a category and provider.
@@ -418,6 +424,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
       :radicale -> "Radicale"
       :zimbra -> "Zimbra"
       :baikal -> "Baikal"
+      :exchange -> "Exchange"
       :mailbox_org -> "mailbox.org"
       :apple -> "Apple iCloud"
       :google -> "Google Calendar"

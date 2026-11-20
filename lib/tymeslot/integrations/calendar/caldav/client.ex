@@ -24,6 +24,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
     :username,
     :password,
     :provider,
+    # The integration the client was built for, carried for log context
+    # only; a client built from a submitted form has none yet.
+    :calendar_integration_id,
     calendar_paths: [],
     # Every collection on the integration a write is allowed to target, which
     # is not the same as the one this client defaults to. A booking client
@@ -47,6 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
           username: String.t() | nil,
           password: String.t() | nil,
           provider: atom(),
+          calendar_integration_id: pos_integer() | nil,
           calendar_paths: [String.t()],
           writable_calendar_paths: [String.t()],
           free_busy_paths: [String.t()],
@@ -84,7 +88,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
         calendar_paths: calendar_paths,
         writable_calendar_paths: config[:writable_calendar_paths],
         free_busy_paths: config[:free_busy_paths],
-        skip_breaker: config[:skip_breaker] || false
+        skip_breaker: config[:skip_breaker] || false,
+        calendar_integration_id: config[:calendar_integration_id]
       },
       provider: provider
     )
@@ -113,6 +118,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
           Map.get(config, "writable_calendar_paths") || [],
       free_busy_paths: Map.get(config, :free_busy_paths) || [],
       skip_breaker: Map.get(config, :skip_breaker, false),
+      calendar_integration_id: Map.get(config, :calendar_integration_id),
       provider: provider
     }
   end
@@ -136,7 +142,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
         base_url: integration.base_url,
         username: integration.username,
         password: integration.password,
-        calendar_paths: integration.calendar_paths
+        calendar_paths: integration.calendar_paths,
+        calendar_integration_id: Map.get(integration, :id)
       },
       provider: client_provider(integration)
     )

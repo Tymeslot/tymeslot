@@ -34,7 +34,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   # Fields the event-driven sync workers need to normalise a single event.
   # `originalStartTimeZone` is the event's own zone: with `Prefer:
   # outlook.timezone="UTC"` every `start.timeZone` reads UTC.
-  @event_sync_select_fields "id,subject,start,end,iCalUId,location,bodyPreview,attendees,recurrence,seriesMasterId,type,originalStart,originalStartTimeZone,isAllDay,showAs"
+  @event_sync_select_fields "id,subject,start,end,iCalUId,location,bodyPreview,attendees,isReminderOn,reminderMinutesBeforeStart,recurrence,seriesMasterId,type,originalStart,originalStartTimeZone,isAllDay,showAs"
 
   @type calendar_event :: %{
           id: String.t(),
@@ -511,7 +511,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       "$orderby" => "start/dateTime",
       "$top" => Integer.to_string(ReadPageSize.get(@list_page_size)),
       "$select" =>
-        "id,iCalUId,subject,body,location,start,end,showAs,sensitivity,isCancelled,responseStatus,isAllDay,organizer,attendees,reminderMinutesBeforeStart,recurrence,seriesMasterId,type,originalStart,originalStartTimeZone,originalEndTimeZone",
+        "id,iCalUId,subject,body,location,start,end,showAs,sensitivity,isCancelled,responseStatus,isAllDay,organizer,attendees,isReminderOn,reminderMinutesBeforeStart,recurrence,seriesMasterId,type,originalStart,originalStartTimeZone,originalEndTimeZone",
       "$expand" =>
         "singleValueExtendedProperties($filter=id eq '#{TymeslotFingerprint.property_id()}')"
     }

@@ -152,6 +152,27 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandlerTest do
                ErrorHandler.classify_and_format(:timeout, :zimbra)
     end
 
+    test "gives Exchange the same advice, since EWS reaches only an on-premises server" do
+      assert {:timeout, "Exchange did not respond in time." <> rest} =
+               ErrorHandler.classify_and_format(:timeout, :exchange)
+
+      assert rest =~ @unreachable_advice
+    end
+
+    # A connection test that answers a raw reason is worded here, not by
+    # `classify_and_format/3`, and must read the same.
+    test "reads the same from sanitize_error_message/2" do
+      for provider <- [:zimbra, :caldav, :nextcloud, :radicale, :baikal, :exchange] do
+        assert {:timeout, ErrorHandler.sanitize_error_message(:timeout, provider)} ==
+                 ErrorHandler.classify_and_format(:timeout, provider)
+      end
+
+      for provider <- [:apple, :mailbox_org, :google, :outlook] do
+        assert ErrorHandler.sanitize_error_message(:timeout, provider) ==
+                 "The request timed out. Please try again."
+      end
+    end
+
     test "keeps the category's wording for a provider with a fixed address" do
       for provider <- [:apple, :mailbox_org, :google, :outlook] do
         assert {:timeout, message} = ErrorHandler.classify_and_format(:timeout, provider)

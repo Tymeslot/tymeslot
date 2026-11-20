@@ -105,6 +105,42 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
                Connection.test_connection(apple_integration(user), scope: :background)
     end
 
+    # Each provider's own test answers a timeout in its own form (a raw
+    # reason or a worded sentence); the owner reads the same advice either way.
+    test "gives every provider on a server its owner runs the unreachable-server advice on a timeout" do
+      user = insert(:user)
+
+      stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+        {:error, %Mint.TransportError{reason: :timeout}}
+      end)
+
+      for provider <- ~w(caldav nextcloud radicale zimbra baikal) do
+        assert {:error, message} =
+                 Connection.test_connection(%{
+                   provider: provider,
+                   base_url: "https://cal.example.com",
+                   username: "alice",
+                   password: "secret",
+                   calendar_paths: [],
+                   user_id: user.id
+                 })
+
+        assert message =~ "only reachable from your organisation's network or over a VPN",
+               "#{provider}: #{message}"
+      end
+    end
+
+    test "keeps the generic timeout wording for a provider with a fixed address" do
+      user = insert(:user)
+
+      stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+        {:error, %Mint.TransportError{reason: :timeout}}
+      end)
+
+      assert {:error, "The request timed out. Please try again."} =
+               Connection.test_connection(apple_integration(user))
+    end
+
     test "returns error for provider with invalid atom" do
       integration = %{
         provider: "nonexistent_provider"

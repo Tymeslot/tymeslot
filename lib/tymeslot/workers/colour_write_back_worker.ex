@@ -16,8 +16,9 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   from its args (which record what was asked, for the logs): no override,
   or a cleared one (a `nil` colour), means no colour. A cleared override
   keeps the old colour, which syncs read back from the host, off the event
-  until the host is clear, so a successful clear deletes it; a clear that
-  never succeeds leaves it in place.
+  until the host is clear, so a successful clear deletes it, together with
+  any colour a sync cached beneath it; a clear that never succeeds leaves
+  it in place.
 
   `unique` is keyed on `[:integration_id, :uid, :user_id]` with `replace: [:args]`
   set at the enqueue site (`ColourWriteBack.enqueue/4`) so rapid successive
@@ -55,6 +56,7 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   alias Tymeslot.Integrations.Calendar.ColourWriteBack
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Repo
 
   # Comfortably longer than the slowest CalDAV sync cadence, the 3600s Tier 3
   # interval in `FallbackSyncSweepWorker`, so each snooze lands after a sync
@@ -108,10 +110,17 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
     result
   end
 
-  # The host is clear, so syncs no longer bring the old colour back. A colour
-  # chosen since is not a cleared override, and stays.
-  defp delete_cleared({user_id, integration_id, uid}),
-    do: ColourOverrideQueries.delete_external_cleared(user_id, integration_id, uid)
+  # The host is clear, so syncs no longer bring the old colour back. A sync
+  # that ran while the clear was pending may already have cached the old
+  # colour again, hidden only by the cleared override, so the cache is
+  # cleared with it. A colour chosen since is not a cleared override: it
+  # stays, and so does the cache beneath it.
+  defp delete_cleared({user_id, integration_id, uid}) do
+    Repo.transaction(fn ->
+      if ColourOverrideQueries.delete_external_cleared(user_id, integration_id, uid),
+        do: ProviderCalendarEventQueries.clear_colour(integration_id, uid)
+    end)
+  end
 
   defp succeeded?(:ok), do: true
   defp succeeded?({:ok, _value}), do: true

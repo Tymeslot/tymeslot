@@ -184,7 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     {successes, errors} =
       Enum.split_with(results, fn {_path, r} -> match?({:ok, _result}, r) end)
 
-    handle_fetch_results(successes, errors)
+    handle_fetch_results(client, successes, errors)
   end
 
   # A collection shared as busy times only answers calendar-query with 403;
@@ -199,7 +199,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   # able to distinguish "no events in range" from "reads silently failed". A
   # timed-out REPORT must not turn into an empty list, or an event just
   # created looks as if it was never stored.
-  defp handle_fetch_results([], [_head | _tail] = errors) do
+  defp handle_fetch_results(_client, [], [_head | _tail] = errors) do
     {_path, {:error, reason}} = List.first(errors)
     {:error, reason}
   end
@@ -222,9 +222,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   # (`EventsRead`). Expanding in both places produces N×N occurrences because
   # each first-pass occurrence still carries the master RRULE and gets
   # re-expanded.
-  defp handle_fetch_results(successes, errors) do
+  defp handle_fetch_results(client, successes, errors) do
     (successes ++ errors)
-    |> FetchAggregate.collect(&classify_path_result/1)
+    |> FetchAggregate.collect(&classify_path_result/1,
+      calendar_integration_id: Map.get(client, :calendar_integration_id),
+      provider: Map.get(client, :provider)
+    )
     |> dedupe_outcome_events()
     |> to_result()
   end

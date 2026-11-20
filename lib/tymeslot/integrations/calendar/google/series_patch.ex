@@ -62,7 +62,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatch do
     "description" => "",
     "location" => "",
     "colorId" => nil,
-    "reminders" => %{"useDefault" => true},
+    # Every reminder taken off: none, not the calendar's defaults.
+    "reminders" => %{"useDefault" => false, "overrides" => []},
     "attendees" => [],
     "transparency" => "opaque"
   }
