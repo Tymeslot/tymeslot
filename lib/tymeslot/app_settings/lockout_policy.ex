@@ -5,7 +5,7 @@ defmodule Tymeslot.AppSettings.LockoutPolicy do
 
   Lives apart from `Tymeslot.AppSettings`, which owns reading, writing and
   projecting settings: this is an authentication policy that happens to be
-  enforced on a settings write, and it was roughly two fifths of that module.
+  enforced on a settings write.
 
   Two evaluation points, deliberately different:
 

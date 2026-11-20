@@ -13,8 +13,9 @@ defmodule Tymeslot.Analytics.ReconciliationQueries do
   All `Repo.*` calls for reconciliation live here per the
   `CredoChecks.RepoCallBoundary` rule.
 
-  Bookings are counted as the analytics dashboard counts them, so only those
-  their organiser may see (`MeetingState.where_visible_to_organiser/1`).
+  Bookings are counted as the analytics dashboard counts them, so only the
+  bookings their organiser may see are counted
+  (`MeetingState.where_visible_to_organiser/1`).
 
   ## Salt-awareness and the untracked ratio
 

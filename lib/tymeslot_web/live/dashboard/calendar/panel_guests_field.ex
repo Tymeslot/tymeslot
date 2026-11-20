@@ -8,7 +8,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
   "Create and invite". On an event someone else organises the edit mode
   lists the guests without either control, since both email them. Also the
   "Guests haven't been told" note (`untold_note/1`) the panel shows below
-  its header.
+  its header, and the note with Cancel while an update to them is held
+  (`pending_note/1`). An address that is not taken says why under the
+  field, and typing again clears it.
   """
 
   use TymeslotWeb, :html
@@ -20,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
 
   attr :guests, :list, required: true, doc: "normalised attendees"
   attr :form_key, :integer, required: true
+  attr :error, :string, default: nil, doc: "why the last address was not invited"
   attr :repeating, :boolean, default: false
   attr :organiser, :boolean, default: true, doc: "whether the user may email the guests"
   attr :surface, :any, required: true
@@ -66,7 +69,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
         :if={@organiser}
         novalidate
         id="calendar-panel-guest-form"
-        class="flex items-end gap-2"
+        class="flex items-start gap-2"
+        phx-change="panel:guest_input"
         phx-submit="panel:guest_invite"
         phx-target={@surface}
       >
@@ -76,6 +80,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
             id={"calendar-panel-guest-email-#{@form_key}"}
             name="email"
             value=""
+            errors={List.wrap(@error)}
             label={dgettext("dashboard_calendar_editing", "Invite a guest")}
             placeholder={dgettext("dashboard_calendar_editing", "name@example.com")}
           />
@@ -103,6 +108,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
 
   attr :guests, :list, required: true, doc: "email strings"
   attr :form_key, :integer, required: true
+  attr :error, :string, default: nil, doc: "why the last address was not added"
+  attr :typed, :string, default: "", doc: "the address typed into the field and not added yet"
+  attr :full, :boolean, default: false, doc: "whether the draft can take no more guests"
   attr :surface, :any, required: true
 
   @spec draft_guests(map()) :: Phoenix.LiveView.Rendered.t()
@@ -129,13 +137,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
           </button>
         </li>
       </ul>
-      <div class="flex items-end gap-2">
+      <p :if={@full} id="calendar-panel-guests-full" class="text-token-xs text-tymeslot-500">
+        {dgettext("dashboard_calendar_editing", "No more guests can be added to this meeting.")}
+      </p>
+      <div :if={!@full} class="flex items-end gap-2">
         <div class="min-w-0 flex-1">
           <.input
             type="email"
             id={"calendar-panel-guest-email-#{@form_key}"}
             name="guest_email"
-            value=""
+            value={@typed || ""}
+            errors={List.wrap(@error)}
             label={dgettext("dashboard_calendar_editing", "Add a guest")}
             placeholder={dgettext("dashboard_calendar_editing", "name@example.com")}
           />
@@ -180,6 +192,35 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuestsField do
         phx-target={@surface}
       >
         {dgettext("dashboard_calendar_editing", "Tell guests")}
+      </.action_button>
+    </div>
+    """
+  end
+
+  attr :surface, :any, required: true
+
+  @doc """
+  The update "Tell guests" sent is held a while before it goes out, so later
+  edits join it; until it has, the organiser can still call it off.
+  """
+  @spec pending_note(map()) :: Phoenix.LiveView.Rendered.t()
+  def pending_note(assigns) do
+    ~H"""
+    <div
+      id="calendar-panel-guests-pending"
+      class="flex flex-wrap items-center gap-2 rounded-token-lg bg-turquoise-50 px-3 py-2 text-token-sm text-turquoise-900"
+    >
+      <span class="min-w-0 flex-1">
+        {dgettext("dashboard_calendar_editing", "Guests will be told about these changes")}
+      </span>
+      <.action_button
+        id="calendar-panel-cancel-guest-update"
+        variant={:secondary}
+        size={:sm}
+        phx-click="panel:cancel_guest_update"
+        phx-target={@surface}
+      >
+        {dgettext("dashboard_calendar_editing", "Cancel")}
       </.action_button>
     </div>
     """

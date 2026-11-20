@@ -512,7 +512,7 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
     end
   end
 
-  describe "pending?/1 and cancel_pending/1" do
+  describe "pending?/1 and cancel_pending/2" do
     test "pending?/1 is false before scheduling, true after" do
       event = insert(:provider_calendar_event)
       refute AttendeeNotifications.pending?(event)
@@ -521,11 +521,12 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
       assert AttendeeNotifications.pending?(event)
     end
 
-    test "cancel_pending/1 removes scheduled jobs for the event" do
+    test "cancel_pending/2 removes scheduled jobs for the event" do
       event = insert(:provider_calendar_event)
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
 
-      :ok = AttendeeNotifications.cancel_pending(event)
+      {:ok, :cancelled} =
+        AttendeeNotifications.cancel_pending(event, AttendeeNotifications.pending_due_at(event))
 
       refute AttendeeNotifications.pending?(event)
     end

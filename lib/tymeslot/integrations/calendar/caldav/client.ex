@@ -3,12 +3,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
   The connected CalDAV client every CalDAV-family provider hands to
   `Base.*` and `Http.*`.
 
-  A struct rather than a plain map for one reason: it carries the
-  integration's decrypted password, and only a struct can refuse to print it.
+  A struct rather than a plain map because it carries the integration's
+  decrypted password, and only a struct can refuse to print it:
   `@derive {Inspect, except: [:password]}` masks the field wherever the client
-  is inspected — an exception message, a `dbg/1`, an OTP crash report that
-  prints a task's arguments — which is what a plain map cannot do however
-  carefully the schema that produced the value marked it `redact: true`.
+  is inspected, however carefully the schema that produced the value marked it
+  `redact: true`. See `Tymeslot.Infrastructure.ProxyCredentials` for the full
+  reasoning.
 
   Build one through `build_client/2`, or `build_provider_client/4` and
   `client_for_integration/1` on top of it (`Providers.CaldavCommon`
@@ -24,6 +24,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
     :username,
     :password,
     :provider,
+    # The integration the client was built for, carried for log context
+    # only; a client built from a submitted form has none yet.
+    :calendar_integration_id,
     calendar_paths: [],
     # Every collection on the integration a write is allowed to target, which
     # is not the same as the one this client defaults to. A booking client
@@ -47,6 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
           username: String.t() | nil,
           password: String.t() | nil,
           provider: atom(),
+          calendar_integration_id: pos_integer() | nil,
           calendar_paths: [String.t()],
           writable_calendar_paths: [String.t()],
           free_busy_paths: [String.t()],
@@ -71,9 +75,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
   base URL and calendar paths already put into that provider's own form.
 
   The credentials and `:writable_calendar_paths` are carried over as given.
-  A provider that rebuilt the config by hand used to drop the writable paths,
-  and the client then wrote every event to its booking calendar, whichever
-  calendar the organiser had picked.
+  Dropping the writable paths would make the client write every event to its
+  booking calendar, whichever calendar the organiser had picked.
   """
   @spec build_provider_client(map(), atom(), String.t() | nil, [String.t()]) :: t()
   def build_provider_client(config, provider, base_url, calendar_paths) do
@@ -85,7 +88,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
         calendar_paths: calendar_paths,
         writable_calendar_paths: config[:writable_calendar_paths],
         free_busy_paths: config[:free_busy_paths],
-        skip_breaker: config[:skip_breaker] || false
+        skip_breaker: config[:skip_breaker] || false,
+        calendar_integration_id: config[:calendar_integration_id]
       },
       provider: provider
     )
@@ -114,6 +118,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
           Map.get(config, "writable_calendar_paths") || [],
       free_busy_paths: Map.get(config, :free_busy_paths) || [],
       skip_breaker: Map.get(config, :skip_breaker, false),
+      calendar_integration_id: Map.get(config, :calendar_integration_id),
       provider: provider
     }
   end
@@ -137,7 +142,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
         base_url: integration.base_url,
         username: integration.username,
         password: integration.password,
-        calendar_paths: integration.calendar_paths
+        calendar_paths: integration.calendar_paths,
+        calendar_integration_id: Map.get(integration, :id)
       },
       provider: client_provider(integration)
     )

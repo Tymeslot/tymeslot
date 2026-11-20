@@ -1,7 +1,6 @@
 defmodule Tymeslot.Dashboard.DashboardContext do
   @moduledoc """
   Context module for dashboard business logic.
-  Extracted from dashboard_live.ex to improve separation of concerns.
   """
 
   require Logger

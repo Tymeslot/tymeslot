@@ -12,9 +12,9 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Progress do
       `:current`; nothing after it is reached yet.
 
   `Navigators.Continuous` and `Navigators.Transcript` show exactly the
-  moments `reached/3` returns. Shared code that used to compare
-  `:current_state` with a classic step name asks `collecting_now?/2` or
-  `at_or_before?/2` instead, which answer the same for the classic journey.
+  moments `reached/3` returns. Shared code that needs to know where the
+  booking stands asks `collecting_now?/2` or `at_or_before?/2`, which answer
+  the same for the classic journey.
 
   Every function takes the fact registry as its last argument, default
   `Journey.facts/0`.

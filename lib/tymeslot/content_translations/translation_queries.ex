@@ -11,7 +11,7 @@ defmodule Tymeslot.ContentTranslations.TranslationQueries do
 
   @doc """
   `record` as its row stands now, locked `FOR UPDATE` until the surrounding
-  transaction ends, so a save built on it cannot overwrite another committed
+  transaction ends, so a save built on it cannot overwrite a save committed
   in the meantime, nor stamp its translations against originals since
   changed. The associations and virtual fields `record` had loaded are
   carried over as they were.

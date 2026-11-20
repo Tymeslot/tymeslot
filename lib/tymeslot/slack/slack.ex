@@ -139,9 +139,6 @@ defmodule Tymeslot.Slack do
   @doc """
   Persists a partial OAuth-completed integration record; see
   `Tymeslot.Slack.Install.complete_oauth/2`.
-
-  The returned integration is in `:pending_oauth` status until `set_channel/2`
-  is called with the user's channel selection.
   """
   @spec complete_oauth(integer(), OAuth.install()) ::
           {:ok, SlackIntegrationSchema.t()}

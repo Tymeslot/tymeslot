@@ -453,9 +453,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   defp delete_scheduled_meeting(token, room_id, config) do
     case meeting_request(:delete, room_id, "", token) do
-      # Token may have been server-side revoked. Attempt one forced refresh
-      # and retry. If refresh fails or the retry also returns 401, flag the
-      # integration for reauthentication.
       {:ok, %Req.Response{status: 401}} ->
         retry_after_401(:delete, room_id, config, "", token)
 

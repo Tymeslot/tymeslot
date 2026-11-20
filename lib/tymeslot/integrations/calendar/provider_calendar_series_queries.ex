@@ -13,6 +13,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries do
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries.Visibility
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
@@ -57,6 +59,125 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries do
     |> where([e], is_nil(e.recurring_event_id) or e.recurring_event_id == "")
     |> where([e], not is_nil(e.video_integration_id) and e.video_link != "")
     |> select([e], {e.provider_event_id, e.video_integration_id, e.video_link})
+    |> Repo.all()
+  end
+
+  @doc """
+  The rows of the integrations `integration_ids` that stand in for a whole
+  series no sync has cached the occurrences of yet, starting before
+  `range_end`, each with the user owning its integration: `{row, user_id}`.
+
+  A stand-in is the row the calendar caches for a series it has just
+  written, or for an event it has just given a repeat rule: a rule, and the
+  row's own UID rather than an occurrence's (a CalDAV occurrence keeps its
+  series' UID in `provider_metadata`, a Google or Outlook one names its
+  master in `recurring_event_id`). It stops being one as soon as an
+  occurrence of its series is cached: a row under its UID and a slot's key,
+  one in the same CalDAV resource, or one naming it as its master. Only providers the calendar writes repeat
+  rules to (`providers`) are read, so an Exchange master, which stands for a
+  series the item path could not expand, is never taken for one. A row
+  waiting for its delete to be sent is left out.
+
+  ## Options
+
+    * `:visibility_rules` - as `ProviderCalendarEventQueries.list_upcoming_timed/4`
+      takes them; `%{}` (the default) keeps every calendar.
+    * `:except_role` - a `role` to leave out.
+  """
+  @spec list_unsynced_series([integer()], DateTime.t(), [String.t()], keyword()) ::
+          [{ProviderCalendarEventSchema.t(), pos_integer()}]
+  def list_unsynced_series(integration_ids, range_end, providers, opts \\ [])
+
+  def list_unsynced_series([], _range_end, _providers, _opts), do: []
+
+  def list_unsynced_series(integration_ids, %DateTime{} = range_end, providers, opts) do
+    range_end_date = DateTime.to_date(range_end)
+
+    from(e in ProviderCalendarEventSchema, as: :stand_in)
+    |> join(:inner, [e], i in CalendarIntegrationSchema, on: i.id == e.calendar_integration_id)
+    |> where([e], e.calendar_integration_id in ^integration_ids and e.provider in ^providers)
+    |> where([e], not is_nil(e.recurrence_rule) and e.recurrence_rule != "")
+    |> where([e], is_nil(e.recurring_event_id) or e.recurring_event_id == "")
+    |> where([e], fragment("coalesce(?->>'uid', ?) = ?", e.provider_metadata, e.uid, e.uid))
+    |> where([e], e.sync_state != "locally_deleted")
+    |> where(
+      [e],
+      (e.all_day == false and e.start_at < ^range_end) or
+        (e.all_day == true and e.start_date <= ^range_end_date)
+    )
+    |> where([e], ^Visibility.dynamic_for(Keyword.get(opts, :visibility_rules, %{})))
+    |> except_role(Keyword.get(opts, :except_role))
+    |> where(
+      [e],
+      not exists(
+        from(o in ProviderCalendarEventSchema,
+          where:
+            o.calendar_integration_id == parent_as(:stand_in).calendar_integration_id and
+              o.id != parent_as(:stand_in).id and
+              (o.recurring_event_id == parent_as(:stand_in).provider_event_id or
+                 o.provider_event_id == parent_as(:stand_in).provider_event_id or
+                 fragment(
+                   "starts_with(?, ? || '_')",
+                   o.uid,
+                   parent_as(:stand_in).uid
+                 ))
+        )
+      )
+    )
+    |> select([e, i], {e, i.user_id})
+    |> Repo.all()
+  end
+
+  defp except_role(query, nil), do: query
+  defp except_role(query, role), do: where(query, [e], e.role != ^role)
+
+  @doc """
+  The most recently synced occurrence of the CalDAV series `series_uid` in
+  the integration `calendar_integration_id` that carries its resource's
+  document: every occurrence is cached with the resource's `raw_ical`, ETag
+  and href, under the series' UID and a slot's key. `provider_calendar_id`,
+  when given, keeps to that calendar of the integration. `{:error,
+  :not_found}` when none is cached.
+  """
+  @spec get_resource_occurrence(integer(), String.t(), String.t() | nil) ::
+          {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found}
+  def get_resource_occurrence(calendar_integration_id, series_uid, provider_calendar_id \\ nil) do
+    row =
+      ProviderCalendarEventSchema
+      |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+      |> in_calendar(provider_calendar_id)
+      |> where([e], fragment("?->>'uid' = ?", e.provider_metadata, ^series_uid))
+      |> where([e], e.uid != ^series_uid)
+      |> where([e], not is_nil(e.raw_ical) and e.raw_ical != "")
+      |> order_by([e], desc: e.synced_at, desc: e.id)
+      |> limit(1)
+      |> Repo.one()
+
+    if row, do: {:ok, row}, else: {:error, :not_found}
+  end
+
+  defp in_calendar(query, calendar_id) when is_binary(calendar_id) and calendar_id != "",
+    do: where(query, [e], e.provider_calendar_id == ^calendar_id)
+
+  defp in_calendar(query, _any_calendar), do: query
+
+  @doc """
+  The videos the rows cached under the CalDAV series UIDs `series_uids`
+  themselves carry, in the integration `calendar_integration_id`: `{uid,
+  video_integration_id, video_link}` for each such row with both a video
+  integration and a link. Those rows stand in for a whole series until a
+  sync caches its occurrences.
+  """
+  @spec list_series_row_videos(integer(), [String.t()]) ::
+          [{String.t(), pos_integer(), String.t()}]
+  def list_series_row_videos(_calendar_integration_id, []), do: []
+
+  def list_series_row_videos(calendar_integration_id, series_uids) do
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+    |> where([e], e.uid in ^series_uids)
+    |> where([e], not is_nil(e.video_integration_id) and e.video_link != "")
+    |> select([e], {e.uid, e.video_integration_id, e.video_link})
     |> Repo.all()
   end
 

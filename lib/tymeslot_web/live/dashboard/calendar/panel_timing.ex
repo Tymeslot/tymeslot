@@ -78,7 +78,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
 
   @doc """
   The change toggling all day makes to `event`, and the write's options; an
-  all-day event longer than a timed one may be cannot become timed.
+  all-day event longer than a timed event may run (a week,
+  `Moves.max_span_seconds/0`) cannot become timed.
   """
   @spec toggle_all_day(map(), String.t()) :: {:ok, map(), keyword()} | {:error, String.t()}
   def toggle_all_day(event, timezone) do
@@ -234,10 +235,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
 
   attr :timing, :map, required: true
   attr :disabled, :boolean, default: false
+
+  attr :reason, :string,
+    default: nil,
+    doc: "why the timing cannot be changed, shown under it when `disabled`"
+
   attr :error, :string, default: nil
   attr :target, :any, required: true
 
-  @doc "All day, Starts and Ends."
+  @doc "All day, Starts and Ends; with a `reason`, why they cannot be changed."
   @spec timing_fields(map()) :: Phoenix.LiveView.Rendered.t()
   def timing_fields(assigns) do
     ~H"""
@@ -257,7 +263,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
         />
       </div>
       <form id="calendar-panel-timing" phx-change="panel:timing" phx-target={@target} novalidate>
-        <fieldset disabled={@disabled} class="space-y-2">
+        <fieldset
+          disabled={@disabled}
+          aria-describedby={@disabled && @reason && "calendar-panel-timing-locked"}
+          class="space-y-2"
+        >
           <div class="grid grid-cols-2 gap-2">
             <.date_picker
               id="calendar-panel-start-date"
@@ -295,6 +305,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelTiming do
           </div>
         </fieldset>
       </form>
+      <p
+        :if={@disabled && @reason}
+        id="calendar-panel-timing-locked"
+        class="flex items-start gap-1.5 text-token-sm text-tymeslot-500"
+      >
+        <.icon name="hero-lock-closed-micro" class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <span>{@reason}</span>
+      </p>
     </div>
     """
   end

@@ -1,6 +1,6 @@
 defmodule Tymeslot.Emails.Shared.MeetingComponents do
   @moduledoc """
-  Public façade for the meeting-related email components — 2026 redesign.
+  Public façade for the meeting-related email components.
 
   Each concern lives in a focused sibling module under
   `Tymeslot.Emails.Shared.Meeting.*`; this module re-exports them so callers

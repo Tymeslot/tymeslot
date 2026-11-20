@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
   alias Phoenix.LiveView.JS
   alias Tymeslot.CalendarGrid.Period
   alias TymeslotWeb.Components.UI.StatusSwitch
+  alias TymeslotWeb.Dashboard.Calendar.DesktopPermission
   alias TymeslotWeb.Helpers.LocaleFormat
 
   # Phones and coarse pointers get a 44px hit area on every row: the row is
@@ -31,6 +32,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
     doc: ~s(prefixes every id: "calendar" in the toolbar, "calendar-sheet" in the sheet)
 
   attr :preferences, :map, required: true, doc: "the organiser's `CalendarPreferencesSchema`"
+
+  attr :desktop_permission, :map,
+    required: true,
+    doc: "the surface's `desktop_permission` (see `DesktopPermission`)"
+
   attr :time_format, :string, required: true, doc: ~s("24h" or "12h": the surface's `time_format`)
 
   attr :calendar_focus, :boolean,
@@ -79,6 +85,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
         id_prefix={@id_prefix}
         preferences={@preferences}
         time_format={@time_format}
+        target={@target}
+      />
+      <.desktop_row
+        id_prefix={@id_prefix}
+        preferences={@preferences}
+        desktop_permission={@desktop_permission}
         target={@target}
       />
       <%!-- Below 1024px focus mode changes nothing, so the row is hidden.
@@ -132,7 +144,46 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
   defp segments, do: @segments
   defp segment_row, do: @segment_row
 
-  # Rows 3 to 7: what the week shows and how times read. Weekends and the
+  # Desktop notifications: switching on goes through the
+  # `DesktopReminderPermission` hook, which asks the browser inside the click
+  # (a user gesture, which Firefox and Safari require) and pushes the answer;
+  # switching off is the plain toggle. The note below says why they are off,
+  # or why they cannot fire while on.
+  attr :id_prefix, :string, required: true
+  attr :preferences, :map, required: true
+  attr :desktop_permission, :map, required: true
+  attr :target, :any, required: true
+
+  defp desktop_row(assigns) do
+    ~H"""
+    <div id={"#{@id_prefix}-desktop-reminders-row"} class={["space-y-2", row()]}>
+      <.switch_row
+        id={"#{@id_prefix}-desktop-reminders"}
+        label={dgettext("dashboard_calendar_power", "Desktop notifications")}
+        description={
+          dgettext(
+            "dashboard_calendar_power",
+            "Before events with a reminder, while the calendar is open"
+          )
+        }
+        checked={@preferences.desktop_reminders_enabled}
+        event="calendar:toggle_desktop_reminders"
+        target={@target}
+        nested
+        phx-hook="DesktopReminderPermission"
+        data-report-event="calendar:desktop_permission"
+        data-enable-event="calendar:enable_desktop_reminders"
+      />
+      <DesktopPermission.note
+        id={"#{@id_prefix}-desktop-permission-note"}
+        state={@desktop_permission}
+        enabled={@preferences.desktop_reminders_enabled}
+      />
+    </div>
+    """
+  end
+
+  # Rows 3 to 6: what the week shows and how times read. Weekends and the
   # week start reload the window; the others redraw from the settings (see
   # `DisplayPreferences`).
   attr :id_prefix, :string, required: true
@@ -203,19 +254,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
         <:option value="12h" label={dgettext("dashboard_calendar_power", "12-hour")} />
       </.segmented_control>
     </div>
-    <.switch_row
-      id={"#{@id_prefix}-desktop-reminders"}
-      label={dgettext("dashboard_calendar_power", "Desktop notifications")}
-      description={
-        dgettext(
-          "dashboard_calendar_power",
-          "Before events with a reminder, while the calendar is open"
-        )
-      }
-      checked={@preferences.desktop_reminders_enabled}
-      event="calendar:toggle_desktop_reminders"
-      target={@target}
-    />
     """
   end
 
@@ -227,9 +265,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
   attr :event, :string, required: true
   attr :target, :any, required: true
 
+  attr :nested, :boolean,
+    default: false,
+    doc: "inside a row that already carries the touch height (`desktop_row/1`)"
+
+  attr :rest, :global, doc: "passed to the switch (a hook and its data attributes)"
+
   defp switch_row(assigns) do
     ~H"""
-    <div class={["flex items-start justify-between gap-3", row()]}>
+    <div class={["flex items-start justify-between gap-3", !@nested && row()]}>
       <div class="min-w-0">
         <span class="block text-token-sm font-medium text-tymeslot-700">{@label}</span>
         <span
@@ -248,6 +292,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.DisplayOptions do
         size={:small}
         aria_label={@label}
         aria-describedby={@description && "#{@id}-description"}
+        {@rest}
       />
     </div>
     """

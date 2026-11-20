@@ -359,9 +359,9 @@ defmodule Tymeslot.Profiles.ProfileSchema do
 
   @doc """
   Focused changeset for the booking languages: `content_locale` (the
-  language the organiser's texts are written in; left unset, the one they
-  read as until now, `Languages.original/1`, is saved), `translation_locales`
-  and `offer_all_locales`.
+  language the organiser's texts are written in; when it is left unset, the
+  language the texts are currently read as, `Languages.original/1`, is
+  saved), `translation_locales` and `offer_all_locales`.
 
   Every code must be a supported locale, and none may be listed twice. The
   list may hold the original, which is then not translated into

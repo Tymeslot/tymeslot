@@ -284,7 +284,6 @@ defmodule Tymeslot.Security.UniversalSanitizer do
           input
         end
 
-      # Leave other inputs unchanged
       _path ->
         input
     end

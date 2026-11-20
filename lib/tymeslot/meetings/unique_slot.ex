@@ -2,11 +2,11 @@ defmodule Tymeslot.Meetings.UniqueSlot do
   @moduledoc """
   The organiser's unique slot index, `(organizer_user_id, start_time)` over the
   rows that hold a slot (confirmed, awaiting approval or awaiting email
-  verification, and not voided by a reschedule request), which every `MeetingSchema` changeset that can write a
-  slot-holding status declares (`constrain/1`).
+  verification, and not voided by a reschedule request), which every
+  `MeetingSchema` changeset that can write a slot-holding status declares
+  (`constrain/1`).
 
-  Split out of `MeetingSchema` to keep it inside the size limit; the schema
-  delegates `unique_slot_violation?/1` here.
+  The schema delegates `unique_slot_violation?/1` here.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

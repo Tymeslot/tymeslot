@@ -34,6 +34,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingDocument do
   calendar integration, or no cached row for this event in that integration,
   or a row with no document, is rebuilt from the payload as before.
 
+  A booking whose calendar copy was given a repeat rule has no row under its
+  UID once a sync has cached the series' occurrences; any occurrence carries
+  the resource's document, so the latest is used, and the rule is kept.
+
   The cached row is looked up in the meeting's integration, which is the one
   `ClientManager.resolve_client/1` writes through for a meeting, and by the
   very UID being written, so a row of another integration or another event
@@ -41,6 +45,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingDocument do
   """
 
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Meetings.MeetingSchema
 
@@ -59,13 +64,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingDocument do
         %{provider_type: provider},
         uid,
         event_data,
-        %MeetingSchema{calendar_integration_id: integration_id}
+        %MeetingSchema{calendar_integration_id: integration_id} = meeting
       )
       when is_integer(integration_id) and is_binary(uid) do
     with true <- ProviderConfig.caldav_based?(provider),
          false <- Map.has_key?(event_data, :raw_ical),
          {:ok, %{raw_ical: raw_ical} = cached} when is_binary(raw_ical) and raw_ical != "" <-
-           ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
+           cached_document(integration_id, uid, meeting.calendar_path) do
       {:ok,
        Map.merge(event_data, %{
          raw_ical: raw_ical,
@@ -79,4 +84,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BookingDocument do
   end
 
   def for_update(_client, _uid, _event_data, _context), do: :none
+
+  # A booking whose calendar copy the organiser gave a repeat rule is cached
+  # as the series' occurrences, under its UID and each slot's key, with no
+  # row under the bare UID once a sync has cached them; each carries the
+  # resource's document, which keeps the rule. They are looked for in the
+  # meeting's calendar, where its event was written.
+  defp cached_document(integration_id, uid, calendar_path) do
+    case ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
+      {:ok, %{raw_ical: raw_ical}} = found when is_binary(raw_ical) and raw_ical != "" ->
+        found
+
+      _no_document ->
+        ProviderCalendarSeriesQueries.get_resource_occurrence(integration_id, uid, calendar_path)
+    end
+  end
 end

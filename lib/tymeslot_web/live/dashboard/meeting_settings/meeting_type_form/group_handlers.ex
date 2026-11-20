@@ -3,8 +3,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupHandlers do
   The group bookings section's events for `MeetingTypeForm`: turning group
   bookings on and off, the participant limit, and the seat-availability and
   last-spots display options.
-
-  Split out of the form to keep it inside the size limit.
   """
 
   import Phoenix.Component, only: [assign: 3]

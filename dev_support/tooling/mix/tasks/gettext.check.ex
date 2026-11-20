@@ -34,10 +34,9 @@ defmodule Mix.Tasks.Gettext.Check do
 
   ## What it is not
 
-  It is a local convenience. Both repositories' CI run
-  `mix gettext.extract --check-up-to-date` directly, with no digest and no
-  skip, so a catalogue can never reach a release stale because a cache said
-  otherwise.
+  It is a local convenience; CI runs the check unfiltered and uncached (see
+  `Tymeslot.GettextCheck.Fingerprint`), so a cache can never let a stale
+  catalogue reach a release.
   """
 
   use Mix.Task

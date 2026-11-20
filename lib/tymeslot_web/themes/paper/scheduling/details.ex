@@ -34,7 +34,6 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Meetings.Approval
-  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Shared.BookingLabels
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
@@ -306,10 +305,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
         data-testid="submit-booking"
         aria-describedby={SeriesSummary.price_describedby(assigns, @series_count)}
         data-intent="submit"
-        disabled={
-          @submitting || !OrganizerHelpers.form_valid?(@form) ||
-            SeriesSummary.submit_waits?(assigns)
-        }
+        disabled={@submitting || SeriesSummary.submit_waits?(assigns)}
       >
         <%= if @submitting do %>
           <.spinner class="paper-spinner" aria-hidden="true" />

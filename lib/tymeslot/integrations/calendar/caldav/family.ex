@@ -95,6 +95,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Family do
     end
   end
 
+  @doc """
+  Whether the account owner enters the server address, so the server is theirs
+  to run and may sit where the internet cannot reach it. False for a member
+  with a fixed address and for any provider outside the family.
+  """
+  @spec own_server?(atom()) :: boolean()
+  def own_server?(provider) when is_atom(provider),
+    do: match?({:ok, %{fixed_url: nil}}, Keyword.fetch(@members, provider))
+
+  def own_server?(_provider), do: false
+
   @doc "The members whose server address is fixed, with that address."
   @spec fixed_urls() :: %{member() => %{url: String.t(), tooltip: String.t()}}
   def fixed_urls do

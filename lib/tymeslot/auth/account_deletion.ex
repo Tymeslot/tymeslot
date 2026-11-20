@@ -98,8 +98,8 @@ defmodule Tymeslot.Auth.AccountDeletion do
   @spec enqueue_overdue_account_deletions() :: non_neg_integer()
   defdelegate enqueue_overdue_account_deletions(), to: Runner, as: :enqueue_overdue
 
-  # As in `Tymeslot.Auth`: a rate-limited entry point needs to know who is
-  # asking, so a missing `:ip` is a caller bug rather than a shared bucket.
+  # As in `Tymeslot.Auth`: `:ip` is required, so a missing one is a caller bug
+  # rather than a shared bucket.
   defp request_opts!(opts) do
     _ip = Keyword.fetch!(opts, :ip)
     opts

@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.FreeBusy do
   alias Tymeslot.CalendarGrid.EditGuard
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.Preview
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -32,6 +33,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.FreeBusy do
       _unknown_or_unchanged -> socket
     end
   end
+
+  # A previewed occurrence of a series not yet synced has no free/busy of its
+  # own to change: the series' is changed from the series.
+  defp editable(_socket, %{preview_of: %{}}),
+    do: {:error, elem(CalendarEditMessages.refusal({:error, :syncing}), 1)}
 
   defp editable(socket, event) do
     if EditGuard.free_busy_editable?(socket.assigns.integrations, event),

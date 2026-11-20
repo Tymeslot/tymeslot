@@ -108,8 +108,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
       {:error, :not_found} ->
         :not_found
 
-      # Auth failures are reported upwards for the caller to act on; logging
-      # them here would double up on the line it writes when it does.
+      # Auth failures are reported upwards for the caller to act on, not
+      # logged here.
       {:error, reason} when reason in [:unauthorized, :forbidden] ->
         {:error, reason}
 

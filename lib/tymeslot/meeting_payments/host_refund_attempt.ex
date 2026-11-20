@@ -65,6 +65,7 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
 
   require Logger
 
+  alias Ecto.UUID
   alias Stripe.Error, as: StripeError
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Jobs.ObanJobQueries
@@ -172,8 +173,8 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
 
   # The claim and the refund commit together, and a run racing for the
   # claim waits on it, then finds the refund made. A job with no id (built
-  # by hand) cannot run twice, so has nothing to claim and no key of its
-  # own: it refunds under the derived key.
+  # by hand) cannot run twice, so has nothing to claim and refunds under a
+  # key of its own making.
   defp refund_once(job_id, id, host_user_id, amount, opts) do
     case amount_due(job_id, id, host_user_id, amount) do
       {:ok, 0} -> {:ok, :nothing_left}
@@ -194,7 +195,7 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
       Repo.transaction(fn ->
         with :claimed <- claim(job_id, opts),
              {:ok, refunded} <-
-               Refunds.issue_host_refund(id, host_user_id, due, nil, key_opts(job_id, opts)) do
+               Refunds.issue_host_refund(id, host_user_id, due, key(job_id, opts)) do
           refunded
         else
           :already_claimed -> :already_made
@@ -220,8 +221,8 @@ defmodule Tymeslot.MeetingPayments.HostRefundAttempt do
   defp claim(nil, _opts), do: :claimed
   defp claim(job_id, opts), do: DeliveryClaims.claim(job_id, opts[:claim])
 
-  defp key_opts(nil, _opts), do: []
-  defp key_opts(job_id, opts), do: [idempotency_key: "#{opts[:key_prefix]}:#{job_id}"]
+  defp key(nil, opts), do: "#{opts[:key_prefix]}:#{UUID.generate()}"
+  defp key(job_id, opts), do: "#{opts[:key_prefix]}:#{job_id}"
 
   # The refund is sized once per job, under the payment's row lock, and the
   # size pinned to the job's row before Stripe is asked: every later attempt

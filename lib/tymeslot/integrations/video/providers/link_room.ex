@@ -39,13 +39,11 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   # this counter follows (`hops_left < 0` refuses, so 3 means three follows).
   @max_redirects 3
 
-  # Each request was previously bounded per-hop only (3s connect + 3s receive),
-  # so the worst case grew with every added hop: up to `@max_redirects + 1`
-  # hops, two requests each (HEAD then a GET fallback), was ~48s with no
-  # overall bound. This caps the whole probe (HEAD, GET fallback and every
-  # redirect hop together) at the original single-hop worst case, shrinking
-  # each subsequent request's own timeout to whatever budget remains rather
-  # than handing out a fresh 3s per hop.
+  # Budget for the whole probe (HEAD, GET fallback and every redirect hop
+  # together). Each request's own timeout shrinks to whatever budget remains
+  # rather than getting a fresh 3s per hop; bounding hops individually would
+  # let up to `@max_redirects + 1` hops of two requests each (HEAD then a GET
+  # fallback) run to ~48s.
   @overall_budget_ms 12_000
 
   @doc """
@@ -118,9 +116,9 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
 
   ## Options
 
-    * `:https` — `:for_public` refuses plain http to a public host (one on
-      localhost, a private network or, once private video addresses are
-      allowed, an internal name stays allowed); `:never`, the default,
+    * `:https` — `:for_public` refuses plain http to a public host; a host on
+      localhost or a private network stays allowed, and so does an internal
+      name once private video addresses are allowed. `:never`, the default,
       accepts either.
     * `:private` — `:switch`, the default, refuses a local or private
       address unless the operator allows them; `:unchecked` leaves the

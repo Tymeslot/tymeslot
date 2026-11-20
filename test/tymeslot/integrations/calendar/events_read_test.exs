@@ -1,5 +1,7 @@
 defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
-  use ExUnit.Case, async: true
+  # async: false: a test refutes a log event, and a `:logger` handler sees
+  # every concurrently running test's events.
+  use ExUnit.Case, async: false
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Runtime.EventsRead
@@ -334,7 +336,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
       assert DegradedAggregateProvider.calls() == 1
     end
 
-    test "logs failed calendar source and reason but never the succeeded calendars' event content" do
+    test "passes a partial outcome through without logging it again" do
       adapter_client = %{
         provider_type: :fake,
         provider_module: PartialSuccessAggregateProvider,
@@ -346,22 +348,11 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
 
       LogCapture.attach()
 
-      assert {:error, %Outcome{}, "/cal/partial-success"} =
+      assert {:error, %Outcome{failed: [%{source: "cal-broken", reason: :timeout}]},
+              "/cal/partial-success"} =
                EventsRead.fetch_events_with_fallback(adapter_client, start_dt, end_dt)
 
-      assert_receive {:captured_log,
-                      %{
-                        level: :error,
-                        msg: {:string, "Failed to fetch from calendar"},
-                        meta: %{failed: failed} = meta
-                      }}
-
-      refute Map.has_key?(meta, :events)
-      assert failed == [%{source: "cal-broken", reason: ":timeout"}]
-
-      full_dump = inspect(meta)
-      refute full_dump =~ "Therapy appointment"
-      refute full_dump =~ "private-1"
+      refute_receive {:captured_log, %{msg: {:string, "Failed to fetch from calendar"}}}
     end
 
     test "still tries the wide-range fallback when the outcome has no hard failures (all sources confirmed absent)" do

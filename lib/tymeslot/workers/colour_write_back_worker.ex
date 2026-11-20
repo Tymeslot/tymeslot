@@ -9,13 +9,31 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   Outlook has no per-event colour concept, so those jobs are discarded. Read-only
   calendars and transient failures surface as errors and are retried by Oban; the
   durable override remains the display source regardless of write-back outcome.
-  Only *set* enqueues a job — clearing a colour leaves the host untouched.
+  Clearing an override enqueues a job too, which clears the host's colour
+  (Google `colorId: null`, CalDAV without `COLOR`).
+
+  The colour written is read from the override table when the job runs, not
+  from its args (which record what was asked, for the logs): no override,
+  or a cleared one (a `nil` colour), means no colour. A cleared override
+  keeps the old colour, which syncs read back from the host, off the event
+  until the host is clear, so a successful clear deletes it, together with
+  any colour a sync cached beneath it; a clear that never succeeds leaves
+  it in place.
 
   `unique` is keyed on `[:integration_id, :uid, :user_id]` with `replace: [:args]`
-  set at the enqueue site (`ColourWriteBack.enqueue/4`, called from
-  `Calendar.set_event_colour/3`) so rapid successive colour changes collapse onto
-  one pending job carrying the latest colour, rather than racing to whichever
-  job's PUT/PATCH lands last.
+  set at the enqueue site (`ColourWriteBack.enqueue/4`) so rapid successive
+  colour changes collapse onto one pending job. It leaves `:executing` out: a
+  change made while a job is already running inserts a job of its own, rather
+  than rewriting the args of a job that has already read them.
+
+  The queue runs jobs concurrently, so that second job can start, read the
+  newer colour and finish while the first one's request is still in flight,
+  leaving the first job's older colour to land last. Each job therefore reads
+  the override again once its write has succeeded, and enqueues one more job
+  when it no longer holds the colour just written. The last write to finish
+  is always followed by that check, so the host ends on the colour the
+  organiser wants now; further changes meanwhile collapse onto the one
+  pending job.
 
   A CalDAV event created from the dashboard grid is cached with `raw_ical` NULL
   by design, for the first read to fill, so a colour set before that sync has no
@@ -29,13 +47,16 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
     priority: 2,
     unique: [
       keys: [:integration_id, :uid, :user_id],
-      states: [:available, :scheduled, :executing, :retryable, :suspended]
+      states: [:available, :scheduled, :retryable, :suspended]
     ]
 
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
+  alias Tymeslot.Integrations.Calendar.ColourWriteBack
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Repo
 
   # Comfortably longer than the slowest CalDAV sync cadence, the 3600s Tier 3
   # interval in `FallbackSyncSweepWorker`, so each snooze lands after a sync
@@ -63,17 +84,52 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args, meta: meta}) do
-    %{
-      "integration_id" => integration_id,
-      "uid" => uid,
-      "user_id" => user_id,
-      "colour" => colour
-    } = args
+    %{"integration_id" => integration_id, "uid" => uid, "user_id" => user_id} = args
 
     if CalendarIntegrationQueries.owned_by?(integration_id, user_id) do
-      write_back_cached(integration_id, uid, user_id, colour, meta)
+      colour = ColourOverrideQueries.external_colour(user_id, integration_id, uid)
+
+      integration_id
+      |> write_back_cached(uid, user_id, colour, meta)
+      |> catch_up({user_id, integration_id, uid}, colour)
     else
       {:discard, @not_owned}
+    end
+  end
+
+  # A job that started and finished while this one's request was in flight
+  # may already have written a newer colour, which this write has just
+  # overwritten. Only a successful write needs the check: a failure is
+  # retried, and a retry reads the override afresh.
+  defp catch_up(result, target, written) do
+    if succeeded?(result) do
+      if is_nil(written), do: delete_cleared(target)
+      enqueue_if_changed(target, written)
+    end
+
+    result
+  end
+
+  # The host is clear, so syncs no longer bring the old colour back. A sync
+  # that ran while the clear was pending may already have cached the old
+  # colour again, hidden only by the cleared override, so the cache is
+  # cleared with it. A colour chosen since is not a cleared override: it
+  # stays, and so does the cache beneath it.
+  defp delete_cleared({user_id, integration_id, uid}) do
+    Repo.transaction(fn ->
+      if ColourOverrideQueries.delete_external_cleared(user_id, integration_id, uid),
+        do: ProviderCalendarEventQueries.clear_colour(integration_id, uid)
+    end)
+  end
+
+  defp succeeded?(:ok), do: true
+  defp succeeded?({:ok, _value}), do: true
+  defp succeeded?(_result), do: false
+
+  defp enqueue_if_changed({user_id, integration_id, uid}, written) do
+    case ColourOverrideQueries.external_colour(user_id, integration_id, uid) do
+      ^written -> :ok
+      current -> ColourWriteBack.enqueue(user_id, integration_id, uid, current)
     end
   end
 
@@ -109,21 +165,21 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   defp handle_unsynced_document(result, _meta), do: result
 
   # Microsoft Graph exposes no per-event colour, so there is nothing to push.
-  defp write_back(%{provider: "outlook"}, _integration_id, _user_id, _colour),
-    do: {:discard, @no_event_colour}
-
   defp write_back(event, integration_id, user_id, colour) do
-    event_data = colour_only_event_data(event, colour)
-
-    CalendarEvents.update_event(event.uid, event_data, {integration_id, user_id})
+    if ColourWriteBack.host_colour?(event.provider) do
+      event_data = colour_only_event_data(event, colour)
+      CalendarEvents.update_event(event.uid, event_data, {integration_id, user_id})
+    else
+      {:discard, @no_event_colour}
+    end
   end
 
   # Colour-only payload: just enough for the provider path to identify the
   # event and patch its colour (Google `colorId` via PATCH, CalDAV `COLOR` via
   # a patched copy of `raw_ical`). Deliberately excludes summary/timing/
   # description/location — a full-field payload would only be safe to send
-  # via a full REPLACE, which is exactly what silently wiped recurrence,
-  # attendees, alarms, and conference data before this fix.
+  # via a full REPLACE, which silently wipes recurrence, attendees, alarms
+  # and conference data.
   #
   # `etag` is the cached ETag for the event. The CalDAV path uses it as the
   # `If-Match` precondition on the colour PUT so that, if the host event has
@@ -134,6 +190,9 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
     %{
       colour_only: true,
       colour: colour,
+      # The event's own calendar: without it Google patches the booking
+      # calendar, where an event on any other calendar is not found.
+      calendar_id: event.provider_calendar_id,
       provider_event_id: event.provider_event_id,
       raw_ical: event.raw_ical,
       etag: event.etag

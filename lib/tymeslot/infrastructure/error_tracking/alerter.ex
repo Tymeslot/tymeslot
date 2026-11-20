@@ -155,8 +155,9 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
   defp job_action(%{"job.args" => %{"action" => action}}), do: scalar(action)
   defp job_action(_context), do: nil
 
-  # A retryable attempt is recorded with `state: :failure` and raises no
-  # alert, so this names what the few others were.
+  # Only `:failure` and `:discard` are named. A retryable attempt is recorded
+  # with `state: :failure` and raises no alert, so the state is what tells it
+  # apart from the outcomes that do.
   defp job_state(%{state: state}) when state in [:failure, :discard], do: Atom.to_string(state)
   defp job_state(_context), do: nil
 

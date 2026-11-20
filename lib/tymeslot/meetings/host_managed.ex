@@ -6,8 +6,7 @@ defmodule Tymeslot.Meetings.HostManaged do
   public cancel and reschedule pages refuse it; the host moves it from the
   dashboard instead (`Tymeslot.Bookings.HostMove.move/3`).
 
-  Split out of `MeetingSchema` to keep it inside the size limit; the schema
-  delegates `managed_by_host?/1` here.
+  The schema delegates `managed_by_host?/1` here.
   """
 
   @doc "Whether only the host manages `meeting`."

@@ -131,4 +131,57 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelTest do
     assert has_element?(lv, "#calendar-panel-read-only", "This calendar is read-only.")
     assert has_element?(lv, "#calendar-panel-title[disabled]")
   end
+
+  test "an event on a read-only calendar shows its place and notes with their links", %{
+    conn: conn,
+    integration: integration
+  } do
+    integration
+    |> Changeset.change(
+      calendar_list: [
+        %{"id" => "work", "name" => "Work", "selected" => true},
+        %{"id" => "shared", "name" => "Shared", "selected" => true, "read_only" => true}
+      ]
+    )
+    |> Repo.update!()
+
+    shared =
+      event(integration, "shared", "Team offsite", ~U[2026-10-16 09:00:00Z], 60,
+        location: "https://meet.example.com/offsite",
+        description: "Plan: https://docs.example.com/plan"
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    edit(lv, "event-#{shared.id}")
+
+    refute has_element?(lv, "#calendar-panel-location")
+    refute has_element?(lv, "#calendar-panel-notes")
+
+    assert has_element?(
+             lv,
+             ~s|#calendar-panel-location-text a[href="https://meet.example.com/offsite"][target="_blank"][rel="noopener noreferrer"]|
+           )
+
+    assert has_element?(
+             lv,
+             ~s|#calendar-panel-notes-text a[href="https://docs.example.com/plan"]|
+           )
+  end
+
+  test "an event that can be edited keeps its place and notes as fields", %{
+    conn: conn,
+    integration: integration
+  } do
+    review =
+      event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z], 60,
+        location: "https://meet.example.com/abc"
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+    edit(lv, "event-#{review.id}")
+
+    assert has_element?(lv, ~s|#calendar-panel-location[value="https://meet.example.com/abc"]|)
+    assert has_element?(lv, "#calendar-panel-notes")
+    refute has_element?(lv, "#calendar-panel-location-text")
+  end
 end

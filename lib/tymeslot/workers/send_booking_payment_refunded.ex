@@ -2,7 +2,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   @moduledoc """
   Sends the attendee email confirming a booking-payment refund.
 
-  Enqueued synchronously by `Tymeslot.MeetingPayments.Refunds.issue_refund/3`
+  Enqueued synchronously by `Tymeslot.MeetingPayments.Refunds.issue_refund/4`
   whenever a refund (full or partial) succeeds, and by
   `Tymeslot.MeetingPayments.Workers.RefundLatePayment` for a refund Stripe
   accepted whose own transaction rolled back. The Stripe `charge.refunded`

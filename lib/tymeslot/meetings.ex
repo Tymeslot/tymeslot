@@ -68,11 +68,10 @@ defmodule Tymeslot.Meetings do
   defdelegate guest_rsvp_summary(guests), to: Guests, as: :summarize
 
   @doc """
-  The calendar identities (`calendar_uid`s) of the organiser's group meetings
-  with live seats overlapping the UTC window `[from_utc, to_utc)`.
+  Which of the calendar event `uids` belong to the organiser's group meetings
+  with live seats, in one query.
   """
-  defdelegate group_booking_uids_for_user(user_id, from_utc, to_utc),
-    to: Tymeslot.Meetings.GroupMeetingQueries
+  defdelegate group_booking_uids_among(user_id, uids), to: Tymeslot.Meetings.GroupMeetingQueries
 
   @doc """
   Whether the organiser's meeting behind a calendar event's `uid` is a group

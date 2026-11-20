@@ -151,11 +151,6 @@ msgstr "Платіж було скасовано. Будь ласка, спро�
 msgid "Please correct the errors below."
 msgstr "Будь ласка, виправте наведені нижче помилки."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "Please fill in all required fields"
-msgstr "Заповніть усі обов'язкові поля"
-
 #: lib/tymeslot_web/themes/shared/components/slot_list.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a date to see available times"

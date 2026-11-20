@@ -108,8 +108,7 @@ defmodule Tymeslot.Bookings.FollowCalendar do
            MeetingQueries.update_meeting(current, attrs(current, start_time, end_time)),
          :ok <- repin_reminders(updated) do
       :ok = MeetingCalendarQueries.put_seen_calendar_end(updated.id, updated.end_time)
-      # Everyone is told the new times, so an end change still waiting to be
-      # announced has nothing left to say.
+      # As in `Reschedule`: everyone is told the new times.
       :ok = MeetingCalendarQueries.clear_notified_ends(updated.id)
       updated
     else

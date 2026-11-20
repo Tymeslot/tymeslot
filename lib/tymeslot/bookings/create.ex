@@ -48,9 +48,8 @@ defmodule Tymeslot.Bookings.Create do
   Result returned by `execute/3`.
 
   The domain layer classifies every failure reason into one of
-  `Tymeslot.Bookings.Errors.classified_error/0`. Rendering an atom to user-facing copy is entirely the
-  web layer's responsibility — see
-  `TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage`.
+  `Tymeslot.Bookings.Errors.classified_error/0`; the moduledoc of
+  `Tymeslot.Bookings.Errors` says how an atom reaches the user.
   """
   @type execute_result ::
           {:ok, map()}

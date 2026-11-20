@@ -4,7 +4,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PendingDeletes do
   of the job that will run them (see `Deletion`).
 
   An entry is `%{event: event, scope: scope, title: title, confirmed: boolean,
-  series: key | nil}`. `event` carries what addresses the event (a loaded
+  notify: boolean, series: key | nil}`, `notify` when the delete is meant to
+  tell the attendees. `event` carries what addresses the event (a loaded
   event, or the address a scheduled delete was stored with), so the same entry
   hides the event whichever week is loaded, and again after a reload, a
   remount or in a second tab: an `:occurrence` delete hides the event with that
@@ -18,14 +19,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PendingDeletes do
 
   @type t :: %{optional(pos_integer()) => map()}
 
-  @doc "The entry for deleting `event` in `scope`; `confirmed?` when it cannot be undone."
-  @spec entry(map(), :occurrence | :series, boolean()) :: map()
-  def entry(event, scope, confirmed?) do
+  @doc """
+  The entry for deleting `event` in `scope`; `confirmed?` when it cannot be
+  undone, `notify?` when it tells the attendees.
+  """
+  @spec entry(map(), :occurrence | :series, boolean(), boolean()) :: map()
+  def entry(event, scope, confirmed?, notify? \\ false) do
     %{
       event: event,
       scope: scope,
       title: EventPayload.title(event),
       confirmed: confirmed?,
+      notify: notify?,
       series: if(scope == :series, do: WriteQueue.series_key(event))
     }
   end
@@ -40,18 +45,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.PendingDeletes do
   def from_jobs(jobs) do
     Map.new(jobs, fn job ->
       titled = Occurrence.cached_row(job)
-      {job.token, entry(titled, job.scope, not job.undoable?)}
+      {job.token, entry(titled, job.scope, not job.undoable?, job.notify_attendees?)}
     end)
   end
 
   @doc """
   The entry for a delete another tab scheduled, from the address it was
-  scheduled with. It is confirmed here (this tab offers no Undo for it) and marked
-  `origin: :elsewhere`, so this tab does not announce its result.
+  scheduled with and whether it tells the attendees (`notify_attendees`). It
+  is confirmed here (this tab offers no Undo for it) and marked
+  `origin: :elsewhere`, so this tab does not announce that it was deleted.
   """
   @spec foreign(map(), :occurrence | :series) :: map()
-  def foreign(address, scope),
-    do: address |> Occurrence.cached_row() |> entry(scope, true) |> Map.put(:origin, :elsewhere)
+  def foreign(address, scope) do
+    address
+    |> Occurrence.cached_row()
+    |> entry(scope, true, Map.get(address, :notify_attendees) == true)
+    |> Map.put(:origin, :elsewhere)
+  end
 
   @doc """
   The undoable entry whose delete the browser tab `tab` scheduled last, with

@@ -201,7 +201,9 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       # The host refunds the past session after the cancellation scheduled
       # its job: the total passes what the job will refund before it runs.
       expect_refund(5_000)
-      assert {:ok, _refunded} = Refunds.issue_host_refund(payment.id, host.user.id, 5_000)
+
+      assert {:ok, _refunded} =
+               Refunds.issue_host_refund(payment.id, host.user.id, 5_000, "host_refund:test:5000")
 
       expect_refund(2_000)
       assert :ok = run_refund_job()
@@ -226,7 +228,14 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       # The host refunds most of the payment from the payments page before
       # the job runs: what is left is less than the job was scheduled for.
       expect_refund(12_000)
-      assert {:ok, _refunded} = Refunds.issue_host_refund(payment.id, host.user.id, 12_000)
+
+      assert {:ok, _refunded} =
+               Refunds.issue_host_refund(
+                 payment.id,
+                 host.user.id,
+                 12_000,
+                 "host_refund:test:12000"
+               )
 
       expect_refund(8_000)
       assert :ok = run_refund_job()
@@ -328,16 +337,9 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert {:error, %Stripe.Error{source: :network}} = run_refund_job()
 
       # Refunded elsewhere (the host's Stripe dashboard) before the retry.
+      # The recorded 15,000 cannot hold a refund of 20,000, so Stripe is not
+      # asked whether this job made one (Mox fails any call).
       assert :ok = ChargeRefunded.handle(charge_refunded_event("evt_REFUNDED", 15_000))
-
-      expect(StripeAdapterMock, :create_refund, 1, fn %{amount: 20_000}, _opts ->
-        {:error,
-         %Stripe.Error{
-           source: :stripe,
-           code: :invalid_request_error,
-           message: "Refund amount is greater than unrefunded amount on charge"
-         }}
-      end)
 
       assert {:discard, :invalid_amount} = run_refund_job(attempt: 2)
       assert Repo.reload!(payment).refunded_amount_cents == 15_000
@@ -356,7 +358,14 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert {:ok, %{refund: {:scheduled, 15_000}}} = cancel_as_host(series, host)
 
       expect_refund(12_000)
-      assert {:ok, _refunded} = Refunds.issue_host_refund(payment.id, host.user.id, 12_000)
+
+      assert {:ok, _refunded} =
+               Refunds.issue_host_refund(
+                 payment.id,
+                 host.user.id,
+                 12_000,
+                 "host_refund:test:12000"
+               )
 
       # The job shrinks to the 8,000 left, which Stripe refunds unanswered.
       timeout_after_stripe_refunds(8_000)
@@ -400,7 +409,9 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
 
       # The host refunds the past session before the job runs again.
       expect_refund(5_000)
-      assert {:ok, _refunded} = Refunds.issue_host_refund(payment.id, host.user.id, 5_000)
+
+      assert {:ok, _refunded} =
+               Refunds.issue_host_refund(payment.id, host.user.id, 5_000, "host_refund:test:5000")
 
       # The retry asks under the same key, so Stripe answers with the refund
       # it already made, which is now recorded once.

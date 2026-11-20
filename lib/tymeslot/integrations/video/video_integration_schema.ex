@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   @moduledoc """
-  Schema for video conferencing integrations (MiroTalk).
+  Schema for video conferencing integrations.
   """
   use Ecto.Schema
   use Gettext, backend: TymeslotWeb.Gettext
@@ -91,7 +91,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     # never cast from attrs.
     field(:room_creation_error, Ecto.Enum, values: @room_creation_errors)
     field(:room_creation_error_since, :utc_datetime)
-    # Code to the time the owner was last emailed about it, as
+    # Maps each code to the time the owner was last emailed about it, as
     # `Tymeslot.Integrations.Video.RoomCreationError` describes. A map rather
     # than a list of codes, so an entry can be given back when its email never
     # went out, and a code nothing reads any more is an entry nothing looks up.

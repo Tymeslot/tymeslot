@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.AgendaTimeline do
   @moduledoc """
   Turns a day's timed entries into an ordered *spine* for the dashboard agenda —
-  the vertical time-rail that replaces the old flat list.
+  the vertical time-rail.
 
   A spine is a list of rows the component renders top to bottom:
 

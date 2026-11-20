@@ -21,7 +21,7 @@ defmodule Tymeslot.BookingSeries.Approval do
   Each takes the organiser's schedule lock, then the series row, then its
   sessions in series order, as every writer of a series does, and moves
   every session still held through the guarded
-  `MeetingQueries.transition_from_awaiting_approval/2` in one transaction.
+  `MeetingTransitionQueries.transition_from_awaiting_approval/2` in one transaction.
   A session that cannot be moved rolls back the series, so it is never left
   half approved. Nothing external happens inside the transaction: the
   calendar, video, refund and email work runs once it has committed, each
@@ -59,9 +59,9 @@ defmodule Tymeslot.BookingSeries.Approval do
   alias Tymeslot.Meetings.Approval, as: MeetingApproval
   alias Tymeslot.Meetings.ApprovalRefunds
   alias Tymeslot.Meetings.MeetingConflictQueries
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Notifications.DispatchInTransactionError
   alias Tymeslot.Repo
 
@@ -106,7 +106,8 @@ defmodule Tymeslot.BookingSeries.Approval do
   Declines the series: every session still held is cancelled and released,
   a paid series refunded in full, and the booker told once, with the host's
   `reason` when given (trimmed and capped as for a single request).
-  `{:error, :not_found}` for an actor who is not the series' organiser.
+  As with `approve/2`, an actor who is not the series' organiser gets
+  `{:error, :not_found}`.
   """
   @spec decline(SeriesSchema.t(), User.t(), String.t() | nil) ::
           {:ok, [Meeting.t()]} | {:error, term()}
@@ -269,7 +270,7 @@ defmodule Tymeslot.BookingSeries.Approval do
 
   defp confirm_session(meeting, now) do
     with {:ok, confirmed} <-
-           MeetingQueries.transition_from_awaiting_approval(meeting.id,
+           MeetingTransitionQueries.transition_from_awaiting_approval(meeting.id,
              status: :confirmed,
              approval_resolved_at: DateTime.truncate(now, :second)
            ),
@@ -348,7 +349,7 @@ defmodule Tymeslot.BookingSeries.Approval do
   end
 
   defp release_session(meeting, changes) do
-    case MeetingQueries.transition_from_awaiting_approval(meeting.id, changes) do
+    case MeetingTransitionQueries.transition_from_awaiting_approval(meeting.id, changes) do
       {:ok, released} -> released
       {:error, reason} -> Repo.rollback(reason)
     end

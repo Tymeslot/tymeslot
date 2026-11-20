@@ -2,11 +2,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   @moduledoc """
   Markup for the meeting type form.
 
-  Extracted from `MeetingTypeForm` so that module stays focused on lifecycle
-  and event routing, matching how `CalendarSettings.ComponentView` sits behind
-  `CalendarSettingsComponent`. `form/1` receives the component's assigns
-  unchanged (its `render/1` delegates straight to it), so LiveView change
-  tracking is preserved.
+  `MeetingTypeForm` keeps to lifecycle and event routing; the markup lives here,
+  as `CalendarSettings.ComponentView` sits behind `CalendarSettingsComponent`.
+  `form/1` receives the component's assigns unchanged (its `render/1` delegates
+  straight to it), so LiveView change tracking is preserved.
 
   The sections are grouped into five panels behind a tab bar, one panel shown
   at a time. Inactive panels are hidden with CSS rather than conditionally

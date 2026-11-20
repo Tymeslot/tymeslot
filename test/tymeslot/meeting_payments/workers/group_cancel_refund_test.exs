@@ -166,15 +166,9 @@ defmodule Tymeslot.MeetingPayments.Workers.GroupCancelRefundTest do
       assert {:error, {:exit, _timeout}} = run_job()
       refund_by_host(payment, 500)
 
-      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, _opts ->
-        {:error,
-         %Stripe.Error{
-           source: :stripe,
-           code: :invalid_request_error,
-           message: "Refund amount is greater than unrefunded amount on charge"
-         }}
-      end)
-
+      # The retry keeps the pinned 2000. The recorded 500 of refunds cannot
+      # hold it, so it is no refund Stripe made, and Stripe is not asked
+      # (Mox fails any call): the job is discarded.
       assert {:discard, :invalid_amount} = run_job(attempt: 2)
     end
   end

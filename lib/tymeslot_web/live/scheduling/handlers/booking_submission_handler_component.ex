@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
           {:awaiting_payment, updated_socket} -> {:noreply, updated_socket}
           {:honeypot, updated_socket} -> {:noreply, updated_socket}
           {:slot_taken, updated_socket} -> {:noreply, updated_socket}
+          {:series_unavailable, updated_socket} -> {:noreply, updated_socket}
           {:error, error_socket} -> {:noreply, error_socket}
         end
       end
@@ -89,6 +90,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       booked; the socket's series moment already names them
       (`Journey.Facts.Series.merge_lost/2`) and checks the series again, and
       the caller should return the booker to it
+    * `{:honeypot, socket}` — the hidden honeypot field was filled in; the
+      socket looks like a success so a bot cannot tell it was caught
     * `{:error, socket}` — validation or persistence failure
 
   A booked series is `{:ok, socket}` too, with `:series` and
@@ -101,7 +104,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         {:ok, updated_socket} -> {:noreply, updated_socket}
         {:redirect, redirect_socket} -> {:noreply, redirect_socket}
         {:awaiting_payment, awaiting_socket} -> {:noreply, awaiting_socket}
+        {:honeypot, honeypot_socket} -> {:noreply, honeypot_socket}
         {:slot_taken, retry_socket} -> {:noreply, retry_socket}
+        {:series_unavailable, series_socket} -> {:noreply, series_socket}
         {:error, error_socket} -> {:noreply, error_socket}
       end
   """
@@ -302,7 +307,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:form, form)
       |> Series.forget_booked()
 
-    # Prepare parameters for orchestrator
     params = %{
       form_data: sanitized_params,
       meeting_params:
@@ -404,8 +408,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   defp handle_expired_preview(socket) do
     # Log it. A blocked submission produces no meeting row, no email and no
     # exception, so without this line the only trace is a flash the visitor
-    # sees and nobody else does. That is what made #84 so hard to pin down:
-    # the server log showed the submit being accepted and then simply stopping.
+    # sees and nobody else does.
     Logger.warning("Booking blocked: preview claimed without a valid owner token",
       organizer_user_id: socket.assigns[:organizer_user_id],
       theme_id: socket.assigns[:theme_id]
@@ -472,9 +475,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   #      blocks the submission with an explicit error.
   #
   #      The claim must therefore only ever come from a parameter a visitor
-  #      cannot trip over by accident. `?theme=` used to set it, which turned
-  #      this branch into a silent booking outage for anyone who switched
-  #      language (#84); `PreviewMode.claimed?/1` now owns that rule.
+  #      cannot trip over by accident (`?preview=`, never `?theme=`, which any
+  #      visitor's URL may carry); `PreviewMode.claimed?/1` alone owns that
+  #      rule.
   #
   #   3. Neither flag set — a normal public booking; dispatch to the real
   #      (or SaaS-demo-mode) orchestrator.

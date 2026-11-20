@@ -250,8 +250,8 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
   The `--theme-background` custom property for a descriptor.
 
   Gradients and colours are the background itself. Behind an image or a video
-  (or when nothing resolved) the page shows the palette's canvas colour, as it
-  always has; with no palette either, the theme's own default stands.
+  (or when nothing resolved) the page shows the palette's canvas colour; with
+  no palette either, the theme's own default stands.
   """
   @spec vars(descriptor() | nil, Tokens.css_vars()) :: Tokens.css_vars()
   def vars(%{kind: :gradient, css: css}, _palette_vars), do: %{"--theme-background" => css}
@@ -274,7 +274,6 @@ defmodule Tymeslot.ThemeCustomizations.Options.Background do
         %{src: "/uploads/" <> base <> variant.suffix, type: variant.type, media: variant.media}
       end)
 
-    # The original upload is always the last fallback.
     variants ++ [%{src: upload_url(path), type: "video/mp4", media: nil}]
   end
 

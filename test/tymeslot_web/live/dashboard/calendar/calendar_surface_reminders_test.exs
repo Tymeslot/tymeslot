@@ -99,7 +99,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRemindersTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
       lv |> element("#calendar-display-options > button") |> render_click()
-      lv |> element("#calendar-desktop-reminders") |> render_click()
+
+      lv
+      |> element("#calendar-desktop-reminders")
+      |> render_hook("calendar:enable_desktop_reminders", %{"permission" => "granted"})
 
       assert feed(lv) =~ ~s(data-enabled="true")
       assert feed(lv) =~ "Reminder: Design review"

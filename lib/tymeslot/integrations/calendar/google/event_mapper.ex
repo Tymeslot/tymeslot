@@ -109,9 +109,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     properties = body["extendedProperties"] || %{}
     private = Map.put(properties["private"] || %{}, "createdBy", "tymeslot")
 
-    # The instance that created the event, not the hosted service: a
-    # self-hoster's Google events used to point their attendees at a site
-    # they have nothing to do with.
+    # The instance that created the event, not the hosted service, so a
+    # self-hoster's attendees are pointed at their own site.
     Map.merge(body, %{
       "source" => %{"title" => "Tymeslot", "url" => UrlBuilder.base_url()},
       "extendedProperties" => Map.put(properties, "private", private)
@@ -296,22 +295,29 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   defp stringify_keys(list) when is_list(list), do: Enum.map(list, &stringify_keys/1)
   defp stringify_keys(other), do: other
 
-  # Reminders sync to Google as explicit overrides (`useDefault: false`). When no
-  # reminders are present the key is omitted entirely, so Google applies the
-  # calendar's default reminders. The canonical inbound shape is
-  # `%{method: :popup | :email, minutes_before: integer}`.
+  # Reminders sync to Google as explicit overrides (`useDefault: false`). An
+  # empty list is ambiguous: a booking or a new event that chose none, and a
+  # synced event on the calendar's defaults (which the sync caches as none),
+  # both carry `[]`, and both want Google's defaults, so the key is left out
+  # and Google applies them (on an update's `PUT` as on a create). Only an
+  # edit that takes every reminder off marks its payload `:reminders_cleared`,
+  # and that is sent as an empty override list, which Google keeps as none.
+  # The canonical inbound shape is `%{method: :popup | :email, minutes_before:
+  # integer}`.
   defp maybe_add_reminders(base_data, event_data) do
     case get_field_value(event_data, :reminders) do
       reminders when is_list(reminders) and reminders != [] ->
-        Map.put(base_data, "reminders", %{
-          "useDefault" => false,
-          "overrides" => Enum.map(reminders, &reminder_override/1)
-        })
+        Map.put(base_data, "reminders", reminders_body(reminders))
 
       _none ->
-        base_data
+        if get_field_value(event_data, :reminders_cleared) == true,
+          do: Map.put(base_data, "reminders", reminders_body([])),
+          else: base_data
     end
   end
+
+  defp reminders_body(reminders),
+    do: %{"useDefault" => false, "overrides" => Enum.map(reminders, &reminder_override/1)}
 
   # Reminder maps reach here either atom-keyed (freshly built in the create/edit
   # flow) or string-keyed (round-tripped through the JSONB cache column). Key

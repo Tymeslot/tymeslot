@@ -36,9 +36,9 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
   no personal link for, which is the booking's guests and the "Join video
   call" line in a calendar event's description. It is the attendee's token
   without the `name` and `email` claims, so a holder enters unnamed rather
-  than as the booker, and never as a moderator. Before it existed those
-  recipients were handed the bare room URL, which a server enforcing tokens
-  simply refuses.
+  than as the booker, and never as a moderator. Without a token those
+  recipients would have only the bare room URL, which a server enforcing
+  tokens simply refuses.
 
   The credentials are optional, but all or nothing: `validate_config/1`
   refuses half a pair, and a secret shorter than 32 bytes, since every guest

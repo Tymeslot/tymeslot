@@ -19,19 +19,15 @@ defmodule Tymeslot.Bookings.RescheduleGate do
   # the reschedule *is* a new request, so the whole approval record is reset
   # rather than partially updated: a stale `approval_resolved_at` would make
   # the new request look answered, a stale `approval_nudge_sent_at` would
-  # suppress the nudge for a window that has not been nudged, and a stale
-  # `announced_at` would leave `Events.meeting_created/1`'s once-per-meeting
-  # claim (`Tymeslot.Meetings.MeetingDeliveryQueries.claim_announcement/1`) already spent — the host's
-  # second approval would then win the DB transition but lose the fan-out,
-  # so the invitee gets no reminders for the new time and the integration
-  # channels never hear that it moved. Clearing it costs nothing that is
-  # needed later: `first_announced_at` keeps the permanent record that this
-  # booking was once a live meeting, which is what `Approval` reads when it
-  # decides whether releasing the request refunds it, and what the claim reads
-  # to announce the approval to webhooks, Telegram and Slack as
-  # `meeting.rescheduled` rather than a second `meeting.created`. The
-  # deadline is computed from now and capped at the new start time, exactly
-  # as an original booking's is.
+  # suppress its nudge, and a stale `announced_at` would leave
+  # `Events.meeting_created/1`'s once-per-meeting claim
+  # (`Tymeslot.Meetings.MeetingDeliveryQueries.claim_announcement/1`) spent,
+  # so the host's approval would win the transition but lose the fan-out.
+  # Clearing it loses nothing: `first_announced_at` keeps the record that
+  # the booking was once live, which `Approval` reads to decide the refund
+  # and the claim reads to announce `meeting.rescheduled` rather than a
+  # second `meeting.created`. The deadline is computed from now and capped
+  # at the new start time, as an original booking's is.
   #
   # A meeting type can also stop requiring approval while one of its bookings
   # is still held. Moving that booking must not leave it stranded in the

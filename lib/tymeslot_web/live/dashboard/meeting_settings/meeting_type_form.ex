@@ -241,7 +241,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         id when is_integer(id) -> id
       end
 
-    # Send a message to parent to fetch fresh calendars
     send(self(), {:refresh_calendar_list, socket.assigns.id, integration_id})
 
     socket =

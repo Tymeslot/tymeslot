@@ -119,10 +119,8 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   whose place a new repeat rule no longer has cannot be carried. A
   write that fails after the split is logged, and the edit still succeeds.
 
-  The series' rows are then deleted and a sync requested, as for an edit of
-  every occurrence, which brings back both halves; the series' recorded video
-  rooms move to the new series, whose occurrences carry its join link on
-  (`Tymeslot.CalendarGrid.EventVideoRooms.series_split/3`).
+  The rows, the sync and the video rooms are handled as for the CalDAV
+  split above.
 
   ## Failure
 
@@ -505,16 +503,34 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   """
   @spec request_sync(String.t() | atom(), pos_integer()) :: :ok
   def request_sync(provider, integration_id) do
-    case SyncSchedule.request_sync(%{provider: to_string(provider), id: integration_id}) do
-      {:ok, _job} ->
-        :ok
+    %{provider: to_string(provider), id: integration_id}
+    |> SyncSchedule.request_sync()
+    |> log_unqueued(integration_id)
+  end
 
-      {:error, reason} ->
-        Logger.warning("Could not request a sync after writing a whole series",
-          calendar_integration_id: integration_id,
-          reason: LogFormat.reason(reason)
-        )
-    end
+  @doc """
+  Requests a sync of the integration `integration_id`, whose provider is
+  `provider`, after a write that cached a new series as one row standing in
+  for it, as `request_sync/2` does, except that a sync waiting out an
+  error's backoff is left to it
+  (`SyncSchedule.request_sync_unless_backing_off/1`). Nothing is missing
+  from the grid meanwhile, since the series is previewed from that row, so
+  a failing provider is not asked again before its backoff ends.
+  """
+  @spec request_sync_unless_backing_off(String.t() | atom(), pos_integer()) :: :ok
+  def request_sync_unless_backing_off(provider, integration_id) do
+    %{provider: to_string(provider), id: integration_id}
+    |> SyncSchedule.request_sync_unless_backing_off()
+    |> log_unqueued(integration_id)
+  end
+
+  defp log_unqueued({:ok, _job_or_backing_off}, _integration_id), do: :ok
+
+  defp log_unqueued({:error, reason}, integration_id) do
+    Logger.warning("Could not request a sync after writing a whole series",
+      calendar_integration_id: integration_id,
+      reason: LogFormat.reason(reason)
+    )
   end
 
   defp refuse(reason), do: {:error, %{reason: reason, retry: :not_queued}}

@@ -42,7 +42,6 @@ defmodule Tymeslot.Utils.UrlBuilder do
   def build_url(path) when is_binary(path) do
     base = base_url()
 
-    # Ensure path starts with /
     path = if String.starts_with?(path, "/"), do: path, else: "/#{path}"
 
     "#{base}#{path}"

@@ -37,8 +37,9 @@ defmodule CredoChecks.MigrationConstraintSafety do
   ## How to fix
 
   Add an `execute(\"UPDATE ...\")` or `execute(\"DELETE ...\")` step before the
-  constraint to handle existing data that may violate it. See the Migrations
-  section in CLAUDE.md for the full convention.
+  constraint to handle existing data that may violate it: backfill NULLs,
+  deduplicate rows, or repair rows that break the check, so the migration
+  succeeds on any existing database.
 
   ## Examples
 

@@ -32,8 +32,8 @@ defmodule Tymeslot.Integrations.Calendar.Primary do
   def set_primary_calendar_integration(user_id, integration_id) do
     with {:ok, integration} <- validate_and_prepare_integration(user_id, integration_id),
          {:ok, _profile} <- update_profile_primary(user_id, integration_id) do
-      # We no longer clear other booking calendars here, as booking is managed per meeting type.
-      # We just ensure the newly primary integration has a default set for fallback.
+      # Booking is managed per meeting type, so other booking calendars are
+      # left alone; the new primary just gets a default set for fallback.
       updated = ensure_default_booking_calendar(integration)
       {:ok, updated}
     else

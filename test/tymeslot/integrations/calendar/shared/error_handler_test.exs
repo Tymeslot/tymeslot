@@ -134,4 +134,65 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandlerTest do
                ErrorHandler.classify_and_format(:malformed_response, :google)
     end
   end
+
+  # A company calendar server reachable only on the office network or over a
+  # VPN times out from Tymeslot exactly as a slow one does, and "try again"
+  # sends its owner round the same loop. Only a server the owner names can be
+  # such a one; a provider with a fixed address keeps the category's wording.
+  describe "a timeout from a server the owner names" do
+    @unreachable_advice "only reachable from your organisation's network or over a VPN"
+
+    test "points at the network the server sits on" do
+      for provider <- [:zimbra, :caldav, :nextcloud, :radicale, :baikal] do
+        assert {:timeout, message} = ErrorHandler.classify_and_format(:timeout, provider)
+        assert message =~ @unreachable_advice
+      end
+
+      assert {:timeout, "Zimbra did not respond in time." <> _rest} =
+               ErrorHandler.classify_and_format(:timeout, :zimbra)
+    end
+
+    test "gives Exchange the same advice, since EWS reaches only an on-premises server" do
+      assert {:timeout, "Exchange did not respond in time." <> rest} =
+               ErrorHandler.classify_and_format(:timeout, :exchange)
+
+      assert rest =~ @unreachable_advice
+    end
+
+    # A connection test that answers a raw reason is worded here, not by
+    # `classify_and_format/3`, and must read the same.
+    test "reads the same from sanitize_error_message/2" do
+      for provider <- [:zimbra, :caldav, :nextcloud, :radicale, :baikal, :exchange] do
+        assert {:timeout, ErrorHandler.sanitize_error_message(:timeout, provider)} ==
+                 ErrorHandler.classify_and_format(:timeout, provider)
+      end
+
+      for provider <- [:apple, :mailbox_org, :google, :outlook] do
+        assert ErrorHandler.sanitize_error_message(:timeout, provider) ==
+                 "The request timed out. Please try again."
+      end
+    end
+
+    test "keeps the category's wording for a provider with a fixed address" do
+      for provider <- [:apple, :mailbox_org, :google, :outlook] do
+        assert {:timeout, message} = ErrorHandler.classify_and_format(:timeout, provider)
+        assert message =~ "timed out"
+        refute message =~ @unreachable_advice
+      end
+    end
+  end
+
+  describe "classify_and_format/3 logging" do
+    test "logs the failure at warning with its category and operation" do
+      LogCapture.attach()
+
+      ErrorHandler.classify_and_format(:timeout, :zimbra, %{operation: "discovery"})
+
+      assert_receive {:captured_log, %{level: :warning, msg: msg, meta: meta}}
+      assert LogCapture.message_text(msg) == "Calendar connection failed"
+      assert meta.provider == :zimbra
+      assert meta.category == :timeout
+      assert meta.operation == "discovery"
+    end
+  end
 end

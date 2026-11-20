@@ -87,7 +87,7 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
   end
 
   # `auth: :always` makes a rejected login fail loudly, but it also refuses a
-  # relay that offers no AUTH at all, which `:if_available` used to send to
+  # relay that offers no AUTH at all, which `:if_available` would send to
   # without logging in. Credentials left configured for such a relay are a
   # harmless leftover rather than a wrong password, so that one case is
   # reopened without a login instead of failing every send. Stripping AUTH

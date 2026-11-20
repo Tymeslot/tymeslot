@@ -98,6 +98,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
           last_notified_state: map(),
           video_link: String.t() | nil,
           video_integration_id: integer() | nil,
+          preview_of: t() | nil,
+          preview_key: String.t() | nil,
           video_integration:
             Tymeslot.Integrations.Video.VideoIntegrationSchema.t()
             | Ecto.Association.NotLoaded.t()
@@ -184,6 +186,12 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
 
     # Video conferencing
     field :video_link, :string
+
+    # Set only on an occurrence `Tymeslot.Integrations.Calendar.SeriesPreview`
+    # computed from a series no sync has cached yet: the series' own row, and
+    # the slot's key. Never stored.
+    field :preview_of, :any, virtual: true
+    field :preview_key, :string, virtual: true
 
     belongs_to :calendar_integration, CalendarIntegrationSchema
 

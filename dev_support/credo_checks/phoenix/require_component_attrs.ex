@@ -97,7 +97,6 @@ defmodule CredoChecks.Phoenix.RequireComponentAttrs do
     {ast, issues}
   end
 
-  # Check if module uses Phoenix.Component
   defp uses_phoenix_component?(body) when is_list(body) do
     Enum.any?(body, fn
       {:use, _, [{:__aliases__, _, [:Phoenix, :Component]} | _]} -> true

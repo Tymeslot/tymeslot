@@ -2,10 +2,10 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
   @moduledoc """
   Lands the booker on the first bookable day instead of an empty grid.
 
-  Entering the schedule step used to assign nothing but the current
-  month: `selected_date` stayed `nil`, so the booker faced a month of
-  greyed-out squares and had to hunt for a live one before a single time
-  appeared. Where the host was fully booked for the rest of the month
+  Entering the schedule step assigns only the current month, so
+  `selected_date` stays `nil` and the booker would face a month of
+  greyed-out squares, hunting for a live one before a single time
+  appears. Where the host was fully booked for the rest of the month
   that hunt failed silently — the grid renders an all-disabled month
   exactly the same way it renders a month nobody has looked at yet, and
   nothing on screen suggests pressing "next month" would help.
@@ -148,11 +148,10 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailable do
   # params never reach `handle_params/3`. A linked day outside the booking
   # window never gets this far: the schedule-step entry drops it.
   #
-  # A date is the only thing that counts as chosen. A reschedule used to be
-  # treated as one too, on the belief that its link carried a date; it does
-  # not — `PathHandlers.organizer_scheduling_path/1` builds
-  # `/:username?reschedule_meeting_uid=…` and nothing else — so the check only
-  # ever switched the landing off for the people most in need of it.
+  # A date is the only thing that counts as chosen. A reschedule link carries
+  # none (`PathHandlers.organizer_scheduling_path/1` builds
+  # `/:username?reschedule_meeting_uid=…` and nothing else), so a reschedule
+  # still gets the landing.
   defp explicitly_chosen?(socket) do
     socket.assigns[:selected_date] not in [nil, ""]
   end

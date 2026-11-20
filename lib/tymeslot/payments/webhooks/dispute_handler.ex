@@ -109,7 +109,6 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
               # Alert admin (log and potentially other notifications)
               alert_admin_dispute_created(dispute_id, user_id, amount, reason)
 
-              # Send email to admin
               send_dispute_created_alert(alert_data(dispute, user_id))
 
               {:ok, :dispute_created}
@@ -234,8 +233,8 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     Map.get(charge, "customer") || Map.get(charge, :customer)
   end
 
-  # Charges from subscription invoices used to carry invoice/subscription
-  # references; Stripe API 2025-03-31.basil removed both from the charge.
+  # Stripe API 2025-03-31.basil omits the invoice and subscription references
+  # from a charge, so a subscription charge cannot be recognised by them.
   # When they are absent, fall back to our own records: one-off charges
   # always have a local transaction for their customer, so a customer
   # without one can only mean a subscription charge. Without a configured
@@ -349,11 +348,8 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     end
   end
 
-  # `:admin_email` was declared in no config file, so the fallback was always
-  # what shipped — a hosted-service address baked into the open-source core.
-  # `:admin_alert_email` is the key this codebase actually declares and
-  # documents for operator alerts (`config.exs`, `runtime.exs`), and an overlay
-  # that wants a different address sets that one.
+  # `:admin_alert_email` is the declared key for operator alerts (`config.exs`,
+  # `runtime.exs`), and an overlay that wants a different address sets that one.
   defp get_admin_email do
     Application.get_env(:tymeslot, :admin_alert_email)
   end

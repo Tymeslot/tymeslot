@@ -239,6 +239,31 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       assert reloaded.needs_reauth == true
       assert Encryption.decrypt(reloaded.password_encrypted) == "oldpass"
     end
+
+    # A server behind the owner's VPN times out from Tymeslot; the modal says
+    # so rather than asking them to try again.
+    test "a server that does not answer: the modal names the network it may sit on", %{
+      conn: conn,
+      integration: integration
+    } do
+      ReqTest.stub(:tymeslot_http, &ReqTest.transport_error(&1, :timeout))
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      view
+      |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      view
+      |> form("form[phx-submit='reconnect_caldav_discover']",
+        reconnect: %{url: integration.base_url, username: "alice", password: "newpass"}
+      )
+      |> render_submit()
+
+      assert view
+             |> element("form[phx-submit='reconnect_caldav_discover']")
+             |> render() =~ "only reachable from your organisation&#39;s network or over a VPN"
+    end
   end
 
   describe "account change reconnect" do

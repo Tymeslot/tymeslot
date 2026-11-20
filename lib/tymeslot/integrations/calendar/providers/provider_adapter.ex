@@ -8,7 +8,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
 
   require Logger
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CreatedEvent
@@ -153,19 +152,10 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             error
 
           # An %Outcome{} carries the full events list of every calendar
-          # that succeeded in the round; never let it reach `inspect/1`
-          # below. Log only the operational summary.
-          {:error, %Outcome{} = outcome} = error ->
-            Logger.error("Failed to get events in range",
-              provider: adapter_client.provider_type,
-              attempted: outcome.attempted,
-              succeeded: outcome.succeeded,
-              failed:
-                Enum.map(outcome.failed, fn %{source: source, reason: reason} ->
-                  %{source: source, reason: Redactor.redact_and_truncate(reason)}
-                end)
-            )
-
+          # that succeeded in the round, so it must never reach `inspect/1`
+          # below; its failures were already logged, once each, by the
+          # `FetchAggregate.collect/3` that classified them.
+          {:error, %Outcome{}} = error ->
             error
 
           {:error, reason} = error ->
@@ -374,7 +364,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             deleted_occurrence
 
           {:ok, _deleted} ->
-            # Be tolerant of providers that return {:ok, payload}
             Logger.info("Successfully deleted event", uid: uid)
             :ok
 

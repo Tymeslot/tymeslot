@@ -8,9 +8,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
 
   With a guest, the form offers to send the draft as a Tymeslot meeting
   (`PanelMeetingFields`, `PanelMeeting`). A meeting has times, is busy and
-  has no place of its own, so All day, Show as and Place give way to the
-  meeting's fields while it is ticked, and Notes becomes the note to the
-  guests.
+  takes its place from its own fields, so All day, Show as, Place and the
+  event's reminders (`PanelNewReminders`) give way to the meeting's fields
+  while it is ticked, and Notes becomes the
+  note to the guests.
+
+  A plain event can repeat (`PanelNewRepeat`): a common pattern named for
+  its start, or one set in the repeat editor behind Custom…, so the series
+  is created at once.
+
+  Without a calendar to write to, only a Tymeslot meeting can be made: its
+  calendar is none (Tymeslot only), Repeat, which only an event has, gives
+  way, and for anything else Create is off beside a note that says why.
 
   Without guests, and on a plan with group bookings, it offers to make the
   draft a group event instead (`PanelGroupEventFields`, `PanelGroupEvent`).
@@ -23,13 +32,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Venues
+  alias TymeslotWeb.Components.Calendar.RecurrenceEditor
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
   alias TymeslotWeb.Dashboard.Calendar.PanelGroupEvent
   alias TymeslotWeb.Dashboard.Calendar.PanelGroupEventFields
   alias TymeslotWeb.Dashboard.Calendar.PanelGuestsField
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelMeetingFields
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewGuests
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewReminders
   alias TymeslotWeb.Dashboard.Calendar.PanelVideoField
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
 
   attr :values, :map, required: true, doc: "the typed values (`panel.form`)"
   attr :saving, :boolean, required: true
@@ -39,7 +53,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
   attr :surface, :any, required: true
   attr :group_allowed, :boolean, default: false
   attr :venues, :list, default: []
+  attr :reminder_picker, :map, default: nil, doc: "the meeting's `ReminderPickerState`"
   attr :timezone, :string, default: "Etc/UTC"
+  attr :has_accounts, :boolean, default: false, doc: "whether any calendar account is connected"
+  attr :guest_error, :string, default: nil, doc: "why the last guest address was not added"
+  attr :provider, :string, default: nil, doc: "the provider of the draft's calendar"
+  attr :repeat, :map, default: nil, doc: "the Repeat field, from `PanelNewRepeat.field/4`"
 
   @spec new_form(map()) :: Phoenix.LiveView.Rendered.t()
   def new_form(assigns) do
@@ -53,7 +72,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         group_offered:
           assigns.calendar_choices != [] and
             PanelGroupEvent.offered?(assigns.group_allowed, assigns.values),
-        timed: PanelMeeting.on?(assigns.values) or group
+        timed: PanelMeeting.on?(assigns.values) or group,
+        # Without a calendar to write to only a Tymeslot meeting can be made.
+        blocked: assigns.calendar_choices == [] and not PanelMeeting.on?(assigns.values)
       )
 
     ~H"""
@@ -115,7 +136,52 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           label={dgettext("dashboard_calendar_editing", "Ends")}
         />
       </div>
-      <PanelCalendarField.calendar_field choices={@calendar_choices} value={@values["calendar"]} />
+      <%!-- Only a plain event repeats, and without a calendar to write to
+            there is none to make. --%>
+      <div
+        :if={@repeat && !@meeting && !@group && @calendar_choices != []}
+        id="calendar-panel-new-repeat"
+        class="space-y-1"
+      >
+        <.select
+          id="calendar-panel-new-repeat-preset"
+          name="repeat"
+          label={dgettext("dashboard_calendar_editing", "Repeat")}
+          value={@repeat.current}
+          options={@repeat.options}
+          disabled={not @repeat.writable}
+        />
+        <p
+          :if={@repeat.summary}
+          id="calendar-panel-new-repeat-summary"
+          class="text-token-xs text-tymeslot-500"
+        >
+          {@repeat.summary}
+        </p>
+        <p :if={not @repeat.writable} class="text-token-xs text-tymeslot-500">
+          {CalendarEditMessages.repeat_refusal(:not_supported)}
+        </p>
+        <RecurrenceEditor.recurrence_editor
+          :if={@repeat.current == "custom" and @repeat.writable}
+          embedded
+          recurrence_rule={@repeat.rule}
+          timezone={@repeat.timezone}
+          start={@repeat.start}
+          myself={@surface}
+          key="panel-new-repeat"
+          change_event="panel:draft_change"
+        />
+      </div>
+      <PanelCalendarField.calendar_field
+        :if={@calendar_choices != []}
+        choices={@calendar_choices}
+        value={@values["calendar"]}
+      />
+      <PanelCalendarField.no_calendar
+        :if={@calendar_choices == []}
+        meeting={@meeting}
+        has_accounts={@has_accounts}
+      />
       <div :if={!@meeting and !@group}>
         <.select
           id="calendar-panel-new-free"
@@ -133,8 +199,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
             else: dgettext("dashboard_calendar_editing", "Guests can't book this time")}
         </p>
       </div>
+      <.select
+        :if={!@meeting and !@group and @venues != []}
+        id="calendar-panel-new-venue"
+        name="location_venue"
+        label={dgettext("dashboard_calendar_editing", "Saved location")}
+        prompt={dgettext("dashboard_calendar_editing", "None, or type a place")}
+        options={Enum.map(@venues, &{Venues.display(&1), to_string(&1.id)})}
+        value={@values["location_venue"]}
+      />
       <.input
-        :if={!@meeting and !@group}
+        :if={!@meeting and !@group and @values["location_venue"] in [nil, ""]}
         id="calendar-panel-new-location"
         name="location"
         value={@values["location"]}
@@ -145,13 +220,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
         video_integrations={@video_integrations}
         value={@values["video_integration_id"]}
       />
+      <PanelNewReminders.field
+        :if={!@meeting and !@group}
+        values={@values}
+        provider={@provider}
+        surface={@surface}
+      />
       <PanelGuestsField.draft_guests
         :if={!@group}
         guests={@values["guests"]}
+        typed={@values["guest_email"]}
+        full={PanelNewGuests.full?(@values)}
+        error={@guest_error}
         form_key={@guest_form_key}
         surface={@surface}
       />
-      <PanelMeetingFields.meeting_fields :if={!@group} values={@values} />
+      <PanelMeetingFields.meeting_fields
+        :if={!@group}
+        values={@values}
+        venues={@venues}
+        reminder_picker={@reminder_picker}
+        surface={@surface}
+      />
       <PanelGroupEventFields.group_event_fields
         :if={@group_offered}
         values={@values}
@@ -177,7 +267,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           )}
         </p>
       </div>
-      <div class="flex justify-end gap-2 border-t border-tymeslot-100 pt-3">
+      <%!-- Enter in a field submits with the form's first submit button,
+            the guest field's Add, which adds the typed guest and never
+            creates. Where that field gives way (a group event, a meeting at
+            its guest limit) this disabled stand-in comes first instead, so
+            Enter does nothing rather than create. --%>
+      <.action_button
+        :if={@group or PanelNewGuests.full?(@values)}
+        id="calendar-panel-new-enter"
+        type="submit"
+        disabled
+        class="hidden"
+        aria-hidden="true"
+        tabindex="-1"
+      >
+        {dgettext("dashboard_calendar_editing", "Add")}
+      </.action_button>
+      <%!-- Wraps where the labels are longer than the panel is wide, as
+            "Create and invite" is in some languages, rather than pushing
+            Cancel out of view. --%>
+      <div class="flex flex-wrap justify-end gap-2 border-t border-tymeslot-100 pt-3">
         <.action_button
           id="calendar-panel-new-cancel"
           type="button"
@@ -193,9 +302,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewForm do
           name="intent"
           value="create"
           variant={:primary}
-          disabled={@saving}
+          disabled={@saving or @blocked}
+          aria-describedby={@blocked && "calendar-panel-calendar-note"}
         >
-          {if @group or @values["guests"] == [],
+          {if @group or not PanelMeeting.guests?(@values),
             do: dgettext("dashboard_calendar_editing", "Create"),
             else: dgettext("dashboard_calendar_editing", "Create and invite")}
         </.action_button>

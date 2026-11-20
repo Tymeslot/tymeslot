@@ -14,12 +14,18 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   The job deletes what the cached row says when it runs, so an edit made in
   another tab during the window is deleted too.
 
-  When it runs (`perform/1`) the seat lock is checked again, the event is
-  deleted through `EventDeletion.delete_event/4`, and the outcome is
+  Both ends ask `EditGuard.write_gates/3`: `schedule/4` refuses an event the
+  organiser may not change before anything is stored, and when it runs
+  (`perform/1`) the delete goes through `EventDeletion.delete_event/4`,
+  which asks the gates again, since the calendar may have been disconnected
+  or a seat booked during the window; a refusal then is reported as
+  `{:failed, reason}`. The outcome is
   broadcast on the organiser's calendar topic as
-  `{:calendar_delete_result, user_id, token, outcome}`: `:deleted`,
-  `{:queued, reason}` when the delete will be replayed on the next sync, or
-  `{:failed, reason}`.
+  `{:calendar_delete_result, user_id, token, outcome}`: `:deleted`;
+  `{:deleted, :cancel_failed}` when the event is gone but its linked meeting
+  could not be cancelled, or `{:deleted, :attendees_not_notified}` when it is
+  gone but the attendees it was meant to tell could not be; `{:queued, reason}`
+  when the delete will be replayed on the next sync, or `{:failed, reason}`.
 
   A rate-limited or circuit-open delete snoozes instead of failing, and both
   kinds of snooze count towards one cap of five snoozes, after which the
@@ -65,7 +71,11 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   ]
 
   @type token :: pos_integer()
-  @type outcome :: :deleted | {:queued, term()} | {:failed, term()}
+  @type outcome ::
+          :deleted
+          | {:deleted, :cancel_failed | :attendees_not_notified}
+          | {:queued, term()}
+          | {:failed, term()}
 
   @doc "Seconds between a delete and its run, while Undo can cancel it."
   @spec undo_delay() :: pos_integer()
@@ -76,10 +86,17 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   `delay` (seconds, default `undo_delay/0`), `notify_attendees`
   (default `false`) and `tab` (the browser tab that asked, kept with the
   job so only that tab offers Undo again after a reload; see `pending/1`).
+  An event `EditGuard.write_gates/3` refuses is refused with its reason, and
+  nothing is scheduled.
   """
   @spec schedule(pos_integer(), map(), EventDeletion.scope(), keyword()) ::
           {:ok, token()} | {:error, term()}
   def schedule(user_id, event, scope, opts \\ []) when scope in [:occurrence, :series] do
+    with :ok <- EditGuard.write_gates(user_id, event, :change),
+         do: insert(user_id, event, scope, opts)
+  end
+
+  defp insert(user_id, event, scope, opts) do
     delay = Keyword.get(opts, :delay, @undo_delay)
 
     args =
@@ -95,10 +112,12 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
 
     case args |> CalendarEventDeleteWorker.new(schedule_in: delay) |> Oban.insert() do
       {:ok, %Oban.Job{id: id}} ->
+        # The other tabs hear whether it tells the attendees, so a delete
+        # queued for the next sync says there too that they were not told.
         SyncBroadcast.broadcast_delete_scheduled(
           user_id,
           id,
-          Map.take(event, @address_fields),
+          event |> Map.take(@address_fields) |> Map.put(:notify_attendees, args.notify_attendees),
           scope
         )
 
@@ -131,8 +150,9 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   The user's deletes that are still waiting, running or retrying, for a
   surface to hide their events and offer Undo again after a reload. Each entry
   carries the `token` Undo takes, the address the delete was scheduled with,
-  its `scope`, when it is due and the `tab` that scheduled it (`nil` when
-  none was named, as for a job stored before tabs were). `undoable?` is false for a delete that was
+  its `scope`, when it is due, the `tab` that scheduled it (`nil` when
+  none was named, as for a job stored before tabs were) and whether it tells
+  the attendees (`notify_attendees?`). `undoable?` is false for a delete that was
   confirmed (it tells someone, so it was scheduled with no undo window) and
   while a job is running or retrying. A silent delete a rate limit snoozed
   is back in `scheduled` and still undoable, which is harmless: nothing has
@@ -150,6 +170,7 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
         scope: scope(args),
         scheduled_at: scheduled_at,
         tab: Map.get(args, "tab"),
+        notify_attendees?: Map.get(args, "notify_attendees") == true,
         undoable?: Map.get(args, "undoable") != false and state in ["scheduled", "available"]
       })
     end)
@@ -242,13 +263,9 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   defp delete(user_id, event, args) do
     notify? = args["notify_attendees"] == true
 
-    with :ok <- EditGuard.seat_lock(user_id, event),
-         {:ok, _deleted} <-
-           EventDeletion.delete_event(user_id, event, scope(args), notify_attendees: notify?) do
-      :deleted
-    else
-      {:error, :group_booking} ->
-        {:failed, :group_booking}
+    case EventDeletion.delete_event(user_id, event, scope(args), notify_attendees: notify?) do
+      {:ok, deleted} ->
+        deleted_outcome(deleted)
 
       # The calendar says it is gone already; the cached row has to follow it
       # or the event would reappear until the next sync.
@@ -260,6 +277,12 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
         classify(reason, retry, event)
     end
   end
+
+  # Gone from the calendar, but the meeting it belonged to or the attendees it
+  # was meant to tell were left behind, which the organiser has to hear.
+  defp deleted_outcome(%{linked_meeting: :cancel_failed}), do: {:deleted, :cancel_failed}
+  defp deleted_outcome(%{attendees_notified: :failed}), do: {:deleted, :attendees_not_notified}
+  defp deleted_outcome(_deleted), do: :deleted
 
   defp purge_cached(event, :series) do
     case Occurrence.series_address(event) do

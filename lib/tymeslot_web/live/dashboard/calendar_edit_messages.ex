@@ -8,6 +8,11 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  # What the domain's write gates refuse a move with
+  # (`Tymeslot.CalendarGrid.EditGuard.write_gates/3`), worded as `refusal/1`
+  # words them.
+  @write_gate_refusals [:booking, :unauthorized, :read_only, :group_booking, :syncing]
+
   @doc "The flash level and words for a refusal."
   @spec refusal(term()) :: {:error | :warning, String.t()}
   def refusal({:error, :unauthorized}),
@@ -27,6 +32,14 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
     do: {:warning, dgettext("dashboard_calendar_events", "Too many edits. Please wait a moment.")}
 
   def refusal({:error, :group_booking}), do: {:warning, seat_lock_message()}
+
+  def refusal({:error, :syncing}),
+    do:
+      {:warning,
+       dgettext(
+         "dashboard_calendar_events",
+         "Syncing with your calendar. Open the event to change the whole series."
+       )}
 
   def refusal({:error, :booking}),
     do:
@@ -63,6 +76,24 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
       "Recurring Exchange events cannot be deleted here yet. Please delete this one in your calendar app."
     )
   end
+
+  @doc "The event is gone, but the meeting it belonged to could not be cancelled."
+  @spec deleted_but_meeting_not_cancelled_message() :: String.t()
+  def deleted_but_meeting_not_cancelled_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+    )
+  end
+
+  @doc "The event is gone, but the cancellation for its attendees could not be sent."
+  @spec deleted_but_attendees_not_notified_message() :: String.t()
+  def deleted_but_attendees_not_notified_message,
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "Event deleted, but the attendees could not be notified."
+      )
 
   @doc """
   Why a delete failed. A queued delete will be replayed on the next sync;
@@ -259,6 +290,9 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
   @spec series_move_failed_message(term()) :: String.t()
   def series_move_failed_message(:recurring_event), do: recurring_move_refused_message()
 
+  def series_move_failed_message(reason) when reason in @write_gate_refusals,
+    do: refusal_text(reason)
+
   def series_move_failed_message(:cross_provider_series) do
     dgettext(
       "dashboard_calendar_events",
@@ -346,6 +380,9 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
   @spec move_failed_message(term()) :: String.t()
   def move_failed_message(:recurring_event), do: recurring_move_refused_message()
 
+  def move_failed_message(reason) when reason in @write_gate_refusals,
+    do: refusal_text(reason)
+
   def move_failed_message(_reason) do
     dgettext(
       "dashboard_calendar_events",
@@ -369,4 +406,9 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessages do
 
   def video_changed_message(_url),
     do: dgettext("dashboard_calendar_events", "Video room created.")
+
+  defp refusal_text(reason) do
+    {_level, message} = refusal({:error, reason})
+    message
+  end
 end

@@ -17,6 +17,8 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
   setup :verify_on_exit!
 
+  @key "refund_test:attempt"
+
   # ---------------------------------------------------------------------------
   # Helpers shared across unit tests (no DB needed)
   # ---------------------------------------------------------------------------
@@ -182,7 +184,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     insert(:booking_payment, Map.merge(defaults, Map.new(attrs)))
   end
 
-  describe "issue_refund/3 — full refund" do
+  describe "issue_refund/4 — full refund" do
     test "transitions paid → refunded and updates refunded_amount_cents" do
       payment = paid_booking_payment()
 
@@ -193,11 +195,11 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
         assert params.metadata.meeting_id == payment.meeting_id
         assert params.metadata.booking_payment_id == payment.id
         assert opts[:connect_account] == payment.stripe_account_id
-        assert opts[:idempotency_key] == "refund:#{payment.id}:5000:5000"
+        assert opts[:idempotency_key] == @key
         {:ok, %{id: "re_full"}}
       end)
 
-      assert {:ok, updated} = Refunds.issue_refund(payment, 5000)
+      assert {:ok, updated} = Refunds.issue_refund(payment, 5000, @key)
       assert updated.status == :refunded
       assert updated.refunded_amount_cents == 5000
 
@@ -207,17 +209,17 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     end
   end
 
-  describe "issue_refund/3 — partial refund" do
+  describe "issue_refund/4 — partial refund" do
     test "transitions paid → partially_refunded and tracks running total" do
       payment = paid_booking_payment()
 
       expect(StripeAdapterMock, :create_refund, fn params, opts ->
         assert params.amount == 2000
-        assert opts[:idempotency_key] == "refund:#{payment.id}:2000:2000"
+        assert opts[:idempotency_key] == @key
         {:ok, %{id: "re_partial"}}
       end)
 
-      assert {:ok, updated} = Refunds.issue_refund(payment, 2000)
+      assert {:ok, updated} = Refunds.issue_refund(payment, 2000, @key)
       assert updated.status == :partially_refunded
       assert updated.refunded_amount_cents == 2000
     end
@@ -227,12 +229,11 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
       expect(StripeAdapterMock, :create_refund, fn params, opts ->
         assert params.amount == 3000
-        # cumulative after = 2000 (existing) + 3000 (this call) = 5000
-        assert opts[:idempotency_key] == "refund:#{payment.id}:5000:3000"
+        assert opts[:idempotency_key] == @key
         {:ok, %{id: "re_top_up"}}
       end)
 
-      assert {:ok, updated} = Refunds.issue_refund(payment, 3000)
+      assert {:ok, updated} = Refunds.issue_refund(payment, 3000, @key)
       assert updated.status == :refunded
       assert updated.refunded_amount_cents == 5000
     end
@@ -244,31 +245,35 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
         {:ok, %{id: "re_partial2"}}
       end)
 
-      assert {:ok, updated} = Refunds.issue_refund(payment, 1500)
+      assert {:ok, updated} = Refunds.issue_refund(payment, 1500, @key)
       assert updated.status == :partially_refunded
       assert updated.refunded_amount_cents == 2500
     end
   end
 
-  describe "issue_refund/3 — validation" do
+  describe "issue_refund/4 — validation" do
     test "rejects over-refund without calling Stripe" do
       payment = paid_booking_payment()
 
-      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 6000)
+      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 6000, @key)
     end
 
     test "rejects refund that exceeds remaining refundable balance" do
       payment = paid_booking_payment(%{refunded_amount_cents: 4500, status: :partially_refunded})
 
-      # remaining = 500; asking for 600 must error
-      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 600)
+      # remaining = 500; asking for 600 must error. The 4500 recorded could
+      # hold an earlier refund of 600 under this key, so Stripe is asked, and
+      # rejects it as a fresh refund.
+      expect_stripe_rejects_fresh_refund(600)
+
+      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 600, @key)
     end
 
     test "rejects zero or negative amounts" do
       payment = paid_booking_payment()
 
-      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 0)
-      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, -100)
+      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 0, @key)
+      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, -100, @key)
     end
 
     test "rejects already-refunded payment" do
@@ -278,20 +283,22 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
           refunded_amount_cents: 5000
         })
 
-      assert {:error, :already_refunded} = Refunds.issue_refund(payment, 100)
+      expect_stripe_rejects_fresh_refund(100)
+
+      assert {:error, :already_refunded} = Refunds.issue_refund(payment, 100, @key)
     end
 
     test "rejects refund outside the 60-day window" do
       old_paid_at = DateTime.add(DateTime.utc_now(:second), -61, :day)
       payment = paid_booking_payment(%{paid_at: old_paid_at})
 
-      assert {:error, :outside_refund_window} = Refunds.issue_refund(payment, 100)
+      assert {:error, :outside_refund_window} = Refunds.issue_refund(payment, 100, @key)
     end
 
     test "rejects refund when paid_at is missing" do
       payment = paid_booking_payment(%{paid_at: nil, status: :pending})
 
-      assert {:error, :not_paid} = Refunds.issue_refund(payment, 100)
+      assert {:error, :not_paid} = Refunds.issue_refund(payment, 100, @key)
     end
 
     test "rejects a disputed payment with :under_dispute and makes no Stripe call" do
@@ -301,11 +308,11 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       # that no create_refund call is made.
       payment = paid_booking_payment(%{status: :disputed})
 
-      assert {:error, :under_dispute} = Refunds.issue_refund(payment, 100)
+      assert {:error, :under_dispute} = Refunds.issue_refund(payment, 100, @key)
     end
   end
 
-  describe "issue_refund/3 — application fee handling" do
+  describe "issue_refund/4 — application fee handling" do
     test "omits refund_application_fee when application_fee_cents is 0" do
       payment = paid_booking_payment(%{application_fee_cents: 0})
 
@@ -314,7 +321,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
         {:ok, %{id: "re_zero_fee"}}
       end)
 
-      assert {:ok, updated} = Refunds.issue_refund(payment, 1000)
+      assert {:ok, updated} = Refunds.issue_refund(payment, 1000, @key)
       assert updated.status == :partially_refunded
     end
 
@@ -326,11 +333,11 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
         {:ok, %{id: "re_with_fee"}}
       end)
 
-      assert {:ok, _payment} = Refunds.issue_refund(payment, 1000)
+      assert {:ok, _payment} = Refunds.issue_refund(payment, 1000, @key)
     end
   end
 
-  describe "issue_refund/3 — Stripe failure" do
+  describe "issue_refund/4 — Stripe failure" do
     test "returns the Stripe error and does not update the row" do
       payment = paid_booking_payment()
 
@@ -338,7 +345,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
         {:error, :stripe_failure}
       end)
 
-      assert {:error, :stripe_failure} = Refunds.issue_refund(payment, 1000)
+      assert {:error, :stripe_failure} = Refunds.issue_refund(payment, 1000, @key)
 
       reloaded = BookingPaymentQueries.by_charge_id(payment.stripe_charge_id)
       assert reloaded.status == :paid
@@ -346,7 +353,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     end
   end
 
-  describe "issue_refund/3 — email enqueueing" do
+  describe "issue_refund/4 — email enqueueing" do
     test "enqueues a SendBookingPaymentRefunded job after a successful refund" do
       payment = paid_booking_payment()
 
@@ -354,7 +361,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
         {:ok, %{id: "re_email"}}
       end)
 
-      assert {:ok, _updated} = Refunds.issue_refund(payment, 5000)
+      assert {:ok, _updated} = Refunds.issue_refund(payment, 5000, @key)
 
       assert_enqueued(
         worker: SendBookingPaymentRefunded,
@@ -369,13 +376,13 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
         {:error, :stripe_failure}
       end)
 
-      assert {:error, :stripe_failure} = Refunds.issue_refund(payment, 5000)
+      assert {:error, :stripe_failure} = Refunds.issue_refund(payment, 5000, @key)
 
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end
   end
 
-  describe "issue_refund/3 — reason metadata" do
+  describe "issue_refund/4 — reason metadata" do
     test "passes the supplied reason through to Stripe" do
       payment = paid_booking_payment()
 
@@ -384,7 +391,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
         {:ok, %{id: "re_reason"}}
       end)
 
-      assert {:ok, _payment} = Refunds.issue_refund(payment, 500, "requested_by_customer")
+      assert {:ok, _payment} = Refunds.issue_refund(payment, 500, @key, "requested_by_customer")
     end
 
     test "omits the reason param when none is supplied" do
@@ -397,11 +404,94 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
         {:ok, %{id: "re_no_reason"}}
       end)
 
-      assert {:ok, _payment} = Refunds.issue_refund(payment, 500)
+      assert {:ok, _payment} = Refunds.issue_refund(payment, 500, @key)
     end
   end
 
-  describe "refund_payment_for_host/4" do
+  describe "issue_refund/4 — a retry after the webhook recorded the refund" do
+    # The first attempt's refund was made at Stripe but its transaction rolled
+    # back; `charge.refunded` has since recorded it, so the balance left no
+    # longer covers a second one.
+    test "asks Stripe under the same key and records the refund once" do
+      payment = paid_booking_payment(%{refunded_amount_cents: 5000, status: :refunded})
+
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 5000}, opts ->
+        assert opts[:idempotency_key] == @key
+        {:ok, %{id: "re_replayed", amount: 5000, charge: %{amount_refunded: 5000}}}
+      end)
+
+      assert {:ok, %{refunded_amount_cents: 5000, status: :refunded}} =
+               Refunds.issue_refund(payment, 5000, @key)
+
+      assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 5000
+    end
+
+    test "records the refund once while the balance still covers it" do
+      payment = paid_booking_payment(%{refunded_amount_cents: 2000, status: :partially_refunded})
+
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, opts ->
+        assert opts[:idempotency_key] == @key
+        {:ok, %{id: "re_replayed", amount: 2000, charge: %{amount_refunded: 2000}}}
+      end)
+
+      assert {:ok, %{refunded_amount_cents: 2000, status: :partially_refunded}} =
+               Refunds.issue_refund(payment, 2000, @key)
+    end
+
+    test "makes no Stripe call for an amount the recorded total cannot hold" do
+      payment = paid_booking_payment(%{refunded_amount_cents: 4500, status: :partially_refunded})
+
+      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 4600, @key)
+    end
+  end
+
+  describe "issue_refund/4 after a partly lost dispute" do
+    # 5000 paid, 3000 taken back by a lost dispute, nothing refunded at Stripe.
+    defp after_lost_dispute,
+      do:
+        paid_booking_payment(%{
+          refunded_amount_cents: 3000,
+          disputed_lost_cents: 3000,
+          status: :partially_refunded
+        })
+
+    test "refuses more than the remainder without asking Stripe" do
+      # Within the recorded total, but none of it is a refund Stripe made,
+      # so there is nothing a replayed key could return. Mox fails the test
+      # on any Stripe call.
+      assert {:error, :invalid_amount} = Refunds.issue_refund(after_lost_dispute(), 2500, @key)
+    end
+
+    test "records a refund of the remainder against Stripe's refunds" do
+      payment = after_lost_dispute()
+
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, _opts ->
+        {:ok, %{id: "re_rest", amount: 2000, charge: %{amount_refunded: 2000}}}
+      end)
+
+      assert {:ok, %{refunded_amount_cents: 5000, disputed_lost_cents: 3000, status: :refunded}} =
+               Refunds.issue_refund(payment, 2000, @key)
+    end
+
+    test "replays a refund of the remainder the webhook already recorded" do
+      payment =
+        paid_booking_payment(%{
+          refunded_amount_cents: 5000,
+          disputed_lost_cents: 3000,
+          status: :refunded
+        })
+
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, opts ->
+        assert opts[:idempotency_key] == @key
+        {:ok, %{id: "re_rest", amount: 2000, charge: %{amount_refunded: 2000}}}
+      end)
+
+      assert {:ok, %{refunded_amount_cents: 5000, status: :refunded}} =
+               Refunds.issue_refund(payment, 2000, @key)
+    end
+  end
+
+  describe "refund_payment_for_host/5" do
     test "refunds a payment the host took" do
       payment = paid_booking_payment()
 
@@ -412,7 +502,12 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       end)
 
       assert {:ok, updated} =
-               MeetingPayments.refund_payment_for_host(payment.id, payment.host_user_id, 1500)
+               MeetingPayments.refund_payment_for_host(
+                 payment.id,
+                 payment.host_user_id,
+                 1500,
+                 @key
+               )
 
       assert updated.refunded_amount_cents == 1500
       assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 1500
@@ -427,7 +522,12 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       payment = paid_booking_payment()
 
       assert {:error, :not_found} =
-               MeetingPayments.refund_payment_for_host(payment.id, payment.host_user_id + 1, 1500)
+               MeetingPayments.refund_payment_for_host(
+                 payment.id,
+                 payment.host_user_id + 1,
+                 1500,
+                 @key
+               )
 
       assert_untouched(payment)
     end
@@ -437,7 +537,12 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       payment = paid_booking_payment()
 
       assert {:error, :not_found} =
-               MeetingPayments.refund_payment_for_host("not-a-uuid", payment.host_user_id, 1500)
+               MeetingPayments.refund_payment_for_host(
+                 "not-a-uuid",
+                 payment.host_user_id,
+                 1500,
+                 @key
+               )
 
       assert_untouched(payment)
     end
@@ -446,7 +551,12 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       payment = paid_booking_payment()
 
       assert {:error, :invalid_amount} =
-               MeetingPayments.refund_payment_for_host(payment.id, payment.host_user_id, 6000)
+               MeetingPayments.refund_payment_for_host(
+                 payment.id,
+                 payment.host_user_id,
+                 6000,
+                 @key
+               )
     end
   end
 
@@ -484,6 +594,19 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
       assert BookingPayments.payment_for_meeting(meeting.id, payment.host_user_id + 1) == nil
     end
+  end
+
+  defp expect_stripe_rejects_fresh_refund(amount) do
+    expect(StripeAdapterMock, :create_refund, fn %{amount: ^amount}, opts ->
+      assert opts[:idempotency_key] == @key
+
+      {:error,
+       %Stripe.Error{
+         source: :stripe,
+         code: :invalid_request_error,
+         message: "Refund amount is greater than unrefunded amount on charge"
+       }}
+    end)
   end
 
   defp stub_successful_stripe_refund do

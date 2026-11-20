@@ -405,8 +405,8 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
       end
 
     # Merge with user options (user options take precedence)
-    # Strip HTTPoison-style timeout keys that were handled by get_timeout/2,
-    # and :max_response_bytes, which Req does not recognise
+    # Drop :timeout and :recv_timeout (applied separately via get_timeout/2),
+    # :max_response_bytes and :bypass_proxy, which Req does not recognise
     user_opts_clean =
       Keyword.drop(user_options, [:timeout, :recv_timeout, :max_response_bytes, :bypass_proxy])
 
@@ -445,13 +445,13 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   # connection options and it serves them from a Finch instance it starts and
   # names itself, one per distinct set of options, kept forever. Connection
   # pinning passes the target's hostname that way on every SSRF-guarded
-  # request, so that used to mean a permanent extra instance per destination.
+  # request, which would mean a permanent extra instance per destination.
   # `FinchPool` says the same thing as a tagged pool on `Tymeslot.Finch`, and
   # the request then carries `:finch` alone.
   #
-  # The fallback is the behaviour that preceded it, and runs whenever the
-  # request is not going through Finch at all — the suite routes Req through a
-  # test plug, which opens no socket and has no pool to register.
+  # When the request is not going through Finch at all (the suite routes Req
+  # through a test plug, which opens no socket and has no pool to register),
+  # the connection options are passed to Req unchanged.
   defp with_connect_options(options, _url, [], fun), do: fun.(options)
 
   defp with_connect_options(options, url, connect_options, fun) do

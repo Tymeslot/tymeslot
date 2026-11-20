@@ -52,7 +52,9 @@ describe("commandRows", () => {
     expect(labels(rows("weekends", { settings: compact }))).toEqual(["Show weekends in week view"]);
     expect(labels(rows("early hours", { settings: compact }))).toEqual(["Fold early hours"]);
     expect(labels(rows("week numbers", { settings: compact }))).toEqual(["Hide week numbers"]);
-    expect(labels(rows("notifications", { settings: compact }))).toEqual(["Turn off desktop notifications"]);
+    expect(rows("notifications", { settings: compact })[0]).toMatchObject({ label: "Turn off desktop notifications", run: { type: "push", event: "calendar:toggle_desktop_reminders" } });
+    // Turning on waits for the browser's permission rather than pushing the toggle.
+    expect(rows("notifications")[0]).toMatchObject({ label: "Turn on desktop notifications", run: { type: "permission", event: "calendar:enable_desktop_reminders" } });
   });
 
   test("focus mode goes to the dashboard, and is not offered on a phone", () => {

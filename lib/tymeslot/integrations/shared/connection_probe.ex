@@ -11,7 +11,7 @@ defmodule Tymeslot.Integrations.Shared.ConnectionProbe do
   the rate limiter either: `probe/1` is the only place that does, and the
   `CredoChecks.RateLimiterBoundary` check enforces that mechanically.
 
-  Every OAuth-backed and dev-only provider draws from a real bucket now
+  Every OAuth-backed and dev-only provider draws from a real bucket
   (`:oauth` for OAuth providers, `:unmetered` only for dev-only demo/debug
   providers), so this module is the *only* place an interactive connection
   test can go unmetered — no compensating guard belongs anywhere else, web
@@ -209,8 +209,8 @@ defmodule Tymeslot.Integrations.Shared.ConnectionProbe do
   actor still needs resolving from a `subject` (an integration struct, or
   anything map-like carrying `:user_id` — see `resolve_actor/2`).
 
-  Collapses the pattern every domain `Connection` module's `test_connection/2`
-  (or `test_integration/2`) entry point used to repeat: resolve the actor —
+  Does what every domain `Connection` module's `test_connection/2` (or
+  `test_integration/2`) entry point needs: resolve the actor —
   `nil` for a `:background` request, `nil` for an `:unmetered` provider
   bucket, otherwise `resolve_actor/2` — then build and run the `Request`.
   Not used by a caller that already has a resolved actor in hand (e.g. a

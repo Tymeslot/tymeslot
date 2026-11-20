@@ -189,6 +189,10 @@ fragment: read how the code uses it.
 | block this time / blocked | zablokuj ten termin / zablokowane (default event title) |
 | copy free times | skopiuj wolne terminy |
 | booking request (short pill) / expired (pill) | prośba / wygasła |
+| tell guests (notify guests of a change to an event) | powiadom gości, always the imperative, never a past form like "powiadomiłeś"; "Delete and tell guests" = "Usuń i powiadom gości"; failure "Nie udało się powiadomić gości"; "Guests will get an update" = "Goście dostaną aktualizację"; the held, cancellable update is aktualizacja ("Ta aktualizacja nie czeka już na wysłanie") |
+| Tymeslot meeting (a booked meeting sent from the calendar) vs calendar event | spotkanie Tymeslot ("Wyślij jako spotkanie Tymeslot", "wyślij spotkanie Tymeslot") vs wydarzenie (a plain entry in a calendar); never call a calendar event "spotkanie", nor a Tymeslot meeting "wydarzenie" |
+| syncing (status label: a calendar write the provider has not confirmed yet) | Synchronizowanie (label, tooltip); in running text "Trwa synchronizacja z kalendarzem"; see sync / synchronise above |
+| preview / live preview | podgląd / podgląd na żywo ("Podgląd motywu", "Podgląd na żywo"); "na żywo" only with podgląd, never for a page accepting bookings (that is online, below) |
 | accept (a booking request) | zatwierdź; "Accepting…" = "Zatwierdzanie…" |
 | hatched (times) | zakreskowane |
 | booking link | link do rezerwacji ("Skopiowano link do rezerwacji!") |

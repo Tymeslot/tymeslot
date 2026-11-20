@@ -2,6 +2,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   @moduledoc """
   Google Calendar API client using direct HTTP calls.
   Handles authentication, token refresh, and calendar CRUD operations.
+
+  Google's own notifications are suppressed on every write (`sendUpdates=none`),
+  because Tymeslot sends its own: without it a create, update or delete would
+  mail each attendee a second notice, a cancellation on delete.
   """
 
   @behaviour Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour
@@ -190,13 +194,19 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   never touched. Uses `PATCH` (not `PUT`), which Google only applies to the
   fields present in the request body.
 
-  Returns `:ok` without making a request when `colour` does not map to a
-  known Google `colorId` (see `EventColour.google_color_id/1`) — nothing to
-  patch, matching the outbound-mapper convention of leaving Google's default
-  colour untouched for unrecognised values.
+  A `nil` colour sends `colorId: null`, which gives the event its calendar's
+  colour again. Returns `:ok` without making a request when `colour` does not
+  map to a known Google `colorId` (see `EventColour.google_color_id/1`):
+  nothing to patch, matching the outbound-mapper convention of leaving
+  Google's default colour untouched for unrecognised values.
   """
   @impl CalendarAPIBehaviour
-  @spec patch_event_colour(CalendarIntegrationSchema.t(), String.t(), String.t(), String.t()) ::
+  @spec patch_event_colour(
+          CalendarIntegrationSchema.t(),
+          String.t(),
+          String.t(),
+          String.t() | nil
+        ) ::
           {:ok, calendar_event()} | :ok | api_error()
   def patch_event_colour(
         %CalendarIntegrationSchema{} = integration,
@@ -204,7 +214,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
         event_id,
         colour
       ) do
-    case EventColour.google_color_id(colour) do
+    case colour_patch(colour) do
       nil ->
         :ok
 
@@ -216,7 +226,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
             :patch,
             event_path(calendar_id, google_event_id),
             token,
-            %{"colorId" => color_id},
+            %{"colorId" => color_id(color_id)},
             params: %{"sendUpdates" => "none"}
           )
         end)
@@ -227,7 +237,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   Patches `event_id` with `body`, a Google event body carrying only the keys
   to change: Google applies a `PATCH` to the fields present and leaves every
   other one as it is, where `update_event/4`'s `PUT` replaces the event.
-  Google's own notifications are suppressed, as on every write here.
   """
   @impl CalendarAPIBehaviour
   @spec patch_event(CalendarIntegrationSchema.t(), String.t(), String.t(), map()) ::
@@ -251,7 +260,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   Unlike `create_event/3`, nothing is mapped or added. A body carrying
   `conferenceData` is sent with `conferenceDataVersion=1`, which copies the
   conference it names (and would make a new one only for a `createRequest`).
-  Google's own notifications are suppressed, as on every write here.
   """
   @impl CalendarAPIBehaviour
   @spec insert_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
@@ -349,9 +357,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   @doc """
-  Deletes an event from the specified calendar. Google's own notifications
-  are suppressed, as on every write here: without `sendUpdates=none` a delete
-  mails each attendee a cancellation beside Tymeslot's own.
+  Deletes an event from the specified calendar.
   """
   @impl CalendarAPIBehaviour
   @spec delete_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
@@ -375,8 +381,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   of the same account (`events.move`). The event keeps its id and
   `iCalUID`, and a recurring event's master takes every instance with it,
   instances edited on their own and exceptions included, and its
-  conference. Answers the event as it now is on the destination. Google's
-  own notifications are suppressed, as on every write here.
+  conference. Answers the event as it is on the destination.
   """
   @impl CalendarAPIBehaviour
   @spec move_event(CalendarIntegrationSchema.t(), String.t(), String.t(), String.t()) ::
@@ -544,4 +549,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   defp handle_http_response(response, path) do
     ApiResponse.handle(response, path, label: "Google Calendar", custom: &ApiStatus.classify/1)
   end
+
+  # A colour to patch: the Google id of a palette key, `:clear` for none.
+  defp colour_patch(nil), do: :clear
+  defp colour_patch(colour), do: EventColour.google_color_id(colour)
+
+  defp color_id(:clear), do: nil
+  defp color_id(color_id), do: color_id
 end

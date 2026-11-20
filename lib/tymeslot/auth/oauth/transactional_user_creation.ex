@@ -116,8 +116,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
 
   # Both signup paths (standard registration and OAuth) must create a default
   # weekly schedule and seed the default meeting types immediately after the
-  # profile. Keep these in sync;
-  # see Task 1 in the composition test plan for drift regression.
+  # profile. Keep these in sync: `Tymeslot.Auth.RegistrationCompositionTest`
+  # asserts the registration path's side.
   defp create_profile(repo, user, profile_params) do
     # Use the repo passed in to ensure we're in the same transaction
     profile_attrs = %{user_id: user.id}

@@ -96,7 +96,6 @@ defmodule Tymeslot.Security.FieldValidators.NameValidator do
   end
 
   defp excessive_whitespace?(name) do
-    # Check for more than 2 consecutive spaces
     Regex.match?(~r/\s{3,}/, name)
   end
 

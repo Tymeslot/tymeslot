@@ -66,9 +66,8 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   @doc """
   Whether booking reCAPTCHA checks are enabled.
 
-  Fixed by `RECAPTCHA_BOOKING_ENABLED` when that variable is set; otherwise
-  changeable at runtime from the admin settings UI (`Tymeslot.AppSettings`),
-  which is useful for emergency disables during outages without a redeploy.
+  Set the same way as `signup_enabled?/0`, from `RECAPTCHA_BOOKING_ENABLED`
+  or the admin settings UI.
 
   This is a *feature flag*; if enabled but keys are missing, booking verification is
   automatically disabled (and logged) so legitimate bookings aren't blocked by misconfiguration.
@@ -133,7 +132,8 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
 
   Returns:
   - `:ok` when the form's checks are off, when verification passes, or when
-    Google could not be reached (see `verify_failing_open/4`)
+    Google could not be reached (`verify_failing_open/4` reports that as
+    `{:ok, :service_unavailable}`, which this function collapses to `:ok`)
   - `{:error, :recaptcha_failed}` when the checks are on and verification fails
   - `{:error, :recaptcha_script_blocked}` when the client reported the reCAPTCHA
     script could not load (JS disabled, CSP blocked, extension blocked) and

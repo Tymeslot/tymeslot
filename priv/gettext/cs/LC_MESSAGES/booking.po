@@ -151,11 +151,6 @@ msgstr "Platba byla zrušena. Zkuste prosím rezervaci znovu."
 msgid "Please correct the errors below."
 msgstr "Opravte prosím chyby níže."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "Please fill in all required fields"
-msgstr "Vyplňte prosím všechna povinná pole"
-
 #: lib/tymeslot_web/themes/shared/components/slot_list.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a date to see available times"

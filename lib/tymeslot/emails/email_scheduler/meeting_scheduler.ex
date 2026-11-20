@@ -191,10 +191,35 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   @doc """
+  Schedules the two emails for a host's reschedule request that lapsed
+  unanswered: the host's, saying the meeting expired, and the attendees',
+  saying the request has lapsed (every live participant on a group meeting).
+  Sent immediately, each unique per meeting, so a repeated expiry queues
+  nothing new.
+  """
+  @spec schedule_reschedule_request_lapsed(term()) :: :ok | {:error, term()}
+  def schedule_reschedule_request_lapsed(meeting_id) do
+    with :ok <- schedule_lapse_email("send_reschedule_request_unanswered", meeting_id) do
+      schedule_lapse_email("send_reschedule_request_lapsed", meeting_id)
+    end
+  end
+
+  defp schedule_lapse_email(action, meeting_id) do
+    %{"action" => action, "meeting_id" => meeting_id}
+    |> EmailWorker.new(
+      queue: :emails,
+      priority: 0,
+      unique: [period: 300, fields: [:args, :queue], keys: [:action, :meeting_id]]
+    )
+    |> Helpers.insert(meeting_id: meeting_id)
+    |> Helpers.ok()
+  end
+
+  @doc """
   Schedules the cancellation to the guests of a held request that was
   declined or expired after a reschedule sent it back into the gate, once
-  they had been invited. Sent immediately, and unique per meeting like the
-  invitee's outcome email.
+  they had been invited. Sent immediately, and unique per meeting, as
+  `schedule_reschedule_request_expired/1` is.
   """
   @spec schedule_released_guest_cancellations(term()) :: :ok | {:error, term()}
   def schedule_released_guest_cancellations(meeting_id) do
@@ -358,9 +383,8 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @doc """
   Schedules one live participant's reminder.
 
-  Dispatched (one call per live participant) from the meeting-level reminder
-  job instead of sending inline, so a failure on one participant cannot
-  discard the reminder to the rest.
+  Dispatched per live participant from the meeting-level reminder job, for
+  the reason given at `schedule_seat_meeting_cancellation_email/2`.
   """
   @spec schedule_seat_reminder_email(term(), term(), term(), term()) ::
           :ok | {:error, term()}
@@ -401,9 +425,8 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @doc """
   Schedules one live participant's reschedule request.
 
-  Dispatched (one call per live participant) from the meeting-level
-  reschedule-request job instead of sending inline, so a failure on one
-  participant cannot discard the request to the rest.
+  Dispatched per live participant from the meeting-level reschedule-request
+  job, for the reason given at `schedule_seat_meeting_cancellation_email/2`.
 
   `requested_at` (the meeting's `reschedule_requested_at`, as ISO 8601, or
   `nil`) names the request: a re-run of the same dispatch is a duplicate, a

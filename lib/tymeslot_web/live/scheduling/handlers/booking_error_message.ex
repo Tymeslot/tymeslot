@@ -185,9 +185,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   end
 
   # Step-requirement refusals: the booker has not chosen enough yet to move on.
-  # `Availability.Calculate` and `MeetingTypes.Duration` used to return this
-  # copy themselves, in English, straight into a flash on a public multi-locale
-  # page.
+  # The copy lives here so the public multi-locale page never flashes an
+  # English string from `Availability.Calculate` or `MeetingTypes.Duration`.
   def message(:duration_required) do
     dgettext("booking_errors", "Please select a meeting duration")
   end
@@ -214,6 +213,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
 
   def message({:not_cancellable, :expired}),
     do: dgettext("booking_errors", "Cannot cancel an expired meeting")
+
+  def message({:not_cancellable, :request_lapsed}),
+    do: request_lapsed_message()
 
   def message({:not_cancellable, :awaiting_verification}),
     do:
@@ -243,6 +245,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
 
   def message({:not_reschedulable, :expired}),
     do: dgettext("booking_errors", "Cannot reschedule an expired meeting")
+
+  def message({:not_reschedulable, :request_lapsed}),
+    do: request_lapsed_message()
 
   def message({:not_reschedulable, :awaiting_verification}),
     do:
@@ -352,6 +357,16 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
   end
 
   defp voice(_no_theme), do: nil
+
+  # The host asked for a new time and none was picked before the request's
+  # deadline, so the meeting is over; whoever opens its links can only book
+  # afresh.
+  defp request_lapsed_message do
+    dgettext(
+      "booking_errors",
+      "The request to pick a new time for this meeting has lapsed, so it is no longer booked. You're welcome to book a new time."
+    )
+  end
 
   defp unrecognised_message do
     dgettext("booking_errors", "Failed to create meeting. Please try again.")

@@ -89,9 +89,6 @@ defmodule Tymeslot.Bookings.MeetingAttributes do
 
   @doc """
   Builds meeting attributes from parameters and form data.
-
-  Resolves the organiser's profile, schedule and integrations along the way, so
-  this reads from the database rather than being a pure transformation.
   """
   @spec build(BuildParams.t()) :: meeting_attributes()
   def build(%BuildParams{} = params) do

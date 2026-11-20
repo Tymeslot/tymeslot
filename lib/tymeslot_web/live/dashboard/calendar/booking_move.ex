@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingMove do
 
   # The surface's dialogs (`SurfaceModals`), by the assign each shows while set.
   @dialogs ~w(series_prompt delete_prompt series_move_prompt remove_guest_prompt
-    decline_request_modal_data cancel_meeting_modal_data
+    discard_draft_prompt decline_request_modal_data cancel_meeting_modal_data
     reschedule_request_modal_data calendar_move_modal_data)a
 
   @doc "Opens the confirmation for the booking `id`, or says why it can no longer move."

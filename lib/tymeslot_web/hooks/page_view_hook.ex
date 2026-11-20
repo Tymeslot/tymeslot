@@ -89,9 +89,8 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
     ip = ClientIP.get_from_mount(socket)
     session_id = socket.id
 
-    # Both the assign and the async page-view write feed the *same* raw inputs to
-    # `Fingerprint.hash/3`, which normalises the "unknown"/blank sentinels itself —
-    # so the event and the booking always derive one identical join key.
+    # Raw inputs go to `Fingerprint.hash/3` unmodified: it normalises the
+    # "unknown"/blank sentinels itself.
     socket = assign(socket, :visitor_hash, Fingerprint.hash(ip, user_agent, session_id))
 
     log_async(params, referrer, ip, user_agent, session_id, viewer_user_id)

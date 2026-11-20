@@ -53,4 +53,19 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrideDurabilityTest do
 
     assert agenda_entry(user, "Sync me").colour == "tomato"
   end
+
+  test "a cleared colour stays off the agenda when a re-sync brings the provider's back" do
+    user = insert(:user)
+    integration = insert(:calendar_integration, user: user)
+    start_at = DateTime.new!(Date.add(Date.utc_today(), 1), ~T[13:00:00], "Etc/UTC")
+
+    insert_cached(integration, start_at)
+    :ok = Calendar.clear_event_colour(user.id, {:external, integration.id, "uid-dur"})
+
+    # The write-back has not cleared the host, so a re-sync caches its colour.
+    ProviderCalendarEventQueries.delete_by_uid(integration.id, "uid-dur")
+    insert_cached(integration, start_at)
+
+    assert agenda_entry(user, "Sync me").colour == nil
+  end
 end

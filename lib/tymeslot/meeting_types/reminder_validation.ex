@@ -79,9 +79,9 @@ defmodule Tymeslot.MeetingTypes.ReminderValidation do
   than a year ahead.
 
   `already_held` is the normalised list the meeting type had before this
-  change. The year limit is newer than some stored reminders, so it judges
-  only what the change adds: a reminder the meeting type already held stays
-  acceptable, or an unrelated edit to that meeting type could never be saved.
+  change. The year limit judges only what the change adds: a reminder the
+  meeting type already held stays acceptable, so an unrelated edit to that
+  meeting type can still be saved.
 
   Returns the first rule broken as an atom, so each caller can word it for
   its own surface.

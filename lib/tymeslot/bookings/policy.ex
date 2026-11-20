@@ -44,6 +44,7 @@ defmodule Tymeslot.Bookings.Policy do
           :cancelled
           | :completed
           | :expired
+          | :request_lapsed
           | :awaiting_approval
           | :awaiting_verification
           | :started
@@ -68,6 +69,12 @@ defmodule Tymeslot.Bookings.Policy do
 
       meeting.status == :completed ->
         {:error, {:not_cancellable, :completed}}
+
+      # See `slot_elapsing?/2`: an unanswered reschedule request stays open
+      # only until its deadline, and is refused from then on even before the
+      # expiry job has ended the meeting.
+      MeetingState.reschedule_request_lapsed?(meeting) ->
+        {:error, {:not_cancellable, :request_lapsed}}
 
       # An expired meeting (a lapsed approval request or an abandoned paid
       # checkout) has already been released: its slot was freed, the attendee
@@ -95,14 +102,14 @@ defmodule Tymeslot.Bookings.Policy do
       held_for_series_payment?(meeting) ->
         {:error, {:not_cancellable, :held_for_series_payment}}
 
-      meeting_is_current?(meeting) ->
+      slot_elapsing?(meeting, &meeting_is_current?/1) ->
         Logger.info("Blocked cancellation: meeting has already started",
           meeting_id: Map.get(meeting, :id)
         )
 
         {:error, {:not_cancellable, :started}}
 
-      meeting_is_past?(meeting) ->
+      slot_elapsing?(meeting, &meeting_is_past?/1) ->
         Logger.info("Blocked cancellation: meeting has already occurred",
           meeting_id: Map.get(meeting, :id)
         )
@@ -113,6 +120,14 @@ defmodule Tymeslot.Bookings.Policy do
         :ok
     end
   end
+
+  # A reschedule request has voided the slot, so its original time no longer
+  # says when the meeting happens: the attendee may still answer the request,
+  # and the host withdraw it, after that time has gone by, until the request's
+  # own deadline (`MeetingState.reschedule_request_deadline/1`). A confirmed
+  # meeting whose time has passed stays refused.
+  defp slot_elapsing?(meeting, time_check),
+    do: not MeetingState.awaiting_new_time?(meeting) and time_check.(meeting)
 
   defp held_for_series_payment?(%{status: :awaiting_payment, series_id: series_id})
        when is_binary(series_id),
@@ -142,11 +157,14 @@ defmodule Tymeslot.Bookings.Policy do
       meeting.status == :completed ->
         {:error, {:not_reschedulable, :completed}}
 
-      # An expired meeting (a lapsed approval request or an abandoned paid
-      # checkout) has already released its slot: `MeetingState`'s
-      # `@occupying_statuses` excludes :expired, so conflict detection ignores
-      # it. Rescheduling would move it to a new time it does not reserve, and
-      # the attendee would be told about a booking anyone else can still take.
+      MeetingState.reschedule_request_lapsed?(meeting) ->
+        {:error, {:not_reschedulable, :request_lapsed}}
+
+      # As for cancelling, an expired meeting has already released its slot:
+      # `MeetingState`'s `@occupying_statuses` excludes :expired, so conflict
+      # detection ignores it. Rescheduling would move it to a new time it does
+      # not reserve, and the attendee would be told about a booking anyone else
+      # can still take.
       meeting.status == :expired ->
         {:error, {:not_reschedulable, :expired}}
 
@@ -162,14 +180,14 @@ defmodule Tymeslot.Bookings.Policy do
       held_for_series_approval?(meeting) ->
         {:error, {:not_reschedulable, :held_for_series_approval}}
 
-      meeting_is_current?(meeting) ->
+      slot_elapsing?(meeting, &meeting_is_current?/1) ->
         Logger.info("Blocked reschedule: meeting has already started",
           meeting_id: Map.get(meeting, :id)
         )
 
         {:error, {:not_reschedulable, :started}}
 
-      meeting_is_past?(meeting) ->
+      slot_elapsing?(meeting, &meeting_is_past?/1) ->
         Logger.info("Blocked reschedule: meeting has already occurred",
           meeting_id: Map.get(meeting, :id)
         )
@@ -253,8 +271,8 @@ defmodule Tymeslot.Bookings.Policy do
   end
 
   @doc """
-  Checks if a meeting is currently happening.
-  Pure function that compares meeting times with current UTC time.
+  Checks if a meeting is currently happening, comparing its times with the
+  current UTC time.
   """
   @spec meeting_is_current?(%{
           required(:start_time) => DateTime.t(),

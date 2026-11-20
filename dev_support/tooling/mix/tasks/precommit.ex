@@ -39,37 +39,31 @@ defmodule Mix.Tasks.Precommit do
 
   ## Why the gate re-execs itself
 
-  The run's memory and CPU limits live in the workspace `mix.sh`, and a plain
-  `mix precommit` typed in a checkout reaches none of them. `Tymeslot.Precommit.Guard`
-  therefore puts the run inside them before any step starts, so the limits hold
-  however the gate was invoked. A run already wrapped, or one with no wrapper
-  above it, proceeds here unchanged.
+  The run's memory and CPU limits live in the workspace `mix.sh`, which a plain
+  `mix precommit` does not pass through. `Tymeslot.Precommit.Guard` puts the
+  run inside those limits before any step starts; see it for how a wrapped run
+  is recognised.
 
   ## Why dialyzer runs incrementally
 
   The step runs `dialyzer.incremental`, not `dialyzer`. A classic PLT is
   re-verified wholesale whenever dialyxir's `mix.lock`-and-applications hash
   moves, and re-analysed wholesale on every run regardless; an incremental PLT
-  tracks per-module hashes and re-analyses only what changed. Measured here,
-  with nothing changed since the previous run: 78.7s against 4.5s in Core, and
-  451.8s against 12.0s in the repo that consumes Core as a path dependency,
-  where every Core commit invalidates the classic PLT.
-
-  The two modes were adopted on identical output: the same warnings, the same
-  skips, the same exit status, verified both on a clean tree and against a
-  deliberately broken `@spec`. `mix dialyzer` is unchanged and remains the
-  cross-check to run when a warning here looks wrong. `--list-unused-filters`
-  is passed explicitly because the incremental task takes it as an argument
-  rather than reading `:list_unused_filters` from the `dialyzer:` config.
+  tracks per-module hashes and re-analyses only what changed (timings are in
+  `Mix.Tasks.Dialyzer.Incremental`). Both modes give the same warnings, skips
+  and exit status, so `mix dialyzer` remains the cross-check to run when a
+  warning here looks wrong. `--list-unused-filters` is passed explicitly
+  because the incremental task takes it as an argument rather than reading
+  `:list_unused_filters` from the `dialyzer:` config.
 
   ## Why the suite is partitioned
 
-  Most of the suite's wall clock is synchronous modules, which one `mix test`
-  runs one at a time. The suite is split into `mix test --partitions` runs
-  sized to the cores the run may use: on an idle 16-core host that took it from
-  126s to about 60s. `PRECOMMIT_TEST_PARTITIONS` forces the count.
-  See `Tymeslot.Precommit.CpuBudget` for the sizing and
-  `Tymeslot.Precommit.Runner` for how partitions get their own databases.
+  Synchronous modules dominate the suite's wall clock, so it is split into
+  `mix test --partitions` runs sized to the cores the run may use: on an idle
+  16-core host that takes it from 126s to about 60s.
+  `PRECOMMIT_TEST_PARTITIONS` forces the count. See
+  `Tymeslot.Precommit.CpuBudget` for the sizing and `Tymeslot.Precommit.Runner`
+  for how partitions get their own databases.
 
   ## Why each step is a separate process
 
@@ -120,16 +114,14 @@ defmodule Mix.Tasks.Precommit do
     # The booking-theme CSS rules, colour literals included. Nothing else
     # checks them: the theme bundles are plain CSS the compiler never sees.
     {"css tokens", ~w[css.check_tokens], :dev},
-    # A ratchet against compile coupling creeping in, not a ban on it. Raised
-    # from 25 to 27 for the two video-provider registries that are read at
-    # compile time on purpose: `Bookings.Activation` needs its provider list
-    # as a literal because it appears in a guard, and the video provider
-    # picker fails the build when a provider has no group, mirroring the
-    # calendar picker. Both exist because a newly registered provider was
-    # once missed. Lower it again if either goes away. Deriving each theme's
-    # module from its catalogue key took three files off the list; the
-    # registry, built from the catalogue while it compiles, and the
-    # onboarding preview's default theme are on it on purpose.
+    # A ratchet against compile coupling creeping in, not a ban on it. Some
+    # files are compile-connected on purpose: the two video-provider
+    # registries (`Bookings.Activation` needs its provider list as a literal
+    # because it appears in a guard, and the video provider picker fails the
+    # build when a provider has no group, mirroring the calendar picker, so a
+    # newly registered provider cannot be missed), the theme registry, built
+    # from the catalogue while it compiles, and the onboarding preview's
+    # default theme. Lower the ceiling if any of them goes away.
     {"xref", ~w[xref graph --label compile-connected --fail-above 26], :dev},
     {"test", ~w[test], :test},
     # Vitest, over the hooks under assets/js. `mix test` never reaches it, so

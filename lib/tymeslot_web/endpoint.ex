@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Endpoint do
     # Use a stable, non-secret salt. secret_key_base is the actual secret.
     signing_salt:
       Application.compile_env(:tymeslot, [TymeslotWeb.Endpoint, :session_signing_salt]),
-    # Changed from "Strict" to "Lax" to allow OAuth callbacks
+    # Lax is required so the session cookie accompanies OAuth callbacks.
     same_site: "Lax",
     http_only: true,
     secure: Application.compile_env(:tymeslot, :secure_cookies, false)

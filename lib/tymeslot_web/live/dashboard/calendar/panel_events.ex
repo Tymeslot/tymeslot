@@ -11,10 +11,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   """
 
   alias Tymeslot.CalendarGrid.EditGuard
+  alias TymeslotWeb.Dashboard.Calendar.PanelColour
   alias TymeslotWeb.Dashboard.Calendar.PanelEdits
   alias TymeslotWeb.Dashboard.Calendar.PanelFields
   alias TymeslotWeb.Dashboard.Calendar.PanelGuests
+  alias TymeslotWeb.Dashboard.Calendar.PanelMeetingReminders
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
+  alias TymeslotWeb.Dashboard.Calendar.PanelNewDiscard
   alias TymeslotWeb.Dashboard.Calendar.PanelRepeat
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.PanelTiming
@@ -45,6 +48,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     end
   end
 
+  # A New event draft with guests asks first (`PanelNewDiscard`).
+  def handle("close", _params, %{assigns: %{panel: %{mode: :new}}} = socket),
+    do: PanelNewDiscard.cancel(socket)
+
   def handle("close", _params, socket), do: PanelState.close(socket)
 
   # The New event form (see `PanelNew`).
@@ -54,8 +61,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   def handle("draft_drop_guest", %{"email" => email}, socket),
     do: PanelNew.drop_guest(socket, email)
 
-  def handle("draft_cancel", _params, socket), do: PanelNew.cancel(socket)
+  def handle("draft_add_reminder", _params, socket), do: PanelNew.add_reminder(socket)
+
+  def handle("draft_drop_reminder", %{"index" => index}, socket),
+    do: PanelNew.drop_reminder(socket, index)
+
+  def handle("draft_cancel", _params, socket), do: PanelNewDiscard.cancel(socket)
+  def handle("draft_discard_confirm", _params, socket), do: PanelNewDiscard.discard(socket)
+  def handle("draft_discard_cancel", _params, socket), do: PanelNewDiscard.keep(socket)
+
+  # The meeting's reminder picker (see `PanelMeetingReminders`).
+  def handle("meeting_" <> _picker_event = name, params, socket),
+    do: PanelMeetingReminders.event(socket, name, params)
+
   def handle("duplicate", _params, socket), do: PanelNew.duplicate(socket)
+
+  # A swatch of the event's colour (see `PanelColour`).
+  def handle("colour", %{"colour" => colour}, socket), do: PanelColour.set(socket, colour)
   def handle("delete", _params, socket), do: PanelNew.delete(socket)
 
   # A New event panel has no event: nothing else it could send applies.
@@ -81,12 +103,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     end
   end
 
-  def handle("reminder", %{"reminder" => choice}, socket) when is_binary(choice) do
+  def handle("add_reminder", params, socket) do
     with %{} = event <- PanelState.current_event(socket.assigns),
-         {:ok, reminders} <- PanelFields.reminders(Map.get(event, :reminders) || [], choice) do
+         {:ok, reminders} <-
+           PanelFields.add_reminder(reminders(event), params, provider(socket, event)) do
       write(socket, %{reminders: reminders})
     else
-      _no_panel_or_not_offered -> socket
+      _no_panel_or_not_added -> socket
+    end
+  end
+
+  def handle("drop_reminder", %{"index" => index, "key" => key}, socket) do
+    with %{} = event <- PanelState.current_event(socket.assigns),
+         {:ok, reminders} <- PanelFields.drop_reminder(reminders(event), index, key) do
+      write(socket, %{reminders: reminders})
+    else
+      _no_panel_or_stale -> socket
     end
   end
 
@@ -171,6 +203,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     do: PanelVideo.change(socket, raw)
 
   def handle("guest_invite", %{"email" => email}, socket), do: PanelGuests.invite(socket, email)
+  def handle("guest_input", _params, socket), do: PanelGuests.typed(socket)
 
   def handle("guest_remove", %{"email" => email}, socket),
     do: PanelGuests.request_remove(socket, email)
@@ -178,6 +211,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
   def handle("guest_remove_confirm", _params, socket), do: PanelGuests.confirm_remove(socket)
   def handle("guest_remove_cancel", _params, socket), do: PanelGuests.cancel_remove(socket)
   def handle("tell_guests", _params, socket), do: PanelGuests.tell(socket)
+  def handle("cancel_guest_update", _params, socket), do: PanelGuests.cancel_pending(socket)
 
   def handle(_name, _params, socket), do: socket
 
@@ -196,6 +230,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     do: PanelEdits.write(socket, id, changes, opts)
 
   defp write(socket, _changes, _opts), do: socket
+
+  defp reminders(event), do: Map.get(event, :reminders) || []
+
+  defp provider(socket, event),
+    do:
+      PanelFields.provider(socket.assigns.integrations, Map.get(event, :calendar_integration_id))
 
   defp movable_event(socket) do
     event = PanelState.current_event(socket.assigns)

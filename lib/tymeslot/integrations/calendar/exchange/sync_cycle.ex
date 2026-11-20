@@ -85,14 +85,14 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SyncCycle do
   version sibling, classified by `Exchange.ItemSync.invalid_sync_state?/1`) is
   the one failure that recovers rather than being reported. The token is
   dropped and this cycle falls through to the full read, which re-bootstraps
-  it. Reporting it instead is what the sync used to do, and it stalled the
-  folder permanently: the refusal repeated every cycle, `last_external_sync_at`
-  never advanced so the fallback sweep re-enqueued it, and the availability
-  half was re-read in full each time for a grid half that could never succeed.
+  it. Reporting it instead would stall the folder permanently: the refusal
+  would repeat every cycle, `last_external_sync_at` would never advance, so
+  the fallback sweep would keep re-enqueueing it, and the availability half
+  would be re-read in full each time for a grid half that could never succeed.
 
   The busy half has no incremental form — `GetUserAvailability` takes a window
   and answers intervals, with no token and no change feed — so it re-reads and
-  replaces wholesale on every cycle, exactly as before.
+  replaces wholesale on every cycle.
 
   ## What this cycle deliberately does not do
 
@@ -110,8 +110,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SyncCycle do
   Not calling it is the structural half of the defence; the other half is the
   namespace `Exchange.IntervalNormaliser` puts on those uids.
 
-  The incremental item half *does* now know which items vanished, and still
-  does not call it. Those deletions are applied straight to the cache by
+  The incremental item half *does* know which items vanished, and still does
+  not call it. Those deletions are applied straight to the cache by
   `provider_event_id`. Cancelling a Tymeslot booking because its mirror row
   left an external calendar is a decision for the providers that own the
   booking, and this one does not: a `display_only` row blocks nothing, so
@@ -125,14 +125,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.SyncCycle do
   times moved. Its other two effects, the availability-cache invalidation and
   the grid broadcast, are wanted and are done directly by `run/1`.
 
-  Two further reasons once stood here and no longer hold: that pass used to
-  return early for every event with a nil `provider_event_id` — which is every
-  synthesised busy row — and to resolve the rest by `provider_event_id` alone.
-  It now matches on any shared identifier, uid included, so a synthesised row
-  is a candidate like any other. The namespacing of those uids
+  That pass matches on any shared identifier, uid included, so a synthesised
+  row is a candidate like any other. The namespacing of those uids
   (`Exchange.IntervalNormaliser`) is what keeps them from colliding with a
-  real booking, and skipping the pass entirely is the structural half of the
-  same defence.
+  real booking.
   """
 
   require Logger

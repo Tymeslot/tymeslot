@@ -151,11 +151,6 @@ msgstr "O pagamento foi cancelado. Tente agendar de novo."
 msgid "Please correct the errors below."
 msgstr "Corrija os erros abaixo."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
-#, elixir-autogen, elixir-format
-msgid "Please fill in all required fields"
-msgstr "Preencha todos os campos obrigatórios"
-
 #: lib/tymeslot_web/themes/shared/components/slot_list.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a date to see available times"

@@ -2,11 +2,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
   @moduledoc """
   Markup for the video integrations settings component.
 
-  Extracted from `VideoSettingsComponent` so that module stays focused on lifecycle
-  and event routing, matching how `CalendarSettings.ComponentView` sits behind
-  `CalendarSettingsComponent`. `settings/1` receives the component's assigns
-  unchanged (its `render/1` delegates straight to it), so LiveView change
-  tracking is preserved.
+  Keeps `VideoSettingsComponent` focused on lifecycle and event routing, as
+  `CalendarSettings.ComponentView` does for `CalendarSettingsComponent`.
+  `settings/1` receives the component's assigns unchanged (its `render/1`
+  delegates straight to it), so LiveView change tracking is preserved.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext

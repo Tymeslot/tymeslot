@@ -22,7 +22,6 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
   alias Tymeslot.Integrations.Calendar.Sync
-  alias Tymeslot.Integrations.HealthCheck.Alerting
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.MeetingTypes
@@ -124,16 +123,16 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   @doc """
   Get fresh events for range with user context (preferred variant).
 
-  A result saying the user's calendars could not all be read is recorded for
-  `HealthCheck.Alerting`: every caller here is an availability decision (a
-  booking page, a booking submit, a poll check) that fails closed on it.
+  A result saying the user's calendars could not all be read is not counted
+  here: only the caller knows whether a guest was turned away by it, so the
+  guest-facing reads record it for `HealthCheck.Alerting` themselves
+  (`Tymeslot.Availability.Offer.HostCalendar`, `Tymeslot.Bookings.CalendarCheck`).
   """
   @spec get_events_for_range_fresh(user_id(), Date.t(), Date.t()) ::
           {:ok, list()} | {:error, term()}
   def get_events_for_range_fresh(user_id, start_date, end_date)
       when is_integer(user_id) do
-    result = behaviour_module().get_events_for_range_fresh(user_id, start_date, end_date)
-    Alerting.track_availability(result, user_id)
+    behaviour_module().get_events_for_range_fresh(user_id, start_date, end_date)
   end
 
   # ---------------------------

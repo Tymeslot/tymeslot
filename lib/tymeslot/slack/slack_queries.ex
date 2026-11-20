@@ -133,9 +133,9 @@ defmodule Tymeslot.Slack.SlackQueries do
   end
 
   @doc """
-  Clears the channel selection on an OAuth integration, demoting it back to
-  `:pending_oauth`. Uses `disconnect_changeset/1` so the operation is safe on
-  records that would otherwise fail full revalidation.
+  Clears the channel selection on an OAuth integration (see
+  `Tymeslot.Slack.disconnect/1`). Uses `disconnect_changeset/1` so the operation
+  is safe on records that would otherwise fail full revalidation.
   """
   @spec disconnect(SlackIntegrationSchema.t()) ::
           {:ok, SlackIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}

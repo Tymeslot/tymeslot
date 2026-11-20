@@ -71,7 +71,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
         status: map_status(raw),
         organiser: map_organiser(raw["organizer"]),
         attendees: map_attendees(raw["attendees"]),
-        reminders: map_reminders(raw["reminderMinutesBeforeStart"]),
+        reminders: map_reminders(raw),
         recurrence_rule: map_recurrence_rule(raw["recurrence"]),
         provider_metadata: Map.put(raw, "seriesMasterId", raw["seriesMasterId"]),
         created_by_tymeslot: tymeslot_origin?(raw)
@@ -137,11 +137,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
   defp map_response_status("none"), do: :needs_action
   defp map_response_status(_other), do: :needs_action
 
-  defp map_reminders(minutes) when is_integer(minutes) do
-    [%{method: :popup, minutes_before: minutes}]
-  end
+  # Graph keeps the lead time of a reminder that was switched off, so the lead
+  # time alone is a reminder only while `isReminderOn` is not false.
+  defp map_reminders(%{"isReminderOn" => false}), do: []
 
-  defp map_reminders(_other), do: []
+  defp map_reminders(%{"reminderMinutesBeforeStart" => minutes}) when is_integer(minutes),
+    do: [%{method: :popup, minutes_before: minutes}]
+
+  defp map_reminders(_raw), do: []
 
   defp map_recurrence_rule(recurrence), do: RecurrenceConverter.outlook_to_rrule(recurrence)
 

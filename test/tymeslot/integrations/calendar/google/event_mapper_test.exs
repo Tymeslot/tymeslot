@@ -586,5 +586,18 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
 
       refute Map.has_key?(result, "reminders")
     end
+
+    test "sends an empty override list when every reminder was taken off" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        reminders: [],
+        reminders_cleared: true
+      }
+
+      assert EventMapper.format_event_data(event_data)["reminders"] ==
+               %{"useDefault" => false, "overrides" => []}
+    end
   end
 end

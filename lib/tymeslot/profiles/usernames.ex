@@ -194,10 +194,10 @@ defmodule Tymeslot.Profiles.Usernames do
   Whether `username` can become `profile`'s username, and if not, why.
 
   Surrounding whitespace is ignored. The profile's own current username is
-  `:unchanged` and is never re-checked, so a handle chosen before its word was
-  reserved keeps working. Otherwise the format is checked first, then the
-  reserved list, then whether another profile already holds it. `profile` may
-  be `nil` when there is no profile yet.
+  `:unchanged` and is never re-checked (see `ReservedPaths.reserved?/1`).
+  Otherwise the format is checked first, then the reserved list, then whether
+  another profile already holds it. `profile` may be `nil` when there is no
+  profile yet.
 
   The profile changeset enforces the same rules again on write, which is what
   settles a username taken between this check and the save.

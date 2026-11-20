@@ -4,9 +4,8 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   invited.
 
   A guest receives an invitation with RSVP links when a booking is confirmed
-  (`Tymeslot.Notifications.Email.MeetingEmails`). Before this module a
-  guest heard nothing more: not when the booking moved, and not when it was
-  cancelled. Here:
+  (`Tymeslot.Notifications.Email.MeetingEmails`). This module tells them
+  when the booking later changes:
 
     * **Rescheduled** (`reset_for_new_time/1`, then `notify_rescheduled/4`
       from the reschedule email job): every guest's answer and reminder

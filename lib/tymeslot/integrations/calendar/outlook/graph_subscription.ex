@@ -44,7 +44,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   @delta_path "/me/calendarView/delta"
 
   @doc """
-  Fetches the initial `events/delta` snapshot, normalises and persists the
+  Fetches the initial `calendarView/delta` snapshot, normalises and persists the
   events to the cache, and stores the returned delta link on the integration
   so subsequent sweeps can fetch incremental changes.
 
@@ -100,11 +100,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   subscription to be kept alive. A new one is created only when there is none
   stored, or Graph answers that the stored one no longer exists.
 
-  Renewing in place is what keeps this safe to repeat. Creating a fresh
-  subscription on every renewal left the previous one pushing to us until it
-  expired, up to two days later, and a job re-run after a lost
-  acknowledgement (a lifeline rescue) created yet another. A repeated renewal
-  now only extends the same subscription again.
+  Renewing in place is what keeps this safe to repeat: a job re-run after a
+  lost acknowledgement (a lifeline rescue) only extends the same subscription
+  again, instead of leaving a second one pushing to us until it expires, up
+  to two days later.
 
   What remains is the create path itself: if the process stops after Graph
   accepted the new subscription and before its id was stored, the next run

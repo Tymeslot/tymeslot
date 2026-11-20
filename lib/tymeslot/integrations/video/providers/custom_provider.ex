@@ -81,7 +81,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
             }
           }
 
-          # Emit telemetry for observability
           :telemetry.execute(
             [:tymeslot, :video, :custom_provider, :meeting_created],
             %{processed_url_length: String.length(processed_url)},
@@ -105,7 +104,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
 
   defp process_template(url, config) do
     if String.contains?(url, TemplateConfig.template_variable()) do
-      # Validate template position before processing
       with :ok <- validate_template_position(url) do
         process_template_with_meeting_id(url, config)
       end
@@ -198,7 +196,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
         {:error, custom_url_required_message()}
 
       url ->
-        # Validate template position first
         with :ok <- validate_template_position(url) do
           # Test with a sample meeting_id to validate template URLs
           test_url =

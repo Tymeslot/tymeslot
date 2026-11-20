@@ -188,9 +188,9 @@ defmodule Tymeslot.Utils.DateTimeUtils do
 
   Returns `{:ok, utc_dt}` on success and `{:error, reason}` when
   `DateTime.shift_zone/2` fails — typically because the source DateTime's
-  time zone is unknown to the loaded tzdata. Prior versions silently
-  returned the original (non-UTC) DateTime on failure, which produced
-  downstream iCal/CalDAV strings in the wrong zone.
+  time zone is unknown to the loaded tzdata. A failed shift is never
+  papered over with the original DateTime, which would produce iCal/CalDAV
+  strings in the wrong zone.
   """
   @spec ensure_utc(DateTime.t()) :: {:ok, DateTime.t()} | {:error, term()}
   def ensure_utc(%DateTime{time_zone: "Etc/UTC"} = dt), do: {:ok, dt}

@@ -142,6 +142,13 @@ defmodule Tymeslot.CalendarGrid.Changes do
   defdelegate series_move_notes(event, integration), to: EventMove
 
   @doc """
+  Whether a move of an event to an integration carries all its reminders.
+  See `Tymeslot.CalendarGrid.EventMove.keeps_reminders?/2`.
+  """
+  @spec keeps_reminders?(map(), map()) :: boolean()
+  defdelegate keeps_reminders?(event, integration), to: EventMove
+
+  @doc """
   How an event may be edited from the grid: on its own, in a scope, or, for
   a series whose provider has no scoped edit, as that one event only. See
   `Tymeslot.CalendarGrid.EventEdit.edit_scopes/1`.
@@ -252,4 +259,23 @@ defmodule Tymeslot.CalendarGrid.Changes do
   defdelegate tell_guests(user_id, integrations, opened_with, event, scope),
     to: GuestUpdate,
     as: :tell
+
+  @doc """
+  When the update "Tell guests" sent for the event goes out, or nil when none
+  is held. See `Tymeslot.CalendarGrid.GuestUpdate.held_until/1`.
+  """
+  @spec guest_update_held_until(map()) :: DateTime.t() | nil
+  defdelegate guest_update_held_until(event), to: GuestUpdate, as: :held_until
+
+  @doc """
+  Cancels the update held for the event's guests until `held_until` (as
+  `guest_update_held_until/1` gave it), once the user is found to organise
+  it on a calendar they can write. See
+  `Tymeslot.CalendarGrid.GuestUpdate.cancel/4`.
+  """
+  @spec cancel_guest_update(pos_integer(), [map()], map(), DateTime.t()) ::
+          {:ok, :cancelled | :already_sent | :not_held} | {:error, GuestUpdate.refusal()}
+  defdelegate cancel_guest_update(user_id, integrations, event, held_until),
+    to: GuestUpdate,
+    as: :cancel
 end

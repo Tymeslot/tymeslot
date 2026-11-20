@@ -4,11 +4,9 @@ defmodule Mix.Tasks.Tymeslot.SyncTlds do
 
   `Tymeslot.Security.FieldValidators.TLDList` rejects any domain ending absent
   from that file, so the file being current is what stands between a real
-  address and a refused booking. It was hand-maintained for its first three
-  years and drifted badly in both directions: by 2026-08 it was missing six
-  delegated TLDs (`.homes` among them, which cost a self-hosted user their
-  bookings) while carrying 98 endings ICANN has never delegated or has since
-  retired. This task replaces that maintenance with a fetch.
+  address and a refused booking. Hand maintenance drifts in both directions
+  (missing newly delegated TLDs, keeping endings ICANN never delegated or has
+  retired), so the list is refreshed by fetching it from IANA.
 
   **Run it before cutting a release.** A release freezes the snapshot for every
   self-hosted instance until that instance upgrades, so release time is the only

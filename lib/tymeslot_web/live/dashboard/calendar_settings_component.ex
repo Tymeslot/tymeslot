@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Profiles
@@ -61,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   # when present; fall back to loading independently otherwise — e.g. when
   # mounted standalone via the `:calendar_integration` dashboard action, or
   # when a `send_update/2` targets us with a partial assign (those always
-  # want a fresh reload, matching prior behaviour).
+  # reload).
   defp maybe_load_integrations(socket, %{
          integrations: _integrations,
          health_states: _health_states,
@@ -375,30 +376,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     # OAuth included, now draws from a real bucket, so no compensating guard
     # belongs here.
     with {:ok, int_id} <- parse_int(id),
-         {:ok, integration} <- Calendar.get_integration(int_id, user_id),
-         {:ok, message} <- Calendar.test_connection(integration) do
-      Flash.info(message)
+         {:ok, integration} <- Calendar.get_integration(int_id, user_id) do
+      integration
+      |> Calendar.test_connection()
+      |> flash_connection_test(integration.provider)
+
       {:noreply, socket}
     else
       {:error, :not_found} ->
         Flash.error(dgettext("dashboard_calendar_settings", "Integration not found"))
-        {:noreply, socket}
-
-      {:error, {:rate_limited, _message} = refusal} ->
-        Flash.error(IntegrationProviders.connection_test_refusal_message(refusal))
-        {:noreply, socket}
-
-      {:error, :unattributable} ->
-        Flash.error(IntegrationProviders.connection_test_refusal_message(:unattributable))
-        {:noreply, socket}
-
-      {:error, reason} ->
-        Flash.error(
-          dgettext("dashboard_calendar_settings", "Connection test failed: %{reason}",
-            reason: inspect(reason)
-          )
-        )
-
         {:noreply, socket}
 
       :error ->
@@ -607,6 +593,29 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   defp shown_ids(_params), do: []
+
+  defp flash_connection_test({:ok, message}, _provider), do: Flash.info(message)
+
+  defp flash_connection_test({:error, {:rate_limited, _message} = refusal}, _provider),
+    do: Flash.error(IntegrationProviders.connection_test_refusal_message(refusal))
+
+  defp flash_connection_test({:error, :unattributable}, _provider),
+    do: Flash.error(IntegrationProviders.connection_test_refusal_message(:unattributable))
+
+  # An interactive test already words most failures; a reason that arrives
+  # unworded is given the sentence the reconnect form shows for it.
+  defp flash_connection_test({:error, reason}, provider) do
+    Flash.error(
+      dgettext("dashboard_calendar_settings", "Connection test failed: %{reason}",
+        reason: connection_failure_text(reason, provider)
+      )
+    )
+  end
+
+  defp connection_failure_text(reason, _provider) when is_binary(reason), do: reason
+
+  defp connection_failure_text(reason, provider),
+    do: DisplayHelpers.connection_error_message(reason, provider)
 
   defp parse_int(id) when is_integer(id), do: {:ok, id}
 

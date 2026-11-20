@@ -109,9 +109,9 @@ defmodule Tymeslot.Webhooks do
 
   Re-enabling a webhook that was auto-disabled (i.e. `disabled_at` is set)
   resets the failure bookkeeping (`failure_count`, `disabled_at`,
-  `disabled_reason`) along with `is_active`. Otherwise a manual re-enable
-  left the counter at the auto-disable threshold, so the very next failed
-  delivery immediately disabled the webhook again.
+  `disabled_reason`) along with `is_active`. The counter must restart: kept at
+  the auto-disable threshold, the very next failed delivery would disable the
+  webhook again.
   """
   @spec toggle_webhook(integer(), integer()) ::
           {:ok, WebhookSchema.t()}

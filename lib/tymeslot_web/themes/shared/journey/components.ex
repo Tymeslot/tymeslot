@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Components do
       navigator with `frame/0` names the element (`Navigators.Continuous` a
       `div`, `Navigators.Transcript` an ordered list that is a polite live
       region); for one without (`Navigators.Paged`) the moment is rendered
-      bare, so a paged theme's DOM is what it was.
+      bare, with no wrapper element.
     * `moment_heading/1`: the heading a moment opens with, on every
       navigator (on a paged theme, the heading of the moment's screen). It
       can take the keyboard focus (`tabindex="-1"`), and takes it when its

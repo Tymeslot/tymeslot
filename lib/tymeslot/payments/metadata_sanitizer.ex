@@ -126,7 +126,6 @@ defmodule Tymeslot.Payments.MetadataSanitizer do
   defp sanitize_value(value) when is_binary(value) do
     value
     |> String.trim()
-    # Remove any HTML tags
     |> strip_html()
     # Remove control characters except newlines and tabs
     |> String.replace(~r/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/, "")

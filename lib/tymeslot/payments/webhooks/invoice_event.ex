@@ -61,9 +61,8 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceEvent do
   and tax, the number printed on the hosted page and PDF, and set as soon as
   Stripe finalises the invoice. `amount_paid` is kept separately: it reads 0
   until the invoice is actually paid, so it's unsuitable as the document's
-  headline amount, but the pre-existing renewal-transaction logic keys its
-  `amount` on it and that behaviour is preserved unchanged. `created` is
-  likewise kept as the raw payload value for that same pre-existing renewal
+  headline amount, but the renewal-transaction logic keys its `amount` on it.
+  `created` is likewise kept as the raw payload value for that same renewal
   metadata, unrelated to `issued_at` below.
 
   `issued_at` prefers `status_transitions.finalized_at` — the moment Stripe

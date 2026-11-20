@@ -135,7 +135,6 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
 
   @doc """
   Gets a profile by user_id.
-  Used for finding profile when given a user_id.
   """
   @spec get_profile_by_user_id(integer()) :: ProfileSchema.t() | nil
   def get_profile_by_user_id(user_id) do

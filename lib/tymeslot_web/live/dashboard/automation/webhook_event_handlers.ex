@@ -321,8 +321,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
             {:noreply, socket}
         end
 
-      # A throttled save previously assigned `%{form: ...}`, which the modal
-      # does not render, so the save silently did nothing.
+      # A throttled save must flash rather than assign `%{form: ...}`, which the
+      # modal does not render: the save would silently do nothing.
       {:error, :rate_limited} ->
         Flash.error(dgettext("dashboard_automation", "Too many requests. Please slow down."))
 

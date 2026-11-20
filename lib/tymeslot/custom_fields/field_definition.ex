@@ -158,9 +158,9 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
   end
 
   # A bound the type cannot read is dropped, as the browser's native number,
-  # date and time inputs used to drop one: "5" kept from a number question
-  # turned date would otherwise disable every day on the booking page and
-  # reject every answer, while the host's picker shows the bound as empty.
+  # date and time inputs drop one: "5" kept from a number question turned
+  # date would otherwise disable every day on the booking page and reject
+  # every answer, while the host's picker shows the bound as empty.
   defp validate_bounds(cs, type) do
     cs
     |> drop_unreadable_bound(:min, type)

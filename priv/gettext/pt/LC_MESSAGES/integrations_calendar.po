@@ -822,3 +822,8 @@ msgstr "O Nextcloud recusou a senha de app armazenada. Provavelmente ela foi rev
 #, elixir-autogen, elixir-format
 msgid "iCloud refused the stored app-specific password. It was most likely revoked, or your Apple ID password was changed, which revokes every app-specific password. Generate a new one and reconnect."
 msgstr "O iCloud recusou a senha específica do app armazenada. Provavelmente ela foi revogada, ou a senha do seu Apple ID foi alterada, o que revoga todas as senhas específicas de apps. Gere uma nova e reconecte."
+
+#: lib/tymeslot/integrations/calendar/shared/error_messages.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} did not respond in time. If the server is only reachable from your organisation's network or over a VPN, Tymeslot cannot connect to it: ask your administrator to make its calendar address reachable from the internet. Otherwise the server may be busy, so try again in a few minutes."
+msgstr "O %{provider} não respondeu a tempo. Se o servidor só puder ser acessado pela rede da sua organização ou por VPN, o Tymeslot não consegue se conectar a ele: peça ao seu administrador para tornar o endereço do calendário acessível pela internet. Caso contrário, o servidor pode estar sobrecarregado; tente de novo em alguns minutos."

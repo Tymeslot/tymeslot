@@ -23,10 +23,10 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
     5. anything else is `:unhandled`, which `SchedulingLive` logs and drops.
 
   A theme's own `theme:<name>` events never reach this module. With
-  `Navigators.Paged` only the current moment is visible, so a canonical
-  event sent from another step is dropped, as it always was. A page without
-  a journey (the meeting and poll pages the same LiveView serves) handles
-  none of them, and its step indicator moves nothing.
+  `Navigators.Paged` only the current moment is visible, so a canonical event
+  sent from another step is dropped. A page without a journey (the meeting and
+  poll pages the same LiveView serves) handles none of them, and its step
+  indicator moves nothing.
 
   `transition_to/3` shows a moment or an outcome: it sets `:current_state`
   and, for a moment, opens it (`open_moment/3`: its `defaults:`, then

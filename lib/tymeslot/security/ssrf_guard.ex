@@ -42,16 +42,11 @@ defmodule Tymeslot.Security.SsrfGuard do
   records), rejecting it when any resolved address falls in a private, loopback,
   or link-local range (including the 169.254.169.254 cloud-metadata endpoint).
 
-  **Connection pinning:** validating a hostname and then handing the URL string
-  to Req/Finch would let Finch resolve that name a second time when it opens the
-  socket, and a short-TTL record can answer public to the check and loopback to
-  the connect. `validate_pinned/2` therefore returns the addresses it approved,
-  and `Tymeslot.Infrastructure.HTTPClient` connects to one of them with the
-  original hostname preserved for TLS and routing — see
-  `Tymeslot.Security.ConnectionPinning`, which also documents the cases where
-  pinning cannot apply and the request still travels by hostname. The
-  multi-record variant of DNS-based SSRF is closed by checking every returned
-  record before any of them is used.
+  **Connection pinning:** `validate_pinned/2` returns the addresses it
+  approved, and `Tymeslot.Infrastructure.HTTPClient` connects to one of them
+  rather than resolving the name again. See `Tymeslot.Security.ConnectionPinning`
+  for the DNS-rebinding reasoning and the cases where pinning cannot apply.
+  Every returned record is checked before any is used.
 
   Enforcement is gated to `:prod` — the environment in which the managed SaaS
   and self-hosted deployments run — so that local development and tests can
@@ -72,10 +67,9 @@ defmodule Tymeslot.Security.SsrfGuard do
 
   ## Plain http to an internal name
 
-  With private addresses allowed, a server on an internal name (a single label
-  such as a Docker service name, or a name under `.local`, `.lan`, `.internal`
-  or `.home.arpa`) may be saved with plain `http://`, decided from the name's
-  shape alone (see `Tymeslot.Security.UrlValidation`). The shape can be wrong:
+  With private addresses allowed, a server on an internal name, as
+  `Tymeslot.Security.UrlValidation` defines it, may be saved with plain
+  `http://`, decided from the name's shape alone. The shape can be wrong:
   a resolver search domain can complete a single label to a public name, and
   nothing reserves `.lan`. Such requests carry credentials in clear text, so
   the opt-out does not skip resolution for them: the name must resolve only to

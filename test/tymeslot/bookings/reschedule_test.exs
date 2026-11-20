@@ -10,6 +10,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   import Mox
 
   alias Ecto.Changeset
+  alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.Bookings.RescheduleRequest
   alias Tymeslot.Bookings.Validation
@@ -130,6 +131,35 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       {:ok, reloaded} = MeetingQueries.get_meeting_by_uid(meeting.uid)
       assert reloaded.status == :confirmed
       assert reloaded.reschedule_requested_at == nil
+    end
+
+    test "the attendee can still answer a request after the original slot has passed" do
+      %{user: user} = create_always_bookable_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: -7_200,
+          duration: 3_600,
+          reschedule_requested_at: DateTime.add(DateTime.utc_now(), -86_400, :second)
+        })
+
+      # The link in the request email opens the reschedule page...
+      assert {:ok, %{id: id}} = Orchestrator.get_meeting_for_reschedule(meeting.uid, user.id)
+      assert id == meeting.id
+
+      # ...and submitting a new time settles the request.
+      new_params = %{
+        date: Date.to_string(Date.add(Date.utc_today(), 2)),
+        time: "2:00 PM",
+        duration: "60min",
+        user_timezone: "America/New_York"
+      }
+
+      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, user.id)
+
+      {:ok, reloaded} = MeetingQueries.get_meeting_by_uid(meeting.uid)
+      assert reloaded.reschedule_requested_at == nil
+      assert DateTime.after?(reloaded.start_time, DateTime.utc_now())
     end
 
     test "a second request after the attendee rebooked is a new email, and only it is sent" do

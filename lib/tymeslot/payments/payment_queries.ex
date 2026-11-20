@@ -95,8 +95,7 @@ defmodule Tymeslot.Payments.PaymentQueries do
   Used by `Payments.CustomerLookup.find_user_id/1` as the last-resort step
   when no subscription manager is configured (Core standalone) to
   attribute an invoice to a user via a Stripe customer id. Restricted to
-  `completed` rows: a `pending` or `failed` transaction was never charged,
-  so it is not a reliable ownership signal.
+  `completed` rows, for the reason given in that function's docs.
   """
   @spec get_transaction_by_stripe_customer_id(String.t()) ::
           {:ok, PaymentTransaction.t()} | {:error, :transaction_not_found}
@@ -197,11 +196,10 @@ defmodule Tymeslot.Payments.PaymentQueries do
   removed.
 
   The snapshot uses `COALESCE` so a value already captured at creation time is
-  never overwritten — it only fills columns that are still null. This closes a
-  retention gap: new rows are not guaranteed to have the snapshot written at
-  creation, so without this fill the counterparty identity would be lost the
-  moment `user_id` is set to nil. The fill mirrors the original backfill
-  migration (`host_email = u.email`, `host_name = u.name`).
+  never overwritten — it only fills columns that are still null. Rows are not
+  guaranteed to have the snapshot written at creation, so without this fill
+  the counterparty identity would be lost the moment `user_id` is set to nil.
+  The fill takes `host_email = u.email` and `host_name = u.name`.
   """
   @spec anonymise_for_host(integer(), DateTime.t()) :: {non_neg_integer(), nil}
   def anonymise_for_host(user_id, now) do

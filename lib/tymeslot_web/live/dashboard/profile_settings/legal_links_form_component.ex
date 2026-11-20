@@ -161,9 +161,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.LegalLinksFormComponent do
     )
   end
 
-  # A field the sanitiser refused cannot be shown again, so it is left out of
-  # the changeset and carries only its error; the other field keeps what was
-  # typed.
+  # A refused field is left out of the changeset and carries only its error,
+  # as in `IntroFormComponent`; the other field keeps what was typed.
   defp refused(profile, params, field_errors) do
     kept = Map.drop(params, Enum.map(Map.keys(field_errors), &Atom.to_string/1))
 

@@ -1,9 +1,13 @@
 defmodule Tymeslot.Integrations.Calendar.Shared.CalendarFetchAggregateTest do
-  use ExUnit.Case, async: true
+  # async: false: a test refutes a log event, and a `:logger` handler sees
+  # every concurrently running test's events.
+  use ExUnit.Case, async: false
   @moduletag :integrations
 
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
+  alias Tymeslot.Test.LogCapture
 
   describe "collect/3" do
     test "aggregates events from successes, drops absent sources, and records failures" do
@@ -53,6 +57,55 @@ defmodule Tymeslot.Integrations.Calendar.Shared.CalendarFetchAggregateTest do
                succeeded: 6,
                failed: [%{source: "cal-9", reason: :timeout}]
              } = outcome
+    end
+  end
+
+  describe "collect/3 logging" do
+    test "logs a failure with its source fingerprinted, since a Google calendar id is an email" do
+      LogCapture.attach()
+
+      FetchAggregate.collect(
+        [{:failure, "organiser@example.com", :unauthorized}],
+        fn {:failure, source, reason} -> {:error, source, reason} end,
+        calendar_integration_id: 380
+      )
+
+      assert_receive {:captured_log,
+                      %{
+                        msg: {:string, "Some calendar fetches failed"},
+                        meta: %{calendar_integration_id: 380, errors: errors} = meta
+                      }}
+
+      assert errors == [
+               %{
+                 source_fingerprint: Redactor.fingerprint("organiser@example.com"),
+                 reason: ":unauthorized"
+               }
+             ]
+
+      refute inspect(meta) =~ "organiser@example.com"
+    end
+
+    test "does not log again the failures a nested outcome carries, which its own level logged" do
+      nested = %Outcome{
+        events: [],
+        attempted: 1,
+        succeeded: 0,
+        failed: [%{source: "cal-9", reason: :timeout}]
+      }
+
+      LogCapture.attach()
+
+      outcome =
+        FetchAggregate.collect([nested], &{:aggregate, &1}, calendar_integration_id: 381)
+
+      assert outcome.failed == [%{source: "cal-9", reason: :timeout}]
+
+      refute_receive {:captured_log,
+                      %{
+                        msg: {:string, "Some calendar fetches failed"},
+                        meta: %{calendar_integration_id: 381}
+                      }}
     end
   end
 

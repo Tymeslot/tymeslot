@@ -8,6 +8,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherTest do
 
   alias Tymeslot.Meetings.AttendeeNotifications.Dispatcher
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
+  alias Tymeslot.Repo
 
   setup do
     event = insert(:provider_calendar_event)
@@ -52,12 +53,14 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherTest do
     end
   end
 
-  describe "cancel_pending/2" do
+  describe "cancel_pending/3" do
     test "removes scheduled update jobs for the event+kind", %{event: event} do
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
       assert [_job] = all_enqueued(worker: Worker)
 
-      :ok = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
+      {:ok, :cancelled} =
+        Dispatcher.cancel_pending(event.id, :provider_calendar_event, due_at(event))
+
       assert all_enqueued(worker: Worker) == []
     end
 
@@ -73,8 +76,66 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherTest do
 
       assert length(all_enqueued(worker: Worker)) == 2
 
-      :ok = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
+      {:ok, :cancelled} =
+        Dispatcher.cancel_pending(event.id, :provider_calendar_event, due_at(event))
+
       assert all_enqueued(worker: Worker) == []
+    end
+
+    test "says the update was sent when the hold ran before the cancel", %{event: event} do
+      {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
+      due_at = due_at(event)
+      now = DateTime.utc_now()
+      Repo.update_all(Oban.Job, set: [state: "completed", attempted_at: now, completed_at: now])
+
+      assert Dispatcher.cancel_pending(event.id, :provider_calendar_event, due_at) == {:ok, :sent}
+    end
+
+    test "counts a hold that is retrying as sent, since it will still go out", %{event: event} do
+      {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
+      due_at = due_at(event)
+
+      # A retry is scheduled later than the hold was due.
+      Repo.update_all(Oban.Job,
+        set: [
+          state: "retryable",
+          attempted_at: DateTime.utc_now(),
+          scheduled_at: DateTime.add(due_at, 30)
+        ]
+      )
+
+      assert Dispatcher.cancel_pending(event.id, :provider_calendar_event, due_at) == {:ok, :sent}
+    end
+
+    test "says nothing was waiting when no update ran or waits", %{event: event} do
+      assert Dispatcher.cancel_pending(event.id, :provider_calendar_event, DateTime.utc_now()) ==
+               {:ok, :none}
+    end
+
+    # Told at t0 (out at t0+2m), told again at t0+5m, that second hold
+    # cancelled in another tab: a Cancel for it still finds the first job,
+    # which went out before the hold began and told nobody about it.
+    test "an update sent before the hold is not the hold going out", %{event: event} do
+      {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
+      two_minutes_ago = DateTime.add(DateTime.utc_now(), -120)
+
+      Repo.update_all(Oban.Job,
+        set: [
+          state: "completed",
+          scheduled_at: DateTime.add(two_minutes_ago, -1),
+          attempted_at: two_minutes_ago,
+          completed_at: two_minutes_ago
+        ]
+      )
+
+      {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
+      second_hold = due_at(event)
+
+      {:ok, :cancelled} =
+        Dispatcher.cancel_pending(event.id, :provider_calendar_event, second_hold)
+
+      assert Dispatcher.cancel_pending(event.id, :provider_calendar_event, second_hold) ==
+               {:ok, :none}
     end
 
     test "does not affect jobs for other events", %{event: event} do
@@ -83,7 +144,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherTest do
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
       {:ok, :scheduled} = Dispatcher.schedule_update(other.id, :provider_calendar_event)
 
-      :ok = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
+      {:ok, :cancelled} =
+        Dispatcher.cancel_pending(event.id, :provider_calendar_event, due_at(event))
 
       jobs = all_enqueued(worker: Worker)
       assert length(jobs) == 1
@@ -103,8 +165,13 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DispatcherTest do
 
     test "returns false after cancel_pending removes the job", %{event: event} do
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
-      :ok = Dispatcher.cancel_pending(event.id, :provider_calendar_event)
+
+      {:ok, :cancelled} =
+        Dispatcher.cancel_pending(event.id, :provider_calendar_event, due_at(event))
+
       refute Dispatcher.pending?(event.id, :provider_calendar_event)
     end
   end
+
+  defp due_at(event), do: Dispatcher.pending_due_at(event.id, :provider_calendar_event)
 end

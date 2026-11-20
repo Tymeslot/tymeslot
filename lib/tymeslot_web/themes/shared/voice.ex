@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
   | `:submit_request_reschedule` | none | "Request new time" |
   | `:submit_reschedule` | none | "Reschedule Meeting" |
   | `:slot_taken` | none | "This time slot is no longer available. Please select a different time." (the notice when the time was booked meanwhile) |
-  | `:slot_heading` | none | "Available Times" (`SlotList`'s heading, and its and `WeekGrid`'s screen-reader status once times are shown) |
+  | `:slot_heading` | none | "Available Times" (`SlotList`'s heading, and the screen-reader status of both `SlotList` and `WeekGrid` once times are shown) |
   | `:slot_prompt` | none | "Please select a date to see available times" (`SlotList` before a day is chosen, shown and announced) |
   | `:select_prompt` | none | "Select…" (a single-select question's empty choice) |
   | `:answer_yes` | none | "Yes" (a yes/no question) |

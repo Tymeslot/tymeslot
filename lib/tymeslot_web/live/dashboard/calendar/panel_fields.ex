@@ -1,13 +1,15 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
   @moduledoc """
   The side panel's plain fields: what a title, place or notes edit writes,
-  the Busy/Free switch, and the reminder choice.
+  the Busy/Free switch, and the reminder list.
 
   Text goes through `CreateParams.clean_text/2`, the rule a create uses (title
-  500, place 1,000, notes 5,000 characters, a title never blank). The reminder field offers None and
-  the lead times `ReminderForm` allows, as one notification; every other
-  alarm the event carries (an email, a lead time another app set, a second
-  notification) is kept as it is and listed under the field.
+  500, place 1,000, notes 5,000 characters, a title never blank). The reminder
+  field lists every alarm the event carries, each removable, and adds a
+  notification or an email at a lead time `ReminderForm` allows. An add or a
+  remove writes the whole list back with every other alarm untouched, so an
+  alarm another app set at a lead time the panel does not offer survives
+  every edit but its own removal.
   """
 
   use TymeslotWeb, :html
@@ -16,8 +18,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.Integrations.Calendar.Reminder
   alias TymeslotWeb.Components.Calendar.ReminderForm
-  alias TymeslotWeb.Components.Calendar.RemindersEditor
   alias TymeslotWeb.Dashboard.Calendar.Creation
+  alias TymeslotWeb.Dashboard.Calendar.PanelReminderList
 
   @text_fields %{
     "title" => {:summary, :title},
@@ -45,45 +47,65 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
   def transparency("busy"), do: "opaque"
 
   @doc """
-  The reminders an event carrying `reminders` gets when the field is set to
-  `choice` (`"none"` or a lead time in minutes): the notification the field
-  shows is replaced or removed, every other alarm kept. `:error` for a lead
-  time the field does not offer. The same choice as now answers the list
-  unchanged, so it writes nothing.
+  The reminders an event carrying `reminders`, on a calendar of `provider`,
+  gets with the reminder the add row's `params` choose (`"minutes"`,
+  `"method"`), appended so the alarms already there are written back as
+  they are. `:error`, writing nothing, for a choice the row does not offer,
+  one the event already has, or a list already as long as the calendar
+  keeps (`CreateParams.reminder_capacity/1`); a calendar keeping one method
+  takes that one, whatever the row sent.
   """
-  @spec reminders([map()], String.t()) :: {:ok, [map()]} | :error
-  def reminders(reminders, choice) do
-    cond do
-      choice == choice(reminders) -> {:ok, reminders}
-      choice == "none" -> {:ok, others(reminders)}
-      true -> with_notification(reminders, choice)
+  @spec add_reminder([map()], map(), String.t() | nil) :: {:ok, [map()]} | :error
+  def add_reminder(reminders, params, provider) do
+    {max, methods} = CreateParams.reminder_capacity(provider)
+    method = if match?([_only], methods), do: Atom.to_string(hd(methods)), else: params["method"]
+
+    with true <- length(reminders) < max,
+         {:ok, reminder} <-
+           ReminderForm.parse_reminder(%{"method" => method, "minutes" => params["minutes"]}),
+         false <- Enum.any?(reminders, &(key(&1) == key(reminder))) do
+      {:ok, reminders ++ [reminder]}
+    else
+      _not_added -> :error
     end
   end
 
-  defp with_notification(reminders, minutes) do
-    case ReminderForm.parse_reminder(%{"method" => "popup", "minutes" => minutes}) do
-      {:ok, reminder} -> {:ok, [reminder | others(reminders)]}
-      :error -> :error
+  @doc """
+  `reminders` without the one at `index`, every other alarm kept as it is.
+  `key` is the removed reminder's `key/1` as the panel drew it: when the
+  list has changed under the panel since (a sync), the reminder at `index`
+  is another one and `:error` removes nothing.
+  """
+  @spec drop_reminder([map()], term(), term()) :: {:ok, [map()]} | :error
+  def drop_reminder(reminders, index, key) do
+    with {at, ""} <- Integer.parse(to_string(index)),
+         %{} = reminder <- Enum.at(reminders, at),
+         true <- at >= 0 and key(reminder) == key do
+      {:ok, List.delete_at(reminders, at)}
+    else
+      _stale_or_invalid -> :error
     end
   end
 
-  # The one notification the field shows: the first popup at a lead time it
-  # offers.
-  defp primary(reminders), do: Enum.find(reminders, &offered?/1)
-
-  defp others(reminders), do: List.delete(reminders, primary(reminders))
-
-  defp offered?(reminder),
-    do:
-      Reminder.method(reminder) == :popup and
-        Reminder.minutes_before(reminder) in ReminderForm.reminder_minutes_presets()
-
-  defp choice(reminders) do
-    case primary(reminders) do
-      nil -> "none"
-      reminder -> reminder |> Reminder.minutes_before() |> Integer.to_string()
+  @doc """
+  The provider of the integration `integration_id` among `integrations`,
+  which decides how many reminders, and of which methods, a calendar keeps.
+  `nil` for none (a booking, which no calendar holds).
+  """
+  @spec provider([map()], term()) :: String.t() | nil
+  def provider(integrations, integration_id) do
+    case Enum.find(integrations, &(&1.id == integration_id)) do
+      nil -> nil
+      integration -> integration.provider
     end
   end
+
+  @doc """
+  What tells a reminder apart in the list, its method and lead time, read
+  through `Reminder` so a cached string-keyed alarm matches a canonical one.
+  """
+  @spec key(map()) :: String.t()
+  def key(reminder), do: "#{Reminder.method(reminder)}:#{Reminder.minutes_before(reminder)}"
 
   attr :free, :boolean, required: true
   attr :target, :any, required: true
@@ -117,48 +139,76 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelFields do
   end
 
   attr :reminders, :list, required: true
+  attr :provider, :string, default: nil, doc: "the provider of the event's calendar"
   attr :disabled, :boolean, default: false
   attr :target, :any, required: true
 
-  @doc "The reminder choice, with the event's other alarms listed under it."
+  @doc """
+  The event's reminders, each removable, and the row that adds one; read
+  only, without either, when the event cannot be changed.
+  """
   @spec reminder_field(map()) :: Phoenix.LiveView.Rendered.t()
   def reminder_field(assigns) do
+    {max, methods} = CreateParams.reminder_capacity(assigns.provider)
+
     assigns =
       assign(assigns,
-        choice: choice(assigns.reminders),
-        others: others(assigns.reminders),
-        options: reminder_options()
+        full: length(assigns.reminders) >= max,
+        single: match?([_only], methods)
       )
 
     ~H"""
-    <form id="calendar-panel-reminder" phx-change="panel:reminder" phx-target={@target} novalidate>
-      <.select
-        id="calendar-panel-reminder-choice"
-        name="reminder"
-        label={dgettext("dashboard_calendar_editing", "Reminder")}
-        value={@choice}
-        options={@options}
-        disabled={@disabled}
+    <section id="calendar-panel-reminders" class="space-y-2">
+      <h3 class="label mb-0">{dgettext("dashboard_calendar_editing", "Reminders")}</h3>
+      <PanelReminderList.chips
+        id="calendar-panel-reminder-list"
+        reminders={@reminders}
+        remove={
+          !@disabled &&
+            fn {reminder, index} ->
+              JS.push("panel:drop_reminder",
+                value: %{index: index, key: key(reminder)},
+                target: @target
+              )
+            end
+        }
       />
-      <ul
-        :if={@others != []}
-        id="calendar-panel-other-reminders"
-        class="mt-1 space-y-0.5 text-token-xs text-tymeslot-500"
-        aria-label={dgettext("dashboard_calendar_editing", "Other reminders")}
+      <p :if={@reminders == [] and @disabled} class="text-token-sm text-tymeslot-500">
+        {dgettext("dashboard_calendar_editing", "None")}
+      </p>
+      <form
+        :if={!@disabled and !@full}
+        id="calendar-panel-reminder-add"
+        class="flex flex-wrap items-end gap-2"
+        phx-submit="panel:add_reminder"
+        phx-target={@target}
+        novalidate
       >
-        <li :for={reminder <- @others}>{RemindersEditor.reminder_label(reminder)}</li>
-      </ul>
-    </form>
+        <.select
+          id="calendar-panel-reminder-minutes"
+          name="minutes"
+          compact
+          aria-label={dgettext("dashboard_calendar_editing", "Reminder time")}
+          options={PanelReminderList.minutes_options()}
+        />
+        <.select
+          :if={!@single}
+          id="calendar-panel-reminder-method"
+          name="method"
+          compact
+          aria-label={dgettext("dashboard_calendar_editing", "Reminder method")}
+          options={PanelReminderList.method_options()}
+        />
+        <.action_button
+          id="calendar-panel-reminder-add-button"
+          type="submit"
+          variant={:secondary}
+          size={:sm}
+        >
+          {dgettext("dashboard_calendar_editing", "Add reminder")}
+        </.action_button>
+      </form>
+    </section>
     """
-  end
-
-  defp reminder_options do
-    [
-      {dgettext("dashboard_calendar_editing", "None"), "none"}
-      | Enum.map(
-          ReminderForm.reminder_minutes_presets(),
-          &{RemindersEditor.minutes_label(&1), Integer.to_string(&1)}
-        )
-    ]
   end
 end

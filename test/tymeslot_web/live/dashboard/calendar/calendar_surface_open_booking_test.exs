@@ -122,6 +122,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceOpenBookingTest do
       assert keys -- Map.keys(strings) == []
       assert strings.kind_open == "Open for booking"
       assert strings.open_draft_title == "Open for %{name}"
+
+      # Without a calendar to write to, a meeting can still be sent from
+      # More options, which the note says.
+      assert strings.no_calendar_note ==
+               "Connect a calendar to add events, or use More options to send a Tymeslot meeting."
     end
   end
 
