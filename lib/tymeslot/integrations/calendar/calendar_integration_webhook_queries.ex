@@ -46,10 +46,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
   @doc """
   Finds an integration by its Microsoft Graph subscription ID.
 
-  Intentionally matches inactive integrations to handle in-flight notifications gracefully.
-  Returns `{:ok, integration}` if found, `{:error, :not_found}` otherwise, with
-  the OAuth tokens left encrypted for the reason given on
-  `get_by_google_channel_id/1`.
+  Like `get_by_google_channel_id/1`, matches inactive integrations and leaves
+  the OAuth tokens encrypted. Returns `{:ok, integration}` if found,
+  `{:error, :not_found}` otherwise.
   """
   @spec get_by_graph_subscription_id(String.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
@@ -280,9 +279,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
   # `needs_reauth` is excluded for the same reason as in
   # `list_unregistered_webhook_integrations/2`: renewing a channel for an
   # integration awaiting reconnection re-runs a registration that cannot
-  # succeed until its owner acts. Without this filter a flagged integration
-  # stayed eligible here, so the daily run kept renewing channels against a
-  # calendar that no longer existed.
+  # succeed until its owner acts.
   defp list_expiring_webhook_integrations(provider, id_field, expires_at_field, hours_ahead) do
     threshold = DateTime.add(DateTime.utc_now(), hours_ahead, :hour)
 

@@ -64,9 +64,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
   reads `IncludesLastItemInRange` either, so a folder or sync window larger
   than that limit is silently short rather than an error: the response carries
   `IncludesLastItemInRange="false"` and the events past the cut simply never
-  reach the caller. Paging is deliberately left out of this phase; adding it
-  means an `m:IndexedPageItemView` on `find_item/3` and a loop driven by that
-  attribute.
+  reach the caller. Paging is not implemented; it would need an
+  `m:IndexedPageItemView` on `find_item/3` and a loop driven by that attribute.
   """
 
   alias Tymeslot.Integrations.Calendar.Utils.XmlEscape
@@ -84,6 +83,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Requests do
     calendar:LegacyFreeBusyStatus
     calendar:IsCancelled
     calendar:StartTimeZone
+    item:ReminderIsSet
+    item:ReminderMinutesBeforeStart
   )
 
   @item_properties_xml Enum.map_join(@item_properties, &~s(<t:FieldURI FieldURI="#{&1}"/>))

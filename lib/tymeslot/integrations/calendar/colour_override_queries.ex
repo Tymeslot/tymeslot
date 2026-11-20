@@ -41,7 +41,54 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrideQueries do
     :ok
   end
 
-  @doc "The colour of `user_id`'s override on the event `uid` of `integration_id`, or nil."
+  @doc """
+  Records that `user_id` cleared the colour of the event `uid` of
+  `integration_id`: an override with a `nil` colour, which paints the event
+  without one even while the host calendar still carries the old colour.
+  """
+  @spec mark_external_cleared(integer(), integer(), String.t()) :: :ok
+  def mark_external_cleared(user_id, integration_id, uid) do
+    now = NaiveDateTime.utc_now(:second)
+
+    Repo.insert_all(
+      ColourOverride,
+      [
+        %{
+          user_id: user_id,
+          calendar_integration_id: integration_id,
+          provider_uid: uid,
+          colour: nil,
+          inserted_at: now,
+          updated_at: now
+        }
+      ],
+      on_conflict: {:replace, @replace_on_conflict},
+      conflict_target: @external_conflict_target
+    )
+
+    :ok
+  end
+
+  @doc """
+  Deletes `user_id`'s cleared override on the event `uid` of
+  `integration_id` (`mark_external_cleared/3`), leaving one that holds a
+  colour in place. Returns whether a cleared override was deleted.
+  """
+  @spec delete_external_cleared(integer(), integer(), String.t()) :: boolean()
+  def delete_external_cleared(user_id, integration_id, uid) do
+    {count, _rows} =
+      ColourOverride
+      |> external_match({user_id, integration_id, uid})
+      |> where([o], is_nil(o.colour))
+      |> Repo.delete_all()
+
+    count > 0
+  end
+
+  @doc """
+  The colour of `user_id`'s override on the event `uid` of `integration_id`,
+  or nil when there is none or it was cleared.
+  """
   @spec external_colour(integer(), integer(), String.t()) :: String.t() | nil
   def external_colour(user_id, integration_id, uid) do
     ColourOverride
@@ -119,9 +166,10 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrideQueries do
 
   @doc """
   All of a user's overrides as a lookup map: `{:meeting, id} => colour` and
-  `{:external, integration_id, uid} => colour`.
+  `{:external, integration_id, uid} => colour`, where a cleared external
+  override's colour is `nil`.
   """
-  @spec for_user(integer()) :: %{optional(tuple()) => String.t()}
+  @spec for_user(integer()) :: %{optional(tuple()) => String.t() | nil}
   def for_user(user_id) do
     from(o in ColourOverride, where: o.user_id == ^user_id)
     |> Repo.all()

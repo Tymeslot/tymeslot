@@ -20,6 +20,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
 
   One move at a time: `transfer` holds the one in flight, so the toast can
   name its calendar, and panel edits of its event wait for it.
+
+  A destination that cannot hold all of the event's reminders (Outlook keeps
+  one notification) still takes the move, and the toast says that not all of
+  them came across (`Changes.keeps_reminders?/2`).
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -191,13 +195,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
   """
   @spec series_moved(socket(), map(), atom() | nil) :: socket()
   def series_moved(socket, event, source) do
-    calendar = get_in(socket.assigns, [:transfer, :calendar_name])
+    transfer = socket.assigns.transfer
     socket = socket |> assign(:transfer, nil) |> Writes.series_moved(event)
 
     socket
     |> SurfaceData.reload(:events)
     |> PanelState.close_on(EventPayload.id(event))
-    |> series_toast(calendar, source)
+    |> series_toast(transfer, source)
   end
 
   @doc "A whole series' move failed: the writes held for it are made now."
@@ -315,7 +319,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
       id: EventPayload.id(event),
       calendar_name: destination.name,
       series: not is_nil(series_to),
-      undo: Keyword.get(opts, :undo, false)
+      undo: Keyword.get(opts, :undo, false),
+      reminders_kept: Changes.keeps_reminders?(event, destination.integration)
     })
     |> show_moving(event, destination, series_to)
     |> PanelEdits.put_status(:saving)
@@ -373,14 +378,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
 
   defp rebase_undo(socket, _original, _found), do: socket
 
-  defp moved_toast(socket, %{undo: true, calendar_name: name}, _original, _found, nil),
+  defp moved_toast(socket, %{undo: true, calendar_name: name} = transfer, _original, _found, nil),
     do:
       Toast.show(
         socket,
-        dgettext("dashboard_calendar_editing", "Moved back to %{calendar}", calendar: name)
+        with_reminders_note(
+          dgettext("dashboard_calendar_editing", "Moved back to %{calendar}", calendar: name),
+          transfer
+        )
       )
 
-  defp moved_toast(socket, %{calendar_name: name}, original, %{} = found, nil)
+  defp moved_toast(socket, %{calendar_name: name} = transfer, original, %{} = found, nil)
        when is_map(original) do
     entry = %{
       kind: :transfer,
@@ -392,7 +400,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
 
     socket
     |> assign(:undo, UndoStack.push(socket.assigns.undo, entry))
-    |> Toast.show(dgettext("dashboard_calendar_editing", "Moved to %{calendar}", calendar: name),
+    |> Toast.show(
+      with_reminders_note(
+        dgettext("dashboard_calendar_editing", "Moved to %{calendar}", calendar: name),
+        transfer
+      ),
       undo: not is_nil(entry.back_to),
       key: entry.key
     )
@@ -401,22 +413,39 @@ defmodule TymeslotWeb.Dashboard.Calendar.Transfer do
   # A move that left the original behind, or that the surface lost track of
   # (it was mounted again meanwhile), is named without Undo: moving it back
   # would leave two copies on the original calendar.
-  defp moved_toast(socket, _transfer, _original, _found, source) do
+  defp moved_toast(socket, transfer, _original, _found, source) do
     {_level, message} = CalendarEditMessages.moved_message(source)
-    Toast.show(socket, message)
+    Toast.show(socket, with_reminders_note(message, transfer))
   end
 
-  defp series_toast(socket, nil, _source), do: Toast.dismiss(socket)
-
-  defp series_toast(socket, calendar, source) do
+  defp series_toast(socket, %{calendar_name: calendar} = transfer, source)
+       when is_binary(calendar) do
     {_level, message} = CalendarEditMessages.series_moved_message(source, calendar)
 
     Toast.show(
       socket,
-      message <>
+      message
+      |> with_reminders_note(transfer)
+      |> Kernel.<>(
         " " <> dgettext("dashboard_calendar_editing", "Moving a series can't be undone here.")
+      )
     )
   end
+
+  defp series_toast(socket, _transfer, _source), do: Toast.dismiss(socket)
+
+  # The move went ahead; the toast says what the destination could not hold.
+  defp with_reminders_note(message, %{reminders_kept: false, calendar_name: calendar}),
+    do:
+      message <>
+        " " <>
+        dgettext(
+          "dashboard_calendar_editing",
+          "%{calendar} can't hold all of the event's reminders, so some were not carried.",
+          calendar: calendar
+        )
+
+  defp with_reminders_note(message, _transfer), do: message
 
   defp still_saving_message,
     do:

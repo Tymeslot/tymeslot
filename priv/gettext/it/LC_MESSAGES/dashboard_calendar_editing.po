@@ -431,11 +431,6 @@ msgstr "Nulla viene salvato finché non crei l'evento"
 msgid "One of the guest addresses isn't a valid email address."
 msgstr "Uno degli indirizzi degli ospiti non è un indirizzo email valido."
 
-#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
-#, elixir-autogen, elixir-format
-msgid "Other reminders"
-msgstr "Altri promemoria"
-
 #: lib/tymeslot_web/live/dashboard/calendar/creation.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
 #, elixir-autogen, elixir-format
@@ -453,11 +448,6 @@ msgstr "Luogo"
 #, elixir-autogen, elixir-format
 msgid "Read only"
 msgstr "Sola lettura"
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder"
-msgstr "Promemoria"
 
 #: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
 #, elixir-autogen, elixir-format
@@ -780,22 +770,27 @@ msgstr "Nessuno, oppure scrivi un luogo"
 msgid "Saved location"
 msgstr "Luogo salvato"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Add reminder"
 msgstr "Aggiungi promemoria"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder method"
 msgstr "Metodo di promemoria"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder time"
 msgstr "Anticipo del promemoria"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_reminder_list.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
 msgstr "Promemoria"
@@ -805,7 +800,7 @@ msgstr "Promemoria"
 msgid "Reminders are synced to your calendar so it can alert you on your own devices."
 msgstr "I promemoria vengono sincronizzati con il tuo calendario, così può avvisarti sui tuoi dispositivi."
 
-#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_reminder_list.ex
 #, elixir-autogen, elixir-format
 msgid "Remove reminder %{label}"
 msgstr "Rimuovi promemoria %{label}"
@@ -866,3 +861,8 @@ msgstr "Colore"
 #, elixir-autogen, elixir-format
 msgid "Add a guest to send a Tymeslot meeting."
 msgstr "Aggiungi un ospite per inviare una riunione Tymeslot."
+
+#: lib/tymeslot_web/live/dashboard/calendar/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "%{calendar} can't hold all of the event's reminders, so some were not carried."
+msgstr "%{calendar} non può contenere tutti i promemoria dell'evento, quindi alcuni non sono stati trasferiti."

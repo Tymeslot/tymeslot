@@ -9,6 +9,9 @@ defmodule Tymeslot.Meetings.GroupMeetingQueriesTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Meetings.GroupMeetingQueries
+  alias Tymeslot.Meetings.GuestQueries
+  alias Tymeslot.Meetings.GuestSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
 
   defp start_at(days, hour) do
@@ -116,6 +119,42 @@ defmodule Tymeslot.Meetings.GroupMeetingQueriesTest do
         )
 
       assert Enum.map(result, & &1.id) == [inside_b.id, inside_a.id]
+    end
+  end
+
+  describe "set_future_group_capacity/3" do
+    test "a lowered limit stops at the seats taken, not counting declined guests", ctx do
+      meeting =
+        insert_group_meeting(ctx.user, ctx.meeting_type, start_at(3, 10), %{capacity: 10})
+
+      bookers = insert_list(3, :participant, meeting: meeting)
+
+      guests =
+        for {booker, n} <- Enum.with_index(bookers) do
+          {:ok, guest} =
+            GuestQueries.insert_guest(%{
+              meeting_id: meeting.id,
+              email: "guest#{n}@example.com",
+              participant_id: booker.id
+            })
+
+          guest
+        end
+
+      # Two of the three guests decline: 3 bookers and 1 guest hold 4 seats.
+      declined_ids = guests |> Enum.take(2) |> Enum.map(& &1.id)
+
+      Repo.update_all(from(g in GuestSchema, where: g.id in ^declined_ids),
+        set: [status: :declined]
+      )
+
+      assert GroupMeetingQueries.set_future_group_capacity(
+               ctx.meeting_type.id,
+               2,
+               DateTime.utc_now()
+             ) == 1
+
+      assert Repo.get!(MeetingSchema, meeting.id).capacity == 4
     end
   end
 end

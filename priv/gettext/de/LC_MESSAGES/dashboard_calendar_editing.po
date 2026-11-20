@@ -431,11 +431,6 @@ msgstr "Wird erst beim Erstellen gespeichert"
 msgid "One of the guest addresses isn't a valid email address."
 msgstr "Eine der Gästeadressen ist keine gültige E-Mail-Adresse."
 
-#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
-#, elixir-autogen, elixir-format
-msgid "Other reminders"
-msgstr "Weitere Erinnerungen"
-
 #: lib/tymeslot_web/live/dashboard/calendar/creation.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
 #, elixir-autogen, elixir-format
@@ -453,11 +448,6 @@ msgstr "Ort"
 #, elixir-autogen, elixir-format
 msgid "Read only"
 msgstr "Schreibgeschützt"
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder"
-msgstr "Erinnerung"
 
 #: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
 #, elixir-autogen, elixir-format
@@ -780,22 +770,27 @@ msgstr "Keiner, oder einen Ort eingeben"
 msgid "Saved location"
 msgstr "Gespeicherter Ort"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Add reminder"
 msgstr "Erinnerung hinzufügen"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder method"
 msgstr "Erinnerungsart"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder time"
 msgstr "Erinnerungszeit"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_reminder_list.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
 msgstr "Erinnerungen"
@@ -805,7 +800,7 @@ msgstr "Erinnerungen"
 msgid "Reminders are synced to your calendar so it can alert you on your own devices."
 msgstr "Erinnerungen werden mit Ihrem Kalender synchronisiert, damit er Sie auf Ihren eigenen Geräten benachrichtigen kann."
 
-#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_reminder_list.ex
 #, elixir-autogen, elixir-format
 msgid "Remove reminder %{label}"
 msgstr "Erinnerung %{label} entfernen"
@@ -866,3 +861,8 @@ msgstr "Farbe"
 #, elixir-autogen, elixir-format
 msgid "Add a guest to send a Tymeslot meeting."
 msgstr "Fügen Sie einen Gast hinzu, um einen Tymeslot-Termin zu senden."
+
+#: lib/tymeslot_web/live/dashboard/calendar/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "%{calendar} can't hold all of the event's reminders, so some were not carried."
+msgstr "%{calendar} kann nicht alle Erinnerungen des Ereignisses aufnehmen, daher wurden einige nicht übernommen."

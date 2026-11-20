@@ -2,7 +2,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   @moduledoc """
   Shared handler for the paths that end in "the user has to reconnect".
 
-  The original caller was the "credentials no longer decrypt" path: when a
+  One use is the "credentials no longer decrypt" path: when a
   query module returns `{:error, :requires_reencryption, integration}`, callers
   delegate here to log a warning, flag the integration for reauthentication,
   and return a normalised result. Permanent OAuth failures (an expired or

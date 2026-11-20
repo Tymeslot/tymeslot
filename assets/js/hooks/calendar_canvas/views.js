@@ -127,6 +127,7 @@ export const ViewsMixin = {
       done: this.agendaFinished(days),
       loading: this.agendaBusy(),
       lens: this.agendaLens,
+      density: this.settings.density,
     });
   },
 

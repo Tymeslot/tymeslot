@@ -3,8 +3,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ReminderHandlers
   The reminder picker's events for `MeetingTypeForm`. Each works on the
   picker's own state (`TymeslotWeb.Components.Shared.ReminderPickerState`),
   lifted out of the form's assigns and written straight back.
-
-  Split out of the form to keep it inside the size limit.
   """
 
   import Phoenix.Component, only: [assign: 2]

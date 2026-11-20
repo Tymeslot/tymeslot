@@ -322,13 +322,13 @@ msgid "1 hour before"
 msgstr "1 hora antes"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_reminder_list.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "Correo electrónico"
 
 #: lib/tymeslot_web/components/calendar/reminders_editor.ex
-#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_reminder_list.ex
 #, elixir-autogen, elixir-format
 msgid "Notification"
 msgstr "Notificación"

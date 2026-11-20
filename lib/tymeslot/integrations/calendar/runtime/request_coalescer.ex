@@ -75,7 +75,6 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.RequestCoalescer do
         {:noreply, new_state}
 
       %{waiters: waiters} = request ->
-        # Request in-flight, add to waiters
         updated_request = %{request | waiters: [from | waiters]}
         new_state = put_in(state.requests[key], updated_request)
 
@@ -84,7 +83,6 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.RequestCoalescer do
           waiter_count: length(waiters) + 1
         )
 
-        # Don't reply yet - we'll reply when the task completes
         {:noreply, new_state}
     end
   end
@@ -104,11 +102,10 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.RequestCoalescer do
         {:noreply, state}
 
       key ->
-        # If task exited normally, it already sent :coalescer_result before exiting.
-        # Let that message handler reply to waiters. Only handle crashes here.
+        # A task that exited normally already sent :coalescer_result before
+        # exiting, and that message's handler replies to waiters, so only
+        # crashes are handled here.
         if reason == :normal do
-          # Normal exit - :coalescer_result message is in mailbox or already processed
-          # Just flush the monitor, let :coalescer_result handle the reply
           Process.demonitor(ref, [:flush])
           {:noreply, state}
         else

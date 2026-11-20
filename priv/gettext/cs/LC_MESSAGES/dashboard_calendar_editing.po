@@ -433,11 +433,6 @@ msgstr "Nic se neuloží, dokud událost nevytvoříte"
 msgid "One of the guest addresses isn't a valid email address."
 msgstr "Jedna z adres hostů není platná e-mailová adresa."
 
-#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
-#, elixir-autogen, elixir-format
-msgid "Other reminders"
-msgstr "Další připomínky"
-
 #: lib/tymeslot_web/live/dashboard/calendar/creation.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
 #, elixir-autogen, elixir-format
@@ -455,11 +450,6 @@ msgstr "Místo"
 #, elixir-autogen, elixir-format
 msgid "Read only"
 msgstr "Jen pro čtení"
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder"
-msgstr "Připomínka"
 
 #: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
 #, elixir-autogen, elixir-format
@@ -782,22 +772,27 @@ msgstr "Žádné, nebo zadejte místo"
 msgid "Saved location"
 msgstr "Uložené místo"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Add reminder"
 msgstr "Přidat připomínku"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder method"
 msgstr "Způsob připomenutí"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder time"
 msgstr "Čas připomenutí"
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_reminder_list.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
 msgstr "Připomínky"
@@ -807,7 +802,7 @@ msgstr "Připomínky"
 msgid "Reminders are synced to your calendar so it can alert you on your own devices."
 msgstr "Připomínky se synchronizují s vaším kalendářem, aby vás mohl upozornit na vašich vlastních zařízeních."
 
-#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_reminder_list.ex
 #, elixir-autogen, elixir-format
 msgid "Remove reminder %{label}"
 msgstr "Odebrat připomínku %{label}"
@@ -853,7 +848,7 @@ msgstr "Na zrušení je pozdě: hosté už byli informováni."
 #: lib/tymeslot_web/live/dashboard/calendar/panel_guests.ex
 #, elixir-autogen, elixir-format
 msgid "This update is no longer waiting to be sent."
-msgstr "Tato aktualizace už nečeká na odeslání."
+msgstr "Toto oznámení o změnách už nečeká na odeslání."
 
 #: lib/tymeslot_web/live/dashboard/calendar/event_panel.ex
 #, elixir-autogen, elixir-format
@@ -869,3 +864,8 @@ msgstr "Barva"
 #, elixir-autogen, elixir-format
 msgid "Add a guest to send a Tymeslot meeting."
 msgstr "Pro odeslání schůzky Tymeslot přidejte hosta."
+
+#: lib/tymeslot_web/live/dashboard/calendar/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "%{calendar} can't hold all of the event's reminders, so some were not carried."
+msgstr "Kalendář %{calendar} neumí uložit všechny připomínky události, proto se některé nepřenesly."

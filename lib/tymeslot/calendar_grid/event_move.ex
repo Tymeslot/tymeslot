@@ -35,6 +35,11 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   link travels in the description it was written into, and the cached link
   and video integration are carried onto the destination's row.
 
+  The reminders are those the destination keeps
+  (`CreateParams.fit_reminders/2`): one notification on Outlook or Exchange,
+  at most `CreateParams.max_reminders/0` elsewhere. The create and the cached
+  row get the same list, so the panel shows what the destination holds.
+
   ## Recurring events
 
   A member of a series is never moved on its own. The create path writes a
@@ -61,6 +66,8 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   """
 
   alias Tymeslot.Availability
+  alias Tymeslot.CalendarGrid.CreateParams
+  alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.ProviderPayload
@@ -73,6 +80,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Reminder
 
   require Logger
 
@@ -130,6 +138,40 @@ defmodule Tymeslot.CalendarGrid.EventMove do
     do: event |> Occurrence.cached_row() |> SeriesTransfer.notes(integration)
 
   @doc """
+  Whether a calendar of `integration` keeps every reminder `event` has, so a
+  move there carries them all (`CreateParams.fit_reminders/2`). Outlook and
+  Exchange keep one notification, so an event with more, or with an email
+  reminder, loses the rest when it moves there. A series always keeps them:
+  it moves only within its provider's family, copied as the provider holds
+  it (`SeriesTransfer`). Reads the cached row, as `move_event/3` does.
+  """
+  @spec keeps_reminders?(map(), map()) :: boolean()
+  def keeps_reminders?(event, %{provider: provider}) do
+    stored = Occurrence.cached_row(event)
+
+    case movable(stored) do
+      {:ok, :series} ->
+        true
+
+      _single_or_refused ->
+        reminders = Map.get(stored, :reminders)
+        fit_reminders(reminders, provider) == reminders
+    end
+  end
+
+  # `reminders` as a calendar of `provider` keeps them, left exactly as they
+  # are when it keeps them all: a cached list is string-keyed, and is only
+  # rewritten in the canonical shape when something had to go.
+  defp fit_reminders(reminders, provider) do
+    normalised = reminders |> List.wrap() |> Enum.map(&Reminder.normalise/1)
+
+    case CreateParams.fit_reminders(normalised, provider) do
+      ^normalised -> reminders
+      fitted -> fitted
+    end
+  end
+
+  @doc """
   Moves `event` to `destination`'s integration, on the calendar named by
   `:calendar_id` or that integration's default when it is `nil`. A member
   of a series moves the whole series (see
@@ -145,7 +187,10 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   `{:error, reason}`, with nothing written anywhere, when the event cannot be
   moved or the destination refused it, including
   `{:error, :no_destination_calendar}` when the destination integration has no
-  calendar to write to.
+  calendar to write to. An event `EditGuard.write_gates/3` refuses as a
+  change of timing is refused with its reason before anything else: one not
+  on a writable calendar of the organiser's own, the calendar copy of a
+  booking, or one held by live seats.
   """
   @spec move_event(pos_integer(), map(), destination()) ::
           {:ok, moved()}
@@ -157,12 +202,14 @@ defmodule Tymeslot.CalendarGrid.EventMove do
              | :invalid_timing
              | term()}
   def move_event(user_id, event, destination) do
-    stored = Occurrence.cached_row(event)
+    with :ok <- EditGuard.write_gates(user_id, event, :timing) do
+      stored = Occurrence.cached_row(event)
 
-    case movable(stored) do
-      :ok -> move_single(user_id, event, stored, destination)
-      {:ok, :series} -> SeriesTransfer.move(user_id, stored, destination)
-      {:error, _reason} = refused -> refused
+      case movable(stored) do
+        :ok -> move_single(user_id, event, stored, destination)
+        {:ok, :series} -> SeriesTransfer.move(user_id, stored, destination)
+        {:error, _reason} = refused -> refused
+      end
     end
   end
 
@@ -219,7 +266,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   # nothing from here on may report that it was not moved: a raise past this
   # point is reported as `source: :unknown`, since the original may or may not
   # have been deleted by then. A raise before the create returned escapes to
-  # the caller as before, where "nothing moved" is the truth.
+  # the caller, where "nothing moved" is the truth.
   defp settle_move(user_id, event, moved, %CreatedEvent{} = created) do
     integration_id = moved.calendar_integration_id
     cached_uid = CreatedEvent.cache_uid(created) || moved.uid
@@ -291,6 +338,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
       | uid: ICalBuilder.generate_uid(if(owned?, do: :tymeslot, else: :foreign)),
         calendar_integration_id: integration.id,
         provider: integration.provider,
+        reminders: fit_reminders(event.reminders, integration.provider),
         provider_calendar_id: destination_calendar_id(integration, calendar_id),
         provider_event_id: nil
     }
@@ -303,9 +351,9 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   all, every collection is read-only, or none is selected.
   """
   @spec destination_calendar_id(map(), String.t() | nil) :: String.t() | nil
-  # The chosen calendar first, for every provider: CalDAV writes now honour
-  # `event_data[:calendar_id]` when it names a writable collection, so filing
-  # the row under the booking collection regardless is no longer the truth.
+  # The chosen calendar first, for every provider: CalDAV writes honour
+  # `event_data[:calendar_id]` when it names a writable collection, so the row
+  # is filed under the chosen collection, not the booking one.
   # `booking_calendar_path/1` resolves nothing when the stored booking calendar
   # id matches no discovered collection, which is the state a rediscovery
   # leaves behind; the move then goes to the first writable collection, which
@@ -367,9 +415,10 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   end
 
   defp remove_source(user_id, event) do
-    # The source's own calendar, not the integration's default: a move away
-    # from a secondary Google or Outlook calendar used to address the default
-    # one and 404, leaving the original behind beside the copy.
+    # The source's own calendar, not the integration's default: the event
+    # lives on its source calendar, which on a secondary Google or Outlook
+    # calendar is not the default, so addressing the default would 404 and
+    # leave the original behind beside the copy.
     opts =
       Enum.reject(
         [provider_event_id: event.provider_event_id, calendar_id: event.provider_calendar_id],

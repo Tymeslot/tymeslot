@@ -65,9 +65,8 @@ defmodule Tymeslot.Meetings.GuestSchema do
     # Who put this guest on the meeting. Nil on rows from before the column,
     # which read as the booker (see `inviter/1`).
     field(:invited_by, Ecto.Enum, values: [:booker, :organizer])
-    # The end this guest was last told by an end change notice, or held before
-    # a change not yet announced; nil when it knows the meeting as booked or
-    # last rescheduled. Written only by the end change and reschedule paths.
+    # The end this guest was last told, as `MeetingSchema`'s `notified_end_time`
+    # records it for the booker.
     field(:notified_end_time, :utc_datetime)
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
@@ -121,7 +120,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
     # Two indexes, one rule per booking shape: a solo booking cannot invite an
     # address twice (its guests carry no participant), and on a group slot each
     # booker cannot invite an address twice, but two bookers inviting the same
-    # colleague is fine, and used to fail the second booking outright.
+    # colleague is fine.
     |> unique_constraint([:meeting_id, :email],
       name: :meeting_guests_meeting_id_email_solo_index,
       message: dgettext_noop("errors", "has already been added")

@@ -1,7 +1,8 @@
 defmodule Tymeslot.Meetings.CommittedStep do
   @moduledoc """
-  Runs a best-effort step after an approval-gate transition has committed,
-  shared by `Tymeslot.Meetings.Approval` and `Tymeslot.Meetings.ApprovalRelease`.
+  Runs a best-effort step after a meeting's transition has committed, shared
+  by `Tymeslot.Meetings.Approval`, `Tymeslot.Meetings.ApprovalRelease` and
+  `Tymeslot.Bookings.RescheduleRequestExpiry`.
   """
 
   alias Tymeslot.Infrastructure.ErrorTracking
@@ -10,8 +11,8 @@ defmodule Tymeslot.Meetings.CommittedStep do
 
   @doc """
   Runs `fun` for a meeting whose row is already committed (confirmed by
-  `Approval`, released by `ApprovalRelease`) and cannot be undone by a caller
-  retrying.
+  `Approval`, released by `ApprovalRelease`, expired by
+  `RescheduleRequestExpiry`) and cannot be undone by a caller retrying.
 
   A crash in one step must not stop the next, nor turn a real approval or
   release into an `{:error, ...}` the caller has to explain: the transition

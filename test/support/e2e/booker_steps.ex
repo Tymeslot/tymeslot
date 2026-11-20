@@ -58,8 +58,8 @@ defmodule TymeslotWeb.E2E.BookerSteps do
 
   @doc """
   Fills the booking form with a valid name and email, submits it, and waits
-  for the confirmation. The fields validate on blur, so the last one is blurred
-  before waiting for the submit button to enable.
+  for the confirmation, clicking submit straight from the email field without
+  waiting for the server to see the typed values.
   """
   @spec submit_booking_form(Wallaby.Session.t()) :: Wallaby.Session.t()
   def submit_booking_form(session) do
@@ -67,8 +67,6 @@ defmodule TymeslotWeb.E2E.BookerSteps do
     |> assert_has(css("[data-testid='booking-form']"))
     |> fill_in(css("input[name='booking[name]']"), with: "Jane Doe")
     |> fill_in(css("input[name='booking[email]']"), with: "jane@example.com")
-    |> execute_script("document.activeElement.blur()")
-    |> assert_has(css("[data-testid='submit-booking']:not([disabled])"))
     |> click(css("[data-testid='submit-booking']"))
     |> assert_has(css("[data-testid='confirmation-heading']"))
   end

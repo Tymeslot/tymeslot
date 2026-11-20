@@ -14,7 +14,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
   ## Partial Refund Handling
 
-  The handler now supports proper partial refund handling:
+  The handler treats partial refunds by their total:
   - Calculates total refunded amount across all refunds for a charge
   - Only revokes access when total refunds exceed a configurable threshold
   - Default threshold: 90% of the original charge amount
@@ -23,6 +23,11 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   ## Configuration
 
       config :tymeslot, :refund_revocation_threshold_percent, 90
+
+  ## Visibility
+
+  The `@doc false` functions below are public only so tests can reach them;
+  treat them as internal API.
 
   ## Refunds the app has already announced
 
@@ -244,7 +249,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   # no subscription (or that paid no invoice) refunds none; one whose
   # invoice billed a different subscription paid for an earlier one, and
   # the customer keeps the subscription they hold now.
-  # Made public for testing purposes but should be considered internal API.
   @doc false
   @spec refunds_current_subscription?(map(), map()) :: boolean()
   def refunds_current_subscription?(%{subscription_id: nil}, _subscription), do: false
@@ -267,7 +271,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
   # Calculates the total amount refunded across all refunds for a charge.
   # Handles both Stripe's expanded refunds list and the amount_refunded summary field.
-  # Made public for testing purposes but should be considered internal API.
   @doc false
   @spec calculate_total_refunded(map()) :: non_neg_integer()
   def calculate_total_refunded(charge) do
@@ -297,7 +300,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   # that list is unavailable (e.g. only the summary `amount_refunded` field
   # was sent), the cumulative total is the best available approximation —
   # it equals the delta for a charge's first refund.
-  # Made public for testing purposes but should be considered internal API.
   @doc false
   @spec calculate_latest_refund_amount(map()) :: non_neg_integer()
   def calculate_latest_refund_amount(charge) do
@@ -308,7 +310,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   end
 
   # Gets the original charge amount.
-  # Made public for testing purposes but should be considered internal API.
   @doc false
   @spec get_charge_amount(map()) :: non_neg_integer()
   def get_charge_amount(charge) do
@@ -410,7 +411,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   end
 
   # Calculates the refund percentage.
-  # Made public for testing purposes but should be considered internal API.
   @doc false
   @spec calculate_refund_percentage(non_neg_integer(), non_neg_integer()) :: float()
   def calculate_refund_percentage(_refunded, 0), do: 0.0
@@ -422,7 +422,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   # Determines if access should be revoked based on refund threshold.
   # Access is revoked if total refunded amount exceeds the configured threshold
   # percentage of the original charge amount.
-  # Made public for testing purposes but should be considered internal API.
   @doc false
   @spec should_revoke_access?(non_neg_integer(), non_neg_integer()) :: boolean()
   def should_revoke_access?(_refunded, 0), do: false
@@ -442,7 +441,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
   # Extracts the currency from a charge object, supporting both string and atom keys.
   # Defaults to "eur" when the field is absent.
-  # Made public for testing purposes but should be considered internal API.
   @doc false
   @spec extract_charge_currency(map()) :: String.t()
   def extract_charge_currency(charge) do

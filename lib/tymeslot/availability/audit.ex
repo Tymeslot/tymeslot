@@ -83,7 +83,9 @@ defmodule Tymeslot.Availability.Audit do
     horizon_days = Keyword.get(opts, :horizon_days, @default_horizon_days)
     start_date = Keyword.get(opts, :start_date, Clock.utc_today())
     end_date = Date.add(start_date, horizon_days)
-    request = %{profile: profile, user_timezone: Profiles.timezone(profile)}
+    # An operator's read on the host's behalf turns no guest away, so a
+    # refusal is not counted as one.
+    request = %{profile: profile, user_timezone: Profiles.timezone(profile), organiser_view: true}
 
     Availability.changed(profile.user_id)
 

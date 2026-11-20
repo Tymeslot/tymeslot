@@ -3,11 +3,10 @@ defmodule TymeslotWeb.Dashboard.DashboardOverview.ComponentView do
   Markup for the dashboard overview: the onboarding checklist, the focus
   cockpit for the next appointment, and the day spine beneath it.
 
-  Extracted from `DashboardOverviewComponent` so that module is left with the
-  agenda view model and the events that rebuild it, matching how
-  `CalendarSettings.ComponentView` sits behind `CalendarSettingsComponent`.
-  `agenda/1` receives the component's assigns unchanged, so LiveView change
-  tracking is preserved.
+  It sits behind `DashboardOverviewComponent`, which keeps the agenda view
+  model and the events that rebuild it, as `CalendarSettings.ComponentView`
+  sits behind `CalendarSettingsComponent`. `agenda/1` receives the component's
+  assigns unchanged, so LiveView change tracking is preserved.
 
   The private function components here are the rail's vocabulary (cockpit,
   spine row, rail) and are only ever rendered from `agenda/1`; the rows

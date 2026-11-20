@@ -146,7 +146,7 @@ defmodule Tymeslot.Agenda do
       who: who(meeting),
       who_email: who_email(meeting),
       calendar: nil,
-      colour: Calendar.resolve_event_colour(Map.get(overrides, target), nil),
+      colour: Calendar.resolve_event_colour(overrides, target, nil),
       target: target
     }
   end
@@ -167,7 +167,7 @@ defmodule Tymeslot.Agenda do
       join_url: nil,
       who: organiser_name(event.organiser),
       calendar: calendar_name(event, calendar_names),
-      colour: Calendar.resolve_event_colour(Map.get(overrides, target), event.colour),
+      colour: Calendar.resolve_event_colour(overrides, target, event.colour),
       target: target
     }
   end
@@ -188,7 +188,7 @@ defmodule Tymeslot.Agenda do
       join_url: presence(event.video_link),
       who: organiser_name(event.organiser),
       calendar: calendar_name(event, calendar_names),
-      colour: Calendar.resolve_event_colour(Map.get(overrides, target), event.colour),
+      colour: Calendar.resolve_event_colour(overrides, target, event.colour),
       target: target
     }
   end

@@ -5,9 +5,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
   type as a group session and a paid type with its price on every step it
   heads.
 
-  "Schedule with" and the organiser's name are the heading of the step it
-  heads (`Journey.Components.moment_heading/1`), so the step takes the focus
-  there when the visitor moves on to it; it looks as the two lines did.
+  The heading of the step it heads (`Journey.Components.moment_heading/1`) is
+  two lines: the booking page's name, or "Schedule with" outside a booking
+  page, above the organiser's name. The step takes the focus there when the
+  visitor moves on to it.
   """
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext

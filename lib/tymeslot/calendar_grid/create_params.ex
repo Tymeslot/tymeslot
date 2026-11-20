@@ -42,6 +42,12 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   @max_rule 500
   @reminder_methods %{"popup" => :popup, "email" => :email}
 
+  # Outlook and Exchange keep one lead time per event and no method: Graph has
+  # a single `reminderMinutesBeforeStart` and EWS a single
+  # `ReminderMinutesBeforeStart`, so every reminder is a notification. A second
+  # reminder, or an email, would never reach either.
+  @reminder_capacities %{"outlook" => {1, [:popup]}, "exchange" => {1, [:popup]}}
+
   @enforce_keys [:integration_id, :calendar_id, :title, :start_at, :end_at, :timezone]
   defstruct [
     :integration_id,
@@ -356,6 +362,31 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   @doc "The most reminders an event can have."
   @spec max_reminders() :: pos_integer()
   def max_reminders, do: @max_reminders
+
+  @doc """
+  How many reminders an event on a calendar of `provider` keeps, and by which
+  methods: `{max, methods}`. Outlook and Exchange keep one notification; every
+  other provider `max_reminders/0` of either method.
+  """
+  @spec reminder_capacity(String.t() | atom() | nil) :: {pos_integer(), [:popup | :email, ...]}
+  def reminder_capacity(provider) when is_atom(provider) and provider != nil,
+    do: reminder_capacity(Atom.to_string(provider))
+
+  def reminder_capacity(provider),
+    do: Map.get(@reminder_capacities, provider, {@max_reminders, [:popup, :email]})
+
+  @doc """
+  `reminders` as a calendar of `provider` keeps them (`reminder_capacity/1`):
+  the first it has room for, any method it lacks written as its first method.
+  """
+  @spec fit_reminders([map()], String.t() | atom() | nil) :: [map()]
+  def fit_reminders(reminders, provider) do
+    {max, [fallback | _rest] = methods} = reminder_capacity(provider)
+
+    reminders
+    |> Enum.take(max)
+    |> Enum.map(&if(&1.method in methods, do: &1, else: %{&1 | method: fallback}))
+  end
 
   @doc """
   Checks a list of guest addresses for `user_id`, as a create checks its

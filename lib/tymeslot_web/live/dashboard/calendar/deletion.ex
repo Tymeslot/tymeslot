@@ -357,7 +357,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
     case Changes.schedule_delete(socket.assigns.current_user.id, event, scope, opts) do
       {:ok, token} ->
         socket
-        |> hide(token, PendingDeletes.entry(event, scope, false))
+        |> hide(token, event, PendingDeletes.entry(event, scope, false))
         |> offer_undo(token, title)
 
       {:error, _reason} ->
@@ -371,7 +371,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
     case Changes.schedule_delete(socket.assigns.current_user.id, event, scope, opts) do
       {:ok, token} ->
         socket
-        |> hide(token, PendingDeletes.entry(event, scope, true, notify?))
+        |> hide(token, event, PendingDeletes.entry(event, scope, true, notify?))
         |> Toast.show(
           dgettext("dashboard_calendar", "Deleting “%{title}”…",
             title: EventPayload.title(event)
@@ -384,9 +384,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.Deletion do
     end
   end
 
-  defp hide(socket, token, pending) do
+  # The panel open on the event closes only now the delete is scheduled, so
+  # backing out of a question about it leaves the panel where it was.
+  defp hide(socket, token, event, pending) do
     socket
     |> assign(:pending_deletes, Map.put(socket.assigns.pending_deletes, token, pending))
+    |> PanelState.close_on(EventPayload.id(event))
     |> SurfaceData.refilter()
     |> SurfaceData.push_events(false)
   end

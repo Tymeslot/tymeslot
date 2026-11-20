@@ -44,7 +44,7 @@ defmodule Tymeslot.Analytics.Contract do
   @spec registry() :: %{optional(String.t()) => [atom()]}
   def registry, do: @registry
 
-  @doc "The dashboard places a host copies their booking link from (`booking_link_shared`)."
+  @doc "The dashboard places a host can copy their booking link from (`booking_link_shared`)."
   @spec share_channels() :: [String.t()]
   def share_channels, do: @share_channels
 

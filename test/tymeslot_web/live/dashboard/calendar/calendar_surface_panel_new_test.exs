@@ -459,13 +459,5 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewTest do
       payload = await_create(lv)
       assert payload.description == "Agenda"
     end
-
-    test "Delete hands the event to the delete flow and closes the panel", %{lv: lv} do
-      lv |> element("#calendar-panel-delete") |> render_click()
-
-      refute has_element?(lv, "#calendar-panel")
-      # The event has a guest, so plan 2's delete asks whether to tell them.
-      assert has_element?(lv, "#calendar-delete-confirm")
-    end
   end
 end

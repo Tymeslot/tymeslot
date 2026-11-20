@@ -147,7 +147,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   @spec connected_calendars_section(map()) :: Phoenix.LiveView.Rendered.t()
   def connected_calendars_section(assigns) do
-    # Group integrations by active/inactive
     {active, inactive} = Enum.split_with(assigns.integrations, & &1.is_active)
 
     assigns =

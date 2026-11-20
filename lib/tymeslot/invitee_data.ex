@@ -35,7 +35,12 @@ defmodule Tymeslot.InviteeData do
 
   Upcoming bookings are refused rather than erased: a confirmed meeting with
   its invitee's address removed could no longer be cancelled, moved or
-  reminded about. Cancel them first, then erase.
+  reminded about. Cancel them first, then erase. A booking still held for
+  email confirmation is neither refused nor named: the host has not been
+  told of it. It is released, silently as a disowned hold is
+  (`Tymeslot.Meetings.EmailVerification.release/1`), and then erased, so a
+  late click on the confirmation link cannot confirm a booking with no one
+  behind it.
 
   A booking series holds its booker's name and email too. An erasure clears
   the series booked under the address, and the purge clears a series with
@@ -48,8 +53,10 @@ defmodule Tymeslot.InviteeData do
 
   require Logger
 
+  alias Tymeslot.Availability
   alias Tymeslot.Clock
   alias Tymeslot.InviteeData.InviteeDataQueries, as: Queries
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Repo
 
   @batch_size 500
@@ -129,16 +136,38 @@ defmodule Tymeslot.InviteeData do
     now = DateTime.truncate(Clock.utc_now(), :second)
 
     result =
-      Repo.transaction(fn ->
-        case Queries.upcoming_meeting_uids(email, scope, now) do
-          [] -> erase_rows(email, scope, now)
-          uids -> Repo.rollback({:upcoming_meetings, uids})
-        end
-      end)
+      announce_released(
+        Repo.transaction(fn ->
+          case Queries.upcoming_meeting_uids(email, scope, now) do
+            [] -> {release_holds(email, scope), erase_rows(email, scope, now)}
+            uids -> Repo.rollback({:upcoming_meetings, uids})
+          end
+        end)
+      )
 
     log_erasure(result, scope)
     result
   end
+
+  # The holds are released inside the erasure's transaction, and the slots
+  # they free announced only once it commits (`announce_released/1`).
+  defp release_holds(email, scope) do
+    email
+    |> Queries.held_meetings_for_attendee(scope)
+    |> Enum.flat_map(fn meeting ->
+      case EmailVerification.release_in_transaction(meeting) do
+        {:ok, released} -> [released.organizer_user_id]
+        {:error, :not_awaiting_verification} -> []
+      end
+    end)
+  end
+
+  defp announce_released({:ok, {organiser_ids, erased}}) do
+    organiser_ids |> Enum.uniq() |> Enum.each(&Availability.changed/1)
+    {:ok, erased}
+  end
+
+  defp announce_released({:error, _reason} = error), do: error
 
   defp erase_rows(email, scope, now) do
     meeting_ids = Queries.meeting_ids_for_attendee(email, scope)

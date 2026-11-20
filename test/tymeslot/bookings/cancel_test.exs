@@ -97,6 +97,23 @@ defmodule Tymeslot.Bookings.CancelTest do
                Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
     end
 
+    test "the host can withdraw an unanswered reschedule request after its original slot passed" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: -7_200,
+          duration: 3_600,
+          reschedule_requested_at: DateTime.add(DateTime.utc_now(), -86_400, :second)
+        })
+
+      assert {:ok, cancelled} =
+               Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid), caller: :organizer)
+
+      assert cancelled.status == :cancelled
+      assert Repo.get!(MeetingSchema, meeting.id).status == :cancelled
+    end
+
     test "refuses the withdraw link on a request that already expired" do
       %{user: user} = create_user_with_profile()
 

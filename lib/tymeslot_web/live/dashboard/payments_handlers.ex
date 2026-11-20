@@ -4,10 +4,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsHandlers do
 
   When the host lands on the integrations hub having just connected Stripe
   (`?return=1`, set by the OAuth callback and carried across from the
-  `/dashboard/payments` route; `?refresh=1` is only still accepted for old
-  links, nothing produces it now), this enqueues a one-shot Stripe
-  resync so capability flags refresh without waiting on the next
-  `account.updated` webhook. It runs on every `:integrations` render,
+  `/dashboard/payments` route; `?refresh=1` counts too, for links already
+  issued with it, though nothing in the app produces it), this enqueues a
+  one-shot Stripe resync so capability flags refresh without waiting on the
+  next `account.updated` webhook. It runs on every `:integrations` render,
   regardless of `Tymeslot.Features.meeting_payments_allowed?/1` (the hub's own
   mount-time gate, read as `payments_allowed`): no feature check is needed
   here because the lookup is scoped to the caller's own account and only acts
@@ -21,8 +21,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsHandlers do
 
   @doc """
   Enqueues the Stripe capability resync when the host has just connected Stripe
-  (`?return=1` from the OAuth callback; `?refresh=1` is only still accepted for
-  old links), and returns the socket unchanged.
+  (see the module doc for the return markers), and returns the socket unchanged.
 
   Safe to call on every `:integrations` render: the resync only runs on the
   connected socket and only when a return marker is present, so ordinary hub

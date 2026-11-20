@@ -390,6 +390,17 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
       assert message =~ "EWS"
     end
 
+    # An on-premises server reachable only over the organisation's VPN times
+    # out from Tymeslot, and "try again" would send its owner round in circles.
+    test "points at the network the server sits on when it does not answer" do
+      ReqTest.stub(:tymeslot_http, &ReqTest.transport_error(&1, :timeout))
+
+      assert {:error, "Exchange did not respond in time." <> rest} =
+               Provider.perform_connection_test(config())
+
+      assert rest =~ "only reachable from your organisation's network or over a VPN"
+    end
+
     test "reports the denial when the server refused the folder read under a 200" do
       # EWS states this failure in the body, not in the status, so a test that
       # stops at the HTTP layer tells the account owner the connection works

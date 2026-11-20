@@ -62,10 +62,10 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   of the integration's own handler.
 
   ErrorTracker gives an `{:error, reason}` returned by a worker a synthetic
-  frame, the worker's `perform/2`, so every returned error of one worker is
+  frame, the worker's `perform/1`, so every returned error of one worker is
   one error, retryable or not. An alert is raised for a new error or a
-  regression only, so once a worker had failed an attempt, a later job of it
-  that failed for good raised nothing. A job's last failed attempt (state
+  regression only, so once a worker has failed an attempt, a later job of it
+  that fails for good would raise nothing. A job's last failed attempt (state
   `:discard`) is therefore recorded here instead, as a `JobDiscardedError`
   with the outcome `:exhausted`, grouped, filtered through the worker's
   expected outcomes and masked exactly as a discard is. It is recorded once:

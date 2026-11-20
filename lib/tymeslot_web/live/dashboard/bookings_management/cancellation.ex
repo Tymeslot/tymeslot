@@ -4,9 +4,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   confirming it (with whatever refund the host chose), and the telemetry and
   user-facing copy that go with it.
 
-  Split out of `BookingsManagementComponent` to keep that module inside the
-  size limit. The reload is passed in rather than reached for: the list belongs
-  to the component, and this module only says when it should be refreshed.
+  The reload is passed in rather than reached for: the list belongs to the
+  component, and this module only says when it should be refreshed.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -221,7 +220,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     :telemetry.execute(@event_prefix ++ [:confirm], %{}, metadata)
   end
 
-  # The message shown when the refund the host asked for cannot be made.
+  # The refund choice as submitted; anything unrecognised reads as a full refund.
   defp refund_form(params) do
     choice = params["cancel_refund_choice"]
     amount = params["cancel_refund_amount"]

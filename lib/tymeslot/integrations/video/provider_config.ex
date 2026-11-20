@@ -186,7 +186,6 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
 
   @metadata_fields [:icon, :description, :button_text, :click_event, :circuit_breaker_enabled]
 
-  # Read provider settings from config
   defp provider_settings do
     Config.video_provider_settings()
   end

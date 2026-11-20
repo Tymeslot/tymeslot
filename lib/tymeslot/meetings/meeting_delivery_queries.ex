@@ -23,10 +23,11 @@ defmodule Tymeslot.Meetings.MeetingDeliveryQueries do
   @doc """
   Claims the `meeting.created` announcement for a meeting.
 
-  Returns `:ok` to exactly one caller and `:already_announced` to every one
-  after it, so an event deferred to `Tymeslot.Workers.VideoRoomWorker` cannot
-  fan out a second time when a room finally arrives after recovery has already
-  announced the booking without one.
+  Returns `{:ok, :first_announcement}` or `{:ok, :re_announcement}` to
+  exactly one caller and `:already_announced` to every one after it, so an
+  event deferred to `Tymeslot.Workers.VideoRoomWorker` cannot fan out a second
+  time when a room finally arrives after recovery has already announced the
+  booking without one.
 
   The claim is a single conditional UPDATE rather than a read followed by a
   write, so two callers racing on the same meeting cannot both win it.

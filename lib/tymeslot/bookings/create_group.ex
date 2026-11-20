@@ -3,11 +3,10 @@ defmodule Tymeslot.Bookings.CreateGroup do
   Books a seat on a group meeting type (`max_participants > 1`) through
   `Tymeslot.Meetings.GroupScheduling.book_seat/3`.
 
-  Split out from `Tymeslot.Bookings.Create` to keep that module under the
-  large-module line limit. `Create` remains the sole entry point booking
-  callers use: it resolves the meeting type and builds the (pre-booker)
-  meeting attributes, then dispatches here once `applicable?/1` says the
-  meeting type holds more than one seat.
+  Kept apart from `Tymeslot.Bookings.Create`, which remains the sole entry point
+  booking callers use: it resolves the meeting type and builds the (pre-booker)
+  meeting attributes, then dispatches here once `applicable?/1` says the meeting
+  type holds more than one seat.
   """
 
   alias Tymeslot.Bookings.Activation
@@ -36,7 +35,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   its host has lost access to group bookings since saving it, so it takes no
   new seats, whether the first on a slot or a join. Everything else passes.
 
-  The booking page no longer offers a paused type, so this refuses only a
+  The booking page does not offer a paused type, so this refuses only a
   page left open from before the host lost access. The reason reads to the
   booker as the type having become unavailable, as it has.
   """

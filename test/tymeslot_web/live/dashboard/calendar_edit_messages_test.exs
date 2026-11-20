@@ -26,6 +26,17 @@ defmodule TymeslotWeb.Dashboard.CalendarEditMessagesTest do
              "Failed to delete event"
   end
 
+  test "a move the write gates refuse says why, as the refusal does" do
+    {_level, seat_lock} = CalendarEditMessages.refusal({:error, :group_booking})
+    assert CalendarEditMessages.move_failed_message(:group_booking) == seat_lock
+    assert CalendarEditMessages.series_move_failed_message(:group_booking) == seat_lock
+
+    assert CalendarEditMessages.move_failed_message(:read_only) =~ "This calendar is read-only."
+
+    assert CalendarEditMessages.move_failed_message(:boom) ==
+             "Could not move the event. It is still on its original calendar."
+  end
+
   describe "create_failure_reason/1" do
     test "names Outlook's repeat refusals" do
       assert CalendarEditMessages.create_failure_reason(:rule_not_supported_by_outlook) ==

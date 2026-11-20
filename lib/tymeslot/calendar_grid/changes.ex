@@ -142,6 +142,13 @@ defmodule Tymeslot.CalendarGrid.Changes do
   defdelegate series_move_notes(event, integration), to: EventMove
 
   @doc """
+  Whether a move of an event to an integration carries all its reminders.
+  See `Tymeslot.CalendarGrid.EventMove.keeps_reminders?/2`.
+  """
+  @spec keeps_reminders?(map(), map()) :: boolean()
+  defdelegate keeps_reminders?(event, integration), to: EventMove
+
+  @doc """
   How an event may be edited from the grid: on its own, in a scope, or, for
   a series whose provider has no scoped edit, as that one event only. See
   `Tymeslot.CalendarGrid.EventEdit.edit_scopes/1`.

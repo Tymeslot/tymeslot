@@ -330,3 +330,8 @@ msgstr "Tento termín patří k žádosti, která čeká na odpověď hostitele,
 #, elixir-autogen, elixir-format
 msgid "Guests can only be added to a single booking. Please remove your guests to book a series."
 msgstr "Hosty lze přidat jen k jednotlivé rezervaci. Chcete-li rezervovat sérii, odeberte prosím své hosty."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "The request to pick a new time for this meeting has lapsed, so it is no longer booked. You're welcome to book a new time."
+msgstr "Žádost o výběr nového termínu této schůzky propadla, a proto schůzka už není rezervována. Můžete si zarezervovat nový termín."

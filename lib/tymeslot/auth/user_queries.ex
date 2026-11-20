@@ -191,14 +191,15 @@ defmodule Tymeslot.Auth.UserQueries do
   paying subscribers), so a protected account never takes a place in the
   batch.
 
-  An account sent a verification link since `cutoff` is left out, so a link
-  its owner asked for recently still works when it is followed. So is an
-  admin, and so is an account with a meeting still to come that nobody has
-  cancelled: its booking page took that booking from a guest, so it goes only
-  once the meeting is over. Nothing else is spared: no route gives an
-  unverified account a session (a sign-in either verifies it, when a provider
-  vouches for the email, or is refused and sent a fresh link), so one used
-  under older rules is as locked out as one never used.
+  An account sent a verification link since `cutoff` is left out, so a link its
+  owner asked for recently still works when it is followed. So is an admin, an
+  invited account (an admin made it and decides when it goes), and an account
+  with a meeting still to come that nobody has cancelled: its booking page took
+  that booking from a guest, so it goes only once the meeting is over. Nothing
+  else is spared: no route gives an unverified account a session (a sign-in
+  either verifies it, when a provider vouches for the email, or is refused and
+  sent a fresh link), so one used under older rules is as locked out as one
+  never used.
   """
   @spec list_stale_unverified_users(DateTime.t(), pos_integer(), [integer()]) :: [UserSchema.t()]
   def list_stale_unverified_users(%DateTime{} = cutoff, limit, excluded_ids \\ [])
@@ -213,11 +214,10 @@ defmodule Tymeslot.Auth.UserQueries do
 
   @doc """
   Whether user `id` still meets every condition of
-  `list_stale_unverified_users/3` for `cutoff`: still unverified, not an
-  admin, not invited, not sent a fresh link, and with no meeting still to
-  come. Run under
-  the row lock just before a purge deletes the account, it catches one that
-  was verified, promoted or booked since the list was read.
+  `list_stale_unverified_users/3` for `cutoff`: still unverified, not an admin,
+  not invited, not sent a fresh link, and with no meeting still to come. Run
+  under the row lock just before a purge deletes the account, it catches one
+  that was verified, promoted or booked since the list was read.
   """
   @spec stale_unverified_user?(integer(), DateTime.t()) :: boolean()
   def stale_unverified_user?(id, %DateTime{} = cutoff) do

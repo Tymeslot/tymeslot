@@ -38,7 +38,6 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
       trial_end: trial_end
     )
 
-    # Convert Unix timestamp to DateTime
     case is_integer(trial_end) && DateTime.from_unix(trial_end) do
       {:ok, trial_ends_at} ->
         # Hand off first: if the handler fails, no email has gone out yet and
@@ -75,7 +74,6 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
         {:ok, :subscription_not_found}
 
       subscription ->
-        # Send reminder email
         send_trial_ending_email(subscription, trial_ends_at)
 
         {:ok, :trial_ending_notified}

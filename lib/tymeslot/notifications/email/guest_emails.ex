@@ -5,8 +5,7 @@ defmodule Tymeslot.Notifications.Email.GuestEmails do
   alongside its reminders, and the guests a host adds after the booking was
   made are invited by a job of their own.
 
-  Split out of `Tymeslot.Notifications.Email.MeetingEmails` so the
-  solo and group handlers (`GroupMeetingEmails`) share one send loop. Each
+  The solo and group handlers (`GroupMeetingEmails`) share one send loop. Each
   guest is stamped on success, so a retry only reaches the guests a previous
   run missed, and a failed guest send never fails the job that made it.
   """

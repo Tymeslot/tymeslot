@@ -290,6 +290,8 @@ defmodule Tymeslot.Meetings.EmailVerification do
   def expire(%Meeting{} = meeting),
     do: release_hold(meeting, :expired, "Unverified booking released")
 
+  @disowned "Unverified booking disowned by its attendee"
+
   @doc """
   Releases a held booking its attendee says they never made.
 
@@ -299,14 +301,32 @@ defmodule Tymeslot.Meetings.EmailVerification do
   """
   @spec release(Meeting.t()) :: {:ok, Meeting.t()} | {:error, :not_awaiting_verification}
   def release(%Meeting{} = meeting),
-    do: release_hold(meeting, :cancelled, "Unverified booking disowned by its attendee")
+    do: release_hold(meeting, :cancelled, @disowned)
+
+  @doc """
+  `release/1` for a caller running it inside a transaction of its own: the
+  same release, but the organiser's availability is left for the caller to
+  announce with `Tymeslot.Availability.changed/1` once that transaction
+  commits. Announced any earlier, an open booking page re-reads the slot
+  while the hold still stands uncommitted, and keeps it hidden.
+  """
+  @spec release_in_transaction(Meeting.t()) ::
+          {:ok, Meeting.t()} | {:error, :not_awaiting_verification}
+  def release_in_transaction(%Meeting{} = meeting),
+    do: release_quietly(meeting, :cancelled, @disowned)
 
   defp release_hold(meeting, status, message) do
+    with {:ok, released} <- release_quietly(meeting, status, message) do
+      Availability.changed(released.organizer_user_id)
+      {:ok, released}
+    end
+  end
+
+  defp release_quietly(meeting, status, message) do
     changes = [status: status, cancelled_at: DateTime.truncate(Clock.utc_now(), :second)]
 
     with {:ok, released} <-
            MeetingTransitionQueries.transition_from_awaiting_verification(meeting.id, changes) do
-      Availability.changed(released.organizer_user_id)
       EmailVerificationJobs.cancel(released)
       Logger.info(message, meeting_id: released.id)
 

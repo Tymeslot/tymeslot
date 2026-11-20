@@ -223,20 +223,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsEtagProbeTest do
   # Every request of one update shares a deadline, so the chain ends inside
   # the calendar worker's time limit rather than being killed there.
   describe "update_calendar_event/5 under a deadline" do
+    # The HEAD answers only once the deadline has passed, so the PUT that
+    # would follow it is due after the deadline however fast or slow the
+    # machine is. The margin only has to cover reaching the HEAD at all.
     test "sends nothing further once the deadline has passed" do
+      deadline = System.monotonic_time(:millisecond) + 500
+
       stub_ordered([
         fn conn ->
           assert conn.method == "HEAD"
+          wait_past(deadline)
           Conn.send_resp(conn, 404, "")
-        end,
-        fn conn ->
-          assert conn.method == "PUT"
-          receive after: (60 -> :ok)
-          Conn.send_resp(conn, 412, "")
         end
       ])
-
-      deadline = System.monotonic_time(:millisecond) + 50
 
       assert {:error, :timeout} = update_without_etag("late-uid", deadline: deadline)
     end
@@ -280,6 +279,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsEtagProbeTest do
     end)
 
     on_exit(fn -> assert :counters.get(counter, 1) == length(handlers) end)
+  end
+
+  defp wait_past(deadline) do
+    receive after: (max(deadline - System.monotonic_time(:millisecond) + 1, 0) -> :ok)
   end
 
   defp update_without_etag(uid, opts \\ []) do

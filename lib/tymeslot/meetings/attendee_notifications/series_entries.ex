@@ -3,9 +3,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.SeriesEntries do
   The entries attendee emails about a recurring series put in its guests'
   calendars, recorded apart from the series' cached rows.
 
-  Which occurrences a guest was emailed about on their own could once be
-  told only from their cached rows' notified state and revision
-  (`Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity`). A write to a
+  The cached rows' notified state and revision
+  (`Tymeslot.Meetings.AttendeeNotifications.SeriesIdentity`) cannot say alone
+  which occurrences a guest was emailed about on their own: a write to a
   whole series drops those rows and a sync brings them back blank
   (`Tymeslot.CalendarGrid.SeriesEdit`), so an email about every occurrence
   sent after it would neither move those entries nor, on a later

@@ -46,9 +46,8 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
 
   ## Failure
 
-  A failed delete is queued for replay on the next sync when the error is one
-  a retry can recover (see `Calendar.Events.queueable_error?/1`) and the
-  integration has an offline queue (the CalDAV family). The queue marks the
+  A failed delete is queued for replay on the next sync under the rule
+  stated in `Tymeslot.CalendarGrid.EventCreation`. The queue marks the
   cached row `locally_deleted`, and the replay removes it once the server has
   deleted the event.
 
@@ -68,6 +67,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   require Logger
 
   alias Tymeslot.Availability
+  alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventVideoDiscard
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
@@ -255,6 +255,12 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   `opts` takes `notify_attendees: true` to send the attendees a cancellation
   once the event is deleted (see the moduledoc).
 
+  An event `EditGuard.write_gates/3` refuses, for a change that is not one
+  of timing, is refused with its reason and `retry: :not_queued` before
+  anything is written: one not on a writable calendar of the organiser's
+  own, or held by live seats. The calendar copy of a booking may be
+  deleted.
+
   Returns `{:ok, deleted}`, or `{:error, %{reason: reason, retry: :queued |
   :not_queued}}` where `:queued` means the delete will be replayed on the
   next sync. A series member is refused with `:recurring_event` when its
@@ -266,8 +272,14 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
           {:ok, deleted()} | {:error, failure()}
   def delete_event(user_id, event, scope \\ :occurrence, opts \\ [])
       when scope in [:occurrence, :series] do
+    case EditGuard.write_gates(user_id, event, :change) do
+      :ok -> delete_allowed(user_id, event, scope, Keyword.get(opts, :notify_attendees, false))
+      {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
+    end
+  end
+
+  defp delete_allowed(user_id, event, scope, notify?) do
     stored = Occurrence.cached_row(event)
-    notify? = Keyword.get(opts, :notify_attendees, false)
 
     case Occurrence.series_family(stored) do
       :single -> delete_single_event(user_id, event, stored, notify?)

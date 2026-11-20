@@ -53,10 +53,8 @@ defmodule Tymeslot.TestAffected.Selection do
   domain tags of the first two swept as for a mirror file. When neither
   exists, the mirror directory's files run alone. Its tags are never swept:
   `test/tymeslot_web/live/dashboard/` carries nearly every domain, so sweeping
-  them, as this once did, turned any dashboard component into the full suite.
-  Replayed over 200 commits, dropping that sweep cost no test the commits
-  themselves edited. Only with no mirror directory either does the suite
-  widen.
+  them would turn any dashboard component into the full suite. Only with no
+  mirror directory either does the suite widen.
 
   ## Test support
 

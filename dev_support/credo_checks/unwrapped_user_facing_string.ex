@@ -14,10 +14,9 @@ defmodule CredoChecks.UnwrappedUserFacingString do
      `LiveView.put_flash(...)`, `Phoenix.Controller.put_flash(...)`, etc., under
      any alias — and of the project's `Flash.error/info/warning/success("…")`
      helper. A bare string literal here ships untranslated to the user. The
-     codebase already routes these through helper functions or `dgettext`; a
-     raw literal is the exact gap that slipped past the first localisation
-     pass (e.g. an entire controller-helper module that never declared
-     `use Gettext`).
+     codebase routes these through helper functions or `dgettext`; a raw
+     literal is the gap to catch (e.g. a controller-helper module that never
+     declared `use Gettext`).
 
   2. **Phoenix `attr` defaults** — a prose `default:` on a component attribute,
      e.g. `attr :confirm_text, :string, default: "Processing…"`. Because an

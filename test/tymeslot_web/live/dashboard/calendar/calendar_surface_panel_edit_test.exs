@@ -223,13 +223,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelEditTest do
     end
   end
 
-  describe "the reminder" do
+  describe "the reminders" do
     setup %{conn: conn, integration: integration} do
+      # A popup at 15 minutes is a lead time the panel does not offer, as
+      # another calendar app would set it.
       alarmed =
         event(integration, "work", "Dentist", ~U[2026-10-15 14:00:00Z], 60,
           reminders: [
             %{"method" => "popup", "minutes_before" => 30},
-            %{"method" => "email", "minutes_before" => 1440}
+            %{"method" => "email", "minutes_before" => 1440},
+            %{"method" => "popup", "minutes_before" => 15}
           ]
         )
 
@@ -238,36 +241,84 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelEditTest do
       %{alarmed: alarmed, lv: lv}
     end
 
-    test "shows the notification and lists the other alarm", %{lv: lv, alarmed: alarmed} do
+    defp add(lv, params),
+      do: lv |> element("#calendar-panel-reminder-add") |> render_submit(params)
+
+    defp remove(lv, label),
+      do:
+        lv
+        |> element("#calendar-panel-reminder-list button[aria-label='Remove reminder #{label}']")
+        |> render_click()
+
+    test "lists every alarm, each removable", %{lv: lv, alarmed: alarmed} do
       edit(lv, alarmed)
 
-      assert has_element?(lv, "#calendar-panel-reminder-choice option[value='30'][selected]")
-      assert has_element?(lv, "#calendar-panel-other-reminders", "Email 1 day before")
+      for label <- [
+            "Notification 30 minutes before",
+            "Email 1 day before",
+            "Notification 15 minutes before"
+          ] do
+        assert has_element?(
+                 lv,
+                 "#calendar-panel-reminder-list button[aria-label='Remove reminder #{label}']"
+               )
+      end
     end
 
-    test "a preset replaces the notification and keeps the other alarm", %{
+    test "adds an email reminder after the alarms already there", %{lv: lv, alarmed: alarmed} do
+      lv |> edit(alarmed) |> add(%{"minutes" => "60", "method" => "email"})
+
+      uid = alarmed.uid
+      assert_receive {:written, ^uid, payload}
+
+      assert alarms(payload.reminders) == [
+               {:popup, 30},
+               {:email, 1440},
+               {:popup, 15},
+               {:email, 60}
+             ]
+    end
+
+    test "adds a second notification", %{lv: lv, alarmed: alarmed} do
+      lv |> edit(alarmed) |> add(%{"minutes" => "10", "method" => "popup"})
+
+      uid = alarmed.uid
+      assert_receive {:written, ^uid, payload}
+
+      assert alarms(payload.reminders) == [
+               {:popup, 30},
+               {:email, 1440},
+               {:popup, 15},
+               {:popup, 10}
+             ]
+    end
+
+    test "a reminder the event already has, or one the row does not offer, writes nothing", %{
       lv: lv,
       alarmed: alarmed
     } do
-      lv
-      |> edit(alarmed)
-      |> element("#calendar-panel-reminder")
-      |> render_change(%{"reminder" => "10"})
+      lv |> edit(alarmed) |> add(%{"minutes" => "30", "method" => "popup"})
+      add(lv, %{"minutes" => "45", "method" => "popup"})
 
-      uid = alarmed.uid
-      assert_receive {:written, ^uid, payload}
-      assert alarms(payload.reminders) == [{:popup, 10}, {:email, 1440}]
+      refute_receive {:written, _uid, _payload}, 200
     end
 
-    test "None keeps only the other alarm", %{lv: lv, alarmed: alarmed} do
-      lv
-      |> edit(alarmed)
-      |> element("#calendar-panel-reminder")
-      |> render_change(%{"reminder" => "none"})
+    test "removes an alarm another app set and keeps the rest", %{lv: lv, alarmed: alarmed} do
+      lv |> edit(alarmed) |> remove("Notification 15 minutes before")
 
       uid = alarmed.uid
       assert_receive {:written, ^uid, payload}
-      assert alarms(payload.reminders) == [{:email, 1440}]
+      assert alarms(payload.reminders) == [{:popup, 30}, {:email, 1440}]
+    end
+
+    test "a remove the list has moved under writes nothing", %{lv: lv, alarmed: alarmed} do
+      edit(lv, alarmed)
+
+      lv
+      |> element("#calendar-canvas")
+      |> render_hook("panel:drop_reminder", %{"index" => "0", "key" => "email:1440"})
+
+      refute_receive {:written, _uid, _payload}, 200
     end
   end
 

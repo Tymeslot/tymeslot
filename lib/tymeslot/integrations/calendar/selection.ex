@@ -281,9 +281,8 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   `calendar_paths` is what the CalDAV sync worker iterates over to decide
   which collections to fetch; `calendar_list` carries per-calendar metadata
   (name, type, selected). The two MUST move together — writing one
-  without the other is the bug behind issue #50, where toggling a
-  calendar off in the dashboard left it being synced because the worker
-  never saw the change.
+  without the other would leave a calendar toggled off in the dashboard still
+  being synced, because the worker never sees the change.
 
   Always use this rather than passing a bare `%{calendar_list: ...}` to
   `update_calendar_integration/2`.

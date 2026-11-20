@@ -135,12 +135,10 @@ defmodule Tymeslot.Availability.Events do
     |> shift_safe(owner_timezone, target_timezone)
   end
 
-  # Recognises the Radicale/Zimbra all-day-as-UTC-midnight convention: a pair
-  # of UTC DateTimes where both sides sit exactly on a whole-day boundary and
-  # the span is an integer number of days. Re-anchoring is gated on the
-  # provider having explicitly set `all_day: true` on the plain map — without
-  # that flag a UTC-midnight pair is treated as a genuine timed event (e.g.
-  # a 24-hour maintenance window scheduled from 00:00Z to 00:00Z next day).
+  # The Radicale/Zimbra all-day-as-UTC-midnight convention (see `bounds/1`
+  # for why it is gated on `all_day: true`): a pair of UTC DateTimes where
+  # both sides sit exactly on a whole-day boundary and the span is an integer
+  # number of days.
   defp maybe_reanchor_utc_midnight(%{
          all_day: true,
          start_time: %DateTime{} = s,

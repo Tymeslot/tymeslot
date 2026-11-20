@@ -260,6 +260,12 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_reschedule_request(meeting), to: CalendarEmails
 
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_reschedule_request_unanswered(meeting, locale), to: CalendarEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_reschedule_request_lapsed(meeting), to: CalendarEmails
+
   # Integration emails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour

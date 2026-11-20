@@ -103,12 +103,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     end
   end
 
-  def handle("reminder", %{"reminder" => choice}, socket) when is_binary(choice) do
+  def handle("add_reminder", params, socket) do
     with %{} = event <- PanelState.current_event(socket.assigns),
-         {:ok, reminders} <- PanelFields.reminders(Map.get(event, :reminders) || [], choice) do
+         {:ok, reminders} <-
+           PanelFields.add_reminder(reminders(event), params, provider(socket, event)) do
       write(socket, %{reminders: reminders})
     else
-      _no_panel_or_not_offered -> socket
+      _no_panel_or_not_added -> socket
+    end
+  end
+
+  def handle("drop_reminder", %{"index" => index, "key" => key}, socket) do
+    with %{} = event <- PanelState.current_event(socket.assigns),
+         {:ok, reminders} <- PanelFields.drop_reminder(reminders(event), index, key) do
+      write(socket, %{reminders: reminders})
+    else
+      _no_panel_or_stale -> socket
     end
   end
 
@@ -220,6 +230,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelEvents do
     do: PanelEdits.write(socket, id, changes, opts)
 
   defp write(socket, _changes, _opts), do: socket
+
+  defp reminders(event), do: Map.get(event, :reminders) || []
+
+  defp provider(socket, event),
+    do:
+      PanelFields.provider(socket.assigns.integrations, Map.get(event, :calendar_integration_id))
 
   defp movable_event(socket) do
     event = PanelState.current_event(socket.assigns)

@@ -5,15 +5,14 @@ defmodule Tymeslot.Integrations.Calendar.InvalidEventReport do
   read, replaced by the default length), and raises one
   `:invalid_calendar_event` operator alert per integration for the run.
 
-  The provider normalisers used to alert once per bad event, from inside the
-  normalise loop. A feed carrying N malformed events therefore made N
-  synchronous alert inserts (each with its own uniqueness query) in the middle
-  of a sync, only for all but the first to be deduplicated away. The
-  normalisers now `record/4` each skip instead, and the sync entry point
-  wraps its run in `collect/1`, which sends the batch once the run ends. An
-  event kept with a default is recorded with `record_default/4` and counted
-  apart from the skips: it reached the calendar, but not as its source wrote
-  it, which is the same signal to the operator that the feed needs a look.
+  Alerting once per bad event from inside the normalise loop would make a feed
+  carrying N malformed events issue N synchronous alert inserts (each with its
+  own uniqueness query) in the middle of a sync, only for all but the first to
+  be deduplicated away. The normalisers therefore `record/4` each skip, and the
+  sync entry point wraps its run in `collect/1`, which sends the batch once the
+  run ends. An event kept with a default is recorded with `record_default/4` and
+  counted apart from the skips: it reached the calendar, but not as its source
+  wrote it, which is the same signal to the operator that the feed needs a look.
 
   ## Why the process dictionary
 

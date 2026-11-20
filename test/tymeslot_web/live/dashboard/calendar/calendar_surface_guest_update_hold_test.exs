@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestUpdateHoldTest do
   @moduletag :live
 
   import Mox
+  import Tymeslot.Factory
   import Phoenix.LiveView, only: [send_update: 3]
   import TymeslotWeb.CalendarSurfaceHelpers
 
@@ -148,6 +149,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestUpdateHoldTest do
 
     lv2 = open_panel(conn, review)
     assert has_element?(lv2, "#calendar-panel-guests-pending")
+  end
+
+  test "a panel opened read only once seats are booked offers no Cancel", %{
+    conn: conn,
+    user: user,
+    lv: lv,
+    review: review
+  } do
+    change_and_tell(lv, review)
+
+    meeting =
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        capacity: 3,
+        calendar_uid: review.uid
+      )
+
+    insert(:participant, meeting: meeting)
+
+    lv2 = open_panel(conn, review)
+    assert has_element?(lv2, "#calendar-panel-read-only")
+    refute has_element?(lv2, "#calendar-panel-guests-pending")
+    refute has_element?(lv2, "#calendar-panel-cancel-guest-update")
   end
 
   test "a look the panel no longer waits for changes nothing", %{lv: lv, review: review} do

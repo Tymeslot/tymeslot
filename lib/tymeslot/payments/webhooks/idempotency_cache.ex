@@ -98,8 +98,7 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
         # processing entirely. The ETS `:processing` slot already reserved
         # above still prevents duplicate concurrent processing within this
         # node's uptime; the worst case here is reprocessing an event that
-        # was already handled more than `processed_ttl` ago, which is the
-        # same exposure this cache had before the database tier existed.
+        # was already handled more than `processed_ttl` ago.
         Logger.error("IdempotencyCache: database check failed, failing open",
           event_id: event_id,
           error: LogFormat.reason(reason)

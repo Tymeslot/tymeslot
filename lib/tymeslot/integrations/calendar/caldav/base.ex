@@ -59,9 +59,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   # calendar collection rather than a home set, which lists every event in it.
   # A SabreDAV member answering the discovery body (its privilege set of ten
   # privileges in a 200 propstat, the calendar-only properties in a 404 one)
-  # is about 1 KB, so this holds about 10,000 events: the same as the parser's
-  # 10 MB guard did before the listing had a budget of its own, so no
-  # collection that connected then is refused now.
+  # is about 1 KB, so this holds about 10,000 events.
   @max_propfind_bytes 10 * 1024 * 1024
   @task_await_timeout_ms 45_000
   @coalescer_call_timeout_ms 50_000

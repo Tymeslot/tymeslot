@@ -431,11 +431,6 @@ msgstr ""
 msgid "One of the guest addresses isn't a valid email address."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
-#, elixir-autogen, elixir-format
-msgid "Other reminders"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/calendar/creation.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_timing.ex
 #, elixir-autogen, elixir-format
@@ -452,11 +447,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar/panel_status.ex
 #, elixir-autogen, elixir-format
 msgid "Read only"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/remove_guest_modal.ex
@@ -780,22 +770,27 @@ msgstr ""
 msgid "Saved location"
 msgstr ""
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Add reminder"
 msgstr ""
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder method"
 msgstr ""
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder time"
 msgstr ""
 
+#: lib/tymeslot_web/live/dashboard/calendar/panel_fields.ex
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_reminder_list.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
 msgstr ""
@@ -805,7 +800,7 @@ msgstr ""
 msgid "Reminders are synced to your calendar so it can alert you on your own devices."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar/panel_new_reminders.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_reminder_list.ex
 #, elixir-autogen, elixir-format
 msgid "Remove reminder %{label}"
 msgstr ""
@@ -865,4 +860,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar/panel_new_guests.ex
 #, elixir-autogen, elixir-format
 msgid "Add a guest to send a Tymeslot meeting."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "%{calendar} can't hold all of the event's reminders, so some were not carried."
 msgstr ""

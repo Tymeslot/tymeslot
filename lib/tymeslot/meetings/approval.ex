@@ -239,13 +239,11 @@ defmodule Tymeslot.Meetings.Approval do
   already did not happen. Declining is the honest action there, and the expiry
   sweep will take it.
 
-  A request answered after its own `approval_deadline_at` is treated the same
-  way: the host missed the window the invitee was promised, so this releases
-  the request as `:expired` exactly as the sweep would have, instead of
-  confirming a meeting past its deadline. The caller sees
-  `{:error, :not_awaiting_approval}` either way — the same race-loss outcome
-  shown whenever somebody else answered first — because by the time this
-  returns, the request genuinely is no longer awaiting approval.
+  A request answered after its own `approval_deadline_at` is released as
+  `:expired` (see "The deadline" in the moduledoc). The caller sees
+  `{:error, :not_awaiting_approval}` either way, the same race-loss outcome
+  shown whenever somebody else answered first, because by the time this
+  returns the request is no longer awaiting approval.
   """
   @spec approve(Meeting.t()) :: {:ok, Meeting.t()} | {:error, error()}
   def approve(%Meeting{} = meeting) do
@@ -415,20 +413,14 @@ defmodule Tymeslot.Meetings.Approval do
   # way. The builder derives `status` from the meeting, so re-pushing the event
   # is the whole flip.
   #
-  # Scheduled unconditionally now, the same way `Bookings.Create` schedules
-  # the original "create" job and `Bookings.Reschedule` schedules its own
-  # "update": whether there is anything to flip is `CalendarEventSync`'s call,
-  # not a pre-check made here. There used to be one — "has an event to flip"
-  # tested for a present `provider_event_id` or a `uid` that didn't look like
-  # a plain UUID — but CalDAV addresses its event by that UID alone (now the
-  # meeting's `calendar_uid`), which is a Tymeslot-minted UUID until CalDAV's
-  # own create job confirms it (`CalendarEventSync.put_provider_mapping/2`),
-  # so the check passed the UUID test and the gate was permanently false for every CalDAV host: their
-  # calendars kept showing TENTATIVE forever regardless of approval. The
-  # "update" job this schedules already falls back to uid-addressing, recreates
-  # the event on a missing-event 404, and errors out gracefully when there is
-  # genuinely no calendar integration to update — so there was nothing this
-  # pre-check did that scheduling unconditionally does not already handle.
+  # The update job is always scheduled, the way `Bookings.Create` schedules its
+  # "create" job and `Bookings.Reschedule` its own "update": whether there is
+  # anything to flip is `CalendarEventSync`'s call. CalDAV addresses its event
+  # by a Tymeslot-minted UID until its create job confirms it
+  # (`CalendarEventSync.put_provider_mapping/2`), so no "has a provider event"
+  # test made here can tell. The job falls back to uid-addressing, recreates
+  # the event on a missing-event 404, and ends gracefully when there is no
+  # calendar integration to update.
   #
   # Best-effort, like every other calendar write: the approval is committed and
   # a failed push is retried by the worker rather than undoing it.

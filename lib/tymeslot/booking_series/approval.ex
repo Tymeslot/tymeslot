@@ -106,7 +106,8 @@ defmodule Tymeslot.BookingSeries.Approval do
   Declines the series: every session still held is cancelled and released,
   a paid series refunded in full, and the booker told once, with the host's
   `reason` when given (trimmed and capped as for a single request).
-  `{:error, :not_found}` for an actor who is not the series' organiser.
+  As with `approve/2`, an actor who is not the series' organiser gets
+  `{:error, :not_found}`.
   """
   @spec decline(SeriesSchema.t(), User.t(), String.t() | nil) ::
           {:ok, [Meeting.t()]} | {:error, term()}

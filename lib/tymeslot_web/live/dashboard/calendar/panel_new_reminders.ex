@@ -1,21 +1,21 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
   @moduledoc """
-  The reminders of a plain calendar event made in the side panel's New
-  event state, as the old Quick Add offered them: several, each a
-  notification or an email at one of the lead times
-  `ReminderForm.reminder_minutes_presets/0` lists, written to the calendar
-  with the event, which then alerts the organiser on their own devices.
+  The reminders of a plain calendar event made in the side panel's New event
+  state: several, each a notification or an email at one of the lead times
+  `ReminderForm.reminder_minutes_presets/0` lists, written to the calendar with
+  the event, which then alerts the organiser on their own devices.
 
   The list is the form's `"event_reminders"`, canonical
   `%{method:, minutes_before:}` maps, cast with the rest of the draft
-  (`CreateParams.cast/5` holds it to its own limit). The add row's choices
-  reach the form with its changes, and Add sends `panel:draft_add_reminder`
-  (`add/2`), a plain button so that Enter in the form never adds a
-  reminder; the remove buttons send `panel:draft_drop_reminder` (`drop/3`).
-  An Outlook calendar keeps a single lead time and no method, so there the
-  row offers one notification and no method choice. A Tymeslot meeting sends reminder
-  emails of its own (`PanelMeetingReminders`) and a group event has none,
-  so the field gives way to them.
+  (`CreateParams.cast/5` holds it to its own limit). The add row's choices reach
+  the form with its changes, and Add sends `panel:draft_add_reminder` (`add/2`),
+  a plain button so that Enter in the form never adds a reminder; the remove
+  buttons send `panel:draft_drop_reminder` (`drop/3`). How many reminders the
+  draft's calendar keeps, and by which methods, is the domain's rule
+  (`CreateParams.reminder_capacity/1`): on Outlook or Exchange, which keep
+  one notification, the row offers one and no method choice. A Tymeslot meeting sends reminder emails of its own
+  (`PanelMeetingReminders`) and a group event has none, so the field gives way
+  to them.
   """
 
   use TymeslotWeb, :html
@@ -23,18 +23,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
 
   alias Tymeslot.CalendarGrid.CreateParams
   alias TymeslotWeb.Components.Calendar.ReminderForm
-  alias TymeslotWeb.Components.Calendar.RemindersEditor
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
+  alias TymeslotWeb.Dashboard.Calendar.PanelReminderList
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
   # The add row's fields, kept in the form as they change.
   @row_fields ~w(event_reminder_minutes event_reminder_method)
-
-  # Outlook keeps one lead time per event and no method
-  # (`Outlook.EventMapper`): a second reminder, or an email, would never
-  # reach it.
-  @single_reminder_providers ["outlook"]
 
   @doc "The add row's fields among a form change's `params`."
   @spec fields(map()) :: map()
@@ -42,24 +37,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
 
   @doc """
   The reminders the draft will be written with, on a calendar of
-  `provider`: all it holds, or for Outlook the first as a notification.
+  `provider`: those it holds that the calendar keeps
+  (`CreateParams.fit_reminders/2`).
   """
   @spec of(map(), String.t() | nil) :: [map()]
-  def of(form, provider \\ nil) do
-    reminders = form["event_reminders"] || []
+  def of(form, provider \\ nil),
+    do: CreateParams.fit_reminders(form["event_reminders"] || [], provider)
 
-    if single?(provider),
-      do: reminders |> Enum.take(1) |> Enum.map(&%{&1 | method: :popup}),
-      else: reminders
-  end
-
-  @doc "Whether a calendar of `provider` takes a single notification only."
+  @doc "Whether a calendar of `provider` keeps a single reminder method only."
   @spec single?(String.t() | nil) :: boolean()
-  def single?(provider), do: provider in @single_reminder_providers
+  def single?(provider), do: match?({_max, [_one]}, CreateParams.reminder_capacity(provider))
 
   @doc "The most reminders a calendar of `provider` takes."
   @spec max(String.t() | nil) :: pos_integer()
-  def max(provider), do: if(single?(provider), do: 1, else: CreateParams.max_reminders())
+  def max(provider), do: provider |> CreateParams.reminder_capacity() |> elem(0)
 
   @doc "The form's reminders as `CreateParams.cast/5` reads them, for a calendar of `provider`."
   @spec params(map(), String.t() | nil) :: [map()]
@@ -84,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
     with true <- length(reminders) < max(provider),
          {:ok, reminder} <-
            ReminderForm.parse_reminder(%{
-             "method" => if(single?(provider), do: "popup", else: method(form)),
+             "method" => method(form, provider),
              "minutes" => minutes(form)
            }) do
       PanelNew.put_form(
@@ -101,7 +92,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
       form["event_reminder_minutes"] ||
         Integer.to_string(hd(ReminderForm.reminder_minutes_presets()))
 
-  defp method(form), do: form["event_reminder_method"] || "popup"
+  # A calendar with one method takes that one, whatever the row last held.
+  defp method(form, provider) do
+    case CreateParams.reminder_capacity(provider) do
+      {_max, [only]} -> Atom.to_string(only)
+      _several -> form["event_reminder_method"] || "popup"
+    end
+  end
 
   @doc "Drops the reminder at `index`."
   @spec drop(socket(), term(), String.t() | nil) :: socket()
@@ -137,26 +134,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
     ~H"""
     <section id="calendar-panel-new-reminders" class="space-y-2">
       <h3 class="label mb-0">{dgettext("dashboard_calendar_editing", "Reminders")}</h3>
-      <ul :if={@reminders != []} class="flex flex-wrap gap-1.5">
-        <li
-          :for={{reminder, index} <- Enum.with_index(@reminders)}
-          class="inline-flex max-w-full items-center gap-1 rounded-token-full bg-tymeslot-100 py-0.5 pl-2.5 pr-1 text-token-sm text-tymeslot-800"
-        >
-          <span class="truncate">{RemindersEditor.reminder_label(reminder)}</span>
-          <button
-            type="button"
-            phx-click={JS.push("panel:draft_drop_reminder", value: %{index: index}, target: @surface)}
-            aria-label={
-              dgettext("dashboard_calendar_editing", "Remove reminder %{label}",
-                label: RemindersEditor.reminder_label(reminder)
-              )
-            }
-            class="shrink-0 rounded-token-full p-0.5 text-tymeslot-500 hover:bg-tymeslot-200 hover:text-tymeslot-800 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400 max-sm:min-h-11 max-sm:min-w-11"
-          >
-            <.icon name="hero-x-mark-micro" class="h-4 w-4" />
-          </button>
-        </li>
-      </ul>
+      <PanelReminderList.chips
+        reminders={@reminders}
+        remove={
+          fn {_reminder, index} ->
+            JS.push("panel:draft_drop_reminder", value: %{index: index}, target: @surface)
+          end
+        }
+      />
       <div :if={!@full} class="flex flex-wrap items-end gap-2">
         <.select
           id="calendar-panel-new-reminder-minutes"
@@ -164,12 +149,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
           compact
           aria-label={dgettext("dashboard_calendar_editing", "Reminder time")}
           value={@values["event_reminder_minutes"]}
-          options={
-            Enum.map(
-              ReminderForm.reminder_minutes_presets(),
-              &{RemindersEditor.minutes_label(&1), Integer.to_string(&1)}
-            )
-          }
+          options={PanelReminderList.minutes_options()}
         />
         <.select
           :if={!@single}
@@ -178,10 +158,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
           compact
           aria-label={dgettext("dashboard_calendar_editing", "Reminder method")}
           value={@values["event_reminder_method"]}
-          options={[
-            {dgettext("dashboard_calendar_events", "Notification"), "popup"},
-            {dgettext("dashboard_calendar_events", "Email"), "email"}
-          ]}
+          options={PanelReminderList.method_options()}
         />
         <%!-- A plain button, not a submit: Enter in the form's fields must
               reach the guest field's Add, its first submit button. --%>

@@ -89,9 +89,8 @@ defmodule Tymeslot.CalendarGrid.NewEvent do
 
   # What the provider actually wrote, before what was asked for. A CalDAV
   # write falls back to the booking collection when the chosen calendar is
-  # not one the integration lists as writable, and filing the row under the
-  # request instead showed the event on a calendar it is not on until the
-  # next sync corrected it.
+  # not one the integration lists as writable, so the row is filed under the
+  # calendar the event is actually on, not the one requested.
   #
   # The provider's identity (`provider_event_id`, `etag`) is the only one the
   # row has until a full sync runs; either may be nil, as a CalDAV server is

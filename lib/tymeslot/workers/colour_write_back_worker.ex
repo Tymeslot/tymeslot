@@ -13,8 +13,12 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   (Google `colorId: null`, CalDAV without `COLOR`).
 
   The colour written is read from the override table when the job runs, not
-  from its args (which record what was asked, for the logs): no override
-  means no colour.
+  from its args (which record what was asked, for the logs): no override,
+  or a cleared one (a `nil` colour), means no colour. A cleared override
+  keeps the old colour, which syncs read back from the host, off the event
+  until the host is clear, so a successful clear deletes it, together with
+  any colour a sync cached beneath it; a clear that never succeeds leaves
+  it in place.
 
   `unique` is keyed on `[:integration_id, :uid, :user_id]` with `replace: [:args]`
   set at the enqueue site (`ColourWriteBack.enqueue/4`) so rapid successive
@@ -52,6 +56,7 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   alias Tymeslot.Integrations.Calendar.ColourWriteBack
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Repo
 
   # Comfortably longer than the slowest CalDAV sync cadence, the 3600s Tier 3
   # interval in `FallbackSyncSweepWorker`, so each snooze lands after a sync
@@ -97,8 +102,24 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   # overwritten. Only a successful write needs the check: a failure is
   # retried, and a retry reads the override afresh.
   defp catch_up(result, target, written) do
-    if succeeded?(result), do: enqueue_if_changed(target, written)
+    if succeeded?(result) do
+      if is_nil(written), do: delete_cleared(target)
+      enqueue_if_changed(target, written)
+    end
+
     result
+  end
+
+  # The host is clear, so syncs no longer bring the old colour back. A sync
+  # that ran while the clear was pending may already have cached the old
+  # colour again, hidden only by the cleared override, so the cache is
+  # cleared with it. A colour chosen since is not a cleared override: it
+  # stays, and so does the cache beneath it.
+  defp delete_cleared({user_id, integration_id, uid}) do
+    Repo.transaction(fn ->
+      if ColourOverrideQueries.delete_external_cleared(user_id, integration_id, uid),
+        do: ProviderCalendarEventQueries.clear_colour(integration_id, uid)
+    end)
   end
 
   defp succeeded?(:ok), do: true
@@ -157,8 +178,8 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   # event and patch its colour (Google `colorId` via PATCH, CalDAV `COLOR` via
   # a patched copy of `raw_ical`). Deliberately excludes summary/timing/
   # description/location — a full-field payload would only be safe to send
-  # via a full REPLACE, which is exactly what silently wiped recurrence,
-  # attendees, alarms, and conference data before this fix.
+  # via a full REPLACE, which silently wipes recurrence, attendees, alarms
+  # and conference data.
   #
   # `etag` is the cached ETag for the event. The CalDAV path uses it as the
   # `If-Match` precondition on the colour PUT so that, if the host event has

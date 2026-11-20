@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Live.Scheduling.RefusedCalendarTest do
   alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.HealthCheck.AvailabilityRefusalSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
@@ -132,21 +133,56 @@ defmodule TymeslotWeb.Live.Scheduling.RefusedCalendarTest do
     end
   end
 
+  # A calendar that cannot be read refuses the organiser's own look at the
+  # page as it refuses a guest's, but turned nobody away: only the guest's is
+  # counted towards the unreadable-calendar alert.
+  describe "the refusals counted for the alert" do
+    setup do
+      BookingTestHelpers.seed_booking_account(
+        hd(ThemeTestMatrix.ids()),
+        "refusedcount",
+        "America/New_York"
+      )
+    end
+
+    @tag :capture_log
+    test "a guest's visit is counted", %{conn: conn, profile: profile} do
+      open_day(conn, profile)
+
+      assert [%{user_id: user_id}] = Repo.all(AvailabilityRefusalSchema)
+      assert user_id == profile.user_id
+    end
+
+    @tag :capture_log
+    test "the organiser's preview is not", %{conn: conn, profile: profile, user: user} do
+      open_day(conn, profile, "&preview=true&preview_token=#{PreviewToken.sign(user.id)}")
+
+      assert Repo.all(AvailabilityRefusalSchema) == []
+    end
+
+    @tag :capture_log
+    test "the signed-in organiser's visit is not", %{conn: conn, profile: profile, user: user} do
+      open_day(sign_in(conn, user), profile)
+
+      assert Repo.all(AvailabilityRefusalSchema) == []
+    end
+  end
+
   defp sign_in(conn, user) do
     conn |> init_test_session(%{}) |> AuthTestHelpers.log_in_user(user)
   end
 
   defp flag_refused, do: Repo.update_all(CalendarIntegrationSchema, set: [needs_reauth: true])
 
-  defp open_view(conn, profile) do
-    {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
+  defp open_view(conn, profile, query \\ "") do
+    {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}#{query}")
     view
   end
 
   # Opens the page, takes the way to the schedule and picks tomorrow, then
   # returns the page once the day's fetch has failed.
-  defp open_day(conn, profile) do
-    view = open_view(conn, profile)
+  defp open_day(conn, profile, query \\ "") do
+    view = open_view(conn, profile, query)
     BookingDriver.choose_meeting_type(view, hd(BookingDriver.meeting_types(view)))
     BookingDriver.continue(view)
 

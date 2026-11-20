@@ -318,8 +318,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
       {:ok, hrefs} ->
         Sync.post_commit_reconciliation(integration, calendar_events)
 
-        # post_commit_reconciliation is a no-op when calendar_events is empty.
-        # Ensure the cache is invalidated even when the sync only deleted events.
+        # As in `run_atomic_full_fetch/6`: invalidate the cache when the sync
+        # only deleted events.
         if calendar_events == [] and hrefs != [] do
           Sync.invalidate_cache_for_user(integration)
         end

@@ -1,5 +1,5 @@
 defmodule Tymeslot.Emails.EmailService.CalendarEmails do
-  @moduledoc "Calendar-related emails: sync errors, external booking changes, invitations, and reschedule requests."
+  @moduledoc "Calendar-related emails: sync errors, external booking changes, invitations, and reschedule requests, answered or lapsed."
 
   require Logger
 
@@ -11,7 +11,9 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
     CalendarSyncError,
     EventUpdateNotification,
     ExternalBookingChange,
-    RescheduleRequest
+    RescheduleRequest,
+    RescheduleRequestLapsed,
+    RescheduleRequestUnanswered
   }
 
   @doc """
@@ -118,5 +120,27 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
 
     email = RescheduleRequest.render(meeting)
     Delivery.deliver(email)
+  end
+
+  @doc """
+  Tells the host the attendee never answered their reschedule request, so the
+  meeting has expired. `locale` is the host's.
+  """
+  @spec send_reschedule_request_unanswered(map(), String.t()) :: {:ok, any()} | {:error, any()}
+  def send_reschedule_request_unanswered(meeting, locale) do
+    meeting
+    |> RescheduleRequestUnanswered.render(locale)
+    |> Delivery.deliver()
+  end
+
+  @doc """
+  Tells the attendee the host's request to pick a new time has lapsed, with
+  the booking page to book again from.
+  """
+  @spec send_reschedule_request_lapsed(map()) :: {:ok, any()} | {:error, any()}
+  def send_reschedule_request_lapsed(meeting) do
+    meeting
+    |> RescheduleRequestLapsed.render()
+    |> Delivery.deliver()
   end
 end

@@ -16,8 +16,7 @@ defmodule Tymeslot.Notifications.Events.Guard do
   # in-process, so a payload the templates don't fit raises instead of
   # returning `{:error, _}`. Everything sequenced after it — reminder jobs,
   # webhooks, Telegram, Slack — is best-effort by design, and an escaping
-  # exception used to skip all of them while the meeting change itself stood
-  # (issue #76: a reschedule that never dispatched `meeting.rescheduled`).
+  # exception would skip all of them while the meeting change itself stood.
   # Contain it here so one failed channel cannot silence the others; the caller
   # still learns the emails failed through the error tuple it already handles.
   @doc """

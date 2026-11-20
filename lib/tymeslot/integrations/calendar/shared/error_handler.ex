@@ -201,8 +201,15 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     )
   end
 
-  def sanitize_error_message(:timeout, _provider),
-    do: dgettext("integrations_calendar", "The request timed out. Please try again.")
+  # A server the owner runs may time out because the internet cannot reach
+  # it; `ErrorMessages` words that case, and every other provider keeps the
+  # generic sentence.
+  def sanitize_error_message(:timeout, provider) do
+    case ErrorMessages.specific_message(:timeout, provider) do
+      message when is_binary(message) -> message
+      nil -> dgettext("integrations_calendar", "The request timed out. Please try again.")
+    end
+  end
 
   # A body that would not decode is the service answering wrongly, not the
   # network failing to carry it.
@@ -253,12 +260,14 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
           {specific_message, nil}
       end
 
-    # Log the original error for debugging
-    Logger.debug("Calendar provider error",
+    # Every caller is an owner setting up or refreshing a calendar, so a
+    # failure here is one they saw on screen; logged at warning so production
+    # keeps the category and the operation it failed in.
+    Logger.warning("Calendar connection failed",
       provider: provider,
       category: category,
       error: LogFormat.reason(error),
-      context: context
+      operation: context[:operation]
     )
 
     # Both halves are already localised by `get_user_friendly_message/2` and

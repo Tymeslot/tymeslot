@@ -122,6 +122,12 @@ test("renderAgendaDay draws one day, or the empty-day note", () => {
   expect(renderAgendaDay(null, { strings, timeFormat: "24h", now })).toContain("Nothing planned on this day.");
 });
 
+test("the list carries its density, comfortable unless compact is chosen", () => {
+  expect(draw().querySelector(".cal-agenda").dataset.density).toBe("comfortable");
+  expect(draw({ density: "compact" }).querySelector(".cal-agenda").dataset.density).toBe("compact");
+  expect(draw({ density: "bogus" }).querySelector(".cal-agenda").dataset.density).toBe("comfortable");
+});
+
 test("the lens heads the list, the one shown pressed", () => {
   const holder = draw();
   const lens = holder.querySelector('.cal-agenda-lens[role="group"]');

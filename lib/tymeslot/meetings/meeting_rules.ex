@@ -5,9 +5,9 @@ defmodule Tymeslot.Meetings.MeetingRules do
   `duration`), the field validations, and the database constraints the
   changeset declares.
 
-  Split out of `MeetingSchema` to keep it inside the size limit; the schema
-  casts and chooses the required fields, then hands the changeset here
-  (`validate/2`). `MeetingSchema.status_changeset/2` deliberately bypasses it.
+  The schema casts and chooses the required fields, then hands the changeset
+  here (`validate/2`). `MeetingSchema.status_changeset/2` deliberately bypasses
+  it.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

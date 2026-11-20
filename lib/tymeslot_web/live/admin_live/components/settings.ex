@@ -181,9 +181,8 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
     effective = Map.fetch!(assigns.effective_values, assigns.key)
     kind = Formatters.kind(assigns.key)
 
-    # Two states that used to share one flag, which made every switched-off
-    # boolean render its own toggle at 60% opacity - reading as "you cannot
-    # click this" on the one control that is the only way back on.
+    # Two separate states, so a switched-off boolean is not dimmed to look
+    # unclickable when its toggle is the only way back on.
     #
     # `disabled` is genuine inertness: a dependent setting whose parent is
     # off, or a setting an environment variable fixes, has a control that

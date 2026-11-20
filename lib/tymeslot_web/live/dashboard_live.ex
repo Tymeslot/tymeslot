@@ -59,7 +59,7 @@ defmodule TymeslotWeb.DashboardLive do
   # The sections showing the Theme screen, which follows booking page changes.
   @booking_page_actions [:theme, :theme_customization]
 
-  # The standalone calendar/video/payments pages now live as tabs inside the
+  # The standalone calendar/video/payments pages live as tabs inside the
   # unified integrations hub. Their routes stay defined (deep links, emails and
   # OAuth/Stripe returns still point at them) but each legacy live action bounces
   # to the matching hub tab.

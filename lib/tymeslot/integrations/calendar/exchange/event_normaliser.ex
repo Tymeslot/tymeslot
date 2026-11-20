@@ -260,6 +260,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
       all_day: all_day,
       status: map_status(Soap.text(item, ~x"./t:IsCancelled/text()")),
       transparency: map_transparency(Soap.text(item, ~x"./t:LegacyFreeBusyStatus/text()")),
+      reminders:
+        map_reminders(
+          Soap.text(item, ~x"./t:ReminderIsSet/text()"),
+          Soap.text(item, ~x"./t:ReminderMinutesBeforeStart/text()")
+        ),
       provider_metadata: metadata(item_type, ical_uid)
     }
 
@@ -291,6 +296,21 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliser do
   # reads back as nil and leaves the event confirmed.
   defp map_status("true"), do: :cancelled
   defp map_status(_other), do: :confirmed
+
+  # An item carries one reminder, a pop-up at a lead time in minutes. EWS
+  # keeps the lead time of a reminder that was switched off, so it counts only
+  # while `ReminderIsSet` is true; a server that omits either reads as none.
+  defp map_reminders("true", minutes) when is_binary(minutes) do
+    case Integer.parse(minutes) do
+      {minutes_before, ""} when minutes_before >= 0 ->
+        [%{method: :popup, minutes_before: minutes_before}]
+
+      _unreadable ->
+        []
+    end
+  end
+
+  defp map_reminders(_is_set, _minutes), do: []
 
   # `Free` is the only status that does not consume the organiser's time.
   # `Tentative`, `Busy`, `OOF`, `WorkingElsewhere` and `NoData` all block,

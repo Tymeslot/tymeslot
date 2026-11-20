@@ -2,9 +2,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
   @moduledoc """
   The modals the bookings dashboard can open, in one place.
 
-  Extracted from the component's `render/1` so the list, its tabs, and the
-  loading states stay readable: the modals are always mounted and almost always
-  hidden, so fifty lines of markup sat between the page and its own footer.
+  They are always mounted and almost always hidden, so they are kept apart
+  from the markup of the list, its tabs and the loading states.
 
   Each one owns a different decision about a booking, and they are deliberately
   distinct rather than one parameterised modal. Cancelling ends a meeting both

@@ -29,6 +29,8 @@ config :swoosh, local: false
 config :tymeslot, :analytics_strict, false
 
 # An email sent outside an email job (see `Tymeslot.Emails.Delivery`) is
-# reported and still sent in production while the guard is new; everywhere
-# else the default, `:raise`, refuses it.
+# reported and still sent in production; everywhere else the default,
+# `:raise`, refuses it. Refusing in production would only turn a send that
+# lacks retries into a lost email and a failed request, while dev and the
+# suite already raise on any new send made outside a job.
 config :tymeslot, :email_delivery_outside_job, :report

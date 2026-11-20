@@ -243,6 +243,20 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Meetings whose reschedule request has lapsed unanswered at `now` but which
+  have not been expired yet, oldest request first, at most `limit`. Backs the
+  reschedule request sweep.
+  """
+  @spec list_lapsed_reschedule_requests(DateTime.t(), pos_integer()) :: [Meeting.t()]
+  def list_lapsed_reschedule_requests(%DateTime{} = now, limit) when is_integer(limit) do
+    Meeting
+    |> MeetingState.where_reschedule_request_lapsed(now)
+    |> order_by([m], asc: m.reschedule_requested_at)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  @doc """
   Held-for-verification meetings whose verification deadline has passed at
   `now`, oldest deadline first, at most `limit`. Backs the expiry sweep.
   """

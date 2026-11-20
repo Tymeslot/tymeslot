@@ -60,8 +60,7 @@ defmodule Tymeslot.AppSettings.Env do
   def default_for(:email_logo_path), do: nil
 
   # Per-surface locale fallbacks. Nil means "no override": `Tymeslot.Locales`
-  # then falls back to the instance-wide `:locales` default, which is where the
-  # value came from before these settings existed.
+  # then falls back to the instance-wide `:locales` default.
   def default_for(:admin_default_locale), do: nil
   def default_for(:booking_default_locale), do: nil
 

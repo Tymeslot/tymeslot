@@ -59,11 +59,9 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
   Normalizes a URL by adding https:// if no protocol is present.
 
   A URL that already carries a scheme is left exactly as typed, whatever that
-  scheme is, so the scheme allow-list downstream can refuse it in its own words.
-  Prefix-matching `http://` and `https://` instead glued a second scheme onto
-  the front of `ftp://…` and `HTTPS://…` alike, which made every one of them
-  fail the *host* check with a message about the host, and rejected a correctly
-  typed URL whose scheme a mobile keyboard had autocapitalised.
+  scheme is, so the scheme allow-list downstream can refuse it in its own
+  words, and a correctly typed URL whose scheme a mobile keyboard
+  autocapitalised (`HTTPS://…`) is not rejected.
   """
   @spec normalize_url_protocol(String.t()) :: String.t()
   def normalize_url_protocol(url) do

@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   # when present; fall back to loading independently otherwise — e.g. when
   # mounted standalone via the `:video_integration` dashboard action, or when
   # a `send_update/2` targets us with a partial assign (those always want a
-  # fresh reload, matching prior behaviour).
+  # fresh reload).
   defp maybe_load_integrations(socket, %{
          integrations: _integrations,
          health_states: _health_states
@@ -226,7 +226,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
     # `Video.test_connection/2` routes through `ConnectionProbe`, the single
     # choke point for connection-test rate limiting: every provider, OAuth
-    # included, now draws from a real bucket, so no compensating guard
+    # included, draws from the same bucket, so no compensating guard
     # belongs here.
     case FormInput.integration_id(id) do
       nil ->

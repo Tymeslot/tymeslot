@@ -2,17 +2,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
   @moduledoc """
   Stateless function component for the meeting-type form's Payments section.
 
-  Renders the "require payment" toggle and the price input. Gating is
-  decided by the parent `MeetingTypeForm` (feature flag + Stripe charges
-  enabled); this component only reflects the `charges_enabled` flag it is
-  given — disabling the toggle and showing a connect-Stripe hint when the
-  host cannot yet accept charges. A host whose Stripe account carries a
-  currency outside the allowlist cannot set prices either, whether or not
-  checkout still charges it (`Tymeslot.MeetingPayments.currency_support/1`),
-  and is told why. A type that is already paid keeps its price in those
-  states, so the stored amount is stated in words, in the account's currency,
-  where the price input cannot be rendered. Payments and group bookings are mutually exclusive:
-  while group bookings is enabled the toggle renders disabled with a hint.
+  Renders the "require payment" toggle and the price input. Gating is decided
+  by the parent `MeetingTypeForm` (feature flag + Stripe charges enabled);
+  this component only reflects the `charges_enabled` flag it is given —
+  disabling the toggle and showing a connect-Stripe hint when the host cannot
+  yet accept charges. A host whose Stripe account carries a currency outside
+  the allowlist cannot set prices either, whether or not checkout still
+  charges it (`Tymeslot.MeetingPayments.currency_support/1`), and is told why.
+  A type that is already paid keeps its price in those states, so the stored
+  amount is stated in words, in the account's currency, where the price input
+  cannot be rendered. Payments and group bookings are mutually exclusive:
+  while group bookings are enabled the toggle renders disabled with a hint.
 
   The toggle and price input dispatch `toggle_payment_required` and
   `change_payment_price` events back to the parent form component

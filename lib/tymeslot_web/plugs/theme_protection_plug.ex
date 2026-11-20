@@ -16,7 +16,6 @@ defmodule TymeslotWeb.Plugs.ThemeProtectionPlug do
 
   @impl Plug
   def call(conn, _opts) do
-    # Get any extra protection plugs from configuration
     plugs = Application.get_env(:tymeslot, :extra_theme_protection_plugs, [])
 
     Enum.reduce_while(plugs, conn, fn plug_info, acc_conn ->

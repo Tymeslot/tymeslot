@@ -219,9 +219,8 @@ defmodule Tymeslot.Integrations.HealthCheck do
   probe and a sync do not issue the same request — for CalDAV the probe
   PROPFINDs the calendar collection while sync issues a REPORT against it —
   and a server can answer one while refusing the other. When that happens the
-  probe is honestly healthy and the integration silently stops syncing:
-  production carried a CalDAV integration that failed 1015 of 1026 sync
-  attempts across eleven days with a green badge and no alert the whole time.
+  probe is honestly healthy and the integration silently stops syncing, with
+  a green badge and no alert.
 
   Feeding the failure into the same pipeline the probe uses means a streak of
   them raises the badge, the 48-hour notification and the auto-pause sweep,

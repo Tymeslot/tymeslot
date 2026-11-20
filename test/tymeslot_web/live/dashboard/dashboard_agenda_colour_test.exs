@@ -82,7 +82,9 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
     view |> element("button", "Company offsite") |> render_click()
     view |> element(~s{button[phx-click="clear_entry_colour"]}) |> render_click()
 
-    assert Calendar.overrides_for(user.id) == %{}
+    # Kept as cleared until the write-back has cleared the provider.
+    assert Calendar.overrides_for(user.id) ==
+             %{{:external, integration.id, "uid-colour-clear"} => nil}
 
     # The write-back the set queued now clears the colour at the provider.
     assert [%{args: %{"uid" => "uid-colour-clear", "colour" => nil}}] =

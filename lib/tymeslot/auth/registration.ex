@@ -435,7 +435,7 @@ defmodule Tymeslot.Auth.Registration do
     {:error, :auth, changeset}
   end
 
-  # Helper function to safely extract constraint errors without sensitive data
+  # Keeps only constraint violations, so the log carries no submitted values.
   defp extract_constraint_errors(changeset) do
     changeset.errors
     |> Enum.filter(fn {_field, {_message, opts}} ->

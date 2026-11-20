@@ -192,6 +192,7 @@ msgstr "De:"
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
+#: lib/tymeslot/emails/templates/reschedule_request_lapsed.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name},"
 msgstr "Hola %{name}:"
@@ -267,6 +268,8 @@ msgstr "Lugar:"
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
+#: lib/tymeslot/emails/templates/reschedule_request_lapsed.ex
+#: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting"
 msgstr "Reunión"
@@ -287,6 +290,7 @@ msgid "New booking request"
 msgstr "Nueva solicitud de reserva"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#: lib/tymeslot/emails/templates/reschedule_request_lapsed.ex
 #, elixir-autogen, elixir-format
 msgid "No longer held"
 msgstr "Ya no está reservado"
@@ -541,3 +545,75 @@ msgstr "Confirma tu reserva, por favor"
 #, elixir-autogen, elixir-format
 msgid "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold the time for you until then."
 msgstr "Tu reserva aún no está confirmada. Haz clic en el botón de abajo antes del %{deadline} para confirmarla. Hasta entonces, te guardamos el horario."
+
+#: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} didn't pick a new time, so your meeting has expired."
+msgstr "%{name} no eligió otro horario, así que tu reunión venció."
+
+#: lib/tymeslot/emails/templates/reschedule_request_lapsed.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} asked you to pick a new time for this meeting, and that request has now lapsed. The original time had already been cancelled, so nothing is booked. If you'd still like to meet, you can book a new time from the booking page."
+msgstr "%{organizer} te pidió que eligieras otro horario para esta reunión, y esa solicitud ya venció. Como el horario original ya se había cancelado, no hay nada reservado. Si todavía quieres reunirte, puedes reservar otro horario desde la página de reservas."
+
+#: lib/tymeslot/emails/templates/reschedule_request_lapsed.ex
+#, elixir-autogen, elixir-format
+msgid "Book a new time"
+msgstr "Reservar otro horario"
+
+#: lib/tymeslot/emails/templates/reschedule_request_lapsed.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, the request to pick a new time has lapsed."
+msgstr "Hola %{name}: la solicitud de elegir otro horario venció."
+
+#: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting expired"
+msgstr "Reunión vencida"
+
+#: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
+#, elixir-autogen, elixir-format
+msgid "No New Time Picked"
+msgstr "No se eligió otro horario"
+
+#: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
+#, elixir-autogen, elixir-format
+msgid "No new time picked: %{title} - %{date}"
+msgstr "No se eligió otro horario: %{title} – %{date}"
+
+#: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody picked a new time for %{title}, so it has expired."
+msgstr "Nadie eligió otro horario para %{title}, así que la reunión venció."
+
+#: lib/tymeslot/emails/templates/reschedule_request_lapsed.ex
+#: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
+#, elixir-autogen, elixir-format
+msgid "ORIGINAL TIME:"
+msgstr "HORARIO ORIGINAL:"
+
+#: lib/tymeslot/emails/templates/reschedule_request_lapsed.ex
+#: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
+#, elixir-autogen, elixir-format
+msgid "Original Time"
+msgstr "Horario original"
+
+#: lib/tymeslot/emails/templates/reschedule_request_lapsed.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule Request Lapsed"
+msgstr "La solicitud de reprogramación venció"
+
+#: lib/tymeslot/emails/templates/reschedule_request_lapsed.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule request lapsed: %{title} - %{date}"
+msgstr "Solicitud de reprogramación vencida: %{title} – %{date}"
+
+#: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
+#, elixir-autogen, elixir-format
+msgid "You asked %{name} to pick a new time for this meeting, and the request lapsed before they did. Its original time had already been given up, so the meeting has expired. %{name} has been told and can book again from your booking page."
+msgstr "Le pediste a %{name} que eligiera otro horario para esta reunión, pero la solicitud venció antes de que lo hiciera. Como el horario original ya se había liberado, la reunión quedó vencida. Ya se avisó a %{name}, que puede volver a reservar desde tu página de reservas."
+
+#: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
+#, elixir-autogen, elixir-format
+msgid "You asked for this meeting to be moved, and the request lapsed before anyone still on it picked a new time. Its original time had already been given up, so the meeting has expired. The participants have been told and can book again from your booking page."
+msgstr "Pediste cambiar el horario de esta reunión, pero la solicitud venció antes de que alguno de los participantes que seguían en ella eligiera otro. Como el horario original ya se había liberado, la reunión quedó vencida. Ya se avisó a los participantes, que pueden volver a reservar desde tu página de reservas."

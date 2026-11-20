@@ -92,7 +92,6 @@ defmodule Tymeslot.Application do
 
     attach_error_tracking()
 
-    # Set up telemetry handlers for metrics
     Metrics.setup_handlers()
 
     # Set up integration telemetry handlers

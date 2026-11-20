@@ -149,8 +149,9 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   (`capacity > 1`, start time after `now`), returning how many were updated.
 
   A meeting never ends up with a capacity below the seats already taken on
-  it (live participants plus their guests, the count
-  `ParticipantQueries.count_seats_taken/1` makes): lowering the limit under
+  it (live participants plus their guests who have not declined, the count
+  `ParticipantQueries.count_seats_taken/1` makes; the SQL below restates it,
+  because Ecto's `update/3` takes no subquery in `set:`): lowering the limit under
   that leaves the slot exactly full, and nobody is cancelled. Solo meetings
   (`capacity == 1`) are never touched, so a one-to-one booking stays private
   whatever the type becomes.
@@ -172,7 +173,8 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
               GREATEST(?::integer, (
                 SELECT count(DISTINCT p.id) + count(g.id)
                 FROM meeting_participants AS p
-                LEFT JOIN meeting_guests AS g ON g.participant_id = p.id
+                LEFT JOIN meeting_guests AS g
+                  ON g.participant_id = p.id AND g.status <> 'declined'
                 WHERE p.meeting_id = ? AND p.cancelled_at IS NULL
               )::integer)
               """,

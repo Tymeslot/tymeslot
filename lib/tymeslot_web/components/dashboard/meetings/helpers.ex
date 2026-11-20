@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.DashboardFormat
 
@@ -29,10 +30,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   def participants(%{participants: participants}) when is_list(participants), do: participants
   def participants(_meeting), do: []
 
-  # Status helpers
+  @doc """
+  Whether the meeting is over. A meeting awaiting a new time is not: the
+  reschedule request voided its slot, and the request stays open after the
+  original time has gone by, until it lapses and the meeting expires.
+  """
   @spec past_meeting?(Ecto.Schema.t()) :: boolean()
   def past_meeting?(meeting) do
-    DateTime.compare(meeting.end_time, DateTime.utc_now()) == :lt
+    not MeetingState.awaiting_new_time?(meeting) and Policy.meeting_is_past?(meeting)
   end
 
   # Policy helpers (surface booleans)

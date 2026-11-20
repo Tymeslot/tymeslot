@@ -15,8 +15,8 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.AnswerNormaliser do
   Coercion is type-aware: the wire tokens are only meaningful for the
   question types that emit them, so a booker who literally types `"true"`,
   `"false"` or `"acknowledge"` into a text/phone/url question keeps that
-  verbatim string. Without this, those words were silently rewritten to a
-  boolean/map and then rejected by the text validator.
+  verbatim string, rather than having it rewritten to a boolean/map and
+  rejected by the text validator.
 
   ## Conversions
 

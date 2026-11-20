@@ -263,10 +263,8 @@ defmodule Tymeslot.Security.RateLimiter do
   `:custom` and `:ics_url` — which probe an arbitrary user-supplied host — at
   5 per 10 minutes. The bucket is always charged to `{:user, user_id}` — an
   interactive "Test connection" click or integration setup. A scheduled
-  background health probe never reaches this function at all: see
-  `Tymeslot.Integrations.Shared.ConnectionProbe`'s `:background` clause
-  (and its moduledoc) for why background probing is unmetered by
-  construction rather than charged to some other bucket.
+  background health probe never reaches this function: see
+  `Tymeslot.Integrations.Shared.ConnectionProbe`'s `:background` clause.
 
   `action` says what the person did to get here; see
   `t:Tymeslot.Security.RateLimiter.Integrations.connection_action/0`. It shapes

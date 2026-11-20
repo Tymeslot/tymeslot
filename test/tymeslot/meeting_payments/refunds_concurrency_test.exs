@@ -33,7 +33,7 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
     insert(:booking_payment, Map.merge(defaults, Map.new(attrs)))
   end
 
-  describe "issue_refund/3 — row-lock serialisation" do
+  describe "issue_refund/4 — row-lock serialisation" do
     test "concurrent partial refunds serialize via FOR UPDATE: one wins, balance is correct" do
       # Payment with 4000 cents remaining. Two tasks each request a 2000-cent
       # partial refund simultaneously. The FOR UPDATE lock in get_for_update/1
@@ -58,9 +58,9 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
       end)
 
       tasks =
-        for _i <- 1..2 do
+        for i <- 1..2 do
           Task.async(fn ->
-            Refunds.issue_refund(payment, 2000)
+            Refunds.issue_refund(payment, 2000, "concurrent:#{i}:2000")
           end)
         end
 
@@ -101,15 +101,32 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
       # {:error, :invalid_amount}.
       payment = paid_booking_payment(%{amount_cents: 3000})
 
-      # Only one Stripe call should happen because the second task fails validation.
-      expect(StripeAdapterMock, :create_refund, 1, fn _params, _opts ->
-        {:ok, %{id: "re_winner"}}
+      # The second task fails validation, but the refund it asks for could be
+      # one its key already made, so Stripe is asked, and rejects it as a
+      # fresh refund of a fully refunded charge.
+      calls = :counters.new(1, [:atomics])
+
+      expect(StripeAdapterMock, :create_refund, 2, fn _params, _opts ->
+        :counters.add(calls, 1, 1)
+
+        case :counters.get(calls, 1) do
+          1 ->
+            {:ok, %{id: "re_winner"}}
+
+          _replay ->
+            {:error,
+             %Stripe.Error{
+               source: :stripe,
+               code: :invalid_request_error,
+               message: "Charge has already been refunded"
+             }}
+        end
       end)
 
       tasks =
-        for _i <- 1..2 do
+        for i <- 1..2 do
           Task.async(fn ->
-            Refunds.issue_refund(payment, 3000)
+            Refunds.issue_refund(payment, 3000, "concurrent:#{i}:3000")
           end)
         end
 

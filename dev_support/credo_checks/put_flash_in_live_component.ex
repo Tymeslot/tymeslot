@@ -4,18 +4,17 @@ defmodule CredoChecks.PutFlashInLiveComponent do
 
   `Phoenix.LiveView.put_flash/3` only mutates the flash on the socket it
   receives — inside a `Phoenix.LiveComponent` that is the component's own
-  socket, never the parent LiveView's. The component is never rendered with
-  the flash group, so the message is silently dropped: no crash, no warning,
-  just a flash that never appears. The project already hit this and built
-  `TymeslotWeb.Live.Shared.Flash` (`lib/tymeslot_web/live/shared/flash.ex`) to
-  fix it: its helpers `send/2` a `{:flash, {type, message}}` message to the
-  current process, which the parent LiveView forwards to the real flash via
-  `handle_info/2`.
+  socket, never the parent LiveView's. The component is never rendered with the
+  flash group, so the message is silently dropped: no crash, no warning, just a
+  flash that never appears. `TymeslotWeb.Live.Shared.Flash`
+  (`lib/tymeslot_web/live/shared/flash.ex`) is the way around it: its helpers
+  `send/2` a `{:flash, {type, message}}` message to the current process, which
+  the parent LiveView forwards to the real flash via `handle_info/2`.
 
-  `lib/tymeslot_web/live/dashboard/payments_settings_component.ex:17-19`
-  documents the same precedent in its own moduledoc: "Flash messages are
-  forwarded to the parent LiveView via `Flash` (a bare `put_flash/3` inside a
-  LiveComponent never reaches the rendered flash group)."
+  `TymeslotWeb.Dashboard.PaymentsSettingsComponent` documents the same
+  precedent in its moduledoc: "Flash messages are forwarded to the parent
+  LiveView via `Flash` (a bare `put_flash/3` inside a LiveComponent never
+  reaches the rendered flash group)."
 
   ## What to do instead
 

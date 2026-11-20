@@ -60,9 +60,8 @@ defmodule Tymeslot.Infrastructure.Metrics do
   end
 
   # An operation that returns {:error, _} failed just as surely as one that
-  # raised. Recording it as a success overstated the calendar success rate and
-  # meant the "Calendar operation failed" line never fired for the ordinary
-  # case where a provider call returns an error tuple.
+  # raised, so it is recorded as an error and logged as a failed calendar
+  # operation.
   defp result_status({:error, reason}), do: %{status: :error, error: LogFormat.reason(reason)}
   defp result_status(_result), do: %{status: :success}
 

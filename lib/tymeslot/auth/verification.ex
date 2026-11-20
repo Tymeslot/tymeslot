@@ -287,10 +287,8 @@ defmodule Tymeslot.Auth.Verification do
   end
 
   defp issue_and_send(user, ip_address) do
-    # Persist the token first so it is valid in the database before the job runs.
-    # The job carries the token's hash; the worker discards it at send time if a
-    # newer request has since rotated the stored token, so an in-flight or
-    # retrying job can never deliver an invalidated link.
+    # Persist the token first, then queue the job with its hash; see
+    # `Tymeslot.Auth.PasswordReset` for why the worker needs the hash.
     with {:ok, updated_user, token} <- issue_verification_token(user.id, ip_address),
          {:ok, _status} <-
            schedule_verification_email(

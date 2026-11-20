@@ -1,6 +1,6 @@
 defmodule Tymeslot.Emails.Shared.Cards do
   @moduledoc """
-  Content card and data-grid components for Tymeslot emails — 2026 redesign.
+  Content card and data-grid components for Tymeslot emails.
 
   Where `Callouts` draws the eye with a tinted background and an intent accent,
   `Cards` lay out structured information — key/value tables, long-form
@@ -20,9 +20,8 @@ defmodule Tymeslot.Emails.Shared.Cards do
   A titled card holding a block of already-prepared HTML — the lines of a
   dispute or a restricted account, joined with `<br/>` by the caller.
 
-  Shared because the same card, down to the padding, was written out in two
-  templates; once both stopped differing in their spacing there was nothing
-  left to tell them apart.
+  Shared so every template that shows such a card uses the same padding and
+  spacing.
   """
   @spec details_card(String.t(), String.t()) :: String.t()
   def details_card(title, body_html) do

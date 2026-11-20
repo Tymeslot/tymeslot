@@ -48,10 +48,14 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrides do
   events the host calendar's colour is cleared too, by the same write-back a
   set enqueues (`ColourWriteBack`, with a `nil` colour): its unique key
   replaces a write-back of the old colour still waiting, which would
-  otherwise land after the clear and bring the colour back. The cached
-  event's colour is cleared at once, so the event shows its calendar's
-  colour before the next sync. An Outlook event keeps no colour of its own,
-  so only its override goes.
+  otherwise land after the clear and bring the colour back.
+
+  Until that write-back has cleared the host, every sync reads the old
+  colour back into the cache, so the override is not deleted but kept with
+  a `nil` colour, which displays as no colour ahead of the cached one. The
+  worker deletes it once the host is clear; a write-back that never
+  succeeds leaves it in place, so the colour stays off in Tymeslot. An
+  Outlook event keeps no colour of its own, so only its override goes.
   """
   @spec clear_event_colour(user_id(), colour_target()) :: :ok | {:error, :not_found}
   def clear_event_colour(user_id, target) do
@@ -67,13 +71,12 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrides do
   # clear: its cached colour is the calendar's, which the next sync brings
   # back anyway.
   defp remove_event_colour(user_id, {:external, integration_id, uid}) do
-    :ok = ColourOverrideQueries.clear_external(user_id, integration_id, uid)
-
     if host_colour?(integration_id, uid) do
+      :ok = ColourOverrideQueries.mark_external_cleared(user_id, integration_id, uid)
       :ok = ProviderCalendarEventQueries.clear_colour(integration_id, uid)
       ColourWriteBack.enqueue(user_id, integration_id, uid, nil)
     else
-      :ok
+      ColourOverrideQueries.clear_external(user_id, integration_id, uid)
     end
   end
 
@@ -98,17 +101,21 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrides do
 
   @doc """
   Returns a user's colour overrides as a lookup map keyed for the resolver:
-  `{:meeting, id}` / `{:external, integration_id, uid}` => palette key.
+  `{:meeting, id}` / `{:external, integration_id, uid}` => palette key, or
+  `nil` for an external event whose colour was cleared.
   """
-  @spec overrides_for(user_id()) :: %{optional(tuple()) => String.t()}
+  @spec overrides_for(user_id()) :: %{optional(tuple()) => String.t() | nil}
   defdelegate overrides_for(user_id), to: ColourOverrideQueries, as: :for_user
 
   @doc """
-  Resolves the palette key to display for an event: the user's durable
-  override wins, else the provider-synced colour, else `nil` (caller applies
-  its own source/integration default).
+  Resolves the palette key to display for the event `target`: the user's
+  durable override in `overrides` wins (a cleared one meaning no colour),
+  else the provider-synced colour, else `nil` (caller applies its own
+  source/integration default).
   """
-  @spec resolve_event_colour(override :: String.t() | nil, provider_colour :: String.t() | nil) ::
+  @spec resolve_event_colour(map(), tuple(), provider_colour :: String.t() | nil) ::
           String.t() | nil
-  defdelegate resolve_event_colour(override, provider_colour), to: ColourResolver, as: :resolve
+  defdelegate resolve_event_colour(overrides, target, provider_colour),
+    to: ColourResolver,
+    as: :resolve
 end

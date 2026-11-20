@@ -273,7 +273,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
 
   # Which property carries the attendee is the server's call, not this
   # module's: `CalDAV.Scheduling.attendee_mode/1` weighs the failure modes
-  # (issues #41, #123 and #151) per server and this serialises its answer.
+  # per server (duplicate invitations, an event showing a single participant,
+  # an owner re-added under another address) and this serialises its answer.
   #
   # `:attendee` emits `ATTENDEE;SCHEDULE-AGENT=CLIENT`, the RFC 6638 §7.1 way
   # to say "stored, but don't mail them — I already did". `:contact` emits
@@ -402,12 +403,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
   # don't inject one of their own at calendar-owner level (which would
   # itself fire iTIP). The `SCHEDULE-AGENT=CLIENT` parameter is kept as
   # defence-in-depth for servers that honour RFC 6638 §7.1 even though
-  # Zimbra silently strips it (see issue #41).
+  # Zimbra silently strips it.
   #
   # In `{:organiser_attendee, _}` mode the line carries the address the owner
   # line does (`Scheduling.owner_attendee_address/2`), so an organiser whose
   # address is not on the account still organises their own event: the server
-  # then lists them once and accepts later guest changes (issue #151).
+  # then lists them once and accepts later guest changes.
   @spec build_organizer_line(map(), Scheduling.mode()) :: String.t() | nil
   def build_organizer_line(event, mode \\ :contact)
 

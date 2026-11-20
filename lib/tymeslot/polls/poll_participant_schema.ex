@@ -68,8 +68,8 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   normalised before validation and validated against the same shared rules the
   rest of the app uses: `EmailValidator` for the address (not a hand-rolled
   regex), `NameValidator` for the display name, and real IANA/locale lookups for
-  `timezone` and `locale`, which were previously cast straight through and could
-  hold arbitrary strings that later reach email rendering and time formatting.
+  `timezone` and `locale`, so arbitrary strings cannot reach email rendering
+  and time formatting.
   """
   @spec creation_changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
   def creation_changeset(participant, attrs) do

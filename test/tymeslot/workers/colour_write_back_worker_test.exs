@@ -254,6 +254,105 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
                })
     end
 
+    test "a clear the provider takes deletes the cleared override", %{
+      user: user,
+      integration: integ
+    } do
+      cached_event(integ, uid: "uid-1", colour: "sage")
+      target = {:external, integ.id, "uid-1"}
+      {:ok, _override} = Calendar.set_event_colour(user.id, target, "tomato")
+      :ok = Calendar.clear_event_colour(user.id, target)
+      assert Calendar.overrides_for(user.id) == %{target => nil}
+
+      stub(Tymeslot.CalendarMock, :update_event, fn "uid-1", _event_data, _context -> :ok end)
+      [clearing] = all_enqueued(worker: ColourWriteBackWorker)
+
+      assert :ok = perform_job(ColourWriteBackWorker, clearing.args)
+      assert Calendar.overrides_for(user.id) == %{}
+    end
+
+    test "a colour a sync cached while the clear was pending is gone once the clear lands", %{
+      user: user,
+      integration: integ
+    } do
+      cached_event(integ, uid: "uid-1", colour: "sage")
+      target = {:external, integ.id, "uid-1"}
+      :ok = Calendar.clear_event_colour(user.id, target)
+
+      # A sync before the write-back reads the host's old colour back.
+      {:ok, event} = ProviderCalendarEventQueries.get_by_uid(integ.id, "uid-1")
+      event |> Changeset.change(colour: "sage") |> Repo.update!()
+
+      stub(Tymeslot.CalendarMock, :update_event, fn "uid-1", _event_data, _context -> :ok end)
+      [clearing] = all_enqueued(worker: ColourWriteBackWorker)
+
+      assert :ok = perform_job(ColourWriteBackWorker, clearing.args)
+      assert Calendar.overrides_for(user.id) == %{}
+      assert {:ok, %{colour: nil}} = ProviderCalendarEventQueries.get_by_uid(integ.id, "uid-1")
+    end
+
+    test "a colour chosen while a clear is in flight keeps the cached colour beneath it", %{
+      user: user,
+      integration: integ
+    } do
+      cached_event(integ, uid: "uid-1")
+      target = {:external, integ.id, "uid-1"}
+      :ok = Calendar.clear_event_colour(user.id, target)
+      {:ok, event} = ProviderCalendarEventQueries.get_by_uid(integ.id, "uid-1")
+      event |> Changeset.change(colour: "sage") |> Repo.update!()
+      [clearing] = all_enqueued(worker: ColourWriteBackWorker)
+
+      stub(Tymeslot.CalendarMock, :update_event, fn "uid-1", _event_data, _context ->
+        {:ok, _override} =
+          ColourOverrideQueries.set_external(user.id, integ.id, "uid-1", "tomato")
+
+        :ok
+      end)
+
+      assert :ok = perform_job(ColourWriteBackWorker, clearing.args)
+      assert {:ok, %{colour: "sage"}} = ProviderCalendarEventQueries.get_by_uid(integ.id, "uid-1")
+    end
+
+    test "a clear the provider refuses keeps the cleared override", %{
+      user: user,
+      integration: integ
+    } do
+      cached_event(integ, uid: "uid-1", colour: "sage")
+      target = {:external, integ.id, "uid-1"}
+      :ok = Calendar.clear_event_colour(user.id, target)
+
+      stub(Tymeslot.CalendarMock, :update_event, fn "uid-1", _event_data, _context ->
+        {:error, :forbidden}
+      end)
+
+      [clearing] = all_enqueued(worker: ColourWriteBackWorker)
+
+      assert {:error, :forbidden} = perform_job(ColourWriteBackWorker, clearing.args)
+      assert Calendar.overrides_for(user.id) == %{target => nil}
+    end
+
+    test "a colour chosen while a clear is in flight survives the clear landing", %{
+      user: user,
+      integration: integ
+    } do
+      cached_event(integ, uid: "uid-1")
+      target = {:external, integ.id, "uid-1"}
+      :ok = Calendar.clear_event_colour(user.id, target)
+      [clearing] = all_enqueued(worker: ColourWriteBackWorker)
+
+      stub(Tymeslot.CalendarMock, :update_event, fn "uid-1", _event_data, _context ->
+        # The organiser picks a colour while the clear's request is out.
+        {:ok, _override} =
+          ColourOverrideQueries.set_external(user.id, integ.id, "uid-1", "tomato")
+
+        :ok
+      end)
+
+      assert :ok = perform_job(ColourWriteBackWorker, clearing.args)
+      assert Calendar.overrides_for(user.id) == %{target => "tomato"}
+      assert_enqueued(worker: ColourWriteBackWorker, args: %{"colour" => "tomato"})
+    end
+
     test "threads the cached ETag into the payload for a conditional write", %{
       user: user,
       integration: integ

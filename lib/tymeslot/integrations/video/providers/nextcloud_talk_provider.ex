@@ -18,9 +18,10 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   address: a reschedule moves the lobby timer and renames the conversation, a
   cancellation deletes it, and a scheduled clean-up deletes it some days after
   the meeting has ended. A conversation already deleted on the server counts as
-  deleted, and so does one its owner marked to be preserved. A refusal that would repeat on every attempt (a 400 or 403, a
-  redirect) is reported as a configuration error, which the sync job discards
-  rather than retries.
+  deleted. Deleting one its owner marked to be preserved is still sent, and
+  Talk's 403 refusal counts as done. A refusal that would repeat on every
+  attempt (a 400 or 403, a redirect) is reported as a configuration error,
+  which the sync job discards rather than retries.
 
   At creation, a refusal caused by the server's own settings (conversation
   creation limited to some groups, Talk limited to some groups, a password

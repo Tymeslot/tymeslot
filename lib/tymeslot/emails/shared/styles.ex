@@ -1,6 +1,6 @@
 defmodule Tymeslot.Emails.Shared.Styles do
   @moduledoc """
-  Public facade for the Tymeslot email design system — 2026 redesign.
+  Public facade for the Tymeslot email design system.
 
   The system is split across three focused sub-modules:
 
@@ -13,10 +13,10 @@ defmodule Tymeslot.Emails.Shared.Styles do
 
   This module re-exports the common public API plus a small set of
   legacy-vocabulary helpers used by `Buttons`, `Cards`, `MeetingComponents`,
-  and `event_update_notification` (old-name button and table helpers kept as
-  thin wrappers over the token system).
+  and `event_update_notification` (button and table helpers that are thin
+  wrappers over the token system).
 
-  ## Redesign notes
+  ## Palette
 
   The palette is **inversion-survivable**: no pure whites, no near-blacks.
   Every base value is chosen so that a client-forced colour inversion (as
@@ -30,7 +30,7 @@ defmodule Tymeslot.Emails.Shared.Styles do
   are exactly three:
 
   - `:confirmed` — the brand accent (turquoise by default; a self-hosted
-    instance can configure its own). The default for every informational,
+    instance can configure its own). Declared by every informational,
     welcome, reminder, invitation, trial, subscription, or confirmation email.
   - `:alert` — amber. The "attention needed" signal.
   - `:cancelled` — rose. The "something is wrong" signal.

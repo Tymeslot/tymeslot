@@ -5,9 +5,8 @@ defmodule TymeslotWeb.Themes.Quill.Voice do
   sheet's brief).
 
   So far it words the overview's heading, which for Quill names no one
-  (its heading style is `:generic`). Every other shared line keeps the
-  shared wording until Quill's own lines land, and the organiser's own
-  wording still wins over all of it.
+  (its heading style is `:generic`). Every other shared line uses the
+  shared wording, and the organiser's own wording wins over all of it.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

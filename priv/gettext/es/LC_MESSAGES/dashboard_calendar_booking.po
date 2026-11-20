@@ -192,7 +192,7 @@ msgstr "Cada semana"
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #, elixir-autogen, elixir-format
 msgid "Expired"
-msgstr "Expirada"
+msgstr "Vencida"
 
 #: lib/tymeslot_web/live/dashboard/calendar/bookable_strings.ex
 #, elixir-autogen, elixir-format
@@ -423,7 +423,7 @@ msgstr "una solicitud a la espera de tu respuesta"
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #, elixir-autogen, elixir-format
 msgid "request expired without an answer"
-msgstr "solicitud expirada sin respuesta"
+msgstr "solicitud vencida sin respuesta"
 
 #: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
 #, elixir-autogen, elixir-format

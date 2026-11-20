@@ -4,7 +4,7 @@ defmodule Tymeslot.Validation.Constraints do
 
   This module is the single source of truth for numeric bounds, length limits,
   and Ecto-ready option lists used across schemas and domain modules. The
-  validation architecture has three layers:
+  validation architecture has four layers:
 
   1. **This module** defines the values (bounds, ranges, limits).
   2. **Field validators** (`Tymeslot.Security.FieldValidators.*`) own format

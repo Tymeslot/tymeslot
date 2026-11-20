@@ -161,8 +161,7 @@ defmodule Tymeslot.Meetings.Scheduling do
 
   The organiser's booking limits are enforced as on creation; pass
   `enforce_booking_limits: false` to skip them. Buffers are weighed as on
-  creation; pass `buffers: false` to count only the meetings overlapping the
-  time itself, for a time the organiser chose rather than a booker.
+  creation, including the `buffers: false` option.
 
   ## Examples
 

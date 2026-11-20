@@ -14,7 +14,7 @@ defmodule Tymeslot.Profiles.Settings do
           optional(String.t()) => term()
         }
 
-  @typedoc ~S'String-keyed params from the scheduling-preferences form (expects "buffer_before_minutes", "buffer_after_minutes", "advance_booking_days", "min_advance_hours").'
+  @typedoc ~S'String-keyed params from the scheduling-preferences form.'
   @type scheduling_params :: %{
           optional(String.t()) => term()
         }

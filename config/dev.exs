@@ -14,8 +14,7 @@ config :tymeslot, :upload_directory, Path.expand("../uploads", __DIR__)
 # Generated URLs (email links, OAuth redirect URIs) come from the endpoint's
 # :url config, so a dev server reached through a reverse proxy must know the
 # domain the browser actually used. These read the same variables runtime.exs
-# reads in production; unset, they collapse to the previous http://localhost:PORT
-# behaviour exactly.
+# reads in production; unset, they give http://localhost:PORT.
 port = String.to_integer(System.get_env("PORT") || "4000")
 host = System.get_env("PHX_HOST") || "localhost"
 url_scheme = System.get_env("URL_SCHEME") || "http"
@@ -33,7 +32,7 @@ config :tymeslot, TymeslotWeb.Endpoint,
   url: [host: host, port: url_port, scheme: url_scheme],
   # The proxied origin has to be allowed too, or the LiveView socket is rejected
   # under the very domain PHX_HOST just enabled. Deduplicated so the default case
-  # produces the same two entries it always did.
+  # yields just the two localhost entries.
   check_origin:
     Enum.uniq([
       "#{url_scheme}://#{host}:#{url_port}",
@@ -140,7 +139,6 @@ config :tymeslot, Oban,
   # startup.
   cron: []
 
-# Enable swoosh api client
 config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 
 # Enable booking analytics in development so the feature is exercisable locally.
@@ -153,8 +151,7 @@ config :tymeslot, :booking_analytics_enabled, true
 # genuine sync can be exercised.
 #
 #   * DEV_CALENDAR=1       → starts with a realistic recurring weekly pattern.
-#   * DEV_EMPTY_CALENDAR=1 → starts empty (every slot free), preserving the
-#     previous behaviour.
+#   * DEV_EMPTY_CALENDAR=1 → starts empty (every slot free).
 cond do
   System.get_env("DEV_CALENDAR") in ~w(1 true) ->
     config :tymeslot, :calendar_module, Tymeslot.Dev.Calendar

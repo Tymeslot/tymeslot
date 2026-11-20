@@ -12,23 +12,22 @@ defmodule Tymeslot.Workers.SyncHealth do
 
   A completed cycle is evidence in the other direction, and it settles two
   things rather than one: the failure streak, and the `needs_reauth` flag that
-  keeps a flagged integration out of booking. Only two of the five workers used
-  to clear that flag, so a Google, Outlook or CalDAV-family integration that
-  started working again on its own — a CalDAV password fixed on the server, a
-  provider outage that resolved — stayed flagged for as long as its owner did
-  not reconnect it by hand, and every booking went on refusing it. Both halves
-  live here for the same reason: five copies of the rule is how three of them
-  came to be missing.
+  keeps a flagged integration out of booking. A completed cycle clears the flag
+  for every sync worker, so an integration that starts working again on its
+  own (a CalDAV password fixed on the server, a provider outage that resolved)
+  is not left flagged until its owner reconnects it by hand, with every
+  booking refusing it. Both halves live here for the same reason: five copies
+  of the rule drift apart.
 
   ## Call it once, at the job boundary
 
   Both halves belong on the verdict a worker is about to hand Oban, so that
   they measure the same thing: one attempt at one sync cycle, succeeded or
   failed. Recording success anywhere deeper counts something smaller than a
-  cycle — the Google worker used to clear the streak while persisting the sync
-  token, before its secondary calendars had been read at all, so an
-  integration whose second calendar failed every time could never build a
-  streak and its badge stayed green through an indefinite outage.
+  cycle: clearing the streak while persisting a sync token, before the
+  secondary calendars have been read, would stop an integration whose second
+  calendar fails every time from ever building a streak, and its badge would
+  stay green through an indefinite outage.
 
   One attempt, not one job: a retried job records once per attempt, which is
   what makes a cycle that exhausts its retries weigh more than one that fails

@@ -177,6 +177,14 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
       {:error, :not_found} ->
         {:ok, meeting_not_found(socket, profile, meeting_uid, action)}
 
+      # The host's request for a new time lapsed unanswered: nothing is
+      # booked, so the visitor is sent to the booking page to book afresh.
+      {:error, {_refused, :request_lapsed} = reason} ->
+        {:ok,
+         socket
+         |> LiveView.put_flash(:error, refusal_message(reason))
+         |> LiveView.redirect(to: ~p"/#{profile.username}")}
+
       {:error, reason} ->
         {:ok,
          socket

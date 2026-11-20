@@ -329,16 +329,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   defp refuse_duplicate(socket, _not_duplicable), do: socket
 
   @doc """
-  Deletes the panel's event through the delete flow. The panel closes once
-  the flow has taken the event over (a question on screen, or the delete
-  scheduled); a refusal leaves the panel open beside its flash.
+  Deletes the panel's event through the delete flow. The panel stays open
+  while the flow asks a question (this event or the series, or whether to
+  tell its guests), so Cancel returns to it, and closes once the delete is
+  scheduled (`Deletion`); a refusal leaves it open beside its flash.
   """
   @spec delete(socket()) :: socket()
   def delete(%{assigns: %{panel: %{mode: :edit, event_id: id}}} = socket) do
     case not_moving(socket, id) do
       :ok ->
-        started = Deletion.request(socket, id)
-        if taken_over?(socket, started), do: PanelState.close(started), else: started
+        Deletion.request(socket, id)
 
       {:error, :moving} ->
         warn(socket, CalendarEditMessages.moving_message())
@@ -346,13 +346,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNew do
   end
 
   def delete(socket), do: socket
-
-  defp taken_over?(before, started) do
-    Enum.any?(
-      [:series_prompt, :delete_prompt, :pending_deletes],
-      &(before.assigns[&1] != started.assigns[&1])
-    )
-  end
 
   defp not_moving(socket, id),
     do: if(Transfer.moving?(socket, id), do: {:error, :moving}, else: :ok)

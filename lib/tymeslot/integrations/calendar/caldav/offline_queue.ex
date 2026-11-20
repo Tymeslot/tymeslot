@@ -355,14 +355,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
         # written in UTC (`ICalBuilder.TimeZoneComponent.series_zone/1`).
         series_timezone: event.timezone,
         provider_event_id: event.provider_event_id,
-        # A held request is queued as tentative, and a replay has to say so: the
-        # cache row carries the status but the rebuilt payload used to drop it,
-        # so the VEVENT went back out with no STATUS line and the host's calendar
-        # showed a confirmed booking for a request nobody had answered.
+        # A held request is queued as tentative, and a replay has to say so:
+        # without the status the VEVENT goes out with no STATUS line and the
+        # host's calendar shows a confirmed booking for a request nobody has
+        # answered.
         status: event.status,
         transparency: event.transparency,
         # The row holds the whole event, so the replay sends the whole event. A
-        # rebuild from the narrower set used to replace a recurring series on the
+        # rebuild from a narrower set would replace a recurring series on the
         # server with a single VEVENT carrying no attendees and no alarms, which
         # is destructive on the organiser's real calendar for what began as a
         # transient write failure.
@@ -390,16 +390,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   # before the sync read alarms, whose reminders are `[]` whatever the
   # document says, leaves them alone.
   #
-  # An unmarked change left the reminders alone, unless it was queued before
-  # the mark existed and so is unmarked whatever it changed. For that row an
-  # unmarked replay compares the row's reminders with the ones the
-  # document's master holds (a series' document holds a VEVENT per edited
-  # occurrence beside the master, the VEVENT the patcher edits) and sends
-  # them when they differ, as the queue did before. That comparison cannot
-  # tell a removal of every reminder from a row cached before the sync read
-  # alarms, so it never replays `[]`, and a document without exactly one
-  # master keeps the server's alarms too. A row with no document is rebuilt
-  # from the row, reminders and all.
+  # An unmarked change leaves the reminders alone, unless the row was queued
+  # before the mark existed and so is unmarked whatever it changed. For that row
+  # an unmarked replay compares the row's reminders with the ones the document's
+  # master holds (a series' document holds a VEVENT per edited occurrence beside
+  # the master, the VEVENT the patcher edits) and sends them when they differ.
+  # That comparison cannot tell a removal of every reminder from a row cached
+  # before the sync read alarms, so it never replays `[]`, and a document
+  # without exactly one master keeps the server's alarms too. A row with no
+  # document is rebuilt from the row, reminders and all.
   defp replayed_reminders(%{reminders: reminders}, true = _changed), do: %{reminders: reminders}
 
   defp replayed_reminders(%{raw_ical: raw_ical, reminders: reminders}, _unmarked)
@@ -442,10 +441,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   # one the row is filed under, then the integration's booking collection,
   # which is where `ClientManager.booking_client/1` writes and so where a
   # Tymeslot-created event with no href yet actually lives, and only then the
-  # first configured path. Taking the first path unconditionally is what built
+  # first configured path. Taking the first path unconditionally would build
   # the wrong URL for every integration whose booking calendar is not its
-  # first, and a CalDAV DELETE counts 404 as success, so that wrong URL
-  # reported the event deleted while it stayed on the server.
+  # first, and since a CalDAV DELETE counts 404 as success, would report the
+  # event deleted while it stays on the server.
   defp collection_path(row, integration) do
     case row.provider_calendar_id || CalendarPathResolver.resolve(integration) do
       path when is_binary(path) and path != "" -> {:ok, path}

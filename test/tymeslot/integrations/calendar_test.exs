@@ -333,7 +333,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
         Calendar.set_event_colour(user.id, {:external, integ.id, "uid-1"}, "blueberry")
 
       :ok = Calendar.clear_event_colour(user.id, {:external, integ.id, "uid-1"})
-      assert Calendar.overrides_for(user.id) == %{}
+      assert Calendar.overrides_for(user.id) == %{{:external, integ.id, "uid-1"} => nil}
     end
 
     test "sets a durable override for a meeting", %{user: user} do

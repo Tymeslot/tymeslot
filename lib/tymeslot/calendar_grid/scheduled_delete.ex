@@ -14,8 +14,12 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   The job deletes what the cached row says when it runs, so an edit made in
   another tab during the window is deleted too.
 
-  When it runs (`perform/1`) the seat lock is checked again, the event is
-  deleted through `EventDeletion.delete_event/4`, and the outcome is
+  Both ends ask `EditGuard.write_gates/3`: `schedule/4` refuses an event the
+  organiser may not change before anything is stored, and when it runs
+  (`perform/1`) the delete goes through `EventDeletion.delete_event/4`,
+  which asks the gates again, since the calendar may have been disconnected
+  or a seat booked during the window; a refusal then is reported as
+  `{:failed, reason}`. The outcome is
   broadcast on the organiser's calendar topic as
   `{:calendar_delete_result, user_id, token, outcome}`: `:deleted`;
   `{:deleted, :cancel_failed}` when the event is gone but its linked meeting
@@ -82,10 +86,17 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   `delay` (seconds, default `undo_delay/0`), `notify_attendees`
   (default `false`) and `tab` (the browser tab that asked, kept with the
   job so only that tab offers Undo again after a reload; see `pending/1`).
+  An event `EditGuard.write_gates/3` refuses is refused with its reason, and
+  nothing is scheduled.
   """
   @spec schedule(pos_integer(), map(), EventDeletion.scope(), keyword()) ::
           {:ok, token()} | {:error, term()}
   def schedule(user_id, event, scope, opts \\ []) when scope in [:occurrence, :series] do
+    with :ok <- EditGuard.write_gates(user_id, event, :change),
+         do: insert(user_id, event, scope, opts)
+  end
+
+  defp insert(user_id, event, scope, opts) do
     delay = Keyword.get(opts, :delay, @undo_delay)
 
     args =
@@ -252,13 +263,9 @@ defmodule Tymeslot.CalendarGrid.ScheduledDelete do
   defp delete(user_id, event, args) do
     notify? = args["notify_attendees"] == true
 
-    with :ok <- EditGuard.seat_lock(user_id, event),
-         {:ok, deleted} <-
-           EventDeletion.delete_event(user_id, event, scope(args), notify_attendees: notify?) do
-      deleted_outcome(deleted)
-    else
-      {:error, :group_booking} ->
-        {:failed, :group_booking}
+    case EventDeletion.delete_event(user_id, event, scope(args), notify_attendees: notify?) do
+      {:ok, deleted} ->
+        deleted_outcome(deleted)
 
       # The calendar says it is gone already; the cached row has to follow it
       # or the event would reappear until the next sync.

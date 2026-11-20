@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollFormErrors do
   `rows_param`, is a date with no time (or a time with no date), rather than
   read it as blank. The error's map goes to the form's errors: a half-filled
   row shows its own message under it, so a form refused for its rows alone
-  gets an empty map, with nothing to add but nothing saved without the row.
+  gets an empty error map, and nothing is saved without the row.
   """
   @spec finished_times(map(), String.t()) :: :ok | {:error, {:unfinished_times, map()}}
   def finished_times(params, rows_param) do

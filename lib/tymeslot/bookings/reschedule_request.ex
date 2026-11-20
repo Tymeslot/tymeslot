@@ -15,6 +15,9 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   4. Schedules deletion of the calendar event — the original time slot is
      void, exactly as if the meeting were cancelled, until the attendee
      books a new time
+  5. Queues the request's expiry (`Tymeslot.Bookings.RescheduleRequestExpiry`),
+     in the same transaction: an attendee who never picks a new time does
+     not leave the request open for good
 
   This is distinct from `Bookings.Reschedule` which actually performs the reschedule
   with a new time. This module only initiates the request workflow.
@@ -24,6 +27,7 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
 
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Bookings.RescheduleRequestExpiry
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -35,16 +39,10 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   alias Tymeslot.Repo
 
   @doc """
-  Sends a reschedule request email for a meeting.
-
-  This function:
-  1. Checks the meeting is eligible via `Policy.can_request_reschedule?/1`,
-     which also refuses one already awaiting a new time
-  2. Marks the meeting as awaiting a new time (`reschedule_requested_at`)
-  3. Deletes pending reminder email jobs and queues a high-priority email
-     job to notify the attendee, atomically — either both happen or neither
-     does, so the slot is never voided without the attendee being told
-  4. Schedules deletion of the calendar event (fire-and-forget)
+  Sends a reschedule request email for a meeting, following the steps in the
+  moduledoc. Eligibility is `Policy.can_request_reschedule?/1`, which also
+  refuses a meeting already awaiting a new time. The calendar deletion is
+  fire-and-forget.
 
   ## Parameters
     - meeting: The meeting struct to send reschedule request for
@@ -114,10 +112,11 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
 
   # The original slot is void until the attendee books a new time, so the
   # request email tells the attendee the appointment has been cancelled.
-  # The meeting update, reminder cancellation, and email-job insert are all
-  # Postgres operations, so they run in one transaction: if the email job
-  # can't be durably enqueued, the slot update rolls back too, rather than
-  # leaving the meeting voided with no email on its way. Calendar event
+  # The meeting update, reminder cancellation, and the email and expiry job
+  # inserts are all Postgres operations, so they run in one transaction: if
+  # either job can't be durably enqueued, the slot update rolls back too,
+  # rather than leaving the meeting voided with no email on its way, or with
+  # a request that never lapses. Calendar event
   # deletion is scheduled last, outside the transaction — it's an external
   # side effect that already never fails the caller (see
   # `Meetings.cancel_calendar_event/1`), and rebooking recreates both the
@@ -130,7 +129,8 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
       Repo.transaction(fn ->
         with {:ok, updated_meeting} <- mark_requested(meeting, requested_at),
              :ok <- Events.reschedule_requested(updated_meeting),
-             :ok <- schedule_reschedule_email(updated_meeting) do
+             :ok <- schedule_reschedule_email(updated_meeting),
+             :ok <- RescheduleRequestExpiry.schedule(updated_meeting) do
           updated_meeting
         else
           {:error, reason} -> Repo.rollback(reason)

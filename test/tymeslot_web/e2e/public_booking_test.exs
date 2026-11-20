@@ -52,20 +52,14 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
     # Click next to go to booking form
     session = click(session, css("[data-testid='next-step']"))
 
-    # Fill in the booking form.
-    # The submit button starts disabled (empty form). With phx-debounce="blur" on
-    # the fields, the server only validates when a field loses focus. We blur the
-    # last field explicitly so phx-change fires and the server marks the form valid
-    # before we attempt to click Submit.
+    # Fill in the booking form and submit straight from the email field. The
+    # fields reach the server only on blur, so a click while the email field
+    # still has focus must land on an enabled button and book first time.
     session =
       session
       |> assert_has(css("[data-testid='booking-form']"))
       |> fill_in(css("input[name='booking[name]']"), with: "Jane Doe")
       |> fill_in(css("input[name='booking[email]']"), with: "jane@example.com")
-      |> execute_script("document.activeElement.blur()")
-
-    # Wait for button to become enabled (server has validated the complete form)
-    session = assert_has(session, css("[data-testid='submit-booking']:not([disabled])"))
 
     session = click(session, css("[data-testid='submit-booking']"))
 

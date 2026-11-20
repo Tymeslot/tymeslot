@@ -65,9 +65,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   still queued for the server: the flash says the event is gone and will be
   retried, so leaving it drawn contradicts it. Availability deliberately keeps
   counting the row until the delete lands, because the event is still on the
-  server and the slot is not free yet. This used to happen by accident — the
-  queue tag blanked the timing columns the overlap test reads — and stopped
-  the moment that blanking was fixed.
+  server and the slot is not free yet.
 
   ## Options
 
@@ -588,11 +586,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   # and a partial cache update that omits it must not silently re-file the row
   # as the default. Its absence here is a decision, not an oversight.
   #
-  # The field now exists on the schema and `full_refresh_for_role/3` writes it,
-  # so its absence from this list is what keeps it insert-time identity: a
-  # server-sourced upsert that omits `:role` (every provider but Exchange does)
-  # cannot re-file an existing row, and one that supplies it cannot move a row
-  # from one read path to the other.
+  # `full_refresh_for_role/3` writes the field, and its absence from this list
+  # is what keeps it insert-time identity: a server-sourced upsert that omits
+  # `:role` (every provider but Exchange does) cannot re-file an existing row,
+  # and one that supplies it cannot move a row from one read path to the other.
   @doc """
   The columns a server-sourced upsert is allowed to overwrite on an existing
   row. Public because `CalDAV.QueueQueries` extends it for a queue entry, which

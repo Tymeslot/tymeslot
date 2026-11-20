@@ -398,4 +398,42 @@ defmodule Tymeslot.CalendarGrid.CreateParamsTest do
       assert {:error, :guests, :too_many} = CreateParams.guests(user.id, crowd)
     end
   end
+
+  describe "fit_reminders/2" do
+    @five [
+      %{method: :email, minutes_before: 10},
+      %{method: :popup, minutes_before: 30},
+      %{method: :popup, minutes_before: 60},
+      %{method: :email, minutes_before: 120},
+      %{method: :popup, minutes_before: 1440}
+    ]
+
+    test "an Outlook calendar keeps the first reminder only, as a notification" do
+      assert CreateParams.fit_reminders(@five, "outlook") == [
+               %{method: :popup, minutes_before: 10}
+             ]
+
+      assert CreateParams.fit_reminders(@five, :outlook) == [
+               %{method: :popup, minutes_before: 10}
+             ]
+    end
+
+    test "an Exchange calendar keeps the first reminder only, as a notification" do
+      assert CreateParams.fit_reminders(@five, "exchange") == [
+               %{method: :popup, minutes_before: 10}
+             ]
+    end
+
+    test "any other calendar keeps every reminder by its own method" do
+      assert CreateParams.fit_reminders(@five, "google") == @five
+      assert CreateParams.fit_reminders(@five, nil) == @five
+    end
+
+    test "the capacity says how many and by which methods" do
+      assert CreateParams.reminder_capacity("outlook") == {1, [:popup]}
+      assert CreateParams.reminder_capacity("exchange") == {1, [:popup]}
+      assert {5, methods} = CreateParams.reminder_capacity("caldav")
+      assert Enum.sort(methods) == [:email, :popup]
+    end
+  end
 end

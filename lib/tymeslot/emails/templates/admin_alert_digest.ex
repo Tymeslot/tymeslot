@@ -18,9 +18,9 @@ defmodule Tymeslot.Emails.Templates.AdminAlertDigest do
 
   Always English, like `Tymeslot.Emails.Templates.AdminAlert`: it goes to the
   operator's configured alert address, not to a user with a stored locale,
-  and inbox rules file it by its `[SEVERITY] Tymeslot:` subject prefix.
-  Keeping operator mail untranslated is a deliberate decision, so the text
-  below is plain English with no gettext.
+  and inbox rules file it by its `[SEVERITY] Tymeslot:` subject prefix. The
+  text below is plain English with no gettext, for the reason given in
+  `Tymeslot.Emails.Templates.AdminAlert`.
   """
 
   alias Swoosh.Email

@@ -3,11 +3,10 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
   What an attendee returning from Stripe Checkout should be told about their
   booking, derived from the payment and meeting rows alone.
 
-  The return page used to work this out for itself, and got it wrong in ways
-  an attendee could see: every paid booking that was not declined, expired or
-  held read as confirmed, including one the attendee had withdrawn or the host
-  had cancelled, and a payment that failed left the page spinning forever. The
-  rule lives here so the page renders an answer instead of deriving one.
+  The rule lives here so the return page renders an answer instead of deriving
+  one. A paid booking is not confirmed merely because it was not declined,
+  expired or held: the attendee may have withdrawn it or the host cancelled it,
+  and a failed payment is reported as failed rather than left pending.
 
   Two facts carry the classification, and neither is `payment.status`:
 

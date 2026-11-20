@@ -2,21 +2,27 @@ defmodule Tymeslot.Notifications.Email.RescheduleRequestEmails do
   @moduledoc """
   The email asking an attendee to pick a new time, after the host asked for
   the booking to be rescheduled, sent only while that request is still the
-  one the meeting is waiting on.
+  one the meeting is waiting on; and the two closing it when the attendee
+  never answered (`Tymeslot.Bookings.RescheduleRequestExpiry`), one to the
+  host and one to the attendee, or to each participant still on a group
+  meeting.
   """
 
   require Logger
 
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.Email.GroupMeetingEmails
   alias Tymeslot.Notifications.Email.MeetingEmails
+  alias Tymeslot.Workers.DeliveryClaims
 
   @meeting_cancelled "Meeting cancelled"
   @meeting_closed "Meeting expired or completed"
   @request_not_pending "Reschedule request no longer pending"
+  @not_lapsed "Reschedule request did not lapse"
 
   @doc """
   Whether `reason`, from a discard this module returned, is an expected end
@@ -25,7 +31,7 @@ defmodule Tymeslot.Notifications.Email.RescheduleRequestEmails do
   """
   @spec expected_discard?(term()) :: boolean()
   def expected_discard?(reason),
-    do: reason in [@meeting_cancelled, @meeting_closed, @request_not_pending]
+    do: reason in [@meeting_cancelled, @meeting_closed, @request_not_pending, @not_lapsed]
 
   @spec handle_reschedule_request(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -98,5 +104,75 @@ defmodule Tymeslot.Notifications.Email.RescheduleRequestEmails do
 
         {:error, reason}
     end
+  end
+
+  @doc """
+  Tells the host their reschedule request lapsed unanswered and the meeting
+  has expired, in the host's own language.
+  """
+  @spec handle_reschedule_request_unanswered(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_reschedule_request_unanswered(%{"meeting_id" => meeting_id}) do
+    MeetingEmails.with_meeting(meeting_id, "reschedule request unanswered", fn meeting ->
+      with_lapsed_request(meeting, fn ->
+        locale = RecipientLocale.locale_for_user_id(meeting.organizer_user_id)
+
+        meeting
+        |> Config.email_service_module().send_reschedule_request_unanswered(locale)
+        |> send_result("reschedule request unanswered", meeting)
+      end)
+    end)
+  end
+
+  @doc """
+  Tells the attendee, or each participant still on a group meeting, that the
+  host's request to pick a new time has lapsed. Each send is claimed on the
+  job, so a retry writes only to whoever a failed run missed.
+  """
+  @spec handle_reschedule_request_lapsed(%{String.t() => term()}, term()) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_reschedule_request_lapsed(%{"meeting_id" => meeting_id}, job_id) do
+    MeetingEmails.with_meeting(meeting_id, "reschedule request lapsed", fn meeting ->
+      with_lapsed_request(meeting, fn ->
+        meeting
+        |> Meetings.recipients()
+        |> Enum.map(&send_lapsed_to(meeting, &1, job_id))
+        |> Enum.find(:ok, &match?({:error, _reason}, &1))
+      end)
+    end)
+  end
+
+  defp with_lapsed_request(meeting, send_fun) do
+    if MeetingState.expired?(meeting) and MeetingState.reschedule_request_lapsed?(meeting) do
+      send_fun.()
+    else
+      Logger.info("Skipping lapsed reschedule request email - request did not lapse",
+        meeting_id: meeting.id,
+        status: meeting.status
+      )
+
+      {:discard, @not_lapsed}
+    end
+  end
+
+  defp send_lapsed_to(meeting, recipient, job_id) do
+    DeliveryClaims.once(job_id, "lapsed:" <> recipient.email, fn ->
+      meeting
+      |> Meetings.meeting_as_seen_by(recipient)
+      |> Config.email_service_module().send_reschedule_request_lapsed()
+      |> send_result("reschedule request lapsed", meeting)
+    end)
+  end
+
+  defp send_result({:ok, _sent}, _email, _meeting), do: :ok
+
+  defp send_result({:error, reason}, email, meeting) do
+    Logger.error("Failed to send lapsed reschedule request email",
+      email_action: email,
+      meeting_id: meeting.id,
+      error: LogFormat.reason(reason)
+    )
+
+    {:error, reason}
   end
 end

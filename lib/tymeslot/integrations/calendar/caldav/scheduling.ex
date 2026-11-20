@@ -8,17 +8,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
   Tymeslot wants, because it sends its own notification with its own branding
   and its own reschedule and cancellation links.
 
-  Most servers honour that. sabre/dav — Nextcloud, Baikal, ownCloud — skips
+  Most servers honour that. sabre/dav (Nextcloud, Baikal, ownCloud) skips
   scheduling for such an attendee in `ITip\\Broker`, with the rule enabled by
   default; Radicale implements no scheduling at all; Apple co-authored the RFC.
-  Zimbra is the first exception on record: it strips the parameter and runs iTIP for
-  any event carrying an `ATTENDEE`, so a single booking reached the attendee
-  three times (issue #41). cPanel's calendar server does the same: an
-  attendee booking with a cPanel-hosted organiser got Tymeslot's email, then
-  an invitation from the organiser's own address without the video link, then
-  an update once the link was written. Issue #123 is the other side of that trade — an
-  event with no `ATTENDEE` shows one participant in the organiser's calendar,
-  and the organiser's own client can never send an update to whoever booked.
+  Zimbra and cPanel's calendar server are the exceptions: they strip the
+  parameter and run iTIP for any event carrying an `ATTENDEE`, so a single
+  booking reaches the attendee as Tymeslot's email plus one or more server
+  invitations, the later ones without the video link. The other side of that
+  trade is that an event with no `ATTENDEE` shows one participant in the
+  organiser's calendar, and the organiser's own client can never send an
+  update to whoever booked.
 
   So attendees are advertised everywhere except Zimbra and cPanel, which keep
   the `CONTACT` fallback (RFC 5545 §3.8.4.2): the same name and address,
@@ -28,23 +27,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
   booker outweighs it.
 
   A Zimbra reached through the generic CalDAV provider counts as Zimbra.
-  `ServerDetector` recognises it from the URL alone, which is how the original
-  report was configured, and an unrecognised server that is really Zimbra is
-  the one case worth erring towards: `:contact` is what every CalDAV server
-  gets today, so a wrong guess leaves that user exactly where they are rather
-  than spamming the people who book with them.
+  `ServerDetector` recognises it from the URL alone, and an unrecognised
+  server that is really Zimbra is the one case worth erring towards:
+  `:contact` is what every CalDAV server gets by default, so a wrong guess
+  leaves that user where they are rather than spamming the people who book
+  with them.
 
   ## Open-Xchange
 
   Open-Xchange, the server behind mailbox.org, insists that the owner of the
   calendar an event is stored in is one of its attendees, and adds them when
-  the event does not list them (issue #151). It recognises the owner by any
-  address on their account, aliases included, but writes the one it adds
-  under the account's primary address. A user whose Tymeslot address is an
-  alias, or a custom domain, on that account therefore saw their login
-  address appear beside the booker, on the server and in every client that
-  syncs from it, whether the event carried the booker as an `ATTENDEE`, as a
-  `CONTACT`, or not at all.
+  the event does not list them. It recognises the owner by any address on
+  their account, aliases included, but writes the one it adds under the
+  account's primary address. A user whose Tymeslot address is an alias, or a
+  custom domain, on that account would therefore see their login address
+  appear beside the booker, on the server and in every client that syncs from
+  it, whether the event carries the booker as an `ATTENDEE`, as a `CONTACT`,
+  or not at all.
 
   `{:organiser_attendee, addresses}` lists the account's owner as an attendee, so the
   server finds them already present and adds nobody. The server recognises its
@@ -58,21 +57,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
       organiser and whoever booked;
     * any other address, typically a custom domain the account does not list
       as its own: the account's preferred address, the one the server would
-      have added, which `ORGANIZER` carries too. Listing the organiser
-      instead, as the first fix for #151 did, left the owner added beside
-      them, which put the organiser in the event twice; keeping their address
-      as `ORGANIZER` alone, as the second did, still showed them under two
-      addresses, and the server, taking the event for an invitation from
-      someone else, silently ignored every later change to its guests. The
-      organiser's own copy now shows them once, under the account's address,
-      while the booker's invitation, which Tymeslot sends itself, keeps theirs.
+      have added, which `ORGANIZER` carries too. Listing the organiser's own
+      address instead leaves the owner added beside them, putting the
+      organiser in the event twice; keeping their address as `ORGANIZER` alone
+      still shows them under two addresses, and the server, taking the event
+      for an invitation from someone else, silently ignores every later change
+      to its guests. The organiser's own copy therefore shows them once, under
+      the account's address, while the booker's invitation, which Tymeslot
+      sends itself, keeps theirs.
 
-  Mailbox.org lists its own aliases in that set, and on the custom-domain
-  account measured on 2026-10-21 the custom-domain address as well, so an
-  organiser on their own domain is usually the first case; the second is for
-  a domain the account does not list. Measured against a live account on
-  2026-10-19: no event shape keeps the account's address out of an event that
-  has an organiser or any attendee.
+  Mailbox.org lists its own aliases in that set, and usually a custom-domain
+  address as well, so an organiser on their own domain is usually the first
+  case; the second is for a domain the account does not list. No event shape
+  keeps the account's address out of an event that has an organiser or any
+  attendee.
 
   Open-Xchange honours `SCHEDULE-AGENT=CLIENT` on the write that carries it
   but strips the parameter before storing the event, so every later write
@@ -81,15 +79,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Scheduling do
   address, and a delete or a removed guest a cancellation, beside Tymeslot's
   own email. Every PUT and DELETE to that server therefore carries
   `Schedule-Reply: F` (RFC 6638 §8.1), which it honours for the organiser's
-  writes as well as an attendee's: measured on 2026-10-21, it suppresses the
-  notice for a create, an update, a removed guest and a delete alike
-  (`write_opts/1`).
+  writes as well as an attendee's, suppressing the notice for a create, an
+  update, a removed guest and a delete alike (`write_opts/1`).
 
   The server also silently drops an update that names a different
   `ORGANIZER` from the stored one, so `ORGANIZER` is written on create only:
   the patcher never touches it, and an update with no cached copy reads the
-  server's first (`CalDAV.Events.update_calendar_event/5`). Events created
-  before the change keep the organiser they were created with.
+  server's first (`CalDAV.Events.update_calendar_event/5`). An existing event
+  therefore keeps the organiser it was created with.
 
   The mode carries the addresses `Discovery.calendar_user_addresses/1`
   answers, read per write; a failed lookup carries none, and the organiser is
