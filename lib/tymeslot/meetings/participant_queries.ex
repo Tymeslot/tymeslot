@@ -326,7 +326,7 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   is live, unverified, its deadline is ahead of `now` and fewer than
   `max_sends` emails have gone out (`nil` counts as the one sent with the
   booking). The seat analogue of
-  `Tymeslot.Meetings.MeetingQueries.count_verification_email/3`.
+  `Tymeslot.Meetings.MeetingTransitionQueries.count_verification_email/3`.
   """
   @spec count_verification_email(binary(), DateTime.t(), pos_integer()) ::
           {:ok, Participant.t()} | {:error, :refused}

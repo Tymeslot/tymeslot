@@ -23,8 +23,11 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
 
   A revoked or expired grant becomes `:token_expired`, anything else
   `:unauthorized`. Both are permanent credential failures, but only the first
-  tells the owner to look in their provider account, and the health check can
-  tell them apart only if the distinction survives this far as an atom.
+  tells the owner to look in their provider account. The message text does not
+  travel further, so the distinction has to survive as an atom: the health
+  check hands this reason to `ReauthHandling.rejection_cause/1`, which reads
+  `:token_expired` as an expired grant and any other atom as rejected
+  credentials.
   """
   @spec unauthorized_reason(String.t()) :: :token_expired | :unauthorized
   def unauthorized_reason(message) do
@@ -327,7 +330,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       calendar_path: path,
       calendar_paths: [path],
       writable_calendar_paths: writable_paths,
-      free_busy_paths: Enum.filter(caldav_free_busy_paths(integration), &(&1 == path))
+      free_busy_paths: Enum.filter(caldav_free_busy_paths(integration), &(&1 == path)),
+      calendar_integration_id: Map.get(integration, :id)
     }
   end
 

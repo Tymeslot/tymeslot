@@ -169,6 +169,31 @@ defmodule TymeslotWeb.Dashboard.CalendarRoutingTest do
       assert settled(lv) =~ "Added “Lunch”."
     end
 
+    test "a warning and a reconnect notice are flashed off the calendar page too", %{
+      conn: conn
+    } do
+      %{conn: conn} = owner(conn)
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/overview")
+
+      send(
+        lv.pid,
+        {:calendar_create_result, {"d1", "Lunch"},
+         {:ok,
+          %{
+            event: nil,
+            invited: [],
+            warning: "Saved without a Meet link.",
+            reauth_required: true
+          }}}
+      )
+
+      html = settled(lv)
+
+      assert html =~ "Added “Lunch”."
+      assert html =~ "Saved without a Meet link."
+      assert html =~ "Your calendar needs to be reconnected."
+    end
+
     test "names the guests invited when flashed off the calendar page", %{conn: conn} do
       %{conn: conn} = owner(conn)
       {:ok, lv, _html} = live(conn, ~p"/dashboard/overview")

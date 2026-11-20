@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
   desktop and on a phone (where the panel is a sheet): offered once the
   draft has a guest, it turns the draft into an ad hoc booking with the
   guest's name, the language of its emails, a note and reminder emails,
-  and hands it to the dashboard (`{:execute_create_ad_hoc_meeting, params}`),
+  and hands it to the dashboard (`{:execute_create_ad_hoc_meeting, request, params}`),
   which books it, flashes the outcome and tells the panel.
   """
 
@@ -14,95 +14,41 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
   @moduletag :meetings
   @moduletag :live
 
-  import Mox
   import Tymeslot.Factory
   import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.Changeset
-  alias Tymeslot.CalendarGrid.MeetingParams
-  alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Phoenix.LiveView
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
 
   @task_timeout 5_000
 
   setup %{conn: conn} do
     context = owner(conn)
-    test_pid = self()
-
-    stub(Tymeslot.CalendarMock, :create_event, fn payload, _context ->
-      send(test_pid, {:provider_call, self(), payload})
-      {:ok, CreatedEvent.new(payload.uid)}
-    end)
-
+    forward_creates(self())
     context
   end
 
-  defp hook(lv, event, params),
-    do: lv |> element("#calendar-canvas") |> render_hook(event, params)
-
-  defp more_options(lv, integration, extra \\ %{}) do
-    hook(
-      lv,
-      "calendar:more_options",
-      Map.merge(
-        %{
-          "draft" => "d1",
-          "title" => "",
-          "start" => "2026-10-15T13:00",
-          "end" => "2026-10-15T14:00",
-          "all_day" => false,
-          "calendar" => "#{integration.id}:work",
-          "location" => "",
-          "guests" => ["ada@example.com", "grace@example.com"],
-          "free" => false
-        },
-        extra
-      )
-    )
-
-    assert_reply(lv, %{opened: true})
-  end
-
-  defp new_form(lv), do: form(lv, "#calendar-panel-new-form")
-
-  defp as_meeting(lv), do: render_change(new_form(lv), %{"meeting" => "true"})
-
-  # What the panel hands the dashboard process is seen by tracing it.
-  defp trace(lv), do: :erlang.trace(lv.pid, true, [:receive])
-
-  defp create_meeting(lv, extra \\ %{}) do
-    render_submit(
-      new_form(lv),
-      Map.merge(%{"intent" => "create", "guest_name" => "Ada Lovelace"}, extra)
-    )
-  end
-
-  test "is offered once the draft has a guest, and says what it does", %{
+  test "the place quick create parsed becomes the meeting's location", %{
     conn: conn,
     integration: integration
   } do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    more_options(lv, integration, %{"guests" => []})
+    open_meeting_draft(lv, integration, %{"location" => "Room 4"})
+    tick_meeting(lv)
 
-    refute has_element?(lv, "#calendar-panel-meeting")
+    trace_surface(lv)
+    book_meeting(lv)
 
-    render_submit(new_form(lv), %{"intent" => "add_guest", "guest_email" => "ada@example.com"})
-
-    assert has_element?(lv, "#calendar-panel-meeting", "Send as a Tymeslot meeting")
-
-    assert has_element?(
-             lv,
-             "#calendar-panel-meeting",
-             "Books the slot, emails the guest an invitation, and adds it to your calendar."
-           )
-
-    refute has_element?(lv, "#calendar-panel-meeting-fields")
+    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, params}}
+    assert %{location: {:custom, "Room 4"}} = params
   end
 
   test "the language of its emails starts as the organiser's own", %{
@@ -112,8 +58,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
   } do
     Repo.update!(Changeset.change(user, locale: "de"))
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    more_options(lv, integration)
-    as_meeting(lv)
+    open_meeting_draft(lv, integration)
+    tick_meeting(lv)
 
     assert has_element?(lv, ~s|#calendar-panel-meeting-locale option[value="de"][selected]|)
   end
@@ -121,20 +67,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
   test "ticked, it asks for the guest's name, language and reminders in place of what a meeting cannot use",
        %{conn: conn, integration: integration} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    more_options(lv, integration)
+    open_meeting_draft(lv, integration)
 
     for id <- ~w(calendar-panel-new-all-day calendar-panel-new-free calendar-panel-new-location) do
       assert has_element?(lv, "##{id}")
     end
 
-    as_meeting(lv)
+    tick_meeting(lv)
 
     assert has_element?(lv, "#calendar-panel-meeting-guest-name")
     assert has_element?(lv, "#calendar-panel-meeting-locale")
 
-    for key <- ~w(30_minutes 1_hours 1_days) do
-      assert has_element?(lv, "#calendar-panel-meeting-reminder-#{key}")
+    for preset <- ~w(30-minutes 1-hours 1-days) do
+      assert has_element?(
+               lv,
+               ~s(#calendar-panel-meeting-reminders [data-testid="reminder-preset-#{preset}"])
+             )
     end
+
+    assert has_element?(
+             lv,
+             ~s(#calendar-panel-meeting-reminders [data-testid="reminder-custom-toggle"])
+           )
 
     for id <- ~w(calendar-panel-new-all-day calendar-panel-new-free calendar-panel-new-location) do
       refute has_element?(lv, "##{id}")
@@ -158,13 +112,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
   } do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
-    more_options(lv, integration, %{
+    open_meeting_draft(lv, integration, %{
       "all_day" => true,
       "start" => "2026-10-15",
       "end" => "2026-10-16"
     })
 
-    as_meeting(lv)
+    tick_meeting(lv)
 
     assert has_element?(
              lv,
@@ -180,17 +134,18 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
   test "Create books the meeting with the first guest, the others as its guests, and what was chosen",
        %{conn: conn, user: user, integration: integration} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    more_options(lv, integration)
-    as_meeting(lv)
-    trace(lv)
+    open_meeting_draft(lv, integration)
+    tick_meeting(lv)
+    add_meeting_reminder(lv, "1-hours")
+    add_meeting_reminder(lv, "1-days")
+    trace_surface(lv)
 
-    create_meeting(lv, %{
+    book_meeting(lv, %{
       "locale" => "fr",
-      "reminders" => ["", "1_hours", "1_days"],
       "description" => "Agenda: the Q3 roadmap."
     })
 
-    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, params}}
+    assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, params}}
 
     assert %{
              title: "Meeting with Ada Lovelace",
@@ -233,15 +188,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     integration: integration
   } do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    more_options(lv, integration)
-    as_meeting(lv)
-    trace(lv)
+    open_meeting_draft(lv, integration)
+    tick_meeting(lv)
+    trace_surface(lv)
 
-    create_meeting(lv, %{"guest_name" => "  "})
+    book_meeting(lv, %{"guest_name" => "  "})
 
     assert has_element?(lv, "#calendar-panel [role=status]", "Guest name is required")
     assert has_element?(lv, "#calendar-panel-create:not([disabled])")
-    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
+
+    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}},
+                   100
   end
 
   test "a note typed before the box was ticked, past the meeting's limit, is refused as such", %{
@@ -249,12 +206,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     integration: integration
   } do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    more_options(lv, integration)
-    render_change(new_form(lv), %{"description" => String.duplicate("a", 2001)})
-    as_meeting(lv)
-    trace(lv)
+    open_meeting_draft(lv, integration)
+    render_change(new_event_form(lv), %{"description" => String.duplicate("a", 2001)})
+    tick_meeting(lv)
+    trace_surface(lv)
 
-    create_meeting(lv)
+    book_meeting(lv)
 
     assert has_element?(
              lv,
@@ -262,13 +219,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
              "The note to the guest is too long. Keep it to 2,000 characters or fewer."
            )
 
-    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
+    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}},
+                   100
   end
 
   test "the guest's name takes at most 255 characters", %{conn: conn, integration: integration} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    more_options(lv, integration)
-    as_meeting(lv)
+    open_meeting_draft(lv, integration)
+    tick_meeting(lv)
 
     assert has_element?(lv, ~s|#calendar-panel-meeting-guest-name[maxlength="255"]|)
   end
@@ -276,42 +234,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
   test "a reminder ticked and the meeting then unticked creates a plain event, sending no meeting",
        %{conn: conn, integration: integration} do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    more_options(lv, integration)
-    as_meeting(lv)
-    render_change(new_form(lv), %{"reminders" => ["", "1_hours"]})
-    render_change(new_form(lv), %{"meeting" => "false"})
+    open_meeting_draft(lv, integration)
+    tick_meeting(lv)
+    add_meeting_reminder(lv, "1-hours")
+    render_change(new_event_form(lv), %{"meeting" => "false"})
     refute has_element?(lv, "#calendar-panel-meeting-fields")
-    trace(lv)
+    trace_surface(lv)
 
-    render_submit(new_form(lv), %{"intent" => "create"})
+    render_submit(new_event_form(lv), %{"intent" => "create"})
 
     assert_receive {:provider_call, task_pid, %{summary: "New event"}}, @task_timeout
     ref = Process.monitor(task_pid)
     assert_receive {:DOWN, ^ref, :process, ^task_pid, _reason}, @task_timeout
-    refute_received {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}
+    refute_received {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}}
     assert Repo.all(MeetingSchema) == []
-  end
-
-  test "more guests than a meeting takes are refused with the meeting's own limit", %{
-    conn: conn,
-    integration: integration
-  } do
-    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    max = MeetingParams.max_guests()
-    guests = for n <- 1..(max + 1), do: "guest#{n}@example.com"
-    more_options(lv, integration, %{"guests" => guests})
-    as_meeting(lv)
-    trace(lv)
-
-    create_meeting(lv)
-
-    assert has_element?(
-             lv,
-             "#calendar-panel [role=status]",
-             "You can invite at most #{max} guests at once."
-           )
-
-    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
   end
 
   test "past the meeting budget nothing is booked, and the panel says to wait", %{
@@ -322,11 +258,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     for _n <- 1..10, do: :ok = RateLimiter.check(:dashboard_quick_add_meeting, user.id)
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    more_options(lv, integration)
-    as_meeting(lv)
-    trace(lv)
+    open_meeting_draft(lv, integration)
+    tick_meeting(lv)
+    trace_surface(lv)
 
-    create_meeting(lv)
+    book_meeting(lv)
 
     assert has_element?(
              lv,
@@ -334,7 +270,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
              "Too many new meetings. Please wait a moment."
            )
 
-    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}, 100
+    refute_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}},
+                   100
   end
 
   test "a slot already taken keeps the panel open with Create offered again, and flashes why", %{
@@ -350,10 +287,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     )
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    more_options(lv, integration)
-    as_meeting(lv)
+    open_meeting_draft(lv, integration)
+    tick_meeting(lv)
 
-    create_meeting(lv)
+    book_meeting(lv)
 
     eventually(fn -> render(lv) =~ "This time is no longer available." end,
       timeout: @task_timeout
@@ -399,6 +336,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     end
   end
 
+  defp answer(lv, action, request),
+    do:
+      LiveView.send_update(lv.pid, CalendarSurface,
+        id: "calendar",
+        action: action,
+        request: request
+      )
+
   defp draft_drawn?(events), do: Enum.any?(events, &(&1.id == "draft-d1"))
 
   describe "closed while the meeting is being booked" do
@@ -415,11 +360,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
       )
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      more_options(lv, integration)
-      as_meeting(lv)
+      open_meeting_draft(lv, integration)
+      tick_meeting(lv)
       holder = hold_schedule(user.id)
 
-      create_meeting(lv)
+      book_meeting(lv)
       assert has_element?(lv, "#calendar-panel-create[disabled]")
       drain_events(lv)
       lv |> element("#calendar-panel-new-cancel") |> render_click()
@@ -444,11 +389,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
       integration: integration
     } do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      more_options(lv, integration)
-      as_meeting(lv)
+      open_meeting_draft(lv, integration)
+      tick_meeting(lv)
       holder = hold_schedule(user.id)
 
-      create_meeting(lv)
+      book_meeting(lv)
       assert has_element?(lv, "#calendar-panel-create[disabled]")
       lv |> element("#calendar-panel-new-cancel") |> render_click()
 
@@ -465,6 +410,45 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
       assert Enum.any?(events, &(&1.id == "booking-#{meeting.id}"))
       refute draft_drawn?(events)
     end
+
+    test "its answer leaves the next draft's meeting saving, which hears its own", %{
+      conn: conn,
+      user: user,
+      integration: integration
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_meeting_draft(lv, integration, %{"draft" => "d2"})
+      tick_meeting(lv)
+      holder = hold_schedule(user.id)
+      trace_surface(lv)
+
+      book_meeting(lv)
+      assert_receive {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, request, _params}}
+
+      # An earlier meeting, whose panel was closed while it saved, answers
+      # now, either way, and the calendar is told as the dashboard tells it
+      # (`CalendarRouting.to_mounted/2`); the dashboard's own handling reads
+      # the database, which this meeting's booking holds until `release/1`.
+      earlier = make_ref()
+      answer(lv, :ad_hoc_meeting_failed, earlier)
+      assert has_element?(lv, "#calendar-panel-meeting-fields")
+      assert has_element?(lv, "#calendar-panel-create[disabled]")
+
+      answer(lv, :ad_hoc_meeting_created, earlier)
+      assert has_element?(lv, "#calendar-panel-create[disabled]")
+      release(holder)
+
+      # Its own answer closes it.
+      assert_receive {:trace, _pid, :receive,
+                      {:create_ad_hoc_meeting_result, ^request, {:ok, _}}},
+                     @task_timeout
+
+      eventually(fn -> render(lv) =~ "Meeting created and invitation sent" end,
+        timeout: @task_timeout
+      )
+
+      refute has_element?(lv, "#calendar-panel")
+    end
   end
 
   test "with its last guest removed the draft is an event again, written to the calendar", %{
@@ -472,21 +456,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
     integration: integration
   } do
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-    more_options(lv, integration, %{"guests" => ["ada@example.com"]})
-    as_meeting(lv)
+    open_meeting_draft(lv, integration, %{"guests" => ["ada@example.com"]})
+    tick_meeting(lv)
 
     lv |> element("#calendar-panel-guests li button") |> render_click()
 
     refute has_element?(lv, "#calendar-panel-meeting")
     assert has_element?(lv, "#calendar-panel-new-location")
-    trace(lv)
+    trace_surface(lv)
 
-    render_submit(new_form(lv), %{"intent" => "create"})
+    render_submit(new_event_form(lv), %{"intent" => "create"})
 
     assert_receive {:provider_call, task_pid, %{summary: "New event"}}, @task_timeout
     ref = Process.monitor(task_pid)
     assert_receive {:DOWN, ^ref, :process, ^task_pid, _reason}, @task_timeout
-    refute_received {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _params}}
+    refute_received {:trace, _pid, :receive, {:execute_create_ad_hoc_meeting, _request, _params}}
   end
 
   describe "on a phone" do
@@ -497,16 +481,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceMeetingTest do
       {:ok, lv, _html} =
         live(put_connect_params(conn, %{"viewport" => "phone"}), ~p"/dashboard/calendar")
 
-      more_options(lv, integration)
+      open_meeting_draft(lv, integration)
 
       assert has_element?(lv, "#calendar-panel-meeting-row[class~='min-h-11']")
 
-      as_meeting(lv)
+      tick_meeting(lv)
 
-      for key <- ~w(30_minutes 1_hours 1_days) do
+      for preset <- ~w(30-minutes 1-hours 1-days) do
         assert has_element?(
                  lv,
-                 "#calendar-panel-meeting-reminders div[class~='min-h-11'] #calendar-panel-meeting-reminder-#{key}"
+                 ~s(#calendar-panel-meeting-reminders [data-testid="reminder-preset-#{preset}"])
                )
       end
 

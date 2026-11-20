@@ -21,7 +21,6 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
 
   @doc """
   Renders the forgot password form using shared auth components.
-  Apps should wrap this component with their own background.
   """
   @spec forgot_password_form(map()) :: Phoenix.LiveView.Rendered.t()
   def forgot_password_form(assigns) do

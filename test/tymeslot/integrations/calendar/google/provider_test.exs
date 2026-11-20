@@ -495,6 +495,27 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
                Provider.call_update_event(integration, "event123", %{summary: "Updated"})
     end
 
+    test "a colour write-back patches the event's own calendar, not the booking one" do
+      integration =
+        insert(:calendar_integration,
+          user: insert(:user),
+          provider: "google",
+          default_booking_calendar_id: "calendar123"
+        )
+
+      expect(GoogleCalendarAPIMock, :patch_event_colour, fn _int, "family", "pid-1", "grape" ->
+        :ok
+      end)
+
+      assert :ok =
+               Provider.call_update_event(integration, "uid-1", %{
+                 colour_only: true,
+                 colour: "grape",
+                 calendar_id: "family",
+                 provider_event_id: "pid-1"
+               })
+    end
+
     test "call_delete_event delegates to mock" do
       user = insert(:user)
 

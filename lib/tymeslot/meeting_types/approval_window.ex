@@ -7,9 +7,8 @@ defmodule Tymeslot.MeetingTypes.ApprovalWindow do
   raw form post handled by `Tymeslot.MeetingTypes.FormMapper`, which can carry
   an integer or anything else a client chooses to send, and the meeting-type
   LiveComponent's `phx-change` params, which are always strings or nil. Both
-  need the same answer to the same question, so the parser lives here once
-  rather than as a copy per caller: the two copies had already drifted, one
-  accepting integers the other did not and each reporting failure differently.
+  need the same answer to the same question, so one parser lives here and the
+  two callers cannot disagree on what is accepted or how failure is reported.
   """
 
   @doc """

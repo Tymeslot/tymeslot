@@ -18,7 +18,8 @@ defmodule Tymeslot.Emails.EmailActionsTest do
     send_integration_reauth_notification send_integration_unhealthy_notification
     send_no_password_to_reset send_password_reset send_poll_deadline_reminders
     send_poll_host_nudge send_reminder_emails send_reschedule_emails send_reschedule_request
-    send_reschedule_request_expired send_seat_cancellation_emails send_seat_confirmation_emails
+    send_reschedule_request_expired send_reschedule_request_lapsed
+    send_reschedule_request_unanswered send_seat_cancellation_emails send_seat_confirmation_emails
     send_seat_meeting_cancellation send_seat_reminder send_seat_reschedule_emails
     send_seat_reschedule_request send_signup_attempt_notice send_social_signup_confirmation
     send_video_room_creation_error_notification

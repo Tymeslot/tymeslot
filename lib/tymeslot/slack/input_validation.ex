@@ -63,9 +63,8 @@ defmodule Tymeslot.Slack.InputValidation do
   defp name_required?(:oauth_pending), do: false
   defp name_required?(_mode), do: true
 
-  # On update the webhook URL is never pre-filled into the form (we don't leak
-  # the stored secret), so a blank field means "keep current" rather than an
-  # error. On create it remains required.
+  # On update a blank URL is acceptable (see `validate_webhook_url_optional/2`);
+  # on create it is required.
   defp webhook_url_validator(:webhook_url_existing), do: &validate_webhook_url_optional/2
   defp webhook_url_validator(_mode), do: &validate_webhook_url/2
 
@@ -141,9 +140,9 @@ defmodule Tymeslot.Slack.InputValidation do
     end
   end
 
-  # Update-mode variant: a blank URL is allowed and means "keep the stored
-  # value" (we never pre-fill the secret). A non-blank value is still
-  # format-validated exactly like create.
+  # Update-mode variant: the stored webhook URL is a secret and is never
+  # pre-filled into the form, so a blank URL means "keep the stored value".
+  # A non-blank value is format-validated exactly like create.
   @spec validate_webhook_url_optional(String.t() | nil, map()) :: {String.t() | nil, map()}
   defp validate_webhook_url_optional(nil, errors), do: {nil, errors}
   defp validate_webhook_url_optional("", errors), do: {nil, errors}

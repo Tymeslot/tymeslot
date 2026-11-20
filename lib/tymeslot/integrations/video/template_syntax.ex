@@ -205,7 +205,6 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
   # Wrong case (e.g. {{MEETING_ID}}, {{Meeting_Id}})
   defp wrong_case?(url), do: Regex.match?(~r/\{\{meeting_id\}\}/i, url)
 
-  # Mismatched brackets detection
   defp mismatched_brackets?(url) do
     Regex.match?(~r/\{\{meeting_id\)|{{meeting_id\]\]|{{meeting_id>/i, url) or
       Regex.match?(~r/\{meeting_id\}\}|\[\[meeting_id\}\}|<meeting_id\}\}/i, url) or
@@ -248,7 +247,6 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
     end
   end
 
-  # Missing brackets detection
   defp missing_brackets?(url) do
     Regex.match?(~r/\{\{meeting_id\}?(?!\})/i, url) or
       Regex.match?(~r/(?<!\{)\{meeting_id\}\}/i, url) or
@@ -271,7 +269,6 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
     end
   end
 
-  # Wrong bracket types
   defp wrong_bracket_type?(url) do
     Regex.match?(~r/\{meeting_id\}|\[\[meeting_id\]\]|\(\(meeting_id\)\)|<+meeting_id>+/i, url)
   end

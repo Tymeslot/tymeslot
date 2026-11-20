@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.Webhooks.ChargeRefunded
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
 
@@ -430,7 +431,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
 
       expect(StripeAdapterMock, :create_refund, fn params, opts ->
         assert params.amount == 5000
-        assert opts[:idempotency_key] == "refund:#{payment.id}:5000:5000"
+        assert "host_refund:" <> attempt = opts[:idempotency_key]
+        assert String.ends_with?(attempt, ":5000")
         {:ok, %{id: "re_full"}}
       end)
 
@@ -527,6 +529,75 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.status == :partially_refunded
       assert reloaded.refunded_amount_cents == 1500
+    end
+
+    # Stripe makes the refund but its answer never arrives, and its
+    # `charge.refunded` webhook records the refund before the host tries
+    # again from the same dialog: the retry is the same refund, so Stripe is
+    # asked under the same key and the attendee is refunded once.
+    test "a refund retried from the dialog after the webhook recorded it is made once", %{
+      conn: conn
+    } do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_REFUND",
+        charges_enabled: true,
+        payouts_enabled: true,
+        details_submitted: true
+      )
+
+      payment = paid_payment_for(user)
+      test_pid = self()
+
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 1500}, opts ->
+        send(test_pid, {:refund_key, opts[:idempotency_key]})
+        exit({:timeout, {GenServer, :call, []}})
+      end)
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
+
+      view
+      |> element("button[phx-click=open_refund_modal]", "Refund")
+      |> render_click()
+
+      view
+      |> form("#refund-form", %{"refund_type" => "partial", "amount" => "15.00"})
+      |> render_submit()
+
+      render_async(view, 5_000)
+      assert_received {:refund_key, first_key}
+      assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 0
+
+      assert :ok =
+               ChargeRefunded.handle(%{
+                 "id" => "evt_REFUNDED_#{System.unique_integer([:positive])}",
+                 "account" => "acct_REFUND",
+                 "type" => "charge.refunded",
+                 "data" => %{
+                   "object" => %{"id" => payment.stripe_charge_id, "amount_refunded" => 1500}
+                 }
+               })
+
+      assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 1500
+
+      # As Stripe answers: the refund already made for a key it has seen, a
+      # second refund for one it has not.
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 1500}, opts ->
+        refunded = if opts[:idempotency_key] == first_key, do: 1500, else: 3000
+        {:ok, %{id: "re_partial", amount: 1500, charge: %{amount_refunded: refunded}}}
+      end)
+
+      view
+      |> form("#refund-form", %{"refund_type" => "partial", "amount" => "15.00"})
+      |> render_submit()
+
+      render_async(view, 5_000)
+
+      assert %{refunded_amount_cents: 1500, status: :partially_refunded} =
+               BookingPaymentQueries.get(payment.id)
     end
 
     # Refusing another host's payment id now lives in

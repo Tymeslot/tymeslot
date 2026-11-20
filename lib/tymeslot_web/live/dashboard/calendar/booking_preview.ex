@@ -1,11 +1,11 @@
 defmodule TymeslotWeb.Dashboard.Calendar.BookingPreview do
   @moduledoc """
   What a booking's preview offers: Accept and Decline on a request, and
-  Reschedule and Cancel on a booking still ahead. Once the moment has passed
-  a quiet line takes their place ("This meeting has ended", "This request
-  expired without an answer"). A meeting under way offers nothing: it can no
-  longer be cancelled or moved, and its time row already says "Happening
-  now".
+  Reschedule and Cancel on a booking still ahead. Once the moment has passed a
+  quiet line takes their place ("This meeting has ended", "This request
+  expired without an answer"). A meeting under way offers none of those: it
+  can no longer be cancelled or rescheduled, and its time row already says
+  "Happening now".
 
   A booking whose event the host moved in their own calendar also offers
   "Move booking to …" (`BookingMove`), whatever its state, as the Meetings

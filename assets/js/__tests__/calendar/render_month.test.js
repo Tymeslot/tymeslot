@@ -83,6 +83,16 @@ describe("wide", () => {
     expect(holder.querySelector('.cal-mchip[data-event-id="event-1"]')).toBeNull();
   });
 
+  test("compact density fits more of a day into the same cell before its +N", () => {
+    const comfortable = draw({ cellHeight: 80 });
+    const compact = draw({ cellHeight: 80, settings: { time_format: "24h", density: "compact" } });
+    expect(comfortable.querySelector('[data-month-more="2026-10-14"]')).not.toBeNull();
+    expect(compact.querySelector('[data-month-more="2026-10-14"]')).toBeNull();
+    expect(compact.querySelectorAll('.cal-mchip[data-day="2026-10-14"]')).toHaveLength(2);
+    expect(compact.querySelector(".cal-month").dataset.density).toBe("compact");
+    expect(comfortable.querySelector(".cal-month").dataset.density).toBe("comfortable");
+  });
+
   test("a +N hiding a request waiting for an answer carries the warning", () => {
     const request = ev("booking-9", "Anna", "2026-10-14T16:00", "2026-10-14T16:30", { kind: "booking", request: true });
     const quiet = ev("event-8", "Standup", "2026-10-14T09:00", "2026-10-14T09:15", { attention: true });

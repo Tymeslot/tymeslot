@@ -1,10 +1,10 @@
 defmodule Tymeslot.Emails.Shared.Meeting.Hero do
   @moduledoc """
-  The typographic hero block for meeting emails — 2026 redesign.
+  The typographic hero block for meeting emails.
 
   Leads with the date set in display type, the time immediately beneath, and a
-  compact metadata grid (type, duration, location) under a hairline. Replaces
-  the older 2×2 emoji grid so a meeting reads like a moment, not a form.
+  compact metadata grid (type, duration, location) under a hairline, so a
+  meeting reads like a moment, not a form.
   """
 
   alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Stack, Styles}

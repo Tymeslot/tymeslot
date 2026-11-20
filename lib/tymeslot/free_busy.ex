@@ -22,6 +22,7 @@ defmodule Tymeslot.FreeBusy do
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.FreebusyGenerator
+  alias Tymeslot.Integrations.Calendar.SeriesPreview
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
@@ -100,13 +101,15 @@ defmodule Tymeslot.FreeBusy do
     # `Ics.Provider.list_events/2`, so it applies a subscription's
     # `all_events_busy` itself, or a holiday that blocks bookings would be
     # published as free.
+    ids = Enum.map(integrations, & &1.id)
+    rules = AvailabilityView.rules(integrations)
+
+    # A series written from the calendar is cached as one row until its next
+    # sync, so its later occurrences are previewed from that row.
     event_intervals =
-      integrations
-      |> Enum.map(& &1.id)
-      |> CalendarEventQueries.in_range(
-        {window_start, window_end},
-        AvailabilityView.rules(integrations)
-      )
+      ids
+      |> CalendarEventQueries.in_range({window_start, window_end}, rules)
+      |> Enum.concat(SeriesPreview.blocking_events(ids, {window_start, window_end}, rules))
       |> Enum.map(&Bookability.as_presented(&1, Map.get(by_id, &1.calendar_integration_id)))
       |> Enum.filter(&Bookability.busy_for_bookings?(&1, overrides))
       |> Enum.flat_map(&event_interval(&1, Profiles.timezone(profile)))

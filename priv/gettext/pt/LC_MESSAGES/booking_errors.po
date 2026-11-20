@@ -330,3 +330,8 @@ msgstr "Esta sessão faz parte de um pedido que está aguardando a resposta do a
 #, elixir-autogen, elixir-format
 msgid "Guests can only be added to a single booking. Please remove your guests to book a series."
 msgstr "Só é possível adicionar convidados a um agendamento avulso. Remova seus convidados para agendar uma série."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "The request to pick a new time for this meeting has lapsed, so it is no longer booked. You're welcome to book a new time."
+msgstr "O pedido de um novo horário para esta reunião expirou, então ela não está mais agendada. Fique à vontade para agendar outro horário."

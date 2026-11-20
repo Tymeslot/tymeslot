@@ -390,8 +390,6 @@ defmodule Tymeslot.ThemeCustomizations do
     spec.tokens(Specs.settings(spec, to_map(customization)), overrides)
   end
 
-  # New orchestrator functions for component interface
-
   @doc """
   The customisation the dashboard starts from: the saved one, or the theme's
   defaults unsaved, with its settings as the booking page reads them
@@ -498,7 +496,6 @@ defmodule Tymeslot.ThemeCustomizations do
     end
   end
 
-  # Helper to get profile by user_id
   @spec get_profile_by_user_id(user_id()) :: ProfileSchema.t() | nil
   defp get_profile_by_user_id(user_id) do
     ThemeCustomizationQueries.get_profile_by_user_id(user_id)

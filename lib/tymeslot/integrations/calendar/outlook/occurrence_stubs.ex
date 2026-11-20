@@ -41,7 +41,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OccurrenceStubs do
   # What a stub takes from its master: the fields `EventNormaliser` reads,
   # apart from the ones that are the occurrence's own (identity, timing).
   @from_master ~w(subject body location sensitivity showAs isCancelled responseStatus organizer
-                  attendees reminderMinutesBeforeStart isAllDay originalStartTimeZone)
+                  attendees isReminderOn reminderMinutesBeforeStart isAllDay
+                  originalStartTimeZone)
 
   @typedoc """
   What each master read made this run found, as `SeriesRules.refresh/4`

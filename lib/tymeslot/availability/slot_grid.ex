@@ -6,20 +6,21 @@ defmodule Tymeslot.Availability.SlotGrid do
   1. Read the owner dates that can matter: from the day before the owner date
      of the booker's midnight (yesterday's overnight tail) to the owner date
      of the latest instant a meeting starting that day can reach.
-  2. Resolve each owner date's window to instants (`BusinessHours.owner_windows/4`).
+  2. Resolve each owner date's window to instants
+     (`BusinessHours.owner_windows/4`).
   3. Available time is the union of the windows (touching ones joined) minus
      every break and every time-off period.
   4. Each window offers its own grid (`TimeSlots.grid_starts/5`), anchored at
-     its own start exactly as before. A 24/7 schedule's joined stretch has no
-     start to anchor to; a window always does.
+     its own start. A 24/7 schedule's joined stretch has no start to anchor
+     to; a window always does.
   5. Keep the starts that fall on the booker's date, earliest first, one per
      label, and only those whose label resolves back to the same instant on
      that date: the booking path only ever receives the date and the label.
   6. Keep the starts whose whole meeting fits inside available time.
 
-  For a same-day window that touches no other, this is exactly the grid the
-  engine offered before overnight windows: same anchor, same steps, and
-  "fits inside available time" is "inside the window, overlapping no break".
+  For a same-day window that touches no other, the grid is anchored at the
+  window's start, steps by the meeting's grid interval, and "fits inside
+  available time" is "inside the window, overlapping no break".
 
   A config carrying `:offered_starts` (a one-to-one type with fixed dates,
   `Tymeslot.MeetingTypes.OfferedTimes`) replaces steps 2 to 4 and 6: the

@@ -318,8 +318,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
       {:ok, hrefs} ->
         Sync.post_commit_reconciliation(integration, calendar_events)
 
-        # post_commit_reconciliation is a no-op when calendar_events is empty.
-        # Ensure the cache is invalidated even when the sync only deleted events.
+        # As in `run_atomic_full_fetch/6`: invalidate the cache when the sync
+        # only deleted events.
         if calendar_events == [] and hrefs != [] do
           Sync.invalidate_cache_for_user(integration)
         end
@@ -343,7 +343,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
          sync_started_at,
          calendar_path
        ) do
-    fetched_uids = MapSet.new(calendar_events, fn %CalendarEvent{uid: uid} -> uid end)
+    # A row under a series' bare UID whose occurrences came back is not
+    # missing: the server only ever returns the occurrences. A synced
+    # stand-in went in `Sync.upsert_cache/2`; one still here holds a queued
+    # edit or delete and waits for the queue. Pruning it would lose that
+    # change and, through `Sync.reconcile_deletions/3`, cancel a booking
+    # linked to it by its UID.
+    fetched_uids =
+      calendar_events
+      |> MapSet.new(fn %CalendarEvent{uid: uid} -> uid end)
+      |> MapSet.union(Sync.series_uids(calendar_events))
 
     cached_uids =
       ProviderCalendarEventQueries.list_uids_in_range(

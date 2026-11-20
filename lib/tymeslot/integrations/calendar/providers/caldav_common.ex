@@ -98,9 +98,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   # `UrlBuilder`'s naming heuristic on every check: where the heuristic guesses
   # wrong and the server also refuses a PROPFIND at its origin root (405, as
   # some self-hosted setups answer), the full discovery chain dead-ends and
-  # reports a calendar that is syncing perfectly as unreachable. That
-  # false-positive drove the periodic health check to email a user about an
-  # integration with nothing wrong with it.
+  # reports a calendar that is syncing perfectly as unreachable, and the
+  # periodic health check would then alert on an integration that works.
   #
   # With no stored paths there is nothing to probe — this is onboarding, before
   # discovery has run — so the guess-then-RFC4791 chain is the only option.
@@ -185,7 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     {successes, errors} =
       Enum.split_with(results, fn {_path, r} -> match?({:ok, _result}, r) end)
 
-    handle_fetch_results(successes, errors)
+    handle_fetch_results(client, successes, errors)
   end
 
   # A collection shared as busy times only answers calendar-query with 403;
@@ -198,10 +197,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   # If every calendar path errored, surface the first error — callers must be
   # able to distinguish "no events in range" from "reads silently failed". A
-  # dropped error here was the cause of today's "event not found after create"
-  # mystery on Radicale: REPORT hit its timeout, the task errored, and we
-  # silently returned an empty list.
-  defp handle_fetch_results([], [_head | _tail] = errors) do
+  # timed-out REPORT must not turn into an empty list, or an event just
+  # created looks as if it was never stored.
+  defp handle_fetch_results(_client, [], [_head | _tail] = errors) do
     {_path, {:error, reason}} = List.first(errors)
     {:error, reason}
   end
@@ -224,9 +222,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   # (`EventsRead`). Expanding in both places produces N×N occurrences because
   # each first-pass occurrence still carries the master RRULE and gets
   # re-expanded.
-  defp handle_fetch_results(successes, errors) do
+  defp handle_fetch_results(client, successes, errors) do
     (successes ++ errors)
-    |> FetchAggregate.collect(&classify_path_result/1)
+    |> FetchAggregate.collect(&classify_path_result/1,
+      calendar_integration_id: Map.get(client, :calendar_integration_id),
+      provider: Map.get(client, :provider)
+    )
     |> dedupe_outcome_events()
     |> to_result()
   end
@@ -264,10 +265,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   # The booking flow chooses no calendar, so the client's own collection is the
-  # default and bookings keep landing where they always have. The calendar grid
-  # does choose one, and used to be ignored: `event_data[:calendar_id]` was
-  # never read on this path, so an event created on, or moved to, any other
-  # collection silently went to the booking one instead.
+  # default. The calendar grid does choose one, read from
+  # `event_data[:calendar_id]`.
   #
   # The choice is honoured only when it names a collection the integration
   # lists as writable. `event_data` is caller-supplied, and a path taken from

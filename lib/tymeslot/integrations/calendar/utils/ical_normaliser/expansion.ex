@@ -208,8 +208,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser.Expansion do
   # `(calendar_integration_id, uid)`, so changing this format changes identity
   # for every occurrence already cached and needs a migration to rewrite them,
   # in `event_colour_overrides.provider_uid` as well as in the cache itself.
-  # `20260904094944_strip_utc_label_from_occurrence_uids` is the one that
-  # accompanied the last such change, and the pattern to follow.
+  # `20260904094944_strip_utc_label_from_occurrence_uids` is the pattern to
+  # follow.
   defp occurrence_suffix(%Date{} = date), do: Calendar.strftime(date, "%Y%m%d")
   defp occurrence_suffix(%DateTime{} = dt), do: Calendar.strftime(dt, "%Y%m%dT%H%M%S")
   defp occurrence_suffix(_other), do: "unknown"

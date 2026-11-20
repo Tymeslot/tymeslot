@@ -62,19 +62,28 @@ defmodule Tymeslot.Integrations.Calendar.Shared.FetchAggregate do
       failure two levels down (which calendar, which reason) survives all
       the way to the outermost caller.
 
-  Failures are logged once here, redacted via `Redactor.redact_and_truncate/1`.
-  `log_context` is merged into that log call so callers can attach their
-  own identifying metadata (e.g. `user_id:`, `calendar_integration_id:`).
+  Each failure is logged once, by the `collect/3` that classified it: the
+  failures a nested outcome carries were logged by the level below, so they
+  are merged here but not logged again. A source is a calendar id or path,
+  which names the account (a Google calendar id is its owner's email), so
+  the log carries its `Redactor.fingerprint/1` instead, and the reason
+  through `Redactor.redact_and_truncate/1`. `log_context` is merged into
+  that log call so callers can attach their own identifying metadata (e.g.
+  `user_id:`, `calendar_integration_id:`).
   """
   @spec collect([term()], (term() -> classification()), keyword()) :: Outcome.t()
   def collect(results, classify_fun, log_context \\ []) do
+    classified = Enum.map(results, classify_fun)
+
     {events, attempted, succeeded, failed} =
-      results
-      |> Enum.map(classify_fun)
-      |> Enum.reduce({[], 0, 0, []}, &accumulate/2)
+      Enum.reduce(classified, {[], 0, 0, []}, &accumulate/2)
+
+    log_failures(
+      for({:error, source, reason} <- classified, do: %{source: source, reason: reason}),
+      log_context
+    )
 
     failed = Enum.reverse(failed)
-    log_failures(failed, log_context)
 
     %Outcome{events: events, attempted: attempted, succeeded: succeeded, failed: failed}
   end
@@ -104,13 +113,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.FetchAggregate do
   end
 
   @doc """
-  Fail-closed availability semantics: a clean outcome (no hard failures —
-  whether every source succeeded, every source was confirmed absent, or none
-  was attempted at all) returns its events, which is `[]` for the absent/
-  nothing-attempted cases rather than an error: a source we know to be empty
-  is not a source we failed to read. Any hard failure with no successful
-  source at all fails closed as `:all_calendars_unavailable`; any other hard
-  failure fails closed as `:some_calendars_unavailable`.
+  A clean outcome (no hard failures) returns its events, possibly `[]`. Any
+  hard failure with no successful source at all fails closed as
+  `:all_calendars_unavailable`; any other hard failure fails closed as
+  `:some_calendars_unavailable`.
   """
   @spec require_complete(Outcome.t()) ::
           {:ok, list()}
@@ -129,7 +135,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.FetchAggregate do
         failed_count: length(failed),
         errors:
           Enum.map(failed, fn %{source: source, reason: reason} ->
-            %{source: source, reason: Redactor.redact_and_truncate(reason)}
+            %{
+              source_fingerprint: Redactor.fingerprint(source),
+              reason: Redactor.redact_and_truncate(reason)
+            }
           end)
       )
     )

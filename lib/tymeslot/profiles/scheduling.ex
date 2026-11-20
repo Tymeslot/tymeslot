@@ -2,7 +2,7 @@ defmodule Tymeslot.Profiles.Scheduling do
   @moduledoc """
   Subcomponent for managing a profile's account-wide booking limits.
 
-  Buffer, minimum notice and the advance booking window are no longer profile
+  Buffer, minimum notice and the advance booking window are not profile
   settings: they belong to an availability schedule and are edited through
   `Tymeslot.Availability.Schedules.update_policy/2`.
   """

@@ -3,8 +3,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
   Handler for the Stripe `charge.refunded` Connect event.
 
   Reconciles `booking_payment.refunded_amount_cents` and `status` against
-  the cumulative `amount_refunded` Stripe reports on the charge. Designed
-  to be idempotent against the synchronous refund path (`Refunds.issue_refund/3`)
+  the cumulative `amount_refunded` Stripe reports on the charge, which
+  counts refunds only: what a lost dispute took is added to it
+  (`RefundedTotal`). Designed
+  to be idempotent against the synchronous refund path (`Refunds.issue_refund/4`)
   — replaying the same event, or arriving after the local row has already
   been updated, is a safe no-op.
 
@@ -21,6 +23,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.RefundedTotal
   alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
@@ -62,7 +65,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
   defp update_payment(payment, event_id, amount_refunded) do
     result =
       LockedPayment.run(payment, event_id, fn locked ->
-        new_total = max(locked.refunded_amount_cents, amount_refunded)
+        new_total = RefundedTotal.with_stripe_refunded(locked, amount_refunded)
 
         case BookingPaymentQueries.update(locked, %{
                refunded_amount_cents: new_total,

@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
   @moduledoc """
-  The password reset flow's event handlers, lifted out of `TymeslotWeb.AuthLive`.
+  The password reset flow's event handlers.
 
   Two forms, two steps: request a reset link by email, then set a new password
   against the token that link carried. They are handled together because they

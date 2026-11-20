@@ -288,8 +288,6 @@ defmodule Tymeslot.BookingSeries.Cancel do
     end
   end
 
-  # Cancel all
-
   defp cancel_all(series, caller, refund_plan) do
     case Repo.transaction(fn -> cancel_in_transaction(series, caller, refund_plan) end) do
       {:ok, {cancelled, refund}} ->

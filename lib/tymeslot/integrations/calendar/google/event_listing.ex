@@ -5,11 +5,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
   Every listing `Tymeslot.Integrations.Calendar.Google.CalendarAPI` makes goes
   through here: a windowed read of one calendar, the bootstrap, a sync-token
   delta, and the events of one series. They differ only in their base
-  params, so they share one loop rather than holding copies of it: before
-  PR #94 the incremental path had no pagination at all while bootstrap had it
-  correct, and the windowed read of a secondary calendar kept only its first
-  page until the sync began inferring deletions from what that read leaves
-  out.
+  params, so they share one loop, and every one of them reads every page. A
+  listing that kept only its first page would make the sync infer deletions
+  from events the read merely left out.
 
   `{:ok, _}` is only ever a complete listing: every page was read. A page
   that fails ends the walk with that page's error, and so does the page cap,
@@ -24,10 +22,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
   alias Tymeslot.Integrations.Calendar.HTTP
   alias Tymeslot.Integrations.Calendar.Shared.ReadPageSize
 
-  # Google's own maximum per page. Set here rather than by any caller, so the
-  # page size cannot drift between listings again: the incremental path was
-  # taking Google's default of 250 where bootstrap asked for 2500, about 18
-  # sequential round-trips for a 4,465-event backlog where 2 would do.
+  # Google's own maximum per page. Set here rather than by any caller, so
+  # every listing requests the same page size: the default of 250 would take
+  # about 18 sequential round-trips for a 4,465-event backlog where 2 will do.
   @max_results 2500
 
   # No listing loop had any bound on iterations: a provider echoing the same
@@ -101,9 +98,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
         end
 
       # Not an error tuple: the success clause is guarded on a map, so this
-      # fires when `decode_body/1` decoded a JSON array or string rather than
-      # an object, and the raw term is returned as the result. Preserved as it
-      # has always behaved, but no longer silently.
+      # fires when the shared response handler (`ApiResponse`) decoded a JSON
+      # array or string rather than an object. The raw term is returned as the
+      # result and the case is logged.
       {:ok, body} ->
         Logger.warning("Google events listing returned a non-object body",
           path: path,

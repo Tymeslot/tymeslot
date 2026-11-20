@@ -112,7 +112,7 @@ msgstr "Скасувати бронювання"
 msgid "Connect a calendar"
 msgstr "Підключити календар"
 
-#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar to add events here."
 msgstr "Підключіть календар, щоб додавати сюди події."
@@ -410,7 +410,7 @@ msgstr "Що додати"
 msgid "You have too many time-off periods to block more time. Remove some first."
 msgstr "У вас забагато періодів відсутності, щоб заблокувати ще час. Спершу видаліть деякі з них."
 
-#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#: lib/tymeslot_web/live/dashboard/calendar/panel_calendar_field.ex
 #, elixir-autogen, elixir-format
 msgid "Your connected calendars are read-only, so events can't be added here."
 msgstr "Підключені календарі доступні лише для перегляду, тому додати сюди події не можна."
@@ -454,3 +454,13 @@ msgstr "Можна заблокувати щонайбільше тиждень 
 #, elixir-autogen, elixir-format
 msgid "Moving…"
 msgstr "Перенесення…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar to add events, or use More options to send a Tymeslot meeting."
+msgstr "Щоб додавати події, підключіть календар або надішліть зустріч Tymeslot через «Більше параметрів»."
+
+#: lib/tymeslot_web/live/dashboard/calendar/client_strings.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendars are read-only. Connect one you can write to, or use More options to send a Tymeslot meeting."
+msgstr "Ваші календарі доступні лише для перегляду. Підключіть календар, до якого можна записувати, або надішліть зустріч Tymeslot через «Більше параметрів»."

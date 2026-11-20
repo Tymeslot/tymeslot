@@ -1,6 +1,6 @@
 defmodule Tymeslot.Emails.Shared.Layouts do
   @moduledoc """
-  High-level MJML layouts for Tymeslot emails — 2026 redesign.
+  High-level MJML layouts for Tymeslot emails.
 
   Two layouts:
 

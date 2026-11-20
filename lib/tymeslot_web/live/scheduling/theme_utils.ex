@@ -16,9 +16,9 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
   @doc """
   Assigns theme-related data including preview mode detection.
 
-  `?theme=` selects which theme renders, and nothing else. A page is a preview
-  only when the URL carries `?preview=` (`PreviewMode.claimed?/1`), which sets
-  `:theme_preview`.
+  A page is a preview only when the URL carries `?preview=`
+  (`PreviewMode.claimed?/1`), which sets `:theme_preview`; `?theme=` only
+  selects which theme renders.
 
   `:theme_preview` is a claim, not an authorisation, and it is load-bearing in
   two different ways. It tunes rendering (the `iframe_embed.js` standalone
@@ -30,8 +30,8 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
   `LiveHelpers.Mount`'s owner-preview gate).
 
   Because the claim can block a booking, it must never be inferrable from a
-  parameter a visitor can pick up by accident. That is why `?theme=` no longer
-  counts: see `PreviewMode`.
+  parameter a visitor can pick up by accident. That is why `?theme=` is never a
+  preview claim: see `PreviewMode`.
   """
   @spec assign_theme_with_preview(Phoenix.LiveView.Socket.t(), map()) ::
           Phoenix.LiveView.Socket.t()

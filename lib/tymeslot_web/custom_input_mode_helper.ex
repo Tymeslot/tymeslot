@@ -34,19 +34,18 @@ defmodule TymeslotWeb.CustomInputModeHelper do
   # only table of them. Every surface that renders preset tags — the onboarding
   # wizard's preference steps and the dashboard availability policy card —
   # builds its tags from this, and `preset_value?/2` validates a `_preset` click
-  # against the same list. Rendering from a separate literal is what let the card
-  # offer values the validator rejected, leaving it stuck in custom-input mode
+  # against the same list. Rendering from a separate literal would let a surface
+  # offer values the validator rejects, leaving it stuck in custom-input mode
   # after a legitimate preset click.
   #
   # Labels stay with each surface: onboarding and the dashboard word the same
   # value differently ("24 hours" vs "1 day") and translate in different gettext
   # domains. Only the values are shared.
   #
-  # The lists are the union of what the two surfaces offered while they each
-  # kept their own: neither was a superset of the other, and neither could be
-  # taken as authoritative — the card's minimum-notice list did not even contain
-  # 3, the schema's own default, so a new user's card opened in custom-input
-  # mode. Unifying by union means no value stopped being offered anywhere.
+  # Every value must pass the changeset that validates the field, or a
+  # one-click choice is rejected on submit, and each schedule default must be
+  # in its field's list, or that setting opens in custom-input mode for every
+  # new user with no tag highlighted. The module's tests check both.
   @buffer_presets [0, 5, 10, 15, 30, 45, 60]
 
   @presets %{
@@ -91,8 +90,8 @@ defmodule TymeslotWeb.CustomInputModeHelper do
 
   ## Security
 
-  Verifies that values with the `_preset` marker are actually in the preset list to prevent
-  client-side manipulation.
+  A `_preset` marker is only honoured for a value in the preset list; see the
+  module's Security section.
 
   ## Parameters
 
@@ -122,7 +121,6 @@ defmodule TymeslotWeb.CustomInputModeHelper do
       if Map.has_key?(params, "_preset") do
         # This claims to be a preset click - verify it's actually a preset value
         if preset_value?(field, value) do
-          # Valid preset - disable custom mode for this field
           Map.put(current_custom_mode, field, false)
         else
           # Security: client sent _preset marker with non-preset value - ignore and keep current state
@@ -137,22 +135,9 @@ defmodule TymeslotWeb.CustomInputModeHelper do
   end
 
   @doc """
-  Enables custom input mode for a specific field.
+  Enables custom input mode for `field`.
 
-  Used when the "Custom" button is clicked to show the custom input field.
-
-  ## Parameters
-
-  - `socket` - The LiveView socket
-  - `field` - The field atom to enable custom mode for
-
-  ## Returns
-
-  Updated socket with custom_input_mode assigned.
-
-  ## Examples
-
-      socket = enable_custom_mode(socket, :buffer_before_minutes)
+  Called when the "Custom" button is clicked, to show the custom input field.
   """
   @spec enable_custom_mode(Phoenix.LiveView.Socket.t(), field()) :: Phoenix.LiveView.Socket.t()
   def enable_custom_mode(socket, field), do: set_custom_mode(socket, field, true)

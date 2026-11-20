@@ -178,6 +178,10 @@ comment, so the ambiguity is visible rather than silently resolved.
 | "X is required" (validation) | **X es obligatorio / obligatoria** **[DECIDED]** (`El nombre es obligatorio`, `La fecha es obligatoria`); not `Falta X`. `Falta…` stays for something genuinely missing from a value or a response (`Falta el dominio del correo`, `Falta el token del bot`) |
 | expire (links, sessions, invitations, tokens, access) | **expirar** / **expiró** / **expirado**, or **ya no es válido** **[DECIDED]** (`El enlace expiró`, `Tu sesión expiró`, `Token no válido o expirado`); never `caducar` (Spain) |
 | lapse at a deadline / be due (requests, payments) | **vencer** / **vencida**, only here (`la solicitud vence`, a booking request or unpaid booking that lapsed: `Vencida`) |
+| Request / Expired (the calendar pill on a booking awaiting approval, and on one that lapsed unanswered) | **Solicitud** / **Vencida** (feminine, agreeing with *solicitud*); the screen-reader label follows suit: `solicitud vencida sin respuesta`. Never `Expirada` here: the *expirar* row covers links and sessions, not requests |
+| tell guests (notify guests of a change to an event) | **avisar a los invitados** (`Avisar a los invitados`, `Eliminar y avisar a los invitados`, `No se pudo avisar a los invitados`); never `notificar`, which reads as system jargon. What they receive is **una actualización** (`Los invitados recibirán una actualización`); a held update that can still be cancelled is **pendiente de envío** (`Esta actualización ya no está pendiente de envío`) |
+| Tymeslot meeting (a booked meeting sent from the calendar) vs calendar event | **reunión de Tymeslot** (`Enviar como reunión de Tymeslot`, `Agrega un invitado para enviar una reunión de Tymeslot`) vs **evento** (`Nuevo evento`); keep them apart: a plain event is never `reunión`, and a Tymeslot meeting is never `evento` |
+| Syncing (status label: a calendar write the provider has not confirmed yet) | **Sincronizando**, the gerund (`Sincronizando con tu calendario`); not `Sincronización`, which is the noun, and not `En sincronización` |
 | contact (someone) | **ponerse en contacto con** **[DECIDED]** (`ponte en contacto con el administrador`); never `comunícate`, which is Latin-American leaning |
 | click (a button or link) | **hacer clic en** **[DECIDED]** (`Haz clic en el botón de abajo`) |
 | press (a keyboard key) | **pulsar** (`pulsa Enter`), only for keys; never `presionar` |
@@ -190,7 +194,7 @@ comment, so the ambiguity is visible rather than silently resolved.
 | delete / remove | **eliminar** / **quitar** |
 | default | **predeterminado** **[DECIDED]** (never `por defecto` in UI labels) |
 | custom | **personalizado** |
-| preview | **vista previa** |
+| preview / Live Preview | **vista previa** / **Vista previa en vivo** (`dashboard_appearance`, `dashboard_embed`); never `en directo` (Spain) or a bare `En vivo` |
 | upgrade (plan) | **mejorar el plan** |
 | subscription | **suscripción** |
 | invoice | **factura** |

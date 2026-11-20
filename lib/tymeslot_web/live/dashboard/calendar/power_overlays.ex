@@ -1,10 +1,10 @@
 defmodule TymeslotWeb.Dashboard.Calendar.PowerOverlays do
   @moduledoc """
-  What the power layer lays over the calendar surface, rendered by one call
-  in `CalendarSurface.render/1`, after the toast: the desktop-notification
-  feed's hook element (Task 6), then the import modal (Task 8), the
-  shortcut help (Task 12) and the command bar (Task 14). Everything here
-  sits outside `#calendar-canvas`, which LiveView never patches.
+  What the power layer lays over the calendar surface, rendered by one call in
+  `CalendarSurface.render/1`, after the toast: the desktop-notification feed's
+  hook element, then the import modal, the shortcut help and the command bar.
+  Everything here sits outside `#calendar-canvas`, which LiveView never
+  patches.
   """
 
   use TymeslotWeb, :html

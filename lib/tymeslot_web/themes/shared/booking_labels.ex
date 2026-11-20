@@ -3,11 +3,11 @@ defmodule TymeslotWeb.Themes.Shared.BookingLabels do
   Labels shared by every theme's booking form.
 
   Every theme asks the same two questions of the same data (what does the
-  submit button say, and what do we call the organiser). Quill and Rhythm once
-  answered them with byte-identical private copies that differed only in the
-  label used when the meeting type is ungated. Approval added a third and fourth branch to that
-  `cond`, which is exactly the point at which two copies start to drift: a
-  wording fix applied to one theme silently leaves the other behind.
+  submit button say, and what do we call the organiser). They live here, with
+  only the label for an ungated meeting type left to each theme, because the
+  approval branches of the submit label's `cond` are where private copies
+  drift: a wording fix applied to one theme would silently leave the other
+  behind.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

@@ -2,11 +2,11 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   @moduledoc """
   What to call a calendar failure, and what to tell the account owner about it.
 
-  Split from `ErrorHandler` because this is copy, not mechanism. Every function
-  here maps a category (and sometimes a provider) onto a sentence the account
-  owner reads, which means the module is almost entirely `dgettext/2` calls and
-  changes whenever the wording does. Keeping it apart leaves the handler free
-  to be about control flow.
+  The wording lives apart from `ErrorHandler`, which handles the mechanism.
+  Every function here maps a category (and sometimes a provider) onto a
+  sentence the account owner reads, which means the module is almost entirely
+  `dgettext/2` calls and changes whenever the wording does. Keeping it apart
+  leaves the handler free to be about control flow.
 
   `categorize_error/1` sits here rather than with the handler because the
   categories exist to select copy: they are the vocabulary the messages and
@@ -14,6 +14,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Tymeslot.Integrations.Calendar.CalDAV.Family
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
 
   @typedoc "Coarse buckets a calendar failure falls into."
   @type error_category ::
@@ -83,10 +86,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
   def categorize_error(status) when is_integer(status) and status >= 500, do: :network
 
   # The CalDAV-family `t:Tymeslot.Integrations.Calendar.CalDAV.Base.error_reason/0`
-  # atoms, reached directly now that `validate_config/1` no longer runs its own
-  # network probe ahead of discovery — previously these were caught earlier by
-  # a provider's own `error_formatter`, which happened to embed a recognisable
-  # word ("password", "not found") in the string before it ever reached here.
+  # atoms, reached directly because `validate_config/1` runs no network probe
+  # of its own ahead of discovery, so nothing formats them into a string first.
   def categorize_error(:unauthorized), do: :auth
   def categorize_error(:forbidden), do: :permission
   def categorize_error(:not_found), do: :config
@@ -218,9 +219,28 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
     )
   end
 
+  # A server the owner names themselves may be reachable only from their own
+  # network or over a VPN, and from outside it times out just as a slow one
+  # does. Retrying cannot fix that, so the message names the cause the owner
+  # can act on. Providers with a fixed address keep the category's wording.
+  def specific_message(:timeout, provider) do
+    if own_server?(provider) do
+      dgettext(
+        "integrations_calendar",
+        "%{provider} did not respond in time. If the server is only reachable from your organisation's network or over a VPN, Tymeslot cannot connect to it: ask your administrator to make its calendar address reachable from the internet. Otherwise the server may be busy, so try again in a few minutes.",
+        provider: format_provider_name(provider)
+      )
+    end
+  end
+
   def specific_message({:error, reason}, provider), do: specific_message(reason, provider)
 
   def specific_message(_error, _provider), do: nil
+
+  # Exchange is reached over EWS only on premises (Exchange Online is the
+  # Outlook provider), so its owner always enters the address of a server
+  # their organisation runs, the classic one sitting behind a VPN.
+  defp own_server?(provider), do: ProviderConfig.ews?(provider) or Family.own_server?(provider)
 
   @doc """
   Gets a user-friendly error message for a category and provider.
@@ -403,6 +423,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
       :nextcloud -> "Nextcloud"
       :radicale -> "Radicale"
       :zimbra -> "Zimbra"
+      :baikal -> "Baikal"
+      :exchange -> "Exchange"
       :mailbox_org -> "mailbox.org"
       :apple -> "Apple iCloud"
       :google -> "Google Calendar"

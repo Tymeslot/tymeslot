@@ -40,11 +40,11 @@ defmodule Tymeslot.Workers.EmailWorker do
 
   # Every send is bounded by `Delivery.send_deadline_ms/0`, so the job timeout
   # is a backstop for a wedged job rather than a send timeout, and it must
-  # outlast the longest legitimate job: a booking confirmation to the
-  # organiser, the attendee and every guest, each allowed the full send
-  # deadline, plus one deadline's headroom for building the emails. A fixed
-  # 30 seconds let two stalled sends exhaust it, and a timed-out job is
-  # discarded, so the recipients after them were never emailed.
+  # outlast the longest legitimate job: a booking confirmation to the organiser,
+  # the attendee and every guest, each allowed the full send deadline, plus one
+  # deadline's headroom for building the emails. A timed-out job is discarded,
+  # so a limit that two stalled sends could exhaust would leave the recipients
+  # after them never emailed.
   # The largest job is a poll's: its cancellation, or the confirmation of the
   # meeting it made, goes to every participant, more than a booking's guests.
   # The job's args do not say how many, so the larger limit is allowed for.
@@ -221,8 +221,8 @@ defmodule Tymeslot.Workers.EmailWorker do
   end
 
   # A send that timed out after the message may have been handed over is
-  # retried once, never more (decision of 2026-10-07: a rare duplicate over a
-  # lost email, at most one extra copy). The first such timeout records it on
+  # retried once, never more: a rare duplicate is preferred over a lost email,
+  # at most one extra copy. The first such timeout records it on
   # the job as it happens, from inside the run, so the record stands even if
   # the run then crashes; every later run assumes such a send delivered. The
   # record is per job, not per copy: once one copy has had its retry, an

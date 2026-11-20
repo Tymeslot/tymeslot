@@ -11,8 +11,7 @@ defmodule Tymeslot.Meetings.UniqueInvitation do
   again, comes back as a changeset error rather than a raised
   `Ecto.ConstraintError`. The same call declares the invitation foreign key,
   so an invitation deleted after the booking's pre-check is an error too
-  (`unavailable?/1` covers both). Split out of `MeetingSchema` to keep it
-  inside the size limit, as `Tymeslot.Meetings.UniqueSlot` is.
+  (`unavailable?/1` covers both).
   """
 
   import Ecto.Changeset, only: [cast: 3, foreign_key_constraint: 2, unique_constraint: 3]

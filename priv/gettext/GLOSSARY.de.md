@@ -156,6 +156,10 @@ Settled while translating; reuse rather than re-coining.
 | block this time / Blocked / unblock | **Diese Zeit blockieren** / **Blockiert** / **Blockierung aufgehoben** |
 | request (calendar pill) / Expired (expired-request pill) | **Anfrage** / **Verfallen** (per the expiry term above) |
 | hatched (bookable layer) | **schraffiert** |
+| tell guests (notify guests of a change to an event) | **Gäste benachrichtigen** (*Löschen und Gäste benachrichtigen*, *Die Gäste konnten nicht benachrichtigt werden.*, *Die Gäste werden benachrichtigt.*); never *informieren* or *Bescheid geben*. The held, cancellable update is **die Benachrichtigung** (*Diese Benachrichtigung steht nicht mehr zum Versand aus.*), not *das Update* |
+| Tymeslot meeting (a booked meeting sent from the calendar) vs a calendar event | **Tymeslot-Termin** (*Als Tymeslot-Termin senden*, *um einen Tymeslot-Termin zu senden*), per *meeting* = **Termin**; a plain calendar event stays **Ereignis**. Never *Tymeslot-Meeting* (*Meeting* is the video session) or *Tymeslot-Ereignis* |
+| Syncing (a calendar write the provider has not confirmed yet) | **Wird synchronisiert** (status pill); in a sentence *Wird mit Ihrem Kalender synchronisiert*, *sobald die Änderung mit Ihrem Kalender synchronisiert wurde*. Never *Synchronisierung läuft*, matching the passive of *Wird getestet* |
+| Preview / Live Preview | **Vorschau** (compounds close up: *Buchungsvorschau*, *Vorschaumodus*; *Design-Vorschau* keeps the hyphen after *Design*) / **Live-Vorschau**, always hyphenated, never *Livevorschau* or *Live Vorschau*. *Live* stays only in this compound; see the *Live* (go live) row below |
 | time off | **Abwesenheit** (*als Abwesenheit eintragen*); holidays inside it stay *Urlaub* |
 | rescheduling terms (a host's own policy) | **Bedingungen zur Terminverschiebung**, per *reschedule* above; never *Umbuchung* |
 | starter setup (the /for page section) | **Starter-Einrichtung** |

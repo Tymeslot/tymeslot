@@ -142,10 +142,9 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
   @spec validate_token(%{optional(:token_expires_at) => DateTime.t()}) ::
           {:ok, :valid | :needs_refresh} | {:error, String.t()}
   def validate_token(config) do
-    # The expiry buffer is shared with every OAuth integration
-    # (`Tymeslot.Integrations.Shared.OAuth.Refresh.valid?/2`). An unknown
-    # expiry means refresh: a token whose lifetime was never stored is
-    # renewed rather than trusted or refused.
+    # An unknown expiry means refresh: a token whose lifetime was never stored
+    # is renewed rather than trusted or refused. The expiry buffer is
+    # `Tymeslot.Integrations.Shared.OAuth.Refresh.valid?/2`'s.
     if Refresh.valid?(Map.get(config, :token_expires_at)),
       do: {:ok, :valid},
       else: {:ok, :needs_refresh}

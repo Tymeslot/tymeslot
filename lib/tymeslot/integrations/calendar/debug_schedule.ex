@@ -77,7 +77,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugSchedule do
     |> Enum.flat_map(&events_for_date(&1, timezone))
   end
 
-  # Mirrors the historical debug pattern so the shape stays familiar.
+  # A fixed weekly pattern of busy slots, one set per day of the week.
   defp events_for_date(date, timezone) do
     case Date.day_of_week(date) do
       1 ->

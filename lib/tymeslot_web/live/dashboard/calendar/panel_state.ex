@@ -17,8 +17,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [push_event: 3]
 
+  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Changes
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventPayload
+  alias TymeslotWeb.Dashboard.Calendar.PanelGuests
+  alias TymeslotWeb.Dashboard.Calendar.Preview
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
 
   @type socket :: Phoenix.LiveView.Socket.t()
@@ -41,12 +45,40 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
   def open_edit(socket, id) do
     case Map.fetch(socket.assigns.events_by_id, id) do
       {:ok, event} ->
+        # A previewed occurrence of a series no sync has cached yet opens
+        # the series, which is the only part of it there is to change.
+        event = CalendarGrid.preview_series(event)
+        id = EventPayload.id(event)
+        held_until = held_until(event)
+
         without_draft(socket, fn socket ->
           socket
           |> drop_prompts()
-          |> assign(panel: new_panel(socket.assigns, event), preview: nil, open_menu: nil)
+          |> assign(
+            panel: new_panel(socket.assigns, event, held_until),
+            preview: nil,
+            open_menu: nil
+          )
+          |> PanelGuests.forget_held_from(id, held_until)
+          |> PanelGuests.watch_hold(id, held_until)
           |> push_event("calendar:panel", %{open: true})
         end)
+
+      :error ->
+        socket
+    end
+  end
+
+  @doc """
+  Opens the preview of the loaded event `id` in the panel's place, as the
+  grid's click does; `socket` unchanged for an id that is not loaded.
+  """
+  @spec open_preview(socket(), String.t()) :: socket()
+  def open_preview(socket, id) do
+    case Map.fetch(socket.assigns.events_by_id, id) do
+      {:ok, event} ->
+        preview = Preview.build(event, Preview.context(socket.assigns))
+        socket |> give_way() |> assign(preview: preview, open_menu: nil)
 
       :error ->
         socket
@@ -106,6 +138,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
 
   def give_way(socket), do: socket
 
+  @doc """
+  The event `id` as the surface holds it: a loaded event, or the panel's own
+  when the panel is open on it but the window does not hold it (the series
+  of a previewed occurrence, cached weeks before the visible ones, or an
+  event a reload has dropped).
+  """
+  @spec fetch_event(map(), String.t()) :: {:ok, map()} | :error
+  def fetch_event(%{events_by_id: by_id} = assigns, id) do
+    case {Map.fetch(by_id, id), Map.get(assigns, :panel)} do
+      {{:ok, _event} = found, _panel} -> found
+      {:error, %{event_id: ^id, event: %{} = event}} -> {:ok, event}
+      {:error, _other} -> :error
+    end
+  end
+
   @doc "The panel's event as the surface holds it now; `nil` with no panel open."
   @spec current_event(map()) :: map() | nil
   def current_event(%{panel: %{event_id: id, event: event}, events_by_id: by_id}),
@@ -120,6 +167,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       timezone: assigns.timezone,
       time_format: assigns.time_format,
       integrations: assigns.integrations,
+      locked_uids: Map.get(assigns, :locked_uids, MapSet.new()),
+      colour_overrides: Map.get(assigns, :colour_overrides, %{}),
       user_id: assigns.current_user.id
     }
 
@@ -160,7 +209,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
 
   defp without_draft(socket, leave), do: leave.(socket)
 
-  defp new_panel(assigns, event) do
+  defp new_panel(assigns, event, held_until) do
     %{
       mode: :edit,
       event_id: EventPayload.id(event),
@@ -169,8 +218,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
       draft_id: nil,
       form: %{},
       scope: nil,
-      opened_with: event,
-      status: opening_status(assigns.integrations, event),
+      opened_with: Map.get(assigns.untold_moves, EventPayload.id(event), event),
+      guests_pending: held_until != nil,
+      held_until: nil,
+      hold_watch: nil,
+      status: opening_status(assigns, event),
       writes: [],
       errors: %{},
       repeat: %{custom_open: false, draft: nil, version: 0},
@@ -179,13 +231,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
     }
   end
 
-  defp opening_status(integrations, event),
-    do: if(EditGuard.editable?(integrations, event), do: :idle, else: :read_only)
+  # An update "Tell guests" sent is held a while before it goes out; the
+  # panel offers to cancel it meanwhile, until it is due. Only an event
+  # with guests can have one, so the others cost no query.
+  defp held_until(event) do
+    if event |> Map.get(:attendees) |> List.wrap() |> Enum.any?(),
+      do: Changes.guest_update_held_until(event)
+  end
+
+  defp opening_status(assigns, event) do
+    locked = Map.get(assigns, :locked_uids, MapSet.new())
+
+    if EditGuard.drawn_writable(assigns.integrations, locked, event) == :ok,
+      do: :idle,
+      else: :read_only
+  end
 
   # What the panel asked about its event goes when the panel leaves that
   # event: the series question, the question about moving a series to another
-  # calendar and the one about removing a guest (the panel is the only place
-  # they are asked), since an answer would act on an event no longer shown.
+  # calendar, the one about removing a guest and the one about discarding a
+  # draft's guests (the panel is the only place they are asked), since an answer would act on an event no longer shown.
   # The grid's own series question (a drag or resize) stays.
   defp drop_prompts(socket) do
     assign(socket,
@@ -195,7 +260,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelState do
           else: socket.assigns.series_prompt
         ),
       series_move_prompt: nil,
-      remove_guest_prompt: nil
+      remove_guest_prompt: nil,
+      discard_draft_prompt: nil
     )
   end
 end

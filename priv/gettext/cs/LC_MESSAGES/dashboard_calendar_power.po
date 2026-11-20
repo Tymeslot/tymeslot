@@ -471,3 +471,33 @@ msgstr[2] "%{count} dalších hostů"
 #, elixir-autogen, elixir-format
 msgid "Maybe"
 msgstr "Možná"
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Allow notifications"
+msgstr "Povolit oznámení"
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "This browser does not support notifications."
+msgstr "Tento prohlížeč oznámení nepodporuje."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Blocked in your browser settings. Allow notifications for this site there, then switch desktop notifications on again."
+msgstr "Blokováno v nastavení prohlížeče. Povolte tam oznámení pro tento web a pak oznámení na ploše znovu zapněte."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop notifications are on, but your browser has not allowed them yet."
+msgstr "Oznámení na ploše jsou zapnutá, ale prohlížeč je zatím nepovolil."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Desktop notifications are on, but your browser is blocking them. Allow notifications for this site in your browser settings and they will start."
+msgstr "Oznámení na ploše jsou zapnutá, ale prohlížeč je blokuje. Povolte oznámení pro tento web v nastavení prohlížeče a začnou se zobrazovat."
+
+#: lib/tymeslot_web/live/dashboard/calendar/desktop_permission.ex
+#, elixir-autogen, elixir-format
+msgid "Your browser did not allow notifications, so desktop notifications are still off."
+msgstr "Prohlížeč oznámení nepovolil, takže oznámení na ploše zůstávají vypnutá."

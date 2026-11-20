@@ -167,13 +167,13 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
         fn focused -> assert focused, "Change time left the focus off the chosen time" end
       )
 
+    # Enter in the email field submits: the field sends its value only on
+    # blur, and implicit submission must not wait for the server to see it.
     session =
       session
       |> fill_in(css("input[name='booking[name]']"), with: "Paper Booker")
       |> fill_in(css("input[name='booking[email]']"), with: email)
-      |> execute_script("document.activeElement.blur()")
-      |> assert_has(css("[data-testid='submit-booking']:not([disabled])"))
-      |> click(css("[data-testid='submit-booking']"))
+      |> send_keys(css("input[name='booking[email]']"), [:enter])
 
     assert_has(session, css("[data-testid='paper-confirmation']"))
     picked

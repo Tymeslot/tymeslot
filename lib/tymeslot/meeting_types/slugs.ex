@@ -64,7 +64,7 @@ defmodule Tymeslot.MeetingTypes.Slugs do
   end
 
   @doc """
-  The effective slug, used in URLs. (Historically called the "duration string".)
+  The effective slug, used in URLs.
   """
   @spec to_duration_string(Ecto.Schema.t()) :: String.t()
   def to_duration_string(meeting_type) do

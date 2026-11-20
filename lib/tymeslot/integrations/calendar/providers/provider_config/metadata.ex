@@ -4,10 +4,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig.Metadata do
   text and the event its button sends, as `Providers.Directory` builds a
   provider's descriptor from them.
 
-  Split out of `Tymeslot.Integrations.Calendar.ProviderConfig`, which keeps
-  the facts the domain acts on (families, URLs, circuit breakers) and
-  delegates these to it. The descriptions are untranslated msgids,
-  translated when read.
+  `Tymeslot.Integrations.Calendar.ProviderConfig` keeps the facts the domain
+  acts on (families, URLs, circuit breakers) and delegates these to this
+  module. The descriptions are untranslated msgids, translated when read.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

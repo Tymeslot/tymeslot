@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
   attr :mini_cursor, :any, required: true
   attr :week_start, :atom, required: true
   attr :preferences, :map, required: true, doc: "the organiser's `CalendarPreferencesSchema`"
+  attr :desktop_permission, :map, required: true, doc: "see `DesktopPermission`"
   attr :rail_open, :boolean, required: true
   attr :calendar_focus, :boolean, default: false
   attr :hidden_count, :integer, required: true
@@ -256,6 +257,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Toolbar do
             <DisplayOptions.display_options
               id_prefix="calendar"
               preferences={@preferences}
+              desktop_permission={@desktop_permission}
               time_format={@time_format}
               calendar_focus={@calendar_focus}
               target={@target}

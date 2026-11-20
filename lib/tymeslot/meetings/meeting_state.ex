@@ -6,7 +6,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   and
   `reschedule_requested_at` (whether the organizer is currently awaiting the
   attendee to pick a new time). The two axes are orthogonal: an organizer
-  reschedule request no longer overwrites `status`, so a `pending` or
+  reschedule request leaves `status` untouched, so a `pending` or
   `awaiting_payment` meeting keeps that status while a request is pending.
 
   `status: :reschedule_requested` is a legacy value: no code writes it any
@@ -59,6 +59,10 @@ defmodule Tymeslot.Meetings.MeetingState do
   # Statuses a meeting never leaves: it is over, one way or another, so
   # nothing may cancel, move or confirm it again.
   @terminal_statuses [@cancelled, @completed, @expired]
+
+  # How long an attendee has to pick a new time after the host asks for one;
+  # see `reschedule_request_deadline/1`.
+  @reschedule_answer_days Application.compile_env(:tymeslot, :reschedule_answer_days, 7)
 
   @typedoc "Where a meeting stands in the booking lifecycle."
   @type status ::
@@ -146,12 +150,79 @@ defmodule Tymeslot.Meetings.MeetingState do
 
   @doc """
   Whether the organizer is currently awaiting the attendee to pick a new
-  time for this meeting.
+  time for this meeting. A meeting that is over awaits nothing, even when a
+  request it was ended under is still stamped on it.
   """
   @spec awaiting_new_time?(Meeting.t()) :: boolean()
   def awaiting_new_time?(%{status: @reschedule_requested}), do: true
+  def awaiting_new_time?(%{status: status}) when status in @terminal_statuses, do: false
   def awaiting_new_time?(%{reschedule_requested_at: %DateTime{}}), do: true
   def awaiting_new_time?(_meeting), do: false
+
+  @doc """
+  How long an attendee has to answer a reschedule request, in days, counted
+  from when it was sent. See `reschedule_request_deadline/1`.
+  """
+  @spec reschedule_answer_days() :: pos_integer()
+  def reschedule_answer_days, do: @reschedule_answer_days
+
+  @doc """
+  When an unanswered reschedule request lapses: the later of the meeting's
+  original start and `reschedule_answer_days/0` after the request was sent,
+  so a request sent just before the meeting still gets the whole window.
+  `nil` for a meeting with no request stamped on it (including rows holding
+  the legacy `:reschedule_requested` status alone), which never lapses.
+  """
+  @spec reschedule_request_deadline(Meeting.t() | map()) :: DateTime.t() | nil
+  def reschedule_request_deadline(
+        %{reschedule_requested_at: %DateTime{} = requested_at} = meeting
+      ) do
+    window_end = DateTime.add(requested_at, @reschedule_answer_days * 86_400, :second)
+
+    case meeting do
+      %{start_time: %DateTime{} = start} -> latest(start, window_end)
+      _no_start -> window_end
+    end
+  end
+
+  def reschedule_request_deadline(_meeting), do: nil
+
+  @doc """
+  Whether a reschedule request on the meeting has lapsed unanswered at `now`:
+  it was expired already, or it is still open and its deadline
+  (`reschedule_request_deadline/1`) has been reached. The deadline itself
+  counts as reached, as for `approval_deadline_passed?/2`.
+  """
+  @spec reschedule_request_lapsed?(Meeting.t() | map(), DateTime.t()) :: boolean()
+  def reschedule_request_lapsed?(meeting, now \\ Clock.utc_now())
+
+  def reschedule_request_lapsed?(%{status: @expired, reschedule_requested_at: %DateTime{}}, _now),
+    do: true
+
+  def reschedule_request_lapsed?(meeting, now) do
+    case awaiting_new_time?(meeting) and reschedule_request_deadline(meeting) do
+      %DateTime{} = deadline -> DateTime.compare(now, deadline) != :lt
+      _open_or_none -> false
+    end
+  end
+
+  @doc """
+  Query-side counterpart of `reschedule_request_lapsed?/2` for requests still
+  open: meetings awaiting a new time whose deadline has been reached at
+  `now`, in a status an expiry may end. A booking still waiting on its
+  payment is left to its checkout's own expiry.
+  """
+  @spec where_reschedule_request_lapsed(Ecto.Queryable.t(), DateTime.t()) :: Ecto.Query.t()
+  def where_reschedule_request_lapsed(query, %DateTime{} = now) do
+    window_start = DateTime.add(now, -@reschedule_answer_days * 86_400, :second)
+
+    query
+    |> where([m], not is_nil(m.reschedule_requested_at))
+    |> where([m], m.reschedule_requested_at <= ^window_start and m.start_time <= ^now)
+    |> where([m], m.status not in ^[@awaiting_payment | @terminal_statuses])
+  end
+
+  defp latest(a, b), do: if(DateTime.compare(a, b) == :lt, do: b, else: a)
 
   @doc """
   Query-side counterpart of `slot_void?/1`, restricted to the statuses that
@@ -282,8 +353,10 @@ defmodule Tymeslot.Meetings.MeetingState do
   def confirmed?(%{status: status}), do: status == @confirmed
 
   @doc """
-  Whether the meeting expired: a request that lapsed unanswered, or a paid
-  booking whose payment completed after its slot was taken.
+  Whether the meeting expired: a request that lapsed unanswered (a booking
+  request the host never answered, or a host's reschedule request the
+  attendee never answered), or a paid booking whose payment completed after
+  its slot was taken.
   """
   @spec expired?(Meeting.t() | map()) :: boolean()
   def expired?(%{status: status}), do: status == @expired
@@ -402,6 +475,11 @@ defmodule Tymeslot.Meetings.MeetingState do
       to `:confirmed` or `:awaiting_approval`, and from then on it is
       visible like any paid booking.
 
+  A reschedule request that lapsed unanswered (`reschedule_request_lapsed?/2`)
+  also ends `:expired` without `approval_resolved_at`, but it keeps its
+  `reschedule_requested_at`, which only the host sets, from a booking they
+  could see, so it stays visible.
+
   The remaining expiry, an unverified hold, also has no
   `approval_resolved_at`; both rules hide it.
   """
@@ -409,6 +487,7 @@ defmodule Tymeslot.Meetings.MeetingState do
   def visible_to_organiser?(meeting), do: not unverified?(meeting) and not unpaid?(meeting)
 
   defp unpaid?(%{status: @awaiting_payment}), do: true
+  defp unpaid?(%{status: @expired, reschedule_requested_at: %DateTime{}}), do: false
   defp unpaid?(%{status: @expired, approval_resolved_at: nil}), do: true
   defp unpaid?(%{status: _status, approval_resolved_at: _resolved_at}), do: false
 
@@ -416,6 +495,12 @@ defmodule Tymeslot.Meetings.MeetingState do
   @spec where_awaiting_verification(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_awaiting_verification(query) do
     where(query, [m], m.status == @awaiting_verification)
+  end
+
+  @doc "Negation of `where_awaiting_verification/1`: keeps only meetings not held for verification."
+  @spec where_not_awaiting_verification(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def where_not_awaiting_verification(query) do
+    where(query, [m], m.status != @awaiting_verification)
   end
 
   @doc """
@@ -430,7 +515,8 @@ defmodule Tymeslot.Meetings.MeetingState do
       [m],
       (is_nil(m.verification_deadline_at) or not is_nil(m.email_verified_at)) and
         m.status != @awaiting_payment and
-        (m.status != @expired or not is_nil(m.approval_resolved_at))
+        (m.status != @expired or not is_nil(m.approval_resolved_at) or
+           not is_nil(m.reschedule_requested_at))
     )
   end
 end

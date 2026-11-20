@@ -8,10 +8,10 @@ defmodule Tymeslot.Integrations.Calendar.BookingEligibility do
   user with a primary calendar that fails every booking, retries, and emails
   them about it, while a writable integration sat there unused.
 
-  That rule was previously re-derived at every gate that selects a booking
-  target, which is exactly how one provider ends up excluded from some of them
-  and not others. Every such gate now calls this module, so adding a read-only
-  provider is one edit in `ProviderConfig` and no edits here.
+  Every gate that selects a booking target calls this module, so the rule is
+  never re-derived and one provider cannot end up excluded from some gates and
+  not others. Adding a read-only provider is one edit in `ProviderConfig` and
+  no edits here.
 
   Eligibility for reading busy time is a different question with a different
   answer: read-only integrations are fully eligible there, and nothing in this

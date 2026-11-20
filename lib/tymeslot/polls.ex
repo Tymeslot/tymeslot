@@ -253,8 +253,7 @@ defmodule Tymeslot.Polls do
   someone the host does not want counted: a joke entry, or someone who has
   dropped out. Nobody is emailed about it.
 
-  Written under the poll's row lock, like cancelling and editing, so a
-  removal never lands on a poll confirmed in the meantime. Once the last
+  Written under `Tymeslot.Polls.OpenPollLock`. Once the last
   invitee is gone the poll's reminders are cancelled, with nobody left to
   remind. If everyone still on the poll has voted, the host is nudged to
   pick a time, as the last vote would have done.
@@ -277,8 +276,7 @@ defmodule Tymeslot.Polls do
   someone who lost the email. See `Tymeslot.Polls.Invitations.resend/2` for
   which email goes out and when it is refused.
 
-  Written under the poll's row lock, like removing someone, so it never goes
-  out for a poll confirmed in the meantime, and two clicks send one email.
+  Written under `Tymeslot.Polls.OpenPollLock`, so two clicks send one email.
   An id that is not a confirmed participant of this poll, including one that
   is not a UUID at all, is `{:error, :not_found}`.
   """
@@ -355,9 +353,8 @@ defmodule Tymeslot.Polls do
   open poll and emails each new invitee their link once the invitations have
   committed. See `Tymeslot.Polls.Invitations.insert/2`.
 
-  Written under the poll's row lock, like cancelling and editing, so an
-  invitation never lands on a poll confirmed in the meantime, and the
-  reminders it schedules are for the deadline the poll holds now.
+  Written under `Tymeslot.Polls.OpenPollLock`, so the reminders it schedules
+  are for the deadline the poll holds now.
 
   Returns `{:error, :voting_closed}` for an open poll whose deadline has
   passed (the host can move the deadline to invite more people) and

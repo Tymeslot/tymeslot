@@ -187,6 +187,21 @@ defmodule Tymeslot.Bookings.MeetingLinks do
     end
   end
 
+  @doc """
+  The organiser's public booking page, for someone to book them afresh: the
+  application's root when the organiser has no username to address it by.
+  """
+  @spec booking_page_url(map()) :: String.t()
+  def booking_page_url(meeting) do
+    case current_username(Map.get(meeting, :organizer_user_id)) do
+      username when is_binary(username) and username != "" ->
+        UrlBuilder.build_url("/" <> username)
+
+      _no_username ->
+        UrlBuilder.base_url()
+    end
+  end
+
   defp url(username, uid, action), do: UrlBuilder.base_url() <> path(username, uid, action)
 
   defp path(username, uid, action) when is_binary(username) and username != "",

@@ -10,11 +10,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.FeedCalendar do
   before the field existed), they are filed under `"primary"`, the name the
   rest of the Outlook code gives the default calendar.
 
-  The bootstrap and the delta used to label the same rows differently (the
-  booking calendar's id, and `"primary"`), and the cache keeps a row's first
-  label. `relabel/2` corrects that on every feed read: the rows the read
-  returned, and every row still filed under `"primary"`, move to the feed's
-  calendar.
+  The cache keeps a row's first label, so `relabel/2` runs on every feed
+  read: the rows the read returned, and every row still filed under
+  `"primary"`, move to the feed's calendar.
   """
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema

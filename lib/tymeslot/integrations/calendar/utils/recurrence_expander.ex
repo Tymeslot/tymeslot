@@ -102,8 +102,8 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   `DateTime` in the series' own zone for a timed one, so the count steps on
   its wall clock across a DST change.
 
-  Unlike `expand/4`, the count is not capped by the range
-  occurrences and steps through every one from `first`: `boundary` bounds it,
+  Unlike `expand/4`, the count is not capped by the range's
+  occurrence cap and steps through every one from `first`: `boundary` bounds it,
   and so does the rule's own `COUNT`, so a split far into a long series still
   takes the right number off. The count is only right for a rule
   `countable?/1` accepts.

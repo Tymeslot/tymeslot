@@ -313,7 +313,6 @@ defmodule Tymeslot.Meetings.VideoRooms do
   defp attached_status(%MeetingSchema{} = meeting), do: {:already_attached, meeting}
 
   defp get_meeting_organizer_user_id(meeting) do
-    # First try to use organizer_user_id if available
     case meeting.organizer_user_id do
       nil ->
         # Fall back to email lookup if no user_id stored

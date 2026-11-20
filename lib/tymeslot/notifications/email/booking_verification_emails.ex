@@ -8,7 +8,7 @@ defmodule Tymeslot.Notifications.Email.BookingVerificationEmails do
   job and is not swallowed by the first one's uniqueness, while a duplicate
   enqueue of the same send within the uniqueness period is. The send number is
   counted atomically on the booking
-  (`Tymeslot.Meetings.MeetingQueries.count_verification_email/3`), so two
+  (`Tymeslot.Meetings.MeetingTransitionQueries.count_verification_email/3`), so two
   resends never share a number. The delivery claim
   (`Tymeslot.Workers.DeliveryClaims.once/3`) is keyed by the job's id, so it
   only stops a retry of the same job from sending twice; it does nothing

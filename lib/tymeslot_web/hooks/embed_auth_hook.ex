@@ -97,9 +97,9 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
     assign(socket, embedded: true, embed_parent_origin: parent_origin)
   end
 
-  # Where a rejected embedded render is sent. This dedicated notice replaces the
-  # old redirect to "/" (the marketing homepage), which would otherwise render
-  # inside the embedding site. The parent origin is forwarded so the notice can
+  # Where a rejected embedded render is sent. A dedicated notice is used rather
+  # than a redirect to "/" (the marketing homepage), which would render inside
+  # the embedding site. The parent origin is forwarded so the notice can
   # post `tymeslot-embed-blocked` back to the embedder, and the booking page's
   # `locale` param so the notice renders in the same language (the notice is
   # framed cross-site, so no session cookie can carry it).

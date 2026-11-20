@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   @moduledoc """
   The preview that opens when an event on the grid is clicked:
   which calendar it sits in, when it is (with how far away), where, who and
-  how each has answered (`PreviewGuests`), whether guests can book over it,
+  how each has answered (`PreviewGuests`), a group booking's seats taken,
+  whether guests can book over it,
   and whether it is still waiting to sync.
 
   Rendered by LiveView rather than by the hook from payload data: it needs
@@ -11,7 +12,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   add actions to it that are server writes anyway. The hook only positions it
   (CSS variables on `<html>`) and takes focus back when it closes.
 
-  An event the organiser can change offers Edit (the side panel) and Delete
+  An event a group meeting with live seats sits on says so, and offers
+  nothing to change (`EditGuard.seat_locked?/2`). An event the organiser can
+  change offers Edit (the side panel) and Delete
   (see `Deletion`), and a Busy/Free toggle unless it is a booking or a
   booking's calendar copy (`FreeBusy`). A booking offers what
   `BookingPreview` allows: Accept and Decline on a request, Reschedule and
@@ -24,6 +27,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.ColourTokens
   alias Tymeslot.CalendarGrid.EditGuard
   alias Tymeslot.CalendarGrid.EventBlocking
@@ -35,9 +39,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Dashboard.Calendar.BookingPreview
+  alias TymeslotWeb.Dashboard.Calendar.LinkedText
   alias TymeslotWeb.Dashboard.Calendar.PreviewGuests
   alias TymeslotWeb.Dashboard.Calendar.TreatAs
   alias TymeslotWeb.Dashboard.Calendar.UndeliveredNotice
+  alias TymeslotWeb.Dashboard.CalendarEditMessages
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @doc "What `build/2` needs from the surface's assigns."
@@ -52,6 +58,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       integration_tokens: assigns.integration_tokens,
       calendar_tokens: assigns.calendar_tokens,
       bookability: Map.get(assigns, :bookability, %{}),
+      locked_uids: Map.get(assigns, :locked_uids, MapSet.new()),
+      colour_overrides: Map.get(assigns, :colour_overrides, %{}),
       user_id: assigns.current_user.id
     }
   end
@@ -60,22 +68,34 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   @spec build(map(), map()) :: map()
   def build(event, context) do
     {integration, entry} = source(event, context.integrations)
+    locked = EditGuard.seat_locked?(Map.get(context, :locked_uids, MapSet.new()), event)
 
     %{
       id: EventPayload.id(event),
       title: EventPayload.title(event),
-      colour: ColourTokens.for_event(event, context.integration_tokens, context.calendar_tokens),
+      colour:
+        event
+        |> ColourTokens.with_override(Map.get(context, :colour_overrides, %{}))
+        |> ColourTokens.for_event(context.integration_tokens, context.calendar_tokens),
       source: source_label(event, integration, entry),
       when: when_text(event, context),
       relative: relative(event, context.now),
       repeats: EventPayload.recurring?(event),
       location: present(Map.get(event, :location)),
+      notes: present(Map.get(event, :description)),
       guests: GuestReplies.of_event(event),
+      seats: seats(event),
       join_url: web_url(Map.get(event, :video_link) || Map.get(event, :join_url)),
       availability: availability(event, integration, entry),
       sync_note: sync_note(event, integration),
-      editable: EditGuard.editable?(context.integrations, event),
-      free_busy: free_busy(event, context.integrations),
+      locked: locked,
+      # A previewed occurrence of a series no sync has cached yet is edited
+      # as its series, which Edit opens; it has nothing of its own to delete.
+      editable:
+        not locked and
+          EditGuard.editable?(context.integrations, CalendarGrid.preview_series(event)),
+      deletable: not CalendarGrid.preview?(event),
+      free_busy: free_busy(event, context.integrations, locked),
       free: Map.get(event, :transparency) == "transparent",
       treat_as: TreatAs.state(event, blocking?(integration, entry), context),
       meeting_id: Map.get(event, :meeting_id),
@@ -146,7 +166,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           {dgettext("dashboard_calendar", "Repeats")}
         </.row>
         <.row :if={@preview.location} icon="hero-map-pin">
-          <span class="break-words">{@preview.location}</span>
+          <LinkedText.linked_text
+            id="calendar-preview-location"
+            text={@preview.location}
+            class="break-words"
+          />
+        </.row>
+        <.row :if={@preview.notes} icon="hero-bars-3-bottom-left">
+          <LinkedText.linked_text
+            id="calendar-preview-notes"
+            text={@preview.notes}
+            class="block max-h-40 overflow-y-auto whitespace-pre-line break-words"
+          />
+        </.row>
+        <.row :if={@preview.seats} icon="hero-users">
+          <span id="calendar-preview-seats">
+            {dgettext("dashboard_calendar", "%{count}/%{capacity} seats taken",
+              count: @preview.seats.taken,
+              capacity: @preview.seats.capacity
+            )}
+          </span>
         </.row>
         <PreviewGuests.guests :if={@preview.guests != []} guests={@preview.guests} />
         <.row :if={@preview.availability} icon="hero-shield-check">
@@ -187,6 +226,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
             {dgettext("dashboard_calendar", "Set in the meeting type")}
           </span>
         </.row>
+        <.row :if={@preview.locked} icon="hero-lock-closed">
+          <span id="calendar-preview-locked" class="text-tymeslot-600">
+            {CalendarEditMessages.seat_lock_message()}
+          </span>
+        </.row>
         <.row :if={@preview.sync_note} icon="hero-arrow-up-tray">
           <span class="text-amber-800">{@preview.sync_note}</span>
         </.row>
@@ -224,6 +268,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
           {dgettext("dashboard_calendar", "Edit")}
         </.action_button>
         <.action_button
+          :if={@preview.deletable}
           id="calendar-preview-delete"
           variant={:danger_soft}
           size={:sm}
@@ -250,6 +295,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
     </div>
     """
   end
+
+  # A group booking's seats: those taken (its people and their guests) of
+  # its capacity. A one-to-one booking has none to count.
+  defp seats(%{kind: :booking, capacity: capacity, seats_taken: taken}) when capacity > 1,
+    do: %{taken: taken, capacity: capacity}
+
+  defp seats(_event), do: nil
 
   defp source(%{kind: :booking}, _integrations), do: {nil, nil}
 
@@ -356,9 +408,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
   # Whether the toggle is offered: a booking and a booking's calendar copy
   # follow their meeting type; a read-only event shows its state only. An
   # editable event the toggle refuses is a booking's calendar copy.
-  defp free_busy(%{kind: :booking}, _integrations), do: :booking
+  defp free_busy(%{kind: :booking}, _integrations, _locked), do: :booking
+  defp free_busy(_event, _integrations, true), do: :read_only
 
-  defp free_busy(event, integrations) do
+  defp free_busy(event, integrations, false) do
     cond do
       EditGuard.free_busy_editable?(integrations, event) -> :editable
       EditGuard.editable?(integrations, event) -> :booking
@@ -412,6 +465,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.Preview do
       label: dgettext("dashboard_calendar", "Free"),
       note: dgettext("dashboard_calendar", "Guests can book this time")
     }
+
+  defp sync_note(%{preview_of: %{}}, _integration),
+    do: elem(CalendarEditMessages.refusal({:error, :syncing}), 1)
 
   defp sync_note(event, integration) do
     if integration && Map.get(event, :sync_state, "synced") != "synced",

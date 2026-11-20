@@ -3,10 +3,10 @@ defmodule Tymeslot.Integrations.Video.Providers.OAuthCredentials do
   The credential shape shared by every video provider authenticated with a
   bearer access token and a refresh token.
 
-  Zoom and Google Meet carried byte-identical copies of both functions; Teams
-  genuinely differs, because it also threads a tenant and a Microsoft user id,
-  and keeps its own. A provider whose credentials are exactly an OAuth pair
-  should delegate here rather than restate the shape.
+  Zoom and Google Meet use it as is; Teams differs, because it also threads a
+  tenant and a Microsoft user id, and keeps its own. A provider whose
+  credentials are exactly an OAuth pair delegates here rather than restating
+  the shape.
   """
 
   @doc """

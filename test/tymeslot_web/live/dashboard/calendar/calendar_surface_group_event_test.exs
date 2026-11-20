@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGroupEventTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.OneOffEvents
@@ -112,6 +113,29 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGroupEventTest do
     refute has_element?(lv, "#calendar-panel-group-event")
   end
 
+  # Ticking the box would hide the guest field, and the group event invites
+  # nobody, so a typed address would be dropped unsent.
+  test "is not offered while a guest address is typed but not added", %{
+    conn: conn,
+    integration: integration
+  } do
+    lv = open(conn, integration)
+
+    render_change(new_form(lv), %{"guest_email" => "ada@example.com"})
+    refute has_element?(lv, "#calendar-panel-group-event")
+
+    # A box ticked meanwhile does not take the draft: the address stays to
+    # be invited, and Create makes no group event of it.
+    as_group_event(lv, %{"guest_email" => "ada@example.com"})
+    refute has_element?(lv, "#calendar-panel-group-event-fields")
+    assert has_element?(lv, ~s(#calendar-panel-guests input[value="ada@example.com"]))
+    assert has_element?(lv, "#calendar-panel-create", "Create and invite")
+
+    create(lv, %{"guest_email" => "ada@example.com"})
+
+    assert Repo.all(MeetingTypeSchema) == []
+  end
+
   # People book a group event on the public page, which needs a calendar.
   test "is not offered without a calendar people can book through", %{
     conn: conn,
@@ -176,6 +200,53 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGroupEventTest do
     assert [session] = PlannedSessions.list(type)
     assert session.start_time == ~U[2026-10-24 18:00:00Z]
     assert session.registration_closes_at == ~U[2026-10-23 12:00:00Z]
+  end
+
+  # A booking still awaiting its attendee's email verification holds its
+  # slot but is hidden from the host, so the refusal must not speak of a
+  # booking they cannot see.
+  test "a time held by a hidden booking is refused without naming a booking", %{
+    conn: conn,
+    user: user,
+    integration: integration,
+    venue: venue
+  } do
+    insert(:awaiting_verification_meeting,
+      organizer_user_id: user.id,
+      start_time: ~U[2026-10-24 18:00:00Z],
+      end_time: ~U[2026-10-24 18:30:00Z]
+    )
+
+    lv = open(conn, integration)
+    as_group_event(lv)
+
+    html = create(lv, %{"max_participants" => "12", "group_location" => "venue:#{venue.id}"})
+
+    assert html =~ "This time is no longer available. Please choose another time."
+    refute html =~ "You already have a booking"
+    assert has_element?(lv, "#calendar-panel-new-form")
+    assert Repo.all(MeetingTypeSchema) == []
+    assert Repo.aggregate(MeetingSchema, :count) == 1
+  end
+
+  test "a saved location chosen for the plain event and deleted since does not block it", %{
+    conn: conn,
+    user: user,
+    integration: integration,
+    venue: venue
+  } do
+    office = insert(:venue, user: user, name: "Head office")
+    lv = open(conn, integration)
+    render_change(new_form(lv), %{"location_venue" => "#{office.id}"})
+    as_group_event(lv)
+
+    Repo.delete!(office)
+    render_change(new_form(lv), %{"max_participants" => "12"})
+    refute render(lv) =~ "That location can no longer be used."
+
+    create(lv, %{"max_participants" => "12", "group_location" => "venue:#{venue.id}"})
+
+    assert [_type] = Repo.all(MeetingTypeSchema)
   end
 
   test "keeps the panel open and says what is missing", %{conn: conn, integration: integration} do

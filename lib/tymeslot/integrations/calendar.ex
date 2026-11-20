@@ -597,16 +597,22 @@ defmodule Tymeslot.Integrations.Calendar do
           {:ok, term()} | {:error, :not_found | Ecto.Changeset.t()}
   defdelegate set_event_colour(user_id, target, colour), to: ColourOverrides
 
+  @doc "Whether events of `provider` keep a colour of their own (not Outlook's)."
+  @spec host_event_colour?(String.t() | nil) :: boolean()
+  defdelegate host_event_colour?(provider),
+    to: Tymeslot.Integrations.Calendar.ColourWriteBack,
+    as: :host_colour?
+
   @doc "See `Tymeslot.Integrations.Calendar.ColourOverrides.clear_event_colour/2`."
   @spec clear_event_colour(user_id(), colour_target()) :: :ok | {:error, :not_found}
   defdelegate clear_event_colour(user_id, target), to: ColourOverrides
 
   @doc "See `Tymeslot.Integrations.Calendar.ColourOverrides.overrides_for/1`."
-  @spec overrides_for(user_id()) :: %{optional(tuple()) => String.t()}
+  @spec overrides_for(user_id()) :: %{optional(tuple()) => String.t() | nil}
   defdelegate overrides_for(user_id), to: ColourOverrides
 
-  @doc "See `Tymeslot.Integrations.Calendar.ColourOverrides.resolve_event_colour/2`."
-  @spec resolve_event_colour(override :: String.t() | nil, provider_colour :: String.t() | nil) ::
+  @doc "See `Tymeslot.Integrations.Calendar.ColourOverrides.resolve_event_colour/3`."
+  @spec resolve_event_colour(map(), tuple(), provider_colour :: String.t() | nil) ::
           String.t() | nil
-  defdelegate resolve_event_colour(override, provider_colour), to: ColourOverrides
+  defdelegate resolve_event_colour(overrides, target, provider_colour), to: ColourOverrides
 end

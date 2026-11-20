@@ -6,9 +6,11 @@
 // the element's data-reminders attribute (refreshed on every 60s tick) and a
 // data-enabled flag from the user's preference. This hook polls and fires a
 // Notification when an entry's fire instant crosses its polling window. It
-// never asks for permission: that needs a user gesture, so the settings modal's
-// toggle does it (desktop_reminder_permission.js). No
-// service worker / push — notifications only fire while the tab is open.
+// never asks for permission: that needs a user gesture, so the calendar's
+// display options (the Desktop notifications switch and its "Allow
+// notifications" button) and the command bar's row ask instead
+// (desktop_reminder_permission.js). No service worker or push: notifications
+// only fire while the tab is open.
 
 const POLL_MS = 30000
 // On the first tick (and after re-enabling) look back this far so a reminder

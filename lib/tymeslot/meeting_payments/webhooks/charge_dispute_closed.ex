@@ -10,8 +10,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
       owes the attendee: its automatic refund was given up while the
       dispute held the money, so it is scheduled again here, in the same
       transaction (`RefundLatePayment.new_after_dispute/1`).
-    * `lost` → set `refunded_amount_cents` to the disputed amount and
-      derive `refunded` / `partially_refunded` accordingly. Stripe debits
+    * `lost` → record the disputed amount as `disputed_lost_cents`, add
+      it to `refunded_amount_cents` (`RefundedTotal`) and derive
+      `refunded` / `partially_refunded` accordingly. Stripe debits
       the host's balance for the disputed amount when a dispute is lost,
       so the row should reflect the funds being gone from the host's
       perspective.
@@ -51,6 +52,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.HeldMeetings
+  alias Tymeslot.MeetingPayments.RefundedTotal
   alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.MeetingPayments.Webhooks.DisputeOutcome
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
@@ -174,8 +176,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
     do: %{status: derive_status_from_refund(payment, payment.refunded_amount_cents)}
 
   defp outcome_attrs(payment, :lost, disputed_amount) do
-    new_total = max(payment.refunded_amount_cents, disputed_amount)
-    %{status: derive_status_from_refund(payment, new_total), refunded_amount_cents: new_total}
+    attrs = RefundedTotal.with_dispute_lost(payment, disputed_amount)
+    Map.put(attrs, :status, derive_status_from_refund(payment, attrs.refunded_amount_cents))
   end
 
   defp derive_status_from_refund(%{amount_cents: amount_cents}, refunded) do

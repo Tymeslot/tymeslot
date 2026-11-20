@@ -145,7 +145,7 @@ config :tymeslot,
     {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
     # Run daily at 04:15 UTC to delete video rooms that outlived their meeting
     {"15 4 * * *", Tymeslot.Workers.ExpiredVideoRoomCleanupWorker},
-    # Run daily at 03:15 UTC
+    # Run daily at 03:15 UTC to delete expired sessions
     {"15 3 * * *", Tymeslot.Workers.ExpiredSessionCleanupWorker},
     # Run daily at 02:00 UTC to renew expiring webhook channels
     {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
@@ -170,6 +170,9 @@ config :tymeslot,
     # Run every 15 min to release approval requests whose deadline passed
     # and whose per-meeting expiry job never fired
     {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker},
+    # Run every 15 min to expire reschedule requests the attendee never
+    # answered and whose per-meeting expiry job never fired
+    {"*/15 * * * *", Tymeslot.Bookings.Workers.RescheduleRequestSweepWorker},
     # Run every 5 min to release unverified bookings whose expiry job never fired
     {"*/5 * * * *", Tymeslot.Meetings.Workers.EmailVerificationSweepWorker},
     # Run daily at 03:05 UTC to resolve quiet errors and prune old ones
@@ -261,7 +264,6 @@ config :tymeslot, :feature_access_checker, Tymeslot.Features.DefaultAccessChecke
 config :tymeslot, :oban_queues,
   default: 10,
   # Email sending (confirmations, reminders, auth emails)
-  # Concurrency increased from 5 to 10 to handle higher email volume
   # Note: Monitor SMTP provider rate limits. Most providers (Gmail, Postmark, etc.)
   # handle this concurrency well, but adjust if you encounter rate limiting.
   emails: 10,
@@ -322,7 +324,6 @@ config :tymeslot, :webhook_idempotency,
 # INTERNATIONALIZATION (I18N) CONFIGURATION
 # =============================================================================
 
-# Configure Gettext default locale
 config :tymeslot, TymeslotWeb.Gettext, default_locale: "en"
 
 # Locale configuration (single source of truth)
@@ -373,7 +374,6 @@ config :tymeslot, :pseudo_locale_enabled, false
 # SHARED INFRASTRUCTURE CONFIGURATION
 # =============================================================================
 
-# Configures the endpoint
 config :tymeslot, TymeslotWeb.Endpoint,
   url: [host: "localhost", scheme: "http"],
   adapter: Bandit.PhoenixAdapter,

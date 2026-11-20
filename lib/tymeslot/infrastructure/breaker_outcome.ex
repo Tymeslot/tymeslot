@@ -12,7 +12,7 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
 
   Hence three outcomes rather than two:
 
-  - `:failure` - the provider looks unwell (transport errors, 5xx, 429, and
+  - `:failure` - the provider looks unwell (transport errors, 5xx, 408, 429, and
     anything a caller explicitly tags `{:provider_error, reason}`).
   - `:success` - the call worked.
   - `:ignore` - the call failed, but for a reason local to us or specific to
@@ -32,10 +32,9 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
   # OAuth error markers that mean the credential itself is gone — a rejected
   # or expired grant, not the provider being unwell. Shared by every OAuth
   # video provider (Zoom, Teams, Google Meet) and by
-  # `HealthCheck.ResponseHandler`'s reauth fast-path, which previously each
-  # carried their own copy; the provider copies only matched strings, so a
-  # bare atom reason (`:unauthorized`, `:invalid_credentials`,
-  # `:token_expired`) fell through to `{:provider_error, _}` and tripped the
+  # `HealthCheck.ResponseHandler`'s reauth fast-path. A bare atom reason
+  # (`:unauthorized`, `:invalid_credentials`, `:token_expired`) must match
+  # here too, or it would fall through to `{:provider_error, _}` and trip the
   # shared breaker instead of being recognised as the tenant's problem.
   #
   # String markers are matched against whole-word tokens extracted from the
@@ -100,10 +99,9 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
   #
   # `malformed_response` is the JSON API clients' name, calendar and video
   # alike, for a reply whose body will not decode (`Shared.ApiResponse`),
-  # typically a proxy or load
-  # balancer answering with HTML in front of a struggling provider. It was a
-  # `network_error` until it got its own name, and a provider that answers
-  # nothing but garbage still has to be able to open its breaker.
+  # typically a proxy or load balancer answering with HTML in front of a
+  # struggling provider. A provider that answers nothing but garbage still has
+  # to be able to open its breaker.
   @transport_reasons ~w(
     timeout network_error closed econnrefused econnreset ehostunreach
     enetunreach etimedout nxdomain closed_by_peer socket_closed_remotely

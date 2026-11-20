@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.AuthLive.SignupEvents do
   @moduledoc """
-  The signup flow's event handlers, lifted out of `TymeslotWeb.AuthLive`.
+  The signup flow's event handlers.
 
   ## Why a taken address looks like a success
 

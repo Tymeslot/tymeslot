@@ -24,6 +24,7 @@ defmodule Tymeslot.Bookings.SlotActivation do
   alias Tymeslot.Clock
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Notifications.Events.Seats
@@ -62,7 +63,7 @@ defmodule Tymeslot.Bookings.SlotActivation do
     changes = [status: :confirmed, email_verified_at: DateTime.truncate(Clock.utc_now(), :second)]
 
     with {:ok, confirmed} <-
-           MeetingQueries.transition_from_awaiting_verification(slot.id, changes) do
+           MeetingTransitionQueries.transition_from_awaiting_verification(slot.id, changes) do
       schedule_seat_effects(confirmed, participant, true, opts)
     end
   end

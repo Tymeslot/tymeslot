@@ -372,9 +372,8 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
 
     # Build connect_options with proxy_headers at the correct level. These are
     # the connection options `Infrastructure.FinchPool` builds the request's
-    # pool from, so the connect timeout named here is the pool's; it is stated
-    # rather than inherited because a proxy is the one hop where a stall is
-    # somebody else's infrastructure and not the destination's.
+    # pool from, so the connect timeout named here is the pool's (see
+    # `@proxy_connect_timeout`).
     connect_opts =
       case proxy_auth_header(proxy_config.auth) do
         # Proxy-Authorization header must be at connect_options level, not in the
@@ -425,13 +424,13 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   # "can't use recv/3 to synchronously receive data when the mode is :active".
   #
   # `:https` target — mint routes it through `Mint.TunnelProxy`, which performs
-  # the CONNECT handshake itself before anything is handed to Finch, and it
-  # does that by waiting on `{:tcp, socket, data}` messages. That needs the
-  # socket in mint's default *active* mode. `mode: :passive` here silences those
-  # messages, the handshake blocks until `tunnel_timeout` and every proxied
-  # `https://` request fails with `{:proxy, :tunnel_timeout}` (the regression in
-  # #97, shipped in 1.15.3). Finch's passive mode still applies to the tunnelled
-  # connection: it is rebuilt from the *host* options after the upgrade.
+  # the CONNECT handshake itself before anything is handed to Finch, and it does
+  # that by waiting on `{:tcp, socket, data}` messages. That needs the socket in
+  # mint's default *active* mode. `mode: :passive` here silences those messages,
+  # the handshake blocks until `tunnel_timeout` and every proxied `https://`
+  # request fails with `{:proxy, :tunnel_timeout}`. Finch's passive mode still
+  # applies to the tunnelled connection: it is rebuilt from the *host* options
+  # after the upgrade.
   #
   # `tunnel_timeout` is stated so a stalled CONNECT is bounded by the same
   # budget as the connect itself, rather than mint's 30s default.

@@ -39,6 +39,25 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceAgendaTest do
     assert_patch(lv, "/dashboard/calendar?view=agenda&date=2026-11-11")
   end
 
+  test "its events say which Tymeslot made, for the Bookings filter", %{
+    conn: conn,
+    integration: integration
+  } do
+    made =
+      event(integration, "work", "Intro call", ~U[2026-10-15 09:00:00Z], 30,
+        created_by_tymeslot: true
+      )
+
+    synced = event(integration, "work", "Lunch", ~U[2026-10-15 12:00:00Z])
+    lv = open(conn)
+    lv |> element("#calendar-canvas") |> render_hook("calendar:ready", %{})
+    assert_reply(lv, %{events: events})
+
+    flags = Map.new(events, &{&1.id, &1.tymeslot})
+    assert flags["event-#{made.id}"] == true
+    assert flags["event-#{synced.id}"] == false
+  end
+
   test "the hook's first request gets four weeks before the agenda and eight from it", %{
     conn: conn
   } do

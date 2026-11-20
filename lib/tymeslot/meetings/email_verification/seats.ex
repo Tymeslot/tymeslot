@@ -27,6 +27,7 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.MeetingTypes
@@ -219,7 +220,7 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   defp void_if_unheld(%Meeting{status: :awaiting_verification} = slot, now) do
     if ParticipantQueries.count_seats_held(slot.id) == 0 do
       {:ok, voided} =
-        MeetingQueries.transition_from_awaiting_verification(slot.id,
+        MeetingTransitionQueries.transition_from_awaiting_verification(slot.id,
           status: :expired,
           cancelled_at: now
         )

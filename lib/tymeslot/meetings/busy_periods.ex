@@ -3,16 +3,16 @@ defmodule Tymeslot.Meetings.BusyPeriods do
   The organiser's own bookings, shaped so the availability engine can weigh
   them alongside provider calendar events.
 
-  A booking page used to compute its offer from connected calendars alone, so a
-  booking blocked its own slot only once `Tymeslot.Workers.CalendarEventWorker`
-  had mirrored it onto a provider calendar: never, for a host with no calendar
-  connected, not yet during the sync window, and not at all while a paid
-  booking sits in `awaiting_payment` (whose calendar side effects are deferred
-  until Stripe confirms). The submit has always refused from the meetings table
-  itself, through `MeetingConflictQueries.count_conflicts/4`, so the grid
-  offered times the submit then rejected and the booker was told the slot had
-  gone only after filling in the form. Merging the two sources here is what
-  makes the display path and the submit answer from the same facts, and
+  Provider calendar events alone would not block a booking's own slot until
+  `Tymeslot.Workers.CalendarEventWorker` had mirrored it onto a provider
+  calendar: never, for a host with no calendar connected, not yet during the
+  sync window, and not at all while a paid booking sits in `awaiting_payment`
+  (whose calendar side effects are deferred until Stripe confirms). The submit
+  refuses from the meetings table itself, through
+  `MeetingConflictQueries.count_conflicts/4`, so a grid built from provider
+  events alone would offer times the submit then rejects. Merging the two
+  sources here makes the display path and the submit answer from the same
+  facts, and
   `MeetingListQueries.list_for_organizer_in_range/4`, with
   `include_hidden: true`, selects on the same `MeetingState.where_slot_live/1`
   the submit's count does, so they cannot drift.

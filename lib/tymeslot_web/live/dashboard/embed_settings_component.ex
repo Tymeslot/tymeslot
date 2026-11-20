@@ -31,7 +31,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
-    # Extract props from parent
     profile = assigns.profile
     integration_status = assigns[:integration_status] || %{}
     base_url = Endpoint.url()
@@ -386,7 +385,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       fn ->
         case Profiles.update_allowed_embed_domains(socket.assigns.profile, domains_payload) do
           {:ok, updated_profile} ->
-            # Notify parent of profile update
             send(self(), {:profile_updated, updated_profile})
             Flash.info(success_message)
 

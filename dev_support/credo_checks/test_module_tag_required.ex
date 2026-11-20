@@ -98,10 +98,8 @@ defmodule CredoChecks.TestModuleTagRequired do
   defp domain_tags, do: TagTaxonomy.by_category() |> Map.fetch!(:domain)
 
   # Credo reports repo-relative filenames ("test/tymeslot/auth/auth_test.exs"),
-  # so an earlier `String.contains?(filename, "/test/")` guard here never
-  # matched and this check silently passed every file in both repositories.
-  # Match on the path segment instead, which holds for relative and absolute
-  # paths alike.
+  # so matching "/test/" inside the string would miss them. Match on the path
+  # segment instead, which holds for relative and absolute paths alike.
   defp test_file?(filename) do
     segments = Path.split(filename)
 

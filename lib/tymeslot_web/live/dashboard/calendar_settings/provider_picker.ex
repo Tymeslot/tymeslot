@@ -2,10 +2,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ProviderPicker do
   @moduledoc """
   Builds the grouped provider list the calendar settings picker modal renders.
 
-  Split out of `TymeslotWeb.Dashboard.CalendarSettingsComponent` so the
-  component keeps to socket state and event handling: turning provider
-  descriptors into display rows is presentation shaping, and it is the only
-  part of that component with an opinion about how providers are categorised.
+  Turning provider descriptors into display rows is presentation shaping, and
+  this module is the only place with an opinion about how providers are
+  categorised, which keeps `TymeslotWeb.Dashboard.CalendarSettingsComponent`
+  to socket state and event handling.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -25,12 +25,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ProviderPicker do
     other: dgettext_noop("dashboard_calendar_settings", "Other")
   }
 
-  # This module used to enumerate the groups by hand, which silently dropped
-  # any family it had not been told about: a new family reached the picker as
-  # a provider that had simply vanished from the modal, with no error. Deriving
-  # the groups from the vocabulary makes that impossible, and this check makes
-  # the remaining half of the edit — deciding what the new group is called —
-  # a build failure rather than a missing heading.
+  # The groups are derived from the vocabulary, so a new family cannot vanish
+  # from the modal unnoticed. This check covers the remaining half of adding
+  # one, deciding what the new group is called: a missing label is a build
+  # failure rather than a missing heading.
   @unlabelled_families Families.all() -- Map.keys(@family_labels)
 
   if @unlabelled_families != [] do

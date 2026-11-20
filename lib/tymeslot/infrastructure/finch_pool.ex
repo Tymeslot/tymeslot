@@ -7,16 +7,15 @@ defmodule Tymeslot.Infrastructure.FinchPool do
   configuration a deployment can size for itself. Req will only use a named
   instance when the request carries no `:connect_options`: hand it any, and it
   hashes them into a name, starts *another whole Finch instance* under its own
-  supervisor for that name, and keeps it for the lifetime of the node. Since
-  the connection pinning that SSRF protection depends on passes the target's
-  hostname as a connect option, and that hostname differs per destination, the
-  practical effect was one permanent Finch instance, plus one never-collected
-  atom, per hostname the application had ever talked to. Webhook destinations
-  are user-supplied, so nothing bounded that.
-
-  Those instances also ran on Finch's stock defaults rather than ours, quietly
-  dropping the `conn_max_idle_time` that exists to evict connections a remote
-  closed behind our back, and the pool size a larger deployment configures.
+  supervisor for that name, and keeps it for the lifetime of the node. The
+  connection pinning that SSRF protection depends on passes the target's
+  hostname as a connect option, and that hostname differs per destination, so
+  it would mean one permanent Finch instance, plus one never-collected atom,
+  per hostname ever contacted. Webhook destinations are user-supplied, so
+  nothing would bound that. Such instances would also run on Finch's stock
+  defaults rather than ours, dropping the `conn_max_idle_time` that evicts
+  connections a remote closed behind our back, and the pool size a larger
+  deployment configures.
 
   Finch can express the same thing without any of that: a *tagged pool* on the
   instance that is already running. `with_pool/3` registers one keyed by the

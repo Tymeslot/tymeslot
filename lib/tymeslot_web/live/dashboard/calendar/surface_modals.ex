@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceModals do
   alias TymeslotWeb.Dashboard.Calendar.BookingMoveModal
   alias TymeslotWeb.Dashboard.Calendar.BookingRescheduleModal
   alias TymeslotWeb.Dashboard.Calendar.DeleteConfirmModal
+  alias TymeslotWeb.Dashboard.Calendar.DiscardDraftModal
   alias TymeslotWeb.Dashboard.Calendar.RemoveGuestModal
   alias TymeslotWeb.Dashboard.Calendar.SeriesMoveModal
   alias TymeslotWeb.Dashboard.Calendar.SeriesScopeModal
@@ -24,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceModals do
   attr :delete_prompt, :map, default: nil
   attr :series_move_prompt, :map, default: nil
   attr :remove_guest_prompt, :map, default: nil
+  attr :discard_draft_prompt, :map, default: nil
   attr :decline_request_modal_data, :map, default: nil
   attr :cancel_meeting_modal_data, :map, default: nil
   attr :cancel_booking_payment, :any, default: nil
@@ -56,6 +58,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.SurfaceModals do
     <RemoveGuestModal.remove_guest_modal
       :if={@remove_guest_prompt}
       prompt={@remove_guest_prompt}
+      target={@target}
+    />
+    <DiscardDraftModal.discard_draft_modal
+      :if={@discard_draft_prompt}
+      prompt={@discard_draft_prompt}
       target={@target}
     />
     <BookingDeclineModal.booking_decline_modal

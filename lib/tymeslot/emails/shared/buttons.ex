@@ -1,6 +1,6 @@
 defmodule Tymeslot.Emails.Shared.Buttons do
   @moduledoc """
-  Primary call-to-action buttons for Tymeslot emails — 2026 redesign.
+  Primary call-to-action buttons for Tymeslot emails.
 
   Pill-shaped, bold, single-CTA ethos. The button background comes from the
   caller-supplied `intent` — a button always matches the intent of the email

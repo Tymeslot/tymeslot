@@ -148,9 +148,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEntry do
   Normalises a raw calendar map (fresh from provider discovery, atom-keyed)
   or a persisted entry (already a `#{inspect(__MODULE__)}`) into the struct.
 
-  Used outside the Ecto cast/load path — e.g. business logic that reconciles
-  discovery output before it has been persisted — so callers get the same
-  single normalised shape `cast/1` produces at the schema boundary.
+  Gives callers outside the Ecto cast/load path the same normalised shape
+  `cast/1` produces at the schema boundary (see the moduledoc).
   """
   @spec normalize(t() | map()) :: t()
   def normalize(%__MODULE__{} = entry), do: entry

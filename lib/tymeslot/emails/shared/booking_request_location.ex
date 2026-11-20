@@ -2,13 +2,12 @@ defmodule Tymeslot.Emails.Shared.BookingRequestLocation do
   @moduledoc """
   Classifies a meeting's location for display.
 
-  Originally written for the three booking-approval templates
-  (`BookingApprovalRequest`, `BookingRequestOutcome`, `BookingRequestReceived`),
-  which render straight from `Meeting.t()` rather than a pre-built
-  appointment-details payload. `AppointmentBuilder.from_meeting/2` and
-  `Templates.RescheduleRequest` delegate to this instead of keeping their own
-  copies, so this is now the one definition of "what kind of location is
-  this" across the email tree.
+  Used by the booking-approval templates (`BookingApprovalRequest`,
+  `BookingRequestOutcome`, `BookingRequestReceived`), which render straight
+  from `Meeting.t()` rather than a pre-built appointment-details payload, and
+  by `AppointmentBuilder.from_meeting/2` and `Templates.RescheduleRequest`.
+  It is the one definition of "what kind of location is this" across the
+  email tree.
   """
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting

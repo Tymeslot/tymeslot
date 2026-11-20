@@ -5,6 +5,10 @@
  * row (`agendaDays`), at most AGENDA_MAX_DAYS, so it never shows a gap; the
  * hook asks the server for more as its end scrolls into sight (see
  * hooks/calendar_canvas/views.js).
+ *
+ * Its lens shows everything ("all") or only what Tymeslot made ("bookings"):
+ * the bookings, whose calendar copies are drawn as the bookings, and the
+ * events created here (`tymeslot`), such as a meeting made with New event.
  */
 import { AGENDA_MAX_DAYS, MINUTES_PER_DAY, dayNumber, isoFromDay } from "./time.js";
 
@@ -35,4 +39,11 @@ export function agendaGroups(events, days, { today }) {
       return { day, today: day === today, items };
     })
     .filter((group) => group.items.length > 0);
+}
+
+export const AGENDA_LENSES = ["all", "bookings"];
+
+// The events the lens shows.
+export function lensEvents(events, lens) {
+  return lens === "bookings" ? events.filter((e) => e.kind === "booking" || e.tymeslot === true) : events;
 }

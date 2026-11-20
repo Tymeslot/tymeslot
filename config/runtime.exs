@@ -50,7 +50,6 @@ end
 # system starts, so it is typically used to load production configuration
 # and secrets from environment variables or elsewhere. Do not define
 # any compile-time configuration in here, as it won't be applied.
-# The block below contains prod specific runtime configuration.
 
 # =============================================================================
 # HTTP PROXY CONFIGURATION
@@ -870,9 +869,8 @@ end
 # Operators who intentionally run those integrations on a private network — the
 # common self-hosting case — opt out by setting ALLOW_PRIVATE_IPS_FOR_CALENDAR=true.
 #
-# For backwards compatibility this also satisfies video, which it was originally
-# documented as covering, unless ALLOW_PRIVATE_IPS_FOR_VIDEO below is set;
-# that is the switch to reach for now.
+# This also satisfies video unless ALLOW_PRIVATE_IPS_FOR_VIDEO below is set;
+# that is the dedicated video switch.
 #
 # This does NOT relax webhook SSRF protection (Tymeslot.Webhooks.SsrfValidator);
 # webhooks have their own switch (ALLOW_PRIVATE_IPS_FOR_WEBHOOKS below).

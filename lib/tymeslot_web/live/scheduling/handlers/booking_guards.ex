@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
   booking domain.
 
   Booking is unauthenticated and creates records, sends mail and can take
-  payment, so it is the most attractive endpoint in the product to abuse. Four
+  payment, so it is the most attractive endpoint in the product to abuse. Five
   independent defences guard it, each covering a gap the others leave:
 
     * **Honeypot** — a hidden `website` field no human fills in. Checked before
@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingGuards do
 
   # An owner preview persists nothing — no meeting, no mail, no calendar event
   # — so charging it to the public allowance means an organiser testing their
-  # own page locks real visitors out of booking it (issue #96).
+  # own page locks real visitors out of booking it.
   #
   # Keyed on `:owner_preview`, never `:theme_preview`. Only the former requires
   # a signed, owner-bound token; the latter is a bare `?preview=true` anyone can

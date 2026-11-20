@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGroupEvent do
   are the event's, and its notes are the event's description. A group event
   has times and no guests of its own: people sign up through its booking
   link. It is offered only to an organiser whose plan includes group
-  bookings, on a draft without guests (`offered?/2`).
+  bookings, on a draft without guests, typed or added (`offered?/2`).
 
   Create checks the fields in the organiser's time zone and creates the
   event at once. On success the panel closes, the calendar reloads with the
@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGroupEvent do
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.CoreComponents.DateTimePicker.Value
   alias TymeslotWeb.Dashboard.Calendar.Creation
+  alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
   alias TymeslotWeb.Dashboard.Calendar.PanelState
   alias TymeslotWeb.Dashboard.Calendar.SurfaceData
@@ -73,10 +74,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGroupEvent do
 
   @doc """
   Whether the box is offered: the organiser's plan includes group bookings
-  (`allowed`) and the draft has no guests, who would have nowhere to go.
+  (`allowed`) and the draft has no guests, who would have nowhere to go. An
+  address typed into the guest field and not added yet counts
+  (`PanelMeeting.guests?/1`), as Create would invite it: ticking the box
+  would hide the field and drop the address unsent.
   """
   @spec offered?(boolean(), map()) :: boolean()
-  def offered?(allowed, form), do: allowed == true and form["guests"] in [nil, []]
+  def offered?(allowed, form), do: allowed == true and not PanelMeeting.guests?(form)
 
   @doc "Whether the form describes a group event: the box ticked, on a draft offered it."
   @spec on?(boolean(), map()) :: boolean()
@@ -135,7 +139,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGroupEvent do
 
   # The draft's times and calendar, read as every create reads them.
   defp cast(socket, form) do
-    case PanelNew.cast_form(socket, Map.merge(form, %{"all_day" => false, "guests" => []})) do
+    # A group event is booked through its calendar, so it needs one.
+    case PanelNew.cast_form(
+           socket,
+           Map.merge(form, %{"all_day" => false, "guests" => []}),
+           :required
+         ) do
       {:ok, create} -> {:ok, create}
       {:error, field, reason} -> {:error, Creation.refusal_message(field, reason)}
     end

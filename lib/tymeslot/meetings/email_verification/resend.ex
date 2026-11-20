@@ -25,6 +25,7 @@ defmodule Tymeslot.Meetings.EmailVerification.Resend do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Repo
@@ -64,7 +65,7 @@ defmodule Tymeslot.Meetings.EmailVerification.Resend do
   def resends_left(%{verification_emails_sent: nil}), do: @max_resends
 
   defp count(%Meeting{id: id}, now),
-    do: MeetingQueries.count_verification_email(id, now, @max_resends + 1)
+    do: MeetingTransitionQueries.count_verification_email(id, now, @max_resends + 1)
 
   defp count(%Participant{id: id}, now),
     do: ParticipantQueries.count_verification_email(id, now, @max_resends + 1)

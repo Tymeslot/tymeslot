@@ -47,9 +47,9 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
 
   ## Colour overrides and undelivered update notices
 
-  Both are keyed by an occurrence's uid and move together; what follows
-  says it of an override. An override is moved to the uid its occurrence will be cached under,
-  which is derived from the uid it had, how far the series moved, and the
+  Both are keyed by an occurrence's uid and move together; what follows says so
+  of an override. An override is moved to the uid its occurrence will be cached
+  under, which is derived from the uid it had, how far the series moved, and the
   uid of the series it now belongs to, never from a later read of the cache,
   which does not hold the new rows yet. Google and the CalDAV family cache an
   occurrence under its series' UID and a stamp of the slot the series put it

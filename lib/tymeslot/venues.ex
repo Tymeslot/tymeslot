@@ -12,7 +12,9 @@ defmodule Tymeslot.Venues do
   (`meetings.location`, from `display/1`), so editing or deleting a venue
   later never rewrites a past meeting.
 
-  Every function acting on a venue is scoped to its owner.
+  Every function acting on a venue on behalf of its owner is scoped to that
+  owner; the one exception is the lookup made while writing a meeting, whose
+  venue id comes from the organiser's own meeting type.
   """
 
   alias Tymeslot.MeetingTypes

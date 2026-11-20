@@ -27,7 +27,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
   end
 
   # Call sites pass :total_refunded; :amount is accepted as a fallback for
-  # any callers that haven't been migrated yet.
+  # callers that pass the older key.
   def format_message(:refund_processed, metadata) do
     user_id = Map.get(metadata, :user_id, "unknown")
     amount = Map.get(metadata, :total_refunded, Map.get(metadata, :amount, "unknown"))

@@ -8,8 +8,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.TimeZoneComponent do
   `TZOFFSETTO`, read from the time zone database. Explicit transitions need
   no `RRULE` in the component, so nothing about the zone's future rules has
   to be inferred, and every subcomponent carries what strict servers
-  (Radicale's vobject among them) require: an earlier version that sent an
-  incomplete `VTIMEZONE` was rejected with HTTP 400.
+  (Radicale's vobject among them) require: a `VTIMEZONE` without its full
+  subcomponents is rejected with HTTP 400.
 
   The first subcomponent is the observance already in force when the span
   begins, starting at the change that brought it in; a zone that has not

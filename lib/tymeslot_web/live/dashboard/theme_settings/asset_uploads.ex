@@ -3,11 +3,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   The upload pipeline for a theme's asset fields: the background image and
   video, and any file an option group of a theme's own declares.
 
-  Split from `ThemeCustomizationComponent`, which is otherwise about choosing
-  options. Uploading is a separate concern with its own lifecycle: declare the
-  sockets up front, receive progress callbacks as bytes arrive, consume the
-  finished entry, which hands the file to `ThemeCustomizations.attach_asset/4`
-  and gets the saved customisation back.
+  Uploading has its own lifecycle, apart from choosing options in
+  `ThemeCustomizationComponent`: declare the sockets up front, receive progress
+  callbacks as bytes arrive, consume the finished entry, which hands the file to
+  `ThemeCustomizations.attach_asset/4` and gets the saved customisation back.
 
   One upload per asset field of the theme's spec
   (`ThemeCustomizations.asset_fields/1`), named after the field

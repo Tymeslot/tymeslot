@@ -165,7 +165,33 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
     |> remember(draft, result)
     |> push_event("calendar:create-settled", %{draft: draft})
     |> settle(draft, params || title, result)
+    |> flash_notices(result)
   end
+
+  defp flash_notices(socket, result),
+    do: Enum.reduce(notices(result), socket, &flash(&2, &1))
+
+  @doc """
+  What a landed create says beside its outcome, as flashes: the calendar's
+  warning (Google saved the event but returned no Meet link), and a reconnect
+  notice when the chosen calendar needs reconnecting, as the event then
+  landed in another of the organiser's calendars.
+  """
+  @spec notices(term()) :: [{:warning | :error, String.t()}]
+  def notices({:ok, %{} = created}) do
+    warning = if is_binary(created[:warning]), do: [{:warning, created.warning}], else: []
+    reauth = if created[:reauth_required] == true, do: [{:error, reauth_text()}], else: []
+    warning ++ reauth
+  end
+
+  def notices(_result), do: []
+
+  defp reauth_text,
+    do:
+      dgettext(
+        "dashboard_calendar_editing",
+        "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
+      )
 
   defp remember(socket, draft, result),
     do: if(landed?(result), do: remember_draft(socket, draft), else: socket)
@@ -405,6 +431,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.Creation do
 
   def refusal_message(:calendar, _not_found),
     do: dgettext("dashboard_calendar_editing", "Choose one of your calendars.")
+
+  def refusal_message(:location, :venue_gone),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "That location can no longer be used. Please choose another one."
+      )
 
   def refusal_message(:location, :too_long),
     do:

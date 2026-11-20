@@ -151,7 +151,7 @@ defmodule Tymeslot.CalendarGrid.WriteGuardian do
   Hands the writes still queued by the calling LiveView to its guardian to
   drive on its own, because the grid that queued them is gone while the
   LiveView lives on. The guardian stays registered, so a grid mounted again
-  takes them back with `adopt/0`. A no-op when there is no guardian.
+  takes them back with `adopt/2`. A no-op when there is no guardian.
   """
   @spec detach() :: :ok
   def detach do

@@ -156,7 +156,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
         transparency: map_transparency(raw[:transparency]),
         status: map_status(raw[:status]),
         organiser: map_organiser(raw[:organizer]),
-        attendees: map_attendees(raw[:attendee] || raw[:attendees]),
+        attendees: attendees(raw),
         reminders: map_reminders(raw[:valarm]),
         recurrence_rule: raw[:rrule] || raw[:recurrence_rule],
         recurrence_exceptions: exdates_as_dates(raw[:exdate] || raw[:exdates] || []),
@@ -351,6 +351,27 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
 
   defp map_organiser(_other), do: nil
 
+  # An event Tymeslot wrote on a server that would invite an `ATTENDEE`
+  # itself carries its guests as `CONTACT` lines instead (`CalDAV.Scheduling`'s
+  # `:contact` mode), and the event is no less theirs to be told about:
+  # without them here, the sync left it guestless, and deleting or moving it
+  # told nobody. Taken only from an event of Tymeslot's own (its UID) that
+  # names no `ATTENDEE`, which is the block `Patcher` treats as Tymeslot's
+  # too; a `CONTACT` on anyone else's event is not a guest. A `CONTACT` line
+  # carries no reply, nor any way to record one, so such a guest has none to
+  # show (`Attendee`'s `nil`) rather than one pending for ever.
+  defp attendees(raw) do
+    case map_attendees(raw[:attendee] || raw[:attendees]) do
+      [] -> if tymeslot_origin?(raw), do: map_contacts(raw[:contacts]), else: []
+      attendees -> attendees
+    end
+  end
+
+  defp map_contacts(contacts) when is_list(contacts),
+    do: Enum.map(contacts, &Attendee.new(email: &1["email"], display_name: &1["name"]))
+
+  defp map_contacts(_other), do: []
+
   defp map_attendees(nil), do: []
   defp map_attendees(attendees) when is_list(attendees), do: Enum.map(attendees, &map_attendee/1)
   defp map_attendees(_other), do: []
@@ -362,7 +383,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
     Attendee.new(
       email: a["email"],
       display_name: a["name"],
-      response_status: map_partstat(a["status"])
+      response_status: reply(map_partstat(a["status"]), a["rsvp"])
     )
   end
 
@@ -374,6 +395,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   defp map_partstat("declined"), do: :declined
   defp map_partstat("tentative"), do: :tentative
   defp map_partstat(_other), do: :needs_action
+
+  # An attendee no reply was asked of (`RSVP=FALSE`, as Tymeslot writes the
+  # guests of a plain calendar event, whose invitation offers no way to
+  # answer) is not waiting to answer: until a reply does arrive there is none
+  # to show (`Attendee`'s `nil`), rather than one pending for ever.
+  defp reply(:needs_action, false), do: nil
+  defp reply(status, _rsvp), do: status
 
   @doc """
   The reminder the sync reads from one VALARM, given as its unfolded content

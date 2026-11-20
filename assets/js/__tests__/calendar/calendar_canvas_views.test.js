@@ -129,6 +129,20 @@ describe("agenda", () => {
     expect(el.querySelector('.cal-agenda button[data-event-id="event-3"]')).not.toBeNull();
   });
 
+  test("the Bookings lens lists only bookings, and All brings the rest back", () => {
+    const booking = event("booking-7", "Anna · Intro call", "2026-10-15T09:00", "2026-10-15T09:30", { kind: "booking" });
+    const { el, hook } = mountHook(agendaPayload({ events: [...payload().events, booking] }));
+    const ids = () => [...el.querySelectorAll(".cal-agenda [data-event-id]")].map((b) => b.dataset.eventId);
+
+    click(el.querySelector('[data-agenda-lens="bookings"]'));
+    expect(ids()).toEqual(["booking-7"]);
+    expect(el.querySelector('[data-agenda-lens="bookings"]').getAttribute("aria-pressed")).toBe("true");
+    expect(pushes(hook, "calendar:open")).toEqual([]);
+
+    click(el.querySelector('[data-agenda-lens="all"]'));
+    expect(ids()).toEqual(["event-1", "event-2", "booking-7", "event-3"]);
+  });
+
   test("a row opens the event's preview", () => {
     const { el, hook } = mountHook(agendaPayload());
     click(el.querySelector('.cal-agenda [data-event-id="event-2"]'));

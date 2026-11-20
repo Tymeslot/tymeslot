@@ -10,14 +10,19 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetailsTest do
   @moduletag :emails
   @moduletag :calendar
 
+  alias Ecto.Changeset
+  alias Tymeslot.Auth
   alias Tymeslot.Emails.Templates.CalendarInvitation
   alias Tymeslot.Emails.Templates.EventUpdateNotification
   alias Tymeslot.Notifications.Email.CalendarEventDetails
+  alias Tymeslot.Repo
 
   setup do
     user = insert(:user, locale: "de")
-    insert(:profile, user: user, timezone: "Europe/Berlin")
-    %{user: user}
+    profile = insert(:profile, user: user, timezone: "Europe/Berlin")
+    # The email handlers load the organiser with their profile.
+    {:ok, user} = Auth.get_user_with_profile(user.id)
+    %{user: user, profile: profile}
   end
 
   # 23:30 UTC on 2 November is 00:30 on 3 November in Berlin.
@@ -43,6 +48,61 @@ defmodule Tymeslot.Notifications.Email.CalendarEventDetailsTest do
       assert email.html_body =~ "Europe/Berlin"
       assert email.text_body =~ "00:30"
       refute email.text_body =~ "23:30"
+    end
+  end
+
+  describe "the organiser's name" do
+    test "is the name on their profile, not their address", %{user: user, profile: profile} do
+      Repo.update!(Changeset.change(profile, full_name: "Ada Lovelace"))
+      {:ok, user} = Auth.get_user_with_profile(user.id)
+      user = %{user | name: nil}
+
+      {:ok, details} = CalendarEventDetails.invitation_details(user, invitation_args())
+
+      assert details.organizer_name == "Ada Lovelace"
+
+      email = CalendarInvitation.render("guest@example.com", details)
+      # The organiser writes in German (see setup).
+      assert email.html_body =~ "Ada Lovelace hat Sie zu einem Termin eingeladen."
+      assert {sender, _instance_address} = email.from
+      assert sender =~ "Ada Lovelace"
+    end
+
+    test "falls back to the account's own name, then to the address", %{
+      user: user,
+      profile: profile
+    } do
+      Repo.update!(Changeset.change(profile, full_name: nil))
+      {:ok, user} = Auth.get_user_with_profile(user.id)
+
+      {:ok, named} =
+        CalendarEventDetails.invitation_details(%{user | name: "Grace Hopper"}, invitation_args())
+
+      assert named.organizer_name == "Grace Hopper"
+
+      {:ok, unnamed} =
+        CalendarEventDetails.invitation_details(%{user | name: nil}, invitation_args())
+
+      assert unnamed.organizer_name == user.email
+    end
+
+    test "an update is sent in the same name", %{user: user, profile: profile} do
+      Repo.update!(Changeset.change(profile, full_name: "Ada Lovelace"))
+      {:ok, user} = Auth.get_user_with_profile(user.id)
+
+      event = %{
+        uid: "uid-1",
+        summary: "Planning",
+        location: nil,
+        description: nil,
+        all_day: false,
+        start_at: ~U[2026-11-02 23:30:00Z],
+        end_at: ~U[2026-11-03 00:30:00Z]
+      }
+
+      {:ok, details} = CalendarEventDetails.update_details(%{user | name: nil}, event, [], %{})
+
+      assert details.organizer_name == "Ada Lovelace"
     end
   end
 

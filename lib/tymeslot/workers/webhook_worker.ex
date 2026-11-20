@@ -11,13 +11,14 @@ defmodule Tymeslot.Workers.WebhookWorker do
     a deploy still gets the event
   - Circuit breaker (auto-disable after consecutive failures)
   - Delivery logging and metrics
-  - At-most-once posting per job, and a stable delivery id on the wire
+  - The post is claimed once per job, with a stable delivery id on the wire
+    for receivers to dedupe on
 
   ## Duplicate deliveries
 
   The post is claimed through `Tymeslot.Workers.DeliveryClaims` before it is
   sent, so a job the Oban lifeline rescues after the post went out does not
-  post it again. A post that failed is still retried as before, and a retry
+  post it again. A post that failed is retried, and a retry
   after a timeout can reach a receiver that did get the first request.
 
   Only the post itself is claimed. The delivery log and the webhook's status
@@ -253,11 +254,10 @@ defmodule Tymeslot.Workers.WebhookWorker do
     do: Map.put(args, "snapshot", snapshot)
 
   # Loads the meeting fresh (for the data that legitimately changes between
-  # attempts, like a guest that responded, or attaches a job-arg snapshot the
-  # trigger site captured, so what fired at dispatch time is what gets
-  # delivered on every attempt. `snapshot` is `nil` for jobs enqueued before
-  # this was threaded through — those keep re-deriving from the live meeting,
-  # same as before.
+  # attempts, like a guest that responded). When the trigger site captured a
+  # job-arg snapshot, it is replayed over the meeting, so what fired at
+  # dispatch time is what gets delivered on every attempt. `snapshot` is `nil`
+  # for jobs enqueued without one; those are derived from the live meeting.
   #
   # A seat's delivery (`participant_id` set) describes that seat's booking:
   # the participant as the attendee, their guests only, and the seat count

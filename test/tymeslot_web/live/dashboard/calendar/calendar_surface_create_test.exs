@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
   import Tymeslot.Factory, only: [insert: 2]
   import Phoenix.LiveView, only: [send_update: 3]
 
+  alias Ecto.Changeset
   alias Tymeslot.CalendarMock
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -140,6 +141,43 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceCreateTest do
     })
 
     assert has_element?(lv, "#calendar-toast", "Added: Fri 16 Oct")
+  end
+
+  test "a create whose calendar needs reconnecting says so beside the toast", %{
+    lv: lv,
+    work: work,
+    integration: integration
+  } do
+    # The calendar was flagged after the page loaded: the event lands
+    # elsewhere, and only reconnecting puts the chosen calendar back.
+    integration |> Changeset.change(needs_reauth: true) |> Repo.update!()
+
+    created_and_settled(lv, work)
+
+    assert has_element?(lv, "#calendar-toast", "Added: Thu 15 Oct, 13:00")
+
+    assert render(lv) =~
+             "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
+  end
+
+  test "a create the calendar saved with a warning shows the warning", %{lv: lv} do
+    warning = "Google Calendar saved the event without a Meet link."
+
+    send(
+      lv.pid,
+      {:calendar_create_result, {"d9", "Lunch"},
+       {:ok, %{event: nil, invited: [], warning: warning, reauth_required: false}}}
+    )
+
+    # The LiveView hands the result to the surface, which flashes the
+    # warning back to the LiveView: one render waits behind each step.
+    render(lv)
+    render(lv)
+    html = render(lv)
+
+    assert html =~ "Added “Lunch”."
+    assert html =~ warning
+    refute html =~ "Your calendar needs to be reconnected."
   end
 
   test "an untitled draft is created as “New event”", %{lv: lv, work: work} do

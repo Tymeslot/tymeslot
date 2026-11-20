@@ -2,7 +2,8 @@ defmodule Tymeslot.CalendarGrid.MeetingParamsTest do
   @moduledoc """
   A Tymeslot meeting the calendar's side panel books: the drafted event
   as `CreateParams` cast it, plus the guest's name, the language and the
-  reminder emails, turned into what `EventCreation.run_create_ad_hoc_meeting/1`
+  reminder emails, whether it has a main participant and where it takes
+  place, turned into what `EventCreation.run_create_ad_hoc_meeting/1`
   takes, or refused with the field that failed. Also the budget each
   meeting spends.
   """
@@ -15,11 +16,12 @@ defmodule Tymeslot.CalendarGrid.MeetingParamsTest do
 
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.MeetingParams
+  alias Tymeslot.Meetings.Guests
 
   @fields %{
     "guest_name" => "  Ada Lovelace ",
     "locale" => "fr",
-    "reminders" => ["", "1_days", "30_minutes"]
+    "reminders" => [%{value: 30, unit: "minutes"}, %{value: 1, unit: "days"}]
   }
 
   defp create(attrs \\ %{}) do
@@ -59,8 +61,82 @@ defmodule Tymeslot.CalendarGrid.MeetingParamsTest do
                 organizer_note: "Bring the Q3 numbers.",
                 attendee_locale: "fr",
                 guest_emails: ["grace@example.com"],
-                reminders: [%{value: 30, unit: "minutes"}, %{value: 1, unit: "days"}]
+                reminders: [%{value: 30, unit: "minutes"}, %{value: 1, unit: "days"}],
+                location: nil
               }}
+  end
+
+  describe "without a main participant" do
+    @managed Map.merge(@fields, %{"main_participant" => false, "title" => "Roadmap review"})
+
+    test "every guest is an equal guest of a meeting the host manages" do
+      assert {:ok, params} = MeetingParams.build(create(), @managed, 42)
+
+      assert %{
+               managed_by_host: true,
+               guest_emails: ["ada@example.com", "grace@example.com"],
+               title: "Roadmap review"
+             } = params
+
+      refute Map.has_key?(params, :attendee_name)
+      refute Map.has_key?(params, :attendee_email)
+    end
+
+    test "a meeting with no title of its own is refused" do
+      assert MeetingParams.build(create(), %{@managed | "title" => " "}, 42) ==
+               {:error, :title, :blank}
+    end
+
+    test "the guests count against the guests' own limit" do
+      guests = Enum.map(1..(Guests.max_guests() + 1), &"guest#{&1}@example.com")
+
+      assert MeetingParams.build(create(%{guests: guests}), @managed, 42) ==
+               {:error, :guests, :too_many_guests}
+    end
+  end
+
+  describe "location" do
+    test "a place typed in is trimmed; one left blank is none" do
+      typed = Map.put(%{@fields | "guest_name" => "Ada"}, "location_choice", "custom")
+
+      assert {:ok, %{location: {:custom, "Room 4"}}} =
+               MeetingParams.build(create(), Map.put(typed, "location_custom", " Room 4 "), 42)
+
+      assert {:ok, %{location: nil}} =
+               MeetingParams.build(create(), Map.put(typed, "location_custom", "  "), 42)
+    end
+
+    test "a place typed in is sanitised as plain text" do
+      typed = Map.merge(@fields, %{"guest_name" => "Ada", "location_choice" => "custom"})
+
+      assert {:ok, %{location: {:custom, "Room 4"}}} =
+               MeetingParams.build(create(), Map.put(typed, "location_custom", "Room\x00 4"), 42)
+
+      assert MeetingParams.build(
+               create(),
+               Map.put(typed, "location_custom", <<0xFF, ?R, ?o, ?o, ?m>>),
+               42
+             ) == {:error, :location, :unsafe}
+    end
+
+    test "a place longer than a meeting takes is refused" do
+      fields =
+        Map.merge(@fields, %{
+          "location_choice" => "custom",
+          "location_custom" => String.duplicate("a", 501)
+        })
+
+      assert MeetingParams.build(create(), fields, 42) == {:error, :location, :too_long}
+    end
+
+    # A saved location of someone else's is looked up and refused in
+    # `CalendarSurfaceMeetingOptionsTest`; these need no database.
+    test "a choice that names no saved location is refused" do
+      for choice <- ["venue:abc", "venue:", "video:3"] do
+        assert MeetingParams.build(create(), Map.put(@fields, "location_choice", choice), 42) ==
+                 {:error, :location, :invalid}
+      end
+    end
   end
 
   test "an all-day draft is refused: a meeting has a start and an end time" do
@@ -98,14 +174,33 @@ defmodule Tymeslot.CalendarGrid.MeetingParamsTest do
              MeetingParams.build(create(), %{@fields | "locale" => ""}, 42)
   end
 
-  test "a reminder that is not one of the choices is refused" do
-    assert MeetingParams.build(create(), %{@fields | "reminders" => ["2_weeks"]}, 42) ==
+  test "any lead time a meeting type could have is taken, string keys and all" do
+    reminders = [%{"value" => "2", "unit" => "weeks"}]
+
+    assert MeetingParams.build(create(), %{@fields | "reminders" => reminders}, 42) ==
              {:error, :reminders, :invalid}
+
+    reminders = [%{"value" => 45, "unit" => "minutes"}, %{value: 2, unit: "days"}]
+
+    assert {:ok, %{reminders: [%{value: 45, unit: "minutes"}, %{value: 2, unit: "days"}]}} =
+             MeetingParams.build(create(), %{@fields | "reminders" => reminders}, 42)
   end
 
-  test "ticking no reminder means no reminder email" do
+  test "reminders a meeting type could not have are refused" do
+    for reminders <- [
+          [%{value: 0, unit: "minutes"}],
+          [%{value: 30, unit: "minutes"}, %{value: 30, unit: "minutes"}],
+          Enum.map(1..4, &%{value: &1, unit: "hours"}),
+          ["30_minutes"]
+        ] do
+      assert MeetingParams.build(create(), %{@fields | "reminders" => reminders}, 42) ==
+               {:error, :reminders, :invalid}
+    end
+  end
+
+  test "no reminder means no reminder email" do
     assert {:ok, %{reminders: []}} =
-             MeetingParams.build(create(), %{@fields | "reminders" => [""]}, 42)
+             MeetingParams.build(create(), %{@fields | "reminders" => []}, 42)
   end
 
   test "a note past the meeting's own limit is refused" do

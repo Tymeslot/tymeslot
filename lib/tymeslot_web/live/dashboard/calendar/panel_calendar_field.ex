@@ -44,6 +44,43 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelCalendarField do
     """
   end
 
+  attr :meeting, :boolean, required: true, doc: "whether the draft is a Tymeslot meeting"
+  attr :has_accounts, :boolean, default: false, doc: "whether any account is connected"
+
+  @doc """
+  The New event state's Calendar field when the organiser has no calendar
+  to write to: a Tymeslot meeting is kept in Tymeslot alone, and an event
+  cannot be made, which the note says.
+  """
+  @spec no_calendar(map()) :: Phoenix.LiveView.Rendered.t()
+  def no_calendar(assigns) do
+    ~H"""
+    <div id="calendar-panel-no-calendar">
+      <%!-- Styled as the form's other field labels, though no control follows. --%>
+      <p id="calendar-panel-no-calendar-label" class="label mb-0">
+        {dgettext("dashboard_calendar_editing", "Calendar")}
+      </p>
+      <p :if={@meeting} id="calendar-panel-calendar-none" class="mt-1 text-token-sm text-tymeslot-600">
+        {dgettext("dashboard_calendar_editing", "None (Tymeslot only)")}
+      </p>
+      <p
+        :if={!@meeting}
+        id="calendar-panel-calendar-note"
+        role="note"
+        class="mt-1 text-token-xs text-tymeslot-500"
+      >
+        {if @has_accounts,
+          do:
+            dgettext(
+              "dashboard_calendar_booking",
+              "Your connected calendars are read-only, so events can't be added here."
+            ),
+          else: dgettext("dashboard_calendar_booking", "Connect a calendar to add events here.")}
+      </p>
+    </div>
+    """
+  end
+
   @doc """
   The choices as `<.select>` option groups,
   `[{account name, [{calendar name, key}]}]`, keeping the rail's order

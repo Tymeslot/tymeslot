@@ -126,9 +126,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
          :ok <- check_write_budget(user_id),
          :ok <- check_no_duplicate_subscription(user_id, sanitized["url"]),
          attrs <- subscription_attrs(user_id, sanitized),
-         # Ahead of the probe, which fetches a feed from an address the
-         # organiser typed and is metered as such: a submission the changeset
-         # rejects never leaves the machine and must not cost a token.
+         # Ahead of the probe, for the reason given in `create/2`.
          :ok <- CalendarIntegrationSchema.validate_new(attrs),
          {:ok, attrs} <- probe_subscription(attrs, user_id),
          # A subscription is never made the primary: it can never receive a

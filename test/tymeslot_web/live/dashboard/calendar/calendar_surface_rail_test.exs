@@ -132,11 +132,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
     assert has_element?(lv, "#calendar-canvas")
   end
 
-  test "inside a hidden account the calendars keep their own ticks and cannot be toggled", %{
-    conn: conn,
-    user: user,
-    integration: integration
-  } do
+  test "inside a hidden account the calendars keep their own ticks, cannot be toggled, and say why",
+       %{
+         conn: conn,
+         user: user,
+         integration: integration
+       } do
     event(integration, "work", "Design review", ~U[2026-10-14 09:00:00Z])
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
@@ -145,12 +146,23 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceRailTest do
 
     assert has_element?(lv, "#calendar-rail [data-calendar-id='work'][aria-checked='true']")
 
+    # aria-disabled, not disabled: the checkbox stays in the tab order, and is
+    # described by why it cannot be ticked.
+    reason_id = "calendar-calendar-#{integration.id}-work-hidden-account"
+
     assert has_element?(
              lv,
-             "#calendar-rail [data-calendar-id='work'][aria-disabled='true'][disabled]"
+             "#calendar-rail [data-calendar-id='work'][aria-disabled='true'][aria-describedby='#{reason_id}']"
            )
 
+    refute has_element?(lv, "#calendar-rail [data-calendar-id='work'][disabled]")
     refute has_element?(lv, "#calendar-rail [data-calendar-id='work'][phx-click]")
+
+    assert has_element?(
+             lv,
+             "##{reason_id}[role='tooltip']",
+             "Show Work account first to choose its calendars."
+           )
 
     lv
     |> element("#calendar-canvas")

@@ -237,7 +237,7 @@ defmodule Tymeslot.Telegram do
 
   Access is checked before anything is written. The user's never-linked setup
   stubs are then replaced by a fresh one holding a new link token, in one
-  transaction; integrations that were linked and later disconnected are kept.
+  transaction.
   The default name is translated in the calling process's locale.
   """
   @spec start_link_flow(integer()) ::
@@ -398,9 +398,8 @@ defmodule Tymeslot.Telegram do
   @doc """
   Deletes abandoned setup stubs: integrations a user created by starting the
   link flow and never finished linking. Called by the shared
-  `DataRetentionWorker` rather than by any read path; listings hide expired
-  stubs on their own. Returns the `{deleted_count, nil}` tuple from
-  `delete_all`.
+  `DataRetentionWorker` rather than by any read path. Returns the
+  `{deleted_count, nil}` tuple from `delete_all`.
   """
   @spec prune_orphaned_stubs() :: {non_neg_integer(), nil | [term()]}
   def prune_orphaned_stubs do

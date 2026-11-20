@@ -11,11 +11,12 @@
 import { agendaGroups } from "./agenda.js";
 import { chipCapacity, dayDots, eventsOnDay, monthLayout, monthWeeks } from "./month.js";
 import { renderAgendaDay } from "./render_agenda.js";
-import { colour, dateLabel, escapeHtml, interpolate, requestAria, requestFlag, weekNumberHtml } from "./render.js";
+import { badgeNotes, colour, ownColour, repliesTone, dateLabel, escapeHtml, interpolate, requestAria, requestFlag, weekNumberHtml } from "./render.js";
 import { MINUTES_PER_DAY, dayNumber, formatMinutes, isoFromDay, isoWeekday } from "./time.js";
 
-const HEAD_ROW = 24;
-const LANE = 20;
+// Row heights per density: compact tightens the day-number row and each lane,
+// so a cell fits more chips before its "+N".
+const ROWS = { comfortable: { head: 24, row: 20 }, compact: { head: 20, row: 16 } };
 
 export function renderMonth({ days, date, today, events, settings, strings, phone = false, cellHeight = 96, now }) {
   const weeks = monthWeeks(days);
@@ -26,9 +27,10 @@ export function renderMonth({ days, date, today, events, settings, strings, phon
   const label = `${strings.months[monthNumber - 1]} ${year}`;
   const head = weeks[0].map((iso) => `<span class="cal-month-weekday">${escapeHtml(strings.weekdays[isoWeekday(dayNumber(iso)) - 1])}</span>`).join("");
   const body = phone ? weeks.map((week) => phoneWeek(week, ctx)).join("") : wideWeeks(weeks, cellHeight, ctx);
+  const density = ROWS[settings.density] ? settings.density : "comfortable";
 
   return (
-    `<div class="cal-month${phone ? " is-phone" : ""}${settings.show_week_numbers ? " has-weeknums" : ""}" data-view-scroll role="region" aria-label="${escapeHtml(label)}">` +
+    `<div class="cal-month${phone ? " is-phone" : ""}${settings.show_week_numbers ? " has-weeknums" : ""}" data-density="${density}" data-view-scroll role="region" aria-label="${escapeHtml(label)}">` +
     `<div class="cal-month-head" aria-hidden="true">${head}</div>` +
     `<div class="cal-month-weeks">${body}</div>` +
     (phone ? chosenDay(ctx) : "") +
@@ -45,11 +47,12 @@ export function dotsHtml(dots, extra = "") {
 }
 
 function wideWeeks(weeks, cellHeight, ctx) {
-  const lanes = chipCapacity(cellHeight, { head: HEAD_ROW, row: LANE });
+  const rows = ROWS[ctx.settings.density] ?? ROWS.comfortable;
+  const lanes = chipCapacity(cellHeight, rows);
   const byId = new Map(ctx.events.map((e) => [e.id, e]));
   return monthLayout(weeks, ctx.events, { maxLanes: lanes })
     .map((week) => {
-      let html = `<div class="cal-mweek" style="grid-template-rows:${HEAD_ROW}px repeat(${lanes}, ${LANE}px) minmax(0, 1fr)">${weekNumberHtml(week.days, ctx.settings, ctx.strings)}`;
+      let html = `<div class="cal-mweek" style="grid-template-rows:${rows.head}px repeat(${lanes}, ${rows.row}px) minmax(0, 1fr)">${weekNumberHtml(week.days, ctx.settings, ctx.strings)}`;
       // Each day's cell is followed by its bars (from the day they start on),
       // chips and "+N", so the document reads day by day; the grid placement
       // is explicit, so the picture does not depend on this order.
@@ -80,7 +83,7 @@ function cell(iso, column, ctx) {
 }
 
 function eventClasses(base, e, past, flag, extra = []) {
-  return [base, ...extra, past && "is-past", e.free && !e.expired && "is-free", e.kind === "booking" && "is-booking", flag && "is-request", e.expired && "is-expired", e.attention && "is-attention"].filter(Boolean).join(" ");
+  return [base, ...extra, past && "is-past", e.free && !e.expired && "is-free", e.kind === "booking" && "is-booking", ownColour(e) && "has-colour", flag && "is-request", e.expired && "is-expired", e.attention && "is-attention"].filter(Boolean).join(" ");
 }
 
 function monthBar(bar, e, iso, { settings, strings, now }) {
@@ -89,13 +92,19 @@ function monthBar(bar, e, iso, { settings, strings, now }) {
   const first = dateLabel(isoFromDay(e.startDay), strings);
   const span = e.endDay - e.startDay > 1 ? `${first} – ${dateLabel(isoFromDay(e.endDay - 1), strings)}` : first;
   const when = e.all_day ? strings.all_day : `${formatMinutes(e.startMin % MINUTES_PER_DAY, settings.time_format)}–${formatMinutes(e.endMin % MINUTES_PER_DAY, settings.time_format)}`;
-  const label = [e.title, flag && requestAria(e, strings), when, span, past && strings.ended].filter(Boolean).join(", ");
+  const label = [e.title, flag && requestAria(e, strings), when, span, past && strings.ended, ...badgeNotes(e, strings)].filter(Boolean).join(", ");
   const classes = eventClasses("cal-mbar", e, past, flag, [bar.cutStart && "cut-start", bar.cutEnd && "cut-end"]);
   return (
     `<button type="button" class="${classes}" data-event-id="${escapeHtml(e.id)}" data-day="${iso}" aria-label="${escapeHtml(label)}" ` +
     `style="grid-column:${bar.startIndex + 1} / ${bar.endIndex + 2};grid-row:${bar.lane + 2};--cal-ev:${colour(e.colour)}">` +
-    `${flag ? `<span class="cal-mchip-flag">${escapeHtml(flag)}</span> ` : ""}${escapeHtml(e.title)}</button>`
+    `${flag ? `<span class="cal-mchip-flag">${escapeHtml(flag)}</span> ` : ""}${escapeHtml(e.title)}${repliesDot(e)}</button>`
   );
+}
+
+// The guests' answers as a dot in their tone; the item's accessible name
+// says them (badgeNotes).
+function repliesDot(e) {
+  return e.replies ? `<span class="cal-mreplies ${repliesTone(e.replies)}" aria-hidden="true"></span>` : "";
 }
 
 function monthChip(e, iso, column, row, { settings, strings, now }) {
@@ -105,13 +114,14 @@ function monthChip(e, iso, column, row, { settings, strings, now }) {
   const range = `${formatMinutes(e.startMin % MINUTES_PER_DAY, tf)}–${formatMinutes(e.endMin % MINUTES_PER_DAY, tf)}`;
   // A chip for the day an overnight event ends on starts at midnight: no time.
   const start = e.startMin < dayNumber(iso) * MINUTES_PER_DAY ? "" : formatMinutes(e.startMin % MINUTES_PER_DAY, tf);
-  const label = [e.title, flag && requestAria(e, strings), dateLabel(iso, strings), range, e.free && !e.expired && strings.shown_as_free, past && strings.ended, e.attention && strings.waiting_to_sync].filter(Boolean).join(", ");
+  const label = [e.title, flag && requestAria(e, strings), dateLabel(iso, strings), range, e.free && !e.expired && strings.shown_as_free, past && strings.ended, e.attention && strings.waiting_to_sync, ...badgeNotes(e, strings)].filter(Boolean).join(", ");
   return (
     `<button type="button" class="${eventClasses("cal-mchip", e, past, flag)}" data-event-id="${escapeHtml(e.id)}" data-day="${iso}" aria-label="${escapeHtml(label)}" ` +
     `style="grid-column:${column + 1};grid-row:${row};--cal-ev:${colour(e.colour)}">` +
     `<span class="cal-mchip-dot" aria-hidden="true"></span>` +
     (start ? `<span class="cal-mchip-time">${escapeHtml(start)}</span>` : "") +
     `<span class="cal-mchip-title">${flag ? `<span class="cal-mchip-flag">${escapeHtml(flag)}</span> ` : ""}${escapeHtml(e.title)}</span>` +
+    repliesDot(e) +
     (e.attention ? `<span class="cal-ev-dot" aria-hidden="true"></span>` : "") +
     `</button>`
   );

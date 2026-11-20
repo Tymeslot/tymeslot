@@ -184,10 +184,14 @@ defmodule Tymeslot.Meetings.Cancellation do
   # The announcement waits for the refund, whichever way it went: the host's
   # cancellation email reports what they still hold for the booking, read from
   # the payment when the email is built.
+  #
+  # A meeting is cancelled once, so it and the amount name the refund.
   defp cancel_and_refund(meeting, payment, host_user_id, amount_cents) do
+    key = "cancel_refund:#{meeting.id}:#{amount_cents}"
+
     with {:ok, cancelled} <- Cancel.execute(meeting, caller: :organizer, announce: false) do
       try do
-        case MeetingPayments.refund_payment_for_host(payment.id, host_user_id, amount_cents) do
+        case MeetingPayments.refund_payment_for_host(payment.id, host_user_id, amount_cents, key) do
           {:ok, _payment} -> {:ok, cancelled}
           {:error, reason} -> {:error, {:refund_failed, reason}}
         end

@@ -2,9 +2,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest do
   @moduledoc """
   Asking an attendee to pick a new time, from the bookings dashboard.
 
-  Split out of `BookingsManagementComponent` to keep that module inside the
-  size limit. The reload is passed in rather than reached for: the list belongs
-  to the component, and this module only says when it should be refreshed.
+  The reload is passed in rather than reached for: the list belongs to the
+  component, and this module only says when it should be refreshed.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext

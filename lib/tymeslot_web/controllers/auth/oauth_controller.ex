@@ -304,9 +304,9 @@ defmodule TymeslotWeb.OAuthController do
     |> redirect(to: ~p"/auth/login")
   end
 
-  # Only an account created with an unproved email awaits verification, and
-  # neither completion path creates one any more; one made before that change
-  # is answered as a provider sign-in to it would be.
+  # Only an account created with an unproved email awaits verification. Neither
+  # completion path creates one, but an existing one is answered as a provider
+  # sign-in to it would be.
   defp respond_to_completion({:verification_required, _conn, _provider, _delivery} = result),
     do: respond_to_oauth_result(result, success_path: ~p"/dashboard", login_path: ~p"/auth/login")
 

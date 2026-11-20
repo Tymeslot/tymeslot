@@ -2,15 +2,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Heroicons do
   @moduledoc """
   Compile-time inline-SVG source for Heroicons.
 
-  Replaces the build-time `assets/heroicons.js` mask-image plugin. Instead of
-  emitting `.hero-*` CSS utility classes (which only land in whichever compiled
-  stylesheet's scanner happened to see the name — the cause of SaaS-only icons
-  silently not painting, and of the `@source inline(...)` safelist), every icon
-  is read from the `heroicons` dep at *compile time* and rendered as an inline
-  `<svg>` by `CoreComponents.Icons.icon/1`.
+  Every icon is read from the `heroicons` dep at *compile time* and rendered
+  as an inline `<svg>` by `CoreComponents.Icons.icon/1`, rather than through
+  `.hero-*` CSS utility classes.
 
-  Because the markup ships in the HTML, rendering no longer depends on a
-  per-bundle Tailwind scan: any name — including dynamically chosen ones — paints
+  Because the markup ships in the HTML, rendering does not depend on a
+  per-bundle Tailwind scan: any name, including dynamically chosen ones, paints
   identically in Core and SaaS, with no safelist to maintain.
 
   The full set is available (names arrive dynamically from the database and from

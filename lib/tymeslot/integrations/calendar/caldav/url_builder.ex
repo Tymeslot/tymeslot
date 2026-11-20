@@ -74,10 +74,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder do
   itself carry a CalDAV path (`https://host/remote.php/dav`, which is what a
   Nextcloud subpath install and a pasted DAV URL both look like), and
   concatenating the two doubles that path into a URL the server answers with
-  404. Resolving an event href against the whole `base_url` is what
-  `Events.resolve_event_url/4` used to do, and because a CalDAV DELETE counts
-  404 as success, the resulting delete reported success without deleting
-  anything.
+  404. For a delete that is worse than an error: a CalDAV DELETE counts 404
+  as success, so it would report success without deleting anything.
   """
   @spec resolve_href(String.t(), String.t()) :: String.t()
   def resolve_href(base_url, href) do
@@ -187,20 +185,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder do
 
   # `Shared.PathUtils.normalize_url/2` turns a bare Nextcloud host into
   # `.../remote.php/dav` before this module ever sees it (see
-  # `Nextcloud.Provider.new/1`). That path has depth 2, so it used to satisfy
-  # `full_caldav_url?/1` and get treated as an already-specific calendar
-  # collection — skipping the `/calendars/{username}/` this module would
-  # otherwise append. The resulting request queried the CalDAV *service
-  # root*, whose PROPFIND response lists top-level collections
+  # `Nextcloud.Provider.new/1`). That path has depth 2, so without this check
+  # it would satisfy `full_caldav_url?/1` and be treated as an
+  # already-specific calendar collection, skipping the `/calendars/{username}/`
+  # this module otherwise appends. The request would then query the CalDAV
+  # *service root*, whose PROPFIND response lists top-level collections
   # (files/, addressbooks/, calendars/, ...) that never carry a
-  # `<cal:calendar/>` resourcetype, so discovery silently returned zero
-  # calendars for every Nextcloud account — no error, no log, just an empty
-  # list indistinguishable from "this user really has no calendars".
+  # `<cal:calendar/>` resourcetype, so discovery would silently return zero
+  # calendars, indistinguishable from "this user really has no calendars".
   #
   # Matched as a suffix, not an exact path: Nextcloud is frequently installed in
   # a subdirectory, where the same normalisation yields `/nextcloud/remote.php/dav`.
-  # An exact two-segment match would leave those installations on the original
-  # broken path.
   defp caldav_service_root?(segments), do: Enum.take(segments, -2) == ["remote.php", "dav"]
 
   # Only include port when it differs from the scheme default.

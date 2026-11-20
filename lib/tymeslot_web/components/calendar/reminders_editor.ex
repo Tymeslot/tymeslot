@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Components.Calendar.RemindersEditor do
   @moduledoc """
   How the calendar labels a reminder: `reminder_label/1` for a saved
   reminder ("Notification 10 minutes before") and `minutes_label/1` for a
-  lead time, which the side panel's reminder select also labels the
+  lead time, which the side panel's add rows also label the
   `ReminderForm.reminder_minutes_presets/0` lead times with. Reminders are
   synced to the calendar provider, which fires the alert on the user's own
   devices; Tymeslot does not fire them itself.

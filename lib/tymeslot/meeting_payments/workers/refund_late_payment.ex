@@ -6,8 +6,8 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
 
   `CheckoutSessionCompleted` records such a payment as paid, leaves the
   meeting expired and inserts this job in the same transaction, so the
-  webhook no longer waits on Stripe and a lasting Stripe failure no longer
-  rolls back every delivery while the money sits unseen. Until the refund
+  webhook never waits on Stripe, and a lasting Stripe failure cannot roll
+  back every delivery while the money sits unseen. Until the refund
   goes through, the booking is on the host's outstanding-refunds list, where
   the host can also refund it by hand.
 
@@ -18,14 +18,15 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   like any other failed one. The refusals below are checked before that,
   since they need no charge id and no Stripe call.
 
-  The refund is `Refunds.issue_refund/3`, whose Stripe idempotency key is
-  derived from the payment id, its refunded total and the amount
-  (`refund:<id>:<total after>:<amount>`). Every attempt of this job asks for
-  the same remaining balance from the same refunded total, so the key is the
-  same each time: when Stripe accepted a refund but the transaction that
-  records it rolled back, the retry gets the same refund back from Stripe
-  instead of a second one. The attendee's refund email is enqueued in that
-  same transaction, so only once Stripe has accepted the refund.
+  The refund is `Refunds.issue_refund/4`, under a Stripe idempotency key
+  naming this job (the payment and the job's reason, of which there is only
+  ever one job) and the amount (`late_payment_refund:<id>:<reason>:<amount>`).
+  Every attempt asks for the same remaining balance, so the key is the same
+  each time: when Stripe accepted a refund but the transaction that records
+  it rolled back, the retry gets the same refund back from Stripe instead of
+  a second one, whether or not `charge.refunded` has recorded it meanwhile.
+  The attendee's refund email is enqueued in that same transaction, so only
+  once Stripe has accepted the refund.
 
   Retries are spread over about four hours (`backoff/1`), well inside the
   24 hours Stripe keeps an idempotency key. When the last attempt fails an
@@ -102,8 +103,8 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
     do: new(%{booking_payment_id: booking_payment_id, reason: "after_dispute"})
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"booking_payment_id" => id}} = job) do
-    case refund(id) do
+  def perform(%Oban.Job{args: %{"booking_payment_id" => id} = args} = job) do
+    case refund(id, Map.get(args, "reason", "late")) do
       {:ok, _refunded} ->
         :ok
 
@@ -133,11 +134,12 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
 
   # A raise (a dropped connection, say) is an attempt failing like any other,
   # so it is returned rather than raised, and the last one is alerted on.
-  defp refund(id) do
+  defp refund(id, reason) do
     with %BookingPaymentSchema{} = payment <- MeetingPayments.get_payment(id),
          :ok <- Refunds.refusal(payment),
          {:ok, payment} <- ensure_charge(payment) do
-      Refunds.issue_refund(payment, Refunds.refundable_remaining_cents(payment))
+      amount = Refunds.refundable_remaining_cents(payment)
+      Refunds.issue_refund(payment, amount, "late_payment_refund:#{id}:#{reason}:#{amount}")
     else
       nil -> {:error, :not_found}
       {:error, _reason} = error -> error

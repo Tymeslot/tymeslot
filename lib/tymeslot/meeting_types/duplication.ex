@@ -119,11 +119,11 @@ defmodule Tymeslot.MeetingTypes.Duplication do
 
   @doc """
   The translations a copy of `source` takes over, for
-  `Tymeslot.MeetingTypes.create_meeting_type/2`'s `:translations` option.
-  They are keyed by the paths of the embeds, whose ids the copy keeps, so
-  each still fits, bar those already orphaned on the source, which the
-  create prunes; the name's reads as outdated, as the copy's name is a new
-  one (`Tymeslot.ContentTranslations.status/3`).
+  `Tymeslot.MeetingTypes.create_meeting_type/2`'s `:translations` option. They
+  are keyed by the paths of the embeds, whose ids the copy keeps, so each still
+  fits, bar those already orphaned on the source, which the create prunes; the
+  translation of the name reads as outdated, as the copy's name is a new one
+  (`Tymeslot.ContentTranslations.status/3`).
   """
   @spec translations(MeetingTypeSchema.t()) :: map()
   def translations(%MeetingTypeSchema{translations: translations}), do: translations || %{}

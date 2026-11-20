@@ -575,3 +575,8 @@ msgstr "Konec"
 #, elixir-autogen, elixir-format
 msgid "Repeat until"
 msgstr "Opakovat do"
+
+#: lib/tymeslot_web/components/calendar/recurrence_editor.ex
+#, elixir-autogen, elixir-format
+msgid "Repeat frequency"
+msgstr "Frekvence opakování"

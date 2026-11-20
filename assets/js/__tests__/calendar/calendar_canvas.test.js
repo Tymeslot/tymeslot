@@ -163,6 +163,25 @@ test("the preview closing hands focus back to the event", () => {
   expect(document.activeElement.dataset.eventId).toBe("event-1");
 });
 
+test("a preview the server opened itself is placed by its event and focused", () => {
+  const { reply, handlers } = mountHook();
+  reply(payload());
+  const preview = document.createElement("div");
+  preview.id = "calendar-preview";
+  preview.tabIndex = -1;
+  document.body.appendChild(preview);
+
+  handlers["calendar:preview-opened"]({ id: "event-1" });
+
+  expect(document.activeElement).toBe(preview);
+  expect(document.documentElement.style.getPropertyValue("--cal-pop-x")).toMatch(/^-?\d+px$/);
+
+  // Closing it hands focus back to that event.
+  preview.remove();
+  handlers["calendar:preview-closed"]();
+  expect(document.activeElement.dataset.eventId).toBe("event-1");
+});
+
 test("the side panel closing hands focus back to its event", () => {
   const { reply, handlers } = mountHook();
   reply(payload());

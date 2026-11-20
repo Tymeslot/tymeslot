@@ -263,7 +263,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatchTest do
 
     test "a cleared colour and reminders are sent cleared" do
       assert SeriesPatch.build(@master, edit(%{colour: nil, reminders: []})) ==
-               {:ok, %{"colorId" => nil, "reminders" => %{"useDefault" => true}}}
+               {:ok,
+                %{"colorId" => nil, "reminders" => %{"useDefault" => false, "overrides" => []}}}
     end
   end
 

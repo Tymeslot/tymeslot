@@ -7,11 +7,9 @@ defmodule Tymeslot.Bookings.SeatEffects do
   `Tymeslot.Bookings.RescheduleSeat` (a seat moving to a new slot) both turn
   a `Tymeslot.Meetings.GroupScheduling.book_seat/3` result into cache
   invalidation, a seat-change broadcast, a calendar job, and — when the seat
-  created a brand-new slot — reminders and video-room scheduling. Splitting
-  that fan-out across the two callers let the reschedule path silently skip
-  reminders and video-room creation for a slot it created; this module is
-  the single owner of what `created_meeting?` implies, so a third caller of
-  `book_seat/3` cannot half-apply the contract.
+  created a brand-new slot — reminders and video-room scheduling. This module
+  is the single owner of what `created_meeting?` implies, so no caller of
+  `book_seat/3` can half-apply the contract.
 
   Calendar-job scheduling is exposed rather than run automatically: each
   caller enqueues it at the point that matches its own transaction shape

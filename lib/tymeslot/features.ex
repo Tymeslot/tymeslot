@@ -87,10 +87,9 @@ defmodule Tymeslot.Features do
   may actually be *persisted* without a live account is a separate question,
   answered by the meeting-type changeset.
 
-  Four call sites — the dashboard init hook, the integrations hub, the payments
-  controller and the meeting-type form — each carried their own copy of this
-  decision and cited three different, mutually inconsistent authorities for it,
-  one of which holds no gate at all. This is the authority.
+  Every surface that shows or configures payments (the dashboard init hook,
+  the integrations hub, the payments controller and the meeting-type form)
+  must ask this function rather than decide for itself.
   """
   @spec meeting_payments_allowed?(integer()) :: boolean()
   def meeting_payments_allowed?(user_id) do

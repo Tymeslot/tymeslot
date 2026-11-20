@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ReminderFeed do
 
   It follows what the surface shows: the hidden accounts and the hidden
   calendar keys in the assigns, which hold the effective visibility (an
-  active calendar set included, from Task 11).
+  active calendar set included).
 
   The surface gets no clock tick (see `CalendarEventHandlers`), so the feed
   refreshes itself: `schedule/1` asks for a `:reminder_tick` in 60 seconds,

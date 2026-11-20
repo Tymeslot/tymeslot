@@ -51,6 +51,9 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   @doc """
   The uids of meetings still to take place that `email` is booked into, as
   the booker, a group seat or a guest.
+
+  A booking still held for email confirmation is left out: the organiser
+  must not learn of it before it is confirmed, and it may never be.
   """
   @spec upcoming_meeting_uids(String.t(), scope(), DateTime.t()) :: [String.t()]
   def upcoming_meeting_uids(email, scope, %DateTime{} = now) do
@@ -75,11 +78,21 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
       query
       |> where([m], m.end_time > ^now)
       |> MeetingState.where_not_released()
+      |> MeetingState.where_not_awaiting_verification()
       |> scope_meetings(scope)
       |> select([m], m.uid)
       |> Repo.all()
     end)
     |> Enum.uniq()
+  end
+
+  @doc "The meetings `email` booked as the attendee that are still held for email confirmation."
+  @spec held_meetings_for_attendee(String.t(), scope()) :: [Meeting.t()]
+  def held_meetings_for_attendee(email, scope) do
+    from(m in Meeting, where: fragment("lower(?)", m.attendee_email) == ^email)
+    |> MeetingState.where_awaiting_verification()
+    |> scope_meetings(scope)
+    |> Repo.all()
   end
 
   @doc "Ids of the meetings `email` booked as the attendee."

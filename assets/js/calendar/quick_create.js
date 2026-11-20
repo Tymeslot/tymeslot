@@ -136,11 +136,14 @@ function errorLine(draft) {
 
 const NO_CALENDAR_ID = "calendar-qc-no-calendar";
 
+// Without a calendar Save is off, but More options stays: the panel can
+// still send the draft as a Tymeslot meeting, which needs no calendar.
 function foot({ draft, strings }, label, { more, blocked = false }) {
+  const lock = locked(draft) ? " disabled" : "";
   const off = (locked(draft) || blocked ? " disabled" : "") + (blocked ? ` aria-describedby="${NO_CALENDAR_ID}"` : "");
   return (
     `<div class="cal-qc-foot">` +
-    (more ? `<button type="button" class="cal-qc-more" data-qc-more data-qc-key="more"${off}>${escapeHtml(strings.more_options)}</button>` : "") +
+    (more ? `<button type="button" class="cal-qc-more" data-qc-more data-qc-key="more"${lock}>${escapeHtml(strings.more_options)}</button>` : "") +
     `<button type="button" class="cal-qc-save action-button action-button--primary action-button--sm" data-qc-save data-qc-key="save"${off}>${escapeHtml(label)}</button>` +
     `</div>`
   );

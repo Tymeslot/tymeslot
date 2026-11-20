@@ -2,9 +2,9 @@ defmodule Tymeslot.Notifications.Events.Seats do
   @moduledoc """
   The notification events of a seat on a group meeting: booked, cancelled
   and moved, the release of seat confirmations once a video room exists, and
-  the seat's own integration dispatch. Split from
-  `Tymeslot.Notifications.Events`, which handles the meeting-level events
-  and runs the deferred fan-outs these return.
+  the seat's own integration dispatch. `Tymeslot.Notifications.Events`
+  handles the meeting-level events and runs the deferred fan-outs these
+  return.
   """
 
   alias Tymeslot.Meetings.ParticipantQueries

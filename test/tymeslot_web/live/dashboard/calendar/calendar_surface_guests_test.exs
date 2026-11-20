@@ -101,12 +101,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
     assert Enum.map(row.attendees, & &1["email"]) == ["ada@example.com", "grace@example.com"]
   end
 
+  test "the reason an address is not invited is said under the field, not in a flash, and typing clears it",
+       %{lv: lv} do
+    invite(lv, "not an email")
+
+    assert has_element?(lv, "#calendar-panel-guest-form", "Enter a valid email address.")
+    refute has_element?(lv, "[id$='flash-group-warning']", "Enter a valid email address.")
+
+    lv
+    |> form("#calendar-panel-guest-form")
+    |> render_change(%{"email" => "grace@"})
+
+    refute has_element?(lv, "#calendar-panel-guest-form", "Enter a valid email address.")
+  end
+
   test "an address that is not an email, or a guest already invited, sends nothing", %{lv: lv} do
     invite(lv, "not an email")
-    assert render(lv) =~ "Enter a valid email address."
+    assert has_element?(lv, "#calendar-panel-guest-form", "Enter a valid email address.")
 
     invite(lv, "ADA@example.com")
-    assert render(lv) =~ "ada@example.com is already a guest."
+    assert has_element?(lv, "#calendar-panel-guest-form", "ada@example.com is already a guest.")
 
     refute_enqueued(worker: EmailWorker)
     refute_receive {:provider_update, _pid, _payload}, 100
@@ -261,7 +275,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
 
     invite(lv, "one-too-many@example.com")
 
-    assert render(lv) =~ "An event can have at most 50 guests."
+    assert has_element?(lv, "#calendar-panel-guest-form", "An event can have at most 50 guests.")
     refute_enqueued(worker: EmailWorker)
     refute_receive {:provider_update, _pid, _payload}, 100
   end
@@ -391,14 +405,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
     # client would send it. The panel shows the changed place, so the event
     # differs from the one the panel opened on and `tell/1` gets as far as
     # the domain, which refuses it (`Changes.tell_guests/5`).
-    defp change_and_force_tell(conn, event, refusal) do
+    # `place` finds the changed place: a field, or text on an event that
+    # cannot be edited.
+    defp change_and_force_tell(conn, event, refusal, place) do
       lv = open_panel(conn, event)
 
       event |> Changeset.change(location: "Room 9") |> Repo.update!()
       send_update(lv.pid, CalendarSurface, id: "calendar", action: :events_updated)
       send_update(lv.pid, CalendarSurface, id: "calendar", action: :reload)
 
-      assert has_element?(lv, ~s|#calendar-panel-location[value="Room 9"]|)
+      assert has_element?(lv, place)
+
       refute has_element?(lv, "#calendar-panel-untold")
       refute has_element?(lv, "#app-flash-group", refusal)
 
@@ -408,7 +425,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
 
     test "an event someone else organises offers no note and a forced Tell guests sends nothing",
          %{conn: conn, integration: integration} do
-      lv = change_and_force_tell(conn, theirs(integration), "Someone else organises this event")
+      lv =
+        change_and_force_tell(
+          conn,
+          theirs(integration),
+          "Someone else organises this event",
+          ~s|#calendar-panel-location[value="Room 9"]|
+        )
 
       nothing_sent()
       assert has_element?(lv, "#app-flash-group", "Someone else organises this event")
@@ -431,7 +454,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceGuestsTest do
           attendees: [%{"email" => "ada@example.com"}]
         )
 
-      lv = change_and_force_tell(conn, shared, "This calendar is read-only.")
+      lv =
+        change_and_force_tell(
+          conn,
+          shared,
+          "This calendar is read-only.",
+          "#calendar-panel-location-text"
+        )
 
       nothing_sent()
       assert has_element?(lv, "#app-flash-group", "This calendar is read-only.")

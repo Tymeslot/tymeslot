@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommonPartialReadTest d
   alias Tymeslot.Infrastructure.ResponseTooLargeError
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
+  alias Tymeslot.Test.LogCapture
 
   setup :set_mox_global
   setup :verify_on_exit!
@@ -58,6 +59,34 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommonPartialReadTest d
       assert {:error, %Outcome{succeeded: 1, failed: [%{source: @unreadable}]}} =
                CaldavCommon.get_events(client, f, t)
     end
+  end
+
+  test "a calendar that cannot be read is logged against its integration and provider", %{
+    range: {f, t}
+  } do
+    stub_unreadable_answer({:ok, %Req.Response{status: 403, body: ""}})
+
+    client =
+      CaldavCommon.client_for_integration(%{
+        id: 4_217,
+        provider: "radicale",
+        base_url: "https://dav.example.com",
+        username: "host",
+        password: "secret",
+        calendar_paths: [@readable, @unreadable]
+      })
+
+    LogCapture.attach()
+    assert {:error, %Outcome{}} = CaldavCommon.get_events(client, f, t)
+
+    assert_receive {:captured_log,
+                    %{
+                      msg: {:string, "Some calendar fetches failed"},
+                      meta: %{calendar_integration_id: 4_217, provider: :radicale} = meta
+                    }}
+
+    refute inspect(meta) =~ "dav.example.com"
+    refute inspect(meta) =~ @unreadable
   end
 
   test "a calendar the server says is gone is absent, not unreadable", %{

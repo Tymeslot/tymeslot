@@ -358,16 +358,18 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @doc """
   Creates a Tymeslot meeting with guests in the background, through
   `Tymeslot.CalendarGrid.EventCreation.run_create_ad_hoc_meeting/1`, and
-  reports back with `{:create_ad_hoc_meeting_result, result}`, which is
-  `{:error, :crashed}` if the create raises (`WriteTask`). The calendar
-  that offers meeting mode sends `{:execute_create_ad_hoc_meeting, params}`.
+  reports back with `{:create_ad_hoc_meeting_result, request, result}`, where
+  `result` is `{:error, :crashed}` if the create raises (`WriteTask`). The
+  calendar that offers meeting mode sends
+  `{:execute_create_ad_hoc_meeting, request, params}`; `request` is its ref
+  for the panel that asked, handed back so only that panel acts on the result.
   """
-  @spec handle_execute_create_ad_hoc_meeting(map(), Phoenix.LiveView.Socket.t()) ::
+  @spec handle_execute_create_ad_hoc_meeting(reference(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_execute_create_ad_hoc_meeting(params, socket) do
+  def handle_execute_create_ad_hoc_meeting(request, params, socket) do
     :ok =
       WriteTask.start(
-        :create_ad_hoc_meeting_result,
+        {:create_ad_hoc_meeting_result, request},
         fn -> EventCreation.run_create_ad_hoc_meeting(params) end,
         {:error, :crashed}
       )
@@ -376,16 +378,18 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   @doc """
-  Handles the result of a meeting's creation: the organiser is told how it
+  Handles the result of the meeting `request`: the organiser is told how it
   went, and the calendar on screen hears `:ad_hoc_meeting_created` or
-  `:ad_hoc_meeting_failed` so it can close or reopen its form.
+  `:ad_hoc_meeting_failed` with the request, so the panel that asked for it
+  can close or reopen its form.
   """
   @spec handle_create_ad_hoc_meeting_result(
+          reference(),
           {:ok, any()} | {:error, term()},
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_create_ad_hoc_meeting_result({:ok, _result}, socket) do
-    CalendarRouting.to_mounted(socket, action: :ad_hoc_meeting_created)
+  def handle_create_ad_hoc_meeting_result(request, {:ok, _result}, socket) do
+    CalendarRouting.to_mounted(socket, action: :ad_hoc_meeting_created, request: request)
 
     {:noreply,
      put_flash(
@@ -395,8 +399,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
      )}
   end
 
-  def handle_create_ad_hoc_meeting_result({:error, reason}, socket) do
-    CalendarRouting.to_mounted(socket, action: :ad_hoc_meeting_failed)
+  def handle_create_ad_hoc_meeting_result(request, {:error, reason}, socket) do
+    CalendarRouting.to_mounted(socket, action: :ad_hoc_meeting_failed, request: request)
     {:noreply, put_flash(socket, :error, ad_hoc_failed_message(reason))}
   end
 
@@ -410,6 +414,15 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     dgettext(
       "dashboard_calendar_events",
       "This time is no longer available. Please choose another time."
+    )
+  end
+
+  # A saved location deleted after the panel built the meeting, before the
+  # booking read it.
+  defp ad_hoc_failed_message(:invalid_location) do
+    dgettext(
+      "dashboard_calendar_events",
+      "That location can no longer be used. Please choose another one."
     )
   end
 

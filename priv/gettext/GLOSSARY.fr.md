@@ -135,7 +135,7 @@ Settled while translating; reuse rather than re-coining.
 | booking link | **lien de réservation** |
 | link (the username field: the host's address at `/<username>`) | **lien** (*Votre lien*, *Commencez votre lien par une lettre…*); never *nom d’utilisateur* in the onboarding wizard |
 | **keep** (your link: save it somewhere you will find it) | **garder** (*Ou gardez-le pour plus tard*, *Commencez par envoyer ou garder votre lien*); never *conserver* or *enregistrer* here, which read as a save action |
-| **Live** (onboarding step name and badge) | **En ligne** (*Votre page est en ligne*, *Presque en ligne*); *Live Preview* stays **Aperçu en direct** |
+| **Live** (onboarding step name and badge) | **En ligne** (*Votre page est en ligne*, *Presque en ligne*); *Live Preview* stays **Aperçu en direct** (see the *Preview / Live Preview* row) |
 | Look (onboarding step: the theme) | **Style** (*Votre style*, *Comparer les styles*) |
 | double bookings | **doubles réservations** |
 | minimum notice | **préavis minimum** |
@@ -162,6 +162,10 @@ Settled while translating; reuse rather than re-coining.
 | Block this time / Blocked | **Bloquer ce créneau** / **Bloqué** |
 | Copy free times | **Copier les créneaux libres** |
 | Request (pill for a booking awaiting approval) / Expired | **Demande** / **Expirée** (feminine, agreeing with *demande*) |
+| **tell guests** (notify guests of a change to an event) | **prévenir les invités** (*Prévenir les invités*, *Supprimer et prévenir les invités*, *Impossible de prévenir les invités*, *Prévenez les invités une fois l’enregistrement terminé*); never *notifier* or *informer*. The message they receive is **une mise à jour** (*Les invités recevront une mise à jour*); the held, cancellable update is **en attente d’envoi** (*Cette mise à jour n’est plus en attente d’envoi*) |
+| **Tymeslot meeting** (a booked meeting sent from the calendar) | **réunion Tymeslot** (*Envoyer comme réunion Tymeslot*, *Ajoutez un invité pour envoyer une réunion Tymeslot*), kept apart from a plain calendar entry, which is an **événement**. Never *événement Tymeslot*, and never bare *réunion* where the two could be confused |
+| **Syncing** (a calendar write the provider has not confirmed yet) | **Synchronisation en cours**; in a sentence *Synchronisation avec votre calendrier en cours*. Never the bare *Synchronisation*, which reads as a setting or a section name |
+| **Preview** / **Live Preview** | **Aperçu** (noun: *Aperçu du thème*, *Aperçu de la réservation*) and **prévisualiser** (verb: *Connectez un calendrier pour prévisualiser*) / **Aperçu en direct**. *Live* here is **en direct**, not the onboarding badge's *En ligne* |
 | translation (noun; booking-page languages) | **traduction** (f., pl. **traductions**); *%{language} translations* → **Traductions : %{language}**, *Your %{language} translations* → **Vos traductions (%{language})**: `%{language}` is filled with the language’s own name, so it goes after a colon or in brackets, never after *en* or *de* |
 | translate | **traduire**; the participle agrees with *textes* (*%{translated}/%{total} traduits*) |
 | original language (the language the host writes their texts in) | **langue d’origine**; *in %{language}* → **dans la langue d’origine (%{language})**; the original text is **l’original** (*s’affiche dans sa version originale*); the badge beside that language is **originale**, agreeing with *langue* |
