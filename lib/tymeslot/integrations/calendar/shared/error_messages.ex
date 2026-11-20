@@ -15,6 +15,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.Family
+
   @typedoc "Coarse buckets a calendar failure falls into."
   @type error_category ::
           :auth | :network | :config | :permission | :rate_limit | :timeout | :unknown
@@ -216,6 +218,20 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
     )
   end
 
+  # A server the owner names themselves may be reachable only from their own
+  # network or over a VPN, and from outside it times out just as a slow one
+  # does. Retrying cannot fix that, so the message names the cause the owner
+  # can act on. Providers with a fixed address keep the category's wording.
+  def specific_message(:timeout, provider) do
+    if Family.own_server?(provider) do
+      dgettext(
+        "integrations_calendar",
+        "%{provider} did not respond in time. If the server is only reachable from your organisation's network or over a VPN, Tymeslot cannot connect to it: ask your administrator to make its calendar address reachable from the internet. Otherwise the server may be busy, so try again in a few minutes.",
+        provider: format_provider_name(provider)
+      )
+    end
+  end
+
   def specific_message({:error, reason}, provider), do: specific_message(reason, provider)
 
   def specific_message(_error, _provider), do: nil
@@ -401,6 +417,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorMessages do
       :nextcloud -> "Nextcloud"
       :radicale -> "Radicale"
       :zimbra -> "Zimbra"
+      :baikal -> "Baikal"
       :mailbox_org -> "mailbox.org"
       :apple -> "Apple iCloud"
       :google -> "Google Calendar"

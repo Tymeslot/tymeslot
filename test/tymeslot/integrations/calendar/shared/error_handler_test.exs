@@ -134,4 +134,31 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandlerTest do
                ErrorHandler.classify_and_format(:malformed_response, :google)
     end
   end
+
+  # A company calendar server reachable only on the office network or over a
+  # VPN times out from Tymeslot exactly as a slow one does, and "try again"
+  # sends its owner round the same loop. Only a server the owner names can be
+  # such a one; a provider with a fixed address keeps the category's wording.
+  describe "a timeout from a server the owner names" do
+    @unreachable_advice "only reachable from your organisation's network or over a VPN"
+
+    test "points at the network the server sits on" do
+      for provider <- [:zimbra, :caldav, :nextcloud, :radicale, :baikal] do
+        assert {:timeout, message} = ErrorHandler.classify_and_format(:timeout, provider)
+        assert message =~ @unreachable_advice
+      end
+
+      assert {:timeout, "Zimbra did not respond in time." <> _rest} =
+               ErrorHandler.classify_and_format(:timeout, :zimbra)
+    end
+
+    test "keeps the category's wording for a provider with a fixed address" do
+      for provider <- [:apple, :mailbox_org, :google, :outlook] do
+        assert {:timeout, message} = ErrorHandler.classify_and_format(:timeout, provider)
+        assert message =~ "timed out"
+        refute message =~ @unreachable_advice
+      end
+    end
+  end
+
 end
