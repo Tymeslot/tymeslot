@@ -89,12 +89,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
 
   defp provider(_integrations, nil), do: nil
 
-  defp provider(integrations, draft) do
-    case Enum.find(integrations, &(&1.id == draft.integration_id)) do
-      nil -> nil
-      integration -> integration.provider
-    end
-  end
+  defp provider(integrations, draft), do: PanelFields.provider(integrations, draft.integration_id)
 
   # Asked on every update the panel's event or its starting point changes;
   # the diff is pure, no query. Never drawn for an event whose guests the
@@ -298,6 +293,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
         />
         <PanelFields.reminder_field
           reminders={Map.get(@event, :reminders) || []}
+          provider={
+            PanelFields.provider(@context.integrations, Map.get(@event, :calendar_integration_id))
+          }
           disabled={!@editable}
           target={@surface}
         />

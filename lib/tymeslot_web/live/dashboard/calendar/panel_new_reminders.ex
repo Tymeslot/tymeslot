@@ -23,8 +23,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
 
   alias Tymeslot.CalendarGrid.CreateParams
   alias TymeslotWeb.Components.Calendar.ReminderForm
-  alias TymeslotWeb.Components.Calendar.RemindersEditor
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
+  alias TymeslotWeb.Dashboard.Calendar.PanelReminderList
 
   @type socket :: Phoenix.LiveView.Socket.t()
 
@@ -134,26 +134,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
     ~H"""
     <section id="calendar-panel-new-reminders" class="space-y-2">
       <h3 class="label mb-0">{dgettext("dashboard_calendar_editing", "Reminders")}</h3>
-      <ul :if={@reminders != []} class="flex flex-wrap gap-1.5">
-        <li
-          :for={{reminder, index} <- Enum.with_index(@reminders)}
-          class="inline-flex max-w-full items-center gap-1 rounded-token-full bg-tymeslot-100 py-0.5 pl-2.5 pr-1 text-token-sm text-tymeslot-800"
-        >
-          <span class="truncate">{RemindersEditor.reminder_label(reminder)}</span>
-          <button
-            type="button"
-            phx-click={JS.push("panel:draft_drop_reminder", value: %{index: index}, target: @surface)}
-            aria-label={
-              dgettext("dashboard_calendar_editing", "Remove reminder %{label}",
-                label: RemindersEditor.reminder_label(reminder)
-              )
-            }
-            class="shrink-0 rounded-token-full p-0.5 text-tymeslot-500 hover:bg-tymeslot-200 hover:text-tymeslot-800 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-400 max-sm:min-h-11 max-sm:min-w-11"
-          >
-            <.icon name="hero-x-mark-micro" class="h-4 w-4" />
-          </button>
-        </li>
-      </ul>
+      <PanelReminderList.chips
+        reminders={@reminders}
+        remove={
+          fn {_reminder, index} ->
+            JS.push("panel:draft_drop_reminder", value: %{index: index}, target: @surface)
+          end
+        }
+      />
       <div :if={!@full} class="flex flex-wrap items-end gap-2">
         <.select
           id="calendar-panel-new-reminder-minutes"
@@ -161,12 +149,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
           compact
           aria-label={dgettext("dashboard_calendar_editing", "Reminder time")}
           value={@values["event_reminder_minutes"]}
-          options={
-            Enum.map(
-              ReminderForm.reminder_minutes_presets(),
-              &{RemindersEditor.minutes_label(&1), Integer.to_string(&1)}
-            )
-          }
+          options={PanelReminderList.minutes_options()}
         />
         <.select
           :if={!@single}
@@ -175,10 +158,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewReminders do
           compact
           aria-label={dgettext("dashboard_calendar_editing", "Reminder method")}
           value={@values["event_reminder_method"]}
-          options={[
-            {dgettext("dashboard_calendar_events", "Notification"), "popup"},
-            {dgettext("dashboard_calendar_events", "Email"), "email"}
-          ]}
+          options={PanelReminderList.method_options()}
         />
         <%!-- A plain button, not a submit: Enter in the form's fields must
               reach the guest field's Add, its first submit button. --%>
