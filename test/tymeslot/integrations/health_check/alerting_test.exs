@@ -191,6 +191,26 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
       refute_received {:send_alert, _type, _payload}
     end
 
+    # Deactivating keeps the flag, but an inactive calendar is never read.
+    test "counts an organiser whose calendar awaiting reconnection has been deactivated",
+         %{user: user, hour: hour} do
+      flag_integrations(user, 1, DateTime.add(hour, -5, :hour), is_active: false)
+      insert_refusals(user, hour, 6)
+
+      assert :alerted = Alerting.check_signal(:availability_refusals, at(hour, 1))
+      assert_received {:send_alert, :integration_health_failure, %{affected_user_ids: [user_id]}}
+      assert user_id == user.id
+    end
+
+    test "leaves out an organiser whose calendar was flagged in the window, then deactivated",
+         %{user: user, hour: hour} do
+      flag_integrations(user, 1, at(hour, 0), is_active: false)
+      insert_refusals(user, hour, 6)
+
+      assert :ok = Alerting.check_signal(:availability_refusals, at(hour, 1))
+      refute_received {:send_alert, _type, _payload}
+    end
+
     test "counts an organiser reconnected before the window whose calendar fails again",
          %{user: user, hour: hour} do
       [integration] = flag_integrations(user, 1, DateTime.add(hour, -5, :hour))
@@ -610,14 +630,14 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
     })
   end
 
-  defp flag_integrations(user, count, flagged_at) do
+  defp flag_integrations(user, count, flagged_at, attrs \\ []) do
     freeze_clock(flagged_at)
 
     integrations =
       for _n <- 1..count do
         {:ok, flagged, true} =
           :calendar_integration
-          |> insert(user: user)
+          |> insert([user: user] ++ attrs)
           |> CalendarIntegrationQueries.flag_needs_reauth("Token revoked")
 
         flagged
