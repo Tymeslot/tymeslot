@@ -35,6 +35,11 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   link travels in the description it was written into, and the cached link
   and video integration are carried onto the destination's row.
 
+  The reminders are those the destination keeps
+  (`CreateParams.fit_reminders/2`): one notification on Outlook or Exchange,
+  at most `CreateParams.max_reminders/0` elsewhere. The create and the cached
+  row get the same list, so the panel shows what the destination holds.
+
   ## Recurring events
 
   A member of a series is never moved on its own. The create path writes a
@@ -134,14 +139,35 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   @doc """
   Whether a calendar of `integration` keeps every reminder `event` has, so a
   move there carries them all (`CreateParams.fit_reminders/2`). Outlook and
-  Exchange keep one notification, so an event with more, or with an email reminder, loses
-  the rest when it moves there. Reads the cached row, as `move_event/3` does.
+  Exchange keep one notification, so an event with more, or with an email
+  reminder, loses the rest when it moves there. A series always keeps them:
+  it moves only within its provider's family, copied as the provider holds
+  it (`SeriesTransfer`). Reads the cached row, as `move_event/3` does.
   """
   @spec keeps_reminders?(map(), map()) :: boolean()
   def keeps_reminders?(event, %{provider: provider}) do
-    reminders = event |> Occurrence.cached_row() |> Map.get(:reminders) |> List.wrap()
-    reminders = Enum.map(reminders, &Reminder.normalise/1)
-    CreateParams.fit_reminders(reminders, provider) == reminders
+    stored = Occurrence.cached_row(event)
+
+    case movable(stored) do
+      {:ok, :series} ->
+        true
+
+      _single_or_refused ->
+        reminders = Map.get(stored, :reminders)
+        fit_reminders(reminders, provider) == reminders
+    end
+  end
+
+  # `reminders` as a calendar of `provider` keeps them, left exactly as they
+  # are when it keeps them all: a cached list is string-keyed, and is only
+  # rewritten in the canonical shape when something had to go.
+  defp fit_reminders(reminders, provider) do
+    normalised = reminders |> List.wrap() |> Enum.map(&Reminder.normalise/1)
+
+    case CreateParams.fit_reminders(normalised, provider) do
+      ^normalised -> reminders
+      fitted -> fitted
+    end
   end
 
   @doc """
@@ -306,6 +332,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
       | uid: ICalBuilder.generate_uid(if(owned?, do: :tymeslot, else: :foreign)),
         calendar_integration_id: integration.id,
         provider: integration.provider,
+        reminders: fit_reminders(event.reminders, integration.provider),
         provider_calendar_id: destination_calendar_id(integration, calendar_id),
         provider_event_id: nil
     }

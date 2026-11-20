@@ -1,8 +1,9 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferRemindersTest do
   @moduledoc """
   Moving an event to a calendar that keeps fewer reminders than it has
-  (Outlook and Exchange keep one notification): the move goes ahead with every reminder
-  sent, and the toast says not all of them came across.
+  (Outlook and Exchange keep one notification): the move goes ahead with
+  the reminders the destination keeps, and the toast says not all of them
+  came across.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -84,13 +85,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferRemindersTest do
     payload
   end
 
-  test "still moves, sends every reminder, and the toast says not all came across", %{
-    lv: lv,
-    outlook: outlook
-  } do
+  test "still moves, sends the reminder Outlook keeps, and the toast says not all came across",
+       %{lv: lv, outlook: outlook} do
     choose_calendar(lv, "#{outlook.id}:cal")
 
-    assert [%{method: :popup, minutes_before: 10}, %{method: :email}] = await_move(lv).reminders
+    assert [%{method: :popup, minutes_before: 10}] = await_move(lv).reminders
     assert has_element?(lv, "#calendar-toast", "Moved to Outlook")
 
     assert has_element?(
