@@ -45,6 +45,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
           status: status(),
           paid_at: DateTime.t() | nil,
           refunded_amount_cents: integer(),
+          disputed_lost_cents: integer(),
           last_event_id: String.t() | nil,
           stripe_dispute_id: String.t() | nil,
           dispute_closed_at: DateTime.t() | nil,
@@ -75,7 +76,11 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
 
     field :status, Ecto.Enum, values: @valid_statuses, default: :pending
     field :paid_at, :utc_datetime
+    # Everything given back to the attendee: refunds made at Stripe plus
+    # what a lost dispute took (`disputed_lost_cents`, a part of it). See
+    # `Tymeslot.MeetingPayments.RefundedTotal`.
     field :refunded_amount_cents, :integer, default: 0
+    field :disputed_lost_cents, :integer, default: 0
 
     field :last_event_id, :string
 
@@ -103,7 +108,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
               ~w(
                 meeting_id host_name attendee_email attendee_name booking_theme_id
                 stripe_checkout_session_id stripe_payment_intent_id stripe_charge_id
-                status paid_at refunded_amount_cents last_event_id host_deleted_at
+                status paid_at refunded_amount_cents disputed_lost_cents last_event_id host_deleted_at
                 stripe_dispute_id dispute_closed_at
               )a
 
@@ -122,6 +127,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     |> unique_constraint(:stripe_payment_intent_id)
     |> unique_constraint(:stripe_charge_id)
     |> check_constraint(:refunded_amount_cents, name: :refunded_amount_within_bounds)
+    |> check_constraint(:disputed_lost_cents, name: :disputed_lost_within_refunded)
   end
 
   @spec update_changeset(t(), map()) :: Ecto.Changeset.t()
@@ -130,6 +136,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     |> cast(attrs, @castable -- @required_on_create)
     |> validate_refunded_bounds()
     |> check_constraint(:refunded_amount_cents, name: :refunded_amount_within_bounds)
+    |> check_constraint(:disputed_lost_cents, name: :disputed_lost_within_refunded)
   end
 
   @spec valid_statuses() :: [status()]
@@ -156,6 +163,9 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
 
       refunded > amount ->
         add_error(changeset, :refunded_amount_cents, "cannot exceed amount_cents")
+
+      (get_field(changeset, :disputed_lost_cents) || 0) not in 0..refunded//1 ->
+        add_error(changeset, :disputed_lost_cents, "must be within refunded_amount_cents")
 
       true ->
         changeset

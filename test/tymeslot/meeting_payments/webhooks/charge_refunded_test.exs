@@ -120,6 +120,50 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
     end
   end
 
+  describe "handle/1 after a partly lost dispute" do
+    # Stripe's `amount_refunded` counts refunds only; the 3000 a lost
+    # dispute took is no part of it.
+    test "records a refund of the remainder and settles the payment" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :partially_refunded,
+          amount_cents: 5000,
+          refunded_amount_cents: 3000,
+          disputed_lost_cents: 3000,
+          stripe_charge_id: "ch_AFTER_LOSS"
+        )
+
+      assert :ok = ChargeRefunded.handle(refund_event("evt_AFTER_LOSS", "ch_AFTER_LOSS", 2000))
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == :refunded
+      assert reloaded.refunded_amount_cents == 5000
+      assert reloaded.disputed_lost_cents == 3000
+    end
+
+    test "records a smaller refund on top of the loss" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :partially_refunded,
+          amount_cents: 5000,
+          refunded_amount_cents: 3000,
+          disputed_lost_cents: 3000,
+          stripe_charge_id: "ch_PART_AFTER_LOSS"
+        )
+
+      assert :ok =
+               ChargeRefunded.handle(
+                 refund_event("evt_PART_AFTER_LOSS", "ch_PART_AFTER_LOSS", 500)
+               )
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == :partially_refunded
+      assert reloaded.refunded_amount_cents == 3500
+    end
+  end
+
   describe "handle/1 with an event from another connected account" do
     test "leaves the booking payment untouched" do
       bp =

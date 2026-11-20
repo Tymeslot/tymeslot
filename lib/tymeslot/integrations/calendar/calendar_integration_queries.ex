@@ -407,8 +407,15 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
-  Which of `user_ids` have a calendar integration awaiting reconnection, or
-  flagged for it at or after `since` even if since reconnected.
+  Which of `user_ids` have an active calendar integration awaiting
+  reconnection, or one flagged for it at or after `since` even if since
+  reconnected or deactivated.
+
+  An inactive integration is never read, so one still awaiting reconnection
+  explains no refusal; deactivating keeps the flag, and counting it would
+  hide its organiser for as long as it stays paused. A flag raised at or
+  after `since` explains the refusals made while it was still read, and
+  stops counting once `since` passes it.
   """
   @spec user_ids_flagged_for_reauth([pos_integer()], DateTime.t()) :: MapSet.t(pos_integer())
   def user_ids_flagged_for_reauth([], _since), do: MapSet.new()
@@ -416,7 +423,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   def user_ids_flagged_for_reauth(user_ids, %DateTime{} = since) do
     CalendarIntegrationSchema
     |> where([c], c.user_id in ^user_ids)
-    |> where([c], c.needs_reauth or c.reauth_flagged_at >= ^since)
+    |> where([c], (c.needs_reauth and c.is_active) or c.reauth_flagged_at >= ^since)
     |> distinct(true)
     |> select([c], c.user_id)
     |> Repo.all()

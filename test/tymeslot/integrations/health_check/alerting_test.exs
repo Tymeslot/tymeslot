@@ -111,7 +111,9 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
 
     test "the organiser's own views of their offer turn no guest away, so are not counted",
          ctx do
-      assert {:error, _reason} =
+      # The calendar's own reason: an earlier refusal (`:not_found` for a
+      # meeting type it could not find) would never read the calendar at all.
+      assert {:error, :all_calendars_unavailable} =
                Availability.bookable_windows(ctx.user.id, ctx.meeting_type.id, ctx.date, ctx.date)
 
       assert {:error, :calendar_unavailable} =
@@ -183,6 +185,26 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
     test "leaves out an organiser still awaiting a reconnection asked for before the window",
          %{user: user, hour: hour} do
       flag_integrations(user, 1, DateTime.add(hour, -5, :hour))
+      insert_refusals(user, hour, 6)
+
+      assert :ok = Alerting.check_signal(:availability_refusals, at(hour, 1))
+      refute_received {:send_alert, _type, _payload}
+    end
+
+    # Deactivating keeps the flag, but an inactive calendar is never read.
+    test "counts an organiser whose calendar awaiting reconnection has been deactivated",
+         %{user: user, hour: hour} do
+      flag_integrations(user, 1, DateTime.add(hour, -5, :hour), is_active: false)
+      insert_refusals(user, hour, 6)
+
+      assert :alerted = Alerting.check_signal(:availability_refusals, at(hour, 1))
+      assert_received {:send_alert, :integration_health_failure, %{affected_user_ids: [user_id]}}
+      assert user_id == user.id
+    end
+
+    test "leaves out an organiser whose calendar was flagged in the window, then deactivated",
+         %{user: user, hour: hour} do
+      flag_integrations(user, 1, at(hour, 0), is_active: false)
       insert_refusals(user, hour, 6)
 
       assert :ok = Alerting.check_signal(:availability_refusals, at(hour, 1))
@@ -608,14 +630,14 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
     })
   end
 
-  defp flag_integrations(user, count, flagged_at) do
+  defp flag_integrations(user, count, flagged_at, attrs \\ []) do
     freeze_clock(flagged_at)
 
     integrations =
       for _n <- 1..count do
         {:ok, flagged, true} =
           :calendar_integration
-          |> insert(user: user)
+          |> insert([user: user] ++ attrs)
           |> CalendarIntegrationQueries.flag_needs_reauth("Token revoked")
 
         flagged

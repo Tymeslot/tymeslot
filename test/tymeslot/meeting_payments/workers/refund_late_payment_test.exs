@@ -23,6 +23,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Repo
 
@@ -274,6 +275,39 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
     {:ok, again} = Oban.insert(RefundLatePayment.new_after_dispute(payment.id))
     assert again.conflict?
     assert again.id == after_dispute.id
+  end
+
+  # Stripe's refunded total after the remainder is refunded is the
+  # remainder alone; the part the dispute took is no refund.
+  test "refunds what a partly lost dispute left and takes the booking off the host's list",
+       %{host: host, payment: payment} do
+    payment |> Changeset.change(status: :disputed) |> Repo.update!()
+
+    assert :ok =
+             ChargeDisputeClosed.handle(%{
+               "id" => "evt_PART_LOST",
+               "account" => "acct_LATE",
+               "type" => "charge.dispute.closed",
+               "data" => %{
+                 "object" => %{
+                   "id" => "dp_PART_LOST",
+                   "charge" => payment.stripe_charge_id,
+                   "amount" => 3000,
+                   "status" => "lost"
+                 }
+               }
+             })
+
+    assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+
+    expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, _opts ->
+      {:ok, %{id: "re_REST", amount: 2000, charge: %{amount_refunded: 2000}}}
+    end)
+
+    assert :ok = perform(payment)
+
+    assert %{status: :refunded, refunded_amount_cents: 5000} = Repo.reload!(payment)
+    assert MeetingPayments.list_outstanding_refunds_for_host(host.id) == []
   end
 
   test "spreads its attempts over about four hours, inside Stripe's idempotency window" do

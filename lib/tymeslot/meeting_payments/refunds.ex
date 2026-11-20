@@ -26,9 +26,11 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     * Updates the local `booking_payments` row, transitioning status
       to `partially_refunded` or `refunded` based on the new total. The
       new total is Stripe's own refunded total for the charge, read from
-      the refund's expanded charge and never lowering the recorded one
-      (the `charge.refunded` webhook's rule), so a refund Stripe answers
-      again for a replayed key is not counted twice.
+      the refund's expanded charge and never lowering the recorded
+      refunds (the `charge.refunded` webhook's rule), so a refund Stripe
+      answers again for a replayed key is not counted twice. What a lost
+      dispute took is added to it, never compared with it
+      (`RefundedTotal`).
     * Synchronously enqueues an attendee refund email via
       `Tymeslot.Workers.SendBookingPaymentRefunded`.
   """
@@ -40,6 +42,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Money
+  alias Tymeslot.MeetingPayments.RefundedTotal
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.Repo
@@ -227,8 +230,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
 
   An amount the recorded balance no longer covers may be this very refund,
   made by an attempt that rolled back and since recorded by the
-  `charge.refunded` webhook. When the recorded total could include it,
-  Stripe is asked anyway: a replayed key returns the refund already made,
+  `charge.refunded` webhook. When the recorded refunds could include it
+  (the part a lost dispute took never can), Stripe is asked anyway: a replayed key returns the refund already made,
   which records nothing new, and a fresh one Stripe rejects, which returns
   the local refusal (`:invalid_amount` or `:already_refunded`).
   """
@@ -286,10 +289,13 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     end
   end
 
-  # A refund already made is part of the recorded total, so an amount the
-  # total cannot hold was never made and needs no Stripe call.
-  defp replayable?(%{refunded_amount_cents: refunded}, amount_cents),
-    do: is_integer(amount_cents) and amount_cents > 0 and amount_cents <= refunded
+  # A refund already made is part of the recorded refunds, so an amount
+  # they cannot hold was never made and needs no Stripe call. A lost
+  # dispute's part of the total is no refund Stripe could replay.
+  defp replayable?(payment, amount_cents),
+    do:
+      is_integer(amount_cents) and amount_cents > 0 and
+        amount_cents <= RefundedTotal.stripe_refunded_cents(payment)
 
   # The key may name a refund Stripe already made, which the recorded
   # balance now includes: a replay returns it, and a refund Stripe was
@@ -385,15 +391,15 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   end
 
   # Stripe's refunded total for the charge, which counts this refund once
-  # however often its key is replayed, and never below the recorded total
+  # however often its key is replayed, and never below the recorded refunds
   # (the webhook's rule). A response without the expanded charge falls back
-  # to adding the refund to the recorded total.
+  # to adding the refund to the recorded refunds.
   defp refunded_total(payment, _amount_cents, %{charge: %{amount_refunded: stripe_total}})
        when is_integer(stripe_total),
-       do: max(payment.refunded_amount_cents, stripe_total)
+       do: RefundedTotal.with_stripe_refunded(payment, stripe_total)
 
   defp refunded_total(payment, amount_cents, _stripe_refund),
-    do: payment.refunded_amount_cents + amount_cents
+    do: RefundedTotal.with_refund_added(payment, amount_cents)
 
   defp enqueue_refund_email(payment) do
     case %{booking_payment_id: payment.id}

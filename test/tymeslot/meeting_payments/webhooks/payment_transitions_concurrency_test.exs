@@ -107,7 +107,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     assert unboxed(fn -> Repo.get!(MeetingSchema, meeting.id).status end) == :confirmed
   end
 
-  test "a lost dispute racing a larger refund keeps the larger refunded amount", ctx do
+  test "a lost dispute racing a refund adds to the refund rather than writing over it", ctx do
     payment =
       unboxed(fn ->
         insert(:paid_booking_payment,
@@ -144,8 +144,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     assert results == [:ok, :ok]
 
     reloaded = unboxed(fn -> Repo.get!(BookingPaymentSchema, payment.id) end)
-    assert reloaded.refunded_amount_cents == 3000
-    assert reloaded.status == :partially_refunded
+    assert reloaded.refunded_amount_cents == 5000
+    assert reloaded.disputed_lost_cents == 2000
+    assert reloaded.status == :refunded
   end
 
   # A charge can be disputed the instant it is captured, so the dispute can

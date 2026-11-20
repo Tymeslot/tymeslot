@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
     EntryRefusal,
     OrganizerHelpers,
     PageAddress,
+    PreviewMode,
     PreviewToken,
     ThemeUtils
   }
@@ -269,15 +270,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Mount do
   end
 
   defp refused_calendars(socket) do
-    organizer_user_id = socket.assigns[:organizer_user_id]
-
-    owner_viewing? =
-      is_integer(organizer_user_id) and
-        (socket.assigns[:owner_preview] == true or
-           socket.assigns[:viewer_user_id] == organizer_user_id)
-
-    with true <- owner_viewing? and connected?(socket),
-         {:credentials_refused, names} <- Calendar.booking_page_health(organizer_user_id) do
+    with true <- PreviewMode.organiser_viewing?(socket) and connected?(socket),
+         {:credentials_refused, names} <-
+           Calendar.booking_page_health(socket.assigns.organizer_user_id) do
       names
     else
       _taking_bookings_or_not_the_owner -> []

@@ -53,6 +53,7 @@ defmodule Tymeslot.InviteeData do
 
   require Logger
 
+  alias Tymeslot.Availability
   alias Tymeslot.Clock
   alias Tymeslot.InviteeData.InviteeDataQueries, as: Queries
   alias Tymeslot.Meetings.EmailVerification
@@ -135,20 +136,40 @@ defmodule Tymeslot.InviteeData do
     now = DateTime.truncate(Clock.utc_now(), :second)
 
     result =
-      Repo.transaction(fn ->
-        case Queries.upcoming_meeting_uids(email, scope, now) do
-          [] -> erase_rows(email, scope, now)
-          uids -> Repo.rollback({:upcoming_meetings, uids})
-        end
-      end)
+      announce_released(
+        Repo.transaction(fn ->
+          case Queries.upcoming_meeting_uids(email, scope, now) do
+            [] -> {release_holds(email, scope), erase_rows(email, scope, now)}
+            uids -> Repo.rollback({:upcoming_meetings, uids})
+          end
+        end)
+      )
 
     log_erasure(result, scope)
     result
   end
 
-  defp erase_rows(email, scope, now) do
-    email |> Queries.held_meetings_for_attendee(scope) |> Enum.each(&EmailVerification.release/1)
+  # The holds are released inside the erasure's transaction, and the slots
+  # they free announced only once it commits (`announce_released/1`).
+  defp release_holds(email, scope) do
+    email
+    |> Queries.held_meetings_for_attendee(scope)
+    |> Enum.flat_map(fn meeting ->
+      case EmailVerification.release_in_transaction(meeting) do
+        {:ok, released} -> [released.organizer_user_id]
+        {:error, :not_awaiting_verification} -> []
+      end
+    end)
+  end
 
+  defp announce_released({:ok, {organiser_ids, erased}}) do
+    organiser_ids |> Enum.uniq() |> Enum.each(&Availability.changed/1)
+    {:ok, erased}
+  end
+
+  defp announce_released({:error, _reason} = error), do: error
+
+  defp erase_rows(email, scope, now) do
     meeting_ids = Queries.meeting_ids_for_attendee(email, scope)
     participants = Queries.participant_rows_for_email(email, scope)
     guests = Queries.guest_rows_for_email(email, scope)
