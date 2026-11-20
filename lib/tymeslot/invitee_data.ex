@@ -35,7 +35,12 @@ defmodule Tymeslot.InviteeData do
 
   Upcoming bookings are refused rather than erased: a confirmed meeting with
   its invitee's address removed could no longer be cancelled, moved or
-  reminded about. Cancel them first, then erase.
+  reminded about. Cancel them first, then erase. A booking still held for
+  email confirmation is neither refused nor named: the host has not been
+  told of it. It is released, silently as a disowned hold is
+  (`Tymeslot.Meetings.EmailVerification.release/1`), and then erased, so a
+  late click on the confirmation link cannot confirm a booking with no one
+  behind it.
 
   A booking series holds its booker's name and email too. An erasure clears
   the series booked under the address, and the purge clears a series with
@@ -50,6 +55,7 @@ defmodule Tymeslot.InviteeData do
 
   alias Tymeslot.Clock
   alias Tymeslot.InviteeData.InviteeDataQueries, as: Queries
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Repo
 
   @batch_size 500
@@ -141,6 +147,8 @@ defmodule Tymeslot.InviteeData do
   end
 
   defp erase_rows(email, scope, now) do
+    email |> Queries.held_meetings_for_attendee(scope) |> Enum.each(&EmailVerification.release/1)
+
     meeting_ids = Queries.meeting_ids_for_attendee(email, scope)
     participants = Queries.participant_rows_for_email(email, scope)
     guests = Queries.guest_rows_for_email(email, scope)

@@ -418,6 +418,12 @@ defmodule Tymeslot.Meetings.MeetingState do
     where(query, [m], m.status == @awaiting_verification)
   end
 
+  @doc "Negation of `where_awaiting_verification/1`: keeps only meetings not held for verification."
+  @spec where_not_awaiting_verification(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def where_not_awaiting_verification(query) do
+    where(query, [m], m.status != @awaiting_verification)
+  end
+
   @doc """
   Query-side counterpart of `visible_to_organiser?/1`, and the same rule
   clause for clause: verified or never gated, and past payment. Assumes the
