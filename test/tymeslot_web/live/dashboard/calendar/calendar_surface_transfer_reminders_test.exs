@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferRemindersTest do
   @moduledoc """
   Moving an event to a calendar that keeps fewer reminders than it has
-  (Outlook keeps one notification): the move goes ahead with every reminder
+  (Outlook and Exchange keep one notification): the move goes ahead with every reminder
   sent, and the toast says not all of them came across.
   """
 
@@ -43,6 +43,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferRemindersTest do
         calendar_list: [%{"id" => "cal", "name" => "Outlook", "selected" => true}]
       )
 
+    exchange =
+      insert(:calendar_integration,
+        user: context.user,
+        name: "Exchange account",
+        provider: "exchange",
+        is_active: true,
+        calendar_list: [%{"id" => "ews", "name" => "Exchange", "selected" => true}]
+      )
+
     planning =
       event(context.integration, "work", "Planning", ~U[2026-10-15 09:00:00Z], 60,
         reminders: [
@@ -57,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferRemindersTest do
     |> element("#calendar-canvas")
     |> render_hook("calendar:edit", %{"id" => "event-#{planning.id}"})
 
-    Map.merge(context, %{lv: lv, outlook: outlook})
+    Map.merge(context, %{lv: lv, outlook: outlook, exchange: exchange})
   end
 
   defp choose_calendar(lv, key),
@@ -88,6 +97,19 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceTransferRemindersTest do
              lv,
              "#calendar-toast",
              "Outlook can't hold all of the event's reminders, so some were not carried."
+           )
+  end
+
+  test "a move to Exchange says not all reminders came across", %{lv: lv, exchange: exchange} do
+    choose_calendar(lv, "#{exchange.id}:ews")
+    await_move(lv)
+
+    assert has_element?(lv, "#calendar-toast", "Moved to Exchange")
+
+    assert has_element?(
+             lv,
+             "#calendar-toast",
+             "Exchange can't hold all of the event's reminders, so some were not carried."
            )
   end
 

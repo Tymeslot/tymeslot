@@ -133,8 +133,8 @@ defmodule Tymeslot.CalendarGrid.EventMove do
 
   @doc """
   Whether a calendar of `integration` keeps every reminder `event` has, so a
-  move there carries them all (`CreateParams.fit_reminders/2`). Outlook keeps
-  one notification, so an event with more, or with an email reminder, loses
+  move there carries them all (`CreateParams.fit_reminders/2`). Outlook and
+  Exchange keep one notification, so an event with more, or with an email reminder, loses
   the rest when it moves there. Reads the cached row, as `move_event/3` does.
   """
   @spec keeps_reminders?(map(), map()) :: boolean()
