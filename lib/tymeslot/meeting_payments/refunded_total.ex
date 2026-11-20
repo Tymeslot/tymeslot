@@ -61,6 +61,7 @@ defmodule Tymeslot.MeetingPayments.RefundedTotal do
     }
   end
 
-  defp whole(%{amount_cents: amount}, refunds, lost) when is_integer(amount),
-    do: min(refunds + lost, amount)
+  defp whole(%{amount_cents: amount}, refunds, lost)
+       when is_integer(amount) and is_integer(refunds) and is_integer(lost),
+       do: min(refunds + lost, amount)
 end
