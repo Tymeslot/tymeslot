@@ -47,6 +47,12 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   space would end up with two links: the one Tymeslot sent, and the one on
   the event. The Meet is therefore made with the event, as on the dashboard.
   Any other combination gets a room of its own from the video provider.
+
+  Both jobs time their wait for each other from when the booking was made
+  (`inserted_at`). A booking whose jobs start later, once its email is
+  verified or its payment arrives, is past that wait when they run: its
+  event is created without the room, and the video provider makes the room
+  on its own.
   """
 
   require Logger
@@ -310,33 +316,47 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   # The booking's video integration, how the calendar it is written to
   # carries its room (`@same_account_rules`), and that calendar, when both
-  # are the same account. The calendar is named as a create addresses it: the
-  # booking's own calendar, else the integration's booking calendar.
+  # are the same account. A video integration the video job would refuse
+  # (switched off, or waiting to be reconnected) gets nothing put on the
+  # event: the event would carry a link the booking and its emails never do.
   defp video_on_booking_calendar(meeting) do
     with %{video_integration_id: vid_id, organizer_user_id: user_id}
          when is_integer(vid_id) and is_integer(user_id) <- meeting,
-         {:ok, video} <- Video.fetch_integration_for_user(vid_id, user_id),
+         {:ok, %{is_active: true, needs_reauth: false} = video} <-
+           Video.fetch_live_integration_for_user(vid_id, user_id),
          {how, calendar_provider} <- same_account_rule(video),
          {:ok, %{integration_id: cal_id} = booking_calendar} <-
            Events.get_booking_integration_info(meeting),
          {:ok, calendar} <- Calendar.get_integration(cal_id, user_id),
          true <- same_account?(calendar, video, calendar_provider) do
-      calendar_id = booking_calendar.calendar_path || Defaults.booking_calendar_id(calendar)
+      calendar_id = booking_calendar.calendar_path || unnamed_calendar(meeting, calendar)
       {:ok, how, video, %{integration_id: cal_id, calendar_id: calendar_id}}
     else
       _other -> :error
     end
   end
 
+  # The calendar a create addresses when the booking names none, as the
+  # booking resolver hands the integration to it: the meeting's own
+  # integration with no calendar named, which Google reads as its primary
+  # calendar, or another integration with its own default.
+  defp unnamed_calendar(%{calendar_integration_id: cal_id}, %{id: cal_id}),
+    do: Defaults.booking_calendar_id(%{default_booking_calendar_id: nil})
+
+  defp unnamed_calendar(_meeting, calendar), do: Defaults.booking_calendar_id(calendar)
+
   # Google makes an event's Meet conference after answering the create, so
-  # the event can exist without its link for a moment. The link is waited for
-  # like the event itself, and for the same time: an event created without a
-  # conference (late in the wait, see `booking_event_video_fields/1`) or one
-  # Google never finishes is given a room of its own once the wait is over.
+  # the event can exist without its link for a moment, and that is waited
+  # for like the event itself, for the same time. An event that asked for no
+  # Meet (created late in the wait, see `booking_event_video_fields/1`, or
+  # created again without one) gets none, so the room is made on its own at
+  # once rather than holding the booking's confirmation for the rest of the
+  # wait.
   defp with_event_meet({:calendar_event, event_id}, meeting, calendar) do
     case event_meet_url(meeting, event_id, calendar) do
       {:ok, url} -> {:calendar_meet, event_id, url}
-      :none -> waiting_or_own_event(meeting, @calendar_event_grace_seconds)
+      :pending -> waiting_or_own_event(meeting, @calendar_event_grace_seconds)
+      :none -> :own_event
       {:error, _reason} -> {:error, :calendar_unavailable}
     end
   end
@@ -353,10 +373,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
     case Events.fetch_event(ref, {cal_id, meeting.organizer_user_id}) do
       {:ok, [event | _rest]} ->
-        case ConferenceData.meet_url_from_google_event(Map.get(event, :provider_metadata) || %{}) do
-          url when is_binary(url) -> {:ok, url}
-          nil -> :none
-        end
+        ConferenceData.meet_status(Map.get(event, :provider_metadata) || %{})
 
       {:error, :not_found} ->
         :none

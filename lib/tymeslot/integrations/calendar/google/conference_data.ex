@@ -75,6 +75,22 @@ defmodule Tymeslot.Integrations.Calendar.Google.ConferenceData do
   def meet_url_from_google_event(_event), do: nil
 
   @doc """
+  Where a raw Google event's Meet stands: `{:ok, url}` once Google has made
+  it, `:pending` while a request for one is still being worked on, and
+  `:none` for an event that has none and asked for none, or whose request
+  Google failed.
+  """
+  @spec meet_status(map()) :: {:ok, String.t()} | :pending | :none
+  def meet_status(event) do
+    case {meet_url_from_google_event(event), get_in(event, ["conferenceData", "createRequest"])} do
+      {url, _request} when is_binary(url) -> {:ok, url}
+      {nil, %{"status" => %{"statusCode" => "failure"}}} -> :none
+      {nil, %{}} -> :pending
+      {nil, _no_request} -> :none
+    end
+  end
+
+  @doc """
   Extracts the Google Meet URL from the converted-event map returned by
   `Google.Provider.convert_event/1`.
 

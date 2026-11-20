@@ -34,11 +34,11 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
-  alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Calendar.Management, as: CalendarManagement
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventCache
+  alias Tymeslot.Meetings.CalendarEventConference
   alias Tymeslot.Meetings.CalendarEventMapping
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -236,6 +236,9 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   the event. Both are checked again under the meeting's row lock before the
   new event is recorded, since a room can be attached to `event_id` while the
   new event is being written; the new event is then deleted again.
+
+  A Google event is not replaced: its Meet conference is taken off in place
+  (`Tymeslot.Meetings.CalendarEventConference`).
   """
   @spec replace(term(), String.t(), pos_integer()) :: :ok | {:error, term()}
   def replace(meeting_id, event_id, attempt) do
@@ -260,37 +263,23 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     end
   end
 
-  # A Google event has its Meet conference taken off in place: a replacement
-  # would be refused as the old event's duplicate, since a Google event's id
-  # is derived from the booking's calendar UID. Outlook keeps a Teams meeting
-  # on its event for good, so an Outlook event is replaced.
   defp replace_or_clear(meeting, event_id, attempt) do
-    if google_calendar?(meeting),
-      do: clear_conference(meeting),
+    if CalendarEventConference.google?(meeting),
+      do: clear_conference(meeting, event_id, attempt),
       else: create_replacement(meeting, event_id, attempt)
   end
 
-  defp google_calendar?(%{calendar_integration_id: cal_id, organizer_user_id: user_id})
-       when is_integer(cal_id) and is_integer(user_id) do
-    match?(
-      {:ok, %{provider: "google"}},
-      CalendarManagement.fetch_integration_for_user(cal_id, user_id)
-    )
-  end
-
-  defp google_calendar?(_meeting), do: false
-
-  defp clear_conference(meeting) do
-    Logger.info("Taking the Meet conference off the calendar event", meeting_id: meeting.id)
-
-    event_data =
-      meeting
-      |> CalendarEventBuilder.build_event_data(
-        attendees: Meetings.attendees_for_calendar(meeting)
-      )
-      |> Map.put(:conference_data, ConferenceData.remove())
-
-    update_existing_event(meeting, event_data)
+  # Checked again on a fresh read just before the write, since a room placed
+  # on the event since this job read the meeting would go with the
+  # conference. Nothing is recorded afterwards, so there is no lock to take.
+  defp clear_conference(meeting, event_id, attempt) do
+    with {:ok, current} <- MeetingQueries.get_meeting(meeting.id),
+         :replace <- replacement_step(current, event_id) do
+      current |> CalendarEventConference.clear() |> flag_if_unauthorized(current)
+    else
+      {:error, :not_found} -> {:error, :meeting_not_found}
+      step -> run_replacement_step(step, meeting, event_id, attempt)
+    end
   end
 
   # What replacing `event_id` still takes, judged from `meeting` as it stands.

@@ -46,6 +46,8 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
   setup do
     TestMocks.setup_calendar_mocks()
     TestMocks.setup_email_mocks()
+    # The booking records the calendar its host's integrations really choose.
+    TestMocks.resolve_booking_calendars()
 
     %{user: user} = create_always_bookable_profile()
 
@@ -190,7 +192,8 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     assert [{:post, post_uri, created}] =
              for({method, _uri, _body} = req <- requests, method != :get, do: req)
 
-    assert post_uri.path == "/calendar/v3/calendars/#{URI.encode_www_form(@calendar_id)}/events"
+    assert calendar_of(post_uri) == @calendar_id
+    assert String.ends_with?(post_uri.path, "/events")
     assert URI.decode_query(post_uri.query)["conferenceDataVersion"] == "1"
 
     assert %{"createRequest" => %{"conferenceSolutionKey" => %{"type" => "hangoutsMeet"}}} =
@@ -278,10 +281,22 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     end)
   end
 
-  defp read_event(events, uri) do
-    id = uri.path |> String.split("/") |> List.last()
+  # Events are kept per calendar, as Google keeps them: an event read or
+  # written in another calendar than the one it was made in is not found.
+  # `primary` is the account's primary calendar, the integration's default.
+  defp calendar_of(uri) do
+    case uri.path |> String.split("/") |> Enum.drop_while(&(&1 != "calendars")) do
+      ["calendars", "primary" | _rest] -> @calendar_id
+      ["calendars", calendar | _rest] -> URI.decode(calendar)
+    end
+  end
 
-    case Agent.get(events, &Map.get(&1, id)) do
+  defp event_key(uri, id), do: {calendar_of(uri), id}
+
+  defp read_event(events, uri) do
+    key = event_key(uri, uri.path |> String.split("/") |> List.last())
+
+    case Agent.get(events, &Map.get(&1, key)) do
       nil -> {:ok, %Req.Response{status: 404, body: ~s({"error":{"message":"Not Found"}})}}
       event -> {:ok, %Req.Response{status: 200, body: Jason.encode!(made_meet(event))}}
     end
@@ -292,37 +307,49 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
   # which may be none.
   defp write_event(events, method, uri, sent) do
     id = if method == :post, do: sent["id"], else: uri.path |> String.split("/") |> List.last()
+    key = event_key(uri, id)
     with_conference? = URI.decode_query(uri.query || "")["conferenceDataVersion"] == "1"
 
-    if method == :post and Agent.get(events, &Map.has_key?(&1, id)) do
-      {:ok,
-       %Req.Response{
-         status: 409,
-         body: ~s({"error":{"message":"The requested identifier already exists."}})
-       }}
-    else
-      event =
-        Agent.get_and_update(events, fn stored ->
-          previous = Map.get(stored, id, %{})
+    exists? = Agent.get(events, &Map.has_key?(&1, key))
 
-          {base, written} =
-            if with_conference?,
-              do: {Map.delete(previous, "conferenceData"), sent},
-              else: {previous, Map.delete(sent, "conferenceData")}
+    cond do
+      method == :post and exists? ->
+        {:ok,
+         %Req.Response{
+           status: 409,
+           body: ~s({"error":{"message":"The requested identifier already exists."}})
+         }}
 
-          event =
-            base
-            |> Map.merge(written)
-            |> Map.merge(%{"id" => id, "iCalUID" => "#{id}@google.com", "status" => "confirmed"})
-            |> keep_conference(previous, with_conference?)
-            |> with_offsets()
-            |> pending_meet()
+      method != :post and not exists? ->
+        {:ok, %Req.Response{status: 404, body: ~s({"error":{"message":"Not Found"}})}}
 
-          {event, Map.put(stored, id, event)}
-        end)
-
-      {:ok, %Req.Response{status: 200, body: Jason.encode!(event)}}
+      true ->
+        store_event(events, key, sent, with_conference?)
     end
+  end
+
+  defp store_event(events, {_calendar, id} = key, sent, with_conference?) do
+    event =
+      Agent.get_and_update(events, fn stored ->
+        previous = Map.get(stored, key, %{})
+
+        {base, written} =
+          if with_conference?,
+            do: {Map.delete(previous, "conferenceData"), sent},
+            else: {previous, Map.delete(sent, "conferenceData")}
+
+        event =
+          base
+          |> Map.merge(written)
+          |> Map.merge(%{"id" => id, "iCalUID" => "#{id}@google.com", "status" => "confirmed"})
+          |> keep_conference(previous, with_conference?)
+          |> with_offsets()
+          |> pending_meet()
+
+        {event, Map.put(stored, key, event)}
+      end)
+
+    {:ok, %Req.Response{status: 200, body: Jason.encode!(event)}}
   end
 
   defp keep_conference(event, %{"conferenceData" => conference}, false),

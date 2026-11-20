@@ -28,14 +28,16 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
       insert(:calendar_integration,
         user: user,
         provider: "google",
-        provider_account_id: Keyword.get(opts, :calendar_account, "google-sub-1")
+        provider_account_id: Keyword.get(opts, :calendar_account, "google-sub-1"),
+        default_booking_calendar_id: Keyword.get(opts, :default_calendar)
       )
 
     video =
       insert(:video_integration,
         user: user,
         provider: "google_meet",
-        provider_account_id: "google-sub-1"
+        provider_account_id: "google-sub-1",
+        needs_reauth: Keyword.get(opts, :needs_reauth, false)
       )
 
     meeting =
@@ -53,27 +55,33 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
   # The booking's calendar is the one the resolver names for this very
   # meeting; answering for any other meeting would hide a caller that asks
   # about the wrong one.
-  defp stub_booking_calendar(%MeetingSchema{id: meeting_id}, calendar_id) do
+  defp stub_booking_calendar(%MeetingSchema{id: meeting_id}, calendar_id, path \\ "primary") do
     stub(Tymeslot.CalendarMock, :get_booking_integration_info, fn
       %MeetingSchema{id: ^meeting_id} ->
-        {:ok, %{integration_id: calendar_id, calendar_path: "primary"}}
+        {:ok, %{integration_id: calendar_id, calendar_path: path}}
     end)
   end
 
-  # The booking's event, read from its calendar as Google answers for it:
-  # with a video entry point once Google has made the Meet, and without one
-  # while Google is still making it.
-  defp stub_booking_event(%{calendar: calendar, meeting: meeting}, entry_points) do
-    stub_booking_calendar(meeting, calendar.id)
+  # The booking's event, read from the calendar `calendar_path` as Google
+  # answers for it, carrying `conference` as its `conferenceData`.
+  defp stub_booking_event(%{calendar: calendar, meeting: meeting}, conference, path \\ "primary") do
+    stub_booking_calendar(meeting, calendar.id, path)
     event_id = meeting.provider_event_id
     calendar_id = calendar.id
     user_id = meeting.organizer_user_id
+    read_from = path || "primary"
 
     stub(Tymeslot.CalendarMock, :fetch_event, fn
-      %{provider_event_id: ^event_id, calendar_id: "primary"}, {^calendar_id, ^user_id} ->
-        {:ok, [%{provider_metadata: %{"conferenceData" => %{"entryPoints" => entry_points}}}]}
+      %{provider_event_id: ^event_id, calendar_id: ^read_from}, {^calendar_id, ^user_id} ->
+        {:ok, [%{provider_metadata: %{"conferenceData" => conference}}]}
     end)
   end
+
+  defp made_meet,
+    do: %{"entryPoints" => [%{"entryPointType" => "video", "uri" => @meet_url}]}
+
+  defp pending_meet,
+    do: %{"createRequest" => %{"status" => %{"statusCode" => "pending"}}}
 
   defp at_seconds(seconds, fun),
     do: ClockHelpers.with_frozen_clock(DateTime.add(@booked_at, seconds, :second), fun)
@@ -81,7 +89,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
   describe "MeetingProvisioning.booking_room_placement/1" do
     test "takes the Meet Google made on the booking's event" do
       booking = meet_booking(provider_event_id: "google-event-1")
-      stub_booking_event(booking, [%{"entryPointType" => "video", "uri" => @meet_url}])
+      stub_booking_event(booking, made_meet())
 
       at_seconds(10, fn ->
         assert MeetingProvisioning.booking_room_placement(booking.meeting) ==
@@ -91,7 +99,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
 
     test "waits while Google is still making the event's Meet" do
       booking = meet_booking(provider_event_id: "google-event-1")
-      stub_booking_event(booking, [])
+      stub_booking_event(booking, pending_meet())
 
       at_seconds(10, fn ->
         assert MeetingProvisioning.booking_room_placement(booking.meeting) ==
@@ -101,10 +109,36 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
 
     test "makes a Meet of its own once the event's Meet is overdue" do
       booking = meet_booking(provider_event_id: "google-event-1")
-      stub_booking_event(booking, [])
+      stub_booking_event(booking, pending_meet())
 
       at_seconds(121, fn ->
         assert MeetingProvisioning.booking_room_placement(booking.meeting) == :own_event
+      end)
+    end
+
+    # Nothing will come to wait for, and the booking's confirmation waits on
+    # the room.
+    test "makes a Meet of its own at once for an event that asked for none" do
+      booking = meet_booking(provider_event_id: "google-event-1")
+      stub_booking_event(booking, nil)
+
+      at_seconds(10, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) == :own_event
+      end)
+    end
+
+    # The booking resolver hands a create the meeting's own integration with
+    # no calendar named, which Google writes to the primary calendar, whatever
+    # the integration's stored default.
+    test "reads the event from the primary calendar when the booking names none" do
+      booking =
+        meet_booking(provider_event_id: "google-event-1", default_calendar: "team@group.google")
+
+      stub_booking_event(booking, made_meet(), nil)
+
+      at_seconds(10, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) ==
+                 {:calendar_meet, "google-event-1", @meet_url}
       end)
     end
 
@@ -158,6 +192,19 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
 
     test "asks for no Meet on an event the booking already has" do
       %{calendar: calendar, meeting: meeting} = meet_booking(provider_event_id: "google-event-1")
+      stub_booking_calendar(meeting, calendar.id)
+
+      at_seconds(10, fn ->
+        assert MeetingProvisioning.booking_event_video_fields(meeting) == %{}
+      end)
+    end
+
+    # The video job refuses such an integration, so a Meet on the event would
+    # be a link the booking and its emails never carry.
+    test "asks for no Meet when the Meet integration waits to be reconnected" do
+      %{calendar: calendar, meeting: meeting} =
+        meet_booking(provider_event_id: nil, needs_reauth: true)
+
       stub_booking_calendar(meeting, calendar.id)
 
       at_seconds(10, fn ->
