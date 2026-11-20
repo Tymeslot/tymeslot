@@ -287,6 +287,29 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert updated_meeting.status == :cancelled
     end
 
+    test "withdraws an unanswered reschedule request whose original slot has passed",
+         %{conn: conn, user: user} do
+      meeting =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_email: user.email,
+          attendee_name: "Never Answered",
+          start_time: DateTime.add(DateTime.utc_now(), -2, :hour),
+          end_time: DateTime.add(DateTime.utc_now(), -1, :hour),
+          reschedule_requested_at: DateTime.add(DateTime.utc_now(), -1, :day)
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("button", "Past") |> render_click()
+      assert render(view) =~ "Never Answered"
+
+      view |> element("#cancel-meeting-#{meeting.id}:not([disabled])") |> render_click()
+      view |> form("#cancel-meeting-form") |> render_submit()
+
+      assert render(view) =~ "Meeting cancelled successfully"
+      assert Repo.get(MeetingSchema, meeting.id).status == :cancelled
+    end
+
     test "a duplicate cancel confirmation after cancellation is a no-op, not a crash",
          %{conn: conn, user: user} do
       meeting =

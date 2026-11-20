@@ -221,6 +221,48 @@ defmodule Tymeslot.Bookings.PolicyTest do
     end
   end
 
+  describe "a request awaiting a new time once its original slot has begun or passed" do
+    # The request voided the slot, so its time says nothing about whether the
+    # meeting still lies ahead: the attendee may answer and the host withdraw.
+    defp voided_meeting(start_offset, duration) do
+      start_time = DateTime.add(DateTime.utc_now(), start_offset, :second)
+
+      %MeetingSchema{
+        uid: "test-uid",
+        status: :confirmed,
+        start_time: start_time,
+        end_time: DateTime.add(start_time, duration, :second),
+        reschedule_requested_at: DateTime.add(start_time, -86_400, :second)
+      }
+    end
+
+    test "can still be rescheduled and cancelled after the original slot ended" do
+      meeting = voided_meeting(-7200, 3600)
+
+      assert Policy.can_reschedule_meeting?(meeting) == :ok
+      assert Policy.can_cancel_meeting?(meeting) == :ok
+    end
+
+    test "can still be rescheduled and cancelled during the original slot" do
+      meeting = voided_meeting(-1800, 3600)
+
+      assert Policy.can_reschedule_meeting?(meeting) == :ok
+      assert Policy.can_cancel_meeting?(meeting) == :ok
+    end
+
+    test "the same meeting without a pending request is refused as past" do
+      meeting = %{voided_meeting(-7200, 3600) | reschedule_requested_at: nil}
+
+      assert Policy.can_reschedule_meeting?(meeting) == {:error, {:not_reschedulable, :past}}
+      assert Policy.can_cancel_meeting?(meeting) == {:error, {:not_cancellable, :past}}
+    end
+
+    test "the host still cannot send a second request" do
+      assert Policy.can_request_reschedule?(voided_meeting(-7200, 3600)) ==
+               {:error, {:not_reschedulable, :already_requested}}
+    end
+  end
+
   describe "can_booker_move_meeting?/1" do
     test "refuses a meeting its host manages" do
       assert Policy.can_booker_move_meeting?(%MeetingSchema{managed_by_host: true}) ==

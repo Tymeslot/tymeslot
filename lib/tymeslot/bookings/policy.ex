@@ -95,14 +95,14 @@ defmodule Tymeslot.Bookings.Policy do
       held_for_series_payment?(meeting) ->
         {:error, {:not_cancellable, :held_for_series_payment}}
 
-      meeting_is_current?(meeting) ->
+      slot_elapsing?(meeting, &meeting_is_current?/1) ->
         Logger.info("Blocked cancellation: meeting has already started",
           meeting_id: Map.get(meeting, :id)
         )
 
         {:error, {:not_cancellable, :started}}
 
-      meeting_is_past?(meeting) ->
+      slot_elapsing?(meeting, &meeting_is_past?/1) ->
         Logger.info("Blocked cancellation: meeting has already occurred",
           meeting_id: Map.get(meeting, :id)
         )
@@ -113,6 +113,13 @@ defmodule Tymeslot.Bookings.Policy do
         :ok
     end
   end
+
+  # A reschedule request has voided the slot, so its original time no longer
+  # says when the meeting happens: the attendee may still answer the request,
+  # and the host withdraw it, after that time has gone by. A confirmed
+  # meeting whose time has passed stays refused.
+  defp slot_elapsing?(meeting, time_check),
+    do: not MeetingState.awaiting_new_time?(meeting) and time_check.(meeting)
 
   defp held_for_series_payment?(%{status: :awaiting_payment, series_id: series_id})
        when is_binary(series_id),
@@ -162,14 +169,14 @@ defmodule Tymeslot.Bookings.Policy do
       held_for_series_approval?(meeting) ->
         {:error, {:not_reschedulable, :held_for_series_approval}}
 
-      meeting_is_current?(meeting) ->
+      slot_elapsing?(meeting, &meeting_is_current?/1) ->
         Logger.info("Blocked reschedule: meeting has already started",
           meeting_id: Map.get(meeting, :id)
         )
 
         {:error, {:not_reschedulable, :started}}
 
-      meeting_is_past?(meeting) ->
+      slot_elapsing?(meeting, &meeting_is_past?/1) ->
         Logger.info("Blocked reschedule: meeting has already occurred",
           meeting_id: Map.get(meeting, :id)
         )
