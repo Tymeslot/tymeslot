@@ -330,3 +330,8 @@ msgstr "Dieser Termin gehört zu einer Anfrage, die noch auf die Antwort des Gas
 #, elixir-autogen, elixir-format
 msgid "Guests can only be added to a single booking. Please remove your guests to book a series."
 msgstr "Gäste können nur zu einer Einzelbuchung hinzugefügt werden. Bitte entfernen Sie Ihre Gäste, um eine Serie zu buchen."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "The request to pick a new time for this meeting has lapsed, so it is no longer booked. You're welcome to book a new time."
+msgstr "Die Anfrage, eine neue Zeit für diesen Termin zu wählen, ist verfallen, daher ist der Termin nicht mehr gebucht. Sie können gerne eine neue Zeit buchen."

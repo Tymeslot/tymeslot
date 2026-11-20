@@ -71,6 +71,11 @@ defmodule Tymeslot.Emails.EmailActions do
        {MeetingEmails, :handle_reminder_emails}},
     "send_reschedule_request" =>
       {["meeting_id"], {RescheduleRequestEmails, :handle_reschedule_request}},
+    # The same request, lapsed unanswered
+    "send_reschedule_request_unanswered" =>
+      {["meeting_id"], {RescheduleRequestEmails, :handle_reschedule_request_unanswered}},
+    "send_reschedule_request_lapsed" =>
+      {["meeting_id"], {RescheduleRequestEmails, :handle_reschedule_request_lapsed, :with_job_id}},
     "send_guest_invitations" =>
       {["meeting_id", "guest_ids"], {GuestEmails, :handle_guest_invitations}},
     # Seats
