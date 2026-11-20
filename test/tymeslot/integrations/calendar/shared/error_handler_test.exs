@@ -161,4 +161,17 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandlerTest do
     end
   end
 
+  describe "classify_and_format/3 logging" do
+    test "logs the failure at warning with its category and operation" do
+      LogCapture.attach()
+
+      ErrorHandler.classify_and_format(:timeout, :zimbra, %{operation: "discovery"})
+
+      assert_receive {:captured_log, %{level: :warning, msg: msg, meta: meta}}
+      assert LogCapture.message_text(msg) == "Calendar connection failed"
+      assert meta.provider == :zimbra
+      assert meta.category == :timeout
+      assert meta.operation == "discovery"
+    end
+  end
 end

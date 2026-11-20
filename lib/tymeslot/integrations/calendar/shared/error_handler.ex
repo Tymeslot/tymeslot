@@ -253,12 +253,14 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
           {specific_message, nil}
       end
 
-    # Log the original error for debugging
-    Logger.debug("Calendar provider error",
+    # Every caller is an owner setting up or refreshing a calendar, so a
+    # failure here is one they saw on screen; logged at warning so production
+    # keeps the category and the operation it failed in.
+    Logger.warning("Calendar connection failed",
       provider: provider,
       category: category,
       error: LogFormat.reason(error),
-      context: context
+      operation: context[:operation]
     )
 
     # Both halves are already localised by `get_user_friendly_message/2` and
