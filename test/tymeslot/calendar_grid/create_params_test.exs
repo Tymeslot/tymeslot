@@ -418,6 +418,12 @@ defmodule Tymeslot.CalendarGrid.CreateParamsTest do
              ]
     end
 
+    test "an Exchange calendar keeps the first reminder only, as a notification" do
+      assert CreateParams.fit_reminders(@five, "exchange") == [
+               %{method: :popup, minutes_before: 10}
+             ]
+    end
+
     test "any other calendar keeps every reminder by its own method" do
       assert CreateParams.fit_reminders(@five, "google") == @five
       assert CreateParams.fit_reminders(@five, nil) == @five
@@ -425,6 +431,7 @@ defmodule Tymeslot.CalendarGrid.CreateParamsTest do
 
     test "the capacity says how many and by which methods" do
       assert CreateParams.reminder_capacity("outlook") == {1, [:popup]}
+      assert CreateParams.reminder_capacity("exchange") == {1, [:popup]}
       assert {5, methods} = CreateParams.reminder_capacity("caldav")
       assert Enum.sort(methods) == [:email, :popup]
     end

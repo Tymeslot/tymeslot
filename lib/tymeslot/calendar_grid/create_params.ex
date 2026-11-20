@@ -42,10 +42,11 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
   @max_rule 500
   @reminder_methods %{"popup" => :popup, "email" => :email}
 
-  # Outlook keeps one lead time per event and no method: Graph has a single
-  # `reminderMinutesBeforeStart`, and every reminder reads back as a
-  # notification. A second reminder, or an email, would never reach it.
-  @reminder_capacities %{"outlook" => {1, [:popup]}}
+  # Outlook and Exchange keep one lead time per event and no method: Graph has
+  # a single `reminderMinutesBeforeStart` and EWS a single
+  # `ReminderMinutesBeforeStart`, so every reminder is a notification. A second
+  # reminder, or an email, would never reach either.
+  @reminder_capacities %{"outlook" => {1, [:popup]}, "exchange" => {1, [:popup]}}
 
   @enforce_keys [:integration_id, :calendar_id, :title, :start_at, :end_at, :timezone]
   defstruct [
@@ -364,8 +365,8 @@ defmodule Tymeslot.CalendarGrid.CreateParams do
 
   @doc """
   How many reminders an event on a calendar of `provider` keeps, and by which
-  methods: `{max, methods}`. Outlook keeps one notification; every other
-  provider `max_reminders/0` of either method.
+  methods: `{max, methods}`. Outlook and Exchange keep one notification; every
+  other provider `max_reminders/0` of either method.
   """
   @spec reminder_capacity(String.t() | atom() | nil) :: {pos_integer(), [:popup | :email, ...]}
   def reminder_capacity(provider) when is_atom(provider) and provider != nil,

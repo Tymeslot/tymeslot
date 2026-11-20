@@ -350,30 +350,43 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfacePanelNewOptionsTest do
     end
   end
 
-  describe "on an Outlook calendar" do
-    test "a single notification is offered, with no method to choose", %{
-      conn: conn,
-      user: user
-    } do
-      outlook = outlook(user)
-      # Read as the calendar loads.
-      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      more_options(lv, nil, %{"calendar" => "#{outlook.id}:cal"})
+  for provider <- ["outlook", "exchange"] do
+    describe "on an #{provider} calendar" do
+      @describetag provider: provider
 
-      refute has_element?(lv, "#calendar-panel-new-reminder-method")
+      test "a single notification is offered, with no method to choose", %{
+        conn: conn,
+        user: user,
+        provider: provider
+      } do
+        account =
+          insert(:calendar_integration,
+            user: user,
+            name: "One-alarm account",
+            provider: provider,
+            is_active: true,
+            calendar_list: [%{"id" => "cal", "name" => "Calendar", "selected" => true}]
+          )
 
-      add_reminder(lv, "10", "email")
+        # Read as the calendar loads.
+        {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+        more_options(lv, nil, %{"calendar" => "#{account.id}:cal"})
 
-      assert has_element?(
-               lv,
-               "#calendar-panel-new-reminders li",
-               "Notification 10 minutes before"
-             )
+        refute has_element?(lv, "#calendar-panel-new-reminder-method")
 
-      refute has_element?(lv, "#calendar-panel-new-reminder-add")
+        add_reminder(lv, "10", "email")
 
-      render_submit(new_form(lv), %{"intent" => "create"})
-      assert created(lv).reminders == [%{method: :popup, minutes_before: 10}]
+        assert has_element?(
+                 lv,
+                 "#calendar-panel-new-reminders li",
+                 "Notification 10 minutes before"
+               )
+
+        refute has_element?(lv, "#calendar-panel-new-reminder-add")
+
+        render_submit(new_form(lv), %{"intent" => "create"})
+        assert created(lv).reminders == [%{method: :popup, minutes_before: 10}]
+      end
     end
   end
 
