@@ -101,7 +101,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   The fields that make a new Outlook event of the integration's Microsoft
   account carry its Teams meeting, for an event created with the meeting on
   it rather than given one afterwards
-  (`Tymeslot.Integrations.MeetingProvisioning.booking_online_meeting/1`).
+  (`Tymeslot.Integrations.MeetingProvisioning.booking_event_video_fields/1`).
   """
   @spec online_meeting_fields(VideoIntegrationSchema.t()) :: map()
   def online_meeting_fields(%VideoIntegrationSchema{} = integration) do
@@ -112,7 +112,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   # `:calendar_event_id` names the booking's own Outlook event when the Teams
   # account is also the calendar it was written to (see
-  # `Tymeslot.Integrations.MeetingProvisioning.teams_room_placement/1`); the
+  # `Tymeslot.Integrations.MeetingProvisioning.booking_room_placement/1`); the
   # meeting then lives on that event. Otherwise it needs an event of its own.
   defp create_or_attach(token, config) do
     case Map.get(config, :calendar_event_id) do
@@ -348,7 +348,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   # The booking's own calendar event, made into the Teams meeting, so the
   # organiser's calendar holds one entry for the booking rather than two. A
   # booking's event may have been created with the meeting already on it
-  # (`MeetingProvisioning.booking_online_meeting/1`, signalled by
+  # (`MeetingProvisioning.booking_event_video_fields/1`, signalled by
   # `:adopt_calendar_meeting`), and is then only read: Graph mails the
   # event's attendees on every write to it, so switching on a meeting it
   # already has would send the guest an update for nothing.

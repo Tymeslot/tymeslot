@@ -46,7 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
               {:ok,
                %{
                  required(:integration_id) => pos_integer(),
-                 required(:calendar_path) => String.t()
+                 required(:calendar_path) => String.t() | nil
                }}
               | {:error, any()}
 end

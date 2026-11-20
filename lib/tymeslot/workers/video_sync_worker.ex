@@ -149,15 +149,17 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   def release(meeting)
 
   # A room that is the booking's own calendar event (a Teams meeting on the
-  # same Microsoft account) is not the provider's to delete: deleting it would
-  # delete the booking's event, which calendar sync still owns. Graph keeps the
-  # online meeting on that event for good once set, so the only way to take
-  # the join link off it is a new event, and that is calendar sync's job. It
-  # runs in the calendar queue, one write per meeting at a time, so it cannot
-  # race the update the same location change enqueued there. The video queue
-  # does not wait for it, though: a later move back to Teams can attach a
-  # room to the event while it is being replaced. Both sides re-check the
-  # meeting under its row lock before recording anything
+  # same Microsoft account, or a Meet conference Google made for a Google
+  # event of the same Google account) is not the provider's to delete:
+  # deleting it would delete the booking's event, which calendar sync still
+  # owns. Graph keeps the online meeting on that event for good once set, so
+  # the way to take the join link off it is a new event, and that is calendar
+  # sync's job. It runs in the calendar queue, one write per meeting at a
+  # time, so it cannot race the update the same location change enqueued
+  # there. The video queue does not wait for it, though: a later move back to
+  # the same provider can attach a room to the event while it is being
+  # replaced. Both sides re-check the meeting under its row lock before
+  # recording anything
   # (`Tymeslot.Meetings.CalendarEventSync.replace/3`,
   # `Tymeslot.Meetings.VideoRoomAttachment.persist/2`), so whichever records
   # first, the other gives way.

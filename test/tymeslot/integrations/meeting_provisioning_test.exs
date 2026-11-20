@@ -228,7 +228,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
     end
   end
 
-  describe "MeetingProvisioning.teams_room_placement/1" do
+  describe "MeetingProvisioning.booking_room_placement/1 with Teams" do
     # The booking's calendar is the one the resolver names for this very
     # meeting; answering for any other meeting would hide a caller that asks
     # about the wrong one.
@@ -287,7 +287,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
 
       adding_seconds =
         Enum.filter(0..180, fn seconds ->
-          at.(seconds, fn -> MeetingProvisioning.booking_online_meeting(meeting) != nil end)
+          at.(seconds, fn -> MeetingProvisioning.booking_event_video_fields(meeting) != %{} end)
         end)
 
       assert adding_seconds != []
@@ -297,7 +297,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
       outrun =
         Enum.reject(adding_seconds, fn seconds ->
           at.(seconds + deadline_seconds, fn ->
-            MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
+            MeetingProvisioning.booking_room_placement(meeting) == :awaiting_calendar_event
           end)
         end)
 
@@ -322,7 +322,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
       %{calendar: calendar, meeting: meeting} = teams_booking(provider_event_id: "AAMk-event-1")
       stub_booking_calendar(meeting, calendar.id)
 
-      assert MeetingProvisioning.teams_room_placement(meeting) ==
+      assert MeetingProvisioning.booking_room_placement(meeting) ==
                {:calendar_event, "AAMk-event-1"}
     end
 
@@ -330,7 +330,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
       %{calendar: calendar, meeting: meeting} = teams_booking(provider_event_id: nil)
       stub_booking_calendar(meeting, calendar.id)
 
-      assert MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
+      assert MeetingProvisioning.booking_room_placement(meeting) == :awaiting_calendar_event
     end
 
     test "stops waiting and creates its own event once the booking's event is overdue" do
@@ -341,7 +341,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
 
       stub_booking_calendar(meeting, calendar.id)
 
-      assert MeetingProvisioning.teams_room_placement(meeting) == :own_event
+      assert MeetingProvisioning.booking_room_placement(meeting) == :own_event
     end
 
     # The grace period is measured on Tymeslot.Clock, so it can be pinned.
@@ -354,11 +354,11 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
       stub_booking_calendar(meeting, calendar.id)
 
       ClockHelpers.with_frozen_clock(DateTime.add(booked_at, 119, :second), fn ->
-        assert MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
+        assert MeetingProvisioning.booking_room_placement(meeting) == :awaiting_calendar_event
       end)
 
       ClockHelpers.with_frozen_clock(DateTime.add(booked_at, 121, :second), fn ->
-        assert MeetingProvisioning.teams_room_placement(meeting) == :own_event
+        assert MeetingProvisioning.booking_room_placement(meeting) == :own_event
       end)
     end
 
@@ -370,7 +370,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
 
       stub_booking_calendar(meeting, calendar.id)
 
-      assert MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
+      assert MeetingProvisioning.booking_room_placement(meeting) == :awaiting_calendar_event
     end
 
     test "creates its own event when the Outlook calendar is another Microsoft account" do
@@ -379,7 +379,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
 
       stub_booking_calendar(meeting, calendar.id)
 
-      assert MeetingProvisioning.teams_room_placement(meeting) == :own_event
+      assert MeetingProvisioning.booking_room_placement(meeting) == :own_event
     end
 
     test "creates its own event when the booking calendar is not Outlook" do
@@ -388,7 +388,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
 
       stub_booking_calendar(meeting, calendar.id)
 
-      assert MeetingProvisioning.teams_room_placement(meeting) == :own_event
+      assert MeetingProvisioning.booking_room_placement(meeting) == :own_event
     end
 
     test "creates its own event when the booking has no calendar" do
@@ -398,33 +398,38 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
         {:error, :no_integration}
       end)
 
-      assert MeetingProvisioning.teams_room_placement(meeting) == :own_event
+      assert MeetingProvisioning.booking_room_placement(meeting) == :own_event
     end
 
-    test "is not asked about any provider but Teams, and never consults the calendar" do
+    test "never consults the calendar for a provider no calendar can carry" do
       %{meeting: meeting} =
-        teams_booking(video_provider: "google_meet", provider_event_id: "AAMk-event-1")
+        teams_booking(video_provider: "mirotalk", provider_event_id: "AAMk-event-1")
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, 0, fn _meeting ->
-        flunk("the booking calendar is irrelevant to a non-Teams room")
+        flunk("the booking calendar is irrelevant to a room of its own")
       end)
 
-      assert MeetingProvisioning.teams_room_placement(meeting) == :own_event
+      assert MeetingProvisioning.booking_room_placement(meeting) == :own_event
     end
   end
 
   # Graph mails the attendees of an organiser's event on every write to it, so
   # the booking's event is created with its Teams meeting rather than given it
   # by a second write (issue #191).
-  describe "MeetingProvisioning.booking_online_meeting/1" do
+  describe "MeetingProvisioning.booking_event_video_fields/1 with Teams" do
     test "has the event created with the meeting while the meeting waits for it" do
       %{calendar: calendar, meeting: meeting} =
         teams_booking(provider_event_id: nil, tenant_id: "11111111-2222-3333-4444-555555555555")
 
       stub_booking_calendar(meeting, calendar.id)
 
-      assert MeetingProvisioning.booking_online_meeting(meeting) ==
-               %{isOnlineMeeting: true, onlineMeetingProvider: "teamsForBusiness"}
+      assert MeetingProvisioning.booking_event_video_fields(meeting) ==
+               %{
+                 online_meeting: %{
+                   isOnlineMeeting: true,
+                   onlineMeetingProvider: "teamsForBusiness"
+                 }
+               }
     end
 
     test "names no provider for a personal Microsoft account" do
@@ -433,7 +438,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
 
       stub_booking_calendar(meeting, calendar.id)
 
-      assert MeetingProvisioning.booking_online_meeting(meeting) == %{isOnlineMeeting: true}
+      assert MeetingProvisioning.booking_event_video_fields(meeting) ==
+               %{online_meeting: %{isOnlineMeeting: true}}
     end
 
     # The Teams job may give up waiting while a create late in the wait is
@@ -446,8 +452,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
 
       stub_booking_calendar(meeting, calendar.id)
 
-      assert MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
-      assert MeetingProvisioning.booking_online_meeting(meeting) == nil
+      assert MeetingProvisioning.booking_room_placement(meeting) == :awaiting_calendar_event
+      assert MeetingProvisioning.booking_event_video_fields(meeting) == %{}
     end
 
     # The race behind a second Teams meeting: a create that adds the meeting
@@ -478,8 +484,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
         stub_booking_calendar(meeting, calendar.id)
 
         ClockHelpers.with_frozen_clock(booked_at, fn ->
-          assert MeetingProvisioning.teams_room_placement(meeting) == :awaiting_calendar_event
-          assert MeetingProvisioning.booking_online_meeting(meeting) == nil
+          assert MeetingProvisioning.booking_room_placement(meeting) == :awaiting_calendar_event
+          assert MeetingProvisioning.booking_event_video_fields(meeting) == %{}
         end)
       end)
     end
@@ -488,7 +494,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
       %{calendar: calendar, meeting: meeting} = teams_booking(provider_event_id: "AAMk-event-1")
       stub_booking_calendar(meeting, calendar.id)
 
-      assert MeetingProvisioning.booking_online_meeting(meeting) == nil
+      assert MeetingProvisioning.booking_event_video_fields(meeting) == %{}
     end
 
     test "adds nothing when the Outlook calendar is another Microsoft account" do
@@ -497,7 +503,118 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
 
       stub_booking_calendar(meeting, calendar.id)
 
-      assert MeetingProvisioning.booking_online_meeting(meeting) == nil
+      assert MeetingProvisioning.booking_event_video_fields(meeting) == %{}
+    end
+  end
+
+  # Google Calendar replaces a Meet code made outside Calendar with one made
+  # for the event, so a booking on the Meet integration's own Google calendar
+  # takes the Meet Google makes with the booking's event.
+  describe "MeetingProvisioning.booking_room_placement/1 with Google Meet" do
+    @meet_url "https://meet.google.com/abc-defg-hij"
+    @booked_at ~U[2026-03-01 10:00:00Z]
+
+    defp meet_booking(opts) do
+      [
+        video_provider: "google_meet",
+        calendar_provider: "google",
+        video_account: "google-sub-1",
+        calendar_account: "google-sub-1",
+        inserted_at: @booked_at
+      ]
+      |> Keyword.merge(opts)
+      |> teams_booking()
+    end
+
+    # The booking's event, read from its calendar as Google answers for it:
+    # with a video entry point once Google has made the Meet, and without one
+    # while Google is still making it.
+    defp stub_booking_event(%{calendar: calendar, meeting: meeting}, entry_points) do
+      stub_booking_calendar(meeting, calendar.id)
+      event_id = meeting.provider_event_id
+      calendar_id = calendar.id
+      user_id = meeting.organizer_user_id
+
+      stub(Tymeslot.CalendarMock, :fetch_event, fn
+        %{provider_event_id: ^event_id, calendar_id: "primary"}, {^calendar_id, ^user_id} ->
+          {:ok, [%{provider_metadata: %{"conferenceData" => %{"entryPoints" => entry_points}}}]}
+      end)
+    end
+
+    defp at_seconds(seconds, fun),
+      do: ClockHelpers.with_frozen_clock(DateTime.add(@booked_at, seconds, :second), fun)
+
+    test "takes the Meet Google made on the booking's event" do
+      booking = meet_booking(provider_event_id: "google-event-1")
+      stub_booking_event(booking, [%{"entryPointType" => "video", "uri" => @meet_url}])
+
+      at_seconds(10, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) ==
+                 {:calendar_meet, "google-event-1", @meet_url}
+      end)
+    end
+
+    test "waits while Google is still making the event's Meet" do
+      booking = meet_booking(provider_event_id: "google-event-1")
+      stub_booking_event(booking, [])
+
+      at_seconds(10, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) ==
+                 :awaiting_calendar_event
+      end)
+    end
+
+    test "makes a Meet of its own once the event's Meet is overdue" do
+      booking = meet_booking(provider_event_id: "google-event-1")
+      stub_booking_event(booking, [])
+
+      at_seconds(121, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) == :own_event
+      end)
+    end
+
+    test "waits for the booking's event when the calendar has not written it yet" do
+      %{calendar: calendar, meeting: meeting} = meet_booking(provider_event_id: nil)
+      stub_booking_calendar(meeting, calendar.id)
+
+      at_seconds(10, fn ->
+        assert MeetingProvisioning.booking_room_placement(meeting) == :awaiting_calendar_event
+      end)
+    end
+
+    test "makes a Meet of its own when the calendar is another Google account" do
+      %{calendar: calendar, meeting: meeting} =
+        meet_booking(calendar_account: "google-sub-2", provider_event_id: "google-event-1")
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      at_seconds(10, fn ->
+        assert MeetingProvisioning.booking_room_placement(meeting) == :own_event
+      end)
+    end
+  end
+
+  describe "MeetingProvisioning.booking_event_video_fields/1 with Google Meet" do
+    test "has the event created asking Google for a Meet while the room waits for it" do
+      %{calendar: calendar, meeting: meeting} = meet_booking(provider_event_id: nil)
+      stub_booking_calendar(meeting, calendar.id)
+
+      at_seconds(10, fn ->
+        assert %{
+                 conference_data: %{
+                   createRequest: %{conferenceSolutionKey: %{type: "hangoutsMeet"}}
+                 }
+               } = MeetingProvisioning.booking_event_video_fields(meeting)
+      end)
+    end
+
+    test "asks for no Meet on an event the booking already has" do
+      %{calendar: calendar, meeting: meeting} = meet_booking(provider_event_id: "google-event-1")
+      stub_booking_calendar(meeting, calendar.id)
+
+      at_seconds(10, fn ->
+        assert MeetingProvisioning.booking_event_video_fields(meeting) == %{}
+      end)
     end
   end
 end

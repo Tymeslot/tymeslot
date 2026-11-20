@@ -233,7 +233,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   sets no Oban timeout of its own, so Oban never stops the job first and
   leaves the task running.
 
-  `Tymeslot.Integrations.MeetingProvisioning.booking_online_meeting/1`
+  `Tymeslot.Integrations.MeetingProvisioning.booking_event_video_fields/1`
   relies on that bound, so it reads it from here rather than repeating it.
   """
   @spec attempt_timeout_ms() :: pos_integer()

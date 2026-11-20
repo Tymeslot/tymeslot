@@ -483,12 +483,15 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   defp create_event_for_meeting(meeting, meeting_id, attempt) do
     Logger.info("Creating calendar event", meeting_id: meeting_id)
 
+    # A room the booking's calendar carries goes on the event as it is
+    # created, so no second write follows to add it, and the video job finds
+    # it there (`MeetingProvisioning.booking_event_video_fields/1`).
     event_data =
       meeting
       |> CalendarEventBuilder.build_event_data(
         attendees: Meetings.attendees_for_calendar(meeting)
       )
-      |> with_online_meeting(MeetingProvisioning.booking_online_meeting(meeting))
+      |> Map.merge(MeetingProvisioning.booking_event_video_fields(meeting))
       |> with_creation_key(meeting)
 
     # Use the meeting context to create in the correct calendar
@@ -515,12 +518,6 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         handle_create_event_error(error_type, meeting, meeting_id, attempt)
     end
   end
-
-  # A booking whose Teams meeting goes on this event is created with it, so the
-  # invitation Outlook mails the guest carries it and no second write follows
-  # to add it (`MeetingProvisioning.booking_online_meeting/1`).
-  defp with_online_meeting(event_data, nil), do: event_data
-  defp with_online_meeting(event_data, fields), do: Map.put(event_data, :online_meeting, fields)
 
   # No calendar to write to is not a sync failure: the owner is never emailed
   # about it, and the worker ends the job without retrying.
