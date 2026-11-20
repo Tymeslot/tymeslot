@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Ecto.UUID
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.MeetingPayments
 
@@ -47,6 +48,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      socket
      |> ModalHook.mount_modal(refund: false, disconnect: false)
      |> assign(:refund_submitting, false)
+     |> assign(:refund_attempt, nil)
      |> assign(:refund_error, nil)
      |> assign(:refund_form, @blank_refund_form)
      |> assign(:connect_account, nil)
@@ -250,9 +252,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     )
   end
 
+  # Each opening of the dialog is one decision to refund, so a retry from
+  # the same dialog, after a refund that failed or timed out, asks Stripe
+  # under the same key and gets back any refund the first try made.
   defp open_refund_modal(socket, payment) do
     if MeetingPayments.refundable?(payment) do
-      {:noreply, socket |> reset_refund_form() |> ModalHook.show_modal(:refund, payment)}
+      {:noreply,
+       socket
+       |> reset_refund_form()
+       |> assign(:refund_attempt, UUID.generate())
+       |> ModalHook.show_modal(:refund, payment)}
     else
       Flash.error(
         dgettext(
@@ -342,13 +351,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   defp process_refund(socket, payment, amount_cents) do
     user_id = socket.assigns.current_user.id
     payment_id = payment.id
+    key = "host_refund:#{socket.assigns.refund_attempt}:#{amount_cents}"
 
     {:noreply,
      start_async(
        socket,
        :issue_refund,
        Tasks.with_context(fn ->
-         MeetingPayments.refund_payment_for_host(payment_id, user_id, amount_cents)
+         MeetingPayments.refund_payment_for_host(payment_id, user_id, amount_cents, key)
        end)
      )}
   end

@@ -48,7 +48,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
       assert params.charge == payment.stripe_charge_id
       assert params.amount == 5000
       assert opts[:connect_account] == "acct_LATE"
-      assert opts[:idempotency_key] == "refund:#{payment.id}:5000:5000"
+      assert opts[:idempotency_key] == "late_payment_refund:#{payment.id}:late:5000"
       assert opts[:connect_timeout] == 3_000
       assert opts[:recv_timeout] == 5_000
       {:ok, %{"id" => "re_LATE"}}
@@ -239,7 +239,9 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   test "sends no second email when the refund was already emailed", %{payment: payment} do
     expect(StripeAdapterMock, :create_refund, fn _params, _opts -> {:ok, %{"id" => "re_HOST"}} end)
 
-    {:ok, _refunded} = Refunds.issue_host_refund(payment.id, payment.host_user_id, 5000)
+    {:ok, _refunded} =
+      Refunds.issue_host_refund(payment.id, payment.host_user_id, 5000, "host_refund:test:5000")
+
     complete_emails(payment)
 
     assert :ok = perform(payment, attempt: 2)

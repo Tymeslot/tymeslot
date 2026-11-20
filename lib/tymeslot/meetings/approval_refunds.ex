@@ -110,8 +110,12 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
     end
   end
 
+  # A payment is released, and refunded automatically, at most once, so the
+  # payment and the amount name the refund.
   defp issue_release_refund(payment, remaining_cents, meeting) do
-    case MeetingPayments.issue_refund(payment, remaining_cents) do
+    key = "approval_refund:#{payment.id}:#{remaining_cents}"
+
+    case MeetingPayments.issue_refund(payment, remaining_cents, key) do
       {:ok, _refunded} ->
         :ok
 

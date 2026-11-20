@@ -12,9 +12,7 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   key is the job's own (`series_refund:<job id>`), the same on every
   attempt, so an attempt whose refund Stripe accepted but whose transaction
   rolled back is answered with that same refund on retry, and recorded
-  then, even when another refund of the payment landed in between (a key
-  derived from the payment's refunded total would have changed with it,
-  and refunded twice). That holds when the `charge.refunded` webhook
+  then, even when another refund of the payment landed in between. That holds when the `charge.refunded` webhook
   recorded the refund in between, too: the refund is recorded as Stripe's
   refunded total for the charge, so the replay adds nothing, and an amount
   the balance no longer covers is put to Stripe under the key rather than
@@ -60,6 +58,7 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
 
   require Logger
 
+  alias Ecto.UUID
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -173,19 +172,17 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   end
 
   # A job with no id (built by hand) cannot run twice, so has nothing to
-  # claim and no key of its own: it refunds under the derived key.
-  # Otherwise the claim and the refund commit together, and a run racing
-  # for the claim waits on it, then finds the refund made.
+  # claim and refunds under a key of its own making. Otherwise the claim and
+  # the refund commit together, and a run racing for the claim waits on it,
+  # then finds the refund made.
   defp refund_once(nil, id, host_user_id, amount),
-    do: Refunds.issue_host_refund(id, host_user_id, amount)
+    do: Refunds.issue_host_refund(id, host_user_id, amount, "series_refund:#{UUID.generate()}")
 
   defp refund_once(job_id, id, host_user_id, amount) do
     Repo.transaction(fn ->
       with :claimed <- DeliveryClaims.claim(job_id, @claim),
            {:ok, refunded} <-
-             Refunds.issue_host_refund(id, host_user_id, amount, nil,
-               idempotency_key: "series_refund:#{job_id}"
-             ) do
+             Refunds.issue_host_refund(id, host_user_id, amount, "series_refund:#{job_id}") do
         refunded
       else
         :already_claimed -> :already_made

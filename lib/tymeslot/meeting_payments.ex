@@ -476,12 +476,16 @@ defmodule Tymeslot.MeetingPayments do
   @doc """
   Issues a full or partial refund for a booking payment, whoever took it.
 
-  Unscoped; see `Refunds.issue_refund/3`. A refund a signed-in user asks for
-  must go through `refund_payment_for_host/4`.
+  Unscoped; see `Refunds.issue_refund/4`. A refund a signed-in user asks for
+  must go through `refund_payment_for_host/5`.
+
+  `key` is the Stripe idempotency key for this one refund, fixed when the
+  refund is decided and carrying the amount, so that a retry gets the same
+  refund back; see `Tymeslot.MeetingPayments.Refunds`.
   """
-  @spec issue_refund(booking_payment(), pos_integer(), String.t() | nil) ::
+  @spec issue_refund(booking_payment(), integer(), String.t(), String.t() | nil) ::
           {:ok, booking_payment()} | {:error, Refunds.refund_error()}
-  defdelegate issue_refund(payment, amount_cents, reason \\ nil), to: Refunds
+  defdelegate issue_refund(payment, amount_cents, key, reason \\ nil), to: Refunds
 
   @doc """
   Refunds a booking payment on behalf of the host who took it.
@@ -489,12 +493,20 @@ defmodule Tymeslot.MeetingPayments do
   Only that host may refund it. Ownership is decided under the payment's row
   lock, in the same transaction as the refund itself. Another host's payment,
   an unknown id and a malformed id all return `{:error, :not_found}`.
+
+  `key` is the Stripe idempotency key, as for `issue_refund/4`.
   """
-  @spec refund_payment_for_host(term(), integer(), pos_integer(), String.t() | nil) ::
+  @spec refund_payment_for_host(term(), integer(), integer(), String.t(), String.t() | nil) ::
           {:ok, booking_payment()} | {:error, :not_found | Refunds.refund_error()}
-  defdelegate refund_payment_for_host(payment_id, host_user_id, amount_cents, reason \\ nil),
-    to: Refunds,
-    as: :issue_host_refund
+  defdelegate refund_payment_for_host(
+                payment_id,
+                host_user_id,
+                amount_cents,
+                key,
+                reason \\ nil
+              ),
+              to: Refunds,
+              as: :issue_host_refund
 
   # ---------------------------------------------------------------------------
   # Checkout
