@@ -869,3 +869,8 @@ msgstr "Barva"
 #, elixir-autogen, elixir-format
 msgid "Add a guest to send a Tymeslot meeting."
 msgstr "Pro odeslání schůzky Tymeslot přidejte hosta."
+
+#: lib/tymeslot_web/live/dashboard/calendar/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "%{calendar} can't hold all of the event's reminders, so some were not carried."
+msgstr "Kalendář %{calendar} neumí uložit všechny připomínky události, proto se některé nepřenesly."

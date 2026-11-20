@@ -61,6 +61,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   """
 
   alias Tymeslot.Availability
+  alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.ProviderPayload
@@ -73,6 +74,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Reminder
 
   require Logger
 
@@ -128,6 +130,19 @@ defmodule Tymeslot.CalendarGrid.EventMove do
           | {:error, :recurring_event | :cross_provider_series | :unaddressable_series}
   def series_move_notes(event, integration),
     do: event |> Occurrence.cached_row() |> SeriesTransfer.notes(integration)
+
+  @doc """
+  Whether a calendar of `integration` keeps every reminder `event` has, so a
+  move there carries them all (`CreateParams.fit_reminders/2`). Outlook keeps
+  one notification, so an event with more, or with an email reminder, loses
+  the rest when it moves there. Reads the cached row, as `move_event/3` does.
+  """
+  @spec keeps_reminders?(map(), map()) :: boolean()
+  def keeps_reminders?(event, %{provider: provider}) do
+    reminders = event |> Occurrence.cached_row() |> Map.get(:reminders) |> List.wrap()
+    reminders = Enum.map(reminders, &Reminder.normalise/1)
+    CreateParams.fit_reminders(reminders, provider) == reminders
+  end
 
   @doc """
   Moves `event` to `destination`'s integration, on the calendar named by

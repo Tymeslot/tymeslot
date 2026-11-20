@@ -866,3 +866,8 @@ msgstr "Farbe"
 #, elixir-autogen, elixir-format
 msgid "Add a guest to send a Tymeslot meeting."
 msgstr "Fügen Sie einen Gast hinzu, um einen Tymeslot-Termin zu senden."
+
+#: lib/tymeslot_web/live/dashboard/calendar/transfer.ex
+#, elixir-autogen, elixir-format
+msgid "%{calendar} can't hold all of the event's reminders, so some were not carried."
+msgstr "%{calendar} kann nicht alle Erinnerungen des Ereignisses aufnehmen, daher wurden einige nicht übernommen."
