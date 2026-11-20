@@ -41,7 +41,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventsRead do
         # degraded. Deciding this from `outcome.failed` (rather than a
         # provider-specific error atom) is what lets `MultiCalendarFetch`
         # report the real per-calendar failures instead of flattening them.
-        Logger.warning("Primary fetch reported unavailable calendars, skipping fallback",
+        Logger.debug("Primary fetch reported unavailable calendars, skipping fallback",
           calendar_path: get_calendar_path(client),
           failed_count: length(failed)
         )
@@ -177,23 +177,11 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventsRead do
 
   # %Outcome{} carries the full events list of every calendar that
   # succeeded, so it must never be handed to a logger whole (see the
-  # generic clause below, which would otherwise inspect it). Log only the
-  # operational summary: counts and which calendars failed and why.
-  defp wrap_events_result(client, {:error, %Outcome{} = outcome}, _log_level) do
-    path = get_calendar_path(client)
-
-    Logger.error("Failed to fetch from calendar",
-      calendar_path: path,
-      attempted: outcome.attempted,
-      succeeded: outcome.succeeded,
-      failed:
-        Enum.map(outcome.failed, fn %{source: source, reason: reason} ->
-          %{source: source, reason: Redactor.redact_and_truncate(reason)}
-        end)
-    )
-
-    {:error, outcome, path}
-  end
+  # generic clause below, which would otherwise inspect it). Its failures
+  # were already logged, once each, by the `FetchAggregate.collect/3` that
+  # classified them.
+  defp wrap_events_result(client, {:error, %Outcome{} = outcome}, _log_level),
+    do: {:error, outcome, get_calendar_path(client)}
 
   defp wrap_events_result(client, {:error, error}, _log_level) do
     path = get_calendar_path(client)
