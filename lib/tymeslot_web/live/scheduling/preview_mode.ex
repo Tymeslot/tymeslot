@@ -49,6 +49,20 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewMode do
     do: assigns[:owner_preview] == true
 
   @doc """
+  True when the page's own organiser is the one looking at it: through a
+  verified preview (`owner_preview?/1`), or signed in as them
+  (`:viewer_user_id`, from the signed session). Never anything a query
+  parameter claims. A page with no organiser has no owner to be viewing it.
+  """
+  @spec organiser_viewing?(Phoenix.LiveView.Socket.t()) :: boolean()
+  def organiser_viewing?(%Phoenix.LiveView.Socket{assigns: assigns} = socket) do
+    organizer_user_id = assigns[:organizer_user_id]
+
+    is_integer(organizer_user_id) and
+      (owner_preview?(socket) or assigns[:viewer_user_id] == organizer_user_id)
+  end
+
+  @doc """
   Builds the path to an owner preview of `username`'s booking page.
 
   Carries both halves of the contract: the display claim and a freshly signed,

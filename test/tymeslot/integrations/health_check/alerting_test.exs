@@ -111,7 +111,9 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
 
     test "the organiser's own views of their offer turn no guest away, so are not counted",
          ctx do
-      assert {:error, _reason} =
+      # The calendar's own reason: an earlier refusal (`:not_found` for a
+      # meeting type it could not find) would never read the calendar at all.
+      assert {:error, :all_calendars_unavailable} =
                Availability.bookable_windows(ctx.user.id, ctx.meeting_type.id, ctx.date, ctx.date)
 
       assert {:error, :calendar_unavailable} =

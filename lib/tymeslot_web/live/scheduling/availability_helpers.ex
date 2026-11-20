@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   alias Tymeslot.Availability.{Calculate, Offer, Schedules}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.Tasks
+  alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Components.SessionList
 
@@ -23,7 +24,9 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   The `Tymeslot.Availability.Offer` request for what this page is showing.
 
   Built once here so the month fetch and the slot fetch cannot describe the
-  page differently. A plain map, so a fetch task can capture it without
+  page differently. The organiser's own look at their page (a preview, or
+  signed in as them) is `organiser_view`, so a calendar refusing it is not
+  counted as a guest turned away. A plain map, so a fetch task can capture it without
   capturing the socket.
   """
   @spec request(Phoenix.LiveView.Socket.t()) :: Offer.request()
@@ -36,7 +39,8 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       reschedule: socket.assigns[:reschedule_context],
       reschedule_seat_token: socket.assigns[:reschedule_seat_token],
       seat_move: socket.assigns[:seat_move_context],
-      demo_mode?: Demo.demo_mode?(socket)
+      demo_mode?: Demo.demo_mode?(socket),
+      organiser_view: PreviewMode.organiser_viewing?(socket)
     }
   end
 
