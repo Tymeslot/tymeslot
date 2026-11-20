@@ -20,6 +20,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
     participants' voting links and receipts
   - `SessionScheduler`: a planned session's participant list, at its
     registration close
+  - `SeatScheduler`: the emails of a single group-booking seat, one job per
+    seat
   - `SeriesScheduler`: a booking series' one confirmation, the
     cancellation of several of its sessions at once, and the request and
     its outcome for a series held for approval
@@ -37,13 +39,14 @@ defmodule Tymeslot.Emails.EmailScheduler do
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
   alias Tymeslot.Emails.EmailScheduler.OnboardingScheduler
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
+  alias Tymeslot.Emails.EmailScheduler.SeatScheduler
   alias Tymeslot.Emails.EmailScheduler.SeriesScheduler
   alias Tymeslot.Emails.EmailScheduler.SessionScheduler
 
   # Meeting emails
 
   defdelegate schedule_confirmation_emails(meeting_id), to: MeetingScheduler
-  defdelegate schedule_seat_confirmation_emails(meeting_id, participant_id), to: MeetingScheduler
+  defdelegate schedule_seat_confirmation_emails(meeting_id, participant_id), to: SeatScheduler
   defdelegate schedule_cancellation_emails(meeting_id, opts \\ []), to: MeetingScheduler
   defdelegate schedule_verification_email(meeting_id, send \\ 1), to: MeetingScheduler
   defdelegate schedule_reschedule_emails(meeting, original, opts \\ []), to: MeetingScheduler
@@ -60,7 +63,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
     to: SeriesScheduler
 
   defdelegate schedule_seat_cancellation_emails(meeting_id, participant_id, slot_freed?),
-    to: MeetingScheduler
+    to: SeatScheduler
 
   defdelegate schedule_reminder_emails(meeting_id, reminder_value, reminder_unit),
     to: MeetingScheduler
@@ -74,10 +77,10 @@ defmodule Tymeslot.Emails.EmailScheduler do
                 old_participant_id,
                 old_slot_freed?
               ),
-              to: MeetingScheduler
+              to: SeatScheduler
 
   defdelegate schedule_seat_meeting_cancellation_email(meeting_id, participant_id),
-    to: MeetingScheduler
+    to: SeatScheduler
 
   defdelegate schedule_seat_reminder_email(
                 meeting_id,
@@ -85,13 +88,13 @@ defmodule Tymeslot.Emails.EmailScheduler do
                 reminder_value,
                 reminder_unit
               ),
-              to: MeetingScheduler
+              to: SeatScheduler
 
   defdelegate schedule_seat_session_moved(meeting_id, participant_id, from),
-    to: MeetingScheduler
+    to: SeatScheduler
 
   defdelegate schedule_seat_reschedule_request(meeting_id, participant_id, requested_at),
-    to: MeetingScheduler
+    to: SeatScheduler
 
   defdelegate schedule_guest_invitations(meeting_id, guest_ids), to: MeetingScheduler
 

@@ -13,7 +13,7 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   already went out. Instead, the meeting-level job here is a dispatcher: it
   enqueues one independently-retryable per-seat job per participant (unique
   per seat and per logical email, see
-  `Tymeslot.Emails.EmailScheduler.MeetingScheduler.schedule_seat_email/5`)
+  `Tymeslot.Emails.EmailScheduler.SeatScheduler.schedule_seat_email/6`)
   plus sends the single organiser email inline, and returns `:ok`. A failed
   organiser send retries the whole dispatch, which is safe because
   re-enqueuing an already-unique per-seat job is a no-op.
