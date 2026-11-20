@@ -4,8 +4,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingConfig do
 
   This is the single source of truth for the booking field spec used by
   `InputProcessor.validate_form/2`. Any new booking fields (e.g. phone, company)
-  should be added here — all validation, sanitisation, and form-validity checks
-  pick it up automatically.
+  should be added here; validation and sanitisation pick it up automatically.
   """
 
   @booking_field_spec [

@@ -22,9 +22,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.OrganizerContext
   alias Tymeslot.Profiles.ProfileSchema
-  alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
-  alias TymeslotWeb.Live.Scheduling.BookingConfig
 
   import Component, only: [assign: 3]
 
@@ -297,17 +295,4 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
 
     assign(socket, :client_ip, ip)
   end
-
-  @doc """
-  Validates if form is complete and valid.
-  """
-  @spec form_valid?(Phoenix.HTML.Form.t()) :: boolean()
-  def form_valid?(%{source: source}) when is_map(source) do
-    case InputProcessor.validate_form(source, BookingConfig.booking_field_spec()) do
-      {:ok, _result} -> true
-      {:error, _reason} -> false
-    end
-  end
-
-  def form_valid?(_form), do: false
 end

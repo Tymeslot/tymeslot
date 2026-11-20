@@ -7,7 +7,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings.Approval
-  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Shared.BookingLabels
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.BookingText
@@ -202,15 +201,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       id="submit-booking-button"
                       loading={@submitting}
                       loading_text={dgettext("booking", "Verifying...")}
-                      disabled={!OrganizerHelpers.form_valid?(@form)}
                       data-testid="submit-booking"
-                      aria-describedby={
-                        submit_describedby(
-                          SeriesSummary.price_describedby(assigns, @series_count),
-                          @submitting,
-                          @form
-                        )
-                      }
+                      aria-describedby={SeriesSummary.price_describedby(assigns, @series_count)}
                       data-intent="submit"
                       class="flex-1"
                     >
@@ -220,13 +212,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       )}
                     </.loading_button>
                   </div>
-                  <p
-                    :if={submit_incomplete?(@submitting, @form)}
-                    id="submit-booking-hint"
-                    class="mt-2 text-center text-sm opacity-80"
-                  >
-                    {dgettext("booking", "Please fill in all required fields")}
-                  </p>
                 </div>
               </.glass_morphism_card>
             </div>
@@ -257,18 +242,5 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
   defp get_organizer_name(organizer_profile, username_context) do
     BookingLabels.organizer_display_name(organizer_profile, username_context)
-  end
-
-  # The form says what is missing while it stays unsendable.
-  defp submit_incomplete?(submitting, form),
-    do: not submitting and not OrganizerHelpers.form_valid?(form)
-
-  defp submit_describedby(price_id, submitting, form) do
-    hint = if submit_incomplete?(submitting, form), do: "submit-booking-hint"
-
-    case Enum.reject([price_id, hint], &is_nil/1) do
-      [] -> nil
-      ids -> Enum.join(ids, " ")
-    end
   end
 end

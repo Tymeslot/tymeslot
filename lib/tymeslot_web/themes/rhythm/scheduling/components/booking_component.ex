@@ -6,7 +6,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings.Approval
-  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.BookingLabels
   alias TymeslotWeb.Themes.Shared.BookingLocation
@@ -191,10 +190,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 data-testid="submit-booking"
                 aria-describedby={SeriesSummary.price_describedby(assigns, @series_count)}
                 data-intent="submit"
-                disabled={
-                  @submitting || !OrganizerHelpers.form_valid?(@form) ||
-                    SeriesSummary.submit_waits?(assigns)
-                }
+                disabled={@submitting || SeriesSummary.submit_waits?(assigns)}
               >
                 <%= if @submitting do %>
                   <.spinner class="loading-spinner icon-sm" />
