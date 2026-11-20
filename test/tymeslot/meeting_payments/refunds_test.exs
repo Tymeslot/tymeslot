@@ -444,6 +444,52 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     end
   end
 
+  describe "issue_refund/4 after a partly lost dispute" do
+    # 5000 paid, 3000 taken back by a lost dispute, nothing refunded at Stripe.
+    defp after_lost_dispute,
+      do:
+        paid_booking_payment(%{
+          refunded_amount_cents: 3000,
+          disputed_lost_cents: 3000,
+          status: :partially_refunded
+        })
+
+    test "refuses more than the remainder without asking Stripe" do
+      # Within the recorded total, but none of it is a refund Stripe made,
+      # so there is nothing a replayed key could return. Mox fails the test
+      # on any Stripe call.
+      assert {:error, :invalid_amount} = Refunds.issue_refund(after_lost_dispute(), 2500, @key)
+    end
+
+    test "records a refund of the remainder against Stripe's refunds" do
+      payment = after_lost_dispute()
+
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, _opts ->
+        {:ok, %{id: "re_rest", amount: 2000, charge: %{amount_refunded: 2000}}}
+      end)
+
+      assert {:ok, %{refunded_amount_cents: 5000, disputed_lost_cents: 3000, status: :refunded}} =
+               Refunds.issue_refund(payment, 2000, @key)
+    end
+
+    test "replays a refund of the remainder the webhook already recorded" do
+      payment =
+        paid_booking_payment(%{
+          refunded_amount_cents: 5000,
+          disputed_lost_cents: 3000,
+          status: :refunded
+        })
+
+      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, opts ->
+        assert opts[:idempotency_key] == @key
+        {:ok, %{id: "re_rest", amount: 2000, charge: %{amount_refunded: 2000}}}
+      end)
+
+      assert {:ok, %{refunded_amount_cents: 5000, status: :refunded}} =
+               Refunds.issue_refund(payment, 2000, @key)
+    end
+  end
+
   describe "refund_payment_for_host/5" do
     test "refunds a payment the host took" do
       payment = paid_booking_payment()

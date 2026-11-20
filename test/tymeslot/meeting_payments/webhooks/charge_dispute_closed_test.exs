@@ -146,6 +146,50 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       reloaded = Repo.reload!(bp)
       assert reloaded.status == :partially_refunded
       assert reloaded.refunded_amount_cents == 2000
+      assert reloaded.disputed_lost_cents == 2000
+    end
+
+    # Refunds and a lost dispute are different money: the dispute is added
+    # to what was refunded before it, not compared with it.
+    test "a lost dispute adds to the refunds made before it" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :disputed,
+          amount_cents: 5000,
+          refunded_amount_cents: 1000,
+          stripe_charge_id: "ch_LOST_AFTER_REFUND"
+        )
+
+      event = dispute_closed_event("evt_LOST_AFTER_REFUND", "ch_LOST_AFTER_REFUND", "lost", 2000)
+
+      assert :ok = ChargeDisputeClosed.handle(event)
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == :partially_refunded
+      assert reloaded.refunded_amount_cents == 3000
+      assert reloaded.disputed_lost_cents == 2000
+    end
+
+    test "a lost dispute over money already refunded settles at the amount paid" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :disputed,
+          amount_cents: 5000,
+          refunded_amount_cents: 2000,
+          stripe_charge_id: "ch_LOST_TWICE"
+        )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_closed_event("evt_LOST_TWICE", "ch_LOST_TWICE", "lost", 5000)
+               )
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == :refunded
+      assert reloaded.refunded_amount_cents == 5000
+      assert reloaded.disputed_lost_cents == 5000
     end
   end
 
