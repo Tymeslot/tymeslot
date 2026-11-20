@@ -130,7 +130,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
   # organiser may email its guests: invite, remove, tell (they organise
   # it; a query or two).
   # An event a group meeting with live seats sits on opens read only, saying
-  # so (`EditGuard.drawn_writable/3`).
+  # so (`EditGuard.drawn_writable/3`). A read only panel emails no guests, so
+  # it offers neither Tell guests nor the Cancel of an update held before the
+  # lock; `EditGuard.guest_update/3` leaves the seat lock out because that
+  # update must stay cancellable elsewhere.
   defp opened(socket, event, %{integrations: integrations} = context) do
     writable = EditGuard.drawn_writable(integrations, context.locked_uids, event)
 
@@ -138,7 +141,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.EventPanel do
       editable: writable == :ok,
       movable: writable == :ok and EditGuard.movable?(integrations, event),
       read_only_reason: read_only_reason(writable),
-      emails_guests: EditGuard.guest_update(context.user_id, integrations, event) == :ok
+      emails_guests:
+        writable == :ok and EditGuard.guest_update(context.user_id, integrations, event) == :ok
     )
   end
 
