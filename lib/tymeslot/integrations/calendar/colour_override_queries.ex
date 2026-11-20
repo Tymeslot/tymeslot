@@ -72,16 +72,17 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrideQueries do
   @doc """
   Deletes `user_id`'s cleared override on the event `uid` of
   `integration_id` (`mark_external_cleared/3`), leaving one that holds a
-  colour in place.
+  colour in place. Returns whether a cleared override was deleted.
   """
-  @spec delete_external_cleared(integer(), integer(), String.t()) :: :ok
+  @spec delete_external_cleared(integer(), integer(), String.t()) :: boolean()
   def delete_external_cleared(user_id, integration_id, uid) do
-    ColourOverride
-    |> external_match({user_id, integration_id, uid})
-    |> where([o], is_nil(o.colour))
-    |> Repo.delete_all()
+    {count, _rows} =
+      ColourOverride
+      |> external_match({user_id, integration_id, uid})
+      |> where([o], is_nil(o.colour))
+      |> Repo.delete_all()
 
-    :ok
+    count > 0
   end
 
   @doc """
