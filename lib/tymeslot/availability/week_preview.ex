@@ -80,7 +80,8 @@ defmodule Tymeslot.Availability.WeekPreview do
       profile: profile,
       user_timezone: timezone,
       meeting_type: meeting_type,
-      cached_calendar: true
+      cached_calendar: true,
+      organiser_view: true
     }
 
     duration = Offer.duration_minutes(meeting_type, @fallback_duration_minutes)

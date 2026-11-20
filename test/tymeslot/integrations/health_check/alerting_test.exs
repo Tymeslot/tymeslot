@@ -10,18 +10,26 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
 
   import Mox
   import Tymeslot.AdminAlertsCaptureHelpers
+
+  import Tymeslot.AvailabilityTestHelpers,
+    only: [create_bookable_profile: 0, next_bookable_weekday: 0]
+
   import Tymeslot.Test.ClockHelpers
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers, only: [insert_unhealthy_health_row: 4]
 
   alias Tymeslot.Application, as: TymeslotApplication
+  alias Tymeslot.Availability
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Bookings.CalendarCheck
+  alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
   alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck.Alerting
   alias Tymeslot.Integrations.HealthCheck.AvailabilityRefusalSchema
+  alias Tymeslot.Profiles
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.DataRetentionWorker
   alias Tymeslot.Workers.IntegrationAutoPauseWorker
@@ -70,6 +78,46 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
       assert payload.affected_user_ids == [user.id]
       assert payload.refusals == 5
       assert payload.summary =~ "1 organiser(s) served no availability"
+    end
+  end
+
+  describe "which unreadable-calendar reads count as refusals" do
+    setup do
+      TestMocks.setup_all_mocks()
+
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        {:error, :all_calendars_unavailable}
+      end)
+
+      %{user: user, profile: profile} = create_bookable_profile()
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 30)
+
+      %{user: user, profile: profile, meeting_type: meeting_type, date: next_bookable_weekday()}
+    end
+
+    test "a guest's booking page offered nothing is counted", ctx do
+      request = %{
+        profile: ctx.profile,
+        user_timezone: Profiles.timezone(ctx.profile),
+        meeting_type: ctx.meeting_type
+      }
+
+      assert {:error, :all_calendars_unavailable} =
+               Offer.slots_for_date(request, Date.to_iso8601(ctx.date), 30)
+
+      assert [%{user_id: user_id, refusals: 1}] = Repo.all(AvailabilityRefusalSchema)
+      assert user_id == ctx.user.id
+    end
+
+    test "the organiser's own views of their offer turn no guest away, so are not counted",
+         ctx do
+      assert {:error, _reason} =
+               Availability.bookable_windows(ctx.user.id, ctx.meeting_type.id, ctx.date, ctx.date)
+
+      assert {:error, :calendar_unavailable} =
+               Availability.week_preview(ctx.profile, meeting_type: ctx.meeting_type)
+
+      assert Repo.all(AvailabilityRefusalSchema) == []
     end
   end
 
