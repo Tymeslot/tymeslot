@@ -151,6 +151,8 @@ config :tymeslot,
     {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
     # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync
     {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
+    # Address books of the calendar connections that suggest contacts.
+    {"*/15 * * * *", Tymeslot.Workers.ContactsSyncSweepWorker},
     # Every 5 min (the shortest health-check backoff): enqueue due health checks
     {"*/5 * * * *", Tymeslot.Workers.IntegrationHealthSweepWorker},
     # Run daily at 04:00 UTC for cross-domain data retention pruning

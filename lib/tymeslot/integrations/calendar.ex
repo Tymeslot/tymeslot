@@ -229,6 +229,11 @@ defmodule Tymeslot.Integrations.Calendar do
           {:ok, integration()} | {:error, OwnerActions.refusal() | term()}
   defdelegate set_all_events_busy(user_id, integration_id, busy?), to: OwnerActions
 
+  @doc "See `Tymeslot.Integrations.Calendar.OwnerActions.set_use_for_contacts/3`."
+  @spec set_use_for_contacts(user_id(), integration_id(), boolean()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, term()}
+  defdelegate set_use_for_contacts(user_id, integration_id, enabled?), to: OwnerActions
+
   # ---------------------------
   # Public API: Discovery/Selection
   # ---------------------------

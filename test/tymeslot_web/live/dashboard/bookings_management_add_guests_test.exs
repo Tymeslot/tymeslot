@@ -98,6 +98,21 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementAddGuestsTest do
       )
     end
 
+    test "invites a guest under the name typed with the address", %{conn: conn, user: user} do
+      meeting = upcoming_meeting(user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("#add-guests-#{meeting.id}") |> render_click()
+
+      assert stage(view, "Grace Hopper <Grace@Example.com>") =~ "Grace Hopper"
+      stage(view, "<script> <plain@example.com>")
+      view |> element("button", "Send invitation") |> render_click()
+
+      assert [
+               %{email: "grace@example.com", name: "Grace Hopper"},
+               %{email: "plain@example.com", name: nil}
+             ] = meeting.id |> GuestQueries.list_for_meeting() |> Enum.sort_by(& &1.email)
+    end
+
     test "says so when every address is already invited, and queues nothing", %{
       conn: conn,
       user: user

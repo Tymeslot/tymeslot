@@ -22,7 +22,7 @@ defmodule Tymeslot.Security.RateLimiterRefusalLoggingTest do
 
   @quiet ~w(
     analytics_ip analytics_visitor availability_add_break availability_quick_break
-    availability_update_hours calendar_push calendar_webhook freebusy healthcheck
+    availability_update_hours calendar_push calendar_webhook contact_search freebusy healthcheck
     meeting_ics payment_initiation poll_link_request poll_register poll_vote stripe_webhook
     theme_upload
     telegram_webhook username_change username_check webhook_form webhook_form_validate

@@ -20,10 +20,12 @@ defmodule Tymeslot.Integrations.Calendar.OwnerActions do
   changes is too: it asks for a sync.
   """
 
+  alias Tymeslot.Contacts
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.Blocking
   alias Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarSelectionQueries
   alias Tymeslot.Integrations.Calendar.Deletion
@@ -124,6 +126,30 @@ defmodule Tymeslot.Integrations.Calendar.OwnerActions do
     with_owned(user_id, integration_id, :write, fn integration ->
       with :ok <- feed_blocks(integration),
            do: Management.put_all_events_busy(integration, busy?)
+    end)
+  end
+
+  @doc """
+  Sets whether a connection's address books suggest contacts
+  (`use_for_contacts`, see `Tymeslot.Contacts`). A connection whose server
+  keeps no address books beside its calendars is refused with
+  `{:error, :contacts_not_supported}`. Where its address books are is
+  forgotten either way, so turning it back on finds them afresh.
+  """
+  @spec set_use_for_contacts(pos_integer(), pos_integer(), boolean()) ::
+          {:ok, integration()}
+          | {:error, refusal() | :contacts_not_supported | Ecto.Changeset.t()}
+  def set_use_for_contacts(user_id, integration_id, enabled?) when is_boolean(enabled?) do
+    with_owned(user_id, integration_id, :write, fn integration ->
+      if Contacts.supported_provider?(integration.provider) do
+        with {:ok, updated} <-
+               CalendarIntegrationQueries.update(integration, %{use_for_contacts: enabled?}) do
+          if enabled?, do: Contacts.sync_soon(updated.id), else: Contacts.drop(updated.id)
+          {:ok, updated}
+        end
+      else
+        {:error, :contacts_not_supported}
+      end
     end)
   end
 

@@ -39,6 +39,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   alias Tymeslot.CalendarGrid.EventPayload
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Meetings.AttendeeNotifications
+  alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Validation.AddressList
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.PanelState
@@ -60,17 +62,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   def of(event),
     do: event |> Map.get(:attendees) |> List.wrap() |> Enum.map(&Attendee.normalise/1)
 
-  @doc "Invites `raw` to the event the panel shows: saves the list, then emails them."
+  @doc """
+  Invites `raw` (an address, or `Name <address>`) to the event the panel
+  shows: saves the list, then emails them.
+  """
   @spec invite(socket(), String.t()) :: socket()
   def invite(socket, raw) when is_binary(raw) do
+    # A bare address, or one with a name (`Name <address>`).
+    typed = AddressList.parse_entry(raw)
+
     with {:ok, event} <- panel_event(socket),
          :ok <- idle(socket, event),
-         {:ok, email} <- address(socket, raw),
+         {:ok, email} <- address(socket, typed.email),
          :ok <- new_guest(event, email),
          :ok <- room_for_one_more(event),
          :ok <- gates(socket, event) do
-      added = Attendee.new(email: email)
-      guests = of(event) ++ [added]
+      guests = of(event) ++ [invitee(email, typed.name)]
 
       socket
       |> write(event, guests)
@@ -83,6 +90,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelGuests do
   end
 
   def invite(socket, _raw), do: socket
+
+  # The guest added, with the name typed if it is one a guest can be given.
+  defp invitee(email, name) do
+    [%{name: name}] = Guests.with_names([email], %{email => name})
+    Attendee.new(email: email, display_name: name)
+  end
 
   @doc "Typing in the guest field clears what it said about the last address."
   @spec typed(socket()) :: socket()

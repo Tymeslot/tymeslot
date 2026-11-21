@@ -411,6 +411,11 @@ msgstr "Sua página de agendamento parou de receber agendamentos"
 msgid "Your booking page isn't taking bookings yet"
 msgstr "Sua página de agendamento ainda não está recebendo agendamentos"
 
+#: lib/tymeslot_web/components/dashboard/contact_suggestions.ex
+#, elixir-autogen, elixir-format
+msgid "Contacts suggested. Use the arrow keys to choose one."
+msgstr "Contatos sugeridos. Use as setas para escolher um."
+
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format

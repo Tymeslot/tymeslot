@@ -5,8 +5,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
 
   Every address is checked with the domain's own rules (`CreateParams.guests/2`:
   a valid address, not the organiser's, at most `CreateParams.max_guests/0`), so
-  the chips never promise an invitation a create would drop. An address typed
-  into the guest field but not added when Create is pressed is added first
+  the chips never promise an invitation a create would drop. An address may come
+  with a name, `Name <address>` (what choosing a contact fills in); the name is
+  kept with the guest (`PanelMeeting.name_guest/3`). An address typed into the
+  guest field but not added when Create is pressed is added first
   (`take_pending/3`): a valid one joins the draft, and one that is not, or the
   organiser's own, stops the create with its reason. A refusal is said under the
   guest field (the panel's `"guest"` error), not in a toast.
@@ -24,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   alias Tymeslot.CalendarGrid.CreateParams
   alias Tymeslot.CalendarGrid.MeetingParams
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Validation.AddressList
   alias TymeslotWeb.Dashboard.Calendar.Creation
   alias TymeslotWeb.Dashboard.Calendar.PanelMeeting
   alias TymeslotWeb.Dashboard.Calendar.PanelNew
@@ -57,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
   @spec pending(map(), map()) :: map()
   def pending(%{"guest_email" => typed}, user) when is_binary(typed) do
     typed = String.replace(typed, "\x00", "")
-    email = typed |> String.trim() |> String.downcase()
+    %{email: email} = AddressList.parse_entry(typed)
     own = String.downcase(user.email || "")
 
     if Guests.valid_email?(email) and email != own,
@@ -123,23 +126,30 @@ defmodule TymeslotWeb.Dashboard.Calendar.PanelNewGuests do
 
   @doc "Drops the guest `email` from the draft."
   @spec drop(socket(), String.t()) :: socket()
-  def drop(%{assigns: %{panel: %{form: form}}} = socket, email),
-    do: PanelNew.put_form(socket, %{form | "guests" => List.delete(form["guests"], email)})
+  def drop(%{assigns: %{panel: %{form: form}}} = socket, email) do
+    form =
+      PanelMeeting.forget_guest(%{form | "guests" => List.delete(form["guests"], email)}, email)
+
+    PanelNew.put_form(socket, form)
+  end
 
   defp put(%{assigns: %{panel: %{form: form}}} = socket, raw) do
     user_id = socket.assigns.current_user.id
     guests = form["guests"]
+    typed = AddressList.parse_entry(raw)
 
-    with {:ok, [email]} <- CreateParams.guests(user_id, [raw]),
+    with {:ok, [email]} <- CreateParams.guests(user_id, [typed.email]),
          :ok <- not_yet_a_guest(guests, email),
          :ok <- room_for_one_more(form),
          {:ok, _kept} <- CreateParams.guests(user_id, guests ++ [email]) do
       form =
-        Map.merge(form, %{
+        form
+        |> Map.merge(%{
           "guests" => guests ++ [email],
           "guest_email" => "",
           "guest_pending" => ""
         })
+        |> PanelMeeting.name_guest(email, typed.name)
 
       socket = socket |> PanelNew.put_form(form) |> PanelState.put_error("guest", nil)
       {:ok, assign(socket, :guest_form_key, socket.assigns.guest_form_key + 1)}
