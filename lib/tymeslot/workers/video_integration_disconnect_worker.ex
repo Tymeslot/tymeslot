@@ -282,15 +282,18 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   end
 
   # A room that is the booking's own calendar event (a Teams meeting on the
-  # same Microsoft account) is not the provider's to delete: deleting it would
-  # take the booking off the organiser's calendar and mail attendees a
-  # cancellation. It is released the way a location change releases it
-  # (`VideoSyncWorker.release/1`), which has calendar sync replace the event
-  # with one carrying no online meeting. Only upcoming bookings reach this, as
-  # Teams rooms are drained in the `:upcoming` scope, so no past event is
-  # rewritten. The room is cleared in the same transaction that schedules the
-  # replacement: the replacement is skipped for a meeting still holding a room
-  # on the event, and a cleared room is never listed for another pass.
+  # same Microsoft account, or a Meet conference Google made for a Google
+  # event of the same Google account) is not the provider's to delete:
+  # deleting it would take the booking off the organiser's calendar and mail
+  # attendees a cancellation. It is released the way a location change
+  # releases it (`VideoSyncWorker.release/1`), which has calendar sync take
+  # the meeting off the event: an Outlook event is replaced with one carrying
+  # none, and a Google event loses its conference in place. Only upcoming
+  # bookings reach this, as Teams and Google Meet rooms are drained in the
+  # `:upcoming` scope, so no past event is rewritten. The room is cleared in
+  # the same transaction that schedules the release: it is skipped for a
+  # meeting still holding a room on the event, and a cleared room is never
+  # listed for another pass.
   defp delete_meeting_room(
          _integration,
          %{video_room_id: event_id, provider_event_id: event_id} = meeting

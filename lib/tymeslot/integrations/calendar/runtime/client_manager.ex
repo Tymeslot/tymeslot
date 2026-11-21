@@ -139,10 +139,13 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
 
   @doc """
   Returns the integration id and calendar path that will be used for
-  creating bookings, given a Meeting, MeetingType, or user id.
+  creating bookings, given a Meeting, MeetingType, or user id. The path is
+  nil when the integration names no booking calendar of its own (a Google
+  integration without a calendar list), and the provider then writes to its
+  default calendar.
   """
   @spec get_booking_integration_info(user_id() | MeetingSchema.t() | MeetingTypeSchema.t()) ::
-          {:ok, %{integration_id: integration_id(), calendar_path: String.t()}}
+          {:ok, %{integration_id: integration_id(), calendar_path: String.t() | nil}}
           | {:error, atom()}
   def get_booking_integration_info(%MeetingSchema{} = meeting) do
     case BookingIntegrationResolver.resolve(meeting) do
