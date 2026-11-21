@@ -165,12 +165,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     end
   end
 
-  def handle_event("toggle_use_for_contacts", %{"id" => id}, socket) do
-    case ContactsToggle.toggle(socket.assigns.current_user.id, socket.assigns.integrations, id) do
-      {:ok, _updated} -> {:noreply, load_integrations(socket)}
-      :unchanged -> {:noreply, socket}
-    end
-  end
+  def handle_event("toggle_use_for_contacts", %{"id" => id}, socket),
+    do: {:noreply, ContactsToggle.handle_toggle(socket, id, &load_integrations/1)}
 
   def handle_event("toggle_integration", %{"id" => id}, socket) do
     with_owned_integration(socket, id, &Calendar.toggle_integration/2, fn

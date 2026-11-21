@@ -13,6 +13,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ContactsToggle do
   alias TymeslotWeb.Dashboard.CalendarSettings.Helpers
   alias TymeslotWeb.Live.Shared.Flash
 
+  @type socket :: Phoenix.LiveView.Socket.t()
+
   attr :integration, :map, required: true
   attr :myself, :any, required: true
 
@@ -72,6 +74,19 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ContactsToggle do
 
       _not_changed ->
         :unchanged
+    end
+  end
+
+  @doc """
+  The settings component's `"toggle_use_for_contacts"` event: flips the
+  setting on the connection `id` (`toggle/3`) and, once it is stored,
+  reloads the connections with `reload`.
+  """
+  @spec handle_toggle(socket(), String.t(), (socket() -> socket())) :: socket()
+  def handle_toggle(socket, id, reload) do
+    case toggle(socket.assigns.current_user.id, socket.assigns.integrations, id) do
+      {:ok, _updated} -> reload.(socket)
+      :unchanged -> socket
     end
   end
 
