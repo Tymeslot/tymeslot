@@ -154,6 +154,44 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
     end
   end
 
+  describe "the time a release records" do
+    test "an expiry that runs long after the deadline is dated to the deadline" do
+      deadline = DateTime.add(DateTime.utc_now(:second), -90, :day)
+      meeting = overdue_meeting(%{approval_deadline_at: deadline})
+
+      assert {:ok, %{expired: 1}} = perform_job(ApprovalSweepWorker, %{})
+
+      expired = reload(meeting)
+      assert expired.status == :expired
+      assert DateTime.compare(expired.cancelled_at, deadline) == :eq
+      assert DateTime.compare(expired.approval_resolved_at, deadline) == :eq
+    end
+
+    test "an expiry run before its deadline is dated to when it ran, not to the future" do
+      meeting = held_meeting()
+      before = DateTime.utc_now(:second)
+
+      {:ok, expired} = Approval.expire(meeting)
+
+      assert DateTime.compare(expired.cancelled_at, before) != :lt
+      assert DateTime.compare(expired.cancelled_at, meeting.approval_deadline_at) == :lt
+    end
+
+    test "a decline is dated to when the host declined, however long after the deadline" do
+      meeting =
+        overdue_meeting(%{
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), -9, :day)
+        })
+
+      before = DateTime.utc_now(:second)
+
+      {:ok, declined} = Approval.decline(meeting, nil)
+
+      assert DateTime.compare(declined.cancelled_at, before) != :lt
+      assert declined.cancelled_at == declined.approval_declined_at
+    end
+  end
+
   describe "releasing a request tells the invitee" do
     test "a decline schedules the declined email" do
       meeting = held_meeting()

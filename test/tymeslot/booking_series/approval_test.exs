@@ -64,8 +64,8 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
 
   defp expiry_jobs, do: all_enqueued(worker: ApprovalExpiryWorker)
 
-  defp past_deadline! do
-    past = DateTime.add(DateTime.utc_now(:second), -60, :second)
+  defp past_deadline!(seconds_ago \\ 60) do
+    past = DateTime.add(DateTime.utc_now(:second), -seconds_ago, :second)
 
     Repo.update_all(from(m in MeetingSchema, where: not is_nil(m.series_id)),
       set: [approval_deadline_at: past]
@@ -506,6 +506,19 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
     assert statuses() == [:expired, :expired, :expired]
     assert [_outcome] = email_jobs("send_series_request_outcome")
     assert email_jobs("send_booking_request_outcome") == []
+  end
+
+  test "a sweep that reaches a series long after its deadline dates every session to it" do
+    book_three()
+    past_deadline!(30 * 86_400)
+
+    assert {:ok, %{expired: 1}} = perform_job(ApprovalSweepWorker, %{})
+
+    for session <- meetings() do
+      assert session.status == :expired
+      assert DateTime.compare(session.cancelled_at, session.approval_deadline_at) == :eq
+      assert DateTime.compare(session.approval_resolved_at, session.approval_deadline_at) == :eq
+    end
   end
 
   test "a held session cannot be moved on its own" do

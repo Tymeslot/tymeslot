@@ -284,11 +284,15 @@ defmodule Tymeslot.Meetings.EmailVerification do
   Releases a held booking whose deadline has passed.
 
   Silent by design: no email, webhook, calendar or video call, since none of
-  them ever learned of the booking. Only the slot is freed.
+  them ever learned of the booking. Only the slot is freed. The booking is
+  dated as ended at its deadline (`MeetingState.lapsed_at/2`), however late
+  this runs.
   """
   @spec expire(Meeting.t()) :: {:ok, Meeting.t()} | {:error, :not_awaiting_verification}
-  def expire(%Meeting{} = meeting),
-    do: release_hold(meeting, :expired, "Unverified booking released")
+  def expire(%Meeting{} = meeting) do
+    ended_at = MeetingState.lapsed_at(meeting.verification_deadline_at, Clock.utc_now())
+    release_hold(meeting, :expired, ended_at, "Unverified booking released")
+  end
 
   @disowned "Unverified booking disowned by its attendee"
 
@@ -301,7 +305,7 @@ defmodule Tymeslot.Meetings.EmailVerification do
   """
   @spec release(Meeting.t()) :: {:ok, Meeting.t()} | {:error, :not_awaiting_verification}
   def release(%Meeting{} = meeting),
-    do: release_hold(meeting, :cancelled, @disowned)
+    do: release_hold(meeting, :cancelled, Clock.utc_now(), @disowned)
 
   @doc """
   `release/1` for a caller running it inside a transaction of its own: the
@@ -313,17 +317,17 @@ defmodule Tymeslot.Meetings.EmailVerification do
   @spec release_in_transaction(Meeting.t()) ::
           {:ok, Meeting.t()} | {:error, :not_awaiting_verification}
   def release_in_transaction(%Meeting{} = meeting),
-    do: release_quietly(meeting, :cancelled, @disowned)
+    do: release_quietly(meeting, :cancelled, Clock.utc_now(), @disowned)
 
-  defp release_hold(meeting, status, message) do
-    with {:ok, released} <- release_quietly(meeting, status, message) do
+  defp release_hold(meeting, status, ended_at, message) do
+    with {:ok, released} <- release_quietly(meeting, status, ended_at, message) do
       Availability.changed(released.organizer_user_id)
       {:ok, released}
     end
   end
 
-  defp release_quietly(meeting, status, message) do
-    changes = [status: status, cancelled_at: DateTime.truncate(Clock.utc_now(), :second)]
+  defp release_quietly(meeting, status, ended_at, message) do
+    changes = [status: status, cancelled_at: DateTime.truncate(ended_at, :second)]
 
     with {:ok, released} <-
            MeetingTransitionQueries.transition_from_awaiting_verification(meeting.id, changes) do

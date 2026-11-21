@@ -21,6 +21,7 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
   alias Tymeslot.Meetings.ApprovalRefunds
   alias Tymeslot.Meetings.CommittedStep
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Notifications.Orchestrator
@@ -37,8 +38,12 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
   @spec decline(Meeting.t(), String.t() | nil) :: {:ok, Meeting.t()} | {:error, Approval.error()}
   def decline(%Meeting{} = meeting, reason \\ nil) do
     case SeriesApproval.for_session(meeting, {:decline, reason}) do
-      :not_in_series -> release(meeting, :cancelled, decline_changes(reason, Clock.utc_now()))
-      answered -> answered
+      :not_in_series ->
+        now = Clock.utc_now()
+        release(meeting, :cancelled, decline_changes(reason, now), now)
+
+      answered ->
+        answered
     end
   end
 
@@ -55,13 +60,19 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
   Releases a held booking whose deadline has passed.
 
   Distinct from `decline/2` only in the status recorded and, downstream, in
-  what the invitee is told. Both free the slot identically.
+  what the invitee is told. Both free the slot identically. The request is
+  dated as resolved at its deadline (`MeetingState.lapsed_at/2`), however
+  late this runs.
   """
   @spec expire(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Approval.error()}
   def expire(%Meeting{} = meeting) do
     case SeriesApproval.for_session(meeting, :expire) do
-      :not_in_series -> release(meeting, :expired, [])
-      answered -> answered
+      :not_in_series ->
+        ended_at = MeetingState.lapsed_at(meeting.approval_deadline_at, Clock.utc_now())
+        release(meeting, :expired, [], ended_at)
+
+      answered ->
+        answered
     end
   end
 
@@ -113,9 +124,11 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
     end)
   end
 
-  defp release(meeting, status, extra_changes) do
-    now = DateTime.truncate(Clock.utc_now(), :second)
-    changes = [status: status, approval_resolved_at: now, cancelled_at: now] ++ extra_changes
+  defp release(meeting, status, extra_changes, %DateTime{} = ended_at) do
+    ended_at = DateTime.truncate(ended_at, :second)
+
+    changes =
+      [status: status, approval_resolved_at: ended_at, cancelled_at: ended_at] ++ extra_changes
 
     with_released_meeting(meeting, changes, fn released -> after_release(released) end)
   end

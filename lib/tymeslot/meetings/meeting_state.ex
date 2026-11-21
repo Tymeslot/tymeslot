@@ -225,6 +225,21 @@ defmodule Tymeslot.Meetings.MeetingState do
   defp latest(a, b), do: if(DateTime.compare(a, b) == :lt, do: b, else: a)
 
   @doc """
+  When a request that lapsed at `deadline` ended, for an expiry running at
+  `now`: the deadline itself, so an expiry that runs late (a delayed job, a
+  sweep catching up) does not date the end to whenever it ran. Never after
+  `now`, and `now` for a request with no deadline. Truncated to the second,
+  as the meeting's timestamp columns hold it.
+  """
+  @spec lapsed_at(DateTime.t() | nil, DateTime.t()) :: DateTime.t()
+  def lapsed_at(nil, %DateTime{} = now), do: DateTime.truncate(now, :second)
+
+  def lapsed_at(%DateTime{} = deadline, %DateTime{} = now) do
+    earliest = if DateTime.compare(deadline, now) == :gt, do: now, else: deadline
+    DateTime.truncate(earliest, :second)
+  end
+
+  @doc """
   Query-side counterpart of `slot_void?/1`, restricted to the statuses that
   occupy a slot (`@occupying_statuses`): composes onto `query` a filter
   matching only meetings whose slot is actually live, i.e. blocking the

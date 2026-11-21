@@ -44,6 +44,16 @@ defmodule Tymeslot.Meetings.Workers.EmailVerificationSweepWorkerTest do
     assert reload(verified).status == :confirmed
   end
 
+  test "dates a booking it reaches long after its deadline to the deadline" do
+    deadline = DateTime.add(DateTime.utc_now(:second), -30, :day)
+    overdue = insert(:awaiting_verification_meeting, verification_deadline_at: deadline)
+
+    assert {:ok, %{expired: 1}} = perform_job(EmailVerificationSweepWorker, %{})
+
+    assert reload(overdue).status == :expired
+    assert DateTime.compare(reload(overdue).cancelled_at, deadline) == :eq
+  end
+
   test "a release that raises is counted as failed and the others still run" do
     [failing, other] =
       for _n <- 1..2, do: insert(:awaiting_verification_meeting, verification_deadline_at: past())
