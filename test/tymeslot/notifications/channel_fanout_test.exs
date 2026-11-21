@@ -73,6 +73,59 @@ defmodule Tymeslot.Notifications.ChannelFanoutTest do
     end
   end
 
+  describe "dispatch/2 of an event that no longer matters" do
+    setup %{user: user} do
+      for {factory, _worker, _key} <- @channels do
+        insert(factory, user: user, events: ["meeting.request_expired"])
+      end
+
+      :ok
+    end
+
+    test "still tells webhooks but not Telegram or Slack", %{user: user} do
+      started = meeting_at(user, days_from_now(-30))
+
+      assert :ok = ChannelFanout.dispatch(:meeting_request_expired, started)
+
+      assert [_job] = all_enqueued(worker: WebhookWorker)
+      assert all_enqueued(worker: TelegramWorker) == []
+      assert all_enqueued(worker: SlackWorker) == []
+    end
+
+    test "tells every channel while the meeting is still ahead", %{user: user} do
+      ahead = meeting_at(user, days_from_now(2))
+
+      assert :ok = ChannelFanout.dispatch(:meeting_request_expired, ahead)
+
+      for {_factory, worker, _key} <- @channels do
+        assert [_job] = all_enqueued(worker: worker)
+      end
+    end
+
+    test "tells every channel of a confirmed booking a reschedule sent back into the gate",
+         %{user: user} do
+      regated =
+        meeting_at(user, days_from_now(-30), first_announced_at: days_from_now(-60))
+
+      assert :ok = ChannelFanout.dispatch(:meeting_request_expired, regated)
+
+      for {_factory, worker, _key} <- @channels do
+        assert [_job] = all_enqueued(worker: worker)
+      end
+    end
+  end
+
+  defp meeting_at(user, start, attrs \\ []) do
+    insert(
+      :meeting,
+      [organizer_user_id: user.id, start_time: start, end_time: DateTime.add(start, 1, :hour)] ++
+        attrs
+    )
+  end
+
+  defp days_from_now(days),
+    do: DateTime.utc_now() |> DateTime.add(days, :day) |> DateTime.truncate(:second)
+
   describe "dispatch/2 with every channel subscribed" do
     setup %{user: user} do
       for {factory, _worker, _key} <- @channels do

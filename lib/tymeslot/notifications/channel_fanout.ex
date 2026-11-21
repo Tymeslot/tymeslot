@@ -14,16 +14,23 @@ defmodule Tymeslot.Notifications.ChannelFanout do
   require Logger
 
   alias Tymeslot.BookingSeries.Automation
+  alias Tymeslot.Clock
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.EventTypes
+  alias Tymeslot.Notifications.Relevance
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
   alias Tymeslot.Webhooks
 
   @channels [webhooks: Webhooks, telegram: Telegram, slack: Slack]
+
+  # The channels a person reads, dropped once the event no longer matters
+  # (`Tymeslot.Notifications.Relevance`). Webhooks always go: they keep an
+  # integration in step with the meeting's state.
+  @read_by_people [:telegram, :slack]
 
   @doc """
   Schedules `event` (an internal event atom or its wire name) about
@@ -37,6 +44,9 @@ defmodule Tymeslot.Notifications.ChannelFanout do
     * `:series` — the `series` object a series event carries
       (`Tymeslot.BookingSeries.Automation`). Without it, the event carries
       the meeting's place in its series, or nil for a booking outside one.
+    * `:relevant_until` — when Telegram and Slack stop being told: past it,
+      only webhooks are scheduled. Defaults to
+      `Tymeslot.Notifications.Relevance.channel_event/2` for the event.
   """
   @spec dispatch(atom() | String.t(), MeetingSchema.t() | term(), keyword()) ::
           :ok | {:error, :no_organizer | :not_a_meeting | term()}
@@ -56,8 +66,14 @@ defmodule Tymeslot.Notifications.ChannelFanout do
          :ok <- check_access(user_id, event_type) do
       series = Keyword.get_lazy(opts, :series, fn -> series_place(meeting, event_type) end)
 
+      relevant_until =
+        Keyword.get_lazy(opts, :relevant_until, fn ->
+          Relevance.channel_event(event_type, meeting)
+        end)
+
       opts
       |> Keyword.get(:channels, @channels)
+      |> still_owed(relevant_until, event_type, meeting)
       |> Enum.each(fn {channel, context} ->
         dispatch_channel(channel, context, user_id, event_type, {meeting, series})
       end)
@@ -69,6 +85,20 @@ defmodule Tymeslot.Notifications.ChannelFanout do
   def dispatch(event, _meeting, _opts) do
     Logger.error("Cannot dispatch channel notifications for a non-meeting", event: event)
     {:error, :not_a_meeting}
+  end
+
+  defp still_owed(channels, relevant_until, event_type, meeting) do
+    if Relevance.relevant?(relevant_until, Clock.utc_now()) do
+      channels
+    else
+      Logger.info("Chat notifications no longer relevant, not sent",
+        event_type: event_type,
+        meeting_id: meeting.id,
+        relevant_until: relevant_until
+      )
+
+      Enum.reject(channels, fn {channel, _context} -> channel in @read_by_people end)
+    end
   end
 
   # An unknown internal atom raises in `EventTypes`; that is a programming

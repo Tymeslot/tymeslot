@@ -60,7 +60,11 @@ defmodule Tymeslot.Polls.ReminderSchedulingTest do
 
       # The shape v1.30.0 queued: no deadline, unique on action and poll only.
       {:ok, _legacy} =
-        %{"action" => "send_poll_deadline_reminders", "poll_id" => poll.id}
+        %{
+          "action" => "send_poll_deadline_reminders",
+          "relevant_until" => nil,
+          "poll_id" => poll.id
+        }
         |> EmailWorker.new(queue: :emails, scheduled_at: reminder_at)
         |> Oban.insert()
 

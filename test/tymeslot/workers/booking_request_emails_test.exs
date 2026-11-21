@@ -44,6 +44,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
     do:
       perform_job(EmailWorker, %{
         "action" => "send_booking_request_emails",
+        "relevant_until" => nil,
         "meeting_id" => meeting.id
       })
 
@@ -51,6 +52,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
     do:
       perform_job(EmailWorker, %{
         "action" => "send_booking_request_outcome",
+        "relevant_until" => nil,
         "meeting_id" => meeting.id,
         "variant" => variant
       })
@@ -59,6 +61,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
     do:
       perform_job(EmailWorker, %{
         "action" => "send_booking_approval_nudge",
+        "relevant_until" => nil,
         "meeting_id" => meeting.id
       })
 
@@ -193,6 +196,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
       assert :ok =
                perform_job(EmailWorker, %{
                  "action" => "send_booking_request_emails",
+                 "relevant_until" => nil,
                  "meeting_id" => meeting.id,
                  "previous_start_time" => DateTime.to_iso8601(previous)
                })
@@ -222,6 +226,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
         assert :ok =
                  perform_job(EmailWorker, %{
                    "action" => "send_booking_request_emails",
+                   "relevant_until" => nil,
                    "meeting_id" => meeting.id,
                    "previous_start_time" => "not a time"
                  })
@@ -291,6 +296,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
         assert :ok =
                  perform_job(EmailWorker, %{
                    "action" => "send_booking_request_emails",
+                   "relevant_until" => nil,
                    "meeting_id" => meeting.id,
                    unquote(flag) => true
                  })

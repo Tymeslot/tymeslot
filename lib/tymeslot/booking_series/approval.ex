@@ -380,7 +380,7 @@ defmodule Tymeslot.BookingSeries.Approval do
   # booker reads one email.
   defp announce_outcome(series, released, variant) when variant in [:declined, :expired] do
     announce_release_to_automations(series, released, variant)
-    Notifications.schedule_series_request_outcome(series, variant)
+    Notifications.schedule_series_request_outcome(series, released, variant)
   end
 
   defp announce_release_to_automations(_series, [], _variant), do: :ok

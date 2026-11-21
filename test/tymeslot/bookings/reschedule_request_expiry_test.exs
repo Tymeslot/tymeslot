@@ -348,6 +348,11 @@ defmodule Tymeslot.Bookings.RescheduleRequestExpiryTest do
       end
 
       assert DateTime.compare(reload(by_start).cancelled_at, by_start.start_time) == :eq
+
+      # Neither side is told months later: the news stopped mattering a week
+      # after each deadline.
+      drain_emails()
+      refute_received {:email, _late}
     end
   end
 

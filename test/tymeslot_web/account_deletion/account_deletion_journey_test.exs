@@ -136,6 +136,7 @@ defmodule TymeslotWeb.AccountDeletion.AccountDeletionJourneyTest do
 
     %{
       "action" => "send_reminder_emails",
+      "relevant_until" => nil,
       "meeting_id" => future.id,
       "reminder_value" => 1,
       "reminder_unit" => "hours"

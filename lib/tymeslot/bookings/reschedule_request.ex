@@ -36,6 +36,7 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.Relevance
   alias Tymeslot.Repo
 
   @doc """
@@ -182,6 +183,10 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   end
 
   defp schedule_reschedule_email(meeting) do
-    EmailScheduler.schedule_reschedule_request(meeting.id, meeting.reschedule_requested_at)
+    EmailScheduler.schedule_reschedule_request(
+      meeting.id,
+      meeting.reschedule_requested_at,
+      Relevance.reschedule_request(meeting)
+    )
   end
 end

@@ -36,6 +36,7 @@ defmodule Tymeslot.Bookings.RescheduleRequestExpiry do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.MeetingTransitionQueries
+  alias Tymeslot.Notifications.Relevance
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -78,7 +79,11 @@ defmodule Tymeslot.Bookings.RescheduleRequestExpiry do
                  requested_at,
                  Clock.utc_now()
                ),
-             :ok <- EmailScheduler.schedule_reschedule_request_lapsed(expired.id) do
+             :ok <-
+               EmailScheduler.schedule_reschedule_request_lapsed(
+                 expired.id,
+                 Relevance.reschedule_lapse(expired)
+               ) do
           expired
         else
           {:error, reason} -> Repo.rollback(reason)

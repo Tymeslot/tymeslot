@@ -43,6 +43,7 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   alias Tymeslot.Notifications.Email.DeliveryOutcome
   alias Tymeslot.Notifications.Email.SeatJobs
   alias Tymeslot.Notifications.GuestNotifications
+  alias Tymeslot.Notifications.Relevance
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Workers.DeliveryClaims
 
@@ -210,7 +211,8 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
                meeting.id,
                recipient.participant_id,
                reminder_value,
-               reminder_unit
+               reminder_unit,
+               Relevance.meeting_start(meeting)
              )
            end) do
       reminder = %{value: reminder_value, unit: reminder_unit}
@@ -247,7 +249,8 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
       EmailScheduler.schedule_seat_reschedule_request(
         meeting.id,
         recipient.participant_id,
-        requested_at
+        requested_at,
+        Relevance.reschedule_request(meeting)
       )
     end)
   end

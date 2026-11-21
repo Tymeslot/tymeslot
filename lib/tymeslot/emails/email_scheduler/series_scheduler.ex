@@ -7,6 +7,7 @@ defmodule Tymeslot.Emails.EmailScheduler.SeriesScheduler do
   (`Tymeslot.Notifications.Email.SeriesEmails`).
   """
 
+  alias Tymeslot.Emails.EmailActions
   alias Tymeslot.Emails.EmailScheduler.Helpers
   alias Tymeslot.Workers.EmailWorker
 
@@ -56,11 +57,16 @@ defmodule Tymeslot.Emails.EmailScheduler.SeriesScheduler do
   @doc """
   Schedules the request a series held for approval sends, now: the host's,
   to approve or decline it, and the booker's acknowledgement. One per series
-  ever, as for the confirmation: a series is requested once.
+  ever, as for the confirmation: a series is requested once. Dropped unsent
+  past `relevant_until`, the shared approval deadline.
   """
-  @spec schedule_series_request_emails(binary()) :: :ok | {:error, term()}
-  def schedule_series_request_emails(series_id) do
-    %{"action" => "send_series_request", "series_id" => series_id}
+  @spec schedule_series_request_emails(binary(), DateTime.t() | nil) :: :ok | {:error, term()}
+  def schedule_series_request_emails(series_id, relevant_until) do
+    %{
+      "action" => "send_series_request",
+      "series_id" => series_id,
+      "relevant_until" => EmailActions.relevant_until(relevant_until)
+    }
     |> EmailWorker.new(queue: :emails, priority: 0, unique: @once_per_series)
     |> Helpers.insert(series_id: series_id)
     |> Helpers.ok()
@@ -69,11 +75,17 @@ defmodule Tymeslot.Emails.EmailScheduler.SeriesScheduler do
   @doc """
   Schedules the host's reminder of a series request they have not answered,
   at `send_at`. One per series ever; the email itself is skipped when the
-  request was answered or withdrawn by then.
+  request was answered or withdrawn by then, or `relevant_until` (the
+  approval deadline) has passed.
   """
-  @spec schedule_series_request_nudge(binary(), DateTime.t()) :: :ok | {:error, term()}
-  def schedule_series_request_nudge(series_id, %DateTime{} = send_at) do
-    %{"action" => "send_series_request_nudge", "series_id" => series_id}
+  @spec schedule_series_request_nudge(binary(), DateTime.t(), DateTime.t() | nil) ::
+          :ok | {:error, term()}
+  def schedule_series_request_nudge(series_id, %DateTime{} = send_at, relevant_until) do
+    %{
+      "action" => "send_series_request_nudge",
+      "series_id" => series_id,
+      "relevant_until" => EmailActions.relevant_until(relevant_until)
+    }
     |> EmailWorker.new(
       queue: :emails,
       priority: 1,
@@ -87,13 +99,17 @@ defmodule Tymeslot.Emails.EmailScheduler.SeriesScheduler do
   @doc """
   Schedules the booker's email saying their series request was declined or
   expired, now. One per series ever: a series is answered once.
+  `relevant_until` is `nil` for a decline, which is owed however late.
   """
-  @spec schedule_series_request_outcome(binary(), :declined | :expired) :: :ok | {:error, term()}
-  def schedule_series_request_outcome(series_id, variant) when variant in [:declined, :expired] do
+  @spec schedule_series_request_outcome(binary(), :declined | :expired, DateTime.t() | nil) ::
+          :ok | {:error, term()}
+  def schedule_series_request_outcome(series_id, variant, relevant_until)
+      when variant in [:declined, :expired] do
     %{
       "action" => "send_series_request_outcome",
       "series_id" => series_id,
-      "variant" => Atom.to_string(variant)
+      "variant" => Atom.to_string(variant),
+      "relevant_until" => EmailActions.relevant_until(relevant_until)
     }
     |> EmailWorker.new(queue: :emails, priority: 0, unique: @once_per_series)
     |> Helpers.insert(series_id: series_id)

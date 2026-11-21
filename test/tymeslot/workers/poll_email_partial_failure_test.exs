@@ -57,6 +57,7 @@ defmodule Tymeslot.Workers.PollEmailPartialFailureTest do
       job =
         persisted_job(EmailWorker, %{
           "action" => "send_poll_deadline_reminders",
+          "relevant_until" => nil,
           "poll_id" => poll.id
         })
 

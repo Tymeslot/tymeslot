@@ -358,6 +358,25 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
     end
   end
 
+  describe "perform/1 for an email no longer relevant" do
+    # Mox is verified on exit: a send attempted here fails the test.
+    test "drops a job past its relevant_until without sending, as an expected outcome" do
+      meeting = insert(:meeting, start_time: DateTime.add(DateTime.utc_now(), -3, :day))
+
+      assert {:discard, reason} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_reminder_emails",
+                 "meeting_id" => meeting.id,
+                 "reminder_value" => 30,
+                 "reminder_unit" => "minutes",
+                 "relevant_until" => DateTime.to_iso8601(meeting.start_time)
+               })
+
+      assert reason == "No longer relevant"
+      assert EmailWorker.expected_outcome?(reason)
+    end
+  end
+
   describe "perform/1 error handling" do
     test "discards job with missing action parameter" do
       assert {:discard, "Missing action parameter"} = perform_queued(%{"meeting_id" => 123})
@@ -386,6 +405,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       assert {:discard, "Meeting not found"} =
                perform_job(EmailWorker, %{
                  "action" => "send_reminder_emails",
+                 "relevant_until" => nil,
                  "meeting_id" => fake_id,
                  "reminder_value" => 1,
                  "reminder_unit" => "hours"
@@ -399,6 +419,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       assert {:discard, "Meeting cancelled"} =
                perform_job(EmailWorker, %{
                  "action" => "send_reminder_emails",
+                 "relevant_until" => nil,
                  "meeting_id" => meeting.id,
                  "reminder_value" => 1,
                  "reminder_unit" => "hours"
