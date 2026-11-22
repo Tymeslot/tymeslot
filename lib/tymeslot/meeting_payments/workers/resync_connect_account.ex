@@ -38,7 +38,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
     # is still treated as stale.
     read_at = DateTime.utc_now(:second)
 
-    case Accounts.retrieve_connected(stripe_account_id, []) do
+    case Accounts.retrieve_connected(stripe_account_id) do
       {:ok, account} ->
         ConnectAccounts.apply_account_event(account, read_at)
 

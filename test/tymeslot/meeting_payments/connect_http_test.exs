@@ -17,6 +17,7 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
+  alias Tymeslot.Integrations.Stripe
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -196,8 +197,13 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
   end
 
   describe "refunds" do
-    test "a refund is created with the lock-bounded timeouts and its key" do
-      payment = paid_payment(%{refunded_amount_cents: 0, status: :paid})
+    test "a refund is created on the host's account under its key" do
+      payment =
+        insert(:paid_booking_payment,
+          meeting: insert(:meeting),
+          stripe_account_id: "acct_REFUND",
+          stripe_charge_id: "ch_test1"
+        )
 
       # The charge's total also holds a 500 refund made outside Tymeslot, so
       # the recorded total is Stripe's 1500, not this refund's 1000.
@@ -215,7 +221,7 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
       assert [%{method: :post, path: "/v1/refunds", form: form, headers: headers}] =
                StripeStub.requests(:create_refund)
 
-      assert form["charge"] == payment.stripe_charge_id
+      assert form["charge"] == "ch_test1"
       assert form["amount"] == "1000"
       assert form["expand"] == ["charge"]
       assert form["metadata"]["meeting_id"] == payment.meeting_id
@@ -223,10 +229,15 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
       assert headers["idempotency-key"] == @refund_key
     end
 
+    # The recorded 4500 could hold an earlier refund of 600 under this key,
+    # so Stripe is asked again.
     test "a replayed key Stripe rejects is the local refusal" do
-      # The recorded 4500 could hold an earlier refund of 600 under this key,
-      # so Stripe is asked, and rejects it as a fresh refund.
-      payment = paid_payment(%{refunded_amount_cents: 4500, status: :partially_refunded})
+      payment =
+        insert(:paid_booking_payment,
+          meeting: insert(:meeting),
+          refunded_amount_cents: 4500,
+          status: :partially_refunded
+        )
 
       StripeStub.expect(:create_refund, {:error_fixture, "charge_already_refunded"})
 
@@ -234,6 +245,22 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
 
       assert [%{form: %{"amount" => "600"}}] = StripeStub.requests(:create_refund)
       assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 4500
+    end
+
+    test "a replay still rate limited after the retries is no refusal" do
+      payment =
+        insert(:paid_booking_payment,
+          meeting: insert(:meeting),
+          refunded_amount_cents: 4500,
+          status: :partially_refunded
+        )
+
+      StripeStub.expect(:create_refund, 3, {:error_fixture, "rate_limit"})
+
+      assert {:error, %Stripe.Error{status: 429}} =
+               MeetingPayments.issue_refund(payment, 600, @refund_key)
+
+      assert length(StripeStub.requests(:create_refund)) == 3
     end
   end
 
@@ -290,22 +317,5 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
 
       assert headers["stripe-account"] == "acct_RECONCILE"
     end
-  end
-
-  defp paid_payment(attrs) do
-    meeting = insert(:meeting)
-
-    insert(
-      :paid_booking_payment,
-      Map.merge(
-        %{
-          meeting: meeting,
-          stripe_account_id: "acct_REFUND",
-          stripe_charge_id: "ch_test1",
-          amount_cents: 5000
-        },
-        attrs
-      )
-    )
   end
 end

@@ -56,7 +56,9 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   # time for another attempt as long (a refused connection, a 429,
   # `Stripe-Should-Retry: true`), never a timed-out receive, and caps each
   # receive at the time left. The call takes about 10 s at worst, plus one
-  # connect timeout, inside the 15 s transaction timeout.
+  # connect timeout, inside the 15 s transaction timeout. The wait for a
+  # pooled connection is capped at the time left separately from the
+  # receive, so that bound assumes the pool is not contended.
   @stripe_connect_timeout_ms 3_000
   @stripe_receive_timeout_ms 5_000
   @stripe_deadline_ms 10_000
@@ -307,7 +309,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
       made
     else
       {:error, :missing_charge} -> {:error, refused}
-      {:error, %Stripe.Error{type: "invalid_request_error"}} -> {:error, refused}
+      {:error, %Stripe.Error{status: 400, type: "invalid_request_error"}} -> {:error, refused}
       {:error, _reason} = error -> error
     end
   end

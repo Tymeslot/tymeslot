@@ -34,7 +34,7 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Stripe.ConnectOAuth
+  alias Tymeslot.Integrations.Stripe.ConnectOAuth, as: StripeOAuthClient
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.StripeConnectOAuth
@@ -87,7 +87,7 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
   end
 
   defp request_revocation(job, stripe_account_id) do
-    case ConnectOAuth.deauthorize(stripe_account_id) do
+    case StripeOAuthClient.deauthorize(stripe_account_id) do
       :ok ->
         :ok
 
@@ -111,7 +111,7 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount do
     {:error, reason}
   end
 
-  # The reason is this module's or `ConnectOAuth`'s own atom, never anything read
+  # The reason is this module's or `StripeOAuthClient`'s own atom, never anything read
   # from Stripe's response, so no detail of it reaches the alert.
   defp alert(job, stripe_account_id, reason) do
     Logger.error("Revoking a Stripe connection failed for good",
