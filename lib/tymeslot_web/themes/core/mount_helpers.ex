@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   }
 
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
+  alias TymeslotWeb.Themes.Shared.PathHandlers
 
   @doc """
   Mounts the socket when an organizer profile is present.
@@ -372,6 +373,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
       |> assign(:booking_window_days, OrganizerHelpers.booking_window_days(profile))
       |> assign(:meeting, meeting)
       |> assign(:meeting_uid, meeting_uid)
+      |> assign(:booking_path, PathHandlers.meeting_booking_path(profile, meeting))
       |> assign(:loading, false)
       |> assign(:has_theme, true)
       |> assign_page_theme(profile, params)
