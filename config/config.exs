@@ -165,6 +165,8 @@ config :tymeslot,
     {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
     # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
     {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments},
+    # Run every 15 min to give refunds left pending without a job a new one
+    {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.SweepPendingRefunds},
     # Run daily at 04:30 UTC to cross-check booking analytics against bookings
     {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker},
     # Run every 15 min to release approval requests whose deadline passed

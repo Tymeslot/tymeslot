@@ -16,6 +16,9 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
   fails it with `"retries_exhausted"` and reports it
   (`Refunds.FailureNotice`). A refund Stripe refused, or whose charge could
   not be found, cancels the job: it has been failed and reported already.
+  A last attempt that leaves the refund pending (Stripe's refunds could not
+  be read, another attempt held the lease, or it raised) ends the job as
+  failed, and `SweepPendingRefunds` gives the refund a new one.
 
   At most one job waits per refund.
   """

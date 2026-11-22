@@ -66,6 +66,17 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
     )
   end
 
+  @doc "The ids of the refunds still pending that were recorded before `cutoff`."
+  @spec pending_ids_recorded_before(DateTime.t()) :: [UUID.t()]
+  def pending_ids_recorded_before(%DateTime{} = cutoff) do
+    Repo.all(
+      from(r in RefundSchema,
+        where: r.status == :pending and r.inserted_at < ^cutoff,
+        select: r.id
+      )
+    )
+  end
+
   @spec by_stripe_refund_id(String.t()) :: RefundSchema.t() | nil
   def by_stripe_refund_id(stripe_refund_id) when is_binary(stripe_refund_id),
     do: Repo.get_by(RefundSchema, stripe_refund_id: stripe_refund_id)
