@@ -119,6 +119,19 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
     end
   end
 
+  describe "issue_refund/4 beside a pending refund" do
+    test "refunds only what the pending refund leaves", %{payment: payment} do
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 3_000)
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LEGACY_PATH"))
+
+      assert {:error, :refund_in_progress} = Refunds.issue_refund(payment, 3_000, "legacy:3000")
+      assert StripeStub.requests(:create_refund) == []
+
+      assert {:ok, %{refunded_amount_cents: 2_000}} =
+               Refunds.issue_refund(payment, 2_000, "legacy:2000")
+    end
+  end
+
   describe "refund_now/4" do
     test "refund_now refunds and records Stripe's total", %{payment: payment} do
       StripeStub.expect(:create_refund, StripeStubResponses.refund("re_NOW"))

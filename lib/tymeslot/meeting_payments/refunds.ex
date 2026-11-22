@@ -93,6 +93,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
           | :under_dispute
           | :invalid_amount
           | :missing_charge
+          | :refund_in_progress
           | term()
 
   @doc """
@@ -418,7 +419,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   end
 
   defp refund_at_stripe(payment, amount_cents, reason, key) do
-    with :ok <- validate_amount(payment, amount_cents),
+    with :ok <- validate_amount(payment, amount_cents, RefundQueries.pending_cents(payment.id)),
          :ok <- validate_charge(payment) do
       create_stripe_refund(payment, amount_cents, reason, key)
     else
@@ -454,17 +455,20 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     end
   end
 
-  defp validate_amount(%{status: :refunded}, _amount_cents), do: {:error, :already_refunded}
+  # A refund recorded and still pending holds its share of the balance, so
+  # an amount only it stands in the way of waits for it rather than being
+  # replayed at Stripe.
+  defp validate_amount(%{status: :refunded}, _amount_cents, _pending),
+    do: {:error, :already_refunded}
 
-  defp validate_amount(
-         %{amount_cents: amount, refunded_amount_cents: refunded},
-         amount_cents
-       )
-       when is_integer(amount_cents) and amount_cents > 0 and
-              amount_cents <= amount - refunded,
-       do: :ok
-
-  defp validate_amount(_payment, _amount_cents), do: {:error, :invalid_amount}
+  defp validate_amount(payment, amount_cents, pending) do
+    cond do
+      not is_integer(amount_cents) or amount_cents <= 0 -> {:error, :invalid_amount}
+      amount_cents <= RefundedTotal.refundable_cents(payment, pending) -> :ok
+      amount_cents <= RefundedTotal.refundable_cents(payment, 0) -> {:error, :refund_in_progress}
+      true -> {:error, :invalid_amount}
+    end
+  end
 
   defp validate_charge(%{stripe_charge_id: charge}) when is_binary(charge) and charge != "",
     do: :ok
