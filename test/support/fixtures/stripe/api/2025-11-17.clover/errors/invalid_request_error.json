@@ -1,0 +1,12 @@
+{
+  "status": 400,
+  "body": {
+    "error": {
+      "code": "parameter_unknown",
+      "doc_url": "https://stripe.com/docs/error-codes/parameter-unknown",
+      "message": "Received unknown parameter: unknown_param",
+      "param": "unknown_param",
+      "type": "invalid_request_error"
+    }
+  }
+}

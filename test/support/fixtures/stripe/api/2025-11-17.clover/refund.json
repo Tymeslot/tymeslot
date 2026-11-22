@@ -1,0 +1,25 @@
+{
+  "id": "re_test1",
+  "object": "refund",
+  "amount": 1000,
+  "balance_transaction": "txn_1Nispe2eZvKYlo2CYezqFhEx",
+  "charge": "ch_test1",
+  "created": 1692942318,
+  "currency": "usd",
+  "destination_details": {
+    "card": {
+      "reference": "123456789012",
+      "reference_status": "available",
+      "reference_type": "acquirer_reference_number",
+      "type": "refund"
+    },
+    "type": "card"
+  },
+  "metadata": {},
+  "payment_intent": "pi_test1",
+  "reason": null,
+  "receipt_number": null,
+  "source_transfer_reversal": null,
+  "status": "succeeded",
+  "transfer_reversal": null
+}
