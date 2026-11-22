@@ -77,4 +77,50 @@ defmodule Tymeslot.Integrations.Stripe.RetryPolicyTest do
       assert RetryPolicy.decide(request, inputs) == unquote(Macro.escape(expected))
     end
   end
+
+  describe "attempt_timeouts/2" do
+    @request Request.new(:retrieve_charge, :get, ["charges", "ch_1"], %{},
+               deadline_ms: 10_000,
+               receive_timeout: 8_000
+             )
+
+    for {description, fields, elapsed_ms, expected} <- [
+          {"a fresh call gets the configured receive timeout and Finch's pool timeout", [], 0,
+           {:ok, %{receive_timeout: 8_000, pool_timeout: 5_000}}},
+          {"a late attempt has both capped at the time left", [], 7_000,
+           {:ok, %{receive_timeout: 3_000, pool_timeout: 3_000}}},
+          {"one millisecond left is still an attempt", [], 9_999,
+           {:ok, %{receive_timeout: 1, pool_timeout: 1}}},
+          {"a short configured receive timeout is never raised", [receive_timeout: 1_000], 0,
+           {:ok, %{receive_timeout: 1_000, pool_timeout: 5_000}}},
+          {"no time left has expired", [], 10_000, :expired},
+          {"a call past its deadline has expired", [], 12_000, :expired}
+        ] do
+      test description do
+        request = struct!(@request, unquote(fields))
+
+        assert RetryPolicy.attempt_timeouts(request, unquote(elapsed_ms)) ==
+                 unquote(Macro.escape(expected))
+      end
+    end
+  end
+
+  describe "transport_phase/1" do
+    for {reason, expected} <- [
+          econnrefused: :connect,
+          nxdomain: :connect,
+          ehostunreach: :connect,
+          timeout: :after_send,
+          closed: :after_send,
+          protocol_not_negotiated: :after_send
+        ] do
+      test "#{reason} is #{expected}" do
+        assert RetryPolicy.transport_phase(unquote(reason)) == unquote(expected)
+      end
+    end
+
+    test "a non-atom reason is after-send" do
+      assert RetryPolicy.transport_phase({:raised, RuntimeError}) == :after_send
+    end
+  end
 end

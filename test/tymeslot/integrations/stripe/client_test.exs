@@ -188,6 +188,57 @@ defmodule Tymeslot.Integrations.Stripe.ClientTest do
     refute_received {:stripe_request, _}
   end
 
+  test "a raise in the HTTP stack is a connection error, retried and logged once" do
+    LogCapture.attach()
+    stub_stripe(fn _call, _conn -> raise "pool checkout timed out for sk_test_x" end)
+
+    assert {:error, %Error{type: "api_connection_error", status: nil} = error} =
+             Client.run(refund_request())
+
+    assert error.reason == {:raised, RuntimeError}
+    for _attempt <- 1..3, do: assert_received({:stripe_request, _request})
+    refute_received {:stripe_request, _request}
+
+    failures =
+      Enum.filter(LogCapture.drain(), &(LogCapture.dump(&1) =~ "Stripe request failed"))
+
+    assert [event] = failures
+    assert LogCapture.user_metadata(event).attempts == 3
+  end
+
+  test "an exit in the HTTP stack is a connection error carrying only its reason" do
+    stub_stripe(fn
+      1, _conn -> exit({:timeout, {GenServer, :call, [:pool, "sk_test_x"]}})
+      _call, conn -> json(conn, 200, @refund_body)
+    end)
+
+    assert {:ok, %{"id" => "re_1"}} = Client.run(refund_request())
+
+    stub_stripe(fn _call, _conn -> exit({:timeout, {GenServer, :call, [:pool, "sk_test_x"]}}) end)
+
+    assert {:error, %Error{type: "api_connection_error", reason: {:exit, :timeout}}} =
+             Client.run(refund_request())
+  end
+
+  test "a call with no time left sends nothing" do
+    stub_stripe(fn _call, conn -> json(conn, 200, @refund_body) end)
+
+    assert {:error, %Error{type: "api_connection_error", reason: :deadline_exceeded}} =
+             Client.run(refund_request(deadline_ms: 0))
+
+    refute_received {:stripe_request, _request}
+  end
+
+  test "req_options may not choose the transport" do
+    settings = Application.get_env(:tymeslot, Stripe)
+
+    for option <- [finch: [name: Tymeslot.Finch], connect_options: [timeout: 1]] do
+      with_config(:tymeslot, Stripe, Keyword.update!(settings, :req_options, &[option | &1]))
+
+      assert_raise ArgumentError, ~r/must not set/, fn -> Client.run(refund_request()) end
+    end
+  end
+
   test "a missing key returns :missing_api_key without a request" do
     with_config(:tymeslot, :stripe_secret_key, nil)
     with_config(:stripity_stripe, :api_key, nil)

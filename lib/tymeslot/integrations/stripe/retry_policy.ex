@@ -1,8 +1,8 @@
 defmodule Tymeslot.Integrations.Stripe.RetryPolicy do
   @moduledoc """
   Decides whether `Tymeslot.Integrations.Stripe.Client` tries a failed call
-  again, and after how long. Internal to `Tymeslot.Integrations.Stripe`, and
-  pure: time and randomness are passed in.
+  again, after how long, and how long each attempt may wait. Internal to
+  `Tymeslot.Integrations.Stripe`, and pure: time and randomness are passed in.
 
   The client retries only within one call, for blips a person waiting on the
   result should not see; anything slower is left to the caller's own retry
@@ -25,11 +25,23 @@ defmodule Tymeslot.Integrations.Stripe.RetryPolicy do
   scaled by `0.5 + random / 2` so concurrent callers spread out. With 3
   attempts the largest uncapped delay is `2 * base_ms`, so the cap only binds
   if the attempt limit is raised.
+
+  `deadline_ms` bounds the whole call, not only the decision to retry:
+  `attempt_timeouts/2` caps each attempt's receive and pool checkout waits at
+  the time left, and once none is left no further attempt starts.
   """
 
   alias Tymeslot.Integrations.Stripe.Request
 
   @max_attempts 3
+
+  # Finch's own default for waiting on a pooled connection.
+  @pool_timeout_ms 5_000
+
+  # Reasons Mint reports before any byte of the request left. A connect
+  # timeout is reported as plain `:timeout`, like a receive timeout, so it
+  # counts as after-send; the rules above treat both phases alike.
+  @connect_reasons [:econnrefused, :nxdomain, :ehostunreach]
 
   @type outcome ::
           {:response, status :: integer(), headers :: [{String.t(), String.t()}]}
@@ -89,4 +101,34 @@ defmodule Tymeslot.Integrations.Stripe.RetryPolicy do
     backoff = min(base_ms * 2 ** (attempt - 1), 4 * base_ms)
     round(backoff * (0.5 + random / 2))
   end
+
+  @doc """
+  The receive and pool checkout timeouts for an attempt starting `elapsed_ms`
+  into the call: the request's own `receive_timeout` and Finch's default pool
+  timeout, each capped at the time left before `deadline_ms`. `:expired` when
+  no time is left.
+  """
+  @spec attempt_timeouts(Request.t(), non_neg_integer()) ::
+          {:ok, %{receive_timeout: pos_integer(), pool_timeout: pos_integer()}} | :expired
+  def attempt_timeouts(%Request{} = request, elapsed_ms) do
+    case request.deadline_ms - elapsed_ms do
+      remaining when remaining > 0 ->
+        {:ok,
+         %{
+           receive_timeout: min(request.receive_timeout, remaining),
+           pool_timeout: min(@pool_timeout_ms, remaining)
+         }}
+
+      _none_left ->
+        :expired
+    end
+  end
+
+  @doc """
+  Whether a transport failure happened before the request was sent
+  (`:connect`) or possibly after (`:after_send`), from its reason.
+  """
+  @spec transport_phase(term()) :: :connect | :after_send
+  def transport_phase(reason) when reason in @connect_reasons, do: :connect
+  def transport_phase(_reason), do: :after_send
 end

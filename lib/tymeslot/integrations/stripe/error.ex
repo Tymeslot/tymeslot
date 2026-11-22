@@ -68,6 +68,20 @@ defmodule Tymeslot.Integrations.Stripe.Error do
   end
 
   @doc """
+  Builds the error for a 2xx response whose body is not a JSON object.
+  """
+  @spec unexpected_body(integer(), [{String.t(), String.t()}], atom()) :: t()
+  def unexpected_body(status, headers, operation) do
+    %__MODULE__{
+      type: "api_error",
+      status: status,
+      request_id: request_id(headers),
+      message: "unexpected response body",
+      operation: operation
+    }
+  end
+
+  @doc """
   Builds the error for a call that got no response.
   """
   @spec from_transport(term(), atom()) :: t()
@@ -125,7 +139,9 @@ defmodule Tymeslot.Integrations.Stripe.Error do
 
   defp detail_text(_error), do: ""
 
-  defp request_id(headers) do
+  @doc "The `request-id` header Stripe sets on a response, or `nil`."
+  @spec request_id([{String.t(), String.t()}]) :: String.t() | nil
+  def request_id(headers) do
     Enum.find_value(headers, fn {name, value} -> name == "request-id" && value end)
   end
 

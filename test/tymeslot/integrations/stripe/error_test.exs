@@ -58,6 +58,27 @@ defmodule Tymeslot.Integrations.Stripe.ErrorTest do
     end
   end
 
+  test "unexpected_body/3 is an api_error naming the request" do
+    assert Error.unexpected_body(200, [{"request-id", "req_2"}], :retrieve_charge) == %Error{
+             type: "api_error",
+             status: 200,
+             request_id: "req_2",
+             message: "unexpected response body",
+             operation: :retrieve_charge
+           }
+  end
+
+  describe "request_id/1" do
+    test "reads the request-id header" do
+      assert Error.request_id([{"content-type", "application/json"}, {"request-id", "req_3"}]) ==
+               "req_3"
+    end
+
+    test "is nil without one" do
+      assert Error.request_id([{"content-type", "application/json"}]) == nil
+    end
+  end
+
   test "from_transport/2 is an api_connection_error carrying the reason" do
     assert Error.from_transport(:timeout, :create_refund) == %Error{
              type: "api_connection_error",

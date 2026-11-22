@@ -96,6 +96,11 @@ defmodule Tymeslot.Integrations.Stripe.RequestTest do
       end
     end
 
+    test "defaults the timeouts" do
+      assert %Request{deadline_ms: 10_000, receive_timeout: 8_000, connect_timeout: 3_000} =
+               Request.new(:retrieve_charge, :get, ["charges"], %{})
+    end
+
     test "keeps the default timeouts unless given" do
       request = Request.new(:retrieve_charge, :get, ["charges"], %{}, receive_timeout: 1_000)
 

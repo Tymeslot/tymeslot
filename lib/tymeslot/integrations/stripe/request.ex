@@ -11,23 +11,28 @@ defmodule Tymeslot.Integrations.Stripe.Request do
   `api_key` is set only when a caller passes one explicitly. The configured key is
   resolved by the client at send time, and `inspect/1` leaves the field out, so a
   request that ends up in a log or a crash report carries no secret.
+
+  `deadline_ms` bounds the whole call, retries and waits included; the
+  client caps each attempt's waits at the time left (see
+  `Tymeslot.Integrations.Stripe.RetryPolicy.attempt_timeouts/2`).
   """
 
   alias Tymeslot.Integrations.Stripe.FormEncoder
 
-  @derive {Inspect, except: [:api_key]}
-  defstruct [
+  @timeouts [deadline_ms: 10_000, receive_timeout: 8_000, connect_timeout: 3_000]
+
+  @fields [
     :operation,
     :method,
     :path,
     params: %{},
     api_key: nil,
     connect_account: nil,
-    idempotency_key: nil,
-    deadline_ms: 10_000,
-    receive_timeout: 8_000,
-    connect_timeout: 3_000
+    idempotency_key: nil
   ]
+
+  @derive {Inspect, except: [:api_key]}
+  defstruct @fields ++ @timeouts
 
   @type method :: :get | :post | :delete
 
@@ -44,14 +49,7 @@ defmodule Tymeslot.Integrations.Stripe.Request do
           connect_timeout: pos_integer()
         }
 
-  @options [
-    :api_key,
-    :connect_account,
-    :idempotency_key,
-    deadline_ms: 10_000,
-    receive_timeout: 8_000,
-    connect_timeout: 3_000
-  ]
+  @options [:api_key, :connect_account, :idempotency_key | @timeouts]
 
   @doc """
   Builds a request.
