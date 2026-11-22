@@ -25,9 +25,9 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
   alias Tymeslot.CalendarMock
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -206,7 +206,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
     assert Repo.reload!(payment).status == :paid
     assert length(calendar_creates()) == 3
     assert [_announcement] = all_enqueued(worker: SeriesAnnouncementWorker)
-    refute_enqueued(worker: RefundLatePayment)
+    assert late_refunds(payment) == []
   end
 
   test "a late payment with one slot taken refunds in full and reinstates nothing", %{
@@ -231,7 +231,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
 
     assert statuses() == [:expired, :expired, :expired]
     assert Repo.reload!(payment).status == :paid
-    assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [%{source: :late_payment}] = late_refunds(payment)
     assert calendar_creates() == []
     refute_enqueued(worker: SeriesAnnouncementWorker)
   end
@@ -270,10 +270,15 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
         assert request.form["charge"] == "ch_SERIES"
         assert request.form["amount"] == "5000"
 
-        assert request.form["metadata"] == %{
-                 "series_id" => to_string(series.id),
-                 "booking_payment_id" => to_string(payment.id)
-               }
+        assert %{
+                 "series_id" => series_id,
+                 "booking_payment_id" => payment_id,
+                 "tymeslot_refund_id" => _refund_id
+               } = request.form["metadata"]
+
+        assert series_id == to_string(series.id)
+        assert payment_id == to_string(payment.id)
+        refute Map.has_key?(request.form["metadata"], "meeting_id")
 
         StripeStubResponses.refund(request, "re_SESSION")
       end)
@@ -314,4 +319,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
       assert cancelled_id == first.id
     end
   end
+
+  defp late_refunds(payment),
+    do: Repo.all(from(r in RefundSchema, where: r.booking_payment_id == ^payment.id))
 end

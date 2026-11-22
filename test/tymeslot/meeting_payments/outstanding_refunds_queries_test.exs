@@ -17,6 +17,7 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
   @moduletag :payments
   @moduletag :queries
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingPayments
 
   defp cancelled_meeting(opts \\ []) do
@@ -190,19 +191,34 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
 
       assert %{pending_refund_cents: 2000} = MeetingPayments.payment_for_meeting(meeting.id, 1)
 
-      assert %{totals: [%{currency: "eur", amount_cents: 3000}]} =
+      # Still owed to the attendee until the refund settles.
+      assert %{totals: [%{currency: "eur", amount_cents: 5000}]} =
                MeetingPayments.outstanding_refunds_summary_for_host(1)
     end
 
-    test "that covers the balance takes the booking off the list" do
+    test "that covers the balance keeps the booking listed until it settles" do
       payment = payment_for(1, cancelled_meeting())
-      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 5000)
+      refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 5000)
 
       insert(:booking_payment_refund,
         booking_payment: payment,
         amount_cents: 900,
         status: :failed
       )
+
+      assert [%{pending_refund_cents: 5000} = listed] =
+               MeetingPayments.list_outstanding_refunds_for_host(1)
+
+      assert MeetingPayments.refund_pending?(listed)
+      assert %{count: 1} = MeetingPayments.outstanding_refunds_summary_for_host(1)
+
+      refund
+      |> Changeset.change(status: :succeeded, settled_at: DateTime.utc_now(:second))
+      |> Repo.update!()
+
+      payment
+      |> Changeset.change(refunded_amount_cents: 5000, status: :refunded)
+      |> Repo.update!()
 
       assert MeetingPayments.list_outstanding_refunds_for_host(1) == []
       assert %{count: 0, totals: []} = MeetingPayments.outstanding_refunds_summary_for_host(1)

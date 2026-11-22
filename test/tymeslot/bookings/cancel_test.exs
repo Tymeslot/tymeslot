@@ -230,6 +230,8 @@ defmodule Tymeslot.Bookings.CancelTest do
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
       assert cancelled.status == :cancelled
+      # The release records the refund; its job makes it.
+      assert %{success: 1} = Oban.drain_queue(queue: :payments, with_scheduled: true)
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
       assert reloaded.status == :refunded
@@ -369,6 +371,8 @@ defmodule Tymeslot.Bookings.CancelTest do
 
       assert {:ok, cancelled} = Cancel.execute_external(meeting)
       assert cancelled.status == :cancelled
+      # The release records the refund; its job makes it.
+      assert %{success: 1} = Oban.drain_queue(queue: :payments, with_scheduled: true)
       assert cancelled.cancellation_reason == "Cancelled externally via calendar sync"
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)

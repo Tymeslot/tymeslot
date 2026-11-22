@@ -116,19 +116,17 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     end
   end
 
-  @doc """
-  Records a refund of `amount_cents` Stripe made of the `locked` payment, as
-  `stripe_refund`: the refunded total and the status that follows from it,
-  whose change is reported to telemetry with `reason`. Call it in the
-  transaction holding the payment's row lock.
-  """
+  # Records a refund of `amount_cents` Stripe made of the `locked` payment,
+  # as `stripe_refund`: the refunded total and the status that follows from
+  # it, whose change is reported to telemetry with `reason`. Called in the
+  # transaction holding the payment's row lock.
   @spec record_refunded(
           BookingPaymentSchema.t(),
           pos_integer(),
           map(),
           Telemetry.status_change_reason()
         ) :: {:ok, BookingPaymentSchema.t()} | {:error, Ecto.Changeset.t()}
-  def record_refunded(locked, amount_cents, stripe_refund, reason) do
+  defp record_refunded(locked, amount_cents, stripe_refund, reason) do
     new_total = refunded_total(locked, amount_cents, stripe_refund)
 
     new_status =
@@ -148,12 +146,10 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     end
   end
 
-  @doc """
-  The params of a refund of `amount_cents` of `payment` at Stripe, with the
-  charge expanded so the answer carries Stripe's refunded total.
-  """
+  # The params of a refund of `amount_cents` of `payment` at Stripe, with the
+  # charge expanded so the answer carries Stripe's refunded total.
   @spec stripe_params(BookingPaymentSchema.t(), pos_integer(), String.t() | nil) :: map()
-  def stripe_params(payment, amount_cents, reason) do
+  defp stripe_params(payment, amount_cents, reason) do
     %{
       charge: payment.stripe_charge_id,
       amount: amount_cents,
@@ -164,12 +160,10 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     |> put_refund_application_fee(payment)
   end
 
-  @doc """
-  Enqueues the attendee's refund email for `payment`. A failed insert is
-  logged and does not undo the refund.
-  """
+  # Enqueues the attendee's refund email for `payment`. A failed insert is
+  # logged and does not undo the refund.
   @spec enqueue_refund_email(BookingPaymentSchema.t()) :: :ok
-  def enqueue_refund_email(payment) do
+  defp enqueue_refund_email(payment) do
     case %{booking_payment_id: payment.id} |> SendBookingPaymentRefunded.new() |> Oban.insert() do
       {:ok, _job} ->
         :ok

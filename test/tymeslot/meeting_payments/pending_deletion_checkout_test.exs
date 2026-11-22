@@ -12,13 +12,14 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
   @moduletag :auth
   @moduletag :integration
 
+  import Ecto.Query, only: [from: 2]
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
   alias Tymeslot.Auth
   alias Tymeslot.Auth.AccountDeletion
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -159,7 +160,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
 
     assert :ok = CheckoutSessionCompleted.handle(completed("RESTORED", meeting))
     assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
-    refute_enqueued(worker: RefundLatePayment)
+    assert refunds(payment) == []
   end
 
   # The guest is mid-payment when the host asks to leave, so Stripe will not
@@ -181,9 +182,9 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
 
     assert :ok = CheckoutSessionCompleted.handle(completed("JOURNEY", meeting))
     assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
-    assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [%{source: :late_payment}] = refunds(payment)
 
-    assert %{success: 1} = Oban.drain_queue(queue: :payments)
+    assert %{success: 1} = Oban.drain_queue(queue: :payments, with_scheduled: true)
 
     refunded = Repo.reload!(payment)
     assert refunded.status == :refunded
@@ -219,10 +220,9 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
                | "id" => "reconcile:cs_GONE"
              })
 
-    assert [_one] =
-             all_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [_one] = refunds(payment)
 
-    Oban.drain_queue(queue: :payments)
+    Oban.drain_queue(queue: :payments, with_scheduled: true)
 
     refunded = Repo.reload!(payment)
     assert refunded.status == :refunded
@@ -254,7 +254,9 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
                | "id" => "reconcile:cs_AWAITING"
              })
 
-    assert [_one] =
-             all_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [_one] = refunds(payment)
   end
+
+  defp refunds(payment),
+    do: Repo.all(from(r in RefundSchema, where: r.booking_payment_id == ^payment.id))
 end

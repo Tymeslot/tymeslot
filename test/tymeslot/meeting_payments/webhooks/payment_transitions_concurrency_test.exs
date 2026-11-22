@@ -24,6 +24,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   alias Ecto.UUID
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated
   alias Tymeslot.MeetingPayments.Webhooks.ChargeRefunded
@@ -60,11 +61,17 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
             from(b in BookingPaymentSchema, where: b.host_user_id == ^user.id, select: b.id)
           )
 
+        refund_ids =
+          Repo.all(
+            from(r in RefundSchema, where: r.booking_payment_id in ^payment_ids, select: r.id)
+          )
+
         Repo.delete_all(
           from(j in Oban.Job,
             where:
               fragment("?->>'meeting_id'", j.args) in ^meeting_ids or
-                fragment("?->>'booking_payment_id'", j.args) in ^payment_ids
+                fragment("?->>'booking_payment_id'", j.args) in ^payment_ids or
+                fragment("?->>'refund_id'", j.args) in ^refund_ids
           )
         )
 
@@ -369,11 +376,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   defp refunds_scheduled(payment) do
     unboxed(fn ->
       Repo.aggregate(
-        from(j in Oban.Job,
-          where:
-            j.worker == "Tymeslot.MeetingPayments.Workers.RefundLatePayment" and
-              fragment("?->>'booking_payment_id'", j.args) == ^payment.id
-        ),
+        from(r in RefundSchema, where: r.booking_payment_id == ^payment.id),
         :count
       )
     end)

@@ -346,16 +346,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       refute key.("avatars/1/a.png", :eacces) == key.("avatars/1/a.png", :erofs)
     end
 
-    test ":late_payment_refund_failed names the payment, the job and how to settle it" do
-      metadata = %{booking_payment_id: "bp_late_1", oban_job_id: 4242, reason: :stripe_down}
-      msg = AlertTypes.format_message(:late_payment_refund_failed, metadata)
-
-      assert msg =~ "bp_late_1"
-      assert msg =~ "still owed"
-      assert msg =~ "refund the booking from the host's payments settings"
-      assert msg =~ "retry Oban job 4242"
-    end
-
     test ":subscription_not_in_database includes stripe subscription ID" do
       msg =
         AlertTypes.format_message(:subscription_not_in_database, %{

@@ -14,9 +14,9 @@ defmodule Tymeslot.MeetingPayments.Workers.BackfillCharge do
   Stripe failure a later attempt can get past are retried, over about four
   hours (`backoff/1`); an intent Stripe refuses for good, or a charge id
   the row refuses, cancels the job.
-  The last failed attempt is logged as an error and raises no alert: the
-  refund paths backfill the charge id again before they refund
-  (`RefundLatePayment`, `SeriesHostRefund`).
+  The last failed attempt is logged as an error and raises no alert: a
+  refund backfills the charge id again before it is made
+  (`RefundExecutor`).
 
   At most one job waits per payment: a redelivered completion while one is
   pending inserts nothing.

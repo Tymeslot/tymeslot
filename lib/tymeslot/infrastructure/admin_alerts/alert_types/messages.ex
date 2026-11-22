@@ -199,20 +199,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       "#{summary} (#{reason_text(metadata)})"
   end
 
-  # The booking stays on the host's outstanding-refunds list; the id is what
-  # the operator needs to find the charge in Stripe. The job is unique per
-  # payment over every state, so a fresh one cannot be inserted: retrying
-  # means retrying this one.
-  def format_message(:late_payment_refund_failed, metadata) do
-    id = Map.get(metadata, :booking_payment_id, "unknown")
-    job_id = Map.get(metadata, :oban_job_id, "unknown")
-
-    "Refund of booking payment #{id}, paid after its slot was taken, failed on every " <>
-      "attempt (#{reason_text(metadata)}); the attendee is still owed the money. " <>
-      "To settle it, refund the booking from the host's payments settings (or the " <>
-      "Stripe dashboard), or once the cause is fixed retry Oban job #{job_id}"
-  end
-
   # The refund row is settled `failed`, so nothing retries it; the payment
   # id is what the operator needs to find the charge.
   def format_message(:refund_failed, metadata) do

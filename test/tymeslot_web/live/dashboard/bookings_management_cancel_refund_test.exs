@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
 
   alias Plug.Test
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -135,6 +136,70 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
       assert updated.refunded_amount_cents == 5000
 
       assert Repo.get(MeetingSchema, meeting.id).status == :cancelled
+    end
+
+    test "cancelling with a refund that is still pending cancels and says so",
+         %{conn: conn, user: user} do
+      {meeting, payment} = paid_meeting(user, "Pending Refund")
+
+      # The client sends the lost call 3 times in all, under the same key.
+      StripeStub.expect(:create_refund, 3, {:transport_error, :timeout})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+      view
+      |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "full"})
+      |> render_submit()
+
+      html = render(view)
+
+      assert html =~
+               "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
+
+      refute html =~ "Stripe dashboard"
+      assert Repo.get(MeetingSchema, meeting.id).status == :cancelled
+      assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 0
+
+      assert [%{source: :cancellation, status: :pending}] =
+               RefundQueries.list_for_payment(payment.id)
+    end
+
+    test "a declined cancellation refund keeps the meeting cancelled and points to Stripe",
+         %{conn: conn, user: user} do
+      {meeting, payment} = paid_meeting(user, "Declined Refund")
+
+      StripeStub.expect(:create_refund, {:error_fixture, "invalid_request_error"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+      view
+      |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "full"})
+      |> render_submit()
+
+      assert render(view) =~
+               "Meeting cancelled, but Stripe declined the refund. Check the payment in your Stripe dashboard."
+
+      assert Repo.get(MeetingSchema, meeting.id).status == :cancelled
+      assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 0
+    end
+
+    test "the dialog says when a refund of the booking is already being processed",
+         %{conn: conn, user: user} do
+      {meeting, payment} = paid_meeting(user, "Partly Pending")
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2000)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+      assert has_element?(
+               view,
+               "#cancel-meeting-pending-refund",
+               "A refund of €20.00 is already being processed."
+             )
+
+      assert has_element?(view, "#cancel-meeting-form", "Refunds the remaining balance (€30.00).")
     end
 
     test "cancelling a paid booking without refund requires the acknowledgement",
@@ -365,5 +430,24 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
              "#cancel-meeting-form",
              "Die Absage erstattet dem Teilnehmer nichts, da die Zahlung angefochten wird. Klären Sie die Anfechtung zuerst in Stripe."
            )
+  end
+
+  defp paid_meeting(user, attendee_name) do
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        organizer_email: user.email,
+        attendee_name: attendee_name
+      )
+
+    payment =
+      insert(:paid_booking_payment,
+        meeting_id: meeting.id,
+        host_user_id: user.id,
+        host_email: user.email,
+        stripe_account_id: "acct_CANCEL"
+      )
+
+    {meeting, payment}
   end
 end

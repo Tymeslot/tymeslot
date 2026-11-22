@@ -114,8 +114,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   says how it went as `{outcome, flash_type, message}`, so the Meetings page
   and the calendar's preview (`Calendar.BookingActions`) act and speak alike:
 
-    * `:closed`: the booking is cancelled (the refund may still have failed,
-      or someone else cancelled it first; the message says which), so the
+    * `:closed`: the booking is cancelled (the refund may still be pending
+      or have been declined, or someone else cancelled it first; the message
+      says which), so the
       dialog closes and the list reloads.
     * `:refused`: the meeting started or ended meanwhile; nothing changed and
       the dialog closes.
@@ -139,13 +140,23 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   defp outcome(_meeting, refund_action, {:ok, _cancelled}),
     do: {:closed, :info, success_message(refund_action)}
 
-  # The meeting is cancelled; only the money is outstanding.
+  # Stripe has not confirmed the refund yet; Tymeslot finishes it, so the
+  # host is not sent to Stripe, where a second refund would double it.
+  defp outcome(_meeting, _refund_action, {:ok, _cancelled, :refund_pending}),
+    do:
+      {:closed, :info,
+       dgettext(
+         "dashboard_bookings",
+         "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
+       )}
+
+  # The meeting is cancelled; Stripe declined the refund.
   defp outcome(_meeting, _refund_action, {:error, {:refund_failed, _reason}}),
     do:
       {:closed, :error,
        dgettext(
          "dashboard_bookings",
-         "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
+         "Meeting cancelled, but Stripe declined the refund. Check the payment in your Stripe dashboard."
        )}
 
   # The attendee (or a calendar sync) cancelled it while the dialog was open,
@@ -214,6 +225,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     metadata =
       case result do
         {:ok, _cancelled} -> Map.put(measurements, :result, :ok)
+        {:ok, _cancelled, :refund_pending} -> Map.put(measurements, :result, :ok)
         {:error, reason} -> Map.merge(measurements, %{result: :error, reason: inspect(reason)})
       end
 

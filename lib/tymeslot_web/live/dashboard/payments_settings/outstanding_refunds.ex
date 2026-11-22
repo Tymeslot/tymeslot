@@ -25,8 +25,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
   words, and dates an expired row by its payment, since an expired meeting
   carries no cancellation date.
 
-  Each row offers the same `open_refund_modal` event as the payments table.
-  A row only carries that button when both halves of the question say yes:
+  A row whose refund is recorded and still pending stays listed, owed until
+  it settles, with a "Refund processing" badge in place of any button.
+  Every other row offers the same `open_refund_modal` event as the payments
+  table. A row only carries that button when both halves of the question say yes:
   the payment itself is still refundable (`MeetingPayments.refundable?/1`
   covers balance, age and dispute state), *and* the host still has a live
   Connect account to refund from. Everything else gets the "Refund in Stripe"
@@ -124,11 +126,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
                 <td class="p-2 text-token-sm">{p.attendee_email}</td>
                 <td class="p-2 text-token-sm">{p.meeting_type_name}</td>
                 <td class="p-2 text-token-sm text-right font-semibold">
-                  {format_amount(MeetingPayments.refundable_remaining_cents(p), p.currency)}
+                  {format_amount(p.amount_cents - p.refunded_amount_cents, p.currency)}
                 </td>
                 <td class="p-2 text-right">
+                  <.pill :if={row_action(p, @account) == :processing} tone={:neutral} size={:sm}>
+                    {dgettext("dashboard_payments", "Refund processing")}
+                  </.pill>
                   <.action_button
-                    :if={can_refund_here?(p, @account)}
+                    :if={row_action(p, @account) == :refund}
                     variant={:secondary}
                     size={:sm}
                     phx-click="open_refund_modal"
@@ -138,7 +143,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
                     {dgettext("dashboard_payments", "Refund")}
                   </.action_button>
                   <span
-                    :if={not can_refund_here?(p, @account)}
+                    :if={row_action(p, @account) == :in_stripe}
                     class="text-token-xs text-tymeslot-500"
                   >
                     {dgettext("dashboard_payments", "Refund in Stripe")}
@@ -153,11 +158,17 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
     """
   end
 
-  # Two independent questions, and the in-app Refund button needs both
-  # answered yes: whether the payment can still be refunded at all, and
-  # whether there is a Connect account left to refund it from.
-  defp can_refund_here?(payment, account),
-    do: MeetingPayments.refundable?(payment) and connected_for_refunds?(account)
+  # A pending refund is Tymeslot's to finish. Otherwise two independent
+  # questions, and the in-app Refund button needs both answered yes: whether
+  # the payment can still be refunded at all, and whether there is a Connect
+  # account left to refund it from.
+  defp row_action(payment, account) do
+    cond do
+      MeetingPayments.refund_pending?(payment) -> :processing
+      MeetingPayments.refundable?(payment) and connected_for_refunds?(account) -> :refund
+      true -> :in_stripe
+    end
+  end
 
   # Nil is the live case, not an oversight: `disconnect/1` nulls `user_id` on
   # the row it soft-deletes, so after a disconnect nothing user-scoped can

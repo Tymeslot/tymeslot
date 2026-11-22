@@ -24,10 +24,10 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.ApprovalRefunds
   alias Tymeslot.Meetings.MeetingSchema
@@ -116,7 +116,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
 
     assert statuses() == [:expired, :cancelled, :expired]
     assert Repo.reload!(payment).status == :paid
-    assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [%{source: :late_payment}] = late_refunds(payment)
     assert_received :expired
     refute_enqueued(worker: SeriesAnnouncementWorker)
     assert all_enqueued(worker: CalendarEventWorker, args: %{"action" => "create"}) == []
@@ -135,7 +135,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
 
     assert statuses() == [:expired, :expired, :expired]
     assert Repo.reload!(payment).status == :paid
-    assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [%{source: :late_payment}] = late_refunds(payment)
   end
 
   test "a payment for a series with no session left is refunded", %{
@@ -147,7 +147,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
     pay(series)
 
     assert Repo.reload!(payment).status == :paid
-    assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [%{source: :late_payment}] = late_refunds(payment)
   end
 
   test "a dispute won on a series that never went ahead refunds what is left", %{
@@ -167,10 +167,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
 
     assert :ok = ChargeDisputeClosed.handle(dispute_closed("won"))
 
-    assert_enqueued(
-      worker: RefundLatePayment,
-      args: %{booking_payment_id: payment.id, reason: "after_dispute"}
-    )
+    assert [%{source: :late_payment}] = late_refunds(payment)
   end
 
   test "a dispute won on a series still going ahead refunds nothing", %{
@@ -182,7 +179,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
 
     assert :ok = ChargeDisputeClosed.handle(dispute_closed("won"))
 
-    refute_enqueued(worker: RefundLatePayment)
+    assert late_refunds(payment) == []
   end
 
   test "abandoning the checkout from the first session ends the series' checkout" do
@@ -292,4 +289,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
       }
     }
   end
+
+  defp late_refunds(payment),
+    do: Repo.all(from(r in RefundSchema, where: r.booking_payment_id == ^payment.id))
 end

@@ -44,7 +44,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     payment_event_enqueue_failed: %{category: "Payment", severity: :error},
     payment_event_orphaned: %{category: "Payment", severity: :error},
     dunning_stalled: %{category: "Payment", severity: :error},
-    late_payment_refund_failed: %{category: "Payment", severity: :error},
     refund_failed: %{category: "Payment", severity: :error},
     refund_stuck: %{category: "Payment", severity: :error},
     refund_failure_reversed: %{category: "Payment", severity: :warning},

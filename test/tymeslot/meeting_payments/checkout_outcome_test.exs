@@ -151,7 +151,6 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
     test "a held request the attendee withdrew is cancelled, not confirmed" do
       meeting = held_paid_meeting()
-      expect_refund()
 
       assert {:ok, _withdrawn} = Approval.withdraw(meeting)
 
@@ -174,6 +173,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
       expect_refund()
 
       assert {:ok, _declined} = Approval.decline(meeting, nil)
+      assert %{success: 1} = Oban.drain_queue(queue: :payments, with_scheduled: true)
 
       assert BookingPaymentQueries.by_meeting_id(meeting.id).status == :refunded
       assert outcome(meeting) == :declined
@@ -184,6 +184,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
       expect_refund({:error_fixture, "invalid_request_error"})
 
       assert {:ok, _declined} = Approval.decline(meeting, nil)
+      assert %{cancelled: 1} = Oban.drain_queue(queue: :payments, with_scheduled: true)
 
       assert BookingPaymentQueries.by_meeting_id(meeting.id).status == :paid
       assert outcome(meeting) == :declined
@@ -209,7 +210,6 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
     test "a request nobody answered in time is expired" do
       meeting = held_paid_meeting()
-      expect_refund()
 
       assert {:ok, _expired} = Approval.expire(meeting)
 

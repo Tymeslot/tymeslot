@@ -7,12 +7,19 @@ defmodule Tymeslot.MeetingPayments.Refunds.FailureNotice do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.RefundSchema
+  alias Tymeslot.Workers.SendRefundFailed
+
+  # The sources a host decided: the dialog, a cancellation, a series
+  # cancellation. The others refund without anyone acting.
+  @host_decided [:host, :cancellation, :series_host]
 
   @doc """
   Reports the failed `refund` to the admins as a `:refund_failed` alert
-  naming its payment and `code`, whatever its source. This is the only
-  notice sent: the host and the attendee are not told.
+  naming its payment and `code`, whatever its source. A refund the host
+  decided also emails the host (`Tymeslot.Workers.SendRefundFailed`), who
+  holds the money and settles it; the attendee is not told.
   """
   @spec deliver(RefundSchema.t(), String.t()) :: :ok
   def deliver(%RefundSchema{} = refund, code) when is_binary(code) do
@@ -32,8 +39,23 @@ defmodule Tymeslot.MeetingPayments.Refunds.FailureNotice do
       }
     )
 
-    :ok
+    tell_host(refund)
   end
+
+  defp tell_host(%RefundSchema{source: source} = refund) when source in @host_decided do
+    case refund |> SendRefundFailed.new_for() |> Oban.insert() do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Could not queue the refund failure email",
+          refund_id: refund.id,
+          reason: LogFormat.reason(reason)
+        )
+    end
+  end
+
+  defp tell_host(_refund), do: :ok
 
   @doc """
   Reports `refund` to the admins as a `:refund_failure_reversed` alert: it

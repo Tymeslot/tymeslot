@@ -5,10 +5,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
   Reconciles `booking_payment.refunded_amount_cents` and `status` against
   the cumulative `amount_refunded` Stripe reports on the charge, which
   counts refunds only: what a lost dispute took is added to it
-  (`RefundedTotal`). Designed
-  to be idempotent against the synchronous refund path (`Refunds.issue_refund/4`)
-  — replaying the same event, or arriving after the local row has already
-  been updated, is a safe no-op.
+  (`RefundedTotal`). Idempotent against the refunds Tymeslot records
+  itself (`RefundExecutor`): replaying the same event, or arriving after the
+  local row has already been updated, is a safe no-op.
 
   Status transitions:
     * full refund (`amount_refunded == amount_cents`) → `refunded`

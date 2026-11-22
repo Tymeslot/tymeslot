@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
   alias Tymeslot.CalendarMock
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
-  alias Tymeslot.MeetingPayments.Workers.SeriesHostRefund
+  alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingSchema
@@ -280,10 +280,24 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       assert html =~ "Refund of €200.00 is being processed. We&#39;ll email you if it fails."
 
       expect_refund(20_000)
-      assert [%{args: args}] = all_enqueued(worker: SeriesHostRefund)
-      assert :ok = perform_job(SeriesHostRefund, args)
+      assert [%{args: args}] = all_enqueued(worker: ExecuteRefund)
+      assert :ok = perform_job(ExecuteRefund, args)
 
       assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
+    end
+
+    test "the series shows a refund still being processed", %{view: view, payment: payment} do
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 5_000)
+      [first | _rest] = meetings()
+      open_series(view, first)
+
+      assert has_element?(
+               view,
+               "[data-testid=series-payment-pending-refund]",
+               "€50.00 being processed"
+             )
+
+      assert has_element?(view, "[data-testid=series-payment]", "€0.00 refunded so far")
     end
 
     test "a partial refund on cancel remaining refunds that amount", %{
@@ -299,8 +313,8 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       })
 
       expect_refund(3_000)
-      assert [%{args: args}] = all_enqueued(worker: SeriesHostRefund)
-      assert :ok = perform_job(SeriesHostRefund, args)
+      assert [%{args: args}] = all_enqueued(worker: ExecuteRefund)
+      assert :ok = perform_job(ExecuteRefund, args)
       assert Repo.reload!(payment).refunded_amount_cents == 3_000
     end
 
@@ -329,7 +343,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       view |> form("#cancel-series-form") |> render_submit()
 
       assert statuses() == [:cancelled, :cancelled, :cancelled, :cancelled]
-      assert all_enqueued(worker: SeriesHostRefund) == []
+      assert all_enqueued(worker: ExecuteRefund) == []
 
       assert render(view) =~
                "4 sessions cancelled without a refund: the payment is older than the 60-day refund window."
@@ -373,7 +387,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       assert has_element?(view, "input[name=cancel_refund_choice][value=partial][checked]")
       assert has_element?(view, "#cancel-series-form [role=alert]", "exceeds the remaining")
       assert statuses() == [:confirmed, :confirmed, :confirmed, :confirmed]
-      assert all_enqueued(worker: SeriesHostRefund) == []
+      assert all_enqueued(worker: ExecuteRefund) == []
     end
 
     test "cancelling one paid session defaults to one session's refund", %{

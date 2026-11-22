@@ -4,8 +4,8 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
   or partially. Built from a normalised `RefundContext` struct so raw Stripe
   payloads never reach the template layer.
 
-  Triggered synchronously by `Tymeslot.MeetingPayments.Refunds.issue_refund/4`
-  via the dedicated `Tymeslot.Workers.SendBookingPaymentRefunded` worker.
+  Sent by `Tymeslot.Workers.SendBookingPaymentRefunded` once a refund has
+  gone through.
   """
 
   import Swoosh.Email

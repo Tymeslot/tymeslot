@@ -285,12 +285,12 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
           totals: [%{currency: String.t(), amount_cents: non_neg_integer()}]
         }
   def outstanding_refunds_summary_for_host(host_user_id) do
-    # What is neither refunded nor in a pending refund, the SQL twin of
-    # `Refunds.refundable_remaining_cents/1`; the `where` above guarantees it
-    # is positive, so the `max(_, 0)` clamp has nothing to do here. The sum
-    # is typed because Ecto cannot infer a type through the subtraction and
-    # would otherwise hand back a `Decimal` where every other amount in the
-    # codebase is an integer count of cents.
+    # What is not refunded yet, a pending refund's share included: the
+    # attendee is owed it until the refund settles. The `where` above
+    # guarantees it is positive. The sum is typed because Ecto cannot infer
+    # a type through the subtraction and would otherwise hand back a
+    # `Decimal` where every other amount in the codebase is an integer count
+    # of cents.
     query =
       from b in outstanding_refunds_query(host_user_id),
         group_by: b.currency,
@@ -298,11 +298,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
         select: %{
           currency: b.currency,
           count: count(b.id),
-          amount_cents:
-            type(
-              sum(b.amount_cents - b.refunded_amount_cents - pending_refund_sum(b.id)),
-              :integer
-            )
+          amount_cents: type(sum(b.amount_cents - b.refunded_amount_cents), :integer)
         }
 
     rows = Repo.all(query)
@@ -317,7 +313,8 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   # booking ends expired when its payment completed after the slot was taken
   # (`CheckoutSessionCompleted`), or when a paid request lapsed unapproved
   # (`Meetings.Approval`); both owe a full refund and refund it on their own,
-  # so a row here is one whose refund has not gone through yet. Derived
+  # so a row here is one whose refund has not gone through yet; one still
+  # pending stays listed until it settles. Derived
   # from the meeting's status and the payment's own balance rather than from
   # a stored "refund owed" flag, so it cannot drift out of step with either
   # side.
@@ -340,7 +337,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
         where:
           b.host_user_id == ^host_user_id and
             b.status in ^BookingPaymentSchema.refundable_statuses() and
-            b.refunded_amount_cents + pending_refund_sum(b.id) < b.amount_cents,
+            b.refunded_amount_cents < b.amount_cents,
         where: is_nil(b.series_id) or not exists(series_sessions_going_ahead())
 
     MeetingState.where_released(query, :meeting)

@@ -39,7 +39,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.DedupKey do
     account_deletion_held_last_admin: {:user_id, "unknown"},
     # Each payment left unrefunded is money an attendee is owed, so one alert
     # per payment, whatever the reason text says.
-    late_payment_refund_failed: {:booking_payment_id, "unknown"},
     # Each failed refund is money an attendee is owed: one alert per refund.
     refund_failed: {:refund_id, "unknown"},
     # A stuck refund is retried by a new job every four hours or so: one

@@ -1,10 +1,9 @@
 defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   @moduledoc """
-  The job that refunds a payment completing after its booking's slot was
-  taken. The money is owed until Stripe accepts the refund, so the job must
-  refund exactly once however its attempts end, email the attendee exactly
-  once, and leave the booking where the host and an admin can see it when
-  it gives up.
+  A late-payment refund job queued before the refund outbox: it records
+  the refund under the key its earlier attempts may have used, so a refund
+  one of them made at Stripe is replayed rather than made twice, and leaves
+  the rest to `ExecuteRefund`.
   """
 
   use Tymeslot.DataCase, async: false
@@ -15,21 +14,18 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   @moduletag :capture_log
 
   import Ecto.Query, only: [from: 2]
-  import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.Factory
 
   alias Ecto.Changeset
-  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
+  alias Ecto.UUID
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.Refunds
-  alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
+  alias Tymeslot.MeetingPayments.RefundSchema
+  alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
   alias Tymeslot.StripeStubResponses
-
-  setup :capture_admin_alerts
+  alias Tymeslot.Workers.SendBookingPaymentRefunded
 
   setup do
     host = insert(:user)
@@ -45,130 +41,53 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
     %{host: host, payment: payment}
   end
 
-  test "refunds the payment in full and emails the attendee once", %{payment: payment} do
-    StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATE"))
+  test "a RefundLatePayment job queued before the upgrade requests a refund under its old key",
+       %{payment: payment} do
+    queued_at = DateTime.add(DateTime.utc_now(), -600, :second)
 
-    assert :ok = perform(payment)
+    assert :ok = perform(payment, inserted_at: queued_at)
+    assert StripeStub.requests() == []
+
+    assert [%RefundSchema{source: :late_payment, amount_cents: 5000} = refund] = refunds(payment)
+    assert refund.legacy_idempotency_key == "late_payment_refund:#{payment.id}:late:5000"
+    assert DateTime.compare(refund.legacy_since, queued_at) == :eq
+
+    StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATE"))
+    assert :ok = perform_job(ExecuteRefund, %{refund_id: refund.id})
 
     assert [%{form: form, headers: headers}] = StripeStub.requests(:create_refund)
-    assert form["charge"] == payment.stripe_charge_id
-    assert form["amount"] == "5000"
-    assert headers["stripe-account"] == "acct_LATE"
     assert headers["idempotency-key"] == "late_payment_refund:#{payment.id}:late:5000"
+    assert headers["stripe-account"] == "acct_LATE"
+    assert form["amount"] == "5000"
 
     assert Repo.reload!(payment).status == :refunded
     assert refund_emails(payment) == 1
-    refute_received {:send_alert, _type, _payload}
   end
 
-  test "a failed attempt short of the last is retried quietly", %{payment: payment} do
-    StripeStub.expect(:create_refund, {:error_fixture, "api_error"})
-
-    assert {:error, %StripeError{type: "api_error"}} = perform(payment, attempt: 3)
-
-    assert Repo.reload!(payment).status == :paid
-    assert refund_emails(payment) == 0
-    refute_received {:send_alert, _type, _payload}
-  end
-
-  test "a refund that fails on the last attempt alerts an admin and stays on the host's list",
-       %{host: host, payment: payment} do
-    StripeStub.expect(:create_refund, {:error_fixture, "api_error"})
-
-    assert {:error, %StripeError{type: "api_error"}} = perform(payment, attempt: 10)
-
-    payment_id = payment.id
-
-    assert_received {:send_alert, :late_payment_refund_failed,
-                     %{booking_payment_id: ^payment_id} = alert}
-
-    assert alert.summary =~ "could not be refunded"
-    assert is_integer(alert.oban_job_id)
-    assert Repo.reload!(payment).status == :paid
-    assert refund_emails(payment) == 0
-    assert [%{id: ^payment_id}] = MeetingPayments.list_outstanding_refunds_for_host(host.id)
-  end
-
-  # The webhook commits the payment and this job even when it could not
-  # fetch the charge id, so the job fetches it before refunding.
-  test "backfills a missing charge id before refunding, retrying until Stripe supplies it",
-       %{payment: payment} do
+  test "a job scheduled by a decided dispute keeps its own key", %{payment: payment} do
     payment
-    |> Changeset.change(stripe_charge_id: nil, stripe_payment_intent_id: "pi_LATE")
+    |> Changeset.change(refunded_amount_cents: 3000, status: :partially_refunded)
     |> Repo.update!()
 
-    # A retryable error on a GET is attempted three times.
-    StripeStub.expect(:retrieve_payment_intent, 3, fn request ->
-      assert request.path == "/v1/payment_intents/pi_LATE"
-      assert request.headers["stripe-account"] == "acct_LATE"
-      {:error_fixture, "api_error"}
-    end)
+    assert :ok = perform(payment, reason: "after_dispute")
 
-    assert {:error, %StripeError{type: "api_error"}} = perform(payment)
-    assert is_nil(Repo.reload!(payment).stripe_charge_id)
-
-    StripeStub.expect(
-      :retrieve_payment_intent,
-      StripeFixtures.object("payment_intent_with_latest_charge", %{
-        "id" => "pi_LATE",
-        "latest_charge" => %{"id" => "ch_BACKFILLED"}
-      })
-    )
-
-    StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATE"))
-
-    assert :ok = perform(payment, attempt: 2)
-
-    assert [%{form: %{"charge" => "ch_BACKFILLED"}}] = StripeStub.requests(:create_refund)
-
-    refunded = Repo.reload!(payment)
-    assert refunded.stripe_charge_id == "ch_BACKFILLED"
-    assert refunded.status == :refunded
-    assert refund_emails(payment) == 1
+    assert [%{amount_cents: 2000, legacy_idempotency_key: key}] = refunds(payment)
+    assert key == "late_payment_refund:#{payment.id}:after_dispute:2000"
   end
 
-  # The dispute decides where the money goes: an attendee who wins it has
-  # it back, and a host who wins it finds the payment `paid` again and back
-  # on the outstanding-refunds list.
-  test "a disputed payment is left to the dispute at once, without retries or an alert",
-       %{payment: payment} do
-    payment |> Changeset.change(status: :disputed) |> Repo.update!()
+  test "a rerun of a job that recorded its refund records none", %{payment: payment} do
+    {:ok, job} = Oban.insert(RefundLatePayment.new(%{booking_payment_id: payment.id}))
+    # As Oban hands it to the worker: read back, string-keyed, dated.
+    job = Repo.reload!(job)
 
-    assert {:discard, :under_dispute} = perform(payment)
+    assert :ok = RefundLatePayment.perform(job)
+    assert :ok = RefundLatePayment.perform(job)
 
-    assert Repo.reload!(payment).status == :disputed
-    assert refund_emails(payment) == 0
-    refute_received {:send_alert, _type, _payload}
+    assert [_one] = refunds(payment)
   end
 
-  test "a payment past the refund window is left on the host's list at once",
+  test "a refusal is discarded at once and leaves the booking on the host's list",
        %{host: host, payment: payment} do
-    paid_at = DateTime.add(DateTime.utc_now(:second), -61, :day)
-    payment |> Changeset.change(paid_at: paid_at) |> Repo.update!()
-
-    assert {:discard, :outside_refund_window} = perform(payment)
-
-    payment_id = payment.id
-    assert [%{id: ^payment_id}] = MeetingPayments.list_outstanding_refunds_for_host(host.id)
-    refute_received {:send_alert, _type, _payload}
-  end
-
-  test "a payment with no paid time is left on the host's list at once",
-       %{host: host, payment: payment} do
-    payment |> Changeset.change(paid_at: nil) |> Repo.update!()
-
-    assert {:discard, :not_paid} = perform(payment)
-
-    payment_id = payment.id
-    assert [%{id: ^payment_id}] = MeetingPayments.list_outstanding_refunds_for_host(host.id)
-    refute_received {:send_alert, _type, _payload}
-  end
-
-  # The refusals need no charge id, so a payment still missing one is not
-  # sent to Stripe for it first, only to be retried for hours while the
-  # lookup fails.
-  test "a refusal is discarded at once even while the charge id is missing",
-       %{payment: payment} do
     stale = DateTime.add(DateTime.utc_now(:second), -61, :day)
 
     for {changes, reason} <- [
@@ -176,164 +95,71 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
           {[paid_at: stale], :outside_refund_window},
           {[paid_at: nil], :not_paid}
         ] do
-      payment
-      |> Changeset.change([stripe_charge_id: nil, stripe_payment_intent_id: "pi_LATE"] ++ changes)
-      |> Repo.update!()
-
+      payment |> Changeset.change(changes) |> Repo.update!()
       assert {:discard, ^reason} = perform(payment)
-      payment |> Changeset.change(status: :paid, paid_at: payment.paid_at) |> Repo.update!()
+
+      payment
+      |> Repo.reload!()
+      |> Changeset.change(status: :paid, paid_at: payment.paid_at)
+      |> Repo.update!()
     end
 
-    assert refund_emails(payment) == 0
-    refute_received {:send_alert, _type, _payload}
+    assert refunds(payment) == []
+    payment_id = payment.id
+    assert [%{id: ^payment_id}] = MeetingPayments.list_outstanding_refunds_for_host(host.id)
   end
 
   test "the discarded refusals are expected outcomes, not failures to record" do
-    for reason <- [:not_paid, :outside_refund_window, :under_dispute] do
+    for reason <- [:not_paid, :outside_refund_window, :under_dispute, :invalid_amount] do
       assert RefundLatePayment.expected_outcome?(reason)
     end
 
-    refute RefundLatePayment.expected_outcome?(%StripeError{type: "api_error"})
+    refute RefundLatePayment.expected_outcome?(:refund_in_progress)
   end
 
-  # Stripe accepts the refund, then the transaction that records it dies
-  # before committing. The retry asks again under the same idempotency key,
-  # so Stripe hands back the refund it already made instead of a second one.
-  test "a refund Stripe accepted before the job's transaction rolled back is not made twice",
-       %{payment: payment} do
-    stripe = start_supervised!({Agent, fn -> %{refunds: %{}, keys: []} end})
-
-    StripeStub.stub(:create_refund, fn request ->
-      key = request.headers["idempotency-key"]
-
-      first? =
-        Agent.get_and_update(stripe, fn state ->
-          refunds = Map.put_new(state.refunds, key, request.form["amount"])
-          {not Map.has_key?(state.refunds, key), %{refunds: refunds, keys: [key | state.keys]}}
-        end)
-
-      if first?, do: raise(DBConnection.ConnectionError, "connection lost")
-      StripeStubResponses.refund(request, "re_#{key}")
-    end)
-
-    assert {:error, %DBConnection.ConnectionError{}} = perform(payment)
-    assert Repo.reload!(payment).status == :paid
-    assert refund_emails(payment) == 0
-
-    assert :ok = perform(payment, attempt: 2)
-
-    %{refunds: refunds, keys: keys} = Agent.get(stripe, & &1)
-    assert map_size(refunds) == 1
-    assert [key, key] = keys
-    assert Repo.reload!(payment).status == :refunded
-    assert refund_emails(payment) == 1
-  end
-
-  # As above, but Stripe's `charge.refunded` recorded the refund before the
-  # retry ran: the retry finds the payment refunded and only the email is
-  # left to send.
+  # An earlier attempt's refund, made at Stripe while its own transaction
+  # rolled back, was recorded by `charge.refunded`, which sends no email.
   test "emails the attendee when the refund was recorded by Stripe's webhook instead",
        %{payment: payment} do
     record_refunded(payment)
 
-    assert :ok = perform(payment, attempt: 2)
+    assert :ok = perform(payment)
 
+    assert refunds(payment) == []
     assert refund_emails(payment) == 1
   end
 
   test "sends no second email when the refund was already emailed", %{payment: payment} do
-    StripeStub.expect(:create_refund, StripeStubResponses.refund("re_HOST"))
-
-    {:ok, _refunded} =
-      Refunds.issue_host_refund(payment.id, payment.host_user_id, 5000, "host_refund:test:5000")
-
+    record_refunded(payment)
+    {:ok, _job} = Oban.insert(SendBookingPaymentRefunded.new(%{booking_payment_id: payment.id}))
     complete_emails(payment)
 
-    assert :ok = perform(payment, attempt: 2)
+    assert :ok = perform(payment)
 
     assert refund_emails(payment) == 1
   end
 
-  # Even a job that gave up for good: the payment is then the host's and an
-  # admin's to settle, never a second automatic refund's.
-  test "is scheduled at most once per payment, whatever became of the first job",
-       %{payment: payment} do
-    {:ok, first} = Oban.insert(RefundLatePayment.new_for(payment.id))
-    Repo.update_all(from(j in Oban.Job, where: j.id == ^first.id), set: [state: "discarded"])
-
-    {:ok, second} = Oban.insert(RefundLatePayment.new_for(payment.id))
-
-    assert second.conflict?
-    assert second.id == first.id
-  end
-
-  # The first job, discarded while a dispute held the money, must not
-  # swallow the one a won dispute schedules; that one is unique in turn.
-  test "is scheduled once more, and only once, after a won dispute", %{payment: payment} do
-    {:ok, first} = Oban.insert(RefundLatePayment.new_for(payment.id))
-    Repo.update_all(from(j in Oban.Job, where: j.id == ^first.id), set: [state: "discarded"])
-
-    {:ok, after_dispute} = Oban.insert(RefundLatePayment.new_after_dispute(payment.id))
-    refute after_dispute.conflict?
-
-    {:ok, again} = Oban.insert(RefundLatePayment.new_after_dispute(payment.id))
-    assert again.conflict?
-    assert again.id == after_dispute.id
-  end
-
-  # Stripe's refunded total after the remainder is refunded is the
-  # remainder alone; the part the dispute took is no refund.
-  test "refunds what a partly lost dispute left and takes the booking off the host's list",
-       %{host: host, payment: payment} do
-    payment |> Changeset.change(status: :disputed) |> Repo.update!()
-
-    assert :ok =
-             ChargeDisputeClosed.handle(%{
-               "id" => "evt_PART_LOST",
-               "account" => "acct_LATE",
-               "type" => "charge.dispute.closed",
-               "data" => %{
-                 "object" => %{
-                   "id" => "dp_PART_LOST",
-                   "charge" => payment.stripe_charge_id,
-                   "amount" => 3000,
-                   "status" => "lost"
-                 }
-               }
-             })
-
-    assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
-
-    StripeStub.expect(
-      :create_refund,
-      StripeFixtures.object("refund_with_charge", %{
-        "id" => "re_REST",
-        "amount" => 2000,
-        "charge" => %{"amount_refunded" => 2000}
-      })
-    )
-
-    assert :ok = perform(payment)
-
-    assert [%{form: %{"amount" => "2000"}}] = StripeStub.requests(:create_refund)
-
-    assert %{status: :refunded, refunded_amount_cents: 5000} = Repo.reload!(payment)
-    assert MeetingPayments.list_outstanding_refunds_for_host(host.id) == []
-  end
-
-  test "spreads its attempts over about four hours, inside Stripe's idempotency window" do
-    total =
-      Enum.sum(for attempt <- 1..9, do: RefundLatePayment.backoff(%Oban.Job{attempt: attempt}))
-
-    assert total == 14_580
+  test "a payment that is gone is discarded" do
+    assert {:discard, :not_found} =
+             perform_job(RefundLatePayment, %{booking_payment_id: UUID.generate()})
   end
 
   defp perform(payment, opts \\ []) do
-    perform_job(RefundLatePayment, %{booking_payment_id: payment.id},
-      attempt: Keyword.get(opts, :attempt, 1),
-      max_attempts: 10
+    args =
+      case Keyword.get(opts, :reason) do
+        nil -> %{booking_payment_id: payment.id}
+        reason -> %{booking_payment_id: payment.id, reason: reason}
+      end
+
+    perform_job(RefundLatePayment, args,
+      attempt: 1,
+      max_attempts: 10,
+      inserted_at: Keyword.get(opts, :inserted_at, DateTime.utc_now())
     )
   end
+
+  defp refunds(payment),
+    do: Repo.all(from(r in RefundSchema, where: r.booking_payment_id == ^payment.id))
 
   # Every refund email job for the payment, in whatever state.
   defp refund_emails(payment), do: Repo.aggregate(email_jobs(payment), :count)

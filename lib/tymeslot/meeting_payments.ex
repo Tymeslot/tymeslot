@@ -45,6 +45,7 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
   alias Tymeslot.MeetingPayments.HeldMeetings
+  alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
@@ -363,6 +364,10 @@ defmodule Tymeslot.MeetingPayments do
   @spec get_payment(Ecto.UUID.t()) :: booking_payment() | nil
   def get_payment(id), do: BookingPaymentQueries.get(id)
 
+  @doc "Fetches a recorded refund by id, or `nil`. Unscoped, as `get_payment/1` is."
+  @spec get_refund(term()) :: RefundSchema.t() | nil
+  def get_refund(id), do: RefundQueries.get(id)
+
   @doc """
   Fetches a booking payment by ID only if `host_user_id` took it.
 
@@ -464,37 +469,21 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate refund_outstanding?(payment), to: Refunds
 
   @doc """
-  Parses raw refund-form params into a validated `{:ok, pos_integer()}` or
-  a tagged `{:error, atom()}`; see `Refunds.parse_refund_amount/2`.
+  Parses raw refund-form params into `{:ok, cents}` or a tagged
+  `{:error, atom()}`; see `Refunds.parse_refund_amount/2`.
   """
   @spec parse_refund_amount(booking_payment(), map()) ::
-          {:ok, pos_integer()} | {:error, :invalid_amount | :exceeds_remaining | :choose_type}
+          {:ok, non_neg_integer()}
+          | {:error, :invalid_amount | :exceeds_remaining | :choose_type | :refund_in_progress}
   defdelegate parse_refund_amount(payment, params), to: Refunds
 
-  @doc """
-  Refunds a booking payment, whoever took it, under the Stripe idempotency
-  key `key`. Unscoped; see `Refunds.issue_refund/4`. A refund a signed-in
-  user asks for must go through `refund_payment_for_host/5`.
-  """
-  @spec issue_refund(booking_payment(), integer(), String.t(), String.t() | nil) ::
-          {:ok, booking_payment()} | {:error, Refunds.refund_error()}
-  defdelegate issue_refund(payment, amount_cents, key, reason \\ nil), to: Refunds
+  @doc "What the payment's pending refunds add up to; see `Refunds.pending_refund_cents/1`."
+  @spec pending_refund_cents(booking_payment()) :: non_neg_integer()
+  defdelegate pending_refund_cents(payment), to: Refunds
 
-  @doc """
-  Refunds a booking payment for the host who took it; any other payment is
-  `{:error, :not_found}`. See `Refunds.issue_host_refund/5`.
-  """
-  @spec refund_payment_for_host(term(), integer(), integer(), String.t(), String.t() | nil) ::
-          {:ok, booking_payment()} | {:error, :not_found | Refunds.refund_error()}
-  defdelegate refund_payment_for_host(
-                payment_id,
-                host_user_id,
-                amount_cents,
-                key,
-                reason \\ nil
-              ),
-              to: Refunds,
-              as: :issue_host_refund
+  @doc "Whether a refund of the payment is still pending; see `Refunds.refund_pending?/1`."
+  @spec refund_pending?(booking_payment()) :: boolean()
+  defdelegate refund_pending?(payment), to: Refunds
 
   @doc "Records a refund and the job that makes it; see `Refunds.request_refund/4`."
   @spec request_refund(booking_payment(), pos_integer(), Refunds.refund_source(), keyword()) ::

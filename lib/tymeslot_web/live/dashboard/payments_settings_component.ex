@@ -47,7 +47,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      socket
      |> ModalHook.mount_modal(refund: false, disconnect: false)
      |> assign(:refund_submitting, false)
-     |> assign(:refund_attempt, nil)
      |> assign(:refund_error, nil)
      |> assign(:refund_form, @blank_refund_form)
      |> assign(:connect_account, nil)
@@ -251,20 +250,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     )
   end
 
-  # A refund is decided against the balance the dialog shows, so the attempt
-  # names the payment and the total refunded when the dialog opened. A retry
-  # after a refund that failed or timed out (from the same dialog, after
-  # closing and reopening it, or after reloading the page) finds the same
-  # total while nothing new is recorded, asks Stripe under the same key, and
-  # gets back any refund the first try made. Once a refund is recorded the
-  # total moves, so a deliberate further refund is a new key.
+  # A payment whose pending refunds hold all that remains opens too: the
+  # dialog shows them being processed, with nothing left to submit.
   defp open_refund_modal(socket, payment) do
-    if MeetingPayments.refundable?(payment) do
-      {:noreply,
-       socket
-       |> reset_refund_form()
-       |> assign(:refund_attempt, "#{payment.id}:#{payment.refunded_amount_cents}")
-       |> ModalHook.show_modal(:refund, payment)}
+    if MeetingPayments.refundable?(payment) or MeetingPayments.refund_pending?(payment) do
+      {:noreply, socket |> reset_refund_form() |> ModalHook.show_modal(:refund, payment)}
     else
       Flash.error(
         dgettext(
@@ -330,6 +320,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
         |> assign(refund_submitting: true, refund_error: nil)
         |> process_refund(payment, amount_cents)
 
+      {:error, :refund_in_progress} ->
+        handle_refund_failure(socket, :refund_in_progress)
+
       {:error, reason} ->
         {:noreply, assign(socket, :refund_error, parse_refund_error_message(reason))}
     end
@@ -348,26 +341,25 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   # Run the blocking Stripe refund call in an async task so the
   # `refund_submitting` spinner actually paints — assigning it and then making
   # the synchronous call in the same handle_event would never yield a render
-  # between the two. The host-scoped refund decides ownership under the row
-  # lock, in the same transaction as the Stripe call, so a forged or raced
-  # request still cannot refund another host's payment.
+  # between the two. The refund is recorded under the payment's row lock,
+  # scoped to the host, so a forged or raced request still cannot refund
+  # another host's payment, and a second submit while it is pending is
+  # refused (`:refund_in_progress`) rather than refunding twice.
   defp process_refund(socket, payment, amount_cents) do
     user_id = socket.assigns.current_user.id
-    payment_id = payment.id
-    key = "host_refund:#{socket.assigns.refund_attempt}:#{amount_cents}"
 
     {:noreply,
      start_async(
        socket,
        :issue_refund,
        Tasks.with_context(fn ->
-         MeetingPayments.refund_payment_for_host(payment_id, user_id, amount_cents, key)
+         MeetingPayments.refund_now(payment, amount_cents, :host, host_user_id: user_id)
        end)
      )}
   end
 
   @impl Phoenix.LiveComponent
-  def handle_async(:issue_refund, {:ok, {:ok, _payment}}, socket) do
+  def handle_async(:issue_refund, {:ok, {:ok, _refund}}, socket) do
     Flash.info(
       dgettext(
         "dashboard_payments",
@@ -375,11 +367,20 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
       )
     )
 
-    {:noreply,
-     socket
-     |> ModalHook.hide_modal(:refund)
-     |> assign(:refund_submitting, false)
-     |> assign_payments_state(socket.assigns.current_user)}
+    {:noreply, refund_settled(socket)}
+  end
+
+  # Recorded, and Tymeslot keeps trying: the host is not invited to retry.
+  def handle_async(:issue_refund, {:ok, {pending, _refund}}, socket)
+      when pending in [:pending, :stuck] do
+    Flash.info(
+      dgettext(
+        "dashboard_payments",
+        "Refund submitted. Stripe has not confirmed it yet; Tymeslot keeps trying and emails the attendee once it goes through."
+      )
+    )
+
+    {:noreply, refund_settled(socket)}
   end
 
   def handle_async(:issue_refund, {:ok, {:error, reason}}, socket) do
@@ -393,6 +394,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   defp handle_refund_failure(socket, reason) do
     Flash.error(refund_error_message(reason))
     {:noreply, assign(socket, :refund_submitting, false)}
+  end
+
+  defp refund_settled(socket) do
+    socket
+    |> ModalHook.hide_modal(:refund)
+    |> assign(:refund_submitting, false)
+    |> assign_payments_state(socket.assigns.current_user)
   end
 
   # Mutation handlers always want a fresh reload of everything (the account
@@ -461,6 +469,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
       dgettext(
         "dashboard_payments",
         "This booking has not been paid yet, so it cannot be refunded."
+      )
+
+  defp refund_error_message(:refund_in_progress),
+    do: dgettext("dashboard_payments", "A refund for this payment is already being processed.")
+
+  defp refund_error_message(:refund_failed),
+    do:
+      dgettext(
+        "dashboard_payments",
+        "Stripe declined this refund. Check the payment in your Stripe dashboard."
       )
 
   defp refund_error_message(:missing_charge),

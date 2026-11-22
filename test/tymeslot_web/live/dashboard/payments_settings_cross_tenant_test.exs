@@ -4,8 +4,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
 
   Ownership is a rule of the payments context: the component looks payments up
   with `MeetingPayments.get_payment_for_host/2` and refunds them with
-  `MeetingPayments.refund_payment_for_host/5`, which decides ownership under
-  the payment's row lock. These tests pin that the screen goes through those
+  `MeetingPayments.refund_now/4` scoped to the host (`host_user_id:`), which
+  decides ownership under the payment's row lock. These tests pin that the screen goes through those
   scoped paths end to end:
 
     * `open_refund_modal` takes an id from the client, so another host's id

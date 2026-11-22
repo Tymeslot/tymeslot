@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.SeriesModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.BookingSeries
+  alias Tymeslot.MeetingPayments
   alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.CoreComponents.Containers
   alias TymeslotWeb.Components.CoreComponents.Modal
@@ -92,6 +93,19 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.SeriesModal do
                 amount:
                   format_amount(
                     @overview.payment.refunded_amount_cents,
+                    @overview.payment.currency
+                  )
+              )}
+            </span>
+            <span
+              :if={MeetingPayments.refund_pending?(@overview.payment)}
+              class="block text-tymeslot-500"
+              data-testid="series-payment-pending-refund"
+            >
+              {dgettext("dashboard_booking_series", "%{amount} being processed",
+                amount:
+                  format_amount(
+                    MeetingPayments.pending_refund_cents(@overview.payment),
                     @overview.payment.currency
                   )
               )}

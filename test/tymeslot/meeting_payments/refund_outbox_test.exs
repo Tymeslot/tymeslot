@@ -26,6 +26,7 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
   alias Tymeslot.StripeStub
   alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.SendBookingPaymentRefunded
+  alias Tymeslot.Workers.SendRefundFailed
 
   setup :capture_admin_alerts
 
@@ -120,16 +121,59 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
     end
   end
 
-  describe "issue_refund/4 beside a pending refund" do
-    test "refunds only what the pending refund leaves", %{payment: payment} do
-      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 3_000)
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LEGACY_PATH"))
+  describe "request_remaining_refund/2" do
+    test "records a refund of what is left, its job due at once, without calling Stripe",
+         %{payment: payment} do
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 1_000)
 
-      assert {:error, :refund_in_progress} = Refunds.issue_refund(payment, 3_000, "legacy:3000")
-      assert StripeStub.requests(:create_refund) == []
+      assert {:ok, %RefundSchema{amount_cents: 4_000, source: :late_payment} = refund} =
+               Refunds.request_remaining_refund(payment, :late_payment)
 
-      assert {:ok, %{refunded_amount_cents: 2_000}} =
-               Refunds.issue_refund(payment, 2_000, "legacy:2000")
+      assert StripeStub.requests() == []
+      assert [job] = all_enqueued(worker: ExecuteRefund, args: %{"refund_id" => refund.id})
+      assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+    end
+
+    test "records nothing when pending refunds hold all that is left", %{payment: payment} do
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 5_000)
+
+      assert {:ok, :none} = Refunds.request_remaining_refund(payment, :late_payment)
+      assert RefundQueries.pending_cents(payment.id) == 5_000
+    end
+
+    test "records nothing for a payment it may not refund, inside the caller's transaction",
+         %{payment: payment} do
+      disputed = payment |> Changeset.change(status: :disputed) |> Repo.update!()
+
+      assert {:ok, :none} =
+               Repo.transaction(fn ->
+                 {:ok, :none} = Refunds.request_remaining_refund(disputed, :late_payment)
+                 :none
+               end)
+
+      assert RefundQueries.pending_cents(payment.id) == 0
+    end
+  end
+
+  describe "pending_refund_cents/1 and refund_pending?/1" do
+    test "read the payment's pending refunds, settled ones aside", %{payment: payment} do
+      refute Refunds.refund_pending?(payment)
+
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 1_200)
+
+      insert(:booking_payment_refund,
+        booking_payment: payment,
+        amount_cents: 300,
+        status: :failed
+      )
+
+      # Loaded without its pending refunds, as a lookup by id is.
+      reloaded = Repo.reload!(payment)
+      assert Refunds.pending_refund_cents(reloaded) == 1_200
+      assert Refunds.refund_pending?(reloaded)
+
+      # As listed, with them read in the same query.
+      assert Refunds.pending_refund_cents(%{payment | pending_refund_cents: 700}) == 700
     end
   end
 
@@ -282,6 +326,19 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
       refute_received {:send_alert, :refund_failed, _payload}
       assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
       refute_enqueued(worker: SendBookingPaymentRefunded)
+      assert_enqueued(worker: SendRefundFailed, args: %{refund_id: refund_id})
+    end
+
+    # Nobody acted on these: the admins are told, the host is not emailed.
+    for source <- [:late_payment, :approval_release] do
+      test "a #{source} refund that fails alerts the admins only", %{payment: payment} do
+        StripeStub.expect(:create_refund, {:error_fixture, "invalid_request_error"})
+
+        assert {:error, :refund_failed} = Refunds.refund_now(payment, 2_000, unquote(source), [])
+
+        assert_received {:send_alert, :refund_failed, %{source: unquote(source)}}
+        refute_enqueued(worker: SendRefundFailed)
+      end
     end
 
     test "a payment without a charge id is backfilled first", %{payment: payment} do

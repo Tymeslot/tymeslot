@@ -3,8 +3,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
   `checkout.session.completed` arriving after its booking expired and its
   payment was failed (the expired webhook, or a disconnect, ran first). The
   money was taken all the same, so the booking is brought back when its slot
-  is still free and the payment is refunded, by `RefundLatePayment`, when it
-  is not.
+  is still free and a refund of all of it recorded, made by its
+  `ExecuteRefund` job, when it is not.
   """
 
   use Tymeslot.DataCase, async: false
@@ -19,13 +19,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
   import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
 
-  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.Invitations
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
+  alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Repo
@@ -104,7 +104,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
 
     # The expiry released the slot, and another booking has taken it since:
     # the attendee's money goes back instead of a double booking. The webhook
-    # records the payment and schedules the refund; the job makes it.
+    # records the payment and its refund; the refund's job makes it.
     test "refunds a completion that arrived after expiry once the slot has been taken" do
       user = insert(:user)
       {meeting, bp} = taken_slot_booking(user, "LATE_TAKEN")
@@ -123,12 +123,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
       assert recorded.paid_at
       assert recorded.stripe_charge_id == "ch_LATE_TAKEN"
       assert recorded.last_event_id == "evt_LATE_TAKEN"
-      assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: bp.id})
+      assert [%{source: :late_payment, amount_cents: 5000}] = refunds(bp)
       refute_enqueued(worker: SendBookingPaymentRefunded)
 
       StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATE_TAKEN"))
 
-      assert %{success: 1} = Oban.drain_queue(queue: :payments)
+      assert %{success: 1} = drain_payments()
 
       assert [%{form: form, headers: refund_headers}] = StripeStub.requests(:create_refund)
       assert form["charge"] == "ch_LATE_TAKEN"
@@ -166,7 +166,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
       assert :ok = CheckoutSessionCompleted.handle(event)
       assert :ok = CheckoutSessionCompleted.handle(%{event | "id" => "reconcile:cs_LATE_AGAIN"})
 
-      assert [_one] = all_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: bp.id})
+      assert [_one] = refunds(bp)
+      assert [_job] = all_enqueued(worker: ExecuteRefund)
     end
 
     # The expiry released the invitation too, and it has been booked again at
@@ -209,7 +210,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
       assert :ok = CheckoutSessionCompleted.handle(late_event("LATE_INVITED", meeting))
 
       assert Repo.reload!(bp).status == :paid
-      assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: bp.id})
+      assert [%{source: :late_payment}] = refunds(bp)
       assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
     end
 
@@ -238,7 +239,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
         })
 
       assert :ok = CheckoutSessionCompleted.handle(event)
-      assert %{success: 1} = Oban.drain_queue(queue: :payments)
+      assert %{success: 1} = drain_payments()
 
       assert [%{form: %{"charge" => "ch_LATE_ORPHAN"}}] = StripeStub.requests(:create_refund)
       assert Repo.reload!(bp).status == :refunded
@@ -249,7 +250,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
     # The refund needs the charge id, which only Stripe can supply. Held back
     # until Stripe supplied it, the payment stayed `failed`, off the host's
     # outstanding refunds, once Stripe stopped redelivering. It is committed
-    # paid with its job instead, and the job backfills the charge id first.
+    # paid with its refund instead, and each attempt backfills the charge id
+    # first.
     test "records a late completion and its refund even when its charge cannot be found yet" do
       user = insert(:user)
       {meeting, bp} = taken_slot_booking(user, "LATE_NO_CHARGE")
@@ -271,7 +273,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
       assert recorded.status == :paid
       assert is_nil(recorded.stripe_charge_id)
       assert recorded.last_event_id == "evt_LATE_NO_CHARGE"
-      assert [job] = all_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: bp.id})
+      assert [refund] = refunds(bp)
       bp_id = bp.id
       assert [%{id: ^bp_id}] = MeetingPayments.list_outstanding_refunds_for_host(bp.host_user_id)
 
@@ -281,12 +283,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
       assert :ok =
                CheckoutSessionCompleted.handle(%{event | "id" => "reconcile:cs_LATE_NO_CHARGE"})
 
-      assert [^job] = all_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: bp.id})
+      assert [^refund] = refunds(bp)
       assert Repo.reload!(bp).last_event_id == "evt_LATE_NO_CHARGE"
 
-      # The job retries while the charge id is still unavailable.
-      assert {:error, %StripeError{type: "api_error"}} =
-               perform_job(RefundLatePayment, %{booking_payment_id: bp.id}, attempt: 1)
+      # The refund waits while the charge id is still unavailable.
+      assert {:error, :pending} =
+               perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 1)
 
       assert Repo.reload!(bp).status == :paid
 
@@ -294,7 +296,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
 
       StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATE_NO_CHARGE"))
 
-      assert :ok = perform_job(RefundLatePayment, %{booking_payment_id: bp.id}, attempt: 2)
+      assert :ok = perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 2)
 
       assert [%{form: form}] = StripeStub.requests(:create_refund)
       assert form["charge"] == "ch_LATE_NO_CHARGE"
@@ -310,9 +312,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
   end
 
   # An expired booking whose slot another confirmed booking now holds.
-  # The attendee disputes the late payment before the refund job runs, so
-  # the job leaves it to the dispute. When the host wins, the money is back
-  # with them for a booking that never happened, and is refunded after all.
+  # The attendee disputes the late payment before its refund is made, so
+  # Stripe refuses the refund. When the host wins, the money is back with
+  # them for a booking that never happened, and is refunded after all.
   describe "a late payment disputed before its refund" do
     test "is refunded, once, after the host wins the dispute" do
       user = insert(:user)
@@ -332,7 +334,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
                  })
                )
 
-      assert %{discard: 1} = Oban.drain_queue(queue: :payments)
+      StripeStub.expect(:create_refund, {:error_fixture, "invalid_request_error"})
+      assert %{cancelled: 1} = drain_payments()
       assert Repo.reload!(bp).status == :disputed
 
       assert :ok =
@@ -342,9 +345,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
 
       StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATE_DISPUTED"))
 
-      assert %{success: 1} = Oban.drain_queue(queue: :payments)
+      assert %{success: 1} = drain_payments()
 
-      assert [%{form: form}] = StripeStub.requests(:create_refund)
+      assert [_refused, %{form: form}] = StripeStub.requests(:create_refund)
       assert form["charge"] == "ch_LATE_DISPUTED"
       assert form["amount"] == Integer.to_string(bp.amount_cents)
 
@@ -363,18 +366,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
                  dispute_event("evt_DISPUTE_WON_2", "charge.dispute.closed", %{"status" => "won"})
                )
 
-      refund_jobs =
-        Repo.all(
-          from(j in Oban.Job,
-            where: j.worker == "Tymeslot.MeetingPayments.Workers.RefundLatePayment",
-            select: {j.state, j.args}
-          )
-        )
-
-      assert Enum.sort(refund_jobs) == [
-               {"completed", %{"booking_payment_id" => bp.id, "reason" => "after_dispute"}},
-               {"discarded", %{"booking_payment_id" => bp.id}}
-             ]
+      assert bp |> refunds() |> Enum.map(&{&1.status, &1.amount_cents}) |> Enum.sort() ==
+               [{:failed, 5000}, {:succeeded, 5000}]
     end
 
     # An inquiry escalates into a chargeback, and the inquiry's close
@@ -403,7 +396,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
       reloaded = Repo.reload!(bp)
       assert reloaded.status == :disputed
       assert reloaded.stripe_dispute_id == "dp_CHARGEBACK"
-      refute_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: bp.id})
+      assert refunds(bp) == []
 
       assert :ok =
                ChargeDisputeClosed.handle(
@@ -414,11 +407,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
                )
 
       assert Repo.reload!(bp).status == :paid
-
-      assert_enqueued(
-        worker: RefundLatePayment,
-        args: %{booking_payment_id: bp.id, reason: "after_dispute"}
-      )
+      assert [%{source: :late_payment, amount_cents: 5000}] = refunds(bp)
     end
 
     test "is refunded after a won dispute whose created Stripe delivers late" do
@@ -503,7 +492,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
                  dispute_event("evt_DISPUTE_WON", "charge.dispute.closed", %{"status" => "won"})
                )
 
-      refute_enqueued(worker: RefundLatePayment)
+      assert Repo.all(RefundSchema) == []
     end
   end
 
@@ -527,13 +516,18 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
       StripeStubResponses.refund("re_#{bp.id}", bp.refunded_amount_cents)
     )
 
-    assert %{success: 1} = Oban.drain_queue(queue: :payments)
+    assert %{success: 1} = drain_payments()
 
     assert [%{form: form}] = StripeStub.requests(:create_refund)
     assert form["charge"] == "ch_LATE_DISPUTED"
     assert form["amount"] == Integer.to_string(remainder)
     assert %{status: :refunded, refunded_amount_cents: 5000} = Repo.reload!(bp)
   end
+
+  defp refunds(bp), do: Repo.all(from(r in RefundSchema, where: r.booking_payment_id == ^bp.id))
+
+  # A recorded refund's job is due at once.
+  defp drain_payments, do: Oban.drain_queue(queue: :payments, with_scheduled: true)
 
   defp payment_intent(id, charge_id) do
     StripeFixtures.object("payment_intent_with_latest_charge", %{

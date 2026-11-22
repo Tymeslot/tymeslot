@@ -21,6 +21,8 @@ defmodule Tymeslot.Meetings.ApprovalTest do
   alias Ecto.UUID
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -458,6 +460,24 @@ defmodule Tymeslot.Meetings.ApprovalTest do
   end
 
   describe "release/3 — refunding a paid request" do
+    # Whatever ran the release (a LiveView task, a job that is not
+    # retried), the refund is made, retried and reported by its own job.
+    test "an approval release records a refund and its job" do
+      meeting = paid_held_meeting()
+      payment = BookingPaymentQueries.by_meeting_id(meeting.id)
+
+      assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
+
+      assert StripeStub.requests() == []
+      assert [refund] = RefundQueries.list_for_payment(payment.id)
+      assert %{source: :approval_release, amount_cents: 5000, status: :pending} = refund
+      assert_enqueued(worker: ExecuteRefund, args: %{refund_id: refund.id})
+
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_released"))
+      assert %{success: 1} = drain_refunds()
+      assert BookingPaymentQueries.by_meeting_id(meeting.id).status == :refunded
+    end
+
     test "declining a paid request refunds the full remaining balance" do
       meeting = paid_held_meeting()
       payment = BookingPaymentQueries.by_meeting_id(meeting.id)
@@ -469,6 +489,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       end)
 
       assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
+      assert %{success: 1} = drain_refunds()
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
       assert reloaded.status == :refunded
@@ -494,6 +515,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
 
       assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
       assert {:error, :not_awaiting_approval} = Approval.decline(meeting, "changed my mind too")
+      assert %{success: 1} = drain_refunds()
 
       assert [_job] =
                all_enqueued(
@@ -511,6 +533,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       end)
 
       assert {:ok, _expired} = Approval.expire(meeting)
+      assert %{success: 1} = drain_refunds()
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
       assert reloaded.status == :refunded
@@ -574,6 +597,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       StripeStub.expect(:create_refund, 1, {:error_fixture, "invalid_request_error"})
 
       assert {:ok, expired} = Approval.expire(meeting)
+      assert %{cancelled: 1} = drain_refunds()
       assert expired.status == :expired
       assert reload(meeting).status == :expired
 
@@ -604,4 +628,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       refute already_answered.id in ids
     end
   end
+
+  # A released request's refund job is due at once.
+  defp drain_refunds, do: Oban.drain_queue(queue: :payments, with_scheduled: true)
 end

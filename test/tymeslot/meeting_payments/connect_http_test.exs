@@ -17,7 +17,6 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
-  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -30,8 +29,6 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
   alias Tymeslot.Profiles
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
-
-  @refund_key "connect_http_test:refund"
 
   describe "checkout" do
     setup :enable_meeting_payments
@@ -197,7 +194,7 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
   end
 
   describe "refunds" do
-    test "a refund is created on the host's account under its key" do
+    test "a refund is created on the host's account under its attempt's key" do
       payment =
         insert(:paid_booking_payment,
           meeting: insert(:meeting),
@@ -215,8 +212,10 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
         })
       )
 
-      assert {:ok, %{refunded_amount_cents: 1500, status: :partially_refunded}} =
-               MeetingPayments.issue_refund(payment, 1000, @refund_key)
+      assert {:ok, refund} = MeetingPayments.refund_now(payment, 1000, :host)
+
+      assert %{refunded_amount_cents: 1500, status: :partially_refunded} =
+               BookingPaymentQueries.get(payment.id)
 
       assert [%{method: :post, path: "/v1/refunds", form: form, headers: headers}] =
                StripeStub.requests(:create_refund)
@@ -226,41 +225,18 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
       assert form["expand"] == ["charge"]
       assert form["metadata"]["meeting_id"] == payment.meeting_id
       assert headers["stripe-account"] == "acct_REFUND"
-      assert headers["idempotency-key"] == @refund_key
+      assert headers["idempotency-key"] == "tymeslot:refund:#{refund.id}:1"
     end
 
-    # The recorded 4500 could hold an earlier refund of 600 under this key,
-    # so Stripe is asked again.
-    test "a replayed key Stripe rejects is the local refusal" do
-      payment =
-        insert(:paid_booking_payment,
-          meeting: insert(:meeting),
-          refunded_amount_cents: 4500,
-          status: :partially_refunded
-        )
-
-      StripeStub.expect(:create_refund, {:error_fixture, "charge_already_refunded"})
-
-      assert {:error, :invalid_amount} = MeetingPayments.issue_refund(payment, 600, @refund_key)
-
-      assert [%{form: %{"amount" => "600"}}] = StripeStub.requests(:create_refund)
-      assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 4500
-    end
-
-    test "a replay still rate limited after the retries is no refusal" do
-      payment =
-        insert(:paid_booking_payment,
-          meeting: insert(:meeting),
-          refunded_amount_cents: 4500,
-          status: :partially_refunded
-        )
+    test "a refund still rate limited after the retries stays pending" do
+      payment = insert(:paid_booking_payment, meeting: insert(:meeting))
 
       StripeStub.expect(:create_refund, 3, {:error_fixture, "rate_limit"})
 
-      assert {:error, %StripeError{status: 429}} =
-               MeetingPayments.issue_refund(payment, 600, @refund_key)
+      assert {:pending, %{status: :pending}} = MeetingPayments.refund_now(payment, 600, :host)
 
       assert length(StripeStub.requests(:create_refund)) == 3
+      assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 0
     end
   end
 

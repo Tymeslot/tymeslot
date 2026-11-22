@@ -109,6 +109,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
           </:full>
         </.refund_choices>
         <.no_refund_warning booking_payment={@booking_payment} />
+        <p
+          :if={pending_refund(@booking_payment) > 0}
+          id="cancel-meeting-pending-refund"
+          class="text-token-sm text-tymeslot-700"
+        >
+          {dgettext("dashboard_bookings", "A refund of %{amount} is already being processed.",
+            amount: format_amount(pending_refund(@booking_payment), @booking_payment.currency)
+          )}
+        </p>
         <p :if={not @paid?} class="text-tymeslot-500">
           {if Helpers.group_meeting?(@meeting),
             do:
@@ -275,6 +284,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   defp refundable_remaining(nil), do: 0
   defp refundable_remaining(payment), do: MeetingPayments.refundable_remaining_cents(payment)
+
+  defp pending_refund(nil), do: 0
+  defp pending_refund(payment), do: MeetingPayments.pending_refund_cents(payment)
 
   attr :booking_payment, :map, default: nil
 

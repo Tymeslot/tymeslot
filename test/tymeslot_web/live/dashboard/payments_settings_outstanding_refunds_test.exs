@@ -217,9 +217,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
     end
   end
 
-  # Declining a paid request refunds it there and then, so the card only
-  # meets a declined booking whose automatic refund failed, and must not tell
-  # the host that cancelling never refunds.
+  # Declining a paid request records its refund, made at once by its job,
+  # so the card only meets a declined booking whose automatic refund failed
+  # (or is still being made), and must not tell the host that cancelling
+  # never refunds.
   describe "a declined request" do
     defp declined_paid_request(host, meeting_attrs \\ %{}) do
       meeting =
@@ -245,6 +246,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
       capture_log(fn ->
         assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
+        Oban.drain_queue(queue: :payments, with_scheduled: true)
       end)
 
       payment
@@ -252,7 +254,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
     test "explains a row whose automatic refund failed as a decline", %{conn: conn} do
       host = connected_host()
-      StripeStub.stub(:create_refund, {:error_fixture, "api_error"})
+      StripeStub.stub(:create_refund, {:error_fixture, "invalid_request_error"})
 
       payment = declined_paid_request(host)
 
@@ -327,8 +329,26 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
       |> form("#refund-form", %{"refund_type" => "full"})
       |> render_submit()
 
+      render_async(view, 5_000)
+
       assert Repo.reload!(payment).status == :refunded
       refute has_element?(view, refund_button(payment))
+    end
+
+    # Tymeslot is still making it: the host is not offered a second one.
+    test "a row whose refund is still being processed says so in place of the button", %{
+      conn: conn
+    } do
+      host = connected_host()
+      payment = cancelled_payment_for(host)
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 5000)
+
+      {view, _html} = open_payments(conn, host)
+
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "Refund processing")
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "€50.00")
+      refute has_element?(view, refund_button(payment))
+      refute has_element?(view, "#outstanding-refund-#{payment.id}", "Refund in Stripe")
     end
 
     # Past 60 days only the host's Stripe dashboard can settle it, so the row

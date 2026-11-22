@@ -8,8 +8,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
       refund was on the row before the dispute opened). A payment whose
       booking expired (it completed after its slot was taken, say) still
       owes the attendee: its automatic refund was given up while the
-      dispute held the money, so it is scheduled again here, in the same
-      transaction (`RefundLatePayment.new_after_dispute/1`).
+      dispute held the money, so a refund of what is left is recorded
+      here, in the same transaction (`Refunds.request_remaining_refund/2`).
     * `lost` → record the disputed amount as `disputed_lost_cents`, add
       it to `refunded_amount_cents` (`RefundedTotal`) and derive
       `refunded` / `partially_refunded` accordingly. Stripe debits
@@ -53,11 +53,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.HeldMeetings
   alias Tymeslot.MeetingPayments.RefundedTotal
+  alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.MeetingPayments.Webhooks.DisputeOutcome
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Payments.Behaviours.WebhookHandler
 
   @event_type "charge.dispute.closed"
@@ -156,7 +156,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
       })
 
     with {:ok, updated} <- BookingPaymentQueries.update(locked, attrs),
-         {:ok, _job} <- maybe_schedule_refund(updated) do
+         {:ok, _refund} <- maybe_request_refund(updated) do
       {:ok, {locked.status, updated.status}}
     end
   end
@@ -164,12 +164,14 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   # Money back with the host for a booking that never happened is owed to
   # the attendee, as it was before the dispute opened: after a won dispute,
   # and after a partly lost one, for the part the dispute did not take. A
-  # series never happened when every one of its sessions expired.
-  defp maybe_schedule_refund(payment) do
+  # series never happened when every one of its sessions expired. A refund
+  # still pending holds its share, so a second close of the dispute records
+  # nothing more.
+  defp maybe_request_refund(payment) do
     with true <- payment.status in BookingPaymentSchema.refundable_statuses(),
          [_first | _rest] = meetings <- HeldMeetings.meetings_for(payment),
          true <- Enum.all?(meetings, &match?(%{status: :expired}, &1)) do
-      Oban.insert(RefundLatePayment.new_after_dispute(payment.id))
+      Refunds.request_remaining_refund(payment, :late_payment)
     else
       _not_owed -> {:ok, :none}
     end

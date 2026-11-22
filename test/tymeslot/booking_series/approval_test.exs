@@ -427,6 +427,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       end)
 
       assert {:ok, _declined} = SeriesApproval.decline(series, host.user, nil)
+      assert %{success: 1} = drain_refunds()
 
       assert statuses() == [:cancelled, :cancelled, :cancelled]
       reloaded = MeetingPayments.payment_for_series(series.id)
@@ -440,6 +441,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       expect_one_full_refund()
 
       assert {:ok, _withdrawn} = Meetings.cancel_meeting(List.last(meetings()))
+      assert %{success: 1} = drain_refunds()
 
       assert statuses() == [:cancelled, :cancelled, :cancelled]
       assert MeetingPayments.payment_for_series(series.id).status == :refunded
@@ -451,6 +453,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       past_deadline!()
 
       assert :ok = perform_job(ApprovalExpiryWorker, %{"meeting_id" => hd(meetings()).id})
+      assert %{success: 1} = drain_refunds()
 
       assert statuses() == [:expired, :expired, :expired]
       assert MeetingPayments.payment_for_series(series.id).status == :refunded
@@ -538,4 +541,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
 
     assert Enum.map(meetings(), & &1.start_time) == [Paid.at(7), Paid.at(14), Paid.at(21)]
   end
+
+  # A released request's refund job is due at once.
+  defp drain_refunds, do: Oban.drain_queue(queue: :payments, with_scheduled: true)
 end

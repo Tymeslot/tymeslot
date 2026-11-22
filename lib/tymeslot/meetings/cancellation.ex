@@ -6,7 +6,9 @@ defmodule Tymeslot.Meetings.Cancellation do
   underneath: the meeting is local state, the refund is a Stripe call that
   cannot be rolled back. This module owns the rule connecting them so that the
   rule is stated once, rather than reconstructed at each place a host can
-  cancel from.
+  cancel from. The refund is recorded with the decision
+  (`MeetingPayments.refund_now/4`) and finished by Tymeslot: a refund Stripe
+  has not confirmed yet stays pending and is retried until it goes through.
 
   ## The refund rule
 
@@ -29,10 +31,13 @@ defmodule Tymeslot.Meetings.Cancellation do
 
   The meeting is cancelled first and refunded second. The reverse order would
   risk refunding an attendee whose meeting then fails to cancel, leaving them
-  with a live booking they have been paid back for. In this order the bad case
-  is a cancelled meeting with no refund, which is visible to the host and can
-  be settled manually from Stripe — hence the distinct `:refund_failed` reason,
-  so callers can say so rather than reporting a failed cancellation.
+  with a live booking they have been paid back for. A refund Stripe has not
+  answered yet is no failure (`{:ok, cancelled, :refund_pending}`): it is
+  recorded and Tymeslot keeps trying. The bad case is a refund Stripe
+  declined, leaving a cancelled meeting with no refund, which is visible to
+  the host and can be settled manually from Stripe; hence the distinct
+  `:refund_failed` reason, so callers can say so rather than reporting a
+  failed cancellation.
 
   The cancellation is announced third, once the refund has settled either
   way. The host's cancellation email tells them what they still hold for the
@@ -133,11 +138,14 @@ defmodule Tymeslot.Meetings.Cancellation do
   refusal is not a failed cancellation or refund, and must not leave a
   cancelled meeting behind.
 
-  A refund failure is reported as `{:error, {:refund_failed, reason}}` and
-  leaves the meeting cancelled; see the module docs on ordering.
+  A refund Stripe has not confirmed yet returns
+  `{:ok, cancelled, :refund_pending}`; one refused is reported as
+  `{:error, {:refund_failed, reason}}` and leaves the meeting cancelled; see
+  the module docs on ordering.
   """
   @spec cancel(struct(), integer() | nil, refund_action()) ::
           {:ok, struct()}
+          | {:ok, struct(), :refund_pending}
           | {:error, :not_found}
           | {:error, {:refund_failed, term()}}
           | {:error, term()}
@@ -185,15 +193,21 @@ defmodule Tymeslot.Meetings.Cancellation do
   # cancellation email reports what they still hold for the booking, read from
   # the payment when the email is built.
   #
-  # A meeting is cancelled once, so it and the amount name the refund.
+  # A refund left pending (`:stuck` included) is Tymeslot's to finish.
   defp cancel_and_refund(meeting, payment, host_user_id, amount_cents) do
-    key = "cancel_refund:#{meeting.id}:#{amount_cents}"
-
     with {:ok, cancelled} <- Cancel.execute(meeting, caller: :organizer, announce: false) do
       try do
-        case MeetingPayments.refund_payment_for_host(payment.id, host_user_id, amount_cents, key) do
-          {:ok, _payment} -> {:ok, cancelled}
-          {:error, reason} -> {:error, {:refund_failed, reason}}
+        case MeetingPayments.refund_now(payment, amount_cents, :cancellation,
+               host_user_id: host_user_id
+             ) do
+          {:ok, _refund} ->
+            {:ok, cancelled}
+
+          {pending, _refund} when pending in [:pending, :stuck] ->
+            {:ok, cancelled, :refund_pending}
+
+          {:error, reason} ->
+            {:error, {:refund_failed, reason}}
         end
       after
         Cancel.announce(cancelled)

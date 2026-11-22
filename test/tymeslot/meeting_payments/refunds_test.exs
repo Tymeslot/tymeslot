@@ -6,7 +6,6 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
   @moduletag :payments
 
   alias Ecto.UUID
-  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Refunds
@@ -14,8 +13,6 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
   alias Tymeslot.StripeStub
   alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.SendBookingPaymentRefunded
-
-  @key "refund_test:attempt"
 
   # ---------------------------------------------------------------------------
   # Helpers shared across unit tests (no DB needed)
@@ -182,13 +179,16 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     insert(:booking_payment, Map.merge(defaults, Map.new(attrs)))
   end
 
-  describe "issue_refund/4 — full refund" do
-    test "transitions paid → refunded and updates refunded_amount_cents" do
+  # What a refund made at once (`refund_now/4`) asks of Stripe and records.
+  # The outbox mechanics (replays, adoption, retries) are in
+  # `RefundOutboxTest`.
+  describe "refund_now/4" do
+    test "a full refund asks Stripe for the charge on the host's account and records it" do
       payment = paid_booking_payment()
 
       StripeStub.expect(:create_refund, StripeStubResponses.refund("re_full"))
 
-      assert {:ok, updated} = Refunds.issue_refund(payment, 5000, @key)
+      assert {:ok, %{status: :succeeded}} = Refunds.refund_now(payment, 5000, :host, [])
 
       assert [%{form: form, headers: headers}] = StripeStub.requests(:create_refund)
       assert form["charge"] == payment.stripe_charge_id
@@ -197,45 +197,24 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       assert form["metadata"]["meeting_id"] == to_string(payment.meeting_id)
       assert form["metadata"]["booking_payment_id"] == payment.id
       assert headers["stripe-account"] == payment.stripe_account_id
-      assert headers["idempotency-key"] == @key
-      assert updated.status == :refunded
-      assert updated.refunded_amount_cents == 5000
+      refute Map.has_key?(form, "reason")
 
-      reloaded = BookingPaymentQueries.by_charge_id(payment.stripe_charge_id)
+      reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
-    end
-  end
 
-  describe "issue_refund/4 — partial refund" do
-    test "transitions paid → partially_refunded and tracks running total" do
-      payment = paid_booking_payment()
-
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_partial"))
-
-      assert {:ok, updated} = Refunds.issue_refund(payment, 2000, @key)
-
-      assert [%{form: %{"amount" => "2000"}, headers: headers}] =
-               StripeStub.requests(:create_refund)
-
-      assert headers["idempotency-key"] == @key
-      assert updated.status == :partially_refunded
-      assert updated.refunded_amount_cents == 2000
+      assert_enqueued(worker: SendBookingPaymentRefunded, args: %{booking_payment_id: payment.id})
     end
 
-    test "second partial reaching total transitions to refunded" do
+    test "a second partial reaching the total refunds the payment" do
       payment = paid_booking_payment(%{refunded_amount_cents: 2000, status: :partially_refunded})
 
       StripeStub.expect(:create_refund, StripeStubResponses.refund("re_top_up", 2000))
 
-      assert {:ok, updated} = Refunds.issue_refund(payment, 3000, @key)
+      assert {:ok, _refund} = Refunds.refund_now(payment, 3000, :host, [])
 
-      assert [%{form: %{"amount" => "3000"}, headers: headers}] =
-               StripeStub.requests(:create_refund)
-
-      assert headers["idempotency-key"] == @key
-      assert updated.status == :refunded
-      assert updated.refunded_amount_cents == 5000
+      assert %{status: :refunded, refunded_amount_cents: 5000} =
+               BookingPaymentQueries.get(payment.id)
     end
 
     test "an answer without the expanded charge adds the refund to the recorded ones" do
@@ -246,216 +225,90 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
         StripeFixtures.object("refund", %{"id" => "re_unexpanded"})
       )
 
-      assert {:ok, updated} = Refunds.issue_refund(payment, 1500, @key)
-      assert updated.status == :partially_refunded
-      assert updated.refunded_amount_cents == 3500
+      assert {:ok, _refund} = Refunds.refund_now(payment, 1500, :host, [])
+
+      assert %{status: :partially_refunded, refunded_amount_cents: 3500} =
+               BookingPaymentQueries.get(payment.id)
     end
 
-    test "second partial below total stays partially_refunded" do
-      payment = paid_booking_payment(%{refunded_amount_cents: 1000, status: :partially_refunded})
-
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_partial2", 1000))
-
-      assert {:ok, updated} = Refunds.issue_refund(payment, 1500, @key)
-      assert updated.status == :partially_refunded
-      assert updated.refunded_amount_cents == 2500
-    end
-  end
-
-  describe "issue_refund/4 — validation" do
-    test "rejects over-refund without calling Stripe" do
-      payment = paid_booking_payment()
-
-      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 6000, @key)
-    end
-
-    test "rejects refund that exceeds remaining refundable balance" do
-      payment = paid_booking_payment(%{refunded_amount_cents: 4500, status: :partially_refunded})
-
-      # remaining = 500; asking for 600 must error. The 4500 recorded could
-      # hold an earlier refund of 600 under this key, so Stripe is asked, and
-      # rejects it as a fresh refund.
-      expect_stripe_rejects_fresh_refund(600)
-
-      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 600, @key)
-    end
-
-    test "rejects zero or negative amounts" do
-      payment = paid_booking_payment()
-
-      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 0, @key)
-      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, -100, @key)
-    end
-
-    test "rejects already-refunded payment" do
-      payment =
-        paid_booking_payment(%{
-          status: :refunded,
-          refunded_amount_cents: 5000
-        })
-
-      expect_stripe_rejects_fresh_refund(100)
-
-      assert {:error, :already_refunded} = Refunds.issue_refund(payment, 100, @key)
-    end
-
-    test "rejects refund outside the 60-day window" do
-      old_paid_at = DateTime.add(DateTime.utc_now(:second), -61, :day)
-      payment = paid_booking_payment(%{paid_at: old_paid_at})
-
-      assert {:error, :outside_refund_window} = Refunds.issue_refund(payment, 100, @key)
-    end
-
-    test "rejects refund when paid_at is missing" do
-      payment = paid_booking_payment(%{paid_at: nil, status: :pending})
-
-      assert {:error, :not_paid} = Refunds.issue_refund(payment, 100, @key)
-    end
-
-    test "rejects a disputed payment with :under_dispute and makes no Stripe call" do
-      # A disputed charge cannot be refunded via the Refund API. Local
-      # validation must short-circuit so the host gets a meaningful error
-      # instead of a wasted Stripe round-trip; no Stripe stub is installed, so
-      # any request fails the test.
-      payment = paid_booking_payment(%{status: :disputed})
-
-      assert {:error, :under_dispute} = Refunds.issue_refund(payment, 100, @key)
-    end
-  end
-
-  describe "issue_refund/4 — application fee handling" do
-    test "omits refund_application_fee when application_fee_cents is 0" do
+    test "omits refund_application_fee when no fee was collected" do
       payment = paid_booking_payment(%{application_fee_cents: 0})
 
       StripeStub.expect(:create_refund, StripeStubResponses.refund("re_zero_fee"))
 
-      assert {:ok, updated} = Refunds.issue_refund(payment, 1000, @key)
+      assert {:ok, _refund} = Refunds.refund_now(payment, 1000, :host, [])
 
       assert [%{form: form}] = StripeStub.requests(:create_refund)
       refute Map.has_key?(form, "refund_application_fee")
-      assert updated.status == :partially_refunded
     end
 
-    test "includes refund_application_fee=true when application_fee_cents > 0" do
-      payment = paid_booking_payment(%{application_fee_cents: 25})
-
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_with_fee"))
-
-      assert {:ok, _payment} = Refunds.issue_refund(payment, 1000, @key)
-
-      assert [%{form: %{"refund_application_fee" => "true"}}] =
-               StripeStub.requests(:create_refund)
-    end
-  end
-
-  describe "issue_refund/4 — Stripe failure" do
-    test "returns the Stripe error and does not update the row" do
-      payment = paid_booking_payment()
-
-      StripeStub.expect(:create_refund, {:error_fixture, "api_error"})
-
-      assert {:error, %StripeError{type: "api_error"}} =
-               Refunds.issue_refund(payment, 1000, @key)
-
-      reloaded = BookingPaymentQueries.by_charge_id(payment.stripe_charge_id)
-      assert reloaded.status == :paid
-      assert reloaded.refunded_amount_cents == 0
-    end
-  end
-
-  describe "issue_refund/4 — email enqueueing" do
-    test "enqueues a SendBookingPaymentRefunded job after a successful refund" do
-      payment = paid_booking_payment()
-
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_email"))
-
-      assert {:ok, _updated} = Refunds.issue_refund(payment, 5000, @key)
-
-      assert_enqueued(
-        worker: SendBookingPaymentRefunded,
-        args: %{booking_payment_id: payment.id}
-      )
-    end
-
-    test "does not enqueue email when Stripe call fails" do
-      payment = paid_booking_payment()
-
-      StripeStub.expect(:create_refund, {:error_fixture, "api_error"})
-
-      assert {:error, %StripeError{type: "api_error"}} =
-               Refunds.issue_refund(payment, 5000, @key)
-
-      refute_enqueued(worker: SendBookingPaymentRefunded)
-    end
-  end
-
-  describe "issue_refund/4 — reason metadata" do
     test "passes the supplied reason through to Stripe" do
       payment = paid_booking_payment()
 
       StripeStub.expect(:create_refund, StripeStubResponses.refund("re_reason"))
 
-      assert {:ok, _payment} = Refunds.issue_refund(payment, 500, @key, "requested_by_customer")
+      assert {:ok, _refund} =
+               Refunds.refund_now(payment, 500, :host, reason: "requested_by_customer")
 
       assert [%{form: %{"reason" => "requested_by_customer"}}] =
                StripeStub.requests(:create_refund)
     end
 
-    test "omits the reason param when none is supplied" do
+    test "a refund only another host could make is not found" do
       payment = paid_booking_payment()
 
-      # Stripe rejects a blank `reason` ("cannot be unset"), so the param must
-      # be absent entirely rather than sent as nil/empty.
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_no_reason"))
+      assert {:error, :not_found} =
+               Refunds.refund_now(payment, 1500, :host, host_user_id: payment.host_user_id + 1)
 
-      assert {:ok, _payment} = Refunds.issue_refund(payment, 500, @key)
+      assert_untouched(payment)
+    end
 
-      assert [%{form: form}] = StripeStub.requests(:create_refund)
-      refute Map.has_key?(form, "reason")
+    # No Stripe stub is installed: any request fails the test.
+    test "refuses, without asking Stripe, what the payment cannot be refunded" do
+      assert {:error, :invalid_amount} =
+               Refunds.refund_now(paid_booking_payment(), 6000, :host, [])
+
+      assert {:error, :invalid_amount} = Refunds.refund_now(paid_booking_payment(), 0, :host, [])
+
+      assert {:error, :invalid_amount} =
+               %{refunded_amount_cents: 4500, status: :partially_refunded}
+               |> paid_booking_payment()
+               |> Refunds.refund_now(600, :host, [])
+
+      assert {:error, :already_refunded} =
+               %{status: :refunded, refunded_amount_cents: 5000}
+               |> paid_booking_payment()
+               |> Refunds.refund_now(100, :host, [])
+
+      assert {:error, :outside_refund_window} =
+               %{paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day)}
+               |> paid_booking_payment()
+               |> Refunds.refund_now(100, :host, [])
+
+      assert {:error, :not_paid} =
+               %{paid_at: nil, status: :pending}
+               |> paid_booking_payment()
+               |> Refunds.refund_now(100, :host, [])
+
+      assert {:error, :under_dispute} =
+               %{status: :disputed}
+               |> paid_booking_payment()
+               |> Refunds.refund_now(100, :host, [])
+
+      assert StripeStub.requests(:create_refund) == []
+    end
+
+    test "a permanent Stripe refusal fails the refund and leaves the payment as it was" do
+      payment = paid_booking_payment()
+
+      StripeStub.expect(:create_refund, {:error_fixture, "invalid_request_error"})
+
+      assert {:error, :refund_failed} = Refunds.refund_now(payment, 1000, :host, [])
+      assert_untouched_after_request(payment)
     end
   end
 
-  describe "issue_refund/4 — a retry after the webhook recorded the refund" do
-    # The first attempt's refund was made at Stripe but its transaction rolled
-    # back; `charge.refunded` has since recorded it, so the balance left no
-    # longer covers a second one.
-    test "asks Stripe under the same key and records the refund once" do
-      payment = paid_booking_payment(%{refunded_amount_cents: 5000, status: :refunded})
-
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_replayed"))
-
-      assert {:ok, %{refunded_amount_cents: 5000, status: :refunded}} =
-               Refunds.issue_refund(payment, 5000, @key)
-
-      assert [%{form: %{"amount" => "5000"}, headers: headers}] =
-               StripeStub.requests(:create_refund)
-
-      assert headers["idempotency-key"] == @key
-      assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 5000
-    end
-
-    test "records the refund once while the balance still covers it" do
-      payment = paid_booking_payment(%{refunded_amount_cents: 2000, status: :partially_refunded})
-
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_replayed"))
-
-      assert {:ok, %{refunded_amount_cents: 2000, status: :partially_refunded}} =
-               Refunds.issue_refund(payment, 2000, @key)
-
-      assert [%{form: %{"amount" => "2000"}, headers: headers}] =
-               StripeStub.requests(:create_refund)
-
-      assert headers["idempotency-key"] == @key
-    end
-
-    test "makes no Stripe call for an amount the recorded total cannot hold" do
-      payment = paid_booking_payment(%{refunded_amount_cents: 4500, status: :partially_refunded})
-
-      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 4600, @key)
-    end
-  end
-
-  describe "issue_refund/4 after a partly lost dispute" do
+  describe "refund_now/4 after a partly lost dispute" do
     # 5000 paid, 3000 taken back by a lost dispute, nothing refunded at Stripe.
     defp after_lost_dispute,
       do:
@@ -466,10 +319,8 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
         })
 
     test "refuses more than the remainder without asking Stripe" do
-      # Within the recorded total, but none of it is a refund Stripe made,
-      # so there is nothing a replayed key could return. Any Stripe request
-      # fails the test.
-      assert {:error, :invalid_amount} = Refunds.issue_refund(after_lost_dispute(), 2500, @key)
+      assert {:error, :invalid_amount} =
+               Refunds.refund_now(after_lost_dispute(), 2500, :host, [])
     end
 
     test "records a refund of the remainder against Stripe's refunds" do
@@ -477,98 +328,10 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
       StripeStub.expect(:create_refund, StripeStubResponses.refund("re_rest"))
 
-      assert {:ok, %{refunded_amount_cents: 5000, disputed_lost_cents: 3000, status: :refunded}} =
-               Refunds.issue_refund(payment, 2000, @key)
+      assert {:ok, _refund} = Refunds.refund_now(payment, 2000, :host, [])
 
-      assert [%{form: %{"amount" => "2000"}}] = StripeStub.requests(:create_refund)
-    end
-
-    test "replays a refund of the remainder the webhook already recorded" do
-      payment =
-        paid_booking_payment(%{
-          refunded_amount_cents: 5000,
-          disputed_lost_cents: 3000,
-          status: :refunded
-        })
-
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_rest"))
-
-      assert {:ok, %{refunded_amount_cents: 5000, status: :refunded}} =
-               Refunds.issue_refund(payment, 2000, @key)
-
-      assert [%{form: %{"amount" => "2000"}, headers: headers}] =
-               StripeStub.requests(:create_refund)
-
-      assert headers["idempotency-key"] == @key
-    end
-  end
-
-  describe "refund_payment_for_host/5" do
-    test "refunds a payment the host took" do
-      payment = paid_booking_payment()
-
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_host"))
-
-      assert {:ok, updated} =
-               MeetingPayments.refund_payment_for_host(
-                 payment.id,
-                 payment.host_user_id,
-                 1500,
-                 @key
-               )
-
-      assert [%{form: form}] = StripeStub.requests(:create_refund)
-      assert form["charge"] == payment.stripe_charge_id
-      assert form["amount"] == "1500"
-
-      assert updated.refunded_amount_cents == 1500
-      assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 1500
-
-      assert_enqueued(worker: SendBookingPaymentRefunded, args: %{booking_payment_id: payment.id})
-    end
-
-    # Stripe is stubbed to succeed for every refusal below, so a refund that does
-    # not land was refused by ownership, not by a missing mock.
-    test "refuses a payment another host took" do
-      stub_successful_stripe_refund()
-      payment = paid_booking_payment()
-
-      assert {:error, :not_found} =
-               MeetingPayments.refund_payment_for_host(
-                 payment.id,
-                 payment.host_user_id + 1,
-                 1500,
-                 @key
-               )
-
-      assert_untouched(payment)
-    end
-
-    test "refuses a malformed payment id without raising" do
-      stub_successful_stripe_refund()
-      payment = paid_booking_payment()
-
-      assert {:error, :not_found} =
-               MeetingPayments.refund_payment_for_host(
-                 "not-a-uuid",
-                 payment.host_user_id,
-                 1500,
-                 @key
-               )
-
-      assert_untouched(payment)
-    end
-
-    test "still validates the payment for its owner" do
-      payment = paid_booking_payment()
-
-      assert {:error, :invalid_amount} =
-               MeetingPayments.refund_payment_for_host(
-                 payment.id,
-                 payment.host_user_id,
-                 6000,
-                 @key
-               )
+      assert %{refunded_amount_cents: 5000, disputed_lost_cents: 3000, status: :refunded} =
+               BookingPaymentQueries.get(payment.id)
     end
   end
 
@@ -608,26 +371,18 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     end
   end
 
-  defp expect_stripe_rejects_fresh_refund(amount) do
-    StripeStub.expect(:create_refund, fn request ->
-      assert request.form["amount"] == Integer.to_string(amount)
-      assert request.headers["idempotency-key"] == @key
-
-      StripeFixtures.error_body("invalid_request_error", %{
-        "message" => "Refund amount is greater than unrefunded amount on charge"
-      })
-    end)
-  end
-
-  defp stub_successful_stripe_refund do
-    StripeStub.stub(:create_refund, StripeStubResponses.refund("re_should_not_happen"))
-  end
-
   defp assert_untouched(payment) do
     reloaded = BookingPaymentQueries.get(payment.id)
     assert reloaded.refunded_amount_cents == 0
     assert reloaded.status == :paid
     refute_enqueued(worker: SendBookingPaymentRefunded)
     assert StripeStub.requests(:create_refund) == []
+  end
+
+  defp assert_untouched_after_request(payment) do
+    reloaded = BookingPaymentQueries.get(payment.id)
+    assert reloaded.refunded_amount_cents == 0
+    assert reloaded.status == :paid
+    refute_enqueued(worker: SendBookingPaymentRefunded)
   end
 end
