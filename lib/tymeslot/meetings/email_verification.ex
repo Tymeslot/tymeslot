@@ -337,6 +337,12 @@ defmodule Tymeslot.Meetings.EmailVerification do
   @doc "Releases a held group seat its booker disowns; see `Tymeslot.Meetings.EmailVerification.Seats.release_seat/1`."
   defdelegate release_seat(seat), to: Seats
 
+  @doc "`release_seat/1` inside the caller's transaction; see `Tymeslot.Meetings.EmailVerification.Seats.release_seat_in_transaction/1`."
+  defdelegate release_seat_in_transaction(seat), to: Seats
+
+  @doc "Announces a seat released in a transaction once it commits; see `Tymeslot.Meetings.EmailVerification.Seats.announce_released/1`."
+  defdelegate announce_seat_released(slot), to: Seats, as: :announce_released
+
   @doc "Releases every held seat on a slot; see `Tymeslot.Meetings.EmailVerification.Seats.release_all_held/1`."
   defdelegate release_all_held(meeting_id), to: Seats
 

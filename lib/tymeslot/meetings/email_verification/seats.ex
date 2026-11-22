@@ -34,6 +34,8 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Repo
 
+  @disowned "Unverified seat disowned by its booker"
+
   @doc """
   Counts a held seat once its booker has confirmed their address.
 
@@ -187,8 +189,35 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   """
   @spec release_seat(Participant.t()) ::
           {:ok, Participant.t()} | {:error, :not_awaiting_verification}
-  def release_seat(%Participant{} = seat),
-    do: release_held(seat, "Unverified seat disowned by its booker")
+  def release_seat(%Participant{} = seat), do: release_held(seat, @disowned)
+
+  @doc """
+  `release_seat/1` for a caller running it inside a transaction of its own:
+  the same release, voiding a held slot left with no held seat and removing
+  the seat's expiry job, but returning the slot and leaving its announcement
+  to `announce_released/1`, which the caller runs once that transaction
+  commits. Announced any earlier, an open booking page re-reads the slot
+  while the seat still holds it uncommitted.
+  """
+  @spec release_seat_in_transaction(Participant.t()) ::
+          {:ok, Meeting.t()} | {:error, :not_awaiting_verification}
+  def release_seat_in_transaction(%Participant{} = seat) do
+    now = DateTime.truncate(Clock.utc_now(), :second)
+
+    with {:ok, {expired, slot}} <- release_locked(seat, now) do
+      EmailVerificationJobs.cancel_seat(expired)
+      Logger.info(@disowned, meeting_id: slot.id, participant_id: expired.id)
+
+      {:ok, slot}
+    end
+  end
+
+  @doc """
+  Tells open booking pages and the organiser's availability that a seat on
+  `slot` was released; see `release_seat_in_transaction/1`.
+  """
+  @spec announce_released(Meeting.t()) :: :ok
+  def announce_released(%Meeting{} = slot), do: SeatEffects.broadcast_and_invalidate(slot)
 
   @doc """
   Releases every held seat on a slot that is going away or moving: a host
@@ -212,11 +241,9 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
 
     released =
       Repo.transaction(fn ->
-        with {:ok, slot} <- lock_slot(seat),
-             {:ok, expired} <- ParticipantQueries.cancel_unverified(seat.id, now) do
-          {expired, void_if_unheld(slot, now)}
-        else
-          {:error, _not_held_or_gone} -> Repo.rollback(:not_awaiting_verification)
+        case release_locked(seat, now) do
+          {:ok, expired_and_slot} -> expired_and_slot
+          {:error, reason} -> Repo.rollback(reason)
         end
       end)
 
@@ -226,6 +253,16 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
       Logger.info(message, meeting_id: slot.id, participant_id: expired.id)
 
       {:ok, expired}
+    end
+  end
+
+  # Writes nothing when it fails, so a caller's own transaction survives it.
+  defp release_locked(seat, now) do
+    with {:ok, slot} <- lock_slot(seat),
+         {:ok, expired} <- ParticipantQueries.cancel_unverified(seat.id, now) do
+      {:ok, {expired, void_if_unheld(slot, now)}}
+    else
+      {:error, _not_held_or_gone} -> {:error, :not_awaiting_verification}
     end
   end
 
