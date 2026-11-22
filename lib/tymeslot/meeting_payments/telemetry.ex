@@ -38,6 +38,11 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
           | :webhook_dispute_created
           | :webhook_dispute_closed
           | :host_refund
+          | :cancellation_refund
+          | :approval_release_refund
+          | :late_payment_refund
+          | :series_host_refund
+          | :external_refund
           | :reconcile
 
   @typedoc "Webhook processing outcome surfaced as telemetry metadata."

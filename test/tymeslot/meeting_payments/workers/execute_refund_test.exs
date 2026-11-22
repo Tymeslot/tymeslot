@@ -13,6 +13,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefundTest do
   alias Ecto.UUID
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.MeetingPayments.Telemetry, as: MeetingPaymentsTelemetry
   alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Repo
   alias Tymeslot.StripeFixtures
@@ -29,8 +30,14 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefundTest do
 
   test "makes the refund", %{payment: payment, refund: refund} do
     StripeStub.expect(:create_refund, StripeStubResponses.refund("re_JOB"))
+    status_changed = MeetingPaymentsTelemetry.status_changed_event()
+    ref = :telemetry_test.attach_event_handlers(self(), [status_changed])
+    on_exit(fn -> :telemetry.detach(ref) end)
 
     assert :ok = perform_job(ExecuteRefund, %{refund_id: refund.id})
+
+    assert_received {^status_changed, ^ref, %{count: 1},
+                     %{from: :paid, to: :partially_refunded, reason: :late_payment_refund}}
 
     assert %{status: :succeeded} = RefundQueries.get(refund.id)
     assert %{refunded_amount_cents: 2_000} = Repo.reload!(payment)

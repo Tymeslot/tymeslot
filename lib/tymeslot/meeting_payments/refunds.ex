@@ -125,6 +125,10 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   `:invalid_amount`. A missing charge id is no refusal here: the attempt
   backfills it.
 
+  Raises, rolling the transaction back, when the refund or its job cannot
+  be inserted: the checks above leave nothing the row's constraints refuse,
+  so that is a fault, not a refusal to report.
+
   Options:
 
     * `:host_user_id`: the host acting. Only a payment they took is found,
@@ -216,11 +220,9 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     schedule_in =
       if opts[:enqueue_now], do: 0, else: opts[:schedule_in] || @safety_delay_seconds
 
-    with {:ok, refund} <- RefundQueries.insert(changeset),
-         {:ok, _job} <-
-           Oban.insert(ExecuteRefund.new(%{refund_id: refund.id}, schedule_in: schedule_in)) do
-      {:ok, refund}
-    end
+    refund = RefundQueries.insert!(changeset)
+    Oban.insert!(ExecuteRefund.new(%{refund_id: refund.id}, schedule_in: schedule_in))
+    {:ok, refund}
   end
 
   @doc """
@@ -409,7 +411,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
            :ok <- refusal(locked),
            {:ok, stripe_refund} <- refund_at_stripe(locked, amount_cents, reason, key),
            {:ok, updated_payment} <-
-             RefundExecutor.record_refunded(locked, amount_cents, stripe_refund) do
+             RefundExecutor.record_refunded(locked, amount_cents, stripe_refund, :host_refund) do
         RefundExecutor.enqueue_refund_email(updated_payment)
         updated_payment
       else

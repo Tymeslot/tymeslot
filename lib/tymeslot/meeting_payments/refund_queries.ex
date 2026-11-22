@@ -25,8 +25,8 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
   @spec in_transaction?() :: boolean()
   def in_transaction?, do: Repo.in_transaction?()
 
-  @spec insert(Changeset.t()) :: {:ok, RefundSchema.t()} | {:error, Changeset.t()}
-  def insert(%Changeset{} = changeset), do: Repo.insert(changeset)
+  @spec insert!(Changeset.t()) :: RefundSchema.t()
+  def insert!(%Changeset{} = changeset), do: Repo.insert!(changeset)
 
   @spec get(term()) :: RefundSchema.t() | nil
   def get(id) do

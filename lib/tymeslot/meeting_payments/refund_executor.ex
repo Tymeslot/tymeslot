@@ -59,6 +59,16 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
   # One page; a booking payment sees nowhere near this many refunds.
   @list_limit 100
 
+  # What a refund's source reports a status change as.
+  @status_change_reasons %{
+    host: :host_refund,
+    cancellation: :cancellation_refund,
+    approval_release: :approval_release_refund,
+    late_payment: :late_payment_refund,
+    series_host: :series_host_refund,
+    external: :external_refund
+  }
+
   @type result ::
           {:ok, RefundSchema.t()}
           | {:pending, RefundSchema.t()}
@@ -97,12 +107,17 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
 
   @doc """
   Records a refund of `amount_cents` Stripe made of the `locked` payment, as
-  `stripe_refund`: the refunded total and the status that follows from it.
-  Call it in the transaction holding the payment's row lock.
+  `stripe_refund`: the refunded total and the status that follows from it,
+  whose change is reported to telemetry with `reason`. Call it in the
+  transaction holding the payment's row lock.
   """
-  @spec record_refunded(BookingPaymentSchema.t(), pos_integer(), map()) ::
-          {:ok, BookingPaymentSchema.t()} | {:error, Ecto.Changeset.t()}
-  def record_refunded(locked, amount_cents, stripe_refund) do
+  @spec record_refunded(
+          BookingPaymentSchema.t(),
+          pos_integer(),
+          map(),
+          Telemetry.status_change_reason()
+        ) :: {:ok, BookingPaymentSchema.t()} | {:error, Ecto.Changeset.t()}
+  def record_refunded(locked, amount_cents, stripe_refund, reason) do
     new_total = refunded_total(locked, amount_cents, stripe_refund)
 
     new_status =
@@ -117,7 +132,7 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
              refunded_amount_cents: new_total,
              status: new_status
            }) do
-      Telemetry.emit_status_changed(locked.status, updated.status, :host_refund)
+      Telemetry.emit_status_changed(locked.status, updated.status, reason)
       {:ok, updated}
     end
   end
@@ -325,7 +340,13 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
       Repo.transaction(fn ->
         with {:ok, locked} <- BookingPaymentQueries.get_for_update(payment.id),
              {:ok, settled} <- RefundQueries.settle(refund, attrs),
-             {:ok, _updated} <- record_refunded(locked, refund.amount_cents, stripe_refund) do
+             {:ok, _updated} <-
+               record_refunded(
+                 locked,
+                 refund.amount_cents,
+                 stripe_refund,
+                 Map.fetch!(@status_change_reasons, refund.source)
+               ) do
           enqueue_refund_email(locked)
           settled
         else
