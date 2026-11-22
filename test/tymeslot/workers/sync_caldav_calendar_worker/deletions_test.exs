@@ -242,5 +242,37 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.DeletionsTest do
       assert cached_uids(integration) == Enum.sort(kept ++ ["new-series@test"])
     end
 
+    test "a refusal on one calendar still syncs the integration's other calendars" do
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 3,
+          calendar_paths: [path1(), path2()]
+        )
+
+      refused = Enum.map(1..3, &"refused-#{&1}@test")
+      for uid <- refused, do: seed_recently_confirmed(integration, path1(), uid)
+
+      path_a = path1()
+      path_b = path2()
+
+      # path1 answers an empty listing over a cache confirmed an hour ago, which
+      # the breaker refuses; path2 comes after it and carries a new event.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        case conn.request_path do
+          ^path_a -> report(conn, [])
+          ^path_b -> report(conn, listing(path_b, ["other-calendar@test"]))
+        end
+      end)
+
+      assert {:discard, reason} =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert reason =~ "circuit breaker"
+      assert cached_uids(integration) == Enum.sort(["other-calendar@test" | refused])
+    end
   end
 end

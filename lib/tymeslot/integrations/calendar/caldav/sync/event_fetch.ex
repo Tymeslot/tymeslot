@@ -56,6 +56,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
   longer has, or an error. The walk stops at the first error, but collects
   404s across all paths so the missing-path decision is made once with the
   full picture rather than per path.
+
+  The exception is the deletion circuit breaker's refusal: it concerns one
+  calendar's listing and leaves that calendar's cache as it was, so the walk
+  carries on with the remaining paths and reports the refusal once it ends.
+  Halting there would leave every later calendar unsynced for as long as the
+  breaker holds.
   """
   @spec each_path(struct(), map(), (String.t() -> result() | :not_found)) :: result()
   def each_path(_integration, %{calendar_paths: []}, _sync_path),
@@ -63,10 +69,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
 
   def each_path(integration, client, sync_path) do
     {status, missing} =
-      Enum.reduce_while(client.calendar_paths, {:ok, []}, fn path, {:ok, missing} ->
+      Enum.reduce_while(client.calendar_paths, {:ok, []}, fn path, {status, missing} ->
         case sync_path.(path) do
-          :ok -> {:cont, {:ok, missing}}
-          :not_found -> {:cont, {:ok, [path | missing]}}
+          :ok -> {:cont, {status, missing}}
+          :not_found -> {:cont, {status, [path | missing]}}
+          {:error, :suspicious_bulk_deletion} = refused -> {:cont, {refused, missing}}
           error -> {:halt, {error, missing}}
         end
       end)
