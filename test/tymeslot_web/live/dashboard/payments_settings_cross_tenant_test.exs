@@ -26,7 +26,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
   use TymeslotWeb.ConnCase, async: false
 
   import Ecto.Query, only: [from: 2]
-  import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
@@ -39,9 +38,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
   alias Tymeslot.Repo
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
-
-  setup :verify_on_exit!
-  setup :set_mox_from_context
 
   setup do
     # Force the Core default checker so the runtime feature flag is honoured

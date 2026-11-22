@@ -20,8 +20,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
   @moduletag :bookings
   @moduletag :live
 
-  import Mox
-
   import Tymeslot.Factory
   import TymeslotWeb.CalendarSurfaceHelpers
 
@@ -36,8 +34,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
   alias Tymeslot.Workers.EmailWorker
 
   @async_timeout 1_000
-
-  setup :verify_on_exit!
 
   setup %{conn: conn}, do: owner(conn)
 

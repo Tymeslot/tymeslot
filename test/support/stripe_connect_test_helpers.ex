@@ -5,7 +5,8 @@ defmodule Tymeslot.StripeConnectTestHelpers do
   exchange by `Req.Test` (`:tymeslot_http`).
   """
 
-  import ExUnit.Assertions, only: [assert: 1]
+  import ExUnit.Assertions, only: [assert: 1, flunk: 1]
+  import ExUnit.Callbacks, only: [on_exit: 1]
   import Tymeslot.ConfigTestHelpers
 
   alias Plug.Conn
@@ -50,42 +51,53 @@ defmodule Tymeslot.StripeConnectTestHelpers do
           | (-> String.t() | {:error, atom()})
   @type deauthorize_outcome ::
           :ok | {:error, :not_connected | :controlled_account | :oauth_failed}
+  @type times :: non_neg_integer() | Range.t()
 
   @doc """
-  Stubs the OAuth code exchange (`POST connect.stripe.com/oauth/token`) for
+  Expects the OAuth code exchange (`POST connect.stripe.com/oauth/token`) for
   `code`. `outcome` is the connected account ID Stripe answers with, or
   `{:error, :invalid_grant | :oauth_failed}` for a refusal, or a 0-arity
   function returning either, run when the request is made. Sends
   `{:oauth_exchange, code}` to the calling process when the request is made.
-  See `expect_oauth/2` for `fallback`.
+  Options are those of `expect_oauth/2`.
   """
-  @spec expect_exchange(String.t(), exchange_outcome(), (Conn.t() -> Conn.t()) | nil) :: :ok
-  def expect_exchange(code, outcome, fallback \\ nil),
-    do: expect_oauth([{:exchange, code, outcome}], fallback)
+  @spec expect_exchange(String.t(), exchange_outcome(), keyword()) :: :ok
+  def expect_exchange(code, outcome, opts \\ []),
+    do: expect_oauth([{:exchange, code, outcome}], opts)
 
   @doc """
-  Stubs the OAuth deauthorisation (`POST connect.stripe.com/oauth/deauthorize`)
+  Expects the OAuth deauthorisation (`POST connect.stripe.com/oauth/deauthorize`)
   for `stripe_account_id`, answering as `outcome` says. Sends
   `{:oauth_deauthorize, stripe_account_id}` to the calling process when the
-  request is made. See `expect_oauth/2` for `fallback`.
+  request is made. Options are those of `expect_oauth/2`.
   """
-  @spec expect_deauthorize(String.t(), deauthorize_outcome(), (Conn.t() -> Conn.t()) | nil) ::
-          :ok
-  def expect_deauthorize(stripe_account_id, outcome \\ :ok, fallback \\ nil),
-    do: expect_oauth([{:deauthorize, stripe_account_id, outcome}], fallback)
+  @spec expect_deauthorize(String.t(), deauthorize_outcome(), keyword()) :: :ok
+  def expect_deauthorize(stripe_account_id, outcome \\ :ok, opts \\ []),
+    do: expect_oauth([{:deauthorize, stripe_account_id, outcome}], opts)
 
   @doc """
-  Stubs `:tymeslot_http` with the given OAuth routes, `{:exchange, code,
-  outcome}` and `{:deauthorize, stripe_account_id, outcome}`, for a test that
-  makes both calls. A request matching no route goes to `fallback` (a
-  1-arity `Plug.Conn` function) when given, for a test that also stubs
-  `:tymeslot_http` for something else, and is otherwise answered with a 400
-  `unexpected_request`. Each matched request sends `{:oauth_exchange, code}`
-  or `{:oauth_deauthorize, stripe_account_id}` to the calling process.
+  Expects the given OAuth routes, `{:exchange, code, outcome}` and
+  `{:deauthorize, stripe_account_id, outcome}`, on `:tymeslot_http`, for a
+  test that makes both calls. Each matched request sends
+  `{:oauth_exchange, code}` or `{:oauth_deauthorize, stripe_account_id}` to
+  the calling process.
+
+  Each route must be called as often as `:times` says (default `1`; an
+  integer or a range such as `0..1` for a call the test may or may not reach)
+  by the time the test ends, or the test fails naming the route. Other
+  options:
+
+    * `:fallback`, a 1-arity `Plug.Conn` function that answers a request
+      matching no route, for a test that also stubs `:tymeslot_http` for
+      something else; without it such a request is answered with a 400
+      `unexpected_request`.
   """
-  @spec expect_oauth([tuple()], (Conn.t() -> Conn.t()) | nil) :: :ok
-  def expect_oauth(routes, fallback \\ nil) do
+  @spec expect_oauth([tuple()], keyword()) :: :ok
+  def expect_oauth(routes, opts \\ []) do
     test_pid = self()
+    fallback = Keyword.get(opts, :fallback)
+    times = Keyword.get(opts, :times, 1)
+    counters = Map.new(routes, &{&1, :counters.new(1, [])})
 
     ReqTest.stub(:tymeslot_http, fn conn ->
       {:ok, body, conn} = Conn.read_body(conn)
@@ -98,10 +110,32 @@ defmodule Tymeslot.StripeConnectTestHelpers do
             else: json(conn, 400, %{"error" => "unexpected_request"})
 
         route ->
+          :counters.add(Map.fetch!(counters, route), 1, 1)
           answer(route, conn, test_pid)
       end
     end)
+
+    on_exit(fn ->
+      for route <- routes do
+        count = :counters.get(Map.fetch!(counters, route), 1)
+
+        unless in_times?(count, times) do
+          flunk(
+            "expected #{describe(route)} to be called #{inspect(times)} time(s), " <>
+              "but it was called #{count}"
+          )
+        end
+      end
+    end)
   end
+
+  defp in_times?(count, %Range{} = range), do: count in range
+  defp in_times?(count, times), do: count == times
+
+  defp describe({:exchange, code, _outcome}), do: "the OAuth code exchange for #{inspect(code)}"
+
+  defp describe({:deauthorize, account_id, _outcome}),
+    do: "the OAuth deauthorisation of #{inspect(account_id)}"
 
   defp route_matches?({:exchange, code, _outcome}, conn, form),
     do: conn.request_path == "/oauth/token" and form["code"] == code

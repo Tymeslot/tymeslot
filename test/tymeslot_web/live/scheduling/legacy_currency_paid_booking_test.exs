@@ -169,9 +169,8 @@ defmodule TymeslotWeb.Live.Scheduling.LegacyCurrencyPaidBookingTest do
        %{conn: conn, user: user, profile: profile, meeting_type: meeting_type} do
     account = legacy_account(user, "ron")
 
-    StripeStub.stub(:create_checkout_session, fn _request ->
-      flunk("no checkout session may be created")
-    end)
+    # Installs the stub, so the requests can be read back; none is expected.
+    StripeStub.stub(:create_checkout_session, StripeFixtures.object("checkout_session_payment"))
 
     view = navigate_to_booking_form(conn, profile, meeting_type)
 
@@ -183,5 +182,6 @@ defmodule TymeslotWeb.Live.Scheduling.LegacyCurrencyPaidBookingTest do
     _drain = :sys.get_state(view.pid)
     assert render(view) =~ "Payments are not available for this booking."
     refute Repo.get_by(MeetingSchema, organizer_user_id: user.id)
+    assert StripeStub.requests(:create_checkout_session) == []
   end
 end

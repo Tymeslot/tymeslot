@@ -26,15 +26,12 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
   @moduletag :plugs
   @moduletag :payments
 
-  import Mox
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.Security.RateLimit
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Helpers.ClientIP
-
-  setup :verify_on_exit!
 
   describe "rate limit" do
     setup %{conn: conn} do

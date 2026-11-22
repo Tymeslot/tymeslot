@@ -13,7 +13,6 @@ defmodule TymeslotWeb.Live.Scheduling.PaperSeriesTest do
   @moduletag :scheduling
   @moduletag :live
 
-  import Mox
   import Tymeslot.Factory
   import TymeslotWeb.SeriesBookingHelpers
 
@@ -25,7 +24,6 @@ defmodule TymeslotWeb.Live.Scheduling.PaperSeriesTest do
   @flow [reveal: true]
   @checkout_url "https://checkout.stripe.com/c/pay/cs_PAPER_SERIES"
 
-  setup :verify_on_exit!
   setup tags, do: setup_series(tags)
 
   @tag :capture_log

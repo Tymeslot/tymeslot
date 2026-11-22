@@ -5,7 +5,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
   @moduletag :database
   @moduletag :payments
 
-  import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
@@ -17,9 +16,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
-
-  setup :verify_on_exit!
-  setup :set_mox_from_context
 
   defp create_onboarded_user do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))

@@ -14,7 +14,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsRefundRetryTest do
 
   @moduletag :payments
 
-  import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.ConfigTestHelpers, only: [setup_config: 2]
@@ -23,9 +22,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsRefundRetryTest do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
-
-  setup :verify_on_exit!
-  setup :set_mox_from_context
 
   setup %{conn: conn} do
     # The Core default checker honours the runtime flag whether or not an
