@@ -29,7 +29,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
         user: user,
         provider: "google",
         provider_account_id: Keyword.get(opts, :calendar_account, "google-sub-1"),
-        default_booking_calendar_id: Keyword.get(opts, :default_calendar)
+        default_booking_calendar_id: Keyword.get(opts, :default_calendar),
+        needs_reauth: Keyword.get(opts, :calendar_needs_reauth, false)
       )
 
     video =
@@ -75,6 +76,11 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
       %{provider_event_id: ^event_id, calendar_id: ^read_from}, {^calendar_id, ^user_id} ->
         {:ok, [%{provider_metadata: %{"conferenceData" => conference}}]}
     end)
+  end
+
+  defp stub_unreadable_event(%{calendar: calendar, meeting: meeting}, error) do
+    stub_booking_calendar(meeting, calendar.id)
+    stub(Tymeslot.CalendarMock, :fetch_event, fn _ref, _context -> error end)
   end
 
   defp made_meet,
@@ -143,15 +149,45 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
     end
 
     # Whether the event carries a Meet is unknown, and a Meet of its own could
-    # be a second one, however long the wait has run.
-    test "retries rather than make a Meet of its own when the event cannot be read" do
-      %{calendar: calendar, meeting: meeting} = meet_booking(provider_event_id: "google-event-1")
-      stub_booking_calendar(meeting, calendar.id)
-      stub(Tymeslot.CalendarMock, :fetch_event, fn _ref, _context -> {:error, :rate_limited} end)
+    # be a second one, so a read that may yet succeed is retried while the
+    # room would wait for the event.
+    test "retries rather than make a Meet of its own while the event cannot be read" do
+      booking = meet_booking(provider_event_id: "google-event-1")
+      stub_unreadable_event(booking, {:error, :rate_limited})
+
+      at_seconds(10, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) ==
+                 {:error, :calendar_unavailable}
+      end)
+    end
+
+    test "makes a Meet of its own once the event has been unreadable for the whole wait" do
+      booking = meet_booking(provider_event_id: "google-event-1")
+      stub_unreadable_event(booking, {:error, :rate_limited})
 
       at_seconds(121, fn ->
-        assert MeetingProvisioning.booking_room_placement(meeting) ==
-                 {:error, :calendar_unavailable}
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) == :own_event
+      end)
+    end
+
+    # Retrying these would only leave the booking without any link.
+    for reason <- [:unauthorized, :no_calendar_integration] do
+      test "makes a Meet of its own at once when the calendar read fails with #{reason}" do
+        booking = meet_booking(provider_event_id: "google-event-1")
+        stub_unreadable_event(booking, {:error, unquote(reason)})
+
+        at_seconds(10, fn ->
+          assert MeetingProvisioning.booking_room_placement(booking.meeting) == :own_event
+        end)
+      end
+    end
+
+    test "makes a Meet of its own at once when the calendar waits to be reconnected" do
+      booking = meet_booking(provider_event_id: "google-event-1", calendar_needs_reauth: true)
+      stub_unreadable_event(booking, {:error, :network_error})
+
+      at_seconds(10, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) == :own_event
       end)
     end
 

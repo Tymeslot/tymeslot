@@ -203,7 +203,11 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
     made by the video provider on its own.
   * `{:error, :calendar_unavailable}`: the booking's Google event could not
     be read. Whether it carries a Meet is unknown, and a room of its own
-    could be a second one, so the caller retries rather than make one.
+    could be a second one, so the caller retries rather than make one, for
+    as long as it would wait for the event. After that, or at once when the
+    failure cannot heal by itself (the calendar's access is refused or gone,
+    or it waits to be reconnected), the answer is `:own_event`: a second
+    link is the lesser harm than none.
   """
   @spec booking_room_placement(MeetingSchema.t()) ::
           {:calendar_event, String.t()}
@@ -330,7 +334,9 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
          {:ok, calendar} <- Calendar.get_integration(cal_id, user_id),
          true <- same_account?(calendar, video, calendar_provider) do
       calendar_id = booking_calendar.calendar_path || unnamed_calendar(meeting, calendar)
-      {:ok, how, video, %{integration_id: cal_id, calendar_id: calendar_id}}
+
+      {:ok, how, video,
+       %{integration_id: cal_id, calendar_id: calendar_id, needs_reauth: calendar.needs_reauth}}
     else
       _other -> :error
     end
@@ -357,11 +363,41 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
       {:ok, url} -> {:calendar_meet, event_id, url}
       :pending -> waiting_or_own_event(meeting, @calendar_event_grace_seconds)
       :none -> :own_event
-      {:error, _reason} -> {:error, :calendar_unavailable}
+      {:error, reason} -> unreadable_event(meeting, calendar, reason)
     end
   end
 
   defp with_event_meet(placement, _meeting, _calendar), do: placement
+
+  # Read failures no retry within the wait can heal: the calendar's access is
+  # refused, revoked or unreadable, or the integration or its client is gone.
+  # A calendar waiting to be reconnected fails the same way, whatever error
+  # its read happens to give.
+  @lasting_read_failures [
+    :unauthorized,
+    :authentication_error,
+    :token_expired,
+    :not_a_calendar_user,
+    :refused,
+    :requires_reencryption,
+    :integration_not_found,
+    :no_calendar_integration,
+    :no_calendar_client,
+    :unaddressable,
+    :unsupported
+  ]
+
+  defp unreadable_event(_meeting, %{needs_reauth: true}, _reason), do: :own_event
+
+  defp unreadable_event(_meeting, _calendar, reason) when reason in @lasting_read_failures,
+    do: :own_event
+
+  defp unreadable_event(meeting, _calendar, _reason) do
+    case waiting_or_own_event(meeting, @calendar_event_grace_seconds) do
+      :awaiting_calendar_event -> {:error, :calendar_unavailable}
+      :own_event -> :own_event
+    end
+  end
 
   # The event is addressed by its Google id within the booking calendar; the
   # booking's own `uid` is its cancel and reschedule capability and is never
@@ -384,9 +420,12 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
           reason: LogFormat.reason(other)
         )
 
-        {:error, :calendar_unavailable}
+        read_failure(other)
     end
   end
+
+  defp read_failure({:error, reason}) when is_atom(reason), do: {:error, reason}
+  defp read_failure(_other), do: {:error, :unreadable}
 
   # ── Private helpers ──────────────────────────────────────────────────────────
 
