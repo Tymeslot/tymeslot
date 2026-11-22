@@ -139,6 +139,39 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxConcurrencyTest do
     end
   end
 
+  test "a refund Stripe made is recorded over a failure settled meanwhile", %{payment: payment} do
+    refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
+    test_pid = self()
+
+    StripeStub.expect(:create_refund, fn request ->
+      send(test_pid, {:creating, self()})
+
+      receive do
+        :answer -> StripeStubResponses.refund(request, "re_LATE_SUCCESS")
+      end
+    end)
+
+    first = Task.async(fn -> Refunds.execute(refund, []) end)
+    assert_receive {:creating, creator}, 5_000
+
+    expire_lease(refund)
+    {:ok, second} = RefundQueries.claim_attempt(refund)
+
+    {:ok, _failed} =
+      RefundQueries.settle_claimed(second, %{
+        status: :failed,
+        failure_code: "refund_failed",
+        settled_at: DateTime.utc_now(:second)
+      })
+
+    send(creator, :answer)
+
+    assert {:ok, %{status: :succeeded, stripe_refund_id: "re_LATE_SUCCESS", failure_code: nil}} =
+             Task.await(first, 5_000)
+
+    assert %{refunded_amount_cents: 2_000, status: :partially_refunded} = Repo.reload!(payment)
+  end
+
   defp expire_lease(refund) do
     past = DateTime.add(DateTime.utc_now(:second), -3_600, :second)
 

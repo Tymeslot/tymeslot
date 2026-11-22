@@ -280,6 +280,61 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
       assert %{refunded_amount_cents: 2_000} = Repo.reload!(payment)
     end
 
+    test "a legacy refund already recorded on another row is not adopted again",
+         %{payment: payment} do
+      payment =
+        Repo.update!(
+          Changeset.change(payment, status: :partially_refunded, refunded_amount_cents: 2_000)
+        )
+
+      insert(:booking_payment_refund,
+        booking_payment: payment,
+        amount_cents: 2_000,
+        status: :succeeded,
+        stripe_refund_id: "re_RECORDED"
+      )
+
+      refund =
+        insert(:booking_payment_refund,
+          booking_payment: payment,
+          amount_cents: 2_000,
+          attempt: 1,
+          legacy_idempotency_key: "host_refund:#{payment.id}:2000:2000"
+        )
+
+      # Stripe's total leaves 2_000 unrecorded, but the only refund that
+      # could be this one is another row's.
+      recorded = legacy_refund("re_RECORDED", payment, amount_refunded: 4_000)
+      StripeStub.expect(:list_refunds, StripeFixtures.list([recorded]))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_FRESH", 2_000))
+
+      assert {:ok, %{stripe_refund_id: "re_FRESH"}} = Refunds.execute(refund, [])
+    end
+
+    test "a legacy refund Stripe's total has no unrecorded money for is not adopted",
+         %{payment: payment} do
+      payment =
+        Repo.update!(
+          Changeset.change(payment, status: :partially_refunded, refunded_amount_cents: 2_000)
+        )
+
+      refund =
+        insert(:booking_payment_refund,
+          booking_payment: payment,
+          amount_cents: 2_000,
+          attempt: 1,
+          legacy_idempotency_key: "host_refund:#{payment.id}:2000:2000"
+        )
+
+      # A refund recorded before rows existed: Stripe's total holds nothing more.
+      earlier = legacy_refund("re_EARLIER", payment, amount_refunded: 2_000)
+      StripeStub.expect(:list_refunds, StripeFixtures.list([earlier]))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_FRESH", 2_000))
+
+      assert {:ok, %{stripe_refund_id: "re_FRESH"}} = Refunds.execute(refund, [])
+      assert %{refunded_amount_cents: 4_000} = Repo.reload!(payment)
+    end
+
     test "a permanent refusal fails the refund and alerts", %{payment: payment} do
       StripeStub.expect(
         :create_refund,
@@ -325,6 +380,15 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
 
       assert [%{form: %{"charge" => "ch_OUTBOX"}}] = StripeStub.requests(:create_refund)
     end
+  end
+
+  defp legacy_refund(id, payment, amount_refunded: total) do
+    StripeFixtures.object("refund_with_charge", %{
+      "id" => id,
+      "amount" => 2_000,
+      "metadata" => %{"booking_payment_id" => payment.id},
+      "charge" => %{"amount_refunded" => total}
+    })
   end
 
   describe "execute/2" do

@@ -130,15 +130,18 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
   end
 
   @doc """
-  Settles a pending refund with `attrs` (`RefundSchema.settle_changeset/2`)
-  and clears its lease, whichever attempt holds it: for a refund Stripe made,
-  which stands however it was learnt of. A refund already settled is left
+  Settles a refund Stripe made with `attrs` (`RefundSchema.settle_changeset/2`)
+  and clears its lease, whichever attempt holds it: money Stripe moved
+  stands however it was learnt of, so a refund settled `failed` is settled
+  again, its failure code cleared. A refund already `succeeded` is left
   alone and returns `{:error, :not_pending}`.
   """
   @spec settle(RefundSchema.t(), map()) ::
           {:ok, RefundSchema.t()} | {:error, :not_pending | Changeset.t()}
-  def settle(%RefundSchema{id: id} = refund, attrs),
-    do: settle_where(from(r in RefundSchema, where: r.id == ^id), refund, attrs)
+  def settle(%RefundSchema{id: id} = refund, attrs) do
+    made = from(r in RefundSchema, where: r.id == ^id and r.status in [:pending, :failed])
+    settle_where(made, refund, attrs, failure_code: nil)
+  end
 
   @doc """
   As `settle/2`, but only while the `claimed` attempt is the latest: an
@@ -147,15 +150,22 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
   """
   @spec settle_claimed(RefundSchema.t(), map()) ::
           {:ok, RefundSchema.t()} | {:error, :not_pending | Changeset.t()}
-  def settle_claimed(%RefundSchema{} = claimed, attrs),
-    do: settle_where(claimed_by(claimed), claimed, attrs)
+  def settle_claimed(%RefundSchema{} = claimed, attrs) do
+    claimed
+    |> claimed_by()
+    |> where([r], r.status == :pending)
+    |> settle_where(claimed, attrs, [])
+  end
 
-  defp settle_where(query, refund, attrs) do
+  defp settle_where(query, refund, attrs, also_set) do
     case RefundSchema.settle_changeset(refund, attrs) do
       %Changeset{valid?: true, changes: changes} ->
-        set = Map.to_list(changes) ++ [executing_until: nil, updated_at: changes.settled_at]
+        set =
+          also_set
+          |> Keyword.merge(Map.to_list(changes))
+          |> Keyword.merge(executing_until: nil, updated_at: changes.settled_at)
 
-        case Repo.update_all(from(r in query, where: r.status == :pending, select: r), set: set) do
+        case Repo.update_all(from(r in query, select: r), set: set) do
           {1, [settled]} -> {:ok, settled}
           {0, []} -> {:error, :not_pending}
         end

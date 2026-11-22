@@ -263,14 +263,27 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
 
   # A refund carries the id of the row it was made for, except one sent
   # under a legacy key, which is known by its payment and amount instead.
+  # Many refunds of a payment can share an amount (a series refunded
+  # session by session), so a legacy one is taken only while it is on no
+  # other row and Stripe's refunded total for the charge holds money not
+  # yet recorded here to cover it.
   defp made_for?(%{"metadata" => %{"tymeslot_refund_id" => id}}, refund, _payment),
     do: id == refund.id
 
   defp made_for?(%{"metadata" => %{"booking_payment_id" => payment_id}} = made, refund, payment)
-       when is_binary(refund.legacy_idempotency_key),
-       do: payment_id == payment.id and made["amount"] == refund.amount_cents
+       when is_binary(refund.legacy_idempotency_key) do
+    payment_id == payment.id and made["amount"] == refund.amount_cents and
+      unrecorded_cents(made, payment) >= refund.amount_cents and
+      is_nil(RefundQueries.by_stripe_refund_id(made["id"]))
+  end
 
   defp made_for?(_made, _refund, _payment), do: false
+
+  defp unrecorded_cents(%{"charge" => %{"amount_refunded" => total}}, payment)
+       when is_integer(total),
+       do: total - RefundedTotal.stripe_refunded_cents(payment)
+
+  defp unrecorded_cents(_made, _payment), do: 0
 
   defp create(refund, payment, opts) do
     {params, key} = request(refund, payment)
@@ -339,7 +352,7 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     recorded =
       Repo.transaction(fn ->
         with {:ok, locked} <- BookingPaymentQueries.get_for_update(payment.id),
-             {:ok, settled} <- RefundQueries.settle(refund, attrs),
+             {:ok, settled} <- settle_made(refund, attrs),
              {:ok, _updated} <-
                record_refunded(
                  locked,
@@ -372,6 +385,20 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
         RefundQueries.release(refund)
         retry_later(refund, opts)
     end
+  end
+
+  # Money Stripe moved stands, even over a refund another attempt failed
+  # meanwhile; that failure has been reported, so the reversal is logged.
+  defp settle_made(refund, attrs) do
+    with %RefundSchema{status: :failed} = failed <- RefundQueries.get_for_update(refund.id) do
+      Logger.warning("Refund settled failed was made at Stripe after all; recording it",
+        refund_id: refund.id,
+        failure_code: failed.failure_code,
+        stripe_refund_id: attrs.stripe_refund_id
+      )
+    end
+
+    RefundQueries.settle(refund, attrs)
   end
 
   defp fail(claimed, code) do
