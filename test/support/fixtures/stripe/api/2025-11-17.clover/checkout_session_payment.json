@@ -44,7 +44,7 @@
   "locale": null,
   "metadata": {},
   "mode": "payment",
-  "payment_intent": "pi_test1",
+  "payment_intent": null,
   "payment_link": null,
   "payment_method_collection": "always",
   "payment_method_options": {},

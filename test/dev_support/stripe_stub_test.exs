@@ -125,6 +125,18 @@ defmodule Tymeslot.StripeStubTest do
     assert_raise ExUnit.AssertionError, ~r"create_refund POST /v1/refunds", &StripeStub.verify!/0
   end
 
+  test "a GET with no stub is answered once, without retries" do
+    StripeStub.stub(:create_refund, StripeFixtures.object("refund"))
+
+    assert {:error, %Error{status: 500, message: message}} =
+             Refunds.retrieve("re_test1", @opts)
+
+    assert message =~ "retrieve_refund GET /v1/refunds/re_test1"
+    assert length(StripeStub.requests(:retrieve_refund)) == 1
+
+    assert_raise ExUnit.AssertionError, ~r"retrieve_refund GET", &StripeStub.verify!/0
+  end
+
   test "an unmet expect fails the test" do
     StripeStub.expect(:create_refund, 2, StripeFixtures.object("refund"))
 
@@ -138,6 +150,42 @@ defmodule Tymeslot.StripeStubTest do
 
     assert {:ok, _refund} = Refunds.create(%{charge: "ch_test1"}, @opts)
     assert StripeStub.verify!() == :ok
+  end
+
+  test "requests/0 and verify!/0 raise where no stub was installed" do
+    assert_raise ArgumentError, ~r"no stub installed", &StripeStub.requests/0
+    assert_raise ArgumentError, ~r"no stub installed", &StripeStub.verify!/0
+  end
+
+  test "a task started from the test reads the test's requests" do
+    StripeStub.stub(:retrieve_charge, StripeFixtures.object("charge"))
+    assert {:ok, _charge} = Charges.retrieve("ch_test1", @opts)
+
+    assert [%{operation: :retrieve_charge}] =
+             fn -> StripeStub.requests() end |> Task.async() |> Task.await()
+  end
+
+  test "a process outside the test's callers cannot read its requests" do
+    StripeStub.stub(:retrieve_charge, StripeFixtures.object("charge"))
+    test_pid = self()
+
+    spawn(fn ->
+      outcome =
+        try do
+          StripeStub.requests()
+        rescue
+          error in ArgumentError -> error.message
+        end
+
+      send(test_pid, {:outcome, outcome})
+    end)
+
+    assert_receive {:outcome, message}
+    assert message =~ "no stub installed"
+  end
+
+  test "shared!/1 refuses an async module", context do
+    assert_raise ArgumentError, ~r"async: false", fn -> StripeStub.shared!(context) end
   end
 
   test "connect_event carries the account" do
@@ -169,8 +217,9 @@ defmodule Tymeslot.StripeStubSharedTest do
 
   @moduletag :payments
 
-  test "shared!/0 answers processes that were never allowed" do
-    StripeStub.shared!()
+  setup {StripeStub, :shared!}
+
+  test "shared!/1 answers processes that were never allowed" do
     StripeStub.stub(:retrieve_charge, StripeFixtures.object("charge"))
     test_pid = self()
 

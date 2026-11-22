@@ -6,7 +6,7 @@ defmodule Tymeslot.StripeStub do
   Tymeslot.Integrations.Stripe}` and names its operation (`:create_refund`,
   `:retrieve_charge`, as listed in each resource module's moduledoc) in the
   `x-tymeslot-stripe-operation` header. The first `stub/2`, `expect/3`,
-  `allow/1` or `shared!/0` in a test installs one `Req.Test` stub that
+  `allow/1` or `shared!/1` in a test installs one `Req.Test` stub that
   dispatches on that header, so the code under test runs its real request
   building, encoding, retries and decoding.
 
@@ -35,11 +35,18 @@ defmodule Tymeslot.StripeStub do
 
   For each request the queued `expect/3` responses for its operation are used
   first, in order, then its `stub/2` response. A request with neither is
-  answered with a 500 whose message names the operation and path, and fails
-  the test when it ends, as does an `expect/3` response left unused. The
-  calling process is the test process, or a process `allow/1` names; a
-  `Task` started from the test is covered already, as `Req.Test` follows
-  `$callers`.
+  answered with a 500 whose message names the operation and path, marked
+  `stripe-should-retry: false` so the client sends it once, and fails the test
+  when it ends, as does an `expect/3` response left unused.
+
+  The client retries a 409, a 429, a 5xx on a GET or DELETE, and a transport
+  error, up to 3 attempts in all, so an `expect/3` of such a response on a GET
+  needs 3 entries to reach the caller as a failure (or use `stub/2`). A 5xx on
+  a POST is not retried.
+
+  Requests are answered for the test process and every process that follows
+  it through `$callers` (see `allow/1`); `shared!/1` widens that to every
+  process.
 
   The state lives in an unlinked `Agent` rather than one tied to the test
   process, so it is still there when `on_exit/1` checks it.
@@ -100,7 +107,9 @@ defmodule Tymeslot.StripeStub do
   end
 
   @doc """
-  Every request the stub received in this test, oldest first.
+  Every request the stub received in this test, oldest first. Callable from
+  the test process or a process started from it (found through `$callers`);
+  raises `ArgumentError` where no stub was installed.
 
   Each is `%{operation, method, path, form, query, headers}`: `method` a
   lowercase atom, `path` such as `"/v1/refunds"`, `form` the decoded POST
@@ -110,10 +119,7 @@ defmodule Tymeslot.StripeStub do
   """
   @spec requests() :: [request()]
   def requests do
-    case Process.get(@agent_key) do
-      nil -> []
-      agent -> agent |> Agent.get(& &1.requests) |> Enum.reverse()
-    end
+    agent!() |> Agent.get(& &1.requests) |> Enum.reverse()
   end
 
   @doc """
@@ -125,8 +131,14 @@ defmodule Tymeslot.StripeStub do
   end
 
   @doc """
-  Lets `pid` use this test's stub: a LiveView, or any process the test did
-  not start as a `Task`. Not available in shared mode.
+  Lets `pid` use this test's stub. Not available in shared mode.
+
+  Most processes need no `allow/1`: `Req.Test` follows `$callers`, so a
+  LiveView started by `Phoenix.LiveViewTest`, its `start_async` tasks, any
+  `Task` and an Oban job run inline from one of them already reach the stub.
+  `allow/1` is for processes outside that chain: a plain `spawn`, or a
+  GenServer started elsewhere (for example under the application's
+  supervisor).
   """
   @spec allow(pid()) :: :ok
   def allow(pid) when is_pid(pid) do
@@ -135,28 +147,54 @@ defmodule Tymeslot.StripeStub do
   end
 
   @doc """
-  Hands this test's stub to every process on the node, for callers that
-  cannot be named in advance (an inline Oban job, a process started by a
-  supervisor). The test module must be `async: false`.
+  Hands this test's stub to every process on the node, for callers that are
+  neither in the test's `$callers` chain nor can be named for `allow/1`.
+  Takes the ExUnit context, so it works as `setup {StripeStub, :shared!}`,
+  and raises in an `async: true` module, where another test's Stripe calls
+  would reach this stub.
   """
-  @spec shared!() :: :ok
-  def shared! do
+  @spec shared!(map()) :: :ok
+  def shared!(%{async: false}) do
     :ok = ReqTest.set_req_test_to_shared(%{})
     install!()
     :ok
+  end
+
+  def shared!(context) do
+    raise ArgumentError,
+          "StripeStub.shared!/1 needs an async: false test module, got async: " <>
+            inspect(context[:async])
   end
 
   @doc """
   Fails if a request had no response or an `expect/3` response is unused,
   listing them. What it reports is then forgotten, so the check that runs
   when the test ends does not report it again. A test of the stub itself can
-  call it directly.
+  call it directly. Finds the stub as `requests/0` does.
   """
   @spec verify!() :: :ok
-  def verify! do
-    case Process.get(@agent_key) do
-      nil -> :ok
-      agent -> verify_agent!(agent)
+  def verify!, do: verify_agent!(agent!())
+
+  defp agent! do
+    case Enum.find_value([self() | Process.get(:"$callers", [])], &agent_of/1) do
+      nil ->
+        raise ArgumentError,
+              "StripeStub: no stub installed by this process or its $callers; " <>
+                "call stub/2, expect/3, allow/1 or shared!/1 in the test process first"
+
+      agent ->
+        agent
+    end
+  end
+
+  defp agent_of(pid) when pid == self(), do: Process.get(@agent_key)
+
+  defp agent_of(pid) do
+    with {:dictionary, dictionary} <- Process.info(pid, :dictionary),
+         {@agent_key, agent} <- List.keyfind(dictionary, @agent_key, 0) do
+      agent
+    else
+      _not_found -> nil
     end
   end
 
@@ -269,7 +307,10 @@ defmodule Tymeslot.StripeStub do
 
   defp respond_unexpected(conn, request) do
     message = "StripeStub: no stub or expect for #{describe(request)}"
-    respond(conn, {500, %{"error" => %{"type" => "api_error", "message" => message}}})
+
+    conn
+    |> Conn.put_resp_header("stripe-should-retry", "false")
+    |> respond({500, %{"error" => %{"type" => "api_error", "message" => message}}})
   end
 
   defp record(conn) do

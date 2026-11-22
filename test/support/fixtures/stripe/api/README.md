@@ -10,7 +10,7 @@ The reference pages were read at `docs.stripe.com/api/<resource>/object?api-vers
 |---|---|
 | `customer.json` | API reference example (`customers/object`), fetched 2026-11-22 |
 | `customer_deleted.json` | API reference example (`customers/delete` response), fetched 2026-11-22 |
-| `checkout_session_payment.json` | API reference example (`checkout/sessions/object`), fetched 2026-11-22; `payment_intent` set |
+| `checkout_session_payment.json` | API reference example (`checkout/sessions/object`), fetched 2026-11-22, unchanged: an open payment-mode session has `payment_intent: null`, as in the `checkout/sessions/create` response example |
 | `checkout_session_paid.json` | API reference example (`checkout/sessions/object`), fetched 2026-11-22; `status: "complete"`, `payment_status: "paid"`, `payment_intent` set, `url: null` |
 | `checkout_session_subscription.json` | API reference example (`checkout/sessions/object`), fetched 2026-11-22; `mode: "subscription"`, `customer` set |
 | `checkout_session_expired.json` | API reference example (`checkout/sessions/object`), fetched 2026-11-22; `status: "expired"`, `url: null` |
