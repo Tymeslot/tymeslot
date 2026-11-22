@@ -24,6 +24,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.AccountDeletionCheckoutsWorker
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.SendBookingPaymentRefunded
@@ -80,7 +81,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
     StripeStub.stub(
       :retrieve_payment_intent,
       StripeFixtures.object("payment_intent_with_latest_charge", %{
-        "latest_charge" => "ch_#{suffix}"
+        "latest_charge" => %{"id" => "ch_#{suffix}"}
       })
     )
 
@@ -88,7 +89,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
       assert request.form["charge"] == "ch_#{suffix}"
       assert request.form["amount"] == Integer.to_string(payment.amount_cents)
       assert request.headers["stripe-account"] == @account
-      StripeFixtures.object("refund", %{"id" => "re_#{suffix}"})
+      StripeStubResponses.refund(request, "re_#{suffix}")
     end)
   end
 

@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
 
   defp create_onboarded_user do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))
@@ -430,7 +431,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
         assert request.form["amount"] == "5000"
         assert "host_refund:" <> attempt = request.headers["idempotency-key"]
         assert String.ends_with?(attempt, ":5000")
-        StripeFixtures.object("refund", %{"id" => "re_full"})
+        StripeStubResponses.refund(request, "re_full")
       end)
 
       conn = log_in_user(conn, user)
@@ -506,7 +507,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
 
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["amount"] == "1500"
-        StripeFixtures.object("refund", %{"id" => "re_partial"})
+        StripeStubResponses.refund(request, "re_partial")
       end)
 
       conn = log_in_user(conn, user)

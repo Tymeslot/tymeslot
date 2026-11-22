@@ -33,8 +33,8 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias TymeslotWeb.BookingDriver
 
   @secret "whsec_connect_journey"
@@ -178,16 +178,11 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
     # charged on the host's connected account.
     assert "paid-consult" in offered_types(profile)
 
-    test_pid = self()
-
-    StripeStub.expect(:create_checkout_session, 1, fn request ->
-      send(test_pid, {:checkout, request.form, request.headers})
-
-      StripeFixtures.object("checkout_session_payment", %{
-        "id" => "cs_journey",
-        "url" => @checkout_url
-      })
-    end)
+    StripeStub.expect(
+      :create_checkout_session,
+      1,
+      StripeStubResponses.checkout_session("cs_journey", @checkout_url)
+    )
 
     {:ok, view, _html} = live(build_conn(), "/#{profile.username}?timezone=Etc/UTC")
     BookingDriver.book(view, meeting_type: "paid-consult", until: :attendee)
@@ -199,7 +194,7 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
     |> render_submit()
 
     assert_redirect(view, @checkout_url, 5_000)
-    assert_received {:checkout, _form, headers}
+    assert [%{form: _form, headers: headers}] = StripeStub.requests(:create_checkout_session)
     assert headers["stripe-account"] == @account_id
   end
 

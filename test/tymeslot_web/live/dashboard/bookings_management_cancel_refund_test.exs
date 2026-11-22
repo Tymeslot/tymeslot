@@ -23,8 +23,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -118,7 +118,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
 
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["amount"] == "5000"
-        StripeFixtures.object("refund", %{"id" => "re_cancel_full"})
+        StripeStubResponses.refund(request, "re_cancel_full")
       end)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
@@ -254,7 +254,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
 
     test "is cancelled without a refund, and the host is told why first and after",
          %{conn: conn, meeting: meeting, payment: payment} do
-      StripeStub.stub(:create_refund, StripeFixtures.object("refund"))
+      StripeStub.stub(:create_refund, StripeStubResponses.refund("re_must_not_happen"))
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
       view |> element("#cancel-meeting-#{meeting.id}") |> render_click()

@@ -12,6 +12,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.SendBookingPaymentRefunded
 
   @key "refund_test:attempt"
@@ -185,7 +186,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "transitions paid → refunded and updates refunded_amount_cents" do
       payment = paid_booking_payment()
 
-      StripeStub.expect(:create_refund, refund("re_full"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_full"))
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 5000, @key)
 
@@ -210,7 +211,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "transitions paid → partially_refunded and tracks running total" do
       payment = paid_booking_payment()
 
-      StripeStub.expect(:create_refund, refund("re_partial"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_partial"))
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 2000, @key)
 
@@ -225,7 +226,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "second partial reaching total transitions to refunded" do
       payment = paid_booking_payment(%{refunded_amount_cents: 2000, status: :partially_refunded})
 
-      StripeStub.expect(:create_refund, refund("re_top_up"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_top_up", 2000))
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 3000, @key)
 
@@ -237,10 +238,23 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       assert updated.refunded_amount_cents == 5000
     end
 
+    test "an answer without the expanded charge adds the refund to the recorded ones" do
+      payment = paid_booking_payment(%{refunded_amount_cents: 2000, status: :partially_refunded})
+
+      StripeStub.expect(
+        :create_refund,
+        StripeFixtures.object("refund", %{"id" => "re_unexpanded"})
+      )
+
+      assert {:ok, updated} = Refunds.issue_refund(payment, 1500, @key)
+      assert updated.status == :partially_refunded
+      assert updated.refunded_amount_cents == 3500
+    end
+
     test "second partial below total stays partially_refunded" do
       payment = paid_booking_payment(%{refunded_amount_cents: 1000, status: :partially_refunded})
 
-      StripeStub.expect(:create_refund, refund("re_partial2"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_partial2", 1000))
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 1500, @key)
       assert updated.status == :partially_refunded
@@ -313,7 +327,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "omits refund_application_fee when application_fee_cents is 0" do
       payment = paid_booking_payment(%{application_fee_cents: 0})
 
-      StripeStub.expect(:create_refund, refund("re_zero_fee"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_zero_fee"))
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 1000, @key)
 
@@ -325,7 +339,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "includes refund_application_fee=true when application_fee_cents > 0" do
       payment = paid_booking_payment(%{application_fee_cents: 25})
 
-      StripeStub.expect(:create_refund, refund("re_with_fee"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_with_fee"))
 
       assert {:ok, _payment} = Refunds.issue_refund(payment, 1000, @key)
 
@@ -353,7 +367,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "enqueues a SendBookingPaymentRefunded job after a successful refund" do
       payment = paid_booking_payment()
 
-      StripeStub.expect(:create_refund, refund("re_email"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_email"))
 
       assert {:ok, _updated} = Refunds.issue_refund(payment, 5000, @key)
 
@@ -379,7 +393,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "passes the supplied reason through to Stripe" do
       payment = paid_booking_payment()
 
-      StripeStub.expect(:create_refund, refund("re_reason"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_reason"))
 
       assert {:ok, _payment} = Refunds.issue_refund(payment, 500, @key, "requested_by_customer")
 
@@ -392,7 +406,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
       # Stripe rejects a blank `reason` ("cannot be unset"), so the param must
       # be absent entirely rather than sent as nil/empty.
-      StripeStub.expect(:create_refund, refund("re_no_reason"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_no_reason"))
 
       assert {:ok, _payment} = Refunds.issue_refund(payment, 500, @key)
 
@@ -408,7 +422,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "asks Stripe under the same key and records the refund once" do
       payment = paid_booking_payment(%{refunded_amount_cents: 5000, status: :refunded})
 
-      StripeStub.expect(:create_refund, refund("re_replayed", 5000, 5000))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_replayed"))
 
       assert {:ok, %{refunded_amount_cents: 5000, status: :refunded}} =
                Refunds.issue_refund(payment, 5000, @key)
@@ -423,7 +437,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "records the refund once while the balance still covers it" do
       payment = paid_booking_payment(%{refunded_amount_cents: 2000, status: :partially_refunded})
 
-      StripeStub.expect(:create_refund, refund("re_replayed", 2000, 2000))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_replayed"))
 
       assert {:ok, %{refunded_amount_cents: 2000, status: :partially_refunded}} =
                Refunds.issue_refund(payment, 2000, @key)
@@ -461,7 +475,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "records a refund of the remainder against Stripe's refunds" do
       payment = after_lost_dispute()
 
-      StripeStub.expect(:create_refund, refund("re_rest", 2000, 2000))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_rest"))
 
       assert {:ok, %{refunded_amount_cents: 5000, disputed_lost_cents: 3000, status: :refunded}} =
                Refunds.issue_refund(payment, 2000, @key)
@@ -477,7 +491,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
           status: :refunded
         })
 
-      StripeStub.expect(:create_refund, refund("re_rest", 2000, 2000))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_rest"))
 
       assert {:ok, %{refunded_amount_cents: 5000, status: :refunded}} =
                Refunds.issue_refund(payment, 2000, @key)
@@ -493,7 +507,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "refunds a payment the host took" do
       payment = paid_booking_payment()
 
-      StripeStub.expect(:create_refund, refund("re_host"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_host"))
 
       assert {:ok, updated} =
                MeetingPayments.refund_payment_for_host(
@@ -605,20 +619,8 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     end)
   end
 
-  # Stripe's answer to a refund. With `amount_refunded` it carries the
-  # expanded charge the refund total is read from.
-  defp refund(id), do: StripeFixtures.object("refund", %{"id" => id})
-
-  defp refund(id, amount, amount_refunded) do
-    StripeFixtures.object("refund_with_charge", %{
-      "id" => id,
-      "amount" => amount,
-      "charge" => %{"amount_refunded" => amount_refunded}
-    })
-  end
-
   defp stub_successful_stripe_refund do
-    StripeStub.stub(:create_refund, refund("re_should_not_happen"))
+    StripeStub.stub(:create_refund, StripeStubResponses.refund("re_should_not_happen"))
   end
 
   defp assert_untouched(payment) do
@@ -626,5 +628,6 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     assert reloaded.refunded_amount_cents == 0
     assert reloaded.status == :paid
     refute_enqueued(worker: SendBookingPaymentRefunded)
+    assert StripeStub.requests(:create_refund) == []
   end
 end

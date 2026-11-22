@@ -20,8 +20,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
 
   @moduletag :payments
   @moduletag :live
@@ -268,7 +268,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
     test "lists nothing once the automatic refund has gone through", %{conn: conn} do
       host = connected_host()
-      StripeStub.stub(:create_refund, StripeFixtures.object("refund", %{"id" => "re_OK"}))
+      StripeStub.stub(:create_refund, StripeStubResponses.refund("re_OK"))
 
       declined_paid_request(host)
 
@@ -316,7 +316,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
       StripeStub.stub(:create_refund, fn request ->
         assert request.form["amount"] == "5000"
-        StripeFixtures.object("refund", %{"id" => "re_EXPIRED"})
+        StripeStubResponses.refund(request, "re_EXPIRED")
       end)
 
       {view, _html} = open_payments(conn, host)

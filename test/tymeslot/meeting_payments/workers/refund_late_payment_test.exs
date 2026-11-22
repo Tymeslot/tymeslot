@@ -27,6 +27,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   alias Tymeslot.Repo
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
 
   setup :capture_admin_alerts
 
@@ -45,7 +46,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   end
 
   test "refunds the payment in full and emails the attendee once", %{payment: payment} do
-    StripeStub.expect(:create_refund, refund("re_LATE"))
+    StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATE"))
 
     assert :ok = perform(payment)
 
@@ -114,7 +115,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
       })
     )
 
-    StripeStub.expect(:create_refund, refund("re_LATE"))
+    StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATE"))
 
     assert :ok = perform(payment, attempt: 2)
 
@@ -212,7 +213,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
         end)
 
       if first?, do: raise(DBConnection.ConnectionError, "connection lost")
-      refund("re_#{key}")
+      StripeStubResponses.refund(request, "re_#{key}")
     end)
 
     assert {:error, %DBConnection.ConnectionError{}} = perform(payment)
@@ -241,7 +242,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   end
 
   test "sends no second email when the refund was already emailed", %{payment: payment} do
-    StripeStub.expect(:create_refund, refund("re_HOST"))
+    StripeStub.expect(:create_refund, StripeStubResponses.refund("re_HOST"))
 
     {:ok, _refunded} =
       Refunds.issue_host_refund(payment.id, payment.host_user_id, 5000, "host_refund:test:5000")
@@ -326,8 +327,6 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
     assert total == 14_580
   end
-
-  defp refund(id), do: StripeFixtures.object("refund", %{"id" => id})
 
   defp perform(payment, opts \\ []) do
     perform_job(RefundLatePayment, %{booking_payment_id: payment.id},

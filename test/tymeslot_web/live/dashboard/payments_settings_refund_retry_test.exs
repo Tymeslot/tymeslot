@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsRefundRetryTest do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
 
   setup %{conn: conn} do
     # The Core default checker honours the runtime flag whether or not an
@@ -98,22 +99,19 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsRefundRetryTest do
     conn: conn,
     payment: payment
   } do
-    test_pid = self()
-
-    StripeStub.expect(:create_refund, 2, fn request ->
-      assert request.form["amount"] == "1500"
-      send(test_pid, {:refund_key, request.headers["idempotency-key"]})
-      StripeFixtures.object("refund", %{"id" => "re_partial", "amount" => 1500})
-    end)
+    StripeStub.expect(:create_refund, StripeStubResponses.refund("re_first"))
+    StripeStub.expect(:create_refund, StripeStubResponses.refund("re_second", 1500))
 
     {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
 
     submit_partial_refund(view, "15.00")
-    assert_received {:refund_key, first_key}
     submit_partial_refund(view, "15.00")
-    assert_received {:refund_key, second_key}
 
-    assert first_key != second_key
+    assert [%{headers: %{"idempotency-key" => first_key}, form: %{"amount" => "1500"}}, second] =
+             StripeStub.requests(:create_refund)
+
+    assert %{"amount" => "1500"} = second.form
+    assert first_key != second.headers["idempotency-key"]
     assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 3000
   end
 

@@ -16,8 +16,8 @@ defmodule TymeslotWeb.Live.Scheduling.FolioSeriesTest do
   import Tymeslot.Factory
   import TymeslotWeb.SeriesBookingHelpers
 
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias TymeslotWeb.BookingDriver
 
   @theme "4"
@@ -204,16 +204,11 @@ defmodule TymeslotWeb.Live.Scheduling.FolioSeriesTest do
       charges_enabled: true
     )
 
-    test_pid = self()
-
-    StripeStub.expect(:create_checkout_session, 1, fn request ->
-      send(test_pid, {:checkout_session, request.form})
-
-      StripeFixtures.object("checkout_session_payment", %{
-        "id" => "cs_FOLIO_SERIES",
-        "url" => @checkout_url
-      })
-    end)
+    StripeStub.expect(
+      :create_checkout_session,
+      1,
+      StripeStubResponses.checkout_session("cs_FOLIO_SERIES", @checkout_url)
+    )
 
     view = to_series(conn, profile, day, @flow)
     assert has_element?(view, "[data-testid='series-total']", "200")
@@ -228,7 +223,7 @@ defmodule TymeslotWeb.Live.Scheduling.FolioSeriesTest do
     |> render_submit()
 
     assert_redirect(view, @checkout_url, 5_000)
-    assert_received {:checkout_session, form}
+    assert [%{form: form}] = StripeStub.requests(:create_checkout_session)
 
     assert [%{"price_data" => %{"unit_amount" => "5000"}, "quantity" => "4"}] =
              form["line_items"]

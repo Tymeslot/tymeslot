@@ -40,6 +40,7 @@ defmodule TymeslotWeb.Journeys.RecurringBookingsJourneyTest do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.BookingDriver
@@ -285,13 +286,7 @@ defmodule TymeslotWeb.Journeys.RecurringBookingsJourneyTest do
     assert headers["stripe-account"] == Paid.account()
 
     # Stripe tells us the checkout completed.
-    StripeStub.stub(
-      :retrieve_payment_intent,
-      StripeFixtures.object("payment_intent_with_latest_charge", %{
-        "id" => "pi_SERIES",
-        "latest_charge" => "ch_SERIES"
-      })
-    )
+    Paid.stub_charge_backfill()
 
     series_id = hd(sessions(user)).series_id
     event = Paid.completed_event("evt_FIVE", series_id, 5 * Paid.price_cents())
@@ -305,7 +300,7 @@ defmodule TymeslotWeb.Journeys.RecurringBookingsJourneyTest do
     # refund: that session's share of the payment.
     StripeStub.expect(:create_refund, 1, fn request ->
       assert request.form["amount"] == to_string(Paid.price_cents())
-      StripeFixtures.object("refund", %{"id" => "re_FIVE"})
+      StripeStubResponses.refund(request, "re_FIVE")
     end)
 
     [_first, second | _rest] = sessions(user)

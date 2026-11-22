@@ -23,8 +23,8 @@ defmodule Tymeslot.Meetings.CancellationTest do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SendBookingPaymentRefunded
@@ -60,7 +60,7 @@ defmodule Tymeslot.Meetings.CancellationTest do
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["charge"] == payment.stripe_charge_id
         assert request.form["amount"] == "2000"
-        StripeFixtures.object("refund", %{"id" => "re_host_cancel"})
+        StripeStubResponses.refund(request, "re_host_cancel")
       end)
 
       assert {:ok, cancelled} =
@@ -83,9 +83,9 @@ defmodule Tymeslot.Meetings.CancellationTest do
     @cancellation_email [worker: EmailWorker, args: %{action: "send_cancellation_emails"}]
 
     test "is only queued once the refund has gone through", %{host: host, meeting: meeting} do
-      StripeStub.expect(:create_refund, 1, fn _request ->
+      StripeStub.expect(:create_refund, 1, fn request ->
         refute_enqueued(@cancellation_email)
-        StripeFixtures.object("refund", %{"id" => "re_before_email"})
+        StripeStubResponses.refund(request, "re_before_email")
       end)
 
       assert {:ok, _cancelled} =
@@ -115,7 +115,7 @@ defmodule Tymeslot.Meetings.CancellationTest do
       # rule and not by a missing stub.
       StripeStub.stub(
         :create_refund,
-        StripeFixtures.object("refund", %{"id" => "re_should_not_happen"})
+        StripeStubResponses.refund("re_should_not_happen")
       )
 
       assert {:error, :not_found} =
@@ -126,6 +126,7 @@ defmodule Tymeslot.Meetings.CancellationTest do
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.refunded_amount_cents == 0
       assert reloaded.status == :paid
+      assert StripeStub.requests(:create_refund) == []
 
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end

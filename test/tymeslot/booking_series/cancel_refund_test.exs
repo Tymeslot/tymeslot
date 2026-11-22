@@ -32,6 +32,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
   alias Tymeslot.Repo
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.SendSeriesRefundFailed
 
   setup :verify_on_exit!
@@ -49,11 +50,12 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
     assert :ok = CheckoutSessionCompleted.handle(event)
   end
 
-  defp expect_refund(amount) do
+  # `prior` is what Stripe has refunded on the charge before this refund.
+  defp expect_refund(amount, prior \\ 0) do
     StripeStub.expect(:create_refund, 1, fn request ->
       assert request.form["charge"] == "ch_SERIES"
       assert request.form["amount"] == to_string(amount)
-      StripeFixtures.object("refund", %{"id" => "re_SERIES"})
+      StripeStubResponses.refund(request, "re_SERIES", prior)
     end)
   end
 
@@ -138,14 +140,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       )
 
       # The completed webhook backfills the charge the refunds are made on.
-      StripeStub.stub(:retrieve_payment_intent, fn request ->
-        assert request.path == "/v1/payment_intents/pi_SERIES"
-
-        StripeFixtures.object("payment_intent_with_latest_charge", %{
-          "id" => "pi_SERIES",
-          "latest_charge" => "ch_SERIES"
-        })
-      end)
+      Paid.stub_charge_backfill()
 
       host = Paid.paid_host()
       Paid.expect_checkout()
@@ -198,7 +193,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert {:ok, %{cancelled: [_second, _third, _fourth], refund: {:scheduled, 4_000}}} =
                cancel_as_host(series, host)
 
-      expect_refund(4_000)
+      expect_refund(4_000, 16_000)
       assert :ok = run_refund_job()
       assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
     end
@@ -222,7 +217,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert {:ok, _refunded} =
                Refunds.issue_host_refund(payment.id, host.user.id, 5_000, "host_refund:test:5000")
 
-      expect_refund(2_000)
+      expect_refund(2_000, 5_000)
       assert :ok = run_refund_job()
       assert Repo.reload!(payment).refunded_amount_cents == 7_000
 
@@ -365,7 +360,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["amount"] == "15000"
         assert request.headers["idempotency-key"] == first_key
-        StripeFixtures.object("refund", %{"id" => "re_SERIES"})
+        StripeStubResponses.refund(request, "re_SERIES", 5_000)
       end)
 
       assert :ok = run_refund_job(attempt: 2)
@@ -517,14 +512,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
         meeting_payments_enabled: true
       )
 
-      StripeStub.stub(:retrieve_payment_intent, fn request ->
-        assert request.path == "/v1/payment_intents/pi_SERIES"
-
-        StripeFixtures.object("payment_intent_with_latest_charge", %{
-          "id" => "pi_SERIES",
-          "latest_charge" => "ch_SERIES"
-        })
-      end)
+      Paid.stub_charge_backfill()
 
       host = Paid.paid_host()
 

@@ -25,8 +25,8 @@ defmodule Tymeslot.Meetings.ApprovalTest do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Validation.Constraints
   alias Tymeslot.Workers.SendBookingPaymentRefunded
 
@@ -465,7 +465,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["charge"] == payment.stripe_charge_id
         assert request.form["amount"] == "5000"
-        StripeFixtures.object("refund", %{"id" => "re_declined"})
+        StripeStubResponses.refund(request, "re_declined")
       end)
 
       assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
@@ -489,7 +489,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       # quietly double-refunding the invitee.
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["charge"] == payment.stripe_charge_id
-        StripeFixtures.object("refund", %{"id" => "re_declined_once"})
+        StripeStubResponses.refund(request, "re_declined_once")
       end)
 
       assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
@@ -507,7 +507,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
 
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["amount"] == "5000"
-        StripeFixtures.object("refund", %{"id" => "re_expired"})
+        StripeStubResponses.refund(request, "re_expired")
       end)
 
       assert {:ok, _expired} = Approval.expire(meeting)
@@ -523,9 +523,9 @@ defmodule Tymeslot.Meetings.ApprovalTest do
 
       # A stub rather than a missing expectation: the release runs its refund
       # step inside a rescue, so an unexpected Stripe call would be swallowed.
-      StripeStub.stub(:create_refund, fn _request ->
+      StripeStub.stub(:create_refund, fn request ->
         send(test_pid, :refund_attempted)
-        StripeFixtures.object("refund", %{"id" => "re_unexpected"})
+        StripeStubResponses.refund(request, "re_unexpected")
       end)
 
       assert {:ok, _declined} = Approval.decline(meeting, "No payment on this one")

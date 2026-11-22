@@ -34,8 +34,6 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
-  alias Tymeslot.StripeStub
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.ThemeTestMatrix
@@ -371,13 +369,7 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
         meeting_payments_enabled: true
       )
 
-      StripeStub.stub(
-        :retrieve_payment_intent,
-        StripeFixtures.object("payment_intent_with_latest_charge", %{
-          "id" => "pi_SERIES",
-          "latest_charge" => "ch_SERIES"
-        })
-      )
+      Paid.stub_charge_backfill()
 
       host = Paid.paid_host()
       Paid.expect_checkout()

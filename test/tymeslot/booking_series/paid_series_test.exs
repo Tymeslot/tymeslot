@@ -31,8 +31,8 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SeriesAnnouncementWorker
@@ -248,14 +248,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
   describe "cancelling one paid session" do
     setup %{host: host, type: type} do
       # The completed webhook backfills the charge the refunds are made on.
-      StripeStub.stub(:retrieve_payment_intent, fn request ->
-        assert request.path == "/v1/payment_intents/pi_SERIES"
-
-        StripeFixtures.object("payment_intent_with_latest_charge", %{
-          "id" => "pi_SERIES",
-          "latest_charge" => "ch_SERIES"
-        })
-      end)
+      stub_charge_backfill()
 
       {series, payment} = book_three(host, type)
       pay(series)
@@ -282,7 +275,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
                  "booking_payment_id" => to_string(payment.id)
                }
 
-        StripeFixtures.object("refund", %{"id" => "re_SESSION"})
+        StripeStubResponses.refund(request, "re_SESSION")
       end)
 
       assert {:ok, _cancelled} =

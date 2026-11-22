@@ -34,8 +34,6 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
   alias Tymeslot.Notifications.ChannelFanout
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Slack.MessageBuilder
-  alias Tymeslot.StripeFixtures
-  alias Tymeslot.StripeStub
   alias Tymeslot.Telegram.MessageBuilder, as: TelegramMessageBuilder
   alias Tymeslot.Webhooks
   alias Tymeslot.Workers.SeriesAnnouncementWorker
@@ -555,10 +553,7 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
     subscribe(host)
     Paid.expect_checkout()
 
-    StripeStub.stub(
-      :retrieve_payment_intent,
-      StripeFixtures.object("payment_intent_with_latest_charge", %{"latest_charge" => "ch_SERIES"})
-    )
+    Paid.stub_charge_backfill()
 
     assert {:ok, :payment_required, %{series: series}} =
              Paid.book(host, Paid.paid_series_type(host), 2)

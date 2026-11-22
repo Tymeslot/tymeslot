@@ -31,6 +31,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
   alias Tymeslot.Repo
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SendBookingPaymentRefunded
@@ -125,7 +126,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
       assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: bp.id})
       refute_enqueued(worker: SendBookingPaymentRefunded)
 
-      StripeStub.expect(:create_refund, refund("re_LATE_TAKEN"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATE_TAKEN"))
 
       assert %{success: 1} = Oban.drain_queue(queue: :payments)
 
@@ -227,7 +228,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
         payment_intent("pi_LATE_ORPHAN", "ch_LATE_ORPHAN")
       )
 
-      StripeStub.expect(:create_refund, refund("re_LATE_ORPHAN"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATE_ORPHAN"))
 
       event =
         completed_event("evt_LATE_ORPHAN", %{
@@ -291,7 +292,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
 
       Agent.update(stripe_up, fn _down -> true end)
 
-      StripeStub.expect(:create_refund, refund("re_LATE_NO_CHARGE"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATE_NO_CHARGE"))
 
       assert :ok = perform_job(RefundLatePayment, %{booking_payment_id: bp.id}, attempt: 2)
 
@@ -339,7 +340,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
                  dispute_event("evt_DISPUTE_WON", "charge.dispute.closed", %{"status" => "won"})
                )
 
-      StripeStub.expect(:create_refund, refund("re_LATE_DISPUTED"))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATE_DISPUTED"))
 
       assert %{success: 1} = Oban.drain_queue(queue: :payments)
 
@@ -521,7 +522,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
   end
 
   defp assert_remainder_refunded(bp, remainder) do
-    StripeStub.expect(:create_refund, refund("re_#{bp.id}"))
+    StripeStub.expect(
+      :create_refund,
+      StripeStubResponses.refund("re_#{bp.id}", bp.refunded_amount_cents)
+    )
 
     assert %{success: 1} = Oban.drain_queue(queue: :payments)
 
@@ -534,11 +538,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
   defp payment_intent(id, charge_id) do
     StripeFixtures.object("payment_intent_with_latest_charge", %{
       "id" => id,
-      "latest_charge" => charge_id
+      "latest_charge" => %{"id" => charge_id}
     })
   end
-
-  defp refund(id), do: StripeFixtures.object("refund", %{"id" => id})
 
   defp dispute_event(event_id, type, fields) do
     %{

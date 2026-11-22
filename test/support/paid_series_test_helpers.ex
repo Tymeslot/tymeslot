@@ -10,12 +10,14 @@ defmodule Tymeslot.PaidSeriesTestHelpers do
   calendar.
   """
 
+  import ExUnit.Assertions, only: [assert: 1]
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
 
   alias Tymeslot.BookingSeries
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
 
   @account "acct_SERIES_HOST"
   @price_cents 5_000
@@ -92,6 +94,19 @@ defmodule Tymeslot.PaidSeriesTestHelpers do
           "url" => "https://checkout.stripe.com/" <> @session_id,
           "payment_intent" => "pi_SERIES"
         })
+    end)
+  end
+
+  @doc """
+  Answers the charge backfill a completed checkout makes, the series' payment
+  intent `pi_SERIES` with the latest charge `ch_SERIES` the refunds are made
+  on.
+  """
+  @spec stub_charge_backfill() :: :ok
+  def stub_charge_backfill do
+    StripeStub.stub(:retrieve_payment_intent, fn request ->
+      assert request.path == "/v1/payment_intents/pi_SERIES"
+      StripeStubResponses.payment_intent("pi_SERIES", "ch_SERIES")
     end)
   end
 

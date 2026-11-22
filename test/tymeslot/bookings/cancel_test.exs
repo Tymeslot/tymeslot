@@ -16,8 +16,8 @@ defmodule Tymeslot.Bookings.CancelTest do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SendBookingPaymentRefunded
@@ -225,7 +225,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["charge"] == payment.stripe_charge_id
         assert request.form["amount"] == "5000"
-        StripeFixtures.object("refund", %{"id" => "re_withdrawn"})
+        StripeStubResponses.refund(request, "re_withdrawn")
       end)
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
@@ -256,9 +256,9 @@ defmodule Tymeslot.Bookings.CancelTest do
       # A stub rather than a missing expectation: the withdrawal runs its
       # refund step inside a rescue, so an unexpected Stripe call would be
       # swallowed and this test would pass over the refund it exists to catch.
-      StripeStub.stub(:create_refund, fn _request ->
+      StripeStub.stub(:create_refund, fn request ->
         send(test_pid, :refund_attempted)
-        StripeFixtures.object("refund", %{"id" => "re_unexpected"})
+        StripeStubResponses.refund(request, "re_unexpected")
       end)
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
@@ -310,9 +310,9 @@ defmodule Tymeslot.Bookings.CancelTest do
       # refund step inside a rescue, so an unexpected Stripe call would be
       # swallowed and every assertion below would still pass over a refund
       # that had just gone out.
-      StripeStub.stub(:create_refund, fn _request ->
+      StripeStub.stub(:create_refund, fn request ->
         send(test_pid, :refund_attempted)
-        StripeFixtures.object("refund", %{"id" => "re_unexpected"})
+        StripeStubResponses.refund(request, "re_unexpected")
       end)
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
@@ -364,7 +364,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["charge"] == payment.stripe_charge_id
         assert request.form["amount"] == "5000"
-        StripeFixtures.object("refund", %{"id" => "re_external"})
+        StripeStubResponses.refund(request, "re_external")
       end)
 
       assert {:ok, cancelled} = Cancel.execute_external(meeting)

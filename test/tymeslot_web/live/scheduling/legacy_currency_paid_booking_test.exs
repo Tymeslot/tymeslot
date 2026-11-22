@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Live.Scheduling.LegacyCurrencyPaidBookingTest do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
@@ -125,16 +126,12 @@ defmodule TymeslotWeb.Live.Scheduling.LegacyCurrencyPaidBookingTest do
        %{conn: conn, user: user, profile: profile, meeting_type: meeting_type} do
     legacy_account(user, "ron")
     checkout_url = "https://checkout.stripe.com/cs_legacy_ron"
-    test_pid = self()
 
-    StripeStub.expect(:create_checkout_session, 1, fn request ->
-      send(test_pid, {:checkout, request.form, request.headers})
-
-      StripeFixtures.object("checkout_session_payment", %{
-        "id" => "cs_legacy_ron",
-        "url" => checkout_url
-      })
-    end)
+    StripeStub.expect(
+      :create_checkout_session,
+      1,
+      StripeStubResponses.checkout_session("cs_legacy_ron", checkout_url)
+    )
 
     view = navigate_to_booking_form(conn, profile, meeting_type)
     submit(view)
@@ -142,7 +139,9 @@ defmodule TymeslotWeb.Live.Scheduling.LegacyCurrencyPaidBookingTest do
     # The submission finishes in a handler component, so allow it a moment.
     assert_redirect(view, checkout_url, 2_000)
 
-    assert_received {:checkout, %{"line_items" => [%{"price_data" => price_data}]}, headers}
+    assert [%{form: %{"line_items" => [%{"price_data" => price_data}]}, headers: headers}] =
+             StripeStub.requests(:create_checkout_session)
+
     assert %{"currency" => "ron", "unit_amount" => "15000"} = price_data
     assert headers["stripe-account"] == "acct_LEGACY"
 

@@ -17,8 +17,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRaceTest do
   alias Plug.Test
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
 
   setup :verify_on_exit!
 
@@ -81,7 +81,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRaceTest do
 
     StripeStub.stub(
       :create_refund,
-      StripeFixtures.object("refund", %{"id" => "re_must_not_happen"})
+      StripeStubResponses.refund("re_must_not_happen")
     )
 
     {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")

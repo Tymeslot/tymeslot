@@ -43,6 +43,7 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.TestMocks
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.BookingDriver
@@ -175,12 +176,14 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
     @tag :capture_log
     test "PubSub :paid flips the iframe to :confirmation",
          %{conn: conn, profile: profile, meeting_type: meeting_type} do
-      StripeStub.expect(:create_checkout_session, 1, fn _request ->
-        StripeFixtures.object("checkout_session_payment", %{
-          "id" => "cs_paid_flip",
-          "url" => "https://checkout.stripe.com/cs_paid_flip"
-        })
-      end)
+      StripeStub.expect(
+        :create_checkout_session,
+        1,
+        StripeStubResponses.checkout_session(
+          "cs_paid_flip",
+          "https://checkout.stripe.com/cs_paid_flip"
+        )
+      )
 
       view = navigate_to_booking_form_embedded(conn, profile, meeting_type)
 
@@ -214,12 +217,14 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
     @tag :capture_log
     test "Schedule another after a paid booking forgets the old meeting's payment",
          %{conn: conn, profile: profile, meeting_type: meeting_type} do
-      StripeStub.expect(:create_checkout_session, 1, fn _request ->
-        StripeFixtures.object("checkout_session_payment", %{
-          "id" => "cs_paid_again",
-          "url" => "https://checkout.stripe.com/cs_paid_again"
-        })
-      end)
+      StripeStub.expect(
+        :create_checkout_session,
+        1,
+        StripeStubResponses.checkout_session(
+          "cs_paid_again",
+          "https://checkout.stripe.com/cs_paid_again"
+        )
+      )
 
       view = navigate_to_booking_form_embedded(conn, profile, meeting_type)
 
@@ -253,12 +258,14 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
     @tag :capture_log
     test "PubSub :expired sends the iframe back to the booking step with a flash",
          %{conn: conn, profile: profile, meeting_type: meeting_type} do
-      StripeStub.expect(:create_checkout_session, 1, fn _request ->
-        StripeFixtures.object("checkout_session_payment", %{
-          "id" => "cs_expired",
-          "url" => "https://checkout.stripe.com/cs_expired"
-        })
-      end)
+      StripeStub.expect(
+        :create_checkout_session,
+        1,
+        StripeStubResponses.checkout_session(
+          "cs_expired",
+          "https://checkout.stripe.com/cs_expired"
+        )
+      )
 
       view = navigate_to_booking_form_embedded(conn, profile, meeting_type)
 
@@ -297,12 +304,14 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
     @tag :capture_log
     test "an :expired broadcast after the payment wait has ended changes nothing",
          %{conn: conn, profile: profile, meeting_type: meeting_type} do
-      StripeStub.expect(:create_checkout_session, 1, fn _request ->
-        StripeFixtures.object("checkout_session_payment", %{
-          "id" => "cs_late_expiry",
-          "url" => "https://checkout.stripe.com/cs_late_expiry"
-        })
-      end)
+      StripeStub.expect(
+        :create_checkout_session,
+        1,
+        StripeStubResponses.checkout_session(
+          "cs_late_expiry",
+          "https://checkout.stripe.com/cs_late_expiry"
+        )
+      )
 
       view = navigate_to_booking_form_embedded(conn, profile, meeting_type)
 
@@ -335,12 +344,11 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
     @tag :capture_log
     test "the step indicator cannot leave the payment wait",
          %{conn: conn, profile: profile, meeting_type: meeting_type} do
-      StripeStub.expect(:create_checkout_session, 1, fn _request ->
-        StripeFixtures.object("checkout_session_payment", %{
-          "id" => "cs_wait",
-          "url" => "https://checkout.stripe.com/cs_wait"
-        })
-      end)
+      StripeStub.expect(
+        :create_checkout_session,
+        1,
+        StripeStubResponses.checkout_session("cs_wait", "https://checkout.stripe.com/cs_wait")
+      )
 
       view = navigate_to_booking_form_embedded(conn, profile, meeting_type)
 
@@ -374,12 +382,11 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
     @tag :capture_log
     test "a URL patch cannot leave the payment wait",
          %{conn: conn, profile: profile, meeting_type: meeting_type} do
-      StripeStub.expect(:create_checkout_session, 1, fn _request ->
-        StripeFixtures.object("checkout_session_payment", %{
-          "id" => "cs_patch",
-          "url" => "https://checkout.stripe.com/cs_patch"
-        })
-      end)
+      StripeStub.expect(
+        :create_checkout_session,
+        1,
+        StripeStubResponses.checkout_session("cs_patch", "https://checkout.stripe.com/cs_patch")
+      )
 
       view = navigate_to_booking_form_embedded(conn, profile, meeting_type)
 
@@ -489,12 +496,11 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
          %{conn: conn, profile: profile, meeting_type: meeting_type} do
       checkout_url = "https://checkout.stripe.com/cs_TOPLEVEL"
 
-      StripeStub.expect(:create_checkout_session, 1, fn _request ->
-        StripeFixtures.object("checkout_session_payment", %{
-          "id" => "cs_TOPLEVEL",
-          "url" => checkout_url
-        })
-      end)
+      StripeStub.expect(
+        :create_checkout_session,
+        1,
+        StripeStubResponses.checkout_session("cs_TOPLEVEL", checkout_url)
+      )
 
       view = navigate_to_booking_form(conn, profile, meeting_type)
 
@@ -548,12 +554,14 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
   # Books the paid meeting type in the embedded booker through the markup
   # contract and returns the view once it shows the payment wait.
   defp book_embedded(conn, profile, session_id) do
-    StripeStub.expect(:create_checkout_session, 1, fn _request ->
-      StripeFixtures.object("checkout_session_payment", %{
-        "id" => session_id,
-        "url" => "https://checkout.stripe.com/#{session_id}"
-      })
-    end)
+    StripeStub.expect(
+      :create_checkout_session,
+      1,
+      StripeStubResponses.checkout_session(
+        session_id,
+        "https://checkout.stripe.com/#{session_id}"
+      )
+    )
 
     view = open_embedded(conn, profile)
     BookingDriver.book(view, meeting_type: "paid-consult", until: :attendee)

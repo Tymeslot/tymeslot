@@ -28,8 +28,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.CalendarEventDeleteWorker
   alias Tymeslot.Workers.EmailWorker
 
@@ -242,7 +242,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
 
     StripeStub.expect(:create_refund, 1, fn request ->
       assert request.form["amount"] == "5000"
-      StripeFixtures.object("refund", %{"id" => "re_calendar_full"})
+      StripeStubResponses.refund(request, "re_calendar_full")
     end)
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")

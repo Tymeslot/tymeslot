@@ -27,8 +27,8 @@ defmodule Tymeslot.Bookings.CreateInvitationTest do
   alias Tymeslot.Meetings.UniqueInvitation
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
@@ -285,10 +285,10 @@ defmodule Tymeslot.Bookings.CreateInvitationTest do
       StripeStub.expect(
         :create_checkout_session,
         1,
-        StripeFixtures.object("checkout_session_payment", %{
-          "id" => "cs_INVITED",
-          "url" => "https://checkout.stripe.com/cs_INVITED"
-        })
+        StripeStubResponses.checkout_session(
+          "cs_INVITED",
+          "https://checkout.stripe.com/cs_INVITED"
+        )
       )
 
       invitation = invite(ctx)

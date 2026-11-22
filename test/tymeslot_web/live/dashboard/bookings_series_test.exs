@@ -37,8 +37,8 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
@@ -227,13 +227,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
         meeting_payments_enabled: true
       )
 
-      StripeStub.stub(
-        :retrieve_payment_intent,
-        StripeFixtures.object("payment_intent_with_latest_charge", %{
-          "id" => "pi_SERIES",
-          "latest_charge" => "ch_SERIES"
-        })
-      )
+      Paid.stub_charge_backfill()
 
       host = Paid.paid_host()
       Paid.expect_checkout()
@@ -257,9 +251,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
         assert request.form["charge"] == "ch_SERIES"
         assert request.form["amount"] == to_string(amount)
 
-        StripeFixtures.object("refund", %{
-          "id" => "re_SERIES_#{System.unique_integer([:positive])}"
-        })
+        StripeStubResponses.refund(request, "re_SERIES_#{System.unique_integer([:positive])}")
       end)
     end
 

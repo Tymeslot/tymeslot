@@ -165,7 +165,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     StripeStub.stub(
       :retrieve_payment_intent,
       StripeFixtures.object("payment_intent_with_latest_charge", %{
-        "latest_charge" => "ch_RACE_DISPUTE"
+        "latest_charge" => %{"id" => "ch_RACE_DISPUTE"}
       })
     )
 
@@ -208,7 +208,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     StripeStub.stub(
       :retrieve_payment_intent,
       StripeFixtures.object("payment_intent_with_latest_charge", %{
-        "latest_charge" => "ch_RACE_EXPIRY"
+        "latest_charge" => %{"id" => "ch_RACE_EXPIRY"}
       })
     )
 
@@ -247,7 +247,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
     StripeStub.stub(
       :retrieve_payment_intent,
       StripeFixtures.object("payment_intent_with_latest_charge", %{
-        "latest_charge" => "ch_RACE_LATE"
+        "latest_charge" => %{"id" => "ch_RACE_LATE"}
       })
     )
 

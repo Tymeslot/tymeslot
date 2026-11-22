@@ -50,14 +50,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
 
     stub(CalendarMock, :get_booking_integration_info, fn _context -> {:error, :no_integration} end)
 
-    StripeStub.stub(:retrieve_payment_intent, fn request ->
-      assert request.path == "/v1/payment_intents/pi_SERIES"
-
-      StripeFixtures.object("payment_intent_with_latest_charge", %{
-        "id" => "pi_SERIES",
-        "latest_charge" => "ch_SERIES"
-      })
-    end)
+    stub_charge_backfill()
 
     host = paid_host()
     expect_checkout()

@@ -37,8 +37,8 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
   alias Tymeslot.Meetings.Workers.ApprovalSweepWorker
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.SeriesAnnouncementWorker
 
@@ -374,14 +374,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       )
 
       # The completed webhook backfills the charge the refund is made on.
-      StripeStub.stub(:retrieve_payment_intent, fn request ->
-        assert request.path == "/v1/payment_intents/pi_SERIES"
-
-        StripeFixtures.object("payment_intent_with_latest_charge", %{
-          "id" => "pi_SERIES",
-          "latest_charge" => "ch_SERIES"
-        })
-      end)
+      Paid.stub_charge_backfill()
 
       host = Paid.paid_host()
 
@@ -430,7 +423,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["charge"] == "ch_SERIES"
         assert request.form["amount"] == to_string(3 * Paid.price_cents())
-        StripeFixtures.object("refund", %{"id" => "re_SERIES"})
+        StripeStubResponses.refund(request, "re_SERIES")
       end)
 
       assert {:ok, _declined} = SeriesApproval.decline(series, host.user, nil)
@@ -487,7 +480,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
 
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["amount"] == to_string(Paid.price_cents())
-        StripeFixtures.object("refund", %{"id" => "re_SESSION"})
+        StripeStubResponses.refund(request, "re_SESSION")
       end)
 
       assert {:ok, %MeetingSchema{status: :cancelled}} =
@@ -508,7 +501,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
     defp expect_one_full_refund do
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["amount"] == to_string(3 * Paid.price_cents())
-        StripeFixtures.object("refund", %{"id" => "re_SERIES"})
+        StripeStubResponses.refund(request, "re_SERIES")
       end)
     end
   end

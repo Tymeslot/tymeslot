@@ -36,8 +36,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
 
   setup do
     # Force the Core default checker so the runtime feature flag is honoured
@@ -162,7 +162,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
       # from params, this expectation would see the victim's charge instead.
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["charge"] == mine.stripe_charge_id
-        StripeFixtures.object("refund", %{"id" => "re_full"})
+        StripeStubResponses.refund(request, "re_full")
       end)
 
       view = open_payments(conn, attacker)
@@ -220,7 +220,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
       # pass against an authorization check that had been deleted.
       StripeStub.stub(
         :create_refund,
-        StripeFixtures.object("refund", %{"id" => "re_should_not_happen"})
+        StripeStubResponses.refund("re_should_not_happen")
       )
 
       # The modal now holds a payment the host no longer owns. This is the one
@@ -239,6 +239,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
 
       assert reload(payment).refunded_amount_cents == 0
       assert reload(payment).status == :paid
+      assert StripeStub.requests(:create_refund) == []
     end
 
     test "a submit with no modal open refunds nothing at all", %{conn: conn} do
@@ -250,7 +251,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
       # missing stub. See the note in the test above.
       StripeStub.stub(
         :create_refund,
-        StripeFixtures.object("refund", %{"id" => "re_should_not_happen"})
+        StripeStubResponses.refund("re_should_not_happen")
       )
 
       view = open_payments(conn, attacker)
@@ -266,6 +267,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
 
       assert reload(theirs).refunded_amount_cents == 0
       assert reload(theirs).status == :paid
+      assert StripeStub.requests(:create_refund) == []
     end
   end
 end

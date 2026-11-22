@@ -12,6 +12,7 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
 
   defp paid_booking_payment(attrs \\ %{}) do
     defaults = %{
@@ -50,10 +51,8 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
       # Allow up to 2 Stripe calls (one per task). If both tasks race through
       # the lock, Stripe is called twice with distinct idempotency keys and
       # distinct amounts-after context.
-      StripeStub.stub(:create_refund, fn _request ->
-        StripeFixtures.object("refund", %{
-          "id" => "re_concurrent_#{System.unique_integer([:positive])}"
-        })
+      StripeStub.stub(:create_refund, fn request ->
+        StripeStubResponses.refund(request, "re_concurrent_#{System.unique_integer([:positive])}")
       end)
 
       tasks =
@@ -105,12 +104,12 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
       # fresh refund of a fully refunded charge.
       calls = :counters.new(1, [:atomics])
 
-      StripeStub.expect(:create_refund, 2, fn _request ->
+      StripeStub.expect(:create_refund, 2, fn request ->
         :counters.add(calls, 1, 1)
 
         case :counters.get(calls, 1) do
           1 ->
-            StripeFixtures.object("refund", %{"id" => "re_winner"})
+            StripeStubResponses.refund(request, "re_winner")
 
           _replay ->
             StripeFixtures.error_body("invalid_request_error", %{

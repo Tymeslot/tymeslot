@@ -221,11 +221,8 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
   # contract, asserts the visitor is sent to Stripe Checkout, and returns
   # the return URLs the checkout session was created with, as paths.
   defp book_to_checkout(conn, profile) do
-    test_pid = self()
-
     StripeStub.expect(:create_checkout_session, 1, fn request ->
       assert request.headers["stripe-account"] == "acct_RETURN"
-      send(test_pid, {:checkout_session, request.form})
 
       StripeFixtures.object("checkout_session_payment", %{
         "id" => @session_id,
@@ -248,7 +245,7 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
     |> render_submit()
 
     assert_redirect(view, @checkout_url, 5_000)
-    assert_received {:checkout_session, form}
+    assert [%{form: form}] = StripeStub.requests(:create_checkout_session)
 
     %{
       success_url:
