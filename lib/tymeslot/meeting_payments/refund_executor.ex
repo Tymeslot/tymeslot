@@ -62,8 +62,12 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
   # One page; a booking payment sees nowhere near this many refunds.
   @list_limit 100
 
-  # How long Stripe keeps an idempotency key.
+  # How long Stripe keeps an idempotency key, and the margin given for the
+  # gap between Stripe's clock and ours, taken in the safe direction: the
+  # key is trusted a little less long, and a refund counts as made since
+  # `legacy_since` a little earlier.
   @legacy_key_kept_seconds 24 * 60 * 60
+  @clock_margin_seconds 5 * 60
 
   # What a refund's source reports a status change as.
   @status_change_reasons %{
@@ -254,7 +258,9 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
   end
 
   defp legacy_key_kept?(%RefundSchema{legacy_since: %DateTime{} = since}),
-    do: DateTime.diff(DateTime.utc_now(), since, :second) < @legacy_key_kept_seconds
+    do:
+      DateTime.diff(DateTime.utc_now(), since, :second) <
+        @legacy_key_kept_seconds - @clock_margin_seconds
 
   defp legacy_key_kept?(_refund), do: false
 
@@ -299,7 +305,7 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
        when is_binary(refund.legacy_idempotency_key) do
     payment_id == payment.id and made["amount"] == refund.amount_cents and
       is_integer(made["created"]) and
-      made["created"] >= DateTime.to_unix(refund.legacy_since) and
+      made["created"] >= DateTime.to_unix(refund.legacy_since) - @clock_margin_seconds and
       is_nil(RefundQueries.by_stripe_refund_id(made["id"]))
   end
 

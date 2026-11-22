@@ -409,7 +409,7 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
           legacy_since: since
         )
 
-      older = legacy_refund("re_OLDER", payment, DateTime.add(since, -1, :second))
+      older = legacy_refund("re_OLDER", payment, DateTime.add(since, -1, :hour))
       StripeStub.expect(:list_refunds, StripeFixtures.list([older]))
       StripeStub.expect(:create_refund, StripeStubResponses.refund("re_FRESH"))
 
