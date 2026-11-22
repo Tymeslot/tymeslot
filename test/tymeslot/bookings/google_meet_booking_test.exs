@@ -28,20 +28,22 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
   import Tymeslot.AvailabilityTestHelpers
 
   alias Ecto.Changeset
-  alias Tymeslot.Bookings.{Orchestrator, RescheduleLocation}
+  alias Tymeslot.Bookings.{Cancel, Orchestrator, Reschedule, RescheduleLocation}
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.GoogleMeetFake
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.{CalendarEventWorker, VideoRoomWorker}
 
   setup :verify_on_exit!
 
   @account_id "google-sub-organiser"
-  @calendar_id "organiser@example.com"
-  @meet_url "https://meet.google.com/abc-defg-hij"
+  @calendar_id GoogleMeetFake.calendar_id()
+  @meet_url GoogleMeetFake.meet_url()
+  @space_url GoogleMeetFake.space_url()
 
   setup do
     TestMocks.setup_calendar_mocks()
@@ -87,14 +89,14 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
         video_integration_id: meet.id
       )
 
-    %{user: user, meeting: book(user, meeting_type)}
+    %{user: user, meeting_type: meeting_type, meeting: book(user, meeting_type)}
   end
 
   test "calendar job first: the booking takes the Meet Google made on its event", %{
     meeting: meeting
   } do
     use_runtime_calendar()
-    report_google_requests()
+    GoogleMeetFake.start()
 
     run_calendar_jobs()
     assert :ok = run_video_job(meeting)
@@ -106,12 +108,12 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
   test "video job first: it waits for the booking's event rather than making a Meet of its own",
        %{meeting: meeting} do
     use_runtime_calendar()
-    report_google_requests()
+    GoogleMeetFake.start()
 
     # The booking's own video job runs before the calendar's, and hands over to
     # a fresh job a few seconds out, still owing the booking its announcement.
     assert %{success: 1, failure: 0, discard: 0} = Oban.drain_queue(queue: :video_rooms)
-    assert google_requests() == []
+    assert GoogleMeetFake.requests() == []
 
     assert_enqueued(
       worker: VideoRoomWorker,
@@ -131,7 +133,7 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
   test "moving the booking off Meet takes the Meet off its event, rather than replacing the event",
        %{meeting: meeting} do
     use_runtime_calendar()
-    report_google_requests()
+    GoogleMeetFake.start()
 
     run_calendar_jobs()
     assert :ok = run_video_job(meeting)
@@ -157,7 +159,11 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     # `conferenceDataVersion=1`: a new event at the booking's id would be
     # refused by Google as a duplicate of the old one.
     assert [{:put, put_uri, put_body}] =
-             for({method, _uri, _body} = req <- google_requests(), method != :get, do: req)
+             for(
+               {method, _uri, _body} = req <- GoogleMeetFake.requests(),
+               method != :get,
+               do: req
+             )
 
     assert put_uri.path =~ "/events/#{original.provider_event_id}"
     assert URI.decode_query(put_uri.query)["conferenceDataVersion"] == "1"
@@ -169,7 +175,7 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
   test "moving the booking off Meet and straight back keeps the Meet on its event",
        %{meeting: meeting} do
     use_runtime_calendar()
-    report_google_requests()
+    GoogleMeetFake.start()
 
     run_calendar_jobs()
     assert :ok = run_video_job(meeting)
@@ -192,7 +198,7 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     run_calendar_jobs()
     assert :ok = run_video_job(meeting)
 
-    requests = google_requests()
+    requests = GoogleMeetFake.requests()
     assert for({method, _uri, _body} = req <- requests, method != :get, do: req) == []
 
     assert for({_method, %URI{host: "meet.googleapis.com"} = uri, _body} <- requests, do: uri) ==
@@ -204,23 +210,187 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     assert back.meeting_url == @meet_url
   end
 
+  test "the attendee's confirmation email carries the Meet on the booking's event", %{
+    meeting: meeting
+  } do
+    use_runtime_calendar()
+    use_real_emails()
+    GoogleMeetFake.start()
+
+    run_calendar_jobs()
+    assert :ok = run_video_job(meeting)
+    assert %{failure: 0, discard: 0} = Oban.drain_queue(queue: :emails)
+
+    attendee_emails =
+      for {:email, email} <- received_emails(), {_name, "ada@example.com"} <- email.to, do: email
+
+    assert [confirmation] = attendee_emails
+    assert confirmation.html_body =~ @meet_url
+    assert confirmation.text_body =~ @meet_url
+  end
+
+  # Google never finishes the Meet it was asked for, so the wait ends and the
+  # booking takes a Meet space of its own rather than none.
+  test "an event whose Meet is still pending after the wait gets a Meet space of its own", %{
+    meeting: meeting
+  } do
+    use_runtime_calendar()
+    GoogleMeetFake.start(meet_pending: true)
+
+    run_calendar_jobs()
+    booked_minutes_ago(meeting, 3)
+    assert :ok = run_video_job(meeting)
+    run_calendar_jobs()
+
+    requests = GoogleMeetFake.requests()
+
+    assert [{:post, %URI{path: "/v2/spaces"}, _body}] =
+             for({_method, %URI{host: "meet.googleapis.com"}, _body} = req <- requests, do: req)
+
+    # The calendar update carries the space's link, and leaves the event's
+    # conference alone: no second write at `conferenceDataVersion=1`.
+    assert [{:post, _create_uri, created}, {:put, put_uri, put_body}] =
+             for(
+               {method, %URI{host: "www.googleapis.com"}, _body} = req <- requests,
+               method != :get,
+               do: req
+             )
+
+    assert put_uri.path =~ "/events/#{created["id"]}"
+    refute URI.decode_query(put_uri.query || "")["conferenceDataVersion"] == "1"
+    assert put_body["description"] =~ @space_url
+
+    updated = Repo.get!(MeetingSchema, meeting.id)
+    assert updated.provider_event_id == created["id"]
+    assert updated.video_room_id == "space-1"
+    assert updated.meeting_url == @space_url
+  end
+
+  # A booking given a standalone Meet space before its Meet was made with its
+  # event: its event carries no conference, and its room is the space.
+  test "a booking with a Meet space of its own is moved and cancelled through the Meet API",
+       %{meeting: meeting, meeting_type: meeting_type} do
+    use_runtime_calendar()
+    GoogleMeetFake.start()
+
+    meeting
+    |> Changeset.change(
+      video_room_id: "legacy-space",
+      meeting_url: @space_url,
+      video_provider: "google_meet",
+      inserted_at: DateTime.add(meeting.inserted_at, -3600, :second)
+    )
+    |> Repo.update!()
+
+    run_calendar_jobs()
+
+    assert [{:post, _uri, created}] =
+             for(
+               {method, _uri, _body} = req <- GoogleMeetFake.requests(),
+               method != :get,
+               do: req
+             )
+
+    refute Map.has_key?(created, "conferenceData")
+
+    original = Repo.get!(MeetingSchema, meeting.id)
+    new_start = DateTime.add(original.start_time, 3600, :second)
+
+    assert {:ok, moved} =
+             Reschedule.apply_new_time(
+               original,
+               %{
+                 start_time: new_start,
+                 end_time: DateTime.add(new_start, 30, :minute),
+                 duration_minutes: 30
+               },
+               meeting_type,
+               %{},
+               host_chosen: true
+             )
+
+    run_calendar_jobs()
+    assert %{failure: 0, discard: 0} = Oban.drain_queue(queue: :video_rooms)
+
+    assert [{:put, put_uri, put_body}] =
+             for(
+               {method, %URI{host: "www.googleapis.com"}, _body} = req <-
+                 GoogleMeetFake.requests(),
+               method != :get,
+               do: req
+             )
+
+    assert put_uri.path =~ "/events/#{original.provider_event_id}"
+    refute URI.decode_query(put_uri.query || "")["conferenceDataVersion"] == "1"
+    refute Map.has_key?(put_body, "conferenceData")
+
+    assert {:ok, _cancelled} = Cancel.execute(Repo.get!(MeetingSchema, moved.id))
+    run_calendar_jobs()
+    assert %{failure: 0, discard: 0} = Oban.drain_queue(queue: :video_rooms)
+
+    requests = GoogleMeetFake.requests()
+
+    assert [{:post, end_uri, _body}] =
+             for({_method, %URI{host: "meet.googleapis.com"}, _body} = req <- requests, do: req)
+
+    assert end_uri.path == "/v2/spaces/legacy-space:endActiveConference"
+
+    assert [{:delete, delete_uri, _body}] =
+             for({:delete, _uri, _body} = req <- requests, do: req)
+
+    assert delete_uri.path =~ "/events/#{original.provider_event_id}"
+  end
+
+  # The Meet is the event's: deleting the event ends it, and the Meet API is
+  # never asked about the event's id.
+  test "cancelling a booking whose Meet is on its event deletes the event once", %{
+    meeting: meeting
+  } do
+    use_runtime_calendar()
+    GoogleMeetFake.start()
+
+    run_calendar_jobs()
+    assert :ok = run_video_job(meeting)
+    run_calendar_jobs()
+    assert_one_event_carrying_the_meet(meeting)
+
+    booked = Repo.get!(MeetingSchema, meeting.id)
+    assert {:ok, _cancelled} = Cancel.execute(booked)
+    run_calendar_jobs()
+    assert %{failure: 0, discard: 0} = Oban.drain_queue(queue: :video_rooms)
+
+    requests = GoogleMeetFake.requests()
+
+    assert for({_method, %URI{host: "meet.googleapis.com"} = uri, _body} <- requests, do: uri) ==
+             []
+
+    assert [{:delete, delete_uri, _body}] =
+             for({method, _uri, _body} = req <- requests, method != :get, do: req)
+
+    assert delete_uri.path =~ "/events/#{booked.provider_event_id}"
+  end
+
   test "a calendar refusing the Meet still gets the booking's event, without it", %{
     meeting: meeting
   } do
     use_runtime_calendar()
-    report_google_requests(refuse_conference: true)
+    GoogleMeetFake.start(refuse_conference: true)
 
     run_calendar_jobs()
 
     assert [{:post, _refused, %{"conferenceData" => _asked}}, {:post, _created, created}] =
-             for({method, _uri, _body} = req <- google_requests(), method != :get, do: req)
+             for(
+               {method, _uri, _body} = req <- GoogleMeetFake.requests(),
+               method != :get,
+               do: req
+             )
 
     refute Map.has_key?(created, "conferenceData")
     assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == created["id"]
   end
 
   defp assert_one_event_carrying_the_meet(meeting) do
-    requests = google_requests()
+    requests = GoogleMeetFake.requests()
 
     # A POST to the Meet API would be a standalone Meet space, the room that
     # Google Calendar later replaces with a second link.
@@ -232,7 +402,7 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     assert [{:post, post_uri, created}] =
              for({method, _uri, _body} = req <- requests, method != :get, do: req)
 
-    assert calendar_of(post_uri) == @calendar_id
+    assert GoogleMeetFake.calendar_of(post_uri) == @calendar_id
     assert String.ends_with?(post_uri.path, "/events")
     assert URI.decode_query(post_uri.query)["conferenceDataVersion"] == "1"
 
@@ -274,174 +444,37 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     booked
   end
 
+  # As if the booking had been made `minutes` ago, past the wait for its event.
+  defp booked_minutes_ago(meeting, minutes) do
+    meeting
+    |> Changeset.change(inserted_at: DateTime.add(meeting.inserted_at, -60 * minutes, :second))
+    |> Repo.update!()
+  end
+
+  defp use_real_emails do
+    email_service = Application.get_env(:tymeslot, :email_service_module)
+    Application.put_env(:tymeslot, :email_service_module, Tymeslot.Emails.EmailService)
+    Application.put_env(:swoosh, :shared_test_process, self())
+
+    on_exit(fn ->
+      Application.put_env(:tymeslot, :email_service_module, email_service)
+      Application.delete_env(:swoosh, :shared_test_process)
+    end)
+  end
+
+  defp received_emails do
+    receive do
+      {:email, _email} = received -> [received | received_emails()]
+    after
+      0 -> []
+    end
+  end
+
   defp run_video_job(meeting),
     do: perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id, "announce" => true})
 
   defp run_calendar_jobs do
     assert %{failure: 0, discard: 0} = Oban.drain_queue(queue: :calendar_events)
-  end
-
-  # Google answers every request, reporting it to the test, and keeps the
-  # events it is given, so a read sees what the writes before it left. As
-  # Google does, a create asking for a Meet (`conferenceDataVersion=1` with a
-  # `createRequest`) is answered while the Meet is still being made, and the
-  # Meet's link is there on the next read. A write without
-  # `conferenceDataVersion=1` leaves the event's conference as it is, and
-  # times come back with their offset in the event's time zone.
-  # A calendar created with `refuse_conference: true` refuses a Meet the way a
-  # calendar that allows no Meet conferences does: the whole create.
-  defp report_google_requests(opts \\ []) do
-    test_pid = self()
-    refuse_conference? = Keyword.get(opts, :refuse_conference, false)
-    {:ok, events} = Agent.start_link(fn -> %{} end)
-
-    stub(Tymeslot.HTTPClientMock, :request, fn method, url, body, _headers, _opts ->
-      uri = URI.parse(url)
-      sent = if is_binary(body) and body != "", do: Jason.decode!(body), else: %{}
-      send(test_pid, {:google, method, uri, sent})
-
-      case {method, uri.host} do
-        {:get, "www.googleapis.com"} ->
-          read_event(events, uri)
-
-        {:post, "www.googleapis.com"}
-        when refuse_conference? and is_map_key(sent, "conferenceData") ->
-          {:ok,
-           %Req.Response{
-             status: 400,
-             body: ~s({"error":{"message":"Invalid conference type value."}})
-           }}
-
-        {_write, "www.googleapis.com"} ->
-          write_event(events, method, uri, sent)
-
-        _other ->
-          {:ok, %Req.Response{status: 404, body: ~s({"error":{"message":"unexpected"}})}}
-      end
-    end)
-  end
-
-  # Events are kept per calendar, as Google keeps them: an event read or
-  # written in another calendar than the one it was made in is not found.
-  # `primary` is the account's primary calendar, the integration's default.
-  defp calendar_of(uri) do
-    case uri.path |> String.split("/") |> Enum.drop_while(&(&1 != "calendars")) do
-      ["calendars", "primary" | _rest] -> @calendar_id
-      ["calendars", calendar | _rest] -> URI.decode(calendar)
-    end
-  end
-
-  defp event_key(uri, id), do: {calendar_of(uri), id}
-
-  defp read_event(events, uri) do
-    key = event_key(uri, uri.path |> String.split("/") |> List.last())
-
-    case Agent.get(events, &Map.get(&1, key)) do
-      nil -> {:ok, %Req.Response{status: 404, body: ~s({"error":{"message":"Not Found"}})}}
-      event -> {:ok, %Req.Response{status: 200, body: Jason.encode!(made_meet(event))}}
-    end
-  end
-
-  # As Google does, an insert at an id an event already has is refused, and a
-  # write at `conferenceDataVersion=1` sets the conference to what it carries,
-  # which may be none.
-  defp write_event(events, method, uri, sent) do
-    id = if method == :post, do: sent["id"], else: uri.path |> String.split("/") |> List.last()
-    key = event_key(uri, id)
-    with_conference? = URI.decode_query(uri.query || "")["conferenceDataVersion"] == "1"
-
-    exists? = Agent.get(events, &Map.has_key?(&1, key))
-
-    cond do
-      method == :post and exists? ->
-        {:ok,
-         %Req.Response{
-           status: 409,
-           body: ~s({"error":{"message":"The requested identifier already exists."}})
-         }}
-
-      method != :post and not exists? ->
-        {:ok, %Req.Response{status: 404, body: ~s({"error":{"message":"Not Found"}})}}
-
-      true ->
-        store_event(events, key, sent, with_conference?)
-    end
-  end
-
-  defp store_event(events, {_calendar, id} = key, sent, with_conference?) do
-    event =
-      Agent.get_and_update(events, fn stored ->
-        previous = Map.get(stored, key, %{})
-
-        {base, written} =
-          if with_conference?,
-            do: {Map.delete(previous, "conferenceData"), sent},
-            else: {previous, Map.delete(sent, "conferenceData")}
-
-        event =
-          base
-          |> Map.merge(written)
-          |> Map.merge(%{"id" => id, "iCalUID" => "#{id}@google.com", "status" => "confirmed"})
-          |> keep_conference(previous, with_conference?)
-          |> with_offsets()
-          |> pending_meet()
-
-        {event, Map.put(stored, key, event)}
-      end)
-
-    {:ok, %Req.Response{status: 200, body: Jason.encode!(event)}}
-  end
-
-  defp keep_conference(event, %{"conferenceData" => conference}, false),
-    do: Map.put(event, "conferenceData", conference)
-
-  defp keep_conference(event, _previous, _with_conference?), do: event
-
-  defp with_offsets(event) do
-    event
-    |> Map.update("start", nil, &offset_time/1)
-    |> Map.update("end", nil, &offset_time/1)
-  end
-
-  defp offset_time(%{"dateTime" => local, "timeZone" => zone} = time) do
-    case DateTime.from_iso8601(local) do
-      {:ok, _with_offset, _seconds} ->
-        time
-
-      {:error, :missing_offset} ->
-        zoned = local |> NaiveDateTime.from_iso8601!() |> DateTime.from_naive!(zone)
-        Map.put(time, "dateTime", DateTime.to_iso8601(zoned))
-    end
-  end
-
-  defp offset_time(time), do: time
-
-  defp pending_meet(%{"conferenceData" => %{"createRequest" => request}} = event)
-       when not is_map_key(request, "status") do
-    put_in(event, ["conferenceData", "createRequest", "status"], %{"statusCode" => "pending"})
-  end
-
-  defp pending_meet(event), do: event
-
-  defp made_meet(%{"conferenceData" => %{"createRequest" => _request} = conference} = event) do
-    made =
-      conference
-      |> put_in(["createRequest", "status"], %{"statusCode" => "success"})
-      |> Map.put("entryPoints", [%{"entryPointType" => "video", "uri" => @meet_url}])
-
-    event
-    |> Map.put("conferenceData", made)
-    |> Map.put("hangoutLink", @meet_url)
-  end
-
-  defp made_meet(event), do: event
-
-  defp google_requests do
-    receive do
-      {:google, method, uri, body} -> [{method, uri, body} | google_requests()]
-    after
-      0 -> []
-    end
   end
 
   defp use_runtime_calendar do
