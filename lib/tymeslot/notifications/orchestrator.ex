@@ -13,6 +13,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   alias Tymeslot.Notifications.{
     GuestNotifications,
     Recipients,
+    Relevance,
     ReminderSchedule,
     SchedulingRules
   }
@@ -79,7 +80,9 @@ defmodule Tymeslot.Notifications.Orchestrator do
       request_emails:
         EmailScheduler.schedule_request_emails(
           meeting.id,
-          Keyword.take(opts, [:previous_start_time])
+          opts
+          |> Keyword.take([:previous_start_time])
+          |> Keyword.put(:relevant_until, Relevance.approval_request(meeting))
         ),
       approval_nudge: schedule_approval_nudge(meeting),
       expiry: ApprovalJobs.schedule_expiry(meeting)
@@ -107,8 +110,15 @@ defmodule Tymeslot.Notifications.Orchestrator do
   # deadline has already passed, or which has none, gets no nudge.
   defp schedule_approval_nudge(meeting) do
     case ApprovalJobs.nudge_at(meeting) do
-      nil -> :ok
-      send_at -> EmailScheduler.schedule_approval_nudge(meeting.id, send_at)
+      nil ->
+        :ok
+
+      send_at ->
+        EmailScheduler.schedule_approval_nudge(
+          meeting.id,
+          send_at,
+          Relevance.approval_request(meeting)
+        )
     end
   end
 
@@ -127,7 +137,9 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @spec send_request_outcome_notifications(%{atom() => term()}, :declined | :expired) ::
           {:ok, :notifications_scheduled} | {:error, term()}
   def send_request_outcome_notifications(meeting, variant) do
-    with :ok <- EmailScheduler.schedule_request_outcome(meeting.id, variant),
+    relevant_until = if variant == :expired, do: Relevance.request_expiry(meeting)
+
+    with :ok <- EmailScheduler.schedule_request_outcome(meeting.id, variant, relevant_until),
          :ok <- maybe_schedule_host_expiry_notice(meeting, variant),
          :ok <- maybe_schedule_guest_cancellations(meeting) do
       {:ok, :notifications_scheduled}

@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.48.0",
+      version: "1.48.1",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -132,11 +132,10 @@ defmodule Tymeslot.MixProject do
       # declares it optional, Wallaby's httpoison and web_driver_client (and
       # the Tesla it pulls in) are test-only, and stripity_stripe uses hackney
       # as its non-optional HTTP client for every Stripe API call.
-      # hackney 4.x has two real runtime consumers: Swoosh's Postmark
-      # adapter (config :swoosh, :api_client, Swoosh.ApiClient.Hackney,
-      # prod-only) and stripity_stripe. Neither path is exercised in CI
-      # (test config uses Swoosh.Adapters.Test and Stripe is mocked), so
-      # both need verification in staging after any hackney upgrade.
+      # stripity_stripe is hackney's only runtime consumer: Swoosh sends
+      # through Finch (config :swoosh, :api_client), and everything else
+      # uses Req. Stripe calls are mocked in CI, so verify a real Stripe
+      # request in staging after any hackney upgrade.
       # The same override must be repeated in any project that depends on
       # this one as a path dependency, because overrides declared by a
       # dependency do not apply to the parent project's resolution.

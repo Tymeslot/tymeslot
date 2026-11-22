@@ -106,6 +106,13 @@ defmodule Tymeslot.Jobs do
   defdelegate delete_jobs_by_action(worker_module, action, meeting_id), to: ObanJobQueries
 
   @doc """
+  Deletes the pending jobs a job with `args` replaces: the same action for the
+  same meeting, on the emails queue, with any other args. See
+  `Tymeslot.Jobs.ObanJobQueries.delete_superseded_jobs/2`.
+  """
+  defdelegate delete_superseded_jobs(worker_module, args), to: ObanJobQueries
+
+  @doc """
   Deletes every pending job a worker holds for one meeting, on any queue.
   """
   defdelegate delete_meeting_jobs(worker_module, meeting_id), to: ObanJobQueries

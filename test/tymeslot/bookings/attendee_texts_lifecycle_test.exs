@@ -378,6 +378,7 @@ defmodule Tymeslot.Bookings.AttendeeTextsLifecycleTest do
     assert :ok =
              perform_job(EmailWorker, %{
                "action" => "send_reminder_emails",
+               "relevant_until" => nil,
                "meeting_id" => meeting.id,
                "reminder_value" => 30,
                "reminder_unit" => "minutes"

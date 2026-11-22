@@ -386,8 +386,8 @@ config :tymeslot, TymeslotWeb.Endpoint,
 # Configures the mailer
 config :tymeslot, Tymeslot.Mailer, adapter: Swoosh.Adapters.Local
 
-# Configure Swoosh API client
-config :swoosh, :api_client, Swoosh.ApiClient.Hackney
+# Swoosh's API-based adapters send through the app's Finch pool, like Req.
+config :swoosh, api_client: Swoosh.ApiClient.Finch, finch_name: Tymeslot.Finch
 
 # Resolve the deps directory for esbuild's NODE_PATH.
 # config/ is at project_root/config/ and deps at project_root/deps/ → ../deps

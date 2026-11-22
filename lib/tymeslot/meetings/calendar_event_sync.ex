@@ -38,6 +38,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventCache
+  alias Tymeslot.Meetings.CalendarEventConference
   alias Tymeslot.Meetings.CalendarEventMapping
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -140,9 +141,11 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     )
 
     event_data =
-      CalendarEventBuilder.build_event_data(meeting,
+      meeting
+      |> CalendarEventBuilder.build_event_data(
         attendees: Meetings.attendees_for_calendar(meeting)
       )
+      |> Map.merge(MeetingProvisioning.booking_event_update_fields(meeting))
 
     meeting
     |> update_or_create_calendar_event(event_data, attempt)
@@ -233,6 +236,9 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   the event. Both are checked again under the meeting's row lock before the
   new event is recorded, since a room can be attached to `event_id` while the
   new event is being written; the new event is then deleted again.
+
+  A Google event is not replaced: its Meet conference is taken off in place
+  (`Tymeslot.Meetings.CalendarEventConference`).
   """
   @spec replace(term(), String.t(), pos_integer()) :: :ok | {:error, term()}
   def replace(meeting_id, event_id, attempt) do
@@ -252,8 +258,25 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
   defp replace_event(meeting, event_id, attempt) do
     case replacement_step(meeting, event_id) do
-      :replace -> create_replacement(meeting, event_id, attempt)
+      :replace -> replace_or_clear(meeting, event_id, attempt)
       step -> run_replacement_step(step, meeting, event_id, attempt)
+    end
+  end
+
+  defp replace_or_clear(meeting, event_id, attempt) do
+    if CalendarEventConference.google?(meeting),
+      do: clear_conference(meeting, event_id, attempt),
+      else: create_replacement(meeting, event_id, attempt)
+  end
+
+  # Judged again from the meeting as it stands under the conference lock
+  # (`CalendarEventConference.clear_under_lock/2`).
+  defp clear_conference(meeting, event_id, attempt) do
+    decide = fn current -> with :replace <- replacement_step(current, event_id), do: :clear end
+
+    case CalendarEventConference.clear_under_lock(meeting.id, decide) do
+      {:skipped, step} -> run_replacement_step(step, meeting, event_id, attempt)
+      result -> flag_if_unauthorized(result, meeting)
     end
   end
 
@@ -413,11 +436,15 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   defp handle_missing_event(meeting_id, event_data, meeting, attempt) do
     Logger.info("Calendar event not found, creating new one", meeting_id: meeting_id)
 
-    # Use the organizer_user_id to create in the correct calendar
-    case CalendarEvents.create_event(
-           with_creation_key(event_data, meeting),
-           meeting.organizer_user_id
-         ) do
+    # Created as a first create would be, with the room its calendar carries
+    # and in the booking's own calendar, since this may be the booking's first
+    # event: an update that ran before the create finds nothing to update.
+    create_data =
+      event_data
+      |> Map.merge(MeetingProvisioning.booking_event_video_fields(meeting))
+      |> with_creation_key(meeting)
+
+    case create_booking_event(create_data, meeting) do
       {:ok, created} ->
         CalendarEventMapping.persist_or_compensate(meeting, created)
 
@@ -483,16 +510,23 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   defp create_event_for_meeting(meeting, meeting_id, attempt) do
     Logger.info("Creating calendar event", meeting_id: meeting_id)
 
+    # A room the booking's calendar carries goes on the event as it is
+    # created, so no second write follows to add it, and the video job finds
+    # it there (`MeetingProvisioning.booking_event_video_fields/1`).
     event_data =
       meeting
       |> CalendarEventBuilder.build_event_data(
         attendees: Meetings.attendees_for_calendar(meeting)
       )
-      |> with_online_meeting(MeetingProvisioning.booking_online_meeting(meeting))
+      |> Map.merge(MeetingProvisioning.booking_event_video_fields(meeting))
       |> with_creation_key(meeting)
 
-    # Use the meeting context to create in the correct calendar
-    case CalendarEvents.create_event(event_data, meeting) do
+    create_with_event_data(event_data, meeting, meeting_id, attempt)
+  end
+
+  # Use the meeting context to create in the correct calendar
+  defp create_with_event_data(event_data, meeting, meeting_id, attempt) do
+    case create_booking_event(event_data, meeting) do
       {:ok, created} ->
         Logger.info("Calendar event created successfully", meeting_id: meeting_id)
 
@@ -500,7 +534,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
       # `If-None-Match: *` found an event already at this meeting's own UID, so
       # it is this booking's event, written by a concurrent update job (see
-      # `handle_missing_event/3`). Retrying the create can only fail the same
+      # `handle_missing_event/4`). Retrying the create can only fail the same
       # way, and on the last attempt would email the owner a sync error for an
       # event that exists. Update it instead, from a fresh read of the meeting:
       # this job's copy may predate the video link the other job carried.
@@ -516,11 +550,29 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     end
   end
 
-  # A booking whose Teams meeting goes on this event is created with it, so the
-  # invitation Outlook mails the guest carries it and no second write follows
-  # to add it (`MeetingProvisioning.booking_online_meeting/1`).
-  defp with_online_meeting(event_data, nil), do: event_data
-  defp with_online_meeting(event_data, fields), do: Map.put(event_data, :online_meeting, fields)
+  # Google decides per calendar which conferences an event may carry, and
+  # refuses the whole event for one it does not allow. The booking still
+  # needs its event: it is created without the Meet, and the video job makes
+  # a Meet of its own once it stops waiting for one on the event. Any other
+  # refusal is the event's own, and is not met by writing it again.
+  defp create_booking_event(event_data, meeting) do
+    case CalendarEvents.create_event(event_data, meeting) do
+      {:error, :conference_refused} when is_map_key(event_data, :conference_data) ->
+        Logger.warning("Calendar refused the event's Meet conference, creating it without one",
+          meeting_id: meeting.id
+        )
+
+        event_data
+        |> Map.delete(:conference_data)
+        |> create_booking_event(meeting)
+
+      {:error, :conference_refused} ->
+        {:error, :refused}
+
+      result ->
+        result
+    end
+  end
 
   # No calendar to write to is not a sync failure: the owner is never emailed
   # about it, and the worker ends the job without retrying.

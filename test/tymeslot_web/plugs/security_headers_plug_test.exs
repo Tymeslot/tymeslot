@@ -47,10 +47,11 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       assert csp =~ "base-uri 'self'"
       assert csp =~ "form-action 'self'"
 
-      # Connect onboarding posts to a controller that redirects to
-      # connect.stripe.com; Chrome enforces form-action on the redirect.
+      # Invitation social sign-in and Connect onboarding post to controllers
+      # that redirect to the provider or connect.stripe.com; Chrome enforces
+      # form-action on the redirect.
       assert csp =~
-               "form-action 'self' https://billing.stripe.com https://checkout.stripe.com https://connect.stripe.com"
+               "form-action 'self' https://accounts.google.com https://github.com https://billing.stripe.com https://checkout.stripe.com https://connect.stripe.com"
     end
 
     test "fonts and stylesheets load only from this instance", %{conn: conn} do

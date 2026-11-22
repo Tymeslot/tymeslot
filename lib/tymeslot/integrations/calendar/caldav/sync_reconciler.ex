@@ -47,9 +47,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
   Wraps cache upsert AND deletion detection in a single `Repo.transaction`:
 
   1. Normalises raw events
-  2. Upserts the batch (inside tx)
-  3. Reads cached UIDs in the sync window (inside tx)
-  4. Deletes cache rows for UIDs missing from the server response (inside tx)
+  2. Reads cached UIDs in the sync window, before the batch touches them (inside tx)
+  3. Upserts the batch (inside tx)
+  4. Deletes cache rows for UIDs missing from the server response, unless the
+     deletion circuit breaker refuses the batch (inside tx)
   5. Commits
   6. Post-commit: broadcasts, runs meeting-time-change reconciliation,
      runs deletion reconciliation (may send emails; must not roll back)
@@ -261,13 +262,25 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
       Repo.transaction(fn ->
         lock_cache!(integration)
 
+        # Read before the upsert: it stamps every returned row with a
+        # `synced_at` later than `sync_started_at`, so a read after it would
+        # see only the rows the server left out, and the circuit breaker would
+        # measure every deletion as the whole cache.
+        cached_uids =
+          ProviderCalendarEventQueries.list_uids_in_range(
+            integration.id,
+            start_time,
+            end_time,
+            sync_started_at,
+            calendar_path
+          )
+
         case Sync.upsert_cache(integration, calendar_events) do
           {:ok, _count} ->
             compute_and_delete_missing_uids(
               integration,
               calendar_events,
-              start_time,
-              end_time,
+              cached_uids,
               sync_started_at,
               calendar_path
             )
@@ -332,20 +345,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
     end
   end
 
-  # Inside the transaction: compute UIDs missing from the server response
-  # and delete the corresponding cache rows. Returns the list of deleted
-  # UIDs so the caller can reconcile them after commit.
+  # Inside the transaction: compute which of `cached_uids` (the window's rows
+  # as they stood before this fetch was upserted) the server response no
+  # longer contains, and delete them. Returns the list of deleted UIDs so the
+  # caller can reconcile them after commit.
   defp compute_and_delete_missing_uids(
          integration,
          calendar_events,
-         start_time,
-         end_time,
+         cached_uids,
          sync_started_at,
          calendar_path
        ) do
     # A row under a series' bare UID whose occurrences came back is not
     # missing: the server only ever returns the occurrences. A synced
-    # stand-in went in `Sync.upsert_cache/2`; one still here holds a queued
+    # stand-in goes in `Sync.upsert_cache/2`; one that stays holds a queued
     # edit or delete and waits for the queue. Pruning it would lose that
     # change and, through `Sync.reconcile_deletions/3`, cancel a booking
     # linked to it by its UID.
@@ -353,15 +366,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
       calendar_events
       |> MapSet.new(fn %CalendarEvent{uid: uid} -> uid end)
       |> MapSet.union(Sync.series_uids(calendar_events))
-
-    cached_uids =
-      ProviderCalendarEventQueries.list_uids_in_range(
-        integration.id,
-        start_time,
-        end_time,
-        sync_started_at,
-        calendar_path
-      )
 
     missing_uids = Enum.reject(cached_uids, &MapSet.member?(fetched_uids, &1))
 

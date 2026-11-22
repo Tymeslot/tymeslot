@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   }
 
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
+  alias TymeslotWeb.Themes.Shared.PathHandlers
 
   @doc """
   Mounts the socket when an organizer profile is present.
@@ -189,7 +190,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
         {:ok,
          socket
          |> LiveView.put_flash(:error, refusal_message(reason))
-         |> LiveView.redirect(to: ~p"/")}
+         |> LiveView.redirect(to: ~p"/#{profile.username}")}
     end
   end
 
@@ -222,7 +223,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
         {:ok, LiveView.redirect(socket, to: path)}
 
       {:error, :not_found} ->
-        {:ok, SeriesManagement.not_found_redirect(socket)}
+        {:ok, SeriesManagement.not_found_redirect(socket, profile)}
     end
   end
 
@@ -253,27 +254,29 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     case MeetingLinks.current_path(meeting_uid, action) do
       {:ok, path} ->
         if String.starts_with?(path, "/#{profile.username}/"),
-          do: meeting_not_found_redirect(socket),
+          do: meeting_not_found_redirect(socket, profile),
           else: LiveView.redirect(socket, to: path)
 
       {:error, :not_found} ->
-        meeting_not_found_redirect(socket)
+        meeting_not_found_redirect(socket, profile)
     end
   end
 
-  defp meeting_not_found_redirect(socket) do
+  # To the booking page of the host the link names: "/" would put a guest
+  # on the sign-in page.
+  defp meeting_not_found_redirect(socket, profile) do
     socket
     |> LiveView.put_flash(:error, BookingErrorMessage.message(:meeting_not_found))
-    |> LiveView.redirect(to: ~p"/")
+    |> LiveView.redirect(to: ~p"/#{profile.username}")
   end
 
   # Mounts the public poll voting page for a known organizer profile.
   #
   # Applies the same public-readiness gate as the scheduling flow, then loads the
   # poll by its public token. A missing token, or one whose poll belongs to a
-  # different host than the resolved username, redirects to `/` exactly as a failed
-  # meeting-management load does — a poll must never render under the wrong host's
-  # theme.
+  # different host than the resolved username, redirects to that username's booking
+  # page exactly as a failed meeting-management load does: a poll must never render
+  # under the wrong host's theme.
   @spec mount_poll_voting(map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   defp mount_poll_voting(profile, params, socket) do
@@ -324,7 +327,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
         {:ok,
          socket
          |> LiveView.put_flash(:error, dgettext("booking", "Poll not found"))
-         |> LiveView.redirect(to: ~p"/")}
+         |> LiveView.redirect(to: ~p"/#{profile.username}")}
     end
   end
 
@@ -372,6 +375,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
       |> assign(:booking_window_days, OrganizerHelpers.booking_window_days(profile))
       |> assign(:meeting, meeting)
       |> assign(:meeting_uid, meeting_uid)
+      |> assign(:booking_path, PathHandlers.meeting_booking_path(profile, meeting))
       |> assign(:loading, false)
       |> assign(:has_theme, true)
       |> assign_page_theme(profile, params)

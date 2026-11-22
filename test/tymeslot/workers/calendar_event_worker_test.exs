@@ -327,7 +327,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
     end
 
     test "creates new event if not found during update" do
-      %{user: user, integration: integration, meeting: meeting} = setup_calendar_scenario()
+      %{integration: integration, meeting: meeting} = setup_calendar_scenario()
       uid = meeting.calendar_uid
 
       # Update fails with not_found
@@ -336,9 +336,10 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
         {:error, :not_found}
       end)
 
-      # Falls back to creating new event
-      expect(Tymeslot.CalendarMock, :create_event, fn _data, id ->
-        assert id == user.id
+      # Falls back to creating the event in the booking's own calendar
+      meeting_id = meeting.id
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, %{id: ^meeting_id} ->
         {:ok, CreatedEvent.new("new-uid")}
       end)
 

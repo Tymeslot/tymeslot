@@ -224,6 +224,11 @@ defmodule Tymeslot.Meetings.MeetingTransitionQueries do
   other finds nothing to change. A later request on the same meeting carries
   its own deadline and is not ended by an earlier one's expiry.
   `{:error, :not_lapsed}` when nothing matched.
+
+  `cancelled_at` is the request's deadline
+  (`MeetingState.reschedule_request_deadline/1`), computed from the row,
+  rather than `now`: the request ended there, and a job or sweep that runs
+  late must not date it to whenever it ran.
   """
   @spec expire_reschedule_request(Ecto.UUID.t(), DateTime.t(), DateTime.t()) ::
           {:ok, Meeting.t()} | {:error, :not_lapsed}
@@ -236,9 +241,26 @@ defmodule Tymeslot.Meetings.MeetingTransitionQueries do
         select: m
       )
 
-    query = MeetingState.where_reschedule_request_lapsed(request, now)
+    days = MeetingState.reschedule_answer_days()
 
-    case Repo.update_all(query, set: [status: :expired, cancelled_at: now, updated_at: now]) do
+    query =
+      request
+      |> MeetingState.where_reschedule_request_lapsed(now)
+      |> update([m],
+        set: [
+          status: :expired,
+          cancelled_at:
+            fragment(
+              "date_trunc('second', GREATEST(?, ? + make_interval(days => ?)))",
+              m.start_time,
+              m.reschedule_requested_at,
+              ^days
+            ),
+          updated_at: ^now
+        ]
+      )
+
+    case Repo.update_all(query, []) do
       {1, [meeting]} -> {:ok, meeting}
       {0, _none} -> {:error, :not_lapsed}
     end

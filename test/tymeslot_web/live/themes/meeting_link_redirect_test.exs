@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingLinkRedirectTest do
       assert {:error,
               {:redirect,
                %{
-                 to: "/",
+                 to: "/claimed-before",
                  flash: %{
                    "error" => "This meeting could not be found. Please refresh and try again."
                  }

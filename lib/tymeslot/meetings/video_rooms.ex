@@ -76,9 +76,10 @@ defmodule Tymeslot.Meetings.VideoRooms do
     - {:error, :organizer_not_found} if organizer lookup fails
     - {:error, :video_disabled} if video provider is set to "none"
     - {:error, :video_integration_missing} if no video integration configured
-    - {:error, :calendar_event_pending} if a Teams meeting is to be attached
-      to the booking's calendar event and that event is not written yet, or
-      was replaced while the meeting was being attached to it
+    - {:error, :calendar_event_pending} if the room belongs on the booking's
+      calendar event (a Teams meeting, or a Google Meet conference) and that
+      event, or its Meet conference, is not written yet or cannot be read
+      yet, or the event was replaced while the meeting was being attached to it
     - {:error, :video_integration_inactive} if integration is disabled
     - {:error, :video_integration_needs_reauth} if its owner has been asked
       to reconnect the integration, so no call is made
@@ -144,7 +145,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
     error
   end
 
-  # A Teams meeting waiting for the booking's own calendar event
+  # A room waiting for the booking's own calendar event
   # (`:calendar_event_pending`) is the expected first outcome, already logged
   # here as a wait; `Tymeslot.Workers.VideoRoomWorker` logs any other failure
   # once, with what it does about it.
@@ -349,32 +350,39 @@ defmodule Tymeslot.Meetings.VideoRooms do
   @spec create_provider_meeting_room(MeetingSchema.t(), integer() | nil) ::
           {:ok, MeetingContext.t()} | {:error, term()}
   defp create_provider_meeting_room(meeting, user_id) do
-    with {:ok, placement_opts} <- room_placement(meeting) do
-      Logger.info("Requesting video room from provider", meeting_id: meeting.id)
+    case room_placement(meeting) do
+      {:ok, placement_opts} ->
+        Logger.info("Requesting video room from provider", meeting_id: meeting.id)
 
-      video_module().create_meeting_room(
-        user_id,
-        [
-          integration_id: meeting.video_integration_id,
-          meeting_id: meeting.id,
-          event_details: EventDetails.from_meeting(meeting)
-        ] ++ placement_opts
-      )
+        video_module().create_meeting_room(
+          user_id,
+          [
+            integration_id: meeting.video_integration_id,
+            meeting_id: meeting.id,
+            event_details: EventDetails.from_meeting(meeting)
+          ] ++ placement_opts
+        )
+
+      {:calendar_meet, event_id, meet_url} ->
+        calendar_meet_context(meeting, user_id, event_id, meet_url)
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
-  # A Teams meeting that belongs on the booking's own calendar event waits for
-  # that event rather than creating a second one (see
-  # `MeetingProvisioning.teams_room_placement/1`). The wait is an ordinary
+  # A room that belongs on the booking's own calendar event waits for that
+  # event rather than being made on its own (see
+  # `MeetingProvisioning.booking_room_placement/1`). The wait is an ordinary
   # retryable failure, so `Tymeslot.Workers.VideoRoomWorker` retries it and,
   # should the event never arrive, announces the booking without a link.
   defp room_placement(meeting) do
-    case MeetingProvisioning.teams_room_placement(meeting) do
+    case MeetingProvisioning.booking_room_placement(meeting) do
       {:calendar_event, event_id} ->
         {:ok, [calendar_event_id: event_id, adopt_calendar_meeting: true]}
 
       :awaiting_calendar_event ->
-        Logger.info("Teams meeting waits for the booking's calendar event",
+        Logger.info("Video room waits for the booking's calendar event",
           meeting_id: meeting.id
         )
 
@@ -382,7 +390,24 @@ defmodule Tymeslot.Meetings.VideoRooms do
 
       :own_event ->
         {:ok, []}
+
+      {:calendar_meet, _event_id, _meet_url} = calendar_meet ->
+        calendar_meet
     end
+  end
+
+  # The Meet conference Google made on the booking's own event is the
+  # booking's room. Like a Teams meeting on that event, it is recorded under
+  # the event's id, so it moves and goes with the event, through calendar sync.
+  defp calendar_meet_context(meeting, user_id, event_id, meet_url) do
+    Logger.info("Using the Meet on the booking's calendar event", meeting_id: meeting.id)
+
+    video_module().existing_room_context(user_id,
+      integration_id: meeting.video_integration_id,
+      room_id: event_id,
+      meeting_url: meet_url,
+      meeting_id: meeting.id
+    )
   end
 
   # The provider room exists by the time its attributes are built, and a
@@ -397,9 +422,10 @@ defmodule Tymeslot.Meetings.VideoRooms do
     end
   end
 
-  # A Teams meeting placed on the booking's own calendar event is that event,
-  # not a room of its own: deleting it would delete the booking's event, and
-  # the retry places the meeting on the same event again, so nothing leaks.
+  # A room placed on the booking's own calendar event (a Teams meeting, or the
+  # Meet conference Google made for it) is that event, not a room of its own:
+  # deleting it would delete the booking's event, and the retry places the
+  # room on the same event again, so nothing leaks.
   defp release_refused_room(%MeetingSchema{provider_event_id: event_id} = meeting, context) do
     case video_module().extract_room_id(context) do
       nil ->

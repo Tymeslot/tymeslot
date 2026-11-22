@@ -139,8 +139,6 @@ config :tymeslot, Oban,
   # startup.
   cron: []
 
-config :swoosh, :api_client, Swoosh.ApiClient.Hackney
-
 # Enable booking analytics in development so the feature is exercisable locally.
 config :tymeslot, :booking_analytics_enabled, true
 

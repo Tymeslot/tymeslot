@@ -14,6 +14,7 @@ defmodule Tymeslot.Workers.BookingVerificationEmailTest do
   import Tymeslot.WorkerTestHelpers, only: [persisted_job: 2]
 
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
+  alias Tymeslot.Emails.EmailScheduler.SeatScheduler
   alias Tymeslot.Meetings.EmailVerificationToken
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Workers.EmailWorker
@@ -215,9 +216,9 @@ defmodule Tymeslot.Workers.BookingVerificationEmailTest do
     test "scheduling twice inserts one job, and a resend is its own" do
       {slot, seat} = held_seat()
 
-      assert :ok = MeetingScheduler.schedule_seat_verification_email(slot.id, seat.id)
-      assert :ok = MeetingScheduler.schedule_seat_verification_email(slot.id, seat.id)
-      assert :ok = MeetingScheduler.schedule_seat_verification_email(slot.id, seat.id, 2)
+      assert :ok = SeatScheduler.schedule_seat_verification_email(slot.id, seat.id)
+      assert :ok = SeatScheduler.schedule_seat_verification_email(slot.id, seat.id)
+      assert :ok = SeatScheduler.schedule_seat_verification_email(slot.id, seat.id, 2)
 
       sends = all_enqueued(worker: EmailWorker) |> Enum.map(& &1.args["send"]) |> Enum.sort()
       assert sends == [1, 2]

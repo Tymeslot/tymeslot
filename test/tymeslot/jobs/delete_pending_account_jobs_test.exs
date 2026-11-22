@@ -17,6 +17,7 @@ defmodule Tymeslot.Jobs.DeletePendingAccountJobsTest do
   defp reminder(meeting_id) do
     %{
       "action" => "send_reminder_emails",
+      "relevant_until" => nil,
       "meeting_id" => meeting_id,
       "reminder_value" => 1,
       "reminder_unit" => "hours"

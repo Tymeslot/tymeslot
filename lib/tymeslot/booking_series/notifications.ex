@@ -20,7 +20,7 @@ defmodule Tymeslot.BookingSeries.Notifications do
   sessions (`schedule_series_request/1`): one request to the host, one
   acknowledgement to the booker, and one expiry job at the deadline the
   sessions share. Its answer is one email too: the series confirmation once
-  approved, and the booker's `schedule_series_request_outcome/2` once
+  approved, and the booker's `schedule_series_request_outcome/3` once
   declined or expired (`Tymeslot.BookingSeries.Approval`).
 
   A session of its own changed later (rescheduled, cancelled) sends the
@@ -38,6 +38,7 @@ defmodule Tymeslot.BookingSeries.Notifications do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
+  alias Tymeslot.Notifications.Relevance
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SeriesAnnouncementWorker
   alias Tymeslot.Workers.VideoRoomWorker
@@ -86,7 +87,9 @@ defmodule Tymeslot.BookingSeries.Notifications do
 
     first_held = List.first(held)
 
-    with :ok <- EmailScheduler.schedule_series_request_emails(series.id),
+    relevant_until = if first_held, do: Relevance.approval_request(first_held)
+
+    with :ok <- EmailScheduler.schedule_series_request_emails(series.id, relevant_until),
          :ok <- schedule_series_nudge(series, first_held),
          :ok <- announce_series_request(series, held) do
       schedule_series_expiry(first_held)
@@ -117,21 +120,36 @@ defmodule Tymeslot.BookingSeries.Notifications do
 
   defp schedule_series_nudge(series, %Meeting{} = first_held) do
     case ApprovalJobs.nudge_at(first_held) do
-      nil -> :ok
-      send_at -> EmailScheduler.schedule_series_request_nudge(series.id, send_at)
+      nil ->
+        :ok
+
+      send_at ->
+        EmailScheduler.schedule_series_request_nudge(
+          series.id,
+          send_at,
+          Relevance.approval_request(first_held)
+        )
     end
   end
 
   @doc """
   Schedules the booker's one email saying their series request was
   declined or expired. The host, who declined it or let it lapse, is sent
-  nothing, as for a single request.
+  nothing, as for a single request. An expiry's email is dropped unsent once
+  it no longer matters (`Tymeslot.Notifications.Relevance.series_expiry/1`).
   """
-  @spec schedule_series_request_outcome(SeriesSchema.t(), :declined | :expired) ::
+  @spec schedule_series_request_outcome(SeriesSchema.t(), [Meeting.t()], :declined | :expired) ::
           :ok | {:error, term()}
-  def schedule_series_request_outcome(%SeriesSchema{id: series_id}, variant)
-      when variant in [:declined, :expired],
-      do: EmailScheduler.schedule_series_request_outcome(series_id, variant)
+  def schedule_series_request_outcome(%SeriesSchema{id: series_id}, released, :expired),
+    do:
+      EmailScheduler.schedule_series_request_outcome(
+        series_id,
+        :expired,
+        Relevance.series_expiry(released)
+      )
+
+  def schedule_series_request_outcome(%SeriesSchema{id: series_id}, _released, :declined),
+    do: EmailScheduler.schedule_series_request_outcome(series_id, :declined, nil)
 
   @doc """
   Queues the series confirmation emails, once the sessions' video rooms are

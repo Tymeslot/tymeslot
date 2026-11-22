@@ -18,6 +18,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
   attr :language_dropdown_open, :boolean, required: true
   attr :offered_locales, :list, default: nil
   attr :legal_links, :map, required: true
+
+  attr :booking_path, :string,
+    required: true,
+    doc: "the booking page to send the guest back to (`PathHandlers.meeting_booking_path/2`)"
+
   attr :meeting, :map, required: true
   attr :organizer_profile, :map, default: nil
   attr :loading, :boolean, required: true
@@ -121,7 +126,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                 <%= if @meeting_kept do %>
                   <div class="confirmation-actions centered">
                     <button
-                      phx-click={JS.navigate("/")}
+                      phx-click={JS.navigate(@booking_path)}
                       class="action-button-primary action-button-success"
                       type="button"
                     >

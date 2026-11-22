@@ -17,9 +17,11 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
   handler reads it from the participant when it sends.
   """
 
+  alias Tymeslot.Emails.EmailActions
   alias Tymeslot.Emails.EmailScheduler.Helpers
   alias Tymeslot.Jobs
   alias Tymeslot.MeetingTypes.Reminders
+  alias Tymeslot.Notifications.Relevance
   alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Workers.EmailWorker
 
@@ -274,7 +276,8 @@ defmodule Tymeslot.Emails.EmailScheduler.PollScheduler do
           "poll_id" => poll.id,
           "deadline_at" => deadline_arg(poll.deadline_at),
           "reminder_value" => value,
-          "reminder_unit" => unit
+          "reminder_unit" => unit,
+          "relevant_until" => EmailActions.relevant_until(Relevance.poll_deadline(poll))
         },
         scheduled_at: reminder_at,
         unique: unique_opts([:action, :poll_id, :deadline_at, :reminder_value, :reminder_unit])

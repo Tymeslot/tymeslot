@@ -386,6 +386,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       assert {:discard, "Meeting not found"} =
                perform_job(EmailWorker, %{
                  "action" => "send_reminder_emails",
+                 "relevant_until" => nil,
                  "meeting_id" => fake_id,
                  "reminder_value" => 1,
                  "reminder_unit" => "hours"
@@ -399,6 +400,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
       assert {:discard, "Meeting cancelled"} =
                perform_job(EmailWorker, %{
                  "action" => "send_reminder_emails",
+                 "relevant_until" => nil,
                  "meeting_id" => meeting.id,
                  "reminder_value" => 1,
                  "reminder_unit" => "hours"

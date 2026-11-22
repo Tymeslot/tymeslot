@@ -38,8 +38,9 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
   # under the lock too, and a room created for a location the meeting has left
   # is released rather than attached.
   #
-  # A Teams meeting placed on the booking's own calendar event (see
-  # `Tymeslot.Integrations.MeetingProvisioning.teams_room_placement/1`) is
+  # A room placed on the booking's own calendar event (a Teams meeting, or the
+  # Meet conference Google made for it; see
+  # `Tymeslot.Integrations.MeetingProvisioning.booking_room_placement/1`) is
   # that event, so its room id is the event id the meeting was read with. The
   # calendar queue can replace that event meanwhile
   # (`Tymeslot.Meetings.CalendarEventSync.replace/3`), and the room would then
@@ -111,8 +112,8 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
   # The room a losing concurrent creator made exists on the provider and
   # nothing in the database points at it, so it is released, unless it is the
   # very room that won (a provider that hands back the same room twice) or
-  # the booking's own calendar event: a Teams meeting placed on that event is
-  # the event, and releasing it would replace the booking's calendar entry.
+  # the booking's own calendar event: a room placed on that event is the
+  # event, and releasing it would replace the booking's calendar entry.
   defp release_duplicate(meeting, existing_meeting, video_room_attrs) do
     if releasable_duplicate?(video_room_attrs, existing_meeting, meeting) do
       Logger.info("Video room already attached by a concurrent writer; releasing this one",
@@ -139,9 +140,10 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
 
   defp releasable_duplicate?(_video_room_attrs, _existing_meeting, _meeting), do: false
 
-  # A Teams meeting placed on the booking's own calendar event is already on
-  # that event, which Graph shows with its join link. Rewriting the event to
-  # add the link would only mail the guest an update.
+  # A room placed on the booking's own calendar event is already on that
+  # event, which the calendar shows with its join link: a Teams meeting, or
+  # the Meet conference Google made for it. Rewriting the event to add the
+  # link would only mail a Teams guest an update.
   defp rides_booking_event?(%MeetingSchema{video_room_id: event_id, provider_event_id: event_id})
        when is_binary(event_id),
        do: true

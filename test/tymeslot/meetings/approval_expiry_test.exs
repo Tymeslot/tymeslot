@@ -142,7 +142,8 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
       :ok =
         MeetingScheduler.schedule_approval_nudge(
           meeting.id,
-          DateTime.add(DateTime.utc_now(:second), 12, :hour)
+          DateTime.add(DateTime.utc_now(:second), 12, :hour),
+          nil
         )
 
       {:ok, _declined} = Approval.decline(meeting, nil)
@@ -151,6 +152,104 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
         worker: EmailWorker,
         args: %{"action" => "send_booking_approval_nudge", "meeting_id" => meeting.id}
       )
+    end
+  end
+
+  describe "the time a release records" do
+    test "an expiry that runs long after the deadline is dated to the deadline" do
+      deadline = DateTime.add(DateTime.utc_now(:second), -90, :day)
+      start = DateTime.add(deadline, 1, :day)
+
+      meeting =
+        overdue_meeting(%{
+          approval_deadline_at: deadline,
+          start_time: start,
+          end_time: DateTime.add(start, 1, :hour)
+        })
+
+      assert {:ok, %{expired: 1}} = perform_job(ApprovalSweepWorker, %{})
+
+      expired = reload(meeting)
+      assert expired.status == :expired
+      assert DateTime.compare(expired.cancelled_at, deadline) == :eq
+      assert DateTime.compare(expired.approval_resolved_at, deadline) == :eq
+
+      # The meeting it asked for is long past, so the invitee is not told.
+      [outcome] = all_enqueued(worker: EmailWorker, args: %{"variant" => "expired"})
+      assert {:discard, "No longer relevant"} = perform_job(EmailWorker, outcome.args)
+    end
+
+    test "the expiry email of a meeting weeks ahead stays owed until it starts" do
+      start = DateTime.add(DateTime.utc_now(:second), 30, :day)
+      meeting = overdue_meeting(%{start_time: start, end_time: DateTime.add(start, 1, :hour)})
+
+      {:ok, _expired} = Approval.expire(meeting)
+
+      [outcome] = all_enqueued(worker: EmailWorker, args: %{"variant" => "expired"})
+      assert outcome.args["relevant_until"] == DateTime.to_iso8601(meeting.start_time)
+    end
+
+    test "the expiry email of a request due at its start stays owed for a week past it" do
+      start = DateTime.add(DateTime.utc_now(:second), -1, :hour)
+
+      meeting =
+        overdue_meeting(%{
+          start_time: start,
+          end_time: DateTime.add(start, 1, :hour),
+          approval_deadline_at: start
+        })
+
+      {:ok, _expired} = Approval.expire(meeting)
+
+      [outcome] = all_enqueued(worker: EmailWorker, args: %{"variant" => "expired"})
+      assert outcome.args["relevant_until"] == DateTime.to_iso8601(DateTime.add(start, 7, :day))
+    end
+
+    test "the expiry email of a booking moved back into the gate is owed however late" do
+      meeting =
+        overdue_meeting(%{
+          start_time: DateTime.add(DateTime.utc_now(:second), -30, :day),
+          end_time: DateTime.add(DateTime.utc_now(:second), -30 * 86_400 + 3600, :second),
+          first_announced_at: DateTime.add(DateTime.utc_now(:second), -60, :day)
+        })
+
+      {:ok, _expired} = Approval.expire(meeting)
+
+      [outcome] = all_enqueued(worker: EmailWorker, args: %{"variant" => "expired"})
+      assert outcome.args["relevant_until"] == nil
+    end
+
+    test "a decline email is owed however late" do
+      meeting = held_meeting()
+
+      {:ok, _declined} = Approval.decline(meeting, nil)
+
+      [outcome] = all_enqueued(worker: EmailWorker, args: %{"variant" => "declined"})
+      assert outcome.args["relevant_until"] == nil
+    end
+
+    test "an expiry run before its deadline is dated to when it ran, not to the future" do
+      meeting = held_meeting()
+      before = DateTime.utc_now(:second)
+
+      {:ok, expired} = Approval.expire(meeting)
+
+      assert DateTime.compare(expired.cancelled_at, before) != :lt
+      assert DateTime.compare(expired.cancelled_at, meeting.approval_deadline_at) == :lt
+    end
+
+    test "a decline is dated to when the host declined, however long after the deadline" do
+      meeting =
+        overdue_meeting(%{
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), -9, :day)
+        })
+
+      before = DateTime.utc_now(:second)
+
+      {:ok, declined} = Approval.decline(meeting, nil)
+
+      assert DateTime.compare(declined.cancelled_at, before) != :lt
+      assert declined.cancelled_at == declined.approval_declined_at
     end
   end
 

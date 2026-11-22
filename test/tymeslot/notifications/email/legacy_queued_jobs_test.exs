@@ -62,6 +62,7 @@ defmodule Tymeslot.Notifications.Email.LegacyQueuedJobsTest do
         job =
           insert_job(%{
             "action" => "send_booking_request_emails",
+            "relevant_until" => nil,
             "meeting_id" => meeting.id,
             unquote(flag) => true
           })
