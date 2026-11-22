@@ -25,10 +25,11 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
 
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.Payments.PaymentTransactionSchema
-  alias Tymeslot.Payments.StripeMock
   alias Tymeslot.Payments.SubscriptionInvoiceQueries
   alias Tymeslot.Payments.SubscriptionManagerMock
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.StripeWebhookFixtures
 
   setup :verify_on_exit!
@@ -118,13 +119,17 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
           subscription_id: "sub_paid_for"
         })
 
-      expect(StripeMock, :list_invoice_payments, fn %{
-                                                      payment: %{
-                                                        type: "payment_intent",
-                                                        payment_intent: "pi_1SfixtureRenewal"
-                                                      }
-                                                    } ->
-        {:ok, %{data: [%{invoice: "in_1SfixtureRenewal"}], has_more: false}}
+      StripeStub.expect(:list_invoice_payments, fn %{
+                                                     query: %{
+                                                       "payment" => %{
+                                                         "type" => "payment_intent",
+                                                         "payment_intent" => "pi_1SfixtureRenewal"
+                                                       }
+                                                     }
+                                                   } ->
+        StripeFixtures.list([
+          StripeFixtures.object("invoice_payment", %{"invoice" => "in_1SfixtureRenewal"})
+        ])
       end)
 
       body =

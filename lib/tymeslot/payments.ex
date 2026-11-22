@@ -6,6 +6,18 @@ defmodule Tymeslot.Payments do
 
   require Logger
 
+  alias Tymeslot.Integrations.Stripe
+
+  alias Tymeslot.Integrations.Stripe.{
+    BillingPortal,
+    Charges,
+    Client,
+    Customers,
+    Invoices,
+    Refunds,
+    Subscriptions
+  }
+
   alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
 
   alias Tymeslot.Payments.{
@@ -14,6 +26,7 @@ defmodule Tymeslot.Payments do
     CustomerLookup,
     DatabaseOperations,
     PaymentQueries,
+    PlatformBilling,
     SubscriptionFlow,
     SubscriptionInvoice,
     SubscriptionInvoices
@@ -23,7 +36,7 @@ defmodule Tymeslot.Payments do
 
   @type transaction :: PaymentTransaction.t()
   @type stripe_id :: String.t()
-  @type stripe_result :: {:ok, map()} | {:error, term()}
+  @type stripe_result :: Client.result()
 
   @doc """
   Verifies and processes one Stripe webhook delivery to `endpoint`
@@ -213,69 +226,78 @@ defmodule Tymeslot.Payments do
 
   @doc "Whether a Stripe platform API key is configured."
   @spec stripe_configured?() :: boolean()
-  def stripe_configured?, do: is_binary(Config.stripe_api_key())
+  defdelegate stripe_configured?, to: Stripe, as: :configured?
 
-  # Stripe API. Each function calls the configured provider (resolved per
-  # call, so a test's `:stripe_provider` override takes effect) and returns
-  # its `{:ok, map()} | {:error, term()}` unchanged. Params and opts are those
-  # of the matching `Tymeslot.Payments.Behaviours.StripeProvider` callback.
+  # Stripe API calls on the platform account, for callers outside Core. Each
+  # returns Stripe's object as Stripe sent it (a string-keyed map), or
+  # `{:error, %Tymeslot.Integrations.Stripe.Error{}}`, or
+  # `{:error, :missing_api_key}`. They exist only until those callers use
+  # `Tymeslot.Integrations.Stripe` and `Tymeslot.Payments.PlatformBilling`
+  # directly.
 
   @doc "Creates a Stripe customer from an email or a params map."
   @spec create_stripe_customer(String.t() | map()) :: stripe_result()
-  def create_stripe_customer(email_or_params),
-    do: Config.stripe_provider().create_customer(email_or_params)
+  defdelegate create_stripe_customer(email_or_params), to: PlatformBilling, as: :create_customer
 
   @doc "Deletes a Stripe customer."
   @spec delete_stripe_customer(String.t()) :: stripe_result()
-  def delete_stripe_customer(customer_id),
-    do: Config.stripe_provider().delete_customer(customer_id)
+  def delete_stripe_customer(customer_id), do: Customers.delete(customer_id, [])
 
   @doc "Creates a Stripe Checkout session in subscription mode."
   @spec create_stripe_subscription_checkout(map()) :: stripe_result()
-  def create_stripe_subscription_checkout(params),
-    do: Config.stripe_provider().create_checkout_session_for_subscription(params)
+  defdelegate create_stripe_subscription_checkout(params),
+    to: PlatformBilling,
+    as: :create_subscription_checkout
 
   @doc "Creates a Stripe billing portal session returning to `return_url`."
   @spec create_stripe_billing_portal_session(String.t(), String.t()) :: stripe_result()
   def create_stripe_billing_portal_session(customer_id, return_url),
-    do: Config.stripe_provider().create_billing_portal_session(customer_id, return_url)
+    do: BillingPortal.create_session(%{customer: customer_id, return_url: return_url}, [])
 
   @doc "Reads a Stripe subscription."
   @spec get_stripe_subscription(String.t()) :: stripe_result()
   def get_stripe_subscription(subscription_id),
-    do: Config.stripe_provider().get_subscription(subscription_id)
+    do: Subscriptions.retrieve(subscription_id, [])
 
   @doc "Lists one page of Stripe subscriptions."
   @spec list_stripe_subscriptions(map()) :: stripe_result()
-  def list_stripe_subscriptions(params),
-    do: Config.stripe_provider().list_subscriptions(params)
+  def list_stripe_subscriptions(params), do: Subscriptions.list(params, [])
 
   @doc "Cancels a Stripe subscription, now or at period end per `opts`."
   @spec cancel_stripe_subscription(String.t(), keyword()) :: stripe_result()
-  def cancel_stripe_subscription(subscription_id, opts),
-    do: Config.stripe_provider().cancel_subscription(subscription_id, opts)
+  defdelegate cancel_stripe_subscription(subscription_id, opts),
+    to: PlatformBilling,
+    as: :cancel_subscription
 
-  @doc "Withdraws a pending period-end cancellation of a Stripe subscription."
+  @doc """
+  Withdraws a pending period-end cancellation of a Stripe subscription. Sent
+  without a stable idempotency key: setting the flag is idempotent by itself.
+  """
   @spec resume_stripe_subscription(String.t()) :: stripe_result()
   def resume_stripe_subscription(subscription_id),
-    do: Config.stripe_provider().resume_subscription(subscription_id)
+    do: Subscriptions.update(subscription_id, %{cancel_at_period_end: false}, [])
 
   @doc "Turns Stripe automatic tax on or off for a subscription."
   @spec set_stripe_subscription_automatic_tax(String.t(), boolean()) :: stripe_result()
   def set_stripe_subscription_automatic_tax(subscription_id, enabled),
-    do: Config.stripe_provider().update_subscription_automatic_tax(subscription_id, enabled)
+    do: Subscriptions.update(subscription_id, %{automatic_tax: %{enabled: enabled}}, [])
 
   @doc "Lists one page of Stripe invoices."
   @spec list_stripe_invoices(map()) :: stripe_result()
-  def list_stripe_invoices(params), do: Config.stripe_provider().list_invoices(params)
+  def list_stripe_invoices(params), do: Invoices.list(params, [])
 
   @doc "Lists one page of Stripe charges."
   @spec list_stripe_charges(map()) :: stripe_result()
-  def list_stripe_charges(params), do: Config.stripe_provider().list_charges(params)
+  def list_stripe_charges(params), do: Charges.list(params, [])
 
-  @doc "Creates a Stripe refund; `opts` carries the `:idempotency_key`."
+  @doc """
+  Creates a Stripe refund. `opts` must carry the `:idempotency_key`: one
+  refund is one decision, and only the caller knows when a repeat is the same
+  decision.
+  """
   @spec create_stripe_refund(map(), keyword()) :: stripe_result()
-  def create_stripe_refund(params, opts), do: Config.stripe_provider().create_refund(params, opts)
+  def create_stripe_refund(params, opts),
+    do: Refunds.create(params, idempotency_key: Keyword.fetch!(opts, :idempotency_key))
 
   @doc """
   Whether `user_id`'s outgoing material carries the free-tier "Tymeslot"

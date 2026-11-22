@@ -53,6 +53,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.Refunds
   alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Payments.ChargeInvoice
   alias Tymeslot.Payments.Config
@@ -60,7 +61,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   alias Tymeslot.Payments.PubSub
   alias Tymeslot.Payments.SubscriptionInvoices
   alias Tymeslot.Payments.Webhooks.WebhookUtils
-  alias Tymeslot.Utils.MapKeys
 
   # Stripe statuses of a subscription that still exists and bills, or can
   # resume billing. A refund only revokes one of these: an incomplete or
@@ -275,7 +275,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @spec calculate_total_refunded(map()) :: non_neg_integer()
   def calculate_total_refunded(charge) do
     # First try to get from amount_refunded (most reliable)
-    case MapKeys.get(charge, :amount_refunded) do
+    case charge["amount_refunded"] do
       amount when is_integer(amount) and amount > 0 ->
         amount
 
@@ -288,7 +288,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   end
 
   defp refund_amount(refund) do
-    case MapKeys.get(refund, :amount) do
+    case refund["amount"] do
       amount when is_integer(amount) and amount > 0 -> amount
       _amount_other -> 0
     end
@@ -305,7 +305,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   def calculate_latest_refund_amount(charge) do
     case latest_refund(charge) do
       nil -> calculate_total_refunded(charge)
-      refund -> MapKeys.get(refund, :amount) || calculate_total_refunded(charge)
+      refund -> refund["amount"] || calculate_total_refunded(charge)
     end
   end
 
@@ -313,7 +313,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @doc false
   @spec get_charge_amount(map()) :: non_neg_integer()
   def get_charge_amount(charge) do
-    MapKeys.get(charge, :amount) || 0
+    charge["amount"] || 0
   end
 
   # Sends the refund email unless the app already announced this refund
@@ -349,7 +349,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   # the event does not record it.
   defp refunded_by_event(event, charge) do
     previous = get_in(event, ["data", "previous_attributes", "amount_refunded"])
-    current = MapKeys.get(charge, :amount_refunded)
+    current = charge["amount_refunded"]
 
     if is_integer(previous) and is_integer(current) and current > previous,
       do: current - previous,
@@ -359,18 +359,15 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   defp candidate_refunds(charge, nil), do: charge_refunds(charge)
 
   defp candidate_refunds(charge, delta),
-    do: charge |> charge_refunds() |> Enum.filter(&(MapKeys.get(&1, :amount) == delta))
+    do: charge |> charge_refunds() |> Enum.filter(&(&1["amount"] == delta))
 
   # A webhook charge carries its refunds only at older API versions, so when
   # they are missing they are read from Stripe. An unreadable list is no
   # candidates, which sends the email.
   defp charge_refunds(charge) do
     with [] <- get_refunds(charge),
-         {:ok, %{data: refunds}} when is_list(refunds) <-
-           Config.stripe_provider().list_refunds(%{
-             charge: charge["id"],
-             limit: @refunds_read_per_charge
-           }) do
+         {:ok, %{"data" => refunds}} when is_list(refunds) <-
+           Refunds.list(%{charge: charge["id"], limit: @refunds_read_per_charge}, []) do
       refunds
     else
       [_first | _rest] = refunds ->
@@ -390,25 +387,20 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     newest =
       candidates
       |> Enum.reject(&customer_notified?/1)
-      |> Enum.max_by(&(MapKeys.get(&1, :created) || 0), fn -> %{} end)
+      |> Enum.max_by(&(&1["created"] || 0), fn -> %{} end)
 
-    MapKeys.get(newest, :amount) || calculate_latest_refund_amount(charge)
+    newest["amount"] || calculate_latest_refund_amount(charge)
   end
 
   defp customer_notified?(refund),
-    do: MapKeys.get(MapKeys.get(refund, :metadata) || %{}, :customer_notified) == "true"
+    do: get_in(refund, ["metadata", "customer_notified"]) == "true"
 
   defp latest_refund(charge),
-    do: Enum.max_by(get_refunds(charge), &(MapKeys.get(&1, :created) || 0), fn -> nil end)
+    do: Enum.max_by(get_refunds(charge), &(&1["created"] || 0), fn -> nil end)
 
   # The list of individual refunds sits one level below the charge, under
-  # "refunds"/"data" (or their atom-keyed equivalents).
-  defp get_refunds(charge) do
-    case MapKeys.get(charge, :refunds) do
-      nil -> []
-      refunds -> MapKeys.get(refunds, :data) || []
-    end
-  end
+  # "refunds"/"data".
+  defp get_refunds(charge), do: get_in(charge, ["refunds", "data"]) || []
 
   # Calculates the refund percentage.
   @doc false
@@ -439,12 +431,12 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     Application.get_env(:tymeslot, :refund_revocation_threshold_percent, 90.0)
   end
 
-  # Extracts the currency from a charge object, supporting both string and atom keys.
-  # Defaults to "eur" when the field is absent.
+  # Extracts the currency from a charge object, defaulting to "eur" when the
+  # field is absent.
   @doc false
   @spec extract_charge_currency(map()) :: String.t()
   def extract_charge_currency(charge) do
-    MapKeys.get(charge, :currency) || "eur"
+    charge["currency"] || "eur"
   end
 
   defp send_refund_email(subscription, refund_amount_cents, access, charge) do

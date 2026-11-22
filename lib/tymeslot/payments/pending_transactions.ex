@@ -5,7 +5,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
 
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Payments.Config
+  alias Tymeslot.Integrations.Stripe.CheckoutSessions
   alias Tymeslot.Payments.PaymentQueries
   alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
 
@@ -48,7 +48,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
   end
 
   defp expire_checkout_session_if_present(%{stripe_id: "cs_" <> _rest = session_id}) do
-    case Config.stripe_provider().expire_checkout_session(session_id) do
+    case CheckoutSessions.expire(session_id, []) do
       {:ok, _session} ->
         :ok
 

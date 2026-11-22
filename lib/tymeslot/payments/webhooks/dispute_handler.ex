@@ -17,6 +17,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.Charges
   alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Payments.{Config, PaymentQueries, PubSub}
   alias Tymeslot.Workers.SendConfiguredEmail
@@ -215,7 +216,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   end
 
   defp fetch_charge(charge_id) do
-    case stripe_provider().get_charge(charge_id) do
+    case Charges.retrieve(charge_id, []) do
       {:ok, charge} ->
         {:ok, charge}
 
@@ -229,9 +230,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     end
   end
 
-  defp get_charge_customer_id(charge) do
-    Map.get(charge, "customer") || Map.get(charge, :customer)
-  end
+  defp get_charge_customer_id(charge), do: charge["customer"]
 
   # Stripe API 2025-03-31.basil omits the invoice and subscription references
   # from a charge, so a subscription charge cannot be recognised by them.
@@ -241,11 +240,8 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   # subscription manager (standalone) there is nothing to forward to, and
   # every dispute stays on the local path.
   defp subscription_charge?(charge) do
-    invoice = Map.get(charge, "invoice") || Map.get(charge, :invoice)
-    subscription = Map.get(charge, "subscription") || Map.get(charge, :subscription)
-
     cond do
-      invoice || subscription -> true
+      charge["invoice"] || charge["subscription"] -> true
       is_nil(Config.subscription_manager()) -> false
       true -> is_nil(find_user_by_customer(get_charge_customer_id(charge)))
     end
@@ -352,9 +348,5 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   # `runtime.exs`), and an overlay that wants a different address sets that one.
   defp get_admin_email do
     Application.get_env(:tymeslot, :admin_alert_email)
-  end
-
-  defp stripe_provider do
-    Config.stripe_provider()
   end
 end

@@ -346,6 +346,17 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
       )
     end
 
+    test "an event from the other mode is acknowledged and skipped" do
+      with_config(:tymeslot, stripe_secret_key: "sk_live_x")
+      account = live_connection()
+
+      assert {:ok, :processed} = deliver(:connect, restricting_update(account, false))
+
+      reloaded = Repo.get!(ConnectAccountSchema, account.id)
+      assert reloaded.charges_enabled
+      assert is_nil(reloaded.last_account_event_at)
+    end
+
     test "a test-mode account update on live keys leaves a live connection alone" do
       with_config(:stripity_stripe, api_key: "sk_live_platform")
       account = live_connection()

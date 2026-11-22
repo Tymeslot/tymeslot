@@ -45,9 +45,9 @@ defmodule Tymeslot.Payments.Webhooks.Ingress do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe
   alias Tymeslot.Integrations.Stripe.WebhookSignature
   alias Tymeslot.MeetingPayments.Webhooks.WebhookRegistry, as: ConnectRegistry
-  alias Tymeslot.Payments.Config
   alias Tymeslot.Payments.Webhooks.Idempotency
   alias Tymeslot.Payments.Webhooks.WebhookRegistry, as: PlatformRegistry
 
@@ -180,12 +180,8 @@ defmodule Tymeslot.Payments.Webhooks.Ingress do
     {:error, :permanent, :invalid_event}
   end
 
-  defp other_mode?(%{"livemode" => livemode}) when is_boolean(livemode) do
-    case Config.stripe_api_key() do
-      key when is_binary(key) -> livemode != String.contains?(key, "_live_")
-      nil -> false
-    end
-  end
+  defp other_mode?(%{"livemode" => livemode}) when is_boolean(livemode),
+    do: Stripe.configured?() and livemode != Stripe.live_mode?()
 
   defp other_mode?(_event), do: false
 

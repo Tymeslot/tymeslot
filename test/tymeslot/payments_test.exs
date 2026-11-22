@@ -6,7 +6,9 @@ defmodule Tymeslot.PaymentsTest do
   alias Tymeslot.Factory
   alias Tymeslot.Payments
   alias Tymeslot.Payments.PaymentTransactionSchema
+  alias Tymeslot.Payments.SubscriptionManagerMock
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
 
   describe "initiate_subscription/7" do
     test "successfully initiates subscription" do
@@ -129,6 +131,37 @@ defmodule Tymeslot.PaymentsTest do
                  user_id: user.id,
                  status: :pending
                )
+    end
+  end
+
+  describe "initiate_subscription/7 with a malformed checkout session" do
+    test "a checkout session without a url is an error, not a crash" do
+      user = Factory.insert(:user)
+      set_subscription_manager(SubscriptionManagerMock)
+
+      Mox.stub(SubscriptionManagerMock, :create_subscription_checkout, fn _price,
+                                                                          _prod,
+                                                                          _amt,
+                                                                          _uid,
+                                                                          _email,
+                                                                          _urls,
+                                                                          _meta ->
+        {:ok,
+         StripeFixtures.without(StripeFixtures.object("checkout_session_subscription"), ["url"])}
+      end)
+
+      assert {:error, :missing_checkout_url} =
+               Payments.initiate_subscription(
+                 "price_123",
+                 "Pro Plan",
+                 1500,
+                 user.id,
+                 "test@example.com",
+                 %{success: "https://s", cancel: "https://c"}
+               )
+
+      assert %{status: :failed, metadata: %{"subscription_checkout_failed" => true}} =
+               Repo.get_by(PaymentTransactionSchema, user_id: user.id)
     end
   end
 
