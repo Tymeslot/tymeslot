@@ -16,6 +16,7 @@ defmodule TymeslotWeb.BookingPageReturnLinksTest do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
+  alias Ecto.UUID
   alias Tymeslot.BookingPages
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -129,5 +130,10 @@ defmodule TymeslotWeb.BookingPageReturnLinksTest do
     cancel |> element("[data-testid='keep-meeting']") |> render_click()
 
     assert click_navigation(cancel, "button", "Done") == "/ben"
+  end
+
+  test "an unknown meeting sends the guest to the host's booking page", %{conn: conn} do
+    assert {:error, {:redirect, %{to: "/ben", flash: %{"error" => _message}}}} =
+             live(conn, ~p"/ben/meeting/#{UUID.generate()}/cancel-confirmed")
   end
 end

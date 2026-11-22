@@ -96,10 +96,10 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
   end
 
   describe "not-found handling" do
-    test "an unknown token redirects to / without crashing", %{conn: conn} do
+    test "an unknown token redirects to the host's booking page", %{conn: conn} do
       %{profile: profile} = seed_booking_account("1", "unknown-token-host", "Etc/UTC")
 
-      assert {:error, {:redirect, %{to: "/"}}} =
+      assert {:error, {:redirect, %{to: "/unknown-token-host"}}} =
                live(conn, poll_path(profile.username, "does-not-exist"))
     end
 
@@ -111,7 +111,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       insert(:poll_time_slot, poll: other_poll)
 
       # The token is real, but it belongs to owner-host, not viewer-host.
-      assert {:error, {:redirect, %{to: "/"}}} =
+      assert {:error, {:redirect, %{to: "/viewer-host"}}} =
                live(conn, poll_path(viewer.username, other_poll.token))
     end
   end

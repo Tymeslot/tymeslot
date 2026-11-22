@@ -223,12 +223,12 @@ defmodule TymeslotWeb.Themes.Core.SeriesManagement do
 
   @doc """
   The redirect for a series link that leads nowhere, as a meeting link's:
-  to the home page, with the reason.
+  to the booking page of the host `profile` the link names, with the reason.
   """
-  @spec not_found_redirect(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def not_found_redirect(socket) do
+  @spec not_found_redirect(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def not_found_redirect(socket, %{username: username}) do
     socket
     |> put_flash(:error, not_found_message())
-    |> redirect(to: "/")
+    |> redirect(to: "/" <> username)
   end
 end
