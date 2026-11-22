@@ -101,6 +101,22 @@ defmodule Tymeslot.Migrations.DateExpiredMeetingsToTheirDeadlineTest do
       assert column(meeting, "approval_resolved_at") == ~U[2026-08-20 12:00:00Z]
     end
 
+    # An approval keeps the deadline and stamps `approval_resolved_at`, so
+    # only the missing `cancelled_at` tells this row from an approval expiry.
+    test "leaves an approved booking whose checkout later expired undated" do
+      meeting =
+        meeting!(:expired,
+          approval_deadline_at: ~U[2026-08-20 12:00:00Z],
+          approval_resolved_at: ~U[2026-08-19 08:00:00Z],
+          cancelled_at: nil
+        )
+
+      MigrationRunner.replay!(@version)
+
+      assert cancelled_at(meeting) == nil
+      assert column(meeting, "approval_resolved_at") == ~U[2026-08-19 08:00:00Z]
+    end
+
     test "leaves a declined request at the time the host declined" do
       meeting =
         meeting!(:cancelled,
@@ -143,6 +159,38 @@ defmodule Tymeslot.Migrations.DateExpiredMeetingsToTheirDeadlineTest do
 
       assert cancelled_at(meeting) == ~U[2026-11-17 18:00:00Z]
     end
+  end
+
+  test "running up/0 a second time changes nothing" do
+    meetings = [
+      meeting!(:expired,
+        reschedule_requested_at: ~U[2026-07-14 09:00:00Z],
+        start_time: ~U[2026-08-13 09:00:00Z],
+        cancelled_at: @swept_at
+      ),
+      meeting!(:expired,
+        approval_deadline_at: ~U[2026-08-20 12:00:00Z],
+        approval_resolved_at: @swept_at,
+        cancelled_at: @swept_at
+      ),
+      meeting!(:expired,
+        verification_deadline_at: ~U[2026-11-14 10:00:00Z],
+        cancelled_at: ~U[2026-11-16 03:05:00Z]
+      )
+    ]
+
+    before = dates(meetings)
+    MigrationRunner.replay!(@version)
+    once = dates(meetings)
+    MigrationRunner.replay!(@version)
+
+    assert once != before
+    assert dates(meetings) == once
+  end
+
+  defp dates(meetings) do
+    for meeting <- meetings,
+        do: {cancelled_at(meeting), column(meeting, "approval_resolved_at")}
   end
 
   # Written past the schema deliberately: an expired meeting's dates are not

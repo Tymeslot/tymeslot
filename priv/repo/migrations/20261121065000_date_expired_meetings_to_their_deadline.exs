@@ -18,9 +18,13 @@ defmodule Tymeslot.Repo.Migrations.DateExpiredMeetingsToTheirDeadline do
       window is read from the same config key, as the release loads its
       configuration before migrating.
     * **A booking request nobody approved**: `expired` with
-      `approval_resolved_at` and `approval_deadline_at` set and no decline. An
-      approval clears the deadline, so a meeting approved and later ended
-      some other way is not caught.
+      `approval_resolved_at`, `approval_deadline_at` and `cancelled_at` set,
+      no decline and no reschedule request. An approval keeps the deadline
+      and stamps `approval_resolved_at` too, so those two alone would also
+      match a meeting approved and expired later some other way; the other
+      guards rule each of those out. A lapsed reschedule request leaves
+      `reschedule_requested_at` set (the first kind), and a checkout never
+      completed expires the meeting without stamping `cancelled_at`.
     * **A booking nobody verified**: `expired` with a
       `verification_deadline_at`, never verified and never through the
       approval gate.
