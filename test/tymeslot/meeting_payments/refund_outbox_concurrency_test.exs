@@ -172,6 +172,21 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxConcurrencyTest do
     assert %{refunded_amount_cents: 2_000, status: :partially_refunded} = Repo.reload!(payment)
   end
 
+  test "two rows settling one Stripe refund: the second is refused, not raised",
+       %{payment: payment} do
+    first = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
+    second = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
+
+    attrs = %{
+      status: :succeeded,
+      stripe_refund_id: "re_ONE",
+      settled_at: DateTime.utc_now(:second)
+    }
+
+    assert {:ok, _settled} = RefundQueries.settle(first, attrs)
+    assert {:error, :stripe_refund_taken} = RefundQueries.settle(second, attrs)
+  end
+
   defp expire_lease(refund) do
     past = DateTime.add(DateTime.utc_now(:second), -3_600, :second)
 

@@ -134,10 +134,11 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
   and clears its lease, whichever attempt holds it: money Stripe moved
   stands however it was learnt of, so a refund settled `failed` is settled
   again, its failure code cleared. A refund already `succeeded` is left
-  alone and returns `{:error, :not_pending}`.
+  alone and returns `{:error, :not_pending}`, and a Stripe refund another
+  row holds `{:error, :stripe_refund_taken}`.
   """
   @spec settle(RefundSchema.t(), map()) ::
-          {:ok, RefundSchema.t()} | {:error, :not_pending | Changeset.t()}
+          {:ok, RefundSchema.t()} | {:error, :not_pending | :stripe_refund_taken | Changeset.t()}
   def settle(%RefundSchema{id: id} = refund, attrs) do
     made = from(r in RefundSchema, where: r.id == ^id and r.status in [:pending, :failed])
     settle_where(made, refund, attrs, failure_code: nil)
@@ -165,14 +166,26 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
           |> Keyword.merge(Map.to_list(changes))
           |> Keyword.merge(executing_until: nil, updated_at: changes.settled_at)
 
-        case Repo.update_all(from(r in query, select: r), set: set) do
-          {1, [settled]} -> {:ok, settled}
-          {0, []} -> {:error, :not_pending}
-        end
+        update_settled(from(r in query, select: r), set)
 
       invalid ->
         {:error, invalid}
     end
+  end
+
+  # A Stripe refund already on another row (two rows adopting one refund)
+  # is refused rather than raised, so the attempt is retried and finds it
+  # recorded.
+  defp update_settled(query, set) do
+    case Repo.update_all(query, set: set) do
+      {1, [settled]} -> {:ok, settled}
+      {0, []} -> {:error, :not_pending}
+    end
+  rescue
+    error in Postgrex.Error ->
+      if match?(%{postgres: %{code: :unique_violation}}, error),
+        do: {:error, :stripe_refund_taken},
+        else: reraise(error, __STACKTRACE__)
   end
 
   defp claimed_by(%RefundSchema{id: id, attempt: attempt}),

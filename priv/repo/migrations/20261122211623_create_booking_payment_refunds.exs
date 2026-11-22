@@ -41,6 +41,9 @@ defmodule Tymeslot.Repo.Migrations.CreateBookingPaymentRefunds do
       # An idempotency key the refund was already sent under elsewhere,
       # used for its first attempt in place of the row's own.
       add :legacy_idempotency_key, :string
+      # When the key could first have been sent, so when Stripe may stop
+      # keeping it (24 hours on). Set exactly when the key is.
+      add :legacy_since, :utc_datetime_usec
       add :requested_by_user_id, references(:users, on_delete: :nilify_all)
       # Single-flight lease: while in the future, one executor is attempting
       # the refund and no other may.
@@ -65,6 +68,10 @@ defmodule Tymeslot.Repo.Migrations.CreateBookingPaymentRefunds do
 
     create constraint(:booking_payment_refunds, :status_known,
              check: "status IN ('pending', 'succeeded', 'failed')"
+           )
+
+    create constraint(:booking_payment_refunds, :legacy_key_dated,
+             check: "(legacy_idempotency_key IS NULL) = (legacy_since IS NULL)"
            )
 
     create constraint(:booking_payment_refunds, :source_known,

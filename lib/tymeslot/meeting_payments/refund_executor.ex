@@ -27,10 +27,13 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     5. Asks Stripe for the refund under the attempt's own key
        (`IdempotencyKey.for_intent(:refund, id, attempt)`), so a later
        attempt never replays an error Stripe stored against an earlier key.
-       The first attempt of a refund carrying a `legacy_idempotency_key`
-       replays that key with the request first sent under it, which carried
-       no refund id; adoption then knows such a refund by its payment and
-       amount.
+       A refund carrying a `legacy_idempotency_key` replays that key, with
+       the request first sent under it (which named no refund row), on
+       every attempt until 24 hours after `legacy_since`, while Stripe may
+       keep it: steps 4 and the last attempt's rule do not apply then. From
+       then on it is attempted as any other, from its first attempt on, and
+       step 4 also adopts a refund of its payment and amount made since
+       `legacy_since` and recorded on no row.
     6. Settles by the outcome (`RefundOutcome`): a refund Stripe accepted
        is added to the payment's refunded total in one short transaction
        under the payment's lock, which also enqueues the attendee's email;
@@ -58,6 +61,9 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
 
   # One page; a booking payment sees nowhere near this many refunds.
   @list_limit 100
+
+  # How long Stripe keeps an idempotency key.
+  @legacy_key_kept_seconds 24 * 60 * 60
 
   # What a refund's source reports a status change as.
   @status_change_reasons %{
@@ -224,13 +230,32 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     end
   end
 
+  # A legacy key is replayed for as long as Stripe may keep it, the last
+  # attempt included: the replay can only return the one refund made under
+  # that key, or make it if none was, so it never adds a refund a later
+  # attempt could not account for, and Stripe's answer is authoritative.
+  # Once the key may be gone, the row is attempted as any other, looking
+  # first for a refund the key made.
   defp outcome(refund, payment, opts) do
     cond do
-      opts[:last_attempt] -> adopt(refund, payment, fn -> {:failed, "retries_exhausted"} end)
-      refund.attempt == 1 -> created(refund, payment, opts)
-      true -> adopt(refund, payment, fn -> created(refund, payment, opts) end)
+      legacy_key_kept?(refund) ->
+        refund |> create(payment, opts) |> RefundOutcome.classify()
+
+      opts[:last_attempt] ->
+        adopt(refund, payment, fn -> {:failed, "retries_exhausted"} end)
+
+      refund.attempt == 1 and is_nil(refund.legacy_idempotency_key) ->
+        created(refund, payment, opts)
+
+      true ->
+        adopt(refund, payment, fn -> created(refund, payment, opts) end)
     end
   end
+
+  defp legacy_key_kept?(%RefundSchema{legacy_since: %DateTime{} = since}),
+    do: DateTime.diff(DateTime.utc_now(), since, :second) < @legacy_key_kept_seconds
+
+  defp legacy_key_kept?(_refund), do: false
 
   defp adopt(refund, payment, when_not_made) do
     case made_earlier(refund, payment) do
@@ -262,28 +287,22 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
   end
 
   # A refund carries the id of the row it was made for, except one sent
-  # under a legacy key, which is known by its payment and amount instead.
-  # Many refunds of a payment can share an amount (a series refunded
-  # session by session), so a legacy one is taken only while it is on no
-  # other row and Stripe's refunded total for the charge holds money not
-  # yet recorded here to cover it.
+  # under a legacy key, which is known by its payment and amount instead:
+  # one made no earlier than the key could have been sent, and recorded on
+  # no row yet, since a payment can have many refunds of one amount (a
+  # series refunded session by session).
   defp made_for?(%{"metadata" => %{"tymeslot_refund_id" => id}}, refund, _payment),
     do: id == refund.id
 
   defp made_for?(%{"metadata" => %{"booking_payment_id" => payment_id}} = made, refund, payment)
        when is_binary(refund.legacy_idempotency_key) do
     payment_id == payment.id and made["amount"] == refund.amount_cents and
-      unrecorded_cents(made, payment) >= refund.amount_cents and
+      is_integer(made["created"]) and
+      made["created"] >= DateTime.to_unix(refund.legacy_since) and
       is_nil(RefundQueries.by_stripe_refund_id(made["id"]))
   end
 
   defp made_for?(_made, _refund, _payment), do: false
-
-  defp unrecorded_cents(%{"charge" => %{"amount_refunded" => total}}, payment)
-       when is_integer(total),
-       do: total - RefundedTotal.stripe_refunded_cents(payment)
-
-  defp unrecorded_cents(_made, _payment), do: 0
 
   defp create(refund, payment, opts) do
     {params, key} = request(refund, payment)
@@ -297,11 +316,16 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
 
   # Stripe refuses a key reused with different params, so a legacy key is
   # sent with the request first made under it, which named no refund row.
-  defp request(%RefundSchema{attempt: 1, legacy_idempotency_key: key} = refund, payment)
-       when is_binary(key),
-       do: {stripe_params(payment, refund.amount_cents, refund.reason), key}
+  defp request(%RefundSchema{legacy_idempotency_key: key} = refund, payment)
+       when is_binary(key) do
+    if legacy_key_kept?(refund),
+      do: {stripe_params(payment, refund.amount_cents, refund.reason), key},
+      else: attempt_request(refund, payment)
+  end
 
-  defp request(%RefundSchema{id: id, attempt: attempt} = refund, payment) do
+  defp request(refund, payment), do: attempt_request(refund, payment)
+
+  defp attempt_request(%RefundSchema{id: id, attempt: attempt} = refund, payment) do
     params =
       payment
       |> stripe_params(refund.amount_cents, refund.reason)

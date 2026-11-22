@@ -19,6 +19,7 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
   alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Repo
   alias Tymeslot.StripeFixtures
@@ -224,117 +225,6 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
       assert %{status: :succeeded, attempt: 2} = RefundQueries.get(refund.id)
     end
 
-    test "a legacy key is replayed with its original request, naming no refund row",
-         %{payment: payment} do
-      refund =
-        insert(:booking_payment_refund,
-          booking_payment: payment,
-          amount_cents: 2_000,
-          legacy_idempotency_key: "late_payment_refund:#{payment.id}:late:2000"
-        )
-
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LEGACY"))
-
-      assert {:ok, %{status: :succeeded}} = Refunds.execute(refund, [])
-
-      assert [%{form: form, headers: headers}] = StripeStub.requests(:create_refund)
-      assert headers["idempotency-key"] == "late_payment_refund:#{payment.id}:late:2000"
-      refute Map.has_key?(form["metadata"], "tymeslot_refund_id")
-      assert form["metadata"]["booking_payment_id"] == payment.id
-    end
-
-    test "a legacy refund Stripe made under its old key is adopted, not made again",
-         %{payment: payment} do
-      refund =
-        insert(:booking_payment_refund,
-          booking_payment: payment,
-          amount_cents: 2_000,
-          legacy_idempotency_key: "late_payment_refund:#{payment.id}:late:2000"
-        )
-
-      StripeStub.expect(:create_refund, {:error_fixture, "idempotency_error"})
-
-      assert {:pending, _refund} = Refunds.execute(refund, [])
-
-      old =
-        StripeFixtures.object("refund_with_charge", %{
-          "id" => "re_OLD",
-          "amount" => 2_000,
-          "metadata" => %{"booking_payment_id" => payment.id},
-          "charge" => %{"amount_refunded" => 2_000}
-        })
-
-      other_amount =
-        StripeFixtures.object("refund", %{
-          "id" => "re_OTHER_AMOUNT",
-          "amount" => 1_000,
-          "metadata" => %{"booking_payment_id" => payment.id}
-        })
-
-      StripeStub.expect(:list_refunds, StripeFixtures.list([other_amount, old]))
-
-      assert :ok = perform_job(ExecuteRefund, %{refund_id: refund.id})
-
-      assert [_only_the_first] = StripeStub.requests(:create_refund)
-      assert %{status: :succeeded, stripe_refund_id: "re_OLD"} = RefundQueries.get(refund.id)
-      assert %{refunded_amount_cents: 2_000} = Repo.reload!(payment)
-    end
-
-    test "a legacy refund already recorded on another row is not adopted again",
-         %{payment: payment} do
-      payment =
-        Repo.update!(
-          Changeset.change(payment, status: :partially_refunded, refunded_amount_cents: 2_000)
-        )
-
-      insert(:booking_payment_refund,
-        booking_payment: payment,
-        amount_cents: 2_000,
-        status: :succeeded,
-        stripe_refund_id: "re_RECORDED"
-      )
-
-      refund =
-        insert(:booking_payment_refund,
-          booking_payment: payment,
-          amount_cents: 2_000,
-          attempt: 1,
-          legacy_idempotency_key: "host_refund:#{payment.id}:2000:2000"
-        )
-
-      # Stripe's total leaves 2_000 unrecorded, but the only refund that
-      # could be this one is another row's.
-      recorded = legacy_refund("re_RECORDED", payment, amount_refunded: 4_000)
-      StripeStub.expect(:list_refunds, StripeFixtures.list([recorded]))
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_FRESH", 2_000))
-
-      assert {:ok, %{stripe_refund_id: "re_FRESH"}} = Refunds.execute(refund, [])
-    end
-
-    test "a legacy refund Stripe's total has no unrecorded money for is not adopted",
-         %{payment: payment} do
-      payment =
-        Repo.update!(
-          Changeset.change(payment, status: :partially_refunded, refunded_amount_cents: 2_000)
-        )
-
-      refund =
-        insert(:booking_payment_refund,
-          booking_payment: payment,
-          amount_cents: 2_000,
-          attempt: 1,
-          legacy_idempotency_key: "host_refund:#{payment.id}:2000:2000"
-        )
-
-      # A refund recorded before rows existed: Stripe's total holds nothing more.
-      earlier = legacy_refund("re_EARLIER", payment, amount_refunded: 2_000)
-      StripeStub.expect(:list_refunds, StripeFixtures.list([earlier]))
-      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_FRESH", 2_000))
-
-      assert {:ok, %{stripe_refund_id: "re_FRESH"}} = Refunds.execute(refund, [])
-      assert %{refunded_amount_cents: 4_000} = Repo.reload!(payment)
-    end
-
     test "a refund whose charge Stripe refuses to list for good fails and alerts",
          %{payment: payment} do
       refund = insert(:booking_payment_refund, booking_payment: payment, attempt: 1)
@@ -399,13 +289,174 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
     end
   end
 
-  defp legacy_refund(id, payment, amount_refunded: total) do
+  defp legacy_refund(id, payment, created_at) do
     StripeFixtures.object("refund_with_charge", %{
       "id" => id,
       "amount" => 2_000,
+      "created" => DateTime.to_unix(created_at),
       "metadata" => %{"booking_payment_id" => payment.id},
-      "charge" => %{"amount_refunded" => total}
+      "charge" => %{"amount_refunded" => 2_000}
     })
+  end
+
+  describe "a refund with a legacy key" do
+    setup %{payment: payment} do
+      %{key: "late_payment_refund:#{payment.id}:late:2000", now: DateTime.utc_now()}
+    end
+
+    test "is replayed with its original request, naming no refund row, while Stripe keeps it",
+         %{payment: payment, key: key, now: now} do
+      refund =
+        insert(:booking_payment_refund,
+          booking_payment: payment,
+          amount_cents: 2_000,
+          legacy_idempotency_key: key,
+          legacy_since: now
+        )
+
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LEGACY"))
+
+      assert {:ok, %{status: :succeeded}} = Refunds.execute(refund, [])
+
+      assert [%{form: form, headers: headers}] = StripeStub.requests(:create_refund)
+      assert headers["idempotency-key"] == key
+      refute Map.has_key?(form["metadata"], "tymeslot_refund_id")
+      assert form["metadata"]["booking_payment_id"] == payment.id
+    end
+
+    test "is replayed again after an ambiguous attempt, even once the webhook recorded it",
+         %{payment: payment, key: key, now: now} do
+      refund =
+        insert(:booking_payment_refund,
+          booking_payment: payment,
+          amount_cents: 2_000,
+          legacy_idempotency_key: key,
+          legacy_since: now
+        )
+
+      first_attempt = :counters.new(1, [])
+
+      StripeStub.stub(:create_refund, fn request ->
+        :counters.add(first_attempt, 1, 1)
+
+        if :counters.get(first_attempt, 1) <= 3,
+          do: {:transport_error, :timeout},
+          else: StripeStubResponses.refund(request, "re_LEGACY")
+      end)
+
+      assert {:pending, _refund} = Refunds.execute(refund, [])
+
+      # `charge.refunded` records the refund Stripe made meanwhile.
+      payment =
+        Repo.update!(
+          Changeset.change(payment, status: :partially_refunded, refunded_amount_cents: 2_000)
+        )
+
+      assert :ok = perform_job(ExecuteRefund, %{refund_id: refund.id})
+
+      assert StripeStub.requests(:list_refunds) == []
+      keys = Enum.map(StripeStub.requests(:create_refund), & &1.headers["idempotency-key"])
+      assert Enum.uniq(keys) == [key]
+      assert %{status: :succeeded, stripe_refund_id: "re_LEGACY"} = RefundQueries.get(refund.id)
+      assert %{refunded_amount_cents: 2_000} = Repo.reload!(payment)
+    end
+
+    test "once Stripe may have dropped the key, adopts the refund it made since",
+         %{payment: payment, key: key, now: now} do
+      since = DateTime.add(now, -25, :hour)
+
+      refund =
+        insert(:booking_payment_refund,
+          booking_payment: payment,
+          amount_cents: 2_000,
+          legacy_idempotency_key: key,
+          legacy_since: since
+        )
+
+      made = legacy_refund("re_MADE_SINCE", payment, DateTime.add(since, 60, :second))
+      StripeStub.expect(:list_refunds, StripeFixtures.list([made]))
+
+      assert {:ok, %{stripe_refund_id: "re_MADE_SINCE"}} = Refunds.execute(refund, [])
+      assert StripeStub.requests(:create_refund) == []
+    end
+
+    test "once Stripe may have dropped the key, a refund made before it is not adopted",
+         %{payment: payment, key: key, now: now} do
+      since = DateTime.add(now, -25, :hour)
+
+      refund =
+        insert(:booking_payment_refund,
+          booking_payment: payment,
+          amount_cents: 2_000,
+          legacy_idempotency_key: key,
+          legacy_since: since
+        )
+
+      older = legacy_refund("re_OLDER", payment, DateTime.add(since, -1, :second))
+      StripeStub.expect(:list_refunds, StripeFixtures.list([older]))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_FRESH"))
+
+      assert {:ok, %{stripe_refund_id: "re_FRESH"}} = Refunds.execute(refund, [])
+    end
+
+    test "once Stripe may have dropped the key, a refund already on a row is not adopted",
+         %{payment: payment, key: key, now: now} do
+      since = DateTime.add(now, -25, :hour)
+
+      insert(:booking_payment_refund,
+        booking_payment: payment,
+        amount_cents: 2_000,
+        status: :succeeded,
+        stripe_refund_id: "re_RECORDED"
+      )
+
+      refund =
+        insert(:booking_payment_refund,
+          booking_payment: payment,
+          amount_cents: 2_000,
+          legacy_idempotency_key: key,
+          legacy_since: since
+        )
+
+      recorded = legacy_refund("re_RECORDED", payment, DateTime.add(since, 60, :second))
+      StripeStub.expect(:list_refunds, StripeFixtures.list([recorded]))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_FRESH"))
+
+      assert {:ok, %{stripe_refund_id: "re_FRESH"}} = Refunds.execute(refund, [])
+    end
+
+    test "once Stripe may have dropped the key, with nothing to adopt, is made under the attempt's key",
+         %{payment: payment, key: key, now: now} do
+      refund =
+        insert(:booking_payment_refund,
+          booking_payment: payment,
+          amount_cents: 2_000,
+          legacy_idempotency_key: key,
+          legacy_since: DateTime.add(now, -25, :hour)
+        )
+
+      StripeStub.expect(:list_refunds, StripeFixtures.list([]))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_FRESH"))
+
+      assert {:ok, %{stripe_refund_id: "re_FRESH"}} = Refunds.execute(refund, [])
+
+      assert [%{form: form, headers: headers}] = StripeStub.requests(:create_refund)
+      assert headers["idempotency-key"] == "tymeslot:refund:#{refund.id}:1"
+      assert form["metadata"]["tymeslot_refund_id"] == refund.id
+    end
+
+    test "is refused without the time it could first have been sent", %{payment: payment} do
+      changeset =
+        RefundSchema.request_changeset(%RefundSchema{}, %{
+          booking_payment_id: payment.id,
+          amount_cents: 2_000,
+          source: :late_payment,
+          legacy_idempotency_key: "late_payment_refund:x"
+        })
+
+      refute changeset.valid?
+      assert changeset.errors[:legacy_since]
+    end
   end
 
   describe "execute/2" do

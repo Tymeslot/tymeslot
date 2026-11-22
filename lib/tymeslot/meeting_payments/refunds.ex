@@ -135,8 +135,10 @@ defmodule Tymeslot.MeetingPayments.Refunds do
       decided under the lock; any other is `{:error, :not_found}`. Recorded
       as who asked.
     * `:reason`: the Stripe `reason` param.
-    * `:legacy_idempotency_key`: the key the refund's first attempt is sent
-      under, for a refund already sent under one elsewhere.
+    * `:legacy_idempotency_key` and `:legacy_since`, given together: a key
+      the refund may already have been sent under elsewhere, and when it
+      could first have been. The attempts replay it while Stripe keeps it
+      (`RefundExecutor`).
     * `:schedule_in` (default #{@safety_delay_seconds}): seconds until the
       job runs; `:enqueue_now` runs it at once, for a caller that does not
       make the refund itself.
@@ -150,6 +152,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
         :host_user_id,
         :reason,
         :legacy_idempotency_key,
+        :legacy_since,
         :schedule_in,
         enqueue_now: false
       ])
@@ -214,7 +217,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
         source: source,
         reason: opts[:reason],
         requested_by_user_id: opts[:host_user_id],
-        legacy_idempotency_key: opts[:legacy_idempotency_key]
+        legacy_idempotency_key: opts[:legacy_idempotency_key],
+        legacy_since: opts[:legacy_since]
       })
 
     schedule_in =

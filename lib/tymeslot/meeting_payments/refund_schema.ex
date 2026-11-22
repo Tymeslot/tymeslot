@@ -44,6 +44,7 @@ defmodule Tymeslot.MeetingPayments.RefundSchema do
           failure_code: String.t() | nil,
           reason: String.t() | nil,
           legacy_idempotency_key: String.t() | nil,
+          legacy_since: DateTime.t() | nil,
           requested_by_user_id: integer() | nil,
           executing_until: DateTime.t() | nil,
           settled_at: DateTime.t() | nil,
@@ -62,6 +63,7 @@ defmodule Tymeslot.MeetingPayments.RefundSchema do
     field :failure_code, :string
     field :reason, :string
     field :legacy_idempotency_key, :string
+    field :legacy_since, :utc_datetime_usec
     field :requested_by_user_id, :integer
     field :executing_until, :utc_datetime
     field :settled_at, :utc_datetime
@@ -83,14 +85,30 @@ defmodule Tymeslot.MeetingPayments.RefundSchema do
       :source,
       :reason,
       :legacy_idempotency_key,
+      :legacy_since,
       :requested_by_user_id
     ])
     |> validate_required([:booking_payment_id, :amount_cents, :source])
     |> validate_number(:amount_cents, greater_than: 0)
     |> validate_inclusion(:source, @requestable_sources)
+    |> validate_legacy_key_dated()
     |> foreign_key_constraint(:booking_payment_id)
     |> foreign_key_constraint(:requested_by_user_id)
     |> check_constraint(:amount_cents, name: :amount_positive)
+  end
+
+  # A legacy key is replayed only while Stripe may still keep it, which is
+  # reckoned from when it could first have been sent.
+  defp validate_legacy_key_dated(changeset) do
+    keyed? = not is_nil(get_field(changeset, :legacy_idempotency_key))
+    dated? = not is_nil(get_field(changeset, :legacy_since))
+
+    changeset =
+      if keyed? == dated?,
+        do: changeset,
+        else: add_error(changeset, :legacy_since, "must be set exactly when a legacy key is")
+
+    check_constraint(changeset, :legacy_since, name: :legacy_key_dated)
   end
 
   @doc "The end of a refund: `succeeded` with Stripe's refund id, or `failed` with a code."
