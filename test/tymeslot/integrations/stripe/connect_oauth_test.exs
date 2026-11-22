@@ -1,6 +1,6 @@
-defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
+defmodule Tymeslot.Integrations.Stripe.ConnectOAuthTest do
   @moduledoc """
-  The live Stripe Connect OAuth calls, driven through the real HTTP
+  The Stripe Connect OAuth calls, driven through the real HTTP
   transport. Stripe's token endpoint is not idempotent: consuming a code
   twice revokes the connection, so every failure must make exactly one
   request.
@@ -9,7 +9,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
 
   @moduletag :payments
 
-  alias Tymeslot.MeetingPayments.StripeAdapter.Stripity
+  alias Tymeslot.Integrations.Stripe.ConnectOAuth
   alias Tymeslot.Test.LogCapture
 
   @platform_key "sk_test_platform_key"
@@ -41,11 +41,11 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
     counter
   end
 
-  describe "exchange_oauth_code/1" do
+  describe "exchange_code/1" do
     test "a failed exchange makes exactly one request" do
       counter = counting_stub(fn conn -> json(conn, 500, %{"error" => "api_error"}) end)
 
-      assert {:error, :oauth_failed} = Stripity.exchange_oauth_code("ac_CODE")
+      assert {:error, :oauth_failed} = ConnectOAuth.exchange_code("ac_CODE")
       assert :counters.get(counter, 1) == 1
     end
 
@@ -53,7 +53,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
       counter =
         counting_stub(fn conn -> ReqTest.transport_error(conn, :timeout) end)
 
-      assert {:error, :oauth_failed} = Stripity.exchange_oauth_code("ac_CODE")
+      assert {:error, :oauth_failed} = ConnectOAuth.exchange_code("ac_CODE")
       assert :counters.get(counter, 1) == 1
     end
 
@@ -77,7 +77,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
         })
       end)
 
-      assert Stripity.exchange_oauth_code("ac_CODE") == {:ok, %{stripe_user_id: "acct_X"}}
+      assert ConnectOAuth.exchange_code("ac_CODE") == {:ok, %{stripe_user_id: "acct_X"}}
 
       assert_received {:request, "POST", "connect.stripe.com", "/oauth/token", auth, form}
       assert auth == expected_auth()
@@ -93,7 +93,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
           })
         end)
 
-      assert {:error, :invalid_grant} = Stripity.exchange_oauth_code("ac_CODE")
+      assert {:error, :invalid_grant} = ConnectOAuth.exchange_code("ac_CODE")
       assert :counters.get(counter, 1) == 1
     end
 
@@ -107,7 +107,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
       results =
         for {label, responder} <- bodies do
           ReqTest.stub(:tymeslot_http, responder)
-          {label, Stripity.exchange_oauth_code("ac_CODE")}
+          {label, ConnectOAuth.exchange_code("ac_CODE")}
         end
 
       assert Enum.reject(results, fn {_label, result} -> result == {:error, :oauth_failed} end) ==
@@ -124,7 +124,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
           |> Conn.send_resp(307, "")
         end)
 
-      assert {:error, :oauth_failed} = Stripity.exchange_oauth_code("ac_CODE")
+      assert {:error, :oauth_failed} = ConnectOAuth.exchange_code("ac_CODE")
       assert :counters.get(counter, 1) == 1
     end
 
@@ -159,7 +159,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
 
       for responder <- responders do
         ReqTest.stub(:tymeslot_http, responder)
-        Stripity.exchange_oauth_code("ac_LEAKY_CODE")
+        ConnectOAuth.exchange_code("ac_LEAKY_CODE")
       end
 
       events = LogCapture.drain()
@@ -176,7 +176,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
         json(conn, 400, %{"error" => "invalid_grant", "error_description" => "ac_CODE gone"})
       end)
 
-      Stripity.exchange_oauth_code("ac_CODE")
+      ConnectOAuth.exchange_code("ac_CODE")
 
       event = LogCapture.await_log("Stripe OAuth request was not accepted")
 
@@ -188,7 +188,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
       LogCapture.attach(logger_level: :debug)
       ReqTest.stub(:tymeslot_http, fn conn -> ReqTest.transport_error(conn, :timeout) end)
 
-      Stripity.exchange_oauth_code("ac_CODE")
+      ConnectOAuth.exchange_code("ac_CODE")
 
       event = LogCapture.await_log("Stripe OAuth request failed")
 
@@ -197,7 +197,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
     end
   end
 
-  describe "deauthorize_account/1" do
+  describe "deauthorize/1" do
     test "revoking posts the client ID and account" do
       test_pid = self()
 
@@ -213,7 +213,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
         json(conn, 200, %{"stripe_user_id" => "acct_X"})
       end)
 
-      assert :ok = Stripity.deauthorize_account("acct_X")
+      assert :ok = ConnectOAuth.deauthorize("acct_X")
 
       assert_received {:request, "POST", "connect.stripe.com", "/oauth/deauthorize", auth, form}
       assert auth == expected_auth()
@@ -228,7 +228,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
         })
       end)
 
-      assert {:error, :not_connected} = Stripity.deauthorize_account("acct_X")
+      assert {:error, :not_connected} = ConnectOAuth.deauthorize("acct_X")
     end
 
     test "a refusal for a platform-controlled account is controlled_account" do
@@ -236,7 +236,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
         json(conn, 400, %{"error" => "no_deauth_on_controlled_account"})
       end)
 
-      assert {:error, :controlled_account} = Stripity.deauthorize_account("acct_X")
+      assert {:error, :controlled_account} = ConnectOAuth.deauthorize("acct_X")
 
       ReqTest.stub(:tymeslot_http, fn conn ->
         json(conn, 401, %{
@@ -245,7 +245,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
         })
       end)
 
-      assert {:error, :controlled_account} = Stripity.deauthorize_account("acct_X")
+      assert {:error, :controlled_account} = ConnectOAuth.deauthorize("acct_X")
     end
 
     test "invalid_client for any other reason is oauth_failed" do
@@ -256,7 +256,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
         })
       end)
 
-      assert {:error, :oauth_failed} = Stripity.deauthorize_account("acct_X")
+      assert {:error, :oauth_failed} = ConnectOAuth.deauthorize("acct_X")
     end
 
     test "a 200 for a different account is oauth_failed" do
@@ -264,23 +264,23 @@ defmodule Tymeslot.MeetingPayments.StripeAdapterOauthHttpTest do
         json(conn, 200, %{"stripe_user_id" => "acct_OTHER"})
       end)
 
-      assert {:error, :oauth_failed} = Stripity.deauthorize_account("acct_X")
+      assert {:error, :oauth_failed} = ConnectOAuth.deauthorize("acct_X")
 
       ReqTest.stub(:tymeslot_http, fn conn -> json(conn, 200, %{}) end)
-      assert {:error, :oauth_failed} = Stripity.deauthorize_account("acct_X")
+      assert {:error, :oauth_failed} = ConnectOAuth.deauthorize("acct_X")
     end
 
     test "a transport error makes exactly one request" do
       counter = counting_stub(fn conn -> ReqTest.transport_error(conn, :timeout) end)
 
-      assert {:error, :oauth_failed} = Stripity.deauthorize_account("acct_X")
+      assert {:error, :oauth_failed} = ConnectOAuth.deauthorize("acct_X")
       assert :counters.get(counter, 1) == 1
     end
 
     test "any other failure is oauth_failed" do
       ReqTest.stub(:tymeslot_http, fn conn -> json(conn, 500, %{"error" => "api_error"}) end)
 
-      assert {:error, :oauth_failed} = Stripity.deauthorize_account("acct_X")
+      assert {:error, :oauth_failed} = ConnectOAuth.deauthorize("acct_X")
     end
   end
 end
