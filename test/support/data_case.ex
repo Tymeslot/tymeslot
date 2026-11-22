@@ -57,8 +57,10 @@ defmodule Tymeslot.DataCase do
 
     # Safe Stripe fallback: meeting-payments handlers backfill
     # stripe_charge_id by retrieving the payment intent. Tests that don't
-    # care about the backfill get a benign no-charge response so the handler
-    # logs a warning and continues without crashing.
+    # care about the backfill get a benign no-charge response, which
+    # `ChargeBackfill` reads as `:charge_not_available`: a checkout completed
+    # under it enqueues a `BackfillCharge` job (not run, as Oban is manual
+    # in test, unless the test drains the `:payments` queue).
     StripeStub.stub(
       :retrieve_payment_intent,
       StripeFixtures.object("payment_intent_with_latest_charge", %{

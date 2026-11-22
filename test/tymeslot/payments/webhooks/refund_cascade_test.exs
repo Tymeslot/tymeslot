@@ -262,6 +262,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       assert {:error, :retry_later, {:refunds_unreadable, %Error{type: "api_connection_error"}}} =
                RefundHandler.handle(with_object(refunded_event(), charge))
 
+      refute_received %{event: :charge_refunded}
       Oban.drain_queue(queue: :emails)
       refute_received {:refund_email, _user_id, _amount, _currency, _access}
     end

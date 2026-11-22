@@ -225,6 +225,16 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       "Tymeslot from the account's authorised apps in the Stripe dashboard"
   end
 
+  def format_message(:connect_event_unmatched, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Stripe event #{get.(:event_type)} #{get.(:event_id)} from account " <>
+      "#{get.(:stripe_account_id)} was acknowledged without a booking match: its payment " <>
+      "intent #{get.(:payment_intent_id)} could not be read (#{reason_text(metadata)}). " <>
+      "Any refund or dispute on charge #{get.(:charge_id)} is not recorded in Tymeslot; " <>
+      "check the charge in the Stripe dashboard"
+  end
+
   def format_message(:subscription_withdrawal_unfinished, metadata) do
     user_id = Map.get(metadata, :user_id, "unknown")
     withdrawal_id = Map.get(metadata, :withdrawal_id, "unknown")

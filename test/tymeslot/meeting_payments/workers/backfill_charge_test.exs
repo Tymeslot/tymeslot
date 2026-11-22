@@ -87,8 +87,27 @@ defmodule Tymeslot.MeetingPayments.Workers.BackfillChargeTest do
       payment = paid_payment()
       StripeStub.stub(:retrieve_payment_intent, {:error_fixture, "resource_missing"})
 
-      assert {:cancel, %StripeError{code: "resource_missing"}} =
-               perform_job(BackfillCharge, args(payment))
+      log =
+        capture_log(fn ->
+          assert {:cancel, %StripeError{code: "resource_missing"}} =
+                   perform_job(BackfillCharge, args(payment))
+        end)
+
+      assert log =~ "refused by Stripe"
+    end
+
+    test "a charge id the row refuses cancels the job" do
+      insert(:booking_payment, stripe_charge_id: "ch_TAKEN")
+      payment = paid_payment()
+      StripeStub.stub(:retrieve_payment_intent, intent(%{"id" => "ch_TAKEN"}))
+
+      log =
+        capture_log(fn ->
+          assert {:cancel, %Ecto.Changeset{}} = perform_job(BackfillCharge, args(payment))
+        end)
+
+      assert log =~ "could not store the charge id"
+      assert Repo.reload!(payment).stripe_charge_id == nil
     end
 
     test "a timeout is retried" do

@@ -42,6 +42,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.DedupKey do
     late_payment_refund_failed: {:booking_payment_id, "unknown"},
     # One alert per account: two accounts failing must not collapse into one.
     connect_revocation_failed: {:stripe_account_id, "unknown"},
+    # A refused key or a revoked account fails every event from that
+    # account alike: one alert per account, not one per event.
+    connect_event_unmatched: {:stripe_account_id, "unknown"},
     # Each unfinished withdrawal is a host owed a refund or a cancellation,
     # so one alert per withdrawal.
     subscription_withdrawal_unfinished: {:withdrawal_id, "unknown"},

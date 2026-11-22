@@ -8,6 +8,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
   # event arrives from it, as Stripe delivers them for a genuine booking.
   @account "acct_TEST_HOST"
 
+  import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.Stripe.Error, as: StripeError
@@ -233,6 +234,37 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
 
       assert :ok = ChargeRefunded.handle(event)
       assert Repo.reload!(bp).refunded_amount_cents == 0
+    end
+
+    # A redelivery would be refused the same way for as long as Stripe keeps
+    # trying, so the event is acknowledged and an admin told it went unrecorded.
+    test "a refused intent lookup is acknowledged with one admin alert", %{bp: bp, event: event} do
+      capture_admin_alerts()
+
+      StripeStub.stub(
+        :retrieve_payment_intent,
+        {403,
+         %{
+           "error" => %{
+             "type" => "invalid_request_error",
+             "message" => "The provided key does not have access to account acct_TEST_HOST."
+           }
+         }}
+      )
+
+      assert :ok = ChargeRefunded.handle(event)
+      assert Repo.reload!(bp).refunded_amount_cents == 0
+
+      assert_received {:send_alert, :connect_event_unmatched, alert}
+
+      assert %{
+               event_id: "evt_BLIP",
+               charge_id: "ch_x",
+               payment_intent_id: "pi_x",
+               stripe_account_id: @account
+             } = alert
+
+      refute_received {:send_alert, _type, _alert}
     end
   end
 

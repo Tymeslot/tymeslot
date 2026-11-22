@@ -135,6 +135,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     schema
     |> cast(attrs, @castable -- @required_on_create)
     |> validate_refunded_bounds()
+    |> unique_constraint(:stripe_charge_id)
     |> check_constraint(:refunded_amount_cents, name: :refunded_amount_within_bounds)
     |> check_constraint(:disputed_lost_cents, name: :disputed_lost_within_refunded)
   end

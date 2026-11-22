@@ -12,7 +12,8 @@ defmodule Tymeslot.MeetingPayments.Workers.BackfillCharge do
 
   An intent with no charge yet (normal for delayed payment methods) and a
   Stripe failure a later attempt can get past are retried, over about four
-  hours (`backoff/1`); an intent Stripe refuses for good cancels the job.
+  hours (`backoff/1`); an intent Stripe refuses for good, or a charge id
+  the row refuses, cancels the job.
   The last failed attempt is logged as an error and raises no alert: the
   refund paths backfill the charge id again before they refund
   (`RefundLatePayment`, `SeriesHostRefund`).
@@ -73,7 +74,7 @@ defmodule Tymeslot.MeetingPayments.Workers.BackfillCharge do
         :ok
 
       payment ->
-        payment |> ChargeBackfill.backfill(intent_id) |> outcome() |> log_if_last(job)
+        payment |> ChargeBackfill.backfill(intent_id) |> outcome(id) |> log_if_last(job)
     end
   end
 
@@ -81,13 +82,38 @@ defmodule Tymeslot.MeetingPayments.Workers.BackfillCharge do
   def backoff(%Oban.Job{attempt: attempt}),
     do: Backoff.exponential(attempt, @base_backoff_seconds, @max_backoff_seconds)
 
-  defp outcome({:ok, _payment}), do: :ok
-  defp outcome({:error, :missing_payment_intent}), do: {:cancel, :missing_payment_intent}
+  defp outcome({:ok, _payment}, _id), do: :ok
+  defp outcome({:error, :missing_payment_intent}, _id), do: {:cancel, :missing_payment_intent}
 
-  defp outcome({:error, %StripeError{} = error}),
-    do: if(StripeError.retryable?(error), do: {:error, error}, else: {:cancel, error})
+  defp outcome({:error, %StripeError{} = error}, id) do
+    if StripeError.retryable?(error) do
+      {:error, error}
+    else
+      Logger.warning("Charge id backfill refused by Stripe, job cancelled",
+        booking_payment_id: id,
+        operation: error.operation,
+        status: error.status,
+        code: error.code,
+        request_id: error.request_id
+      )
 
-  defp outcome({:error, _reason} = error), do: error
+      {:cancel, error}
+    end
+  end
+
+  # Stripe gave the charge id but the row refused it (another payment holds
+  # the same charge id, say); every retry would read it again only to fail
+  # the same way.
+  defp outcome({:error, %Ecto.Changeset{} = changeset}, id) do
+    Logger.error("Charge id backfill could not store the charge id, job cancelled",
+      booking_payment_id: id,
+      reason: LogFormat.reason(changeset)
+    )
+
+    {:cancel, changeset}
+  end
+
+  defp outcome({:error, _reason} = error, _id), do: error
 
   defp log_if_last(
          {:error, reason} = result,

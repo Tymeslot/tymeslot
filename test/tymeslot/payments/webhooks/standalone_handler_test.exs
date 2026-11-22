@@ -74,6 +74,9 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
 
       event = %{"type" => "charge.refunded", "id" => "evt_124"}
 
+      # Without them on the charge, the refunds are read from Stripe.
+      StripeStub.expect(:list_refunds, StripeFixtures.list([]))
+
       assert {:ok, :refund_logged} = RefundHandler.handle(with_object(event, charge))
     end
 

@@ -46,6 +46,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     dunning_stalled: %{category: "Payment", severity: :error},
     late_payment_refund_failed: %{category: "Payment", severity: :error},
     connect_revocation_failed: %{category: "Payment", severity: :error},
+    connect_event_unmatched: %{category: "Payment", severity: :error},
     subscription_withdrawal_unfinished: %{category: "Payment", severity: :error},
     account_deletion_billing_sync_failed: %{category: "Payment", severity: :error},
     account_deletion_stalled: %{category: "Account", severity: :error},

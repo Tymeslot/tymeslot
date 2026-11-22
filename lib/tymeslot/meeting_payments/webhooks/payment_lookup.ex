@@ -11,9 +11,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
   creates the object, so a row is only returned when `event["account"]`
   equals the row's `stripe_account_id`. Anything else is logged and answered
   with `nil`, which the handlers acknowledge so Stripe stops retrying.
-  A Stripe failure while resolving the row is not a `nil`: it is returned
-  as `{:error, reason}`, which the handlers answer with `:retry_later`, so
-  Stripe redelivers the event rather than having it acknowledged unmatched.
+  A Stripe failure a later attempt can get past is not a `nil`: it is
+  returned as `{:error, reason}`, which the handlers answer with
+  `:retry_later`, so Stripe redelivers the event rather than having it
+  acknowledged unmatched.
 
   Checkout session events (`checkout.session.*`) resolve by:
 
@@ -35,13 +36,15 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
     3. `meeting_id` (or `series_id`) read from the PaymentIntent's metadata, the last resort
        for an event that races ahead of `checkout.session.completed`. It costs
        one Stripe API call and needs the connected-account id from the event.
-       An intent Stripe does not know on that account matches nothing; any
-       other failure of the call is the lookup's error.
+       A failure no retry can fix (an unknown intent, a refused or missing
+       key) matches nothing, with an admin alert, since the event then goes
+       unrecorded; any other failure of the call is the lookup's error.
   """
 
   require Logger
 
   alias Ecto.UUID
+  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.Integrations.Stripe.PaymentIntents
@@ -64,15 +67,16 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
   Resolves the row for a charge-based event, or `nil`. `charge_id` is the
   charge the event's object refers to (the object itself for a charge, its
   `charge` field for a dispute). `{:error, reason}` when the PaymentIntent
-  the last resort reads could not be read from Stripe.
+  the last resort reads could not be read from Stripe, for a reason a
+  redelivery may get past.
   """
   @spec find_for_charge(map(), String.t() | nil) ::
-          BookingPaymentSchema.t() | nil | {:error, StripeError.t() | :missing_api_key}
+          BookingPaymentSchema.t() | nil | {:error, StripeError.t()}
   def find_for_charge(%{"data" => %{"object" => object}} = event, charge_id) do
     intent_id = object["payment_intent"]
 
     case by_charge_id(charge_id) || by_payment_intent_id(intent_id) ||
-           by_metadata(intent_id, event["account"]) do
+           by_metadata(event, intent_id, charge_id) do
       {:error, _reason} = error -> error
       payment -> owned_by_event_account(payment, event)
     end
@@ -127,30 +131,52 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
 
   defp by_payment_intent_id(_intent_id), do: nil
 
-  defp by_metadata(intent_id, connect_account)
-       when is_binary(intent_id) and is_binary(connect_account) do
-    case PaymentIntents.retrieve(intent_id, %{}, connect_account: connect_account) do
+  defp by_metadata(%{"account" => account} = event, intent_id, charge_id)
+       when is_binary(intent_id) and is_binary(account) do
+    case PaymentIntents.retrieve(intent_id, %{}, connect_account: account) do
       {:ok, intent} ->
         intent |> reference_from_metadata() |> by_reference()
 
       {:error, reason} ->
-        unreadable_intent(intent_id, reason)
+        context = %{
+          event_id: event["id"],
+          event_type: event["type"],
+          charge_id: charge_id,
+          payment_intent_id: intent_id,
+          stripe_account_id: account
+        }
+
+        unreadable_intent(StripeError.retryable?(reason), reason, context)
     end
   end
 
-  defp by_metadata(_intent_id, _connect_account), do: nil
+  defp by_metadata(_event, _intent_id, _charge_id), do: nil
 
-  defp unreadable_intent(intent_id, reason) do
-    missing? = StripeError.resource_missing?(reason)
-
-    Logger.log(
-      if(missing?, do: :info, else: :warning),
-      "payment lookup: could not retrieve payment intent for metadata match",
-      payment_intent_id: intent_id,
-      reason: LogFormat.reason(reason)
+  defp unreadable_intent(true = _retryable, reason, context) do
+    Logger.warning(
+      "payment lookup: could not retrieve payment intent for metadata match, retrying",
+      Map.to_list(context) ++ [reason: LogFormat.reason(reason)]
     )
 
-    if missing?, do: nil, else: {:error, reason}
+    {:error, reason}
+  end
+
+  # The event is acknowledged, as redelivering it would fail the same way
+  # for the three days Stripe keeps trying, so whatever refund or dispute it
+  # carries is recorded only by hand.
+  defp unreadable_intent(false = _retryable, reason, context) do
+    Logger.error(
+      "payment lookup: payment intent unreadable for good, event acknowledged unmatched",
+      Map.to_list(context) ++ [reason: LogFormat.reason(reason)]
+    )
+
+    AdminAlerts.report(:connect_event_unmatched,
+      summary: "A Connect charge event could not be matched to a booking payment",
+      reason: reason,
+      context: context
+    )
+
+    nil
   end
 
   # A reference names the meeting a payment is for, or, prefixed, the series.
