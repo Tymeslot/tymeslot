@@ -9,6 +9,7 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxConcurrencyTest do
   @moduletag :integration
 
   import Ecto.Query, only: [from: 2]
+  import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.Factory
 
   alias Tymeslot.MeetingPayments.RefundQueries
@@ -18,6 +19,8 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxConcurrencyTest do
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
   alias Tymeslot.StripeStubResponses
+
+  setup :capture_admin_alerts
 
   setup do
     %{payment: insert(:paid_booking_payment, stripe_account_id: "acct_CONCURRENT")}
@@ -170,6 +173,11 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxConcurrencyTest do
              Task.await(first, 5_000)
 
     assert %{refunded_amount_cents: 2_000, status: :partially_refunded} = Repo.reload!(payment)
+
+    refund_id = refund.id
+
+    assert_received {:send_alert, :refund_failure_reversed,
+                     %{refund_id: ^refund_id, failure_code: "refund_failed"}}
   end
 
   test "two rows settling one Stripe refund: the second is refused, not raised",

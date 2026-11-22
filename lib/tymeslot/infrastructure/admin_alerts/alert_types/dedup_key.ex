@@ -45,6 +45,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.DedupKey do
     # A stuck refund is retried by a new job every four hours or so: one
     # alert per refund, not one per job.
     refund_stuck: {:refund_id, "unknown"},
+    # A refund is settled once succeeded, so it is reversed at most once.
+    refund_failure_reversed: {:refund_id, "unknown"},
     # One alert per account: two accounts failing must not collapse into one.
     connect_revocation_failed: {:stripe_account_id, "unknown"},
     # A refused key or a revoked account fails every event from that

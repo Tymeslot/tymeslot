@@ -36,6 +36,26 @@ defmodule Tymeslot.MeetingPayments.Refunds.FailureNotice do
   end
 
   @doc """
+  Reports `refund` to the admins as a `:refund_failure_reversed` alert: it
+  was settled failed with `failure_code` and reported, and has since been
+  recorded as made at Stripe, so that earlier alert no longer stands.
+  """
+  @spec reversed(RefundSchema.t(), String.t() | nil) :: :ok
+  def reversed(%RefundSchema{} = refund, failure_code) do
+    AdminAlerts.report(:refund_failure_reversed,
+      summary: "A refund reported as failed was made at Stripe after all",
+      context: %{
+        refund_id: refund.id,
+        booking_payment_id: refund.booking_payment_id,
+        stripe_refund_id: refund.stripe_refund_id,
+        failure_code: failure_code
+      }
+    )
+
+    :ok
+  end
+
+  @doc """
   Reports `refund` to the admins as a `:refund_stuck` alert: a job's last
   attempt left it pending, or Stripe refuses to list its charge's refunds.
   It is not failed, as Stripe may have made it, and

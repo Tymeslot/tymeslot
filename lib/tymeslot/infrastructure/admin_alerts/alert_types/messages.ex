@@ -224,6 +224,15 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       "Stripe dashboard"
   end
 
+  def format_message(:refund_failure_reversed, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Refund #{get.(:refund_id)} of booking payment #{get.(:booking_payment_id)}, reported " <>
+      "as failed (#{get.(:failure_code)}), was made at Stripe after all as " <>
+      "#{get.(:stripe_refund_id)} and is now recorded. The earlier failure alert is void: " <>
+      "the attendee has been refunded, so refund nothing by hand"
+  end
+
   def format_message(:refund_stuck, metadata) do
     get = &Map.get(metadata, &1, "unknown")
 

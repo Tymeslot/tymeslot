@@ -40,4 +40,22 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesRefundFailedTest do
       assert msg =~ "still pending after 9 attempts"
     end
   end
+
+  describe "the alert for a failed refund made after all" do
+    test ":refund_failure_reversed voids the failure alert and names the refund made" do
+      metadata = %{
+        refund_id: "rf_1",
+        booking_payment_id: "bp_1",
+        stripe_refund_id: "re_1",
+        failure_code: "retries_exhausted"
+      }
+
+      msg = AlertTypes.format_message(:refund_failure_reversed, metadata)
+
+      assert msg =~ "Refund rf_1 of booking payment bp_1"
+      assert msg =~ "(retries_exhausted)"
+      assert msg =~ "as re_1"
+      assert msg =~ "earlier failure alert is void"
+    end
+  end
 end

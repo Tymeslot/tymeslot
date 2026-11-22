@@ -388,7 +388,8 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     recorded =
       Repo.transaction(fn ->
         with {:ok, locked} <- BookingPaymentQueries.get_for_update(payment.id),
-             {:ok, settled} <- settle_made(refund, attrs),
+             prior = RefundQueries.get_for_update(refund.id),
+             {:ok, settled} <- RefundQueries.settle(refund, attrs),
              {:ok, _updated} <-
                record_refunded(
                  locked,
@@ -397,14 +398,18 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
                  Map.fetch!(@status_change_reasons, refund.source)
                ) do
           enqueue_refund_email(locked)
-          settled
+          {settled, prior}
         else
           {:error, reason} -> Repo.rollback(reason)
         end
       end)
 
     case recorded do
-      {:ok, settled} ->
+      {:ok, {settled, %RefundSchema{status: :failed} = failed}} ->
+        failure_reversed(failed, settled)
+        {:ok, settled}
+
+      {:ok, {settled, _pending}} ->
         {:ok, settled}
 
       {:error, :not_pending} ->
@@ -424,17 +429,16 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
   end
 
   # Money Stripe moved stands, even over a refund another attempt failed
-  # meanwhile; that failure has been reported, so the reversal is logged.
-  defp settle_made(refund, attrs) do
-    with %RefundSchema{status: :failed} = failed <- RefundQueries.get_for_update(refund.id) do
-      Logger.warning("Refund settled failed was made at Stripe after all; recording it",
-        refund_id: refund.id,
-        failure_code: failed.failure_code,
-        stripe_refund_id: attrs.stripe_refund_id
-      )
-    end
+  # meanwhile (`RefundQueries.settle/2`); that failure was reported, so its
+  # reversal is too, once committed.
+  defp failure_reversed(failed, settled) do
+    Logger.warning("Refund settled failed was made at Stripe after all; recorded",
+      refund_id: settled.id,
+      failure_code: failed.failure_code,
+      stripe_refund_id: settled.stripe_refund_id
+    )
 
-    RefundQueries.settle(refund, attrs)
+    FailureNotice.reversed(settled, failed.failure_code)
   end
 
   defp fail(claimed, code) do
