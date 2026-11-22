@@ -135,7 +135,7 @@ defmodule Tymeslot.BookingSeries.Automation do
         event_type
         |> ChannelFanout.dispatch(meeting,
           series: summary(series, meeting, sessions, occurrences),
-          relevant_until: relevant_until(event_type, Enum.map(sessions, &as_booking/1))
+          relevant_until: relevant_until(event_type, meeting, sessions)
         )
         |> retry_only_unchecked()
     end
@@ -182,9 +182,14 @@ defmodule Tymeslot.BookingSeries.Automation do
 
   # When a series event stops being worth a Telegram or Slack message, as for
   # its email (`Tymeslot.Notifications.Relevance`): this job can run late.
-  defp relevant_until(@requested, [first | _rest]), do: Relevance.approval_request(first)
-  defp relevant_until(@expired, sessions), do: Relevance.series_expiry(sessions)
-  defp relevant_until(_event_type, _sessions), do: nil
+  # Only an expiry reads every session, and turning a group seat into a
+  # booking costs a query, so only an expiry does it for all of them.
+  defp relevant_until(@requested, first, _sessions), do: Relevance.approval_request(first)
+
+  defp relevant_until(@expired, _first, sessions),
+    do: sessions |> Enum.map(&as_booking/1) |> Relevance.series_expiry()
+
+  defp relevant_until(_event_type, _first, _sessions), do: nil
 
   defp as_booking(%Meeting{} = meeting), do: meeting
   defp as_booking(%Participant{meeting: meeting} = seat), do: SeatView.at_event(meeting, seat)

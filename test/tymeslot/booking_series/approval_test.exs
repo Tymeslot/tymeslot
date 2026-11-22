@@ -268,7 +268,10 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
     assert length(deletes) == 3
 
     assert email_jobs("send_booking_request_outcome") == []
-    assert [_outcome] = email_jobs("send_series_request_outcome")
+
+    # A decline is owed however late it goes out.
+    assert [%{args: %{"variant" => "declined", "relevant_until" => nil}}] =
+             email_jobs("send_series_request_outcome")
 
     drain_emails()
     assert [declined] = sent_emails()
@@ -295,7 +298,13 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
 
     assert :ok = perform_job(ApprovalExpiryWorker, %{"meeting_id" => first.id})
     assert statuses() == [:expired, :expired, :expired]
-    assert [%{args: %{"variant" => "expired"}}] = email_jobs("send_series_request_outcome")
+
+    # Dropped unsent once the last session has started: three weekly
+    # sessions end later than a week past a deadline that just passed.
+    assert [%{args: %{"variant" => "expired", "relevant_until" => until}}] =
+             email_jobs("send_series_request_outcome")
+
+    assert until == DateTime.to_iso8601(List.last(meetings()).start_time)
 
     drain_emails()
     assert [expired] = sent_emails()
