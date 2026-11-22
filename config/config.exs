@@ -590,15 +590,27 @@ config :tymeslot, :calendar_providers, %{
   debug: [enabled: false]
 }
 
-# Pin the Stripe API version instead of inheriting stripity_stripe's built-in
-# default, which travels with the library: upgrading the dependency would move
-# the wire contract without any change here. This matches the version the
-# locked stripity_stripe generates its structs from; the consumers of the
+# Stripe API integration (`Tymeslot.Integrations.Stripe`), read at runtime.
+#
+# `api_version` pins the wire contract: every request names it, so Stripe never
+# moves the shape of what it returns behind our back. The consumers of the
 # fields that moved in 2025-03-31.basil (billing periods on subscription
-# items, invoice subscription reference under parent, charges without
-# invoice links) accept both the old and new shapes. Webhook payload shape
-# follows the endpoint version configured in the Stripe dashboard, not this
-# pin — keep the two in step.
+# items, invoice subscription reference under parent, charges without invoice
+# links) accept both the old and new shapes. Webhook payload shape follows the
+# endpoint version configured in the Stripe dashboard, not this pin; keep the
+# two in step.
+#
+# `retry_base_ms` is the first retry delay, `req_options` are merged into every
+# Req request, and `tag_requests` adds the operation name as a header for test
+# stubs.
+config :tymeslot, Tymeslot.Integrations.Stripe,
+  api_version: "2025-11-17.clover",
+  base_url: "https://api.stripe.com",
+  retry_base_ms: 250,
+  req_options: [],
+  tag_requests: false
+
+# Kept only for the stripity_stripe library until it is removed.
 config :stripity_stripe, api_version: "2025-11-17.clover"
 
 # Payment rate limiting configuration

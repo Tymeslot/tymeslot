@@ -23,7 +23,7 @@ defmodule Tymeslot.Integrations.Stripe.FormEncoder do
     end
   end
 
-  defp flatten(%{__struct__: _} = struct, path), do: unsupported(struct, path)
+  defp flatten(%{__struct__: _module} = struct, path), do: unsupported(struct, path)
 
   defp flatten(map, path) when is_map(map) do
     Enum.flat_map(map, fn {key, value} -> flatten(value, join(path, key)) end)
