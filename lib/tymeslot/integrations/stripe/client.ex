@@ -36,6 +36,7 @@ defmodule Tymeslot.Integrations.Stripe.Client do
   apart.
   """
 
+  alias Req.Finch, as: ReqFinch
   alias Tymeslot.Infrastructure.FinchPool
   alias Tymeslot.Integrations.Stripe
   alias Tymeslot.Integrations.Stripe.Error
@@ -129,7 +130,7 @@ defmodule Tymeslot.Integrations.Stripe.Client do
     else
       FinchPool.with_pool(settings[:base_url], connect_options, fn
         {:ok, finch} -> fun.(finch: finch)
-        :error -> fun.(finch: Req.Finch.pool_options(connect_options: connect_options))
+        :error -> fun.(finch: ReqFinch.pool_options(connect_options: connect_options))
       end)
     end
   end

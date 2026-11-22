@@ -14,6 +14,8 @@ defmodule Tymeslot.Integrations.Stripe.WebhookSignature do
   decide what time it is. Verify before decoding the body.
   """
 
+  alias Plug.Crypto
+
   @default_tolerance 300
 
   @type error :: :missing_header | :no_signatures | :timestamp_expired | :signature_mismatch
@@ -60,7 +62,7 @@ defmodule Tymeslot.Integrations.Stripe.WebhookSignature do
   end
 
   defp matches?(signatures, expected),
-    do: Enum.any?(signatures, &Plug.Crypto.secure_compare(&1, expected))
+    do: Enum.any?(signatures, &Crypto.secure_compare(&1, expected))
 
   defp parse(header) when is_binary(header) do
     pairs =

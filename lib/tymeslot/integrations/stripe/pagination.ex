@@ -14,8 +14,8 @@ defmodule Tymeslot.Integrations.Stripe.Pagination do
   @doc """
   A lazy stream of every object, one request per page, fetched as the stream is
   consumed. A failed page raises its `Tymeslot.Integrations.Stripe.Error` from
-  inside the stream (a missing key raises `ArgumentError`); `collect/3` is the
-  non-raising form.
+  inside the stream, and any other reason (such as `:missing_api_key`) raises
+  `ArgumentError`; `collect/3` is the non-raising form.
   """
   @spec stream((map(), keyword() -> {:ok, map()} | {:error, term()}), map(), keyword()) ::
           Enumerable.t()
@@ -32,13 +32,27 @@ defmodule Tymeslot.Integrations.Stripe.Pagination do
     )
   end
 
-  @doc "Every object as `{:ok, objects}`, or `{:error, error}` for the first failed page."
+  @doc """
+  Every object as `{:ok, objects}`, or `{:error, error}` for the first failed
+  page; `{:error, :missing_api_key}` when no key is configured.
+  """
   @spec collect((map(), keyword() -> {:ok, map()} | {:error, term()}), map(), keyword()) ::
-          {:ok, [map()]} | {:error, Error.t()}
+          {:ok, [map()]} | {:error, Error.t() | :missing_api_key}
   def collect(list_fun, params, opts) do
-    {:ok, list_fun |> stream(params, opts) |> Enum.to_list()}
+    {:ok, list_fun |> throwing_missing_key() |> stream(params, opts) |> Enum.to_list()}
   rescue
     error in Error -> {:error, error}
+  catch
+    :missing_api_key -> {:error, :missing_api_key}
+  end
+
+  defp throwing_missing_key(list_fun) do
+    fn params, opts ->
+      case list_fun.(params, opts) do
+        {:error, :missing_api_key} -> throw(:missing_api_key)
+        result -> result
+      end
+    end
   end
 
   defp fetch(list_fun, params, opts, cursor) do

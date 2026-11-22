@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Stripe.ResourcesTest do
   test "Connect calls pass Stripe-Account through opts" do
     capture()
 
-    assert {:ok, _} =
+    assert {:ok, _object} =
              Refunds.create(@params,
                api_key: "sk_test_x",
                connect_account: "acct_1",

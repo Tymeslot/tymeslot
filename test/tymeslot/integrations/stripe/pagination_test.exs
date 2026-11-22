@@ -75,6 +75,12 @@ defmodule Tymeslot.Integrations.Stripe.PaginationTest do
     assert {:error, %Error{status: 500}} = Pagination.collect(&Charges.list/2, %{}, @opts)
   end
 
+  test "collect returns :missing_api_key instead of raising" do
+    list_fun = fn _params, _opts -> {:error, :missing_api_key} end
+
+    assert {:error, :missing_api_key} = Pagination.collect(list_fun, %{}, [])
+  end
+
   test "stream raises the error when a page fails" do
     serve_pages(["ch_2"])
 

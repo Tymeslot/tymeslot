@@ -2,6 +2,7 @@
 defmodule Tymeslot.Integrations.Stripe.WebhookSignatureEquivalenceTest do
   use ExUnit.Case, async: true
 
+  alias Stripe.Webhook
   alias Tymeslot.Integrations.Stripe.WebhookSignature
 
   @moduletag :payments
@@ -51,8 +52,8 @@ defmodule Tymeslot.Integrations.Stripe.WebhookSignatureEquivalenceTest do
 
       theirs =
         match?(
-          {:ok, _},
-          Stripe.Webhook.construct_event(@body, header || "", @secret, 300, response_as: :raw)
+          {:ok, _event},
+          Webhook.construct_event(@body, header || "", @secret, 300, response_as: :raw)
         )
 
       assert ours == theirs,
