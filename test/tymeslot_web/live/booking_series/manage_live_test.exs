@@ -27,7 +27,6 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
@@ -35,6 +34,8 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.ThemeTestMatrix
@@ -370,9 +371,13 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
         meeting_payments_enabled: true
       )
 
-      stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-        {:ok, %{"latest_charge" => "ch_SERIES"}}
-      end)
+      StripeStub.stub(
+        :retrieve_payment_intent,
+        StripeFixtures.object("payment_intent_with_latest_charge", %{
+          "id" => "pi_SERIES",
+          "latest_charge" => "ch_SERIES"
+        })
+      )
 
       host = Paid.paid_host()
       Paid.expect_checkout()

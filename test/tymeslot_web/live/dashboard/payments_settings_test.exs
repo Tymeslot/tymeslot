@@ -12,10 +12,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.ChargeRefunded
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   setup :verify_on_exit!
   setup :set_mox_from_context
@@ -429,11 +430,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
 
       payment = paid_payment_for(user)
 
-      expect(StripeAdapterMock, :create_refund, fn params, opts ->
-        assert params.amount == 5000
-        assert "host_refund:" <> attempt = opts[:idempotency_key]
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["amount"] == "5000"
+        assert "host_refund:" <> attempt = request.headers["idempotency-key"]
         assert String.ends_with?(attempt, ":5000")
-        {:ok, %{id: "re_full"}}
+        StripeFixtures.object("refund", %{"id" => "re_full"})
       end)
 
       conn = log_in_user(conn, user)
@@ -507,9 +508,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
 
       payment = paid_payment_for(user)
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.amount == 1500
-        {:ok, %{id: "re_partial"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["amount"] == "1500"
+        StripeFixtures.object("refund", %{"id" => "re_partial"})
       end)
 
       conn = log_in_user(conn, user)
@@ -551,9 +552,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       payment = paid_payment_for(user)
       test_pid = self()
 
-      expect(StripeAdapterMock, :create_refund, fn %{amount: 1500}, opts ->
-        send(test_pid, {:refund_key, opts[:idempotency_key]})
-        exit({:timeout, {GenServer, :call, []}})
+      # The client sends a lost call 3 times in all, under the same key.
+      StripeStub.expect(:create_refund, 3, fn request ->
+        assert request.form["amount"] == "1500"
+        send(test_pid, {:refund_key, request.headers["idempotency-key"]})
+        {:transport_error, :timeout}
       end)
 
       conn = log_in_user(conn, user)
@@ -585,9 +588,15 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
 
       # As Stripe answers: the refund already made for a key it has seen, a
       # second refund for one it has not.
-      expect(StripeAdapterMock, :create_refund, fn %{amount: 1500}, opts ->
-        refunded = if opts[:idempotency_key] == first_key, do: 1500, else: 3000
-        {:ok, %{id: "re_partial", amount: 1500, charge: %{amount_refunded: refunded}}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["amount"] == "1500"
+        refunded = if request.headers["idempotency-key"] == first_key, do: 1500, else: 3000
+
+        StripeFixtures.object("refund_with_charge", %{
+          "id" => "re_partial",
+          "amount" => 1500,
+          "charge" => %{"amount_refunded" => refunded}
+        })
       end)
 
       view

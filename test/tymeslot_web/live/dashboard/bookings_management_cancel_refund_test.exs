@@ -20,10 +20,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
 
   alias Plug.Test
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -115,9 +116,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
           refunded_amount_cents: 0
         )
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.amount == 5000
-        {:ok, %{id: "re_cancel_full"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["amount"] == "5000"
+        StripeFixtures.object("refund", %{"id" => "re_cancel_full"})
       end)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
@@ -253,7 +254,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
 
     test "is cancelled without a refund, and the host is told why first and after",
          %{conn: conn, meeting: meeting, payment: payment} do
-      expect(StripeAdapterMock, :create_refund, 0, fn _params, _opts -> {:ok, %{}} end)
+      StripeStub.stub(:create_refund, StripeFixtures.object("refund"))
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
       view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
@@ -275,6 +276,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
       refute html =~ "refund could not be issued"
       assert Repo.get(MeetingSchema, meeting.id).status == :cancelled
       assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 0
+      assert StripeStub.requests(:create_refund) == []
     end
 
     # The dialog offers no amount for such a payment; one sent anyway is

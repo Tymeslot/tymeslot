@@ -36,8 +36,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   setup :verify_on_exit!
   setup :set_mox_from_context
@@ -163,9 +164,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
       # Stripe is told to refund exactly one charge. Pinning the charge id here
       # is the assertion that matters: if the handler ever read `payment_id`
       # from params, this expectation would see the victim's charge instead.
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.charge == mine.stripe_charge_id
-        {:ok, %{id: "re_full"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == mine.stripe_charge_id
+        StripeFixtures.object("refund", %{"id" => "re_full"})
       end)
 
       view = open_payments(conn, attacker)
@@ -218,12 +219,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
       assert has_element?(view, "#refund-modal")
 
       # Stripe is stubbed to succeed on purpose. Leaving it unstubbed would make
-      # Mox raise inside the async task, and the refund would fail to land for
+      # the request fail inside the async task, and the refund would fail to land for
       # that reason rather than because it was refused — the test would then
       # pass against an authorization check that had been deleted.
-      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
-        {:ok, %{id: "re_should_not_happen"}}
-      end)
+      StripeStub.stub(
+        :create_refund,
+        StripeFixtures.object("refund", %{"id" => "re_should_not_happen"})
+      )
 
       # The modal now holds a payment the host no longer owns. This is the one
       # state in which the re-check inside the async task is load-bearing: the
@@ -249,10 +251,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
       theirs = paid_payment_for(victim, %{stripe_account_id: "acct_VICTIM"})
 
       # Stubbed to succeed, so the refund is stopped by the handler and not by a
-      # missing mock. See the note in the test above.
-      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
-        {:ok, %{id: "re_should_not_happen"}}
-      end)
+      # missing stub. See the note in the test above.
+      StripeStub.stub(
+        :create_refund,
+        StripeFixtures.object("refund", %{"id" => "re_should_not_happen"})
+      )
 
       view = open_payments(conn, attacker)
 

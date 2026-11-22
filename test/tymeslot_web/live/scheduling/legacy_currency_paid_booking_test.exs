@@ -25,11 +25,12 @@ defmodule TymeslotWeb.Live.Scheduling.LegacyCurrencyPaidBookingTest do
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
@@ -126,9 +127,13 @@ defmodule TymeslotWeb.Live.Scheduling.LegacyCurrencyPaidBookingTest do
     checkout_url = "https://checkout.stripe.com/cs_legacy_ron"
     test_pid = self()
 
-    expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
-      send(test_pid, {:checkout, params, opts})
-      {:ok, %{id: "cs_legacy_ron", url: checkout_url}}
+    StripeStub.expect(:create_checkout_session, 1, fn request ->
+      send(test_pid, {:checkout, request.form, request.headers})
+
+      StripeFixtures.object("checkout_session_payment", %{
+        "id" => "cs_legacy_ron",
+        "url" => checkout_url
+      })
     end)
 
     view = navigate_to_booking_form(conn, profile, meeting_type)
@@ -137,9 +142,9 @@ defmodule TymeslotWeb.Live.Scheduling.LegacyCurrencyPaidBookingTest do
     # The submission finishes in a handler component, so allow it a moment.
     assert_redirect(view, checkout_url, 2_000)
 
-    assert_received {:checkout, %{line_items: [%{price_data: price_data}]}, opts}
-    assert %{currency: "ron", unit_amount: 15_000} = price_data
-    assert opts[:connect_account] == "acct_LEGACY"
+    assert_received {:checkout, %{"line_items" => [%{"price_data" => price_data}]}, headers}
+    assert %{"currency" => "ron", "unit_amount" => "15000"} = price_data
+    assert headers["stripe-account"] == "acct_LEGACY"
 
     meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
     assert meeting.status == :awaiting_payment
@@ -164,7 +169,7 @@ defmodule TymeslotWeb.Live.Scheduling.LegacyCurrencyPaidBookingTest do
        %{conn: conn, user: user, profile: profile, meeting_type: meeting_type} do
     account = legacy_account(user, "ron")
 
-    expect(StripeAdapterMock, :create_checkout_session, 0, fn _params, _opts ->
+    StripeStub.stub(:create_checkout_session, fn _request ->
       flunk("no checkout session may be created")
     end)
 

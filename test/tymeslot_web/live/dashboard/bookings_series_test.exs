@@ -29,7 +29,6 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.CalendarMock
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Workers.SeriesHostRefund
   alias Tymeslot.Meetings
@@ -38,9 +37,10 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Workers.EmailWorker
 
-  setup :set_mox_global
   setup :verify_on_exit!
 
   setup do
@@ -227,9 +227,13 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
         meeting_payments_enabled: true
       )
 
-      stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-        {:ok, %{"latest_charge" => "ch_SERIES"}}
-      end)
+      StripeStub.stub(
+        :retrieve_payment_intent,
+        StripeFixtures.object("payment_intent_with_latest_charge", %{
+          "id" => "pi_SERIES",
+          "latest_charge" => "ch_SERIES"
+        })
+      )
 
       host = Paid.paid_host()
       Paid.expect_checkout()
@@ -249,10 +253,13 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
     end
 
     defp expect_refund(amount) do
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.charge == "ch_SERIES"
-        assert params.amount == amount
-        {:ok, %{id: "re_SERIES_#{System.unique_integer([:positive])}"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == "ch_SERIES"
+        assert request.form["amount"] == to_string(amount)
+
+        StripeFixtures.object("refund", %{
+          "id" => "re_SERIES_#{System.unique_integer([:positive])}"
+        })
       end)
     end
 

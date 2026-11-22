@@ -9,7 +9,7 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
   newer version dropped or moved still reaches the handler that reads it.
   """
 
-  # async: false: the Stripe adapter and the signing secrets are global config.
+  # async: false: the signing secrets are global config.
   use TymeslotWeb.ConnCase, async: false
 
   @moduletag :payments
@@ -23,7 +23,6 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
 
   import Mox
 
-  alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Payments.SubscriptionInvoiceQueries
   alias Tymeslot.Payments.SubscriptionManagerMock
@@ -190,10 +189,7 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
 
   describe "Connect endpoint" do
     setup do
-      with_config(:tymeslot,
-        stripe_adapter: StripeAdapter.Stripity,
-        stripe_connect_webhook_secret: @connect_secret
-      )
+      with_config(:tymeslot, stripe_connect_webhook_secret: @connect_secret)
 
       :ok
     end

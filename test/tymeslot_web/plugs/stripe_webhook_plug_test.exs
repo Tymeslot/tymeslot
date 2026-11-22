@@ -71,9 +71,8 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
     end
 
     test "the Connect endpoint answers 429 and halts before verifying anything", %{conn: conn} do
-      # The secret is configured and no `StripeAdapterMock` expectation is
-      # set, so reaching signature verification would raise
-      # `Mox.UnexpectedCallError`.
+      # The secret is configured and the payload's signature is invalid, so
+      # reaching signature verification would answer 400 rather than 429.
       with_config(:tymeslot, stripe_connect_webhook_secret: "whsec_test_connect")
 
       payload = ~s({"type":"account.updated","id":"evt_connect_rate_limited"})

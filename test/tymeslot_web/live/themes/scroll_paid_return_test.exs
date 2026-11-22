@@ -21,8 +21,9 @@ defmodule TymeslotWeb.Live.Themes.ScrollPaidReturnTest do
 
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
 
@@ -70,8 +71,11 @@ defmodule TymeslotWeb.Live.Themes.ScrollPaidReturnTest do
   # Books in an embed up to the awaiting-payment outcome; returns the view
   # and the meeting's id.
   defp book_and_await_payment(conn, profile) do
-    expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
-      {:ok, %{id: "cs_scroll", url: "https://checkout.stripe.com/cs_scroll"}}
+    StripeStub.expect(:create_checkout_session, 1, fn _request ->
+      StripeFixtures.object("checkout_session_payment", %{
+        "id" => "cs_scroll",
+        "url" => "https://checkout.stripe.com/cs_scroll"
+      })
     end)
 
     conn = put_req_header(conn, "referer", "https://embedder.test/page")

@@ -26,10 +26,11 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
 
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
 
@@ -389,9 +390,13 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
 
     test_pid = self()
 
-    expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-      send(test_pid, {:checkout_session, params})
-      {:ok, %{id: "cs_SERIES", url: @checkout_url}}
+    StripeStub.expect(:create_checkout_session, 1, fn request ->
+      send(test_pid, {:checkout_session, request.form})
+
+      StripeFixtures.object("checkout_session_payment", %{
+        "id" => "cs_SERIES",
+        "url" => @checkout_url
+      })
     end)
 
     view = to_series(conn, profile, day)
@@ -406,8 +411,10 @@ defmodule TymeslotWeb.Live.Scheduling.QuillSeriesTest do
     |> render_submit()
 
     assert_redirect(view, @checkout_url, 5_000)
-    assert_received {:checkout_session, params}
-    assert [%{price_data: %{unit_amount: 5000}, quantity: 4}] = params.line_items
+    assert_received {:checkout_session, form}
+
+    assert [%{"price_data" => %{"unit_amount" => "5000"}, "quantity" => "4"}] =
+             form["line_items"]
 
     assert user |> meetings() |> Enum.map(& &1.status) == List.duplicate(:awaiting_payment, 4)
   end

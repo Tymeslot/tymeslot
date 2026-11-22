@@ -17,7 +17,7 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
-  alias Tymeslot.Integrations.Stripe
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -257,7 +257,7 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
 
       StripeStub.expect(:create_refund, 3, {:error_fixture, "rate_limit"})
 
-      assert {:error, %Stripe.Error{status: 429}} =
+      assert {:error, %StripeError{status: 429}} =
                MeetingPayments.issue_refund(payment, 600, @refund_key)
 
       assert length(StripeStub.requests(:create_refund)) == 3

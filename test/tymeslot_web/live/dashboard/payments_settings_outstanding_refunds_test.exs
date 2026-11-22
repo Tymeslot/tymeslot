@@ -18,9 +18,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   @moduletag :payments
   @moduletag :live
@@ -251,7 +252,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
     test "explains a row whose automatic refund failed as a decline", %{conn: conn} do
       host = connected_host()
-      Mox.stub(StripeAdapterMock, :create_refund, fn _params, _opts -> {:error, :api_error} end)
+      StripeStub.stub(:create_refund, {:error_fixture, "api_error"})
 
       payment = declined_paid_request(host)
 
@@ -267,7 +268,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
     test "lists nothing once the automatic refund has gone through", %{conn: conn} do
       host = connected_host()
-      Mox.stub(StripeAdapterMock, :create_refund, fn _params, _opts -> {:ok, %{id: "re_OK"}} end)
+      StripeStub.stub(:create_refund, StripeFixtures.object("refund", %{"id" => "re_OK"}))
 
       declined_paid_request(host)
 
@@ -313,9 +314,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
       host = connected_host()
       payment = cancelled_payment_for(host, %{meeting: insert(:meeting, status: :expired)})
 
-      Mox.stub(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.amount == 5000
-        {:ok, %{id: "re_EXPIRED"}}
+      StripeStub.stub(:create_refund, fn request ->
+        assert request.form["amount"] == "5000"
+        StripeFixtures.object("refund", %{"id" => "re_EXPIRED"})
       end)
 
       {view, _html} = open_payments(conn, host)
