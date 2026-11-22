@@ -35,6 +35,25 @@ defmodule Tymeslot.Integrations.Shared.OAuth.GoogleOAuthHelperTest do
       assert url =~ "state="
     end
 
+    # Google returns a refresh token only from its consent screen, and skips
+    # that screen for an account that has already granted the scopes. A
+    # reconnect without it would keep the dead refresh token it came to replace.
+    test "asks for consent when reconnecting an existing integration" do
+      query =
+        GoogleOAuthHelper.authorization_url(123, "http://localhost/callback", [:meet],
+          integration_id: 42,
+          login_hint: "host@example.com"
+        )
+        |> URI.parse()
+        |> Map.fetch!(:query)
+        |> URI.decode_query()
+
+      assert query["prompt"] == "consent select_account"
+      assert query["access_type"] == "offline"
+      assert query["login_hint"] == "host@example.com"
+      assert {:ok, %{integration_id: 42}} = State.validate(query["state"], @state_secret)
+    end
+
     test "handles multiple scopes" do
       url =
         GoogleOAuthHelper.authorization_url(123, "http://localhost/callback", [
