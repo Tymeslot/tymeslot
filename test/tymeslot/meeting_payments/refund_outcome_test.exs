@@ -71,10 +71,18 @@ defmodule Tymeslot.MeetingPayments.RefundOutcomeTest do
       assert RefundOutcome.classify_list_error(error) == {:retry, error}
     end
 
-    test "one Stripe refuses for good fails the refund with its code" do
+    test "one Stripe refuses for good leaves the refund unlistable, never failed" do
       error = %StripeError{type: "invalid_request_error", code: "account_invalid", status: 403}
 
-      assert RefundOutcome.classify_list_error(error) == {:failed, "account_invalid"}
+      assert RefundOutcome.classify_list_error(error) == {:unlistable, error}
+    end
+
+    test "a refused API key is retried" do
+      unauthorised = %StripeError{type: "invalid_request_error", status: 401}
+      authentication = %StripeError{type: "authentication_error", status: 403}
+
+      assert RefundOutcome.classify_list_error(unauthorised) == {:retry, unauthorised}
+      assert RefundOutcome.classify_list_error(authentication) == {:retry, authentication}
     end
 
     test "a missing API key is retried" do

@@ -502,13 +502,12 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate request_refund(payment, amount_cents, source, opts \\ []), to: Refunds
 
   @doc "Makes one attempt at a recorded refund; see `Refunds.execute/2`."
-  @spec execute_refund(RefundSchema.t(), keyword()) ::
-          {:ok | :pending, RefundSchema.t()} | {:error, Refunds.refusal() | :refund_failed}
+  @spec execute_refund(RefundSchema.t(), keyword()) :: Refunds.attempt_result()
   defdelegate execute_refund(refund, opts \\ []), to: Refunds, as: :execute
 
   @doc "Records a refund and makes it at once; see `Refunds.refund_now/4`."
   @spec refund_now(booking_payment(), pos_integer(), Refunds.refund_source(), keyword()) ::
-          {:ok | :pending, RefundSchema.t()} | {:error, Refunds.refusal() | :refund_failed}
+          Refunds.attempt_result()
   defdelegate refund_now(payment, amount_cents, source, opts \\ []), to: Refunds
 
   # ---------------------------------------------------------------------------

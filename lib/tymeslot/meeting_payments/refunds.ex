@@ -86,6 +86,10 @@ defmodule Tymeslot.MeetingPayments.Refunds do
           | :missing_charge
           | :refund_in_progress
 
+  @typedoc "How an attempt at a recorded refund ended (`execute/2`)."
+  @type attempt_result ::
+          {:ok | :pending | :stuck, RefundSchema.t()} | {:error, refusal() | :refund_failed}
+
   @type refund_error ::
           :not_paid
           | :outside_refund_window
@@ -173,13 +177,12 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   Makes one attempt at a recorded refund, outside any transaction; see
   `RefundExecutor.run/2` for the steps and options. Returns the refund once
   it succeeded, `{:pending, refund}` while it waits for another attempt,
-  `{:error, :refund_failed}` once it failed, and `{:error, :missing_charge}`
-  when the last attempt found no charge to refund.
+  `{:error, :refund_failed}` once it failed, `{:error, :missing_charge}`
+  when the last attempt found no charge to refund, and `{:stuck, refund}`
+  when Stripe refuses to list the charge's refunds: the refund stays
+  pending, reported, until `Workers.SweepPendingRefunds` tries it again.
   """
-  @spec execute(RefundSchema.t(), keyword()) ::
-          {:ok, RefundSchema.t()}
-          | {:pending, RefundSchema.t()}
-          | {:error, refusal() | :refund_failed}
+  @spec execute(RefundSchema.t(), keyword()) :: attempt_result()
   defdelegate execute(refund, opts), to: RefundExecutor, as: :run
 
   @doc """
@@ -187,9 +190,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   (`execute/2`), for a caller waiting on the outcome.
   """
   @spec refund_now(BookingPaymentSchema.t(), pos_integer(), refund_source(), keyword()) ::
-          {:ok, RefundSchema.t()}
-          | {:pending, RefundSchema.t()}
-          | {:error, refusal() | :refund_failed}
+          attempt_result()
   def refund_now(payment, amount_cents, source, opts) do
     with {:ok, refund} <- request_refund(payment, amount_cents, source, opts),
          do: execute(refund, deadline_ms: @stripe_deadline_ms)

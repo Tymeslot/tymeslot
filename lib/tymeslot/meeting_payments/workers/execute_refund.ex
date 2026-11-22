@@ -16,11 +16,15 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
   fails it with `"retries_exhausted"` and reports it
   (`Refunds.FailureNotice`). A refund Stripe refused, or whose charge could
   not be found, cancels the job: it has been failed and reported already.
-  A last attempt that leaves the refund pending (Stripe's refunds could not
-  be read for now, or another attempt held the lease) raises a
-  `:refund_stuck` alert and ends the job as failed, as does one that
-  raised; `SweepPendingRefunds` gives the refund a new job. A read Stripe
-  refuses for good fails the refund.
+  A last attempt that leaves the refund pending because Stripe's refunds
+  could not be read for now raises a `:refund_stuck` alert; one that met
+  another attempt's lease leaves the outcome to that attempt. Either way,
+  as for a last attempt that raised, the job ends as failed and
+  `SweepPendingRefunds` gives the refund a new job. A read Stripe refuses
+  for good (a revoked Connect account) leaves the refund pending too,
+  since an earlier request may have made it: it is reported as stuck at
+  once and the job cancelled, and the sweeper tries it again later, in
+  case the account is reconnected.
 
   At most one job waits per refund.
   """
@@ -46,7 +50,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
 
   # Each of these has been reported already (`Refunds.FailureNotice`), or the
   # refund is gone.
-  @expected [:refund_failed, :missing_charge, :not_found]
+  @expected [:refund_failed, :missing_charge, :refund_stuck, :not_found]
 
   @behaviour ExpectedJobOutcome
 
@@ -90,8 +94,10 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
   defp result({:ok, _refund}, _job), do: :ok
   defp result({:error, reason}, _job) when reason in @expected, do: {:cancel, reason}
 
+  defp result({:stuck, _refund}, _job), do: {:cancel, :refund_stuck}
+
   defp result({:pending, refund}, job) do
-    if last?(job), do: FailureNotice.stuck(refund)
+    if last?(job) and not RefundQueries.leased?(refund), do: FailureNotice.stuck(refund)
     {:error, :pending}
   end
 

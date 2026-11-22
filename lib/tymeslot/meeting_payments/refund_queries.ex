@@ -119,6 +119,12 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
     end
   end
 
+  @doc "Whether an attempt holds the refund's lease now, by the database's clock."
+  @spec leased?(RefundSchema.t()) :: boolean()
+  def leased?(%RefundSchema{id: id}) do
+    Repo.exists?(from(r in RefundSchema, where: r.id == ^id and r.executing_until > db_now()))
+  end
+
   @doc """
   Gives up the lease the `claimed` attempt took. A later attempt that has
   claimed the refund since keeps its own.

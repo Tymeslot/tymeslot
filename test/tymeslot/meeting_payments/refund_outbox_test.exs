@@ -225,7 +225,7 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
       assert %{status: :succeeded, attempt: 2} = RefundQueries.get(refund.id)
     end
 
-    test "a refund whose charge Stripe refuses to list for good fails and alerts",
+    test "a refund whose charge Stripe refuses to list for good stays pending, reported stuck",
          %{payment: payment} do
       refund = insert(:booking_payment_refund, booking_payment: payment, attempt: 1)
 
@@ -234,12 +234,29 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
         {403, %{"error" => %{"type" => "invalid_request_error", "code" => "account_invalid"}}}
       )
 
-      assert {:error, :refund_failed} = Refunds.execute(refund, [])
+      assert {:stuck, _refund} = Refunds.execute(refund, [])
 
       assert StripeStub.requests(:create_refund) == []
-      assert %{status: :failed, failure_code: "account_invalid"} = RefundQueries.get(refund.id)
+      assert %{status: :pending, executing_until: nil} = RefundQueries.get(refund.id)
       refund_id = refund.id
-      assert_received {:send_alert, :refund_failed, %{refund_id: ^refund_id}}
+      assert_received {:send_alert, :refund_stuck, %{refund_id: ^refund_id}}
+      refute_received {:send_alert, :refund_failed, _payload}
+    end
+
+    test "a refund whose list a refused API key blocks is retried, unreported",
+         %{payment: payment} do
+      refund = insert(:booking_payment_refund, booking_payment: payment, attempt: 1)
+
+      StripeStub.expect(
+        :list_refunds,
+        {401, %{"error" => %{"type" => "invalid_request_error", "message" => "Invalid API Key"}}}
+      )
+
+      assert {:pending, _refund} = Refunds.execute(refund, from_job: true)
+
+      assert StripeStub.requests(:create_refund) == []
+      assert %{status: :pending, executing_until: nil} = RefundQueries.get(refund.id)
+      refute_received {:send_alert, _type, _payload}
     end
 
     test "a permanent refusal fails the refund and alerts", %{payment: payment} do

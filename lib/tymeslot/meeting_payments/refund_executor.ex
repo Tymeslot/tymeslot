@@ -78,6 +78,7 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
   @type result ::
           {:ok, RefundSchema.t()}
           | {:pending, RefundSchema.t()}
+          | {:stuck, RefundSchema.t()}
           | {:error, :not_found | :missing_charge | :refund_failed}
 
   @doc """
@@ -369,6 +370,17 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
   end
 
   defp conclude({:failed, code}, refund, _payment, _opts), do: fail(refund, code)
+
+  defp conclude({:unlistable, reason}, refund, _payment, _opts) do
+    Logger.warning("Refund attempt cannot read the charge's refunds, left pending",
+      refund_id: refund.id,
+      reason: LogFormat.reason(reason)
+    )
+
+    RefundQueries.release(refund)
+    FailureNotice.stuck(refund)
+    {:stuck, refund}
+  end
 
   defp record_success(refund, payment, stripe_refund, opts) do
     attrs = %{status: :succeeded, stripe_refund_id: stripe_refund["id"], settled_at: now()}

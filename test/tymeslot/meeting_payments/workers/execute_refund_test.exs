@@ -112,8 +112,16 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefundTest do
              perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 10)
 
     assert %{status: :pending} = RefundQueries.get(refund.id)
-    refund_id = refund.id
-    assert_received {:send_alert, :refund_stuck, %{refund_id: ^refund_id}}
+    refute_received {:send_alert, _type, _payload}
+  end
+
+  test "a refund whose charge Stripe refuses to list cancels the job, left pending",
+       %{payment: payment} do
+    refund = insert(:booking_payment_refund, booking_payment: payment, attempt: 1)
+    StripeStub.expect(:list_refunds, {403, %{"error" => %{"type" => "invalid_request_error"}}})
+
+    assert {:cancel, :refund_stuck} = perform_job(ExecuteRefund, %{refund_id: refund.id})
+    assert %{status: :pending} = RefundQueries.get(refund.id)
   end
 
   test "a refund Stripe refused cancels the job", %{refund: refund} do
