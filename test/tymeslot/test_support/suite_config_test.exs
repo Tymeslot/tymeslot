@@ -6,6 +6,10 @@ defmodule Tymeslot.Test.SuiteConfigTest do
 
   alias Tymeslot.Test.SuiteConfig
 
+  test "stripe_live is excluded by default" do
+    assert Keyword.get(SuiteConfig.default_exclude_tags(), :stripe_live) == true
+  end
+
   describe "unless_included/2" do
     test "skips an excluded suite that a domain sweep reaches" do
       assert SuiteConfig.unless_included(:calendar_integration, [:calendar]) ==
