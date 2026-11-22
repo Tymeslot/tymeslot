@@ -93,6 +93,18 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefundTest do
     refute_received {:send_alert, _type, _payload}
   end
 
+  test "the last attempt that cannot read Stripe's refunds reports the refund stuck",
+       %{refund: refund} do
+    StripeStub.stub(:list_refunds, {:error_fixture, "api_error"})
+
+    assert {:error, :pending} = perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 10)
+
+    assert %{status: :pending} = RefundQueries.get(refund.id)
+    refund_id = refund.id
+    assert_received {:send_alert, :refund_stuck, %{refund_id: ^refund_id}}
+    refute_received {:send_alert, :refund_failed, _payload}
+  end
+
   test "the last attempt leaves a refund another attempt is making", %{refund: refund} do
     {:ok, _claimed} = RefundQueries.claim_attempt(refund)
 
@@ -100,7 +112,8 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefundTest do
              perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 10)
 
     assert %{status: :pending} = RefundQueries.get(refund.id)
-    refute_received {:send_alert, _type, _payload}
+    refund_id = refund.id
+    assert_received {:send_alert, :refund_stuck, %{refund_id: ^refund_id}}
   end
 
   test "a refund Stripe refused cancels the job", %{refund: refund} do

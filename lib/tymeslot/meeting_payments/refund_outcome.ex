@@ -38,4 +38,19 @@ defmodule Tymeslot.MeetingPayments.RefundOutcome do
   end
 
   def classify({:error, :missing_api_key}), do: {:retry, :missing_api_key}
+
+  @doc """
+  What a failed read of the charge's refunds comes to. No refund is sent
+  blind, so one a later read can get past is retried; one Stripe refuses
+  for good (a Connect account that revoked access, say) fails the refund,
+  since no attempt could ever learn whether it was made.
+  """
+  @spec classify_list_error(StripeError.t() | :missing_api_key) :: t()
+  def classify_list_error(%StripeError{} = error) do
+    if StripeError.retryable?(error),
+      do: {:retry, error},
+      else: {:failed, error.code || error.type}
+  end
+
+  def classify_list_error(:missing_api_key), do: {:retry, :missing_api_key}
 end

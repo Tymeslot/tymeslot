@@ -236,7 +236,7 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     case made_earlier(refund, payment) do
       {:ok, nil} -> when_not_made.()
       {:ok, made} -> RefundOutcome.classify({:ok, made})
-      {:error, reason} -> {:retry, reason}
+      {:error, reason} -> RefundOutcome.classify_list_error(reason)
     end
   end
 

@@ -42,6 +42,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.DedupKey do
     late_payment_refund_failed: {:booking_payment_id, "unknown"},
     # Each failed refund is money an attendee is owed: one alert per refund.
     refund_failed: {:refund_id, "unknown"},
+    # A stuck refund is retried by a new job every four hours or so: one
+    # alert per refund, not one per job.
+    refund_stuck: {:refund_id, "unknown"},
     # One alert per account: two accounts failing must not collapse into one.
     connect_revocation_failed: {:stripe_account_id, "unknown"},
     # A refused key or a revoked account fails every event from that

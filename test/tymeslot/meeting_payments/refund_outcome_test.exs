@@ -63,4 +63,22 @@ defmodule Tymeslot.MeetingPayments.RefundOutcomeTest do
   test "a missing API key is retried, as configuration may yet be fixed" do
     assert RefundOutcome.classify({:error, :missing_api_key}) == {:retry, :missing_api_key}
   end
+
+  describe "a failed read of the charge's refunds" do
+    test "one a later read can get past is retried" do
+      error = %StripeError{type: "api_error", status: 500}
+
+      assert RefundOutcome.classify_list_error(error) == {:retry, error}
+    end
+
+    test "one Stripe refuses for good fails the refund with its code" do
+      error = %StripeError{type: "invalid_request_error", code: "account_invalid", status: 403}
+
+      assert RefundOutcome.classify_list_error(error) == {:failed, "account_invalid"}
+    end
+
+    test "a missing API key is retried" do
+      assert RefundOutcome.classify_list_error(:missing_api_key) == {:retry, :missing_api_key}
+    end
+  end
 end

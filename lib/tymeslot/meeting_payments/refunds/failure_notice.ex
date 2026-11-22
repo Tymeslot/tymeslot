@@ -34,4 +34,29 @@ defmodule Tymeslot.MeetingPayments.Refunds.FailureNotice do
 
     :ok
   end
+
+  @doc """
+  Reports `refund` to the admins as a `:refund_stuck` alert: a job's last
+  attempt left it pending. It is not failed, as Stripe may have made it, and
+  `Workers.SweepPendingRefunds` hands it to a new job.
+  """
+  @spec stuck(RefundSchema.t()) :: :ok
+  def stuck(%RefundSchema{} = refund) do
+    Logger.error("Refund still pending after every attempt of its job",
+      refund_id: refund.id,
+      booking_payment_id: refund.booking_payment_id
+    )
+
+    AdminAlerts.report(:refund_stuck,
+      summary: "A refund of a booking payment is still pending after every attempt of its job",
+      context: %{
+        refund_id: refund.id,
+        booking_payment_id: refund.booking_payment_id,
+        source: refund.source,
+        attempt: refund.attempt
+      }
+    )
+
+    :ok
+  end
 end

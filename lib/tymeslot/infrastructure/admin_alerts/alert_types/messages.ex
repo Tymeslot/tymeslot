@@ -224,6 +224,15 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       "Stripe dashboard"
   end
 
+  def format_message(:refund_stuck, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Refund #{get.(:refund_id)} (#{get.(:source)}) of booking payment " <>
+      "#{get.(:booking_payment_id)} is still pending after #{get.(:attempt)} attempts: " <>
+      "Tymeslot cannot tell whether Stripe made it. A new job keeps trying; check the " <>
+      "charge in the Stripe dashboard"
+  end
+
   # The job is unique per account, so once the cause is fixed the way to try
   # again is to retry this one.
   def format_message(:connect_revocation_failed, metadata) do

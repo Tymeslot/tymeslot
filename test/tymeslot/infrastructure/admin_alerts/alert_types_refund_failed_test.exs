@@ -29,4 +29,15 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesRefundFailedTest do
       refute key.("rf_A") == key.("rf_B")
     end
   end
+
+  describe "the alert for a refund its job could not settle" do
+    test ":refund_stuck names the refund, its source, the payment and its attempts" do
+      metadata = %{refund_id: "rf_1", source: :host, booking_payment_id: "bp_1", attempt: 9}
+
+      msg = AlertTypes.format_message(:refund_stuck, metadata)
+
+      assert msg =~ "Refund rf_1 (host) of booking payment bp_1"
+      assert msg =~ "still pending after 9 attempts"
+    end
+  end
 end

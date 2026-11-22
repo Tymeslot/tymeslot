@@ -17,8 +17,10 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
   (`Refunds.FailureNotice`). A refund Stripe refused, or whose charge could
   not be found, cancels the job: it has been failed and reported already.
   A last attempt that leaves the refund pending (Stripe's refunds could not
-  be read, another attempt held the lease, or it raised) ends the job as
-  failed, and `SweepPendingRefunds` gives the refund a new one.
+  be read for now, or another attempt held the lease) raises a
+  `:refund_stuck` alert and ends the job as failed, as does one that
+  raised; `SweepPendingRefunds` gives the refund a new job. A read Stripe
+  refuses for good fails the refund.
 
   At most one job waits per refund.
   """
@@ -31,6 +33,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.MeetingPayments.Refunds.FailureNotice
   alias Tymeslot.Workers.Backoff
 
   # Sixty seconds, doubling, capped at an hour: nine waits between ten
@@ -72,7 +75,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
   def perform(%Oban.Job{args: %{"refund_id" => id}} = job) do
     case RefundQueries.get(id) do
       nil -> {:discard, :not_found}
-      refund -> refund |> attempt(job) |> result()
+      refund -> refund |> attempt(job) |> result(job)
     end
   end
 
@@ -84,10 +87,13 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
     do:
       Refunds.execute(refund, from_job: true, deadline_ms: @deadline_ms, last_attempt: last?(job))
 
-  defp result({:ok, _refund}), do: :ok
-  defp result({:error, reason}) when reason in @expected, do: {:cancel, reason}
+  defp result({:ok, _refund}, _job), do: :ok
+  defp result({:error, reason}, _job) when reason in @expected, do: {:cancel, reason}
 
-  defp result({:pending, _refund}), do: {:error, :pending}
+  defp result({:pending, refund}, job) do
+    if last?(job), do: FailureNotice.stuck(refund)
+    {:error, :pending}
+  end
 
   defp last?(%Oban.Job{attempt: attempt, max_attempts: max}), do: attempt >= max
 end

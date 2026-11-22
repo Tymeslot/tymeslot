@@ -335,6 +335,23 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
       assert %{refunded_amount_cents: 4_000} = Repo.reload!(payment)
     end
 
+    test "a refund whose charge Stripe refuses to list for good fails and alerts",
+         %{payment: payment} do
+      refund = insert(:booking_payment_refund, booking_payment: payment, attempt: 1)
+
+      StripeStub.expect(
+        :list_refunds,
+        {403, %{"error" => %{"type" => "invalid_request_error", "code" => "account_invalid"}}}
+      )
+
+      assert {:error, :refund_failed} = Refunds.execute(refund, [])
+
+      assert StripeStub.requests(:create_refund) == []
+      assert %{status: :failed, failure_code: "account_invalid"} = RefundQueries.get(refund.id)
+      refund_id = refund.id
+      assert_received {:send_alert, :refund_failed, %{refund_id: ^refund_id}}
+    end
+
     test "a permanent refusal fails the refund and alerts", %{payment: payment} do
       StripeStub.expect(
         :create_refund,
