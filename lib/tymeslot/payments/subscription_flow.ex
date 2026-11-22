@@ -144,8 +144,9 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
             {:ok, %{checkout_url: checkout_url}}
         end
 
-      {:ok, _checkout_session_without_url} ->
+      {:ok, checkout_session_without_url} ->
         Logger.error("Stripe returned a subscription checkout session without a URL")
+        expire_unusable_checkout(checkout_session_without_url)
 
         _mark_result =
           mark_pending_subscription_transaction_failed(transaction, :missing_checkout_url)
@@ -157,6 +158,13 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
         {:error, reason}
     end
   end
+
+  # A session nobody can open would otherwise stay payable at Stripe with no
+  # transaction recording it.
+  defp expire_unusable_checkout(%{"id" => session_id}) when is_binary(session_id),
+    do: PendingTransactions.expire_checkout_session(session_id)
+
+  defp expire_unusable_checkout(_checkout_session), do: :ok
 
   defp create_pending_subscription_transaction(
          user_id,

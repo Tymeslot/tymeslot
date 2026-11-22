@@ -61,8 +61,7 @@ defmodule Tymeslot.Payments.StripeApiTest do
         assert [%{operation: ^operation, method: ^method, path: ^path} = request] =
                  StripeStub.requests()
 
-        params = if method == :get, do: request.query, else: request.form
-        assert Map.take(params, Map.keys(sent)) == sent
+        assert request |> sent_params() |> Map.take(Map.keys(sent)) == sent
       end
     end
 
@@ -155,6 +154,9 @@ defmodule Tymeslot.Payments.StripeApiTest do
       assert Payments.stripe_configured?()
     end
   end
+
+  defp sent_params(%{method: :get, query: query}), do: query
+  defp sent_params(%{form: form}), do: form
 
   defp response_fixture(:list), do: StripeFixtures.list([])
   defp response_fixture(name), do: StripeFixtures.object(name)

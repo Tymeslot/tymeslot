@@ -346,7 +346,7 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
       )
     end
 
-    test "an event from the other mode is acknowledged and skipped" do
+    test "the mode is read from :tymeslot, :stripe_secret_key ahead of the stripity_stripe key" do
       with_config(:tymeslot, stripe_secret_key: "sk_live_x")
       account = live_connection()
 

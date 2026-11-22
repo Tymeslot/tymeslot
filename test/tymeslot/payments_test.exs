@@ -9,6 +9,7 @@ defmodule Tymeslot.PaymentsTest do
   alias Tymeslot.Payments.SubscriptionManagerMock
   alias Tymeslot.Repo
   alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   describe "initiate_subscription/7" do
     test "successfully initiates subscription" do
@@ -134,9 +135,8 @@ defmodule Tymeslot.PaymentsTest do
     end
   end
 
-  describe "initiate_subscription/7 with a malformed checkout session" do
-    test "a checkout session without a url is an error, not a crash" do
-      user = Factory.insert(:user)
+  describe "initiate_subscription/7 with a checkout session without a url" do
+    setup do
       set_subscription_manager(SubscriptionManagerMock)
 
       Mox.stub(SubscriptionManagerMock, :create_subscription_checkout, fn _price,
@@ -150,19 +150,42 @@ defmodule Tymeslot.PaymentsTest do
          StripeFixtures.without(StripeFixtures.object("checkout_session_subscription"), ["url"])}
       end)
 
-      assert {:error, :missing_checkout_url} =
-               Payments.initiate_subscription(
-                 "price_123",
-                 "Pro Plan",
-                 1500,
-                 user.id,
-                 "test@example.com",
-                 %{success: "https://s", cancel: "https://c"}
-               )
+      %{user: Factory.insert(:user)}
+    end
+
+    test "is an error, not a crash, and the session is expired", %{user: user} do
+      StripeStub.expect(
+        :expire_checkout_session,
+        StripeFixtures.object("checkout_session_expired")
+      )
+
+      assert {:error, :missing_checkout_url} = initiate(user)
 
       assert %{status: :failed, metadata: %{"subscription_checkout_failed" => true}} =
                Repo.get_by(PaymentTransactionSchema, user_id: user.id)
+
+      assert [%{method: :post, path: "/v1/checkout/sessions/cs_test1/expire"}] =
+               StripeStub.requests()
     end
+
+    test "is still an error when the session cannot be expired", %{user: user} do
+      StripeStub.expect(:expire_checkout_session, {:error_fixture, "invalid_request_error"})
+
+      assert {:error, :missing_checkout_url} = initiate(user)
+
+      assert %{status: :failed} = Repo.get_by(PaymentTransactionSchema, user_id: user.id)
+    end
+  end
+
+  defp initiate(user) do
+    Payments.initiate_subscription(
+      "price_123",
+      "Pro Plan",
+      1500,
+      user.id,
+      "test@example.com",
+      %{success: "https://s", cancel: "https://c"}
+    )
   end
 
   defp set_subscription_manager(manager) do

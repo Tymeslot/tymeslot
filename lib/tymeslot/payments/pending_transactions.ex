@@ -47,20 +47,28 @@ defmodule Tymeslot.Payments.PendingTransactions do
     end
   end
 
-  defp expire_checkout_session_if_present(%{stripe_id: "cs_" <> _rest = session_id}) do
+  defp expire_checkout_session_if_present(%{stripe_id: "cs_" <> _rest = session_id}),
+    do: expire_checkout_session(session_id)
+
+  defp expire_checkout_session_if_present(_transaction), do: :ok
+
+  @doc """
+  Expires a Checkout session at Stripe so it can no longer be paid, as a best
+  effort: a failure is logged and the caller carries on.
+  """
+  @spec expire_checkout_session(String.t()) :: :ok
+  def expire_checkout_session(session_id) when is_binary(session_id) do
     case CheckoutSessions.expire(session_id, []) do
       {:ok, _session} ->
         :ok
 
       {:error, reason} ->
-        Logger.warning("Failed to expire superseded checkout session",
+        Logger.warning("Failed to expire checkout session",
           session_id: session_id,
           reason: LogFormat.reason(reason)
         )
     end
   end
-
-  defp expire_checkout_session_if_present(_transaction), do: :ok
 
   @spec supersede_pending_transaction_if_needed(pos_integer()) ::
           :ok | {:error, :transaction_lookup_failed | term()}
