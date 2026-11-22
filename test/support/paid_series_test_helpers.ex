@@ -2,7 +2,7 @@ defmodule Tymeslot.PaidSeriesTestHelpers do
   @moduledoc """
   Booking a paid series in tests, end to end: a host charging on a
   connected Stripe account, a weekly paid series type, the booking (with
-  Stripe Checkout mocked) and the Connect events that pay for it or let it
+  Stripe Checkout stubbed) and the Connect events that pay for it or let it
   lapse.
 
   The caller sets `meeting_payments_enabled: true` (and any application
@@ -10,12 +10,12 @@ defmodule Tymeslot.PaidSeriesTestHelpers do
   calendar.
   """
 
-  import Mox
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
 
   alias Tymeslot.BookingSeries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   @account "acct_SERIES_HOST"
   @price_cents 5_000
@@ -75,23 +75,23 @@ defmodule Tymeslot.PaidSeriesTestHelpers do
 
   @doc """
   Expects one Checkout Session to be created, answering with
-  `session_id/0`, and sends its params and options to the calling process
-  as `{:checkout, params, opts}`. Returns `result` instead when given.
+  `session_id/0`, and sends its decoded form and request headers to the
+  calling process as `{:checkout, form, headers}`. Answers `result` instead
+  when given.
   """
-  @spec expect_checkout(term()) :: module()
+  @spec expect_checkout(StripeStub.response() | nil) :: :ok
   def expect_checkout(result \\ nil) do
     test_pid = self()
 
-    expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
-      send(test_pid, {:checkout, params, opts})
+    StripeStub.expect(:create_checkout_session, 1, fn request ->
+      send(test_pid, {:checkout, request.form, request.headers})
 
       result ||
-        {:ok,
-         %{
-           id: @session_id,
-           url: "https://checkout.stripe.com/#{@session_id}",
-           payment_intent: "pi_SERIES"
-         }}
+        StripeFixtures.object("checkout_session_payment", %{
+          "id" => @session_id,
+          "url" => "https://checkout.stripe.com/" <> @session_id,
+          "payment_intent" => "pi_SERIES"
+        })
     end)
   end
 
