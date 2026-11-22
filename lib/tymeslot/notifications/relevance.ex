@@ -53,7 +53,9 @@ defmodule Tymeslot.Notifications.Relevance do
   @doc """
   A reschedule request, asking the attendee to pick a new time: its deadline
   (`MeetingState.reschedule_request_deadline/1`), after which no answer is
-  taken.
+  taken. It follows the meeting's start, so its email reads it from the
+  meeting when it runs rather than carrying it
+  (`Tymeslot.Notifications.Email.RescheduleRequestEmails.check_answerable/1`).
   """
   @spec reschedule_request(map()) :: DateTime.t() | nil
   def reschedule_request(meeting), do: MeetingState.reschedule_request_deadline(meeting)

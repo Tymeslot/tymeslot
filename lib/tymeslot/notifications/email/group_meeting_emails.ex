@@ -13,7 +13,7 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   already went out. Instead, the meeting-level job here is a dispatcher: it
   enqueues one independently-retryable per-seat job per participant (unique
   per seat and per logical email, see
-  `Tymeslot.Emails.EmailScheduler.MeetingScheduler.schedule_seat_email/5`)
+  `Tymeslot.Emails.EmailScheduler.SeatScheduler.schedule_seat_email/5`)
   plus sends the single organiser email inline, and returns `:ok`. A failed
   organiser send retries the whole dispatch, which is safe because
   re-enqueuing an already-unique per-seat job is a no-op.
@@ -41,6 +41,7 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Notifications.Email.DeliveryOutcome
+  alias Tymeslot.Notifications.Email.RescheduleRequestEmails
   alias Tymeslot.Notifications.Email.SeatJobs
   alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Notifications.Relevance
@@ -131,7 +132,8 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   @doc """
   One live participant's reschedule request. Dispatched by
   `send_group_reschedule_requests/2` so a failure sending to one participant
-  cannot block or discard the rest.
+  cannot block or discard the rest, and sent only while the request can
+  still be answered (`RescheduleRequestEmails.check_answerable/1`).
   """
   @spec handle_seat_reschedule_request(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -144,7 +146,10 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
       participant_id,
       "seat reschedule request",
       {:not_cancelled, :live},
-      &send_seat_reschedule_request/2
+      fn meeting, participant ->
+        with :ok <- RescheduleRequestEmails.check_answerable(meeting),
+             do: send_seat_reschedule_request(meeting, participant)
+      end
     )
   end
 
@@ -249,8 +254,7 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
       EmailScheduler.schedule_seat_reschedule_request(
         meeting.id,
         recipient.participant_id,
-        requested_at,
-        Relevance.reschedule_request(meeting)
+        requested_at
       )
     end)
   end

@@ -13,8 +13,12 @@ defmodule Tymeslot.Workers.EmailWorkerRelevanceTest do
   @moduletag :workers
   @moduletag :emails
 
+  alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.Emails.EmailActions
+  alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
+  alias Tymeslot.Emails.EmailScheduler.SeatScheduler
+  alias Tymeslot.EmailServiceMock
   alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
@@ -37,33 +41,14 @@ defmodule Tymeslot.Workers.EmailWorkerRelevanceTest do
       assert EmailWorker.expected_outcome?(reason)
     end
 
-    # Every action that carries a `relevant_until`. The ids name nothing, so a
+    # Every action that carries a `relevant_until`, read from the table the
+    # worker checks; `Tymeslot.Emails.EmailActionsTest` pins which they are,
+    # so the list cannot come up empty unnoticed. The ids name nothing, so a
     # job that got past the check would discard as "not found" instead.
-    @time_bound_actions [
-      "send_reminder_emails",
-      "send_seat_reminder",
-      "send_reschedule_request",
-      "send_seat_reschedule_request",
-      "send_reschedule_request_unanswered",
-      "send_reschedule_request_lapsed",
-      "send_booking_request_emails",
-      "send_booking_approval_nudge",
-      "send_booking_request_outcome",
-      "send_series_request",
-      "send_series_request_nudge",
-      "send_series_request_outcome",
-      "send_poll_deadline_reminders"
-    ]
-
-    test "the list above is every action that carries a relevant_until" do
-      carrying =
-        Enum.filter(EmailActions.names(), fn action ->
-          {:ok, fields} = EmailActions.required_fields(action)
-          "relevant_until" in fields
-        end)
-
-      assert Enum.sort(carrying) == Enum.sort(@time_bound_actions)
-    end
+    @time_bound_actions Enum.filter(EmailActions.names(), fn action ->
+                          {:ok, fields} = EmailActions.required_fields(action)
+                          "relevant_until" in fields
+                        end)
 
     for action <- @time_bound_actions do
       test "drops #{action} once its moment has passed" do
@@ -80,6 +65,118 @@ defmodule Tymeslot.Workers.EmailWorkerRelevanceTest do
       assert {:discard, "Meeting not found"} =
                perform_job(EmailWorker, time_bound_args("send_reminder_emails", ahead))
     end
+  end
+
+  # A reschedule request can be answered until the later of the meeting's
+  # start and a week after it was made, and the start can move while the
+  # email waits. The request below was made ten days ago for a meeting that
+  # started yesterday, so its deadline was yesterday as queued.
+  describe "a reschedule request, judged against the meeting as it stands" do
+    setup do
+      now = DateTime.utc_now(:second)
+      requested_at = DateTime.add(now, -10, :day)
+      start = DateTime.add(now, -1, :day)
+
+      meeting =
+        insert(:meeting,
+          start_time: start,
+          end_time: DateTime.add(start, 30, :minute),
+          reschedule_requested_at: requested_at
+        )
+
+      %{meeting: meeting, now: now}
+    end
+
+    test "sends one whose start moved later after it was queued", %{meeting: meeting, now: now} do
+      assert :ok =
+               MeetingScheduler.schedule_reschedule_request(
+                 meeting.id,
+                 meeting.reschedule_requested_at
+               )
+
+      [job] = all_enqueued(worker: EmailWorker, args: %{"meeting_id" => meeting.id})
+
+      move_start(meeting, DateTime.add(now, 2, :day))
+      expect(EmailServiceMock, :send_reschedule_request, fn _meeting -> {:ok, "sent"} end)
+
+      assert :ok = perform_job(EmailWorker, job.args)
+    end
+
+    test "drops one past its deadline as the meeting stands", %{meeting: meeting} do
+      assert :ok =
+               MeetingScheduler.schedule_reschedule_request(
+                 meeting.id,
+                 meeting.reschedule_requested_at
+               )
+
+      [job] = all_enqueued(worker: EmailWorker, args: %{"meeting_id" => meeting.id})
+
+      assert {:discard, reason} = perform_job(EmailWorker, job.args)
+      assert reason == "Reschedule request past its deadline"
+      assert EmailWorker.expected_outcome?(reason)
+    end
+
+    test "drops one whose start moved earlier, past the deadline that leaves", %{
+      meeting: meeting,
+      now: now
+    } do
+      later =
+        insert(:meeting,
+          start_time: DateTime.add(now, 2, :day),
+          end_time: DateTime.add(now, 2 * 86_400 + 1800, :second),
+          reschedule_requested_at: meeting.reschedule_requested_at
+        )
+
+      assert :ok =
+               MeetingScheduler.schedule_reschedule_request(
+                 later.id,
+                 later.reschedule_requested_at
+               )
+
+      [job] = all_enqueued(worker: EmailWorker, args: %{"meeting_id" => later.id})
+
+      move_start(later, DateTime.add(now, -1, :day))
+
+      assert {:discard, "Reschedule request past its deadline"} =
+               perform_job(EmailWorker, job.args)
+    end
+
+    test "a participant's copy follows the meeting too", %{meeting: meeting, now: now} do
+      group =
+        insert(:group_meeting,
+          start_time: meeting.start_time,
+          end_time: meeting.end_time,
+          reschedule_requested_at: meeting.reschedule_requested_at
+        )
+
+      participant = insert(:participant, meeting: group)
+      requested_at = DateTime.to_iso8601(group.reschedule_requested_at)
+
+      assert :ok =
+               SeatScheduler.schedule_seat_reschedule_request(
+                 group.id,
+                 participant.id,
+                 requested_at
+               )
+
+      [job] = all_enqueued(worker: EmailWorker, args: %{"participant_id" => participant.id})
+
+      assert {:discard, "Reschedule request past its deadline"} =
+               perform_job(EmailWorker, job.args)
+
+      move_start(group, DateTime.add(now, 2, :day))
+      expect(EmailServiceMock, :send_reschedule_request, fn _meeting -> {:ok, "sent"} end)
+
+      assert :ok = perform_job(EmailWorker, job.args)
+    end
+  end
+
+  # As a host edit or a calendar sync would leave it: the start moved, the
+  # request still standing.
+  defp move_start(meeting, start) do
+    meeting
+    |> Changeset.change(start_time: start, end_time: DateTime.add(start, 30, :minute))
+    |> Repo.update!()
   end
 
   defp time_bound_args(action, relevant_until) do

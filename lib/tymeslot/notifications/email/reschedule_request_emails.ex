@@ -10,6 +10,7 @@ defmodule Tymeslot.Notifications.Email.RescheduleRequestEmails do
 
   require Logger
 
+  alias Tymeslot.Clock
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -17,11 +18,13 @@ defmodule Tymeslot.Notifications.Email.RescheduleRequestEmails do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.Email.GroupMeetingEmails
   alias Tymeslot.Notifications.Email.MeetingEmails
+  alias Tymeslot.Notifications.Relevance
   alias Tymeslot.Workers.DeliveryClaims
 
   @meeting_cancelled "Meeting cancelled"
   @meeting_closed "Meeting expired or completed"
   @request_not_pending "Reschedule request no longer pending"
+  @past_deadline "Reschedule request past its deadline"
   @not_lapsed "Reschedule request did not lapse"
 
   @doc """
@@ -31,7 +34,14 @@ defmodule Tymeslot.Notifications.Email.RescheduleRequestEmails do
   """
   @spec expected_discard?(term()) :: boolean()
   def expected_discard?(reason),
-    do: reason in [@meeting_cancelled, @meeting_closed, @request_not_pending, @not_lapsed]
+    do:
+      reason in [
+        @meeting_cancelled,
+        @meeting_closed,
+        @request_not_pending,
+        @past_deadline,
+        @not_lapsed
+      ]
 
   @spec handle_reschedule_request(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -58,9 +68,34 @@ defmodule Tymeslot.Notifications.Email.RescheduleRequestEmails do
           {:discard, @request_not_pending}
 
         true ->
-          send_reschedule_request_email(meeting)
+          with :ok <- check_answerable(meeting), do: send_reschedule_request_email(meeting)
       end
     end)
+  end
+
+  @doc """
+  Whether the attendee can still answer the meeting's reschedule request:
+  `:ok` until its deadline (`Relevance.reschedule_request/1`), a discard
+  after it.
+
+  Judged against the meeting as it stands when the email is about to go,
+  never a moment frozen into the job: the deadline follows the meeting's
+  start, which a host edit or a calendar sync can move while the job waits.
+  """
+  @spec check_answerable(map()) :: :ok | {:discard, String.t()}
+  def check_answerable(meeting) do
+    deadline = Relevance.reschedule_request(meeting)
+
+    if Relevance.relevant?(deadline, Clock.utc_now()) do
+      :ok
+    else
+      Logger.info("Skipping reschedule request past its deadline",
+        meeting_id: meeting.id,
+        deadline: deadline
+      )
+
+      {:discard, @past_deadline}
+    end
   end
 
   # The request this job announces is still the one the meeting is waiting

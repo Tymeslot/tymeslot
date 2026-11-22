@@ -239,6 +239,23 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
+  Deletes the pending jobs on the emails queue for the action and meeting
+  `args` names whose args are anything but `args` exactly: the jobs a job
+  with `args` replaces. One with the same args is kept, for the caller's
+  uniqueness to settle.
+  """
+  @spec delete_superseded_jobs(module(), %{String.t() => term()}) :: {non_neg_integer(), nil}
+  def delete_superseded_jobs(
+        worker_module,
+        %{"action" => action, "meeting_id" => meeting_id} = args
+      ) do
+    worker_module
+    |> pending_jobs_query(%{"action" => action, "meeting_id" => meeting_id}, queue: "emails")
+    |> where([j], fragment("? <> ?::jsonb", j.args, type(^args, :map)))
+    |> Repo.delete_all()
+  end
+
+  @doc """
   Deletes every pending job a worker holds for one meeting, on any queue.
 
   `delete_jobs_by_action/3` above is scoped to the `emails` queue, which is
@@ -374,15 +391,19 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
     do: delete_pending_jobs(worker_module, %{"user_id" => user_id})
 
   defp delete_pending_jobs(worker_module, args_match, opts \\ []) do
+    worker_module
+    |> pending_jobs_query(args_match, opts)
+    |> Repo.delete_all()
+  end
+
+  defp pending_jobs_query(worker_module, args_match, opts) do
     worker_name = normalize_worker_name(worker_module)
-    queue = Keyword.get(opts, :queue)
 
     Job
     |> where([j], j.worker == ^worker_name)
     |> where([j], j.state in @deletable_states)
     |> where([j], fragment("? @> ?::jsonb", j.args, type(^args_match, :map)))
-    |> queue_filter(queue)
-    |> Repo.delete_all()
+    |> queue_filter(Keyword.get(opts, :queue))
   end
 
   defp queue_filter(query, nil), do: query

@@ -33,12 +33,12 @@ defmodule Tymeslot.Emails.EmailActionsTest do
     send_released_guest_cancellations send_external_booking_change send_calendar_sync_error
   )
 
-  # The emails that are dropped unsent once their news stops mattering. Every
-  # other action is owed however late it runs, so adding one here, or a new
-  # action that should be here, is a decision about when its news expires.
+  # The emails that are dropped unsent once the moment they carry has passed.
+  # Adding one here, or a new action that should be here, is a decision about
+  # when its news expires. The reschedule request carries none: its deadline
+  # moves with the meeting, so its handler reads it from the meeting.
   @time_bound ~w(
     send_reminder_emails send_seat_reminder
-    send_reschedule_request send_seat_reschedule_request
     send_reschedule_request_lapsed send_reschedule_request_unanswered
     send_booking_request_emails send_booking_approval_nudge send_booking_request_outcome
     send_series_request send_series_request_nudge send_series_request_outcome

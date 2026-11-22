@@ -164,7 +164,6 @@ defmodule Tymeslot.Bookings.GroupSeatJobsIntegrationTest do
         assert :ok =
                  perform_job(EmailWorker, %{
                    "action" => "send_reschedule_request",
-                   "relevant_until" => nil,
                    "meeting_id" => meeting.id
                  })
       end

@@ -21,8 +21,15 @@ defmodule Tymeslot.Emails.EmailActions do
   (a decline sharing an action with an expiry), and `relevant?/2` is false
   once it has passed, so `Tymeslot.Workers.EmailWorker` drops the job
   unsent. A sweep catching up on old rows, a restored backup or a long mail
-  outage would otherwise deliver news nobody can use. Every other action is
-  always owed, however late it runs.
+  outage would otherwise deliver news nobody can use.
+
+  A moment that can move after the job is queued is not frozen into it. A
+  reschedule request (`send_reschedule_request`, `send_seat_reschedule_request`)
+  can be answered until a deadline that follows the meeting's start, which a
+  host edit or a calendar sync can change while the job waits, so its handler
+  judges it against the meeting as it stands
+  (`Tymeslot.Notifications.Email.RescheduleRequestEmails.check_answerable/1`).
+  Every other action is always owed, however late it runs.
 
   A handler is `{module, function}`, called with the args, or
   `{module, function, :with_job_id}`, also called with the Oban job id, which
@@ -80,7 +87,7 @@ defmodule Tymeslot.Emails.EmailActions do
       {["meeting_id", "reminder_value", "reminder_unit", "relevant_until"],
        {MeetingEmails, :handle_reminder_emails}},
     "send_reschedule_request" =>
-      {["meeting_id", "relevant_until"], {RescheduleRequestEmails, :handle_reschedule_request}},
+      {["meeting_id"], {RescheduleRequestEmails, :handle_reschedule_request}},
     # The same request, lapsed unanswered
     "send_reschedule_request_unanswered" =>
       {["meeting_id", "relevant_until"],
@@ -103,8 +110,7 @@ defmodule Tymeslot.Emails.EmailActions do
       {["meeting_id", "participant_id", "old_participant_id"],
        {SeatEmails, :handle_seat_reschedule_emails, :with_job_id}},
     "send_seat_reschedule_request" =>
-      {["meeting_id", "participant_id", "relevant_until"],
-       {GroupMeetingEmails, :handle_seat_reschedule_request}},
+      {["meeting_id", "participant_id"], {GroupMeetingEmails, :handle_seat_reschedule_request}},
     "send_seat_reminder" =>
       {["meeting_id", "participant_id", "reminder_value", "reminder_unit", "relevant_until"],
        {GroupMeetingEmails, :handle_seat_reminder_emails}},
