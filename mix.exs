@@ -158,7 +158,7 @@ defmodule Tymeslot.MixProject do
       # libvips through vix, which ships prebuilt binaries: re-encodes uploaded
       # images so their metadata (EXIF location, capture time, device) is never
       # published.
-      {:image, "~> 0.72"},
+      {:vix, "~> 0.42"},
       {:sweet_xml, "~> 0.7"},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

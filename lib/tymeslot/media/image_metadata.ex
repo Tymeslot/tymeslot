@@ -33,6 +33,7 @@ defmodule Tymeslot.Media.ImageMetadata do
 
   alias Tymeslot.Integrations.Shared.Lock
   alias Vix.Vips.Image, as: VipsImage
+  alias Vix.Vips.Operation
 
   # Bounds the memory a decompression bomb can claim: a few kilobytes of PNG
   # or WebP can declare a canvas of billions of pixels, and decoding costs
@@ -172,8 +173,10 @@ defmodule Tymeslot.Media.ImageMetadata do
     with {:ok, binary} <- read(path), do: open_binary(binary, extension)
   end
 
+  # `n: -1` loads every frame of an animation; loaders of still formats
+  # ignore it.
   defp open_binary(binary, extension) do
-    case Image.open(binary, pages: :all) do
+    case VipsImage.new_from_buffer(binary, n: -1) do
       {:ok, image} -> check_size(image, max_pixels(binary, extension))
       {:error, _reason} -> {:error, :invalid_image_format}
     end
@@ -202,14 +205,19 @@ defmodule Tymeslot.Media.ImageMetadata do
   end
 
   defp upright(image) do
-    if Image.pages(image) > 1 do
+    if animated?(image) do
       {:ok, image}
     else
-      case Image.autorotate(image) do
+      case Operation.autorot(image) do
         {:ok, {rotated, _flags}} -> {:ok, rotated}
         {:error, _reason} -> {:error, :invalid_image_format}
       end
     end
+  end
+
+  # Loaders of still formats set no `n-pages` field.
+  defp animated?(image) do
+    match?({:ok, pages} when pages > 1, VipsImage.header_value(image, "n-pages"))
   end
 
   defp encode(image, extension, options) do
