@@ -15,8 +15,10 @@ defmodule Tymeslot.Integrations.Stripe.WebhookSignatureEquivalenceTest do
     Base.encode16(:crypto.mac(:hmac, :sha256, secret, "#{t}.#{body}"), case: :lower)
   end
 
-  # Whitespace around parts is left out: the library does not trim, ours does
-  # (covered in webhook_signature_test.exs).
+  # Two deliberate differences are left out of the matrix: the library does
+  # not trim whitespace around parts and ours does (covered in
+  # webhook_signature_test.exs), and the library accepts a timestamp with
+  # trailing characters (`t=123abc`) where ours requires a whole integer.
   test "agrees with the library across a matrix of headers" do
     now = System.system_time(:second)
     old = now - 10_000

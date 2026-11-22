@@ -7,7 +7,8 @@ defmodule Tymeslot.Integrations.Stripe.WebhookSignature do
   secret. A delivery verifies when any `v1` matches and the timestamp is no
   older than the tolerance. Only the past side of the window is checked: a
   timestamp in the future verifies. Schemes other than `v1` are ignored, and
-  when the timestamp is repeated the first one counts.
+  when the timestamp is repeated the first one that parses as a whole
+  integer counts (a value with trailing characters is not a timestamp).
 
   The module is pure: the clock is the `:now` option, so callers and tests
   decide what time it is. Verify before decoding the body.
