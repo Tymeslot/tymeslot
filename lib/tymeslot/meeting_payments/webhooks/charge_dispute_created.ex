@@ -49,6 +49,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
 
   defp do_handle(%{"id" => event_id, "data" => %{"object" => object}} = event) do
     case PaymentLookup.find_for_charge(event, object["charge"]) do
+      {:error, reason} ->
+        {{:error, :retry_later, reason}, :error}
+
       nil ->
         Logger.info("charge.dispute.created: no booking_payment matched",
           charge_id: object["charge"]

@@ -42,6 +42,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
        )
        when is_binary(charge_id) do
     case PaymentLookup.find_for_charge(event, charge_id) do
+      {:error, reason} ->
+        {{:error, :retry_later, reason}, :error}
+
       nil ->
         Logger.info("charge.refunded: no booking_payment matched", charge_id: charge_id)
         {:ok, :ok}

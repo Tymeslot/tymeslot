@@ -174,8 +174,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # Stripe API call (expanding payment_intent.latest_charge) which must
   # not be made inside a DB transaction.  Charge handlers (refund/dispute)
   # all look up the row via stripe_charge_id so this field is required for
-  # them to work.  A failure here is logged but does not roll back the
-  # payment transition; the reconciler can retry if needed.
+  # them to work.  A failure here does not roll back the payment
+  # transition: the read is handed to `Workers.BackfillCharge`.
   defp after_payment(paid, meeting, pending, object) do
     PaymentCompletion.backfill_charge_id(paid, object)
     PaymentCompletion.emit_payment_succeeded(paid, meeting)

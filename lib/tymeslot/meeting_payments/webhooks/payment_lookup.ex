@@ -11,6 +11,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
   creates the object, so a row is only returned when `event["account"]`
   equals the row's `stripe_account_id`. Anything else is logged and answered
   with `nil`, which the handlers acknowledge so Stripe stops retrying.
+  A Stripe failure while resolving the row is not a `nil`: it is returned
+  as `{:error, reason}`, which the handlers answer with `:retry_later`, so
+  Stripe redelivers the event rather than having it acknowledged unmatched.
 
   Checkout session events (`checkout.session.*`) resolve by:
 
@@ -32,12 +35,15 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
     3. `meeting_id` (or `series_id`) read from the PaymentIntent's metadata, the last resort
        for an event that races ahead of `checkout.session.completed`. It costs
        one Stripe API call and needs the connected-account id from the event.
+       An intent Stripe does not know on that account matches nothing; any
+       other failure of the call is the lookup's error.
   """
 
   require Logger
 
   alias Ecto.UUID
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.Integrations.Stripe.PaymentIntents
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -57,18 +63,19 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
   @doc """
   Resolves the row for a charge-based event, or `nil`. `charge_id` is the
   charge the event's object refers to (the object itself for a charge, its
-  `charge` field for a dispute).
+  `charge` field for a dispute). `{:error, reason}` when the PaymentIntent
+  the last resort reads could not be read from Stripe.
   """
-  @spec find_for_charge(map(), String.t() | nil) :: BookingPaymentSchema.t() | nil
+  @spec find_for_charge(map(), String.t() | nil) ::
+          BookingPaymentSchema.t() | nil | {:error, StripeError.t() | :missing_api_key}
   def find_for_charge(%{"data" => %{"object" => object}} = event, charge_id) do
     intent_id = object["payment_intent"]
 
-    payment =
-      by_charge_id(charge_id) ||
-        by_payment_intent_id(intent_id) ||
-        by_metadata(intent_id, event["account"])
-
-    owned_by_event_account(payment, event)
+    case by_charge_id(charge_id) || by_payment_intent_id(intent_id) ||
+           by_metadata(intent_id, event["account"]) do
+      {:error, _reason} = error -> error
+      payment -> owned_by_event_account(payment, event)
+    end
   end
 
   def find_for_charge(_event, _charge_id), do: nil
@@ -127,16 +134,24 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
         intent |> reference_from_metadata() |> by_reference()
 
       {:error, reason} ->
-        Logger.warning("payment lookup: could not retrieve payment intent for metadata match",
-          payment_intent_id: intent_id,
-          reason: LogFormat.reason(reason)
-        )
-
-        nil
+        unreadable_intent(intent_id, reason)
     end
   end
 
   defp by_metadata(_intent_id, _connect_account), do: nil
+
+  defp unreadable_intent(intent_id, reason) do
+    missing? = StripeError.resource_missing?(reason)
+
+    Logger.log(
+      if(missing?, do: :info, else: :warning),
+      "payment lookup: could not retrieve payment intent for metadata match",
+      payment_intent_id: intent_id,
+      reason: LogFormat.reason(reason)
+    )
+
+    if missing?, do: nil, else: {:error, reason}
+  end
 
   # A reference names the meeting a payment is for, or, prefixed, the series.
   # Strict on the owner: a meeting's own payment only, never its series'.

@@ -5,6 +5,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookupTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
@@ -74,6 +75,26 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookupTest do
 
       assert [%{path: "/v1/payment_intents/pi_FOREIGN"}] =
                StripeStub.requests(:retrieve_payment_intent)
+    end
+
+    test "returns a transient Stripe failure instead of reading it as no booking" do
+      insert(:booking_payment,
+        stripe_account_id: @account,
+        stripe_charge_id: nil,
+        stripe_payment_intent_id: nil
+      )
+
+      StripeStub.stub(:retrieve_payment_intent, {:error_fixture, "api_error"})
+
+      assert {:error, %StripeError{type: "api_error", status: 500}} =
+               PaymentLookup.find_for_charge(charge_event(@account, "pi_BLIP"), "ch_BLIP")
+    end
+
+    test "returns nil for an intent Stripe does not know on that account" do
+      StripeStub.stub(:retrieve_payment_intent, {:error_fixture, "resource_missing"})
+
+      assert PaymentLookup.find_for_charge(charge_event(@account, "pi_UNKNOWN"), "ch_UNKNOWN") ==
+               nil
     end
 
     test "does not call Stripe when no connected account is available" do

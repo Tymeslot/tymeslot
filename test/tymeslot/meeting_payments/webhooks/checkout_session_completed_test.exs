@@ -17,8 +17,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
-  alias Tymeslot.StripeFixtures
-  alias Tymeslot.StripeStub
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
 
@@ -300,43 +298,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert reloaded_meeting.status == :awaiting_payment
 
       refute_enqueued(worker: CalendarEventWorker)
-    end
-
-    test "backfills stripe_charge_id from an expanded latest_charge" do
-      meeting = insert(:meeting, status: :awaiting_payment)
-
-      bp =
-        insert_payment(
-          meeting: meeting,
-          status: :pending,
-          stripe_checkout_session_id: "cs_CHARGE"
-        )
-
-      # The payment intent is read with `latest_charge` expanded, so the
-      # handler must read the charge id from the embedded charge object,
-      # otherwise stripe_charge_id stays blank and every downstream
-      # refund/dispute lookup (keyed on it) fails.
-      StripeStub.expect(
-        :retrieve_payment_intent,
-        StripeFixtures.object("payment_intent_with_latest_charge", %{
-          "id" => "pi_CHARGE",
-          "latest_charge" => %{"id" => "ch_REAL"}
-        })
-      )
-
-      event =
-        completed_event("evt_CHARGE", %{
-          "id" => "cs_CHARGE",
-          "client_reference_id" => meeting.id,
-          "payment_intent" => "pi_CHARGE"
-        })
-
-      assert :ok = CheckoutSessionCompleted.handle(event)
-
-      assert Repo.reload!(bp).stripe_charge_id == "ch_REAL"
-
-      assert [%{path: "/v1/payment_intents/pi_CHARGE"}] =
-               StripeStub.requests(:retrieve_payment_intent)
     end
 
     test "a paid booking on a meeting type requiring approval moves into the gate, not confirmed" do

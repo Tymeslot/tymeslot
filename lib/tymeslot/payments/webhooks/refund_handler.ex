@@ -12,6 +12,10 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   delivery, so Stripe redelivers the refund. The handler itself then tells
   the user.
 
+  Stripe delivers an event at least once, and a delivery failed after the
+  hand-off (the refunds read below) hands the refund off again, so the
+  payment-event handler must take the same refund twice without harm.
+
   ## Partial Refund Handling
 
   The handler treats partial refunds by their total:
@@ -53,6 +57,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.Integrations.Stripe.Refunds
   alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Payments.ChargeInvoice
@@ -171,8 +176,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
       charge_id: charge_id,
       customer_id: customer_id,
       total_refunded: total_refunded,
-      charge_amount: charge_amount,
-      should_revoke: should_revoke
+      charge_amount: charge_amount
     } = refund
 
     # Find the subscription by Stripe customer ID for local notifications
@@ -198,42 +202,60 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
         {:ok, :refund_logged}
 
       subscription ->
-        # Revoking access is the payment-event handler's job: it received
-        # this refund, with the decision, above, and has not acted on it
-        # yet. Here the user is told, and told access ends only when the
-        # refund is for the subscription they hold now.
-        revoked = should_revoke and refunds_current_subscription?(refund, subscription)
-        access = access_outcome(should_revoke, revoked)
+        # Read before anything is announced, so a read that fails the
+        # delivery leaves nothing for the redelivery to repeat but the
+        # hand-off.
+        delta = refunded_by_event(event, charge)
 
-        if !should_revoke do
-          Logger.info("Refund below threshold - not revoking access",
-            user_id: subscription.user_id,
-            charge_id: charge_id,
-            total_refunded: total_refunded,
-            charge_amount: charge_amount,
-            refund_percentage: calculate_refund_percentage(total_refunded, charge_amount),
-            threshold: refund_revocation_threshold_percent()
-          )
+        with {:ok, candidates} <- candidate_refunds(charge, delta) do
+          notify_subscriber(subscription, charge, refund, {delta, candidates})
         end
-
-        # Alert admin about processed refund
-        AdminAlerts.report(:refund_processed,
-          summary: "Refund processed for subscription",
-          context: %{
-            user_id: subscription.user_id,
-            charge_id: charge_id,
-            total_refunded: total_refunded,
-            charge_amount: charge_amount,
-            access_revoked: revoked
-          }
-        )
-
-        # Send email notification to user, quoting the amount of THIS
-        # refund rather than the cumulative total across the charge.
-        notify_unless_announced(subscription, event, charge, access)
-
-        {:ok, :refund_processed}
     end
+  end
+
+  # Revoking access is the payment-event handler's job: it received this
+  # refund, with the decision, above, and has not acted on it yet. Here the
+  # user is told, and told access ends only when the refund is for the
+  # subscription they hold now.
+  defp notify_subscriber(subscription, charge, refund, event_refunds) do
+    %{
+      charge_id: charge_id,
+      total_refunded: total_refunded,
+      charge_amount: charge_amount,
+      should_revoke: should_revoke
+    } = refund
+
+    revoked = should_revoke and refunds_current_subscription?(refund, subscription)
+    access = access_outcome(should_revoke, revoked)
+
+    if !should_revoke do
+      Logger.info("Refund below threshold - not revoking access",
+        user_id: subscription.user_id,
+        charge_id: charge_id,
+        total_refunded: total_refunded,
+        charge_amount: charge_amount,
+        refund_percentage: calculate_refund_percentage(total_refunded, charge_amount),
+        threshold: refund_revocation_threshold_percent()
+      )
+    end
+
+    # Alert admin about processed refund
+    AdminAlerts.report(:refund_processed,
+      summary: "Refund processed for subscription",
+      context: %{
+        user_id: subscription.user_id,
+        charge_id: charge_id,
+        total_refunded: total_refunded,
+        charge_amount: charge_amount,
+        access_revoked: revoked
+      }
+    )
+
+    # Send email notification to user, quoting the amount of THIS
+    # refund rather than the cumulative total across the charge.
+    notify_unless_announced(subscription, charge, access, event_refunds)
+
+    {:ok, :refund_processed}
   end
 
   # What the refund email tells the customer about their access, as a
@@ -327,12 +349,10 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   # The email is skipped only when every candidate was announced, so a
   # notice is never lost to an ambiguous match: a repeated notice is the
   # lesser harm next to a refund nobody is told about. The same holds when
-  # the refunds cannot be read at all.
-  defp notify_unless_announced(subscription, event, charge, access) do
-    delta = refunded_by_event(event, charge)
-
-    case candidate_refunds(charge, delta) do
-      [_first | _rest] = candidates ->
+  # Stripe refuses the read of the refunds for good.
+  defp notify_unless_announced(subscription, charge, access, {delta, candidates}) do
+    case candidates do
+      [_first | _rest] ->
         unless Enum.all?(candidates, &customer_notified?/1) do
           amount = delta || newest_unannounced_amount(candidates, charge)
           send_refund_email(subscription, amount, access, charge)
@@ -358,29 +378,41 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
   defp candidate_refunds(charge, nil), do: charge_refunds(charge)
 
-  defp candidate_refunds(charge, delta),
-    do: charge |> charge_refunds() |> Enum.filter(&(&1["amount"] == delta))
+  defp candidate_refunds(charge, delta) do
+    with {:ok, refunds} <- charge_refunds(charge),
+         do: {:ok, Enum.filter(refunds, &(&1["amount"] == delta))}
+  end
 
   # A webhook charge carries its refunds only at older API versions, so when
-  # they are missing they are read from Stripe. An unreadable list is no
-  # candidates, which sends the email.
+  # they are missing they are read from Stripe. A read a redelivery may get
+  # past fails the delivery; one Stripe refuses for good is no candidates,
+  # which sends the email.
   defp charge_refunds(charge) do
     with [] <- get_refunds(charge),
          {:ok, %{"data" => refunds}} when is_list(refunds) <-
            Refunds.list(%{charge: charge["id"], limit: @refunds_read_per_charge}, []) do
-      refunds
+      {:ok, refunds}
     else
       [_first | _rest] = refunds ->
-        refunds
+        {:ok, refunds}
+
+      {:error, %StripeError{} = error} ->
+        if StripeError.retryable?(error),
+          do: {:error, :retry_later, {:refunds_unreadable, error}},
+          else: unreadable_refunds(charge, error)
 
       other ->
-        Logger.info("Refunds not readable; sending the refund email",
-          charge_id: charge["id"],
-          reason: LogFormat.reason(other)
-        )
-
-        []
+        unreadable_refunds(charge, other)
     end
+  end
+
+  defp unreadable_refunds(charge, reason) do
+    Logger.info("Refunds not readable; sending the refund email",
+      charge_id: charge["id"],
+      reason: LogFormat.reason(reason)
+    )
+
+    {:ok, []}
   end
 
   defp newest_unannounced_amount(candidates, charge) do

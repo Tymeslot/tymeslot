@@ -10,8 +10,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments.Webhooks.ChargeRefunded
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   describe "handle/1" do
     test "marks booking_payment refunded when full amount has been refunded" do
@@ -161,6 +164,75 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       reloaded = Repo.reload!(bp)
       assert reloaded.status == :partially_refunded
       assert reloaded.refunded_amount_cents == 3500
+    end
+  end
+
+  # A refund that races ahead of checkout.session.completed finds the row
+  # only through the payment intent's metadata, read from Stripe.
+  describe "handle/1 when the row is found only through Stripe" do
+    setup do
+      meeting = insert(:meeting)
+
+      bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          stripe_account_id: @account,
+          status: :paid,
+          amount_cents: 5000,
+          refunded_amount_cents: 0,
+          stripe_charge_id: nil,
+          stripe_payment_intent_id: nil
+        )
+
+      event =
+        put_in(
+          refund_event("evt_BLIP", "ch_x", 5000),
+          ["data", "object", "payment_intent"],
+          "pi_x"
+        )
+
+      %{bp: bp, meeting: meeting, event: event}
+    end
+
+    test "a transient intent lookup makes charge.refunded answer retry_later", %{
+      bp: bp,
+      event: event
+    } do
+      StripeStub.stub(:retrieve_payment_intent, {:error_fixture, "api_error"})
+
+      assert {:error, :retry_later, %StripeError{type: "api_error"}} =
+               ChargeRefunded.handle(event)
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.refunded_amount_cents == 0
+      assert reloaded.status == :paid
+      assert reloaded.last_event_id == nil
+    end
+
+    test "a redelivery after the blip succeeds", %{bp: bp, meeting: meeting, event: event} do
+      StripeStub.stub(:retrieve_payment_intent, {:error_fixture, "api_error"})
+      assert {:error, :retry_later, _reason} = ChargeRefunded.handle(event)
+
+      StripeStub.stub(
+        :retrieve_payment_intent,
+        StripeFixtures.object("payment_intent_with_latest_charge", %{
+          "id" => "pi_x",
+          "metadata" => %{"meeting_id" => meeting.id}
+        })
+      )
+
+      assert :ok = ChargeRefunded.handle(event)
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.refunded_amount_cents == 5000
+      assert reloaded.status == :refunded
+    end
+
+    test "an intent Stripe does not know is still acknowledged", %{bp: bp, event: event} do
+      StripeStub.stub(:retrieve_payment_intent, {:error_fixture, "resource_missing"})
+
+      assert :ok = ChargeRefunded.handle(event)
+      assert Repo.reload!(bp).refunded_amount_cents == 0
     end
   end
 

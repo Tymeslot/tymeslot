@@ -250,11 +250,27 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       assert_received {:refund_email, ^user_id, 6_000, "eur", _revoked}
     end
 
-    test "a failed read of the latest refund still sends the refund email" do
+    # Whether the refund was announced already cannot be known, so sending
+    # the email now could repeat the app's own notice; the redelivery reads
+    # the list again.
+    test "an unreadable refund list on a transient error sends no email and retries" do
+      {_user, customer_id} = linked_subscription()
+      charge = refunded_charge(customer_id, 5_000, 10_000)
+
+      StripeStub.stub(:list_refunds, {:transport_error, :closed})
+
+      assert {:error, :retry_later, {:refunds_unreadable, %Error{type: "api_connection_error"}}} =
+               RefundHandler.handle(with_object(refunded_event(), charge))
+
+      Oban.drain_queue(queue: :emails)
+      refute_received {:refund_email, _user_id, _amount, _currency, _access}
+    end
+
+    test "a permanent refund list error still sends the email" do
       {user, customer_id} = linked_subscription()
       charge = refunded_charge(customer_id, 5_000, 10_000)
 
-      StripeStub.stub(:list_refunds, {:error_fixture, "api_error"})
+      StripeStub.stub(:list_refunds, {:error_fixture, "invalid_request_error"})
 
       assert {:ok, :refund_processed} =
                RefundHandler.handle(with_object(refunded_event(), charge))
@@ -262,6 +278,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       Oban.drain_queue(queue: :emails)
       user_id = user.id
       assert_received {:refund_email, ^user_id, 5_000, "eur", "partial"}
+      refute_received {:refund_email, _user_id, _amount, _currency, _access}
     end
 
     test "an earlier announced refund on the payload does not silence a later one" do

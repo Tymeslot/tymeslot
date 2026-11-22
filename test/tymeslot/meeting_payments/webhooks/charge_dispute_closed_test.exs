@@ -10,8 +10,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
 
   describe "handle/1 — won outcomes" do
     test "won dispute on a previously paid booking reverts status to paid" do
@@ -387,6 +389,33 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       assert reloaded.status == :paid
       assert reloaded.stripe_dispute_id == "dp_evt_LEGACY"
       assert %DateTime{} = reloaded.dispute_closed_at
+    end
+  end
+
+  describe "handle/1 when the row is found only through Stripe" do
+    test "a transient intent lookup answers retry_later and records no outcome" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :disputed,
+          amount_cents: 5000,
+          refunded_amount_cents: 0,
+          stripe_charge_id: nil,
+          stripe_payment_intent_id: nil
+        )
+
+      StripeStub.stub(:retrieve_payment_intent, {:error_fixture, "rate_limit"})
+
+      event =
+        "evt_CLOSED_BLIP"
+        |> dispute_closed_event("ch_x", "lost", 5000)
+        |> put_in(["data", "object", "payment_intent"], "pi_x")
+
+      assert {:error, :retry_later, %StripeError{status: 429}} = ChargeDisputeClosed.handle(event)
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == :disputed
+      assert reloaded.last_event_id == nil
     end
   end
 
