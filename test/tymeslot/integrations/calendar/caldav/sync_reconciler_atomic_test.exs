@@ -302,6 +302,37 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
       assert {:ok, _event} = ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-1")
     end
 
+    # Five missing rows clear the minimum cache size on their own, so this is
+    # the case that tells a share of the whole window apart from a share of
+    # only the rows the server left out (which is always all of them).
+    test "measures the share against every cached row, including those the fetch returns",
+         %{integration: integration} do
+      for i <- 1..10, do: seed_cached_event(integration, "cached-#{i}")
+
+      # Server returns 5 of 10 cached → 5/10 (50%) missing, below the threshold.
+      fetched = Enum.map(1..5, &raw_event("cached-#{&1}"))
+
+      assert :ok =
+               SyncReconciler.process_full_fetch(
+                 integration,
+                 fetched,
+                 @start_time,
+                 @end_time,
+                 @sync_started_at,
+                 "/cal/"
+               )
+
+      for i <- 1..5 do
+        assert {:ok, _event} =
+                 ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-#{i}")
+      end
+
+      for i <- 6..10 do
+        assert {:error, :not_found} =
+                 ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-#{i}")
+      end
+    end
+
     test "reconciles an empty listing once the cache has gone unconfirmed past the grace period",
          %{integration: integration} do
       # A calendar the user genuinely emptied produces the same listing as a

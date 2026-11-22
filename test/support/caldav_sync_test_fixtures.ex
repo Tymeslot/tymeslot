@@ -54,20 +54,34 @@ defmodule Tymeslot.CalDAVSyncTestFixtures do
   def ical_path2, do: @ical_path2
 
   @spec caldav_report_xml(String.t(), String.t()) :: String.t()
-  def caldav_report_xml(href, ical_data) do
+  def caldav_report_xml(href, ical_data), do: caldav_report_xml([{href, ical_data}])
+
+  @doc """
+  A calendar-query REPORT answer listing each `{href, ical_data}` pair; an
+  empty list is a valid listing of an empty calendar.
+  """
+  @spec caldav_report_xml([{String.t(), String.t()}]) :: String.t()
+  def caldav_report_xml(entries) do
+    responses =
+      Enum.map_join(entries, "\n", fn {href, ical_data} ->
+        """
+          <D:response>
+            <D:href>#{href}</D:href>
+            <D:propstat>
+              <D:prop>
+                <D:getetag>"test-etag"</D:getetag>
+                <C:calendar-data>#{String.trim(ical_data)}</C:calendar-data>
+              </D:prop>
+              <D:status>HTTP/1.1 200 OK</D:status>
+            </D:propstat>
+          </D:response>
+        """
+      end)
+
     """
     <?xml version="1.0" encoding="UTF-8"?>
     <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
-      <D:response>
-        <D:href>#{href}</D:href>
-        <D:propstat>
-          <D:prop>
-            <D:getetag>"test-etag"</D:getetag>
-            <C:calendar-data>#{String.trim(ical_data)}</C:calendar-data>
-          </D:prop>
-          <D:status>HTTP/1.1 200 OK</D:status>
-        </D:propstat>
-      </D:response>
+    #{responses}
     </D:multistatus>
     """
   end
