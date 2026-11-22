@@ -22,7 +22,9 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
        (`IdempotencyKey.for_intent(:refund, id, attempt)`), so a later
        attempt never replays an error Stripe stored against an earlier key.
        The first attempt of a refund carrying a `legacy_idempotency_key`
-       uses that instead.
+       replays that key with the request first sent under it, which carried
+       no refund id; adoption then knows such a refund by its payment and
+       amount.
     6. Settles by the outcome (`RefundOutcome`): a refund Stripe accepted
        is added to the payment's refunded total in one short transaction
        under the payment's lock, which also enqueues the attendee's email;
@@ -225,27 +227,45 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
         )
       end
 
-      {:ok, Enum.find(refunds, &(get_in(&1, ["metadata", "tymeslot_refund_id"]) == refund.id))}
+      {:ok, Enum.find(refunds, &made_for?(&1, refund, payment))}
     end
   end
 
+  # A refund carries the id of the row it was made for, except one sent
+  # under a legacy key, which is known by its payment and amount instead.
+  defp made_for?(%{"metadata" => %{"tymeslot_refund_id" => id}}, refund, _payment),
+    do: id == refund.id
+
+  defp made_for?(%{"metadata" => %{"booking_payment_id" => payment_id}} = made, refund, payment)
+       when is_binary(refund.legacy_idempotency_key),
+       do: payment_id == payment.id and made["amount"] == refund.amount_cents
+
+  defp made_for?(_made, _refund, _payment), do: false
+
   defp create(refund, payment, opts) do
-    payment
-    |> stripe_params(refund.amount_cents, refund.reason)
-    |> put_in([:metadata, :tymeslot_refund_id], refund.id)
-    |> StripeRefunds.create(
+    {params, key} = request(refund, payment)
+
+    StripeRefunds.create(params,
       connect_account: payment.stripe_account_id,
-      idempotency_key: idempotency_key(refund),
+      idempotency_key: key,
       deadline_ms: opts[:deadline_ms]
     )
   end
 
-  defp idempotency_key(%RefundSchema{attempt: 1, legacy_idempotency_key: key})
+  # Stripe refuses a key reused with different params, so a legacy key is
+  # sent with the request first made under it, which named no refund row.
+  defp request(%RefundSchema{attempt: 1, legacy_idempotency_key: key} = refund, payment)
        when is_binary(key),
-       do: key
+       do: {stripe_params(payment, refund.amount_cents, refund.reason), key}
 
-  defp idempotency_key(%RefundSchema{id: id, attempt: attempt}),
-    do: IdempotencyKey.for_intent(:refund, id, attempt)
+  defp request(%RefundSchema{id: id, attempt: attempt} = refund, payment) do
+    params =
+      payment
+      |> stripe_params(refund.amount_cents, refund.reason)
+      |> put_in([:metadata, :tymeslot_refund_id], id)
+
+    {params, IdempotencyKey.for_intent(:refund, id, attempt)}
+  end
 
   # A series payment names its series instead of a meeting.
   defp metadata(%{series_id: series_id} = payment) when is_binary(series_id),

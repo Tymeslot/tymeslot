@@ -208,6 +208,62 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
       assert %{status: :succeeded, attempt: 2} = RefundQueries.get(refund.id)
     end
 
+    test "a legacy key is replayed with its original request, naming no refund row",
+         %{payment: payment} do
+      refund =
+        insert(:booking_payment_refund,
+          booking_payment: payment,
+          amount_cents: 2_000,
+          legacy_idempotency_key: "late_payment_refund:#{payment.id}:late:2000"
+        )
+
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LEGACY"))
+
+      assert {:ok, %{status: :succeeded}} = Refunds.execute(refund, [])
+
+      assert [%{form: form, headers: headers}] = StripeStub.requests(:create_refund)
+      assert headers["idempotency-key"] == "late_payment_refund:#{payment.id}:late:2000"
+      refute Map.has_key?(form["metadata"], "tymeslot_refund_id")
+      assert form["metadata"]["booking_payment_id"] == payment.id
+    end
+
+    test "a legacy refund Stripe made under its old key is adopted, not made again",
+         %{payment: payment} do
+      refund =
+        insert(:booking_payment_refund,
+          booking_payment: payment,
+          amount_cents: 2_000,
+          legacy_idempotency_key: "late_payment_refund:#{payment.id}:late:2000"
+        )
+
+      StripeStub.expect(:create_refund, {:error_fixture, "idempotency_error"})
+
+      assert {:pending, _refund} = Refunds.execute(refund, [])
+
+      old =
+        StripeFixtures.object("refund_with_charge", %{
+          "id" => "re_OLD",
+          "amount" => 2_000,
+          "metadata" => %{"booking_payment_id" => payment.id},
+          "charge" => %{"amount_refunded" => 2_000}
+        })
+
+      other_amount =
+        StripeFixtures.object("refund", %{
+          "id" => "re_OTHER_AMOUNT",
+          "amount" => 1_000,
+          "metadata" => %{"booking_payment_id" => payment.id}
+        })
+
+      StripeStub.expect(:list_refunds, StripeFixtures.list([other_amount, old]))
+
+      assert :ok = perform_job(ExecuteRefund, %{refund_id: refund.id})
+
+      assert [_only_the_first] = StripeStub.requests(:create_refund)
+      assert %{status: :succeeded, stripe_refund_id: "re_OLD"} = RefundQueries.get(refund.id)
+      assert %{refunded_amount_cents: 2_000} = Repo.reload!(payment)
+    end
+
     test "a permanent refusal fails the refund and alerts", %{payment: payment} do
       StripeStub.expect(
         :create_refund,
