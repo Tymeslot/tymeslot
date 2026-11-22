@@ -211,7 +211,7 @@ defmodule Tymeslot.Integrations.Calendar.OwnerActions do
   # questions are different and need not stay in step. An Exchange mailbox
   # discovers real folders and has no feed to re-fetch, so it belongs on the
   # discovery path with every other credentialed provider.
-  defp refresh(%{provider: provider} = integration) do
+  defp refresh(%CalendarIntegrationSchema{provider: provider} = integration) do
     cond do
       ProviderConfig.subscription?(provider) ->
         with {:ok, _outcome} <- SyncIcsCalendarWorker.enqueue(integration.id),
