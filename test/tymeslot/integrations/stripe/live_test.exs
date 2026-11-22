@@ -472,7 +472,8 @@ defmodule Tymeslot.Integrations.Stripe.LiveTest do
       invoice_creation: %{enabled: true},
       customer_email: "stripe-live+#{unix}@example.test",
       client_reference_id: "live-#{unix}",
-      expires_at: unix + 30 * 60,
+      # Stripe's minimum is 30 minutes from when the call arrives.
+      expires_at: System.os_time(:second) + 31 * 60,
       success_url: "https://example.test/paid?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: "https://example.test/cancel",
       locale: "en"

@@ -150,16 +150,6 @@ defmodule Tymeslot.StripeLiveReport do
   defp mark_recorded!(names) do
     readme = Path.join(@fixtures_root, "README.md")
     today = Date.to_iso8601(Date.utc_today())
-
-    updated =
-      Enum.reduce(names, File.read!(readme), fn name, text ->
-        Regex.replace(
-          ~r/^(\| `#{Regex.escape(name)}\.json` \| ).*\|$/m,
-          text,
-          "\\1recorded #{today} |"
-        )
-      end)
-
-    File.write!(readme, updated)
+    File.write!(readme, StripeLiveContract.mark_recorded(File.read!(readme), names, today))
   end
 end

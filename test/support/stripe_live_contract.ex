@@ -34,7 +34,31 @@ defmodule Tymeslot.StripeLiveContract do
   }
 
   @redacted_keys ~w(client_secret secret url hosted_invoice_url)
-  @fake_id ~r/^(cus|ch|re|cs|pi|sub|in|inpay|dp|acct|bps)_test\d+$/
+  # `<prefix>_<token>` with a digit in the token: an object id (`cus_test1`,
+  # `price_1Abc`), where an enum value such as `card_declined` has none.
+  @object_id ~r/^([a-z]+(?:_[a-z]+)*)_(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{5,}$/
+
+  # The step each fixture is recorded from, so a re-record does not depend on
+  # the order the flows ran in. Other steps mapped above are only compared.
+  @recorded_by [
+    "Customers.create",
+    "Customers.delete",
+    "CheckoutSessions.create (subscription)",
+    "CheckoutSessions.expire (subscription)",
+    "Subscriptions.retrieve",
+    "Subscriptions.update (cancel at period end)",
+    "Subscriptions.cancel",
+    "Invoices.retrieve",
+    "BillingPortal.create_session",
+    # The platform charge-and-refund flow records these four.
+    "PaymentIntents.retrieve",
+    "Charges.retrieve",
+    "Charges.list (expand refunds)",
+    "Refunds.create",
+    "Refunds.retrieve",
+    "Accounts.retrieve_connected",
+    "CheckoutSessions.create (connect)"
+  ]
   @email ~r/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/
 
   @doc "The fixture name for a step label, or `nil` when it has none."
@@ -45,6 +69,10 @@ defmodule Tymeslot.StripeLiveContract do
       name -> name
     end
   end
+
+  @doc "Whether the step is the one its fixture is recorded from."
+  @spec recorded_by?(String.t()) :: boolean()
+  def recorded_by?(label), do: label in @recorded_by
 
   @doc "The object a step's live response stands for, given its label."
   @spec target(String.t(), map()) :: map()
@@ -92,7 +120,7 @@ defmodule Tymeslot.StripeLiveContract do
   def id_map(fixture, live), do: collect_ids(fixture, live, %{})
 
   defp collect_ids(fake, live, acc) when is_binary(fake) and is_binary(live) do
-    if Regex.match?(@fake_id, fake) and fake != live, do: Map.put(acc, live, fake), else: acc
+    if fake != live and same_kind?(fake, live), do: Map.put(acc, live, fake), else: acc
   end
 
   defp collect_ids(fixture, live, acc) when is_map(fixture) and is_map(live) do
@@ -109,6 +137,15 @@ defmodule Tymeslot.StripeLiveContract do
   end
 
   defp collect_ids(_fixture, _live, acc), do: acc
+
+  defp same_kind?(fake, live) do
+    with [_whole, prefix] <- Regex.run(@object_id, fake),
+         [_whole, ^prefix] <- Regex.run(@object_id, live) do
+      true
+    else
+      _other -> false
+    end
+  end
 
   @doc """
   Turns a live object into fixture content: live ids become their fixture ids,
@@ -137,4 +174,20 @@ defmodule Tymeslot.StripeLiveContract do
   end
 
   defp clean(other, _ids), do: other
+
+  @doc """
+  Marks each named fixture's README row as recorded on `date`, replacing only
+  the provenance text (`API reference example (...), fetched <date>`) and
+  keeping the row's notes.
+  """
+  @spec mark_recorded(String.t(), [String.t()], String.t()) :: String.t()
+  def mark_recorded(readme, names, date) do
+    Enum.reduce(names, readme, fn name, text ->
+      Regex.replace(
+        ~r/^(\| `#{Regex.escape(name)}\.json` \| )(?:API reference example \([^)]*\), fetched [\d-]+|recorded [\d-]+)/m,
+        text,
+        "\\1recorded #{date}"
+      )
+    end)
+  end
 end

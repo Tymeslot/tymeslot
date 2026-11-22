@@ -36,16 +36,16 @@ defmodule Tymeslot.Integrations.Stripe.LiveSupportTest do
       fixture = %{"id" => "re_test1", "charge" => "ch_test1", "url" => "https://x"}
 
       live = %{
-        "id" => "re_3Abc",
-        "charge" => "ch_3Abc",
+        "id" => "re_3Abc12345",
+        "charge" => "ch_3Abc12345",
         "url" => "https://pay.example/secret",
-        "receipt" => "https://dashboard/re_3Abc",
+        "receipt" => "https://dashboard/re_3Abc12345",
         "email" => "someone@real.example"
       }
 
       ids = StripeLiveContract.id_map(fixture, live)
 
-      assert ids == %{"re_3Abc" => "re_test1", "ch_3Abc" => "ch_test1"}
+      assert ids == %{"re_3Abc12345" => "re_test1", "ch_3Abc12345" => "ch_test1"}
 
       assert StripeLiveContract.sanitise(live, ids) == %{
                "id" => "re_test1",
@@ -54,6 +54,70 @@ defmodule Tymeslot.Integrations.Stripe.LiveSupportTest do
                "receipt" => "https://dashboard/re_test1",
                "email" => "customer@example.test"
              }
+    end
+  end
+
+  describe "recording stability" do
+    test "maps every object id at the same position, not only the listed prefixes" do
+      fixture = %{
+        "id" => "ch_test1",
+        "price" => %{"id" => "price_1AbCdE2fG", "product" => "prod_Zz9Yy8Xx7"},
+        "items" => [%{"id" => "si_Qq1Ww2Ee3"}],
+        "last_error" => "card_declined",
+        "balance_transaction" => "txn_1Mm2Nn3Oo"
+      }
+
+      live = %{
+        "id" => "ch_3Live99",
+        "price" => %{"id" => "price_9ZzLive88", "product" => "prod_Live77Abc"},
+        "items" => [%{"id" => "si_Live55Def"}],
+        "last_error" => "card_expired",
+        "balance_transaction" => "txn_Live44Ghi"
+      }
+
+      assert StripeLiveContract.id_map(fixture, live) == %{
+               "ch_3Live99" => "ch_test1",
+               "price_9ZzLive88" => "price_1AbCdE2fG",
+               "prod_Live77Abc" => "prod_Zz9Yy8Xx7",
+               "si_Live55Def" => "si_Qq1Ww2Ee3",
+               "txn_Live44Ghi" => "txn_1Mm2Nn3Oo"
+             }
+    end
+
+    test "the README update replaces only the provenance text" do
+      readme = """
+      | `customer.json` | API reference example (`customers/object`), fetched 2026-11-22 |
+      | `checkout_session_payment.json` | API reference example (`checkout/sessions/object`), fetched 2026-11-22, unchanged: an open session has `payment_intent: null` |
+      | `refund.json` | API reference example (`refunds/object`), fetched 2026-11-22 |
+      """
+
+      updated =
+        StripeLiveContract.mark_recorded(
+          readme,
+          ["customer", "checkout_session_payment"],
+          "2027-01-02"
+        )
+
+      assert updated =~ "| `customer.json` | recorded 2027-01-02 |"
+
+      assert updated =~
+               "| `checkout_session_payment.json` | recorded 2027-01-02, unchanged: an open session has `payment_intent: null` |"
+
+      assert updated =~
+               "| `refund.json` | API reference example (`refunds/object`), fetched 2026-11-22 |"
+    end
+
+    test "each fixture has exactly one designated recording step" do
+      labels = [
+        "Charges.retrieve",
+        "Charges.retrieve (connect)",
+        "Refunds.create",
+        "Refunds.create (connect)"
+      ]
+
+      recorders = Enum.map(labels, &StripeLiveContract.recorded_by?/1)
+
+      assert recorders == [true, false, true, false]
     end
   end
 
@@ -101,6 +165,16 @@ defmodule Tymeslot.Integrations.Stripe.LiveSupportTest do
       StripeLiveFlow.step(flow, "Refunds.retrieve", fn -> {:ok, live} end)
 
       assert [%{status: :failed, drift: ["status"]}] = StripeLiveReport.steps(report)
+    end
+
+    test "recording captures only the designated step", %{report: report} do
+      flow = StripeLiveFlow.new(report, "rec", live?: true, record?: true)
+      charge = StripeFixtures.object("charge")
+
+      StripeLiveFlow.step(flow, "Charges.retrieve (connect)", fn -> {:ok, charge} end)
+      StripeLiveFlow.step(flow, "Charges.retrieve", fn -> {:ok, charge} end)
+
+      assert [{"charge", _live}] = Agent.get(report, & &1.captures)
     end
 
     test "without a key every step is skipped and the function never runs", %{report: report} do

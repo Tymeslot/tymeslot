@@ -108,14 +108,22 @@ defmodule Tymeslot.StripeLiveFlow do
       live = StripeLiveContract.target(operation, value)
 
       if flow.record? do
-        StripeLiveReport.capture(flow.report, name, live)
-        %{note: "recorded as #{name}"}
+        record_fixture(flow, operation, name, live)
       else
         fixture = StripeFixtures.object(name)
         Map.put(StripeLiveContract.compare(fixture, live), :fixture, name)
       end
     else
       _other -> %{}
+    end
+  end
+
+  defp record_fixture(flow, operation, name, live) do
+    if StripeLiveContract.recorded_by?(operation) do
+      StripeLiveReport.capture(flow.report, name, live)
+      %{note: "recorded as #{name}"}
+    else
+      %{}
     end
   end
 
@@ -224,8 +232,13 @@ defmodule Tymeslot.StripeLiveFlow do
       end
 
     case result do
-      {:error, error} -> if Error.resource_missing?(error), do: {:ok, %{}}, else: result
+      {:error, error} -> if already_gone?(error), do: {:ok, %{}}, else: result
       ok -> ok
     end
+  end
+
+  defp already_gone?(%Error{message: message} = error) do
+    Error.resource_missing?(error) or
+      (is_binary(message) and message =~ ~r/already (been )?(canceled|cancelled|deleted)/i)
   end
 end
