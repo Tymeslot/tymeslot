@@ -468,6 +468,14 @@ defmodule Tymeslot.Meetings.MeetingState do
   Whether the organiser may see this meeting: the single definition of
   organiser visibility, mirrored for queries by `where_visible_to_organiser/1`.
 
+  A booking held for email verification (`:awaiting_verification`) is
+  hidden while it is held. That is nearly always also the first rule below,
+  but not for a group slot held again once its last confirmed seat left
+  beside seats still awaiting verification
+  (`Tymeslot.Bookings.SeatRelease`): it keeps the `email_verified_at` of its
+  first life, so that should it end held it stays in the organiser's history
+  as the meeting they knew of.
+
   Two kinds of booking never reach the organiser, because neither became a
   booking anyone agreed to:
 
@@ -499,7 +507,8 @@ defmodule Tymeslot.Meetings.MeetingState do
   `approval_resolved_at`; both rules hide it.
   """
   @spec visible_to_organiser?(Meeting.t() | map()) :: boolean()
-  def visible_to_organiser?(meeting), do: not unverified?(meeting) and not unpaid?(meeting)
+  def visible_to_organiser?(meeting),
+    do: not awaiting_verification?(meeting) and not unverified?(meeting) and not unpaid?(meeting)
 
   defp unpaid?(%{status: @awaiting_payment}), do: true
   defp unpaid?(%{status: @expired, reschedule_requested_at: %DateTime{}}), do: false
@@ -520,15 +529,16 @@ defmodule Tymeslot.Meetings.MeetingState do
 
   @doc """
   Query-side counterpart of `visible_to_organiser?/1`, and the same rule
-  clause for clause: verified or never gated, and past payment. Assumes the
-  meeting is the query's first binding.
+  clause for clause: not held, verified or never gated, and past payment.
+  Assumes the meeting is the query's first binding.
   """
   @spec where_visible_to_organiser(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_visible_to_organiser(query) do
     where(
       query,
       [m],
-      (is_nil(m.verification_deadline_at) or not is_nil(m.email_verified_at)) and
+      m.status != @awaiting_verification and
+        (is_nil(m.verification_deadline_at) or not is_nil(m.email_verified_at)) and
         m.status != @awaiting_payment and
         (m.status != @expired or not is_nil(m.approval_resolved_at) or
            not is_nil(m.reschedule_requested_at))

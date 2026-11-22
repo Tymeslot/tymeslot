@@ -43,11 +43,14 @@ defmodule Tymeslot.Bookings.SeatRelease do
   it had been cancelled: the leaving seat's own email and event say so, and
   `finish_return_to_held/1` removes what the confirmed slot had (calendar
   event, video room, reminders, pending room creation). The slot row is
-  reset to what a slot that never counted carries: unverified, with a
-  verification deadline (its held seats' latest), no video room, and a new
-  calendar identity, so that the event a later activation creates is a new
-  event rather than the deleted one written again, which a provider keeping
-  deleted events by id (Google) refuses.
+  reset to what a held slot carries: a verification deadline (its held
+  seats' latest), no video room, and a new calendar identity, so that the
+  event a later activation creates is a new event rather than the deleted
+  one written again, which a provider keeping deleted events by id (Google)
+  refuses. It keeps its `email_verified_at`, the record that the organiser
+  knew of the meeting: its status hides it while held, and should its last
+  held seat lapse it ends as the cancelled meeting it was to them, in their
+  history, rather than as a hold nobody saw.
   """
 
   require Logger
@@ -217,14 +220,13 @@ defmodule Tymeslot.Bookings.SeatRelease do
     end
   end
 
-  # A slot that never counted carries no verification stamp, no room and no
-  # calendar event; a fresh `calendar_uid` with no `provider_event_id` is
-  # what makes the next activation's calendar job a create of a new event.
-  # The old event's calendar (`calendar_integration_id`, `calendar_path`)
-  # stays, for the job deleting it.
+  # A held slot carries no room and no calendar event; a fresh
+  # `calendar_uid` with no `provider_event_id` is what makes the next
+  # activation's calendar job a create of a new event. The old event's
+  # calendar (`calendar_integration_id`, `calendar_path`) stays, for the job
+  # deleting it, and `email_verified_at` stays as the module doc says.
   defp return_to_held(meeting, deadline) do
     changes = [
-      email_verified_at: nil,
       verification_deadline_at: deadline,
       calendar_uid: UUID.generate(),
       provider_event_id: nil,

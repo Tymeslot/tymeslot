@@ -212,6 +212,31 @@ defmodule Tymeslot.Bookings.HeldSeatsKeepSlotIntegrationTest do
              perform_job(CalendarEventWorker, %{"action" => "create", "meeting_id" => ctx.slot.id})
   end
 
+  # The organiser was told of the meeting and then that it was cancelled, so
+  # when the held seat lapses it ends cancelled in their history, and the
+  # prune of holds nobody saw keeps it and the departed guest's seat.
+  test "a slot held again whose held seat lapses stays in the organiser's history", ctx do
+    assert {:ok, :meeting_cancelled} = CancelSeat.execute(ctx.confirmed.management_token)
+
+    {:ok, _released} = EmailVerification.expire_seat(ctx.held)
+
+    assert %{status: :cancelled, cancelled_at: %DateTime{}} = reload(ctx.slot)
+    assert ctx.slot.id in organiser_meeting_ids(ctx)
+
+    past = DateTime.add(DateTime.utc_now(:second), -2, :hour)
+    Repo.update_all(where(MeetingSchema, id: ^ctx.slot.id), set: [verification_deadline_at: past])
+
+    Repo.update_all(where(ParticipantSchema, id: ^ctx.held.id),
+      set: [verification_deadline_at: past]
+    )
+
+    assert {1, nil} = EmailVerification.prune_unverified(1)
+
+    assert %{status: :cancelled} = reload(ctx.slot)
+    assert %{cancelled_at: %DateTime{}} = reload(ctx.confirmed)
+    refute Repo.get(ParticipantSchema, ctx.held.id)
+  end
+
   test "with no held seat left, the last guest cancelling cancels the slot", ctx do
     {:ok, _released} = EmailVerification.expire_seat(ctx.held)
 
@@ -233,8 +258,10 @@ defmodule Tymeslot.Bookings.HeldSeatsKeepSlotIntegrationTest do
   defp assert_held_again(ctx) do
     held_slot = reload(ctx.slot)
 
-    assert %{status: :awaiting_verification, email_verified_at: nil, cancelled_at: nil} =
-             held_slot
+    # The slot keeps the stamp of its first life, the record that the
+    # organiser knew of it, and is hidden by its status alone.
+    assert %{status: :awaiting_verification, cancelled_at: nil} = held_slot
+    assert held_slot.email_verified_at == ctx.slot.email_verified_at
 
     assert held_slot.verification_deadline_at == ctx.deadline
     assert %{provider_event_id: nil, video_room_id: nil, meeting_url: nil} = held_slot

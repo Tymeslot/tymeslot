@@ -172,8 +172,10 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
 
   Silent by design: no email, webhook or calendar change, since nobody but
   the booker ever learned of the seat. Its capacity is freed. A held slot
-  left with no held seat is voided (`:expired`) with it, so its time is free
-  again; a live slot, or one still holding another seat, is not touched.
+  left with no held seat is voided with it, so its time is free again
+  (`:expired`, or `:cancelled` for one the organiser knew of before its last
+  confirmed seat left, see `Tymeslot.Bookings.SeatRelease`); a live slot, or
+  one still holding another seat, is not touched.
   """
   @spec expire_seat(Participant.t()) ::
           {:ok, Participant.t()} | {:error, :not_awaiting_verification}
@@ -268,11 +270,18 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
 
   # Under the slot's lock, so a seat booked or verified on it meanwhile is
   # either counted here or waits for this to commit.
+  #
+  # A slot that never counted expires, a hold nobody but its bookers saw. One
+  # that was confirmed before its last confirmed seat left
+  # (`Tymeslot.Bookings.SeatRelease`) still carries `email_verified_at`: the
+  # organiser was told of it and then that it was cancelled, so it ends
+  # `:cancelled`, which keeps it in their history and out of the prune of
+  # unverified holds.
   defp void_if_unheld(%Meeting{status: :awaiting_verification} = slot, now) do
     if ParticipantQueries.count_seats_held(slot.id) == 0 do
       {:ok, voided} =
         MeetingTransitionQueries.transition_from_awaiting_verification(slot.id,
-          status: :expired,
+          status: voided_status(slot),
           cancelled_at: now
         )
 
@@ -283,6 +292,9 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   end
 
   defp void_if_unheld(slot, _now), do: slot
+
+  defp voided_status(%Meeting{email_verified_at: %DateTime{}}), do: :cancelled
+  defp voided_status(_never_counted), do: :expired
 
   # The checks the booking path makes (`Tymeslot.Bookings.Create`): a type
   # the host has deactivated, or made series-only, would refuse this seat
