@@ -20,6 +20,7 @@ defmodule Tymeslot.Notifications.Email.BookingVerificationEmails do
   alias Tymeslot.Bookings.MeetingLinks
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.EmailVerificationToken
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
@@ -68,7 +69,8 @@ defmodule Tymeslot.Notifications.Email.BookingVerificationEmails do
   Sends the verification link to one held seat of a group meeting.
 
   Discards the job when the seat is cancelled, verified or past its deadline,
-  or when the slot no longer occupies its time. The token is signed here from
+  or when its slot no longer holds its time
+  (`Tymeslot.Meetings.EmailVerification.seat_standing/3`). The token is signed here from
   the current row and never stored in the job args.
   """
   @spec handle_seat_verification_email(%{String.t() => term()}, integer() | nil) ::
@@ -97,10 +99,8 @@ defmodule Tymeslot.Notifications.Email.BookingVerificationEmails do
     )
   end
 
-  defp seat_held_and_in_time?(%Meeting{status: status}, %ParticipantSchema{} = seat) do
-    status in MeetingState.occupying() and ParticipantSchema.unverified?(seat) and
-      DateTime.compare(Clock.utc_now(), seat.verification_deadline_at) == :lt
-  end
+  defp seat_held_and_in_time?(slot, seat),
+    do: ParticipantSchema.unverified?(seat) and EmailVerification.seat_live?(slot, seat)
 
   defp seat_claim_key(args), do: "seat_verification:attendee:#{Map.get(args, "send", 1)}"
 

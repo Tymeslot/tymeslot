@@ -20,6 +20,7 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
   @moduletag :bookings
   @moduletag :integration
 
+  alias Ecto.Changeset
   alias Tymeslot.Bookings.CancelSeat
   alias Tymeslot.Bookings.Create
   alias Tymeslot.EmailServiceMock
@@ -281,6 +282,48 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
       assert {:error, :expired} = EmailVerification.verify_seat(seat)
       assert reload(seat).email_verified_at == nil
       refute_enqueued(worker: CalendarEventWorker)
+    end
+
+    test "a held seat on a slot awaiting a new time stays held until the request is withdrawn",
+         ctx do
+      slot = slot(ctx, :confirmed, reschedule_requested_at: DateTime.utc_now(:second))
+      visible_seat(slot, "first@example.com")
+      seat = held_seat(slot, "second@example.com")
+
+      assert {:error, :slot_void} = EmailVerification.verify_seat(seat)
+      assert %{email_verified_at: nil, cancelled_at: nil} = reload(seat)
+      assert reload(slot).status == :confirmed
+      assert_nothing_started()
+
+      slot |> reload() |> Changeset.change(reschedule_requested_at: nil) |> Repo.update!()
+
+      assert {:ok, :verified, _slot} = EmailVerification.verify_seat(seat)
+      assert calendar_actions(slot) == ["update"]
+    end
+  end
+
+  describe "seat_standing/3" do
+    test "reads each way a seat can stand against its slot", ctx do
+      now = DateTime.utc_now(:second)
+      live = slot(ctx, :confirmed)
+      voided = slot(ctx, :confirmed, reschedule_requested_at: now)
+      cancelled = slot(ctx, :cancelled, cancelled_at: now)
+
+      cases = [
+        {live, held_seat(live, "held@example.com"), :live},
+        {live, visible_seat(live, "verified@example.com"), :live},
+        {voided, held_seat(voided, "voided@example.com"), :slot_void},
+        {live, held_seat(live, "lapsed@example.com", DateTime.add(now, -1)), :gone},
+        {live, held_seat(live, "released@example.com", nil, cancelled_at: now), :gone},
+        {cancelled, held_seat(cancelled, "cancelled@example.com"), :gone}
+      ]
+
+      assert Enum.reject(cases, fn {slot, seat, standing} ->
+               EmailVerification.seat_standing(slot, seat, now) == standing
+             end) == []
+
+      assert EmailVerification.seat_live?(live, held_seat(live, "other@example.com"), now)
+      refute EmailVerification.seat_live?(voided, held_seat(voided, "void@example.com"), now)
     end
   end
 

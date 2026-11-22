@@ -195,14 +195,15 @@ defmodule Tymeslot.Workers.BookingVerificationEmailTest do
       refute_received {:email, _email}
     end
 
-    test "is not sent for a verified, cancelled or lapsed seat, or a cancelled slot" do
+    test "is not sent for a verified, cancelled or lapsed seat, or a cancelled or voided slot" do
       now = DateTime.utc_now(:second)
 
       cases = [
         held_seat(%{email_verified_at: now}),
         held_seat(%{cancelled_at: now}),
         held_seat(%{verification_deadline_at: DateTime.add(now, -60)}),
-        held_seat(%{}, %{status: :cancelled})
+        held_seat(%{}, %{status: :cancelled}),
+        held_seat(%{}, %{reschedule_requested_at: now})
       ]
 
       for {slot, seat} <- cases do

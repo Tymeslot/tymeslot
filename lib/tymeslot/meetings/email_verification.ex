@@ -88,6 +88,7 @@ defmodule Tymeslot.Meetings.EmailVerification do
           | {:ok, :already_verified, Meeting.t()}
           | {:error, :expired}
           | {:error, :not_scheduled}
+          | {:error, :slot_void}
 
   @type resend_error ::
           :limit_reached | :expired | :not_awaiting_verification | :not_scheduled
@@ -295,6 +296,37 @@ defmodule Tymeslot.Meetings.EmailVerification do
     do: DateTime.compare(now, deadline) != :lt
 
   def deadline_reached?(_booking_or_seat, _now), do: false
+
+  @doc """
+  Where a group seat stands against its slot at `now`; the one rule the
+  verification, its emails and its page all read.
+
+    * `:live`: the seat stands (verified, or held with its deadline ahead)
+      on a slot that occupies its time.
+    * `:slot_void`: the seat stands, but a pending reschedule request has
+      voided the slot's time. Nothing is released: a held seat stays held,
+      cannot be verified while the request is pending, and still lapses at
+      its deadline.
+    * `:gone`: the seat was released or cancelled, a held seat's deadline
+      has passed, or its slot no longer occupies its time (cancelled,
+      expired).
+  """
+  @spec seat_standing(Meeting.t(), Participant.t(), DateTime.t()) ::
+          :live | :slot_void | :gone
+  def seat_standing(%Meeting{} = slot, %Participant{} = seat, now \\ Clock.utc_now()) do
+    cond do
+      not Participant.live?(seat) -> :gone
+      Participant.unverified?(seat) and deadline_reached?(seat, now) -> :gone
+      slot.status not in MeetingState.occupying() -> :gone
+      MeetingState.slot_void?(slot) -> :slot_void
+      true -> :live
+    end
+  end
+
+  @doc "Whether `seat_standing/3` reads `:live`."
+  @spec seat_live?(Meeting.t(), Participant.t(), DateTime.t()) :: boolean()
+  def seat_live?(%Meeting{} = slot, %Participant{} = seat, now \\ Clock.utc_now()),
+    do: seat_standing(slot, seat, now) == :live
 
   @doc "Counts a held group seat; see `Tymeslot.Meetings.EmailVerification.Seats.verify_seat/1`."
   defdelegate verify_seat(seat), to: Seats

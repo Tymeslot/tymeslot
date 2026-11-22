@@ -26,7 +26,6 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   alias Tymeslot.Meetings.EmailVerificationJobs
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
-  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
@@ -51,8 +50,10 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   time, and one whose meeting type was deleted, deactivated or made
   series-only while it was held, held slot or live, as
   `EmailVerification.verify/1` releases such a booking. Group types cannot be
-  invitation-only, so no invitation check applies. `{:error, :not_scheduled}` means the seat's work could not be
-  queued; it is still held and the booker may try again. A seat no longer
+  invitation-only, so no invitation check applies. `{:error, :not_scheduled}`
+  means the seat's work could not be queued, and `{:error, :slot_void}` that
+  a pending reschedule request has voided the slot's time; either way the
+  seat is still held and the booker may try again. A seat no longer
   held is answered for as stored: `{:ok, :already_verified, slot}` while it
   counts, `{:error, :expired}` once released or cancelled.
   """
@@ -72,7 +73,7 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   defp count_seat(seat, now) do
     Repo.transaction(fn ->
       with {:ok, slot} <- lock_slot(seat),
-           :ok <- ensure_occupying(slot),
+           :ok <- ensure_live(slot, seat, now),
            :ok <- ensure_still_wanted(slot),
            {:ok, verified} <-
              ParticipantQueries.transition_from_unverified(
@@ -101,8 +102,21 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   # Lost a race with another exit (a second click, the expiry job).
   defp verify_outcome({:error, :not_awaiting_verification}, seat), do: answer_as_stored(seat)
 
-  # The slot was cancelled or deleted while the seat was held; the seat
-  # went with it (`Tymeslot.Bookings.SeatRelease`).
+  # A pending reschedule request voids the slot's time without releasing its
+  # seats, so the seat is neither confirmed onto a time that does not hold
+  # nor released: it stays held, to be verified should the request be
+  # withdrawn, and lapses at its deadline otherwise.
+  defp verify_outcome({:error, :slot_void}, seat) do
+    Logger.info("Seat verification refused: its slot awaits a new time",
+      meeting_id: seat.meeting_id,
+      participant_id: seat.id
+    )
+
+    {:error, :slot_void}
+  end
+
+  # The slot was cancelled, expired or deleted while the seat was held; the
+  # seat went with it (`Tymeslot.Bookings.SeatRelease`).
   defp verify_outcome({:error, reason}, _seat) when reason in [:slot_gone, :not_found],
     do: {:error, :expired}
 
@@ -141,10 +155,10 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   end
 
   defp answer_as_stored(seat) do
-    with {:ok, %Participant{cancelled_at: nil, email_verified_at: %DateTime{}}} <-
+    with {:ok, %Participant{email_verified_at: %DateTime{}} = current} <-
            ParticipantQueries.get(seat.id),
          {:ok, slot} <- MeetingQueries.get_meeting(seat.meeting_id),
-         :ok <- ensure_occupying(slot) do
+         true <- EmailVerification.seat_live?(slot, current) do
       {:ok, :already_verified, slot}
     else
       _gone_released_or_never_verified -> {:error, :expired}
@@ -252,9 +266,11 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
 
   defp lock_slot(seat), do: MeetingQueries.get_meeting_for_update(seat.meeting_id)
 
-  defp ensure_occupying(slot) do
-    if slot.status in MeetingState.occupying() and not MeetingState.slot_void?(slot),
-      do: :ok,
-      else: {:error, :slot_gone}
+  defp ensure_live(slot, seat, now) do
+    case EmailVerification.seat_standing(slot, seat, now) do
+      :live -> :ok
+      :slot_void -> {:error, :slot_void}
+      :gone -> {:error, :slot_gone}
+    end
   end
 end

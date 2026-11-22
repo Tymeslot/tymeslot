@@ -105,15 +105,15 @@ defmodule TymeslotWeb.BookingVerificationLive do
   # A seat verified and later cancelled, or whose slot was, reads as a link
   # out of date, as a one-to-one booking does. A held seat released by its
   # deadline or by its booker has no status to tell the two apart, so both
-  # read as expired.
+  # read as expired. A held seat on a slot voided by a reschedule request is
+  # still held, so it reads as awaiting, and confirming it is refused until
+  # the request is withdrawn.
   defp state_for({:seat, %{email_verified_at: %DateTime{}} = seat, slot}) do
-    if seat.cancelled_at == nil and occupying?(slot), do: :already_verified, else: :invalid
+    if EmailVerification.seat_live?(slot, seat), do: :already_verified, else: :invalid
   end
 
-  defp state_for({:seat, %{cancelled_at: %DateTime{}}, _slot}), do: :expired
-
   defp state_for({:seat, seat, slot}) do
-    if occupying?(slot) and not deadline_passed?(seat), do: :awaiting, else: :expired
+    if EmailVerification.seat_standing(slot, seat) == :gone, do: :expired, else: :awaiting
   end
 
   # A verified booking that was later cancelled has nothing true to show here:
@@ -156,9 +156,6 @@ defmodule TymeslotWeb.BookingVerificationLive do
 
   defp deadline_passed?(held), do: EmailVerification.deadline_reached?(held, Clock.utc_now())
 
-  defp occupying?(slot),
-    do: slot.status in MeetingState.occupying() and not MeetingState.slot_void?(slot)
-
   defp act(socket, action) do
     RateLimit.with_rate_limit(
       RateLimiter.check(:booking_email_verification, ClientIP.get(socket)),
@@ -193,7 +190,9 @@ defmodule TymeslotWeb.BookingVerificationLive do
       {:error, :expired} ->
         load(socket)
 
-      {:error, :not_scheduled} ->
+      # Still held: its work could not be queued, or a reschedule request
+      # has voided the slot's time for now.
+      {:error, reason} when reason in [:not_scheduled, :slot_void] ->
         socket
         |> show(held, :failed)
         |> put_flash(

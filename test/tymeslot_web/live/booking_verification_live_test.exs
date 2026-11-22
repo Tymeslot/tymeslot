@@ -438,6 +438,29 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
       assert reload(slot).status == :awaiting_verification
     end
 
+    test "a seat link on a slot awaiting a new time stays held, not expired", %{
+      conn: conn,
+      user: user
+    } do
+      {slot, seat} =
+        held_seat(user, in_minutes(30),
+          status: :confirmed,
+          verification_deadline_at: nil,
+          reschedule_requested_at: DateTime.utc_now(:second)
+        )
+
+      {:ok, view, _html} = live(conn, seat_path(seat))
+
+      refute render(view) =~ "This booking has expired"
+      html = quietly(fn -> confirm(view) end)
+
+      assert html =~ "We could not confirm your booking just now."
+      refute html =~ "This booking has expired"
+      assert has_element?(view, "[data-testid='confirm-booking']")
+      assert %{email_verified_at: nil, cancelled_at: nil} = reload(seat)
+      assert reload(slot).status == :confirmed
+    end
+
     test "a seat link confirmed after its deadline releases the seat", %{
       conn: conn,
       user: user
