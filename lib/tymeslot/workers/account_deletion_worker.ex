@@ -23,6 +23,7 @@ defmodule Tymeslot.Workers.AccountDeletionWorker do
 
   alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"user_id" => user_id} = args} = job) when is_integer(user_id) do
@@ -34,7 +35,9 @@ defmodule Tymeslot.Workers.AccountDeletionWorker do
         {:snooze, seconds}
 
       {:error, reason} ->
-        if job.attempt >= job.max_attempts, do: alert(user_id, reason)
+        if job.attempt >= job.max_attempts or permanent_stripe_error?(reason),
+          do: alert(user_id, reason)
+
         {:error, reason}
     end
   end
@@ -55,11 +58,23 @@ defmodule Tymeslot.Workers.AccountDeletionWorker do
   defp put_force(args, true), do: Map.put(args, "force", true)
   defp put_force(args, _not_forced), do: args
 
+  # Retrying cannot fix a refusal Stripe will repeat, so the operator hears
+  # at once; the deletion is still retried, never cancelled.
+  defp permanent_stripe_error?(%StripeError{} = error), do: not StripeError.retryable?(error)
+  defp permanent_stripe_error?(_reason), do: false
+
   defp alert(user_id, reason) do
     AdminAlerts.report(:account_deletion_stalled,
       summary: "Account deletion failed after every retry",
       reason: reason,
-      context: %{user_id: user_id}
+      context: user_id |> alert_context() |> put_request_id(reason)
     )
   end
+
+  defp alert_context(user_id), do: %{user_id: user_id}
+
+  defp put_request_id(context, %StripeError{request_id: id}) when is_binary(id),
+    do: Map.put(context, :stripe_request_id, id)
+
+  defp put_request_id(context, _reason), do: context
 end
