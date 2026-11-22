@@ -4,9 +4,9 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
 
   Snapshots every retention-relevant field onto `booking_payments` at the
   moment of creation so the row survives meeting deletion or host
-  anonymisation later. The Checkout Session itself is created via
-  `StripeAdapter.create_checkout_session/2` so tests can replace it with
-  a Mox.
+  anonymisation later. The Checkout Session itself is created on the host's
+  connected account through `Tymeslot.Integrations.Stripe.CheckoutSessions`;
+  tests answer it with `Tymeslot.StripeStub`.
 
   Call sites should pass a freshly created `MeetingSchema` (status
   `awaiting_payment`), or a paid series whose sessions all are
@@ -24,13 +24,13 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.CheckoutSessions, as: StripeCheckoutSessions
 
   alias Tymeslot.MeetingPayments.{
     ApplicationFee,
     BookingPaymentQueries,
     ConnectAccountQueries,
-    Currency,
-    StripeAdapter
+    Currency
   }
 
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
@@ -121,7 +121,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
          {:ok, %{booking_payment: booking_payment} = context} <- record_payment(checkout, host),
          {:ok, session} <- create_stripe_session(checkout, context),
          {:ok, booking_payment} <- attach_session_details(booking_payment, session) do
-      {:ok, %{checkout_url: session.url, booking_payment: booking_payment}}
+      {:ok, %{checkout_url: session["url"], booking_payment: booking_payment}}
     end
   end
 
@@ -178,7 +178,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   defp create_stripe_session(%{meeting: meeting} = checkout, context) do
     %{account: account, theme_slug: slug} = context
 
-    StripeAdapter.create_checkout_session(
+    StripeCheckoutSessions.create(
       session_params(
         checkout,
         context,
@@ -190,18 +190,18 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     )
   end
 
-  # Persist the PaymentIntent id alongside the session id at creation time.
-  # In `payment` mode Stripe creates the PaymentIntent with the session, so it
-  # is already available here — capturing it now gives charge-based Connect
-  # webhooks (dispute/refund) a join key that exists before the
-  # `checkout.session.completed` handler runs, closing a webhook-ordering race
-  # where a dispute arriving first would otherwise match no row and be dropped.
+  # An open payment-mode session carries `payment_intent: null`: Stripe
+  # creates the PaymentIntent only when the attendee pays, and the completed
+  # handler (`Webhooks.PaymentCompletion`) records its id. A charge event that
+  # arrives before that is matched through the PaymentIntent's metadata
+  # (`Webhooks.PaymentLookup`). An id the creation response does carry is
+  # kept.
   defp attach_session_details(booking_payment, session) do
     attrs =
       Map.reject(
         %{
-          stripe_checkout_session_id: session.id,
-          stripe_payment_intent_id: Map.get(session, :payment_intent)
+          stripe_checkout_session_id: session["id"],
+          stripe_payment_intent_id: session["payment_intent"]
         },
         fn {_key, value} -> is_nil(value) end
       )
@@ -398,7 +398,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   end
 
   defp expire_stripe_session(session_id, stripe_account_id) do
-    case StripeAdapter.expire_checkout_session(session_id, connect_account: stripe_account_id) do
+    case StripeCheckoutSessions.expire(session_id, connect_account: stripe_account_id) do
       {:ok, _session} ->
         :ok
 

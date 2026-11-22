@@ -32,6 +32,8 @@ defmodule Tymeslot.MeetingPayments do
 
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe
+  alias Tymeslot.Integrations.Stripe.Charges
   alias Tymeslot.MeetingPayments.AccountCurrency
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
@@ -44,11 +46,9 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.Currency
   alias Tymeslot.MeetingPayments.HeldMeetings
   alias Tymeslot.MeetingPayments.Refunds
-  alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
-  alias Tymeslot.Payments.Config, as: PaymentsConfig
 
   @type account :: ConnectAccountSchema.t()
   @type booking_payment :: BookingPaymentSchema.t()
@@ -225,7 +225,7 @@ defmodule Tymeslot.MeetingPayments do
   """
   @spec platform_configured?() :: boolean()
   def platform_configured? do
-    case PaymentsConfig.stripe_api_key() do
+    case Stripe.secret_key() do
       nil -> false
       "sk_test_fake" -> false
       _real -> true
@@ -637,10 +637,7 @@ defmodule Tymeslot.MeetingPayments do
   @spec retrieve_charge_receipt_url(charge_id :: String.t(), account_id :: String.t()) ::
           {:ok, String.t() | nil} | {:error, term()}
   def retrieve_charge_receipt_url(charge_id, account_id) do
-    # The adapter normalises every read response to a string-keyed map, so the
-    # receipt URL lives under the "receipt_url" string key regardless of whether
-    # the production stripity struct or a Mox stub produced it.
-    case StripeAdapter.retrieve_charge(charge_id, connect_account: account_id) do
+    case Charges.retrieve(charge_id, connect_account: account_id) do
       {:ok, %{"receipt_url" => url}} when is_binary(url) and url != "" -> {:ok, url}
       {:ok, _other} -> {:ok, nil}
       {:error, reason} -> {:error, reason}

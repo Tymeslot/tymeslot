@@ -13,10 +13,11 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.Accounts
+  alias Tymeslot.Integrations.Stripe.ConnectOAuth
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
-  alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.StripeConnectOAuth
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.MeetingTypes
@@ -97,7 +98,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
     with :ok <- check_onboarding_access(user.id),
          {:ok, nonce} <- verify_state_for(user.id, state),
          :ok <- claim_nonce(user.id, nonce),
-         {:ok, %{stripe_user_id: stripe_account_id}} <- StripeAdapter.exchange_oauth_code(code),
+         {:ok, %{stripe_user_id: stripe_account_id}} <- ConnectOAuth.exchange_code(code),
          :ok <- check_not_linked_elsewhere(stripe_account_id, user.id),
          :ok <- enqueue_revocation(stripe_account_id, @revocation_delay) do
       record_connection(user.id, stripe_account_id, connected_at)
@@ -145,7 +146,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   defp record_connection(user_id, stripe_account_id, connected_at) do
     read_at = DateTime.utc_now(:second)
 
-    case StripeAdapter.retrieve_account(stripe_account_id) do
+    case Accounts.retrieve_connected(stripe_account_id, []) do
       {:ok, %{"default_currency" => currency} = snapshot} when is_binary(currency) ->
         if Currency.allowed?(currency) do
           connect_with_snapshot(user_id, stripe_account_id, snapshot, read_at, connected_at)

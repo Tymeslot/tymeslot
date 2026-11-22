@@ -26,8 +26,8 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.Accounts
   alias Tymeslot.MeetingPayments.ConnectAccounts
-  alias Tymeslot.MeetingPayments.StripeAdapter
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"stripe_account_id" => stripe_account_id}})
@@ -38,7 +38,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
     # is still treated as stale.
     read_at = DateTime.utc_now(:second)
 
-    case StripeAdapter.retrieve_account(stripe_account_id) do
+    case Accounts.retrieve_connected(stripe_account_id, []) do
       {:ok, account} ->
         ConnectAccounts.apply_account_event(account, read_at)
 

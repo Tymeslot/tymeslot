@@ -37,13 +37,13 @@ defmodule Tymeslot.MeetingPayments.Refunds do
 
   require Logger
 
-  alias Stripe.Error, as: StripeError
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe
+  alias Tymeslot.Integrations.Stripe.Refunds, as: StripeRefunds
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.MeetingPayments.RefundedTotal
-  alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SendBookingPaymentRefunded
@@ -51,14 +51,15 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   @refund_window_days 60
 
   # The refund call runs while its transaction holds the payment's row lock,
-  # so it is bounded tighter than hackney's defaults (8_000 ms to connect,
-  # 5_000 ms per receive). stripity_stripe passes these through to hackney
-  # and retries a timed-out request up to three more times, with at most
-  # 2_000 ms between attempts, safely under the same idempotency key: four
-  # attempts at 3_000 + 5_000 ms plus 3_500 ms of backoff bound the call at
-  # about 35 seconds instead of about 55.
+  # so each attempt is bounded at 3 s to connect and 5 s to receive. The
+  # request's 10 s deadline lets the client retry only a failure that left
+  # time for another attempt as long (a refused connection, a 429,
+  # `Stripe-Should-Retry: true`), never a timed-out receive, and caps each
+  # receive at the time left. The call takes about 10 s at worst, plus one
+  # connect timeout, inside the 15 s transaction timeout.
   @stripe_connect_timeout_ms 3_000
-  @stripe_recv_timeout_ms 5_000
+  @stripe_receive_timeout_ms 5_000
+  @stripe_deadline_ms 10_000
 
   @type refund_error ::
           :not_paid
@@ -306,7 +307,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
       made
     else
       {:error, :missing_charge} -> {:error, refused}
-      {:error, %StripeError{source: :stripe, code: :invalid_request_error}} -> {:error, refused}
+      {:error, %Stripe.Error{type: "invalid_request_error"}} -> {:error, refused}
       {:error, _reason} = error -> error
     end
   end
@@ -339,11 +340,12 @@ defmodule Tymeslot.MeetingPayments.Refunds do
       |> maybe_put_reason(reason)
       |> maybe_refund_application_fee(payment)
 
-    StripeAdapter.create_refund(params,
+    StripeRefunds.create(params,
       connect_account: payment.stripe_account_id,
       idempotency_key: key,
       connect_timeout: @stripe_connect_timeout_ms,
-      recv_timeout: @stripe_recv_timeout_ms
+      receive_timeout: @stripe_receive_timeout_ms,
+      deadline_ms: @stripe_deadline_ms
     )
   end
 
@@ -394,7 +396,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   # however often its key is replayed, and never below the recorded refunds
   # (the webhook's rule). A response without the expanded charge falls back
   # to adding the refund to the recorded refunds.
-  defp refunded_total(payment, _amount_cents, %{charge: %{amount_refunded: stripe_total}})
+  defp refunded_total(payment, _amount_cents, %{"charge" => %{"amount_refunded" => stripe_total}})
        when is_integer(stripe_total),
        do: RefundedTotal.with_stripe_refunded(payment, stripe_total)
 

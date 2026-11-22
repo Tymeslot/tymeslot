@@ -18,12 +18,12 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
 
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.CheckoutSessions, as: StripeCheckoutSessions
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
   alias Tymeslot.MeetingPayments.HeldMeetings
-  alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
@@ -333,7 +333,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
   # Isolated per session: one that raises is logged like one that fails, so
   # the rest are still expired and every booking is still cancelled locally.
   defp expire_stripe_session(session_id, stripe_account_id) do
-    case StripeAdapter.expire_checkout_session(session_id, connect_account: stripe_account_id) do
+    case StripeCheckoutSessions.expire(session_id, connect_account: stripe_account_id) do
       {:ok, _session} -> :ok
       {:error, reason} -> log_expire_failure(session_id, reason)
     end

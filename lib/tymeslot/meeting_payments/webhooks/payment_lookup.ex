@@ -26,8 +26,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
     1. `stripe_charge_id`, present once `checkout.session.completed` has
        backfilled it. The common case: real disputes and refunds arrive long
        after the booking is paid.
-    2. `stripe_payment_intent_id`, written at checkout creation and by the
-       completed handler, so it survives a failed charge-id backfill.
+    2. `stripe_payment_intent_id`, written by the completed handler (an open
+       session names no PaymentIntent yet), so it survives a failed
+       charge-id backfill.
     3. `meeting_id` (or `series_id`) read from the PaymentIntent's metadata, the last resort
        for an event that races ahead of `checkout.session.completed`. It costs
        one Stripe API call and needs the connected-account id from the event.
@@ -37,9 +38,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
 
   alias Ecto.UUID
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.PaymentIntents
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.StripeAdapter
 
   @doc """
   Resolves the row for a `checkout.session.*` event, or `nil`.
@@ -121,7 +122,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
 
   defp by_metadata(intent_id, connect_account)
        when is_binary(intent_id) and is_binary(connect_account) do
-    case StripeAdapter.retrieve_payment_intent(intent_id, connect_account: connect_account) do
+    case PaymentIntents.retrieve(intent_id, %{}, connect_account: connect_account) do
       {:ok, intent} ->
         intent |> reference_from_metadata() |> by_reference()
 
@@ -150,9 +151,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
 
   defp by_reference(nil), do: nil
 
-  # Stripe metadata keys are always strings; the PaymentIntent itself may be an
-  # atom-keyed Stripity struct (real adapter) or a string-keyed map (mock).
-  defp reference_from_metadata(%{metadata: metadata}), do: metadata_reference(metadata)
+  # Checkout copies the booking's reference into the PaymentIntent's metadata
+  # (`payment_intent_data.metadata`), so it is there from the first charge
+  # event on.
   defp reference_from_metadata(%{"metadata" => metadata}), do: metadata_reference(metadata)
   defp reference_from_metadata(_intent), do: nil
 
