@@ -120,7 +120,6 @@ defmodule Tymeslot.MixProject do
       {:dns_cluster, "~> 0.3"},
       {:bandit, "~> 1.8"},
       {:tz, "~> 0.28"},
-      {:uuid, "~> 1.1"},
       # QR codes are drawn server-side (booking-link email, onboarding).
       {:eqrcode, "~> 0.2"},
       {:bcrypt_elixir, "~> 3.2"},

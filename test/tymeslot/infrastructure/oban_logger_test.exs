@@ -52,7 +52,7 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
 
       {process_id, logger_id} = result
 
-      assert {:ok, _uuid_info} = UUID.info(process_id)
+      assert {:ok, ^process_id} = Ecto.UUID.cast(process_id)
       assert process_id == logger_id
     end
 

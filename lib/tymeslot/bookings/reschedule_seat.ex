@@ -52,6 +52,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   require Logger
 
+  alias Ecto.UUID
   alias Tymeslot.Auth
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Bookings.BuildParams
@@ -79,7 +80,6 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.MeetingTypes.FixedDates
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Notifications.Events.Seats
-  alias UUID
 
   @typedoc "New-slot parameters, same shape as `Bookings.Reschedule`."
   @type reschedule_params :: %{
@@ -428,7 +428,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   # `CreateGroup`.
   defp new_slot_attrs(old_meeting, new_times, participant) do
     %BuildParams{
-      meeting_uid: UUID.uuid4(),
+      meeting_uid: UUID.generate(),
       form_data: %{
         "name" => participant.name,
         "email" => participant.email,
