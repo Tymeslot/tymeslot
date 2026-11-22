@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.OwnerActionsTest do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Workers.SyncDebugCalendarWorker
   alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   defp insert_subscription(user, attrs \\ []) do
@@ -147,6 +148,25 @@ defmodule Tymeslot.Integrations.Calendar.OwnerActionsTest do
 
       assert [job] = all_enqueued(worker: SyncIcsCalendarWorker)
       assert job.args["calendar_integration_id"] == active.id
+    end
+
+    test "syncs a provider with nothing to discover instead of rediscovering it" do
+      user = insert(:user)
+      debug = insert(:calendar_integration, user: user, provider: "debug", name: "Debug")
+      feed = insert_subscription(user, name: "Team feed")
+
+      assert {:ok, results} = Calendar.refresh_all_integrations(user.id)
+      assert Enum.sort(results) == [{"Debug", :ok}, {"Team feed", :ok}]
+
+      assert_enqueued(
+        worker: SyncDebugCalendarWorker,
+        args: %{"calendar_integration_id" => debug.id}
+      )
+
+      assert_enqueued(
+        worker: SyncIcsCalendarWorker,
+        args: %{"calendar_integration_id" => feed.id}
+      )
     end
 
     test "is refused once the refresh budget is spent" do

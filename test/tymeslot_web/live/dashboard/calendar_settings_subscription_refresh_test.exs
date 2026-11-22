@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsSubscriptionRefreshTest do
 
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Workers.SyncDebugCalendarWorker
   alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   setup do
@@ -55,6 +56,49 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsSubscriptionRefreshTest do
         rendered = render(view)
         assert rendered =~ "All calendars refreshed successfully"
       end)
+
+      assert_enqueued(
+        worker: SyncIcsCalendarWorker,
+        args: %{"calendar_integration_id" => subscription.id}
+      )
+    end
+
+    test "a debug calendar, which has nothing to discover, is synced and reported refreshed",
+         %{conn: conn, user: user} do
+      debug =
+        insert(:calendar_integration,
+          user: user,
+          provider: "debug",
+          name: "Debug",
+          is_active: true
+        )
+
+      subscription =
+        insert(:calendar_integration,
+          user: user,
+          provider: "ics_url",
+          name: "Feed",
+          is_active: true,
+          base_url: "https://feeds.example.com",
+          username_encrypted: nil,
+          password_encrypted: nil,
+          subscription_url_encrypted: Encryption.encrypt("https://feeds.example.com/feed.ics")
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      view
+      |> element("button[phx-click='refresh_all_calendars']")
+      |> render_click()
+
+      eventually(fn ->
+        assert render(view) =~ "All calendars refreshed successfully"
+      end)
+
+      assert_enqueued(
+        worker: SyncDebugCalendarWorker,
+        args: %{"calendar_integration_id" => debug.id}
+      )
 
       assert_enqueued(
         worker: SyncIcsCalendarWorker,
