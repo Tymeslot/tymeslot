@@ -300,7 +300,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   def booking_event_update_fields(%MeetingSchema{provider_event_id: event_id} = meeting)
       when is_binary(event_id) and event_id != "" do
-    with false <- match?({:ok, :inline, _video, _calendar}, video_on_booking_calendar(meeting)),
+    with false <- booking_meet_on_event?(meeting),
          {:ok, cached} <-
            ProviderCalendarEventQueries.get_by_identifiers(meeting.calendar_integration_id, [
              event_id
@@ -317,6 +317,16 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   end
 
   def booking_event_update_fields(_meeting), do: %{}
+
+  @doc """
+  Whether the booking's room is the Meet conference on its Google event: its
+  Meet integration is of the same Google account as the calendar the
+  booking is written to, so the video job takes the event's Meet as the
+  room (`booking_room_placement/1`) rather than make one.
+  """
+  @spec booking_meet_on_event?(MeetingSchema.t()) :: boolean()
+  def booking_meet_on_event?(%MeetingSchema{} = meeting),
+    do: match?({:ok, :inline, _video, _calendar}, video_on_booking_calendar(meeting))
 
   # The booking's video integration, how the calendar it is written to
   # carries its room (`@same_account_rules`), and that calendar, when both

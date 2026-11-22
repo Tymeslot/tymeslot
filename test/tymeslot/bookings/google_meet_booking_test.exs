@@ -164,6 +164,46 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     refute Map.has_key?(put_body, "conferenceData")
   end
 
+  # The Meet is the booking's room again by the time the calendar job would
+  # take it off, so it stays on the event and the video job takes it back.
+  test "moving the booking off Meet and straight back keeps the Meet on its event",
+       %{meeting: meeting} do
+    use_runtime_calendar()
+    report_google_requests()
+
+    run_calendar_jobs()
+    assert :ok = run_video_job(meeting)
+    run_calendar_jobs()
+    assert_one_event_carrying_the_meet(meeting)
+
+    original = Repo.get!(MeetingSchema, meeting.id)
+
+    moved =
+      original
+      |> Changeset.change(video_room_id: nil, meeting_url: nil, video_integration_id: nil)
+      |> Repo.update!()
+
+    assert :ok = RescheduleLocation.release_abandoned_room(moved, original)
+
+    moved
+    |> Changeset.change(video_integration_id: original.video_integration_id)
+    |> Repo.update!()
+
+    run_calendar_jobs()
+    assert :ok = run_video_job(meeting)
+
+    requests = google_requests()
+    assert for({method, _uri, _body} = req <- requests, method != :get, do: req) == []
+
+    assert for({_method, %URI{host: "meet.googleapis.com"} = uri, _body} <- requests, do: uri) ==
+             []
+
+    back = Repo.get!(MeetingSchema, meeting.id)
+    assert back.video_room_id == original.provider_event_id
+    assert back.provider_event_id == original.provider_event_id
+    assert back.meeting_url == @meet_url
+  end
+
   test "a calendar refusing the Meet still gets the booking's event, without it", %{
     meeting: meeting
   } do

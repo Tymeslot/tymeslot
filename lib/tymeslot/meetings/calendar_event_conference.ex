@@ -18,6 +18,7 @@ defmodule Tymeslot.Meetings.CalendarEventConference do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Calendar.Management, as: CalendarManagement
+  alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventCache
 
@@ -32,6 +33,24 @@ defmodule Tymeslot.Meetings.CalendarEventConference do
   end
 
   def google?(_meeting), do: false
+
+  @doc """
+  As `clear/1`, unless the meeting is back on a Meet its event carries
+  (`MeetingProvisioning.booking_meet_on_event?/1`): its video job takes that
+  conference as the booking's room, so it stays on the event.
+  """
+  @spec clear_unless_retaken(map()) :: :ok | {:error, term()}
+  def clear_unless_retaken(meeting) do
+    if MeetingProvisioning.booking_meet_on_event?(meeting) do
+      Logger.info("Meeting is back on the Meet its calendar event carries, keeping it",
+        meeting_id: meeting.id
+      )
+
+      :ok
+    else
+      clear(meeting)
+    end
+  end
 
   @doc """
   Writes the meeting's event as it stands, without a conference. An event
