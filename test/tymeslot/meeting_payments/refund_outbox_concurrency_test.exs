@@ -8,10 +8,12 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxConcurrencyTest do
   @moduletag :payments
   @moduletag :integration
 
+  import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
 
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.Repo
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
@@ -80,5 +82,68 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxConcurrencyTest do
 
     assert [%{headers: %{"idempotency-key" => key}}] = StripeStub.requests(:create_refund)
     assert key == "tymeslot:refund:#{refund.id}:2"
+  end
+
+  describe "a claim outlived by its lease" do
+    setup %{payment: payment} do
+      refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
+      %{refund: refund}
+    end
+
+    test "a late release does not clear the next claim's lease", %{refund: refund} do
+      {:ok, first} = RefundQueries.claim_attempt(refund)
+      expire_lease(refund)
+      {:ok, second} = RefundQueries.claim_attempt(refund)
+
+      :ok = RefundQueries.release(first)
+
+      assert %{attempt: 2, executing_until: %DateTime{}} = RefundQueries.get(refund.id)
+      assert :busy = RefundQueries.claim_attempt(refund)
+      :ok = RefundQueries.release(second)
+      assert %{executing_until: nil} = RefundQueries.get(refund.id)
+    end
+
+    test "a late refusal does not fail a refund the next attempt is making",
+         %{payment: payment, refund: refund} do
+      test_pid = self()
+
+      for {answer, n} <- [
+            {StripeFixtures.error_body("charge_already_refunded"), 1},
+            {&StripeStubResponses.refund(&1, "re_SECOND"), 2}
+          ] do
+        StripeStub.expect(:create_refund, fn request ->
+          send(test_pid, {:creating, n, self()})
+
+          receive do
+            :answer -> if is_function(answer), do: answer.(request), else: answer
+          end
+        end)
+      end
+
+      StripeStub.expect(:list_refunds, StripeFixtures.list([]))
+
+      first = Task.async(fn -> Refunds.execute(refund, []) end)
+      assert_receive {:creating, 1, first_creator}, 5_000
+      expire_lease(refund)
+
+      second = Task.async(fn -> Refunds.execute(refund, []) end)
+      assert_receive {:creating, 2, second_creator}, 5_000
+
+      send(first_creator, :answer)
+      assert {:pending, _refund} = Task.await(first, 5_000)
+      assert %{status: :pending, failure_code: nil, attempt: 2} = RefundQueries.get(refund.id)
+
+      send(second_creator, :answer)
+      assert {:ok, %{status: :succeeded}} = Task.await(second, 5_000)
+      assert %{refunded_amount_cents: 2_000} = Repo.reload!(payment)
+    end
+  end
+
+  defp expire_lease(refund) do
+    past = DateTime.add(DateTime.utc_now(:second), -3_600, :second)
+
+    Repo.update_all(from(r in RefundSchema, where: r.id == ^refund.id),
+      set: [executing_until: past]
+    )
   end
 end

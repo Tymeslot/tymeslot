@@ -10,9 +10,16 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.Repo
 
-  # Longer than any one attempt can take: the client's largest deadline is
-  # 20 s, which it may overrun by one connect timeout.
-  @lease_seconds 60
+  # Far longer than any one attempt can take (the client's largest deadline
+  # is 20 s, which it may overrun by one connect timeout), so a stalled
+  # process is not mistaken for a dead one.
+  @lease_seconds 300
+
+  # The database's clock as a UTC timestamp, the type the lease column has.
+  # The statement's own time, not the transaction's, which may be old.
+  defmacrop db_now do
+    quote do: fragment("(statement_timestamp() AT TIME ZONE 'UTC')")
+  end
 
   @doc "Whether the calling process is inside a transaction."
   @spec in_transaction?() :: boolean()
@@ -65,26 +72,31 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
 
   @doc """
   Starts one attempt at a pending refund: counts it and takes the lease for
-  #{@lease_seconds} seconds from `now`, in one statement committed on its
-  own, so the attempt's number is spent even if the process dies during it.
+  #{@lease_seconds} seconds, in one statement committed on its own, so the
+  attempt's number is spent even if the process dies during it. The lease
+  is read and written by the database's clock, so app servers whose clocks
+  disagree still agree on it.
 
   Returns the refund as claimed, `:busy` while another attempt holds an
   unexpired lease, or `:not_pending` for a refund settled (or gone).
   """
-  @spec claim_attempt(RefundSchema.t(), DateTime.t()) ::
-          {:ok, RefundSchema.t()} | :not_pending | :busy
-  def claim_attempt(%RefundSchema{id: id}, %DateTime{} = now) do
+  @spec claim_attempt(RefundSchema.t()) :: {:ok, RefundSchema.t()} | :not_pending | :busy
+  def claim_attempt(%RefundSchema{id: id}) do
     query =
       from(r in RefundSchema,
         where: r.id == ^id and r.status == :pending,
-        where: is_nil(r.executing_until) or r.executing_until < ^now,
-        select: r
+        where: is_nil(r.executing_until) or r.executing_until < db_now(),
+        select: r,
+        update: [
+          inc: [attempt: 1],
+          set: [
+            executing_until: fragment("? + make_interval(secs => ?)", db_now(), ^@lease_seconds),
+            updated_at: db_now()
+          ]
+        ]
       )
 
-    case Repo.update_all(query,
-           inc: [attempt: 1],
-           set: [executing_until: DateTime.add(now, @lease_seconds, :second), updated_at: now]
-         ) do
+    case Repo.update_all(query, []) do
       {1, [claimed]} ->
         {:ok, claimed}
 
@@ -96,32 +108,43 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
     end
   end
 
-  @doc "Gives up the lease of the attempt in flight."
+  @doc """
+  Gives up the lease the `claimed` attempt took. A later attempt that has
+  claimed the refund since keeps its own.
+  """
   @spec release(RefundSchema.t()) :: :ok
-  def release(%RefundSchema{id: id}) do
-    Repo.update_all(from(r in RefundSchema, where: r.id == ^id), set: [executing_until: nil])
+  def release(%RefundSchema{} = claimed) do
+    Repo.update_all(claimed_by(claimed), set: [executing_until: nil])
     :ok
   end
 
   @doc """
   Settles a pending refund with `attrs` (`RefundSchema.settle_changeset/2`)
-  and clears its lease. A refund already settled is left alone and returns
-  `{:error, :not_pending}`.
-
-  With `idle_at: now`, a refund whose lease is held at `now` is left alone
-  too, so an attempt in flight decides the outcome.
+  and clears its lease, whichever attempt holds it: for a refund Stripe made,
+  which stands however it was learnt of. A refund already settled is left
+  alone and returns `{:error, :not_pending}`.
   """
-  @spec settle(RefundSchema.t(), map() | keyword(), keyword()) ::
+  @spec settle(RefundSchema.t(), map()) ::
           {:ok, RefundSchema.t()} | {:error, :not_pending | Changeset.t()}
-  def settle(%RefundSchema{id: id} = refund, attrs, opts \\ []) do
-    case RefundSchema.settle_changeset(refund, Map.new(attrs)) do
-      %Changeset{valid?: true, changes: changes} ->
-        pending = from(r in RefundSchema, where: r.id == ^id and r.status == :pending, select: r)
-        query = idle_at(pending, opts[:idle_at])
+  def settle(%RefundSchema{id: id} = refund, attrs),
+    do: settle_where(from(r in RefundSchema, where: r.id == ^id), refund, attrs)
 
+  @doc """
+  As `settle/2`, but only while the `claimed` attempt is the latest: an
+  attempt whose lease ran out and was claimed again since no longer decides
+  the refund, and gets `{:error, :not_pending}`.
+  """
+  @spec settle_claimed(RefundSchema.t(), map()) ::
+          {:ok, RefundSchema.t()} | {:error, :not_pending | Changeset.t()}
+  def settle_claimed(%RefundSchema{} = claimed, attrs),
+    do: settle_where(claimed_by(claimed), claimed, attrs)
+
+  defp settle_where(query, refund, attrs) do
+    case RefundSchema.settle_changeset(refund, attrs) do
+      %Changeset{valid?: true, changes: changes} ->
         set = Map.to_list(changes) ++ [executing_until: nil, updated_at: changes.settled_at]
 
-        case Repo.update_all(query, set: set) do
+        case Repo.update_all(from(r in query, where: r.status == :pending, select: r), set: set) do
           {1, [settled]} -> {:ok, settled}
           {0, []} -> {:error, :not_pending}
         end
@@ -131,8 +154,6 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
     end
   end
 
-  defp idle_at(query, nil), do: query
-
-  defp idle_at(query, %DateTime{} = now),
-    do: where(query, [r], is_nil(r.executing_until) or r.executing_until < ^now)
+  defp claimed_by(%RefundSchema{id: id, attempt: attempt}),
+    do: from(r in RefundSchema, where: r.id == ^id and r.attempt == ^attempt)
 end

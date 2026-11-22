@@ -15,6 +15,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefundTest do
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
   alias Tymeslot.StripeStubResponses
 
@@ -44,12 +45,15 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefundTest do
     refute_received {:send_alert, _type, _payload}
   end
 
-  test "the last attempt fails a refund still pending and alerts", %{refund: refund} do
-    StripeStub.expect(:create_refund, {:error_fixture, "api_error"})
+  test "the last attempt fails a refund Stripe never made, without asking for it",
+       %{refund: refund} do
+    StripeStub.stub(:create_refund, StripeStubResponses.refund("re_UNASKED"))
+    StripeStub.expect(:list_refunds, StripeFixtures.list([]))
 
-    assert {:cancel, :retries_exhausted} =
+    assert {:cancel, :refund_failed} =
              perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 10)
 
+    assert StripeStub.requests(:create_refund) == []
     assert %{status: :failed, failure_code: "retries_exhausted"} = RefundQueries.get(refund.id)
 
     refund_id = refund.id
@@ -58,10 +62,34 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefundTest do
                      %{refund_id: ^refund_id, failure_code: "retries_exhausted"}}
   end
 
-  test "the last attempt waits for a refund another attempt is making", %{refund: refund} do
-    {:ok, _claimed} = RefundQueries.claim_attempt(refund, DateTime.utc_now(:second))
+  test "the last attempt adopts a refund an ambiguous timeout left made at Stripe",
+       %{payment: payment, refund: refund} do
+    StripeStub.stub(:create_refund, {:transport_error, :timeout})
+    assert {:error, :pending} = perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 9)
+    creates = StripeStub.requests(:create_refund)
 
-    assert {:snooze, 60} =
+    made =
+      StripeFixtures.object("refund_with_charge", %{
+        "id" => "re_LAST",
+        "amount" => 2_000,
+        "metadata" => %{"tymeslot_refund_id" => refund.id},
+        "charge" => %{"amount_refunded" => 2_000}
+      })
+
+    StripeStub.expect(:list_refunds, StripeFixtures.list([made]))
+
+    assert :ok = perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 10)
+
+    assert StripeStub.requests(:create_refund) == creates
+    assert %{status: :succeeded, stripe_refund_id: "re_LAST"} = RefundQueries.get(refund.id)
+    assert %{refunded_amount_cents: 2_000} = Repo.reload!(payment)
+    refute_received {:send_alert, _type, _payload}
+  end
+
+  test "the last attempt leaves a refund another attempt is making", %{refund: refund} do
+    {:ok, _claimed} = RefundQueries.claim_attempt(refund)
+
+    assert {:error, :pending} =
              perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 10)
 
     assert %{status: :pending} = RefundQueries.get(refund.id)

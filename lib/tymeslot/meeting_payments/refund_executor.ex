@@ -10,14 +10,20 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     2. Backfills a missing charge id (`ChargeBackfill`). While none can be
        found the refund stays pending; on the job's last attempt it fails
        with `"missing_charge"`.
-    3. Claims the attempt (`RefundQueries.claim_attempt/2`): its number is
+    3. Claims the attempt (`RefundQueries.claim_attempt/1`): its number is
        committed and a lease taken before Stripe is called, so two
        executors never call Stripe for one refund at once, and an attempt
-       whose process dies has still spent its idempotency key.
+       whose process dies has still spent its idempotency key. Releasing
+       the lease and failing the refund apply only while this claim is the
+       latest, so an attempt that outlived its lease decides nothing but a
+       refund Stripe made.
     4. From the second attempt on, lists the charge's refunds first and
        adopts the one carrying this refund's id in its metadata: an earlier
        attempt may have been made at Stripe without its answer arriving. A
-       list that fails sends nothing.
+       list that fails sends nothing. The job's last attempt only lists:
+       with no attempt after it to find out how a new request ended, it
+       never sends one, and fails the refund with `"retries_exhausted"`
+       only once the list shows Stripe never made it.
     5. Asks Stripe for the refund under the attempt's own key
        (`IdempotencyKey.for_intent(:refund, id, attempt)`), so a later
        attempt never replays an error Stripe stored against an earlier key.
@@ -68,8 +74,9 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     * `:from_job` (default `false`): called by `ExecuteRefund`, whose own
       backoff schedules the next attempt. Otherwise a refund left pending
       has its job rescheduled to run at once.
-    * `:last_attempt` (default `false`): no attempt follows, so a refund
-      whose charge cannot be found fails.
+    * `:last_attempt` (default `false`): no attempt follows, so the attempt
+      only looks for the refund at Stripe (step 4), and a refund whose
+      charge cannot be found fails.
   """
   @spec run(RefundSchema.t(), keyword()) :: result()
   def run(%RefundSchema{id: id}, opts) do
@@ -87,14 +94,6 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
         settled(settled_or_nil)
     end
   end
-
-  @doc """
-  Fails `refund` with `code` unless an attempt holds its lease, and sends
-  `Refunds.FailureNotice`. For the last attempt of `ExecuteRefund`, when the
-  refund is still pending.
-  """
-  @spec give_up(RefundSchema.t(), String.t()) :: result()
-  def give_up(%RefundSchema{} = refund, code), do: fail(refund, code, idle_at: now())
 
   @doc """
   Records a refund of `amount_cents` Stripe made of the `locked` payment, as
@@ -181,7 +180,7 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
         )
 
         if opts[:last_attempt] do
-          with {:error, :refund_failed} <- fail(refund, "missing_charge", idle_at: now()),
+          with {:error, :refund_failed} <- claim_and_fail(refund, "missing_charge"),
                do: {:error, :missing_charge}
         else
           retry_later(refund, opts)
@@ -189,8 +188,16 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     end
   end
 
+  defp claim_and_fail(refund, code) do
+    case RefundQueries.claim_attempt(refund) do
+      {:ok, claimed} -> fail(claimed, code)
+      :busy -> {:pending, refund}
+      :not_pending -> refund.id |> RefundQueries.get() |> settled()
+    end
+  end
+
   defp attempt(refund, payment, opts) do
-    case RefundQueries.claim_attempt(refund, now()) do
+    case RefundQueries.claim_attempt(refund) do
       {:ok, claimed} ->
         claimed |> outcome(payment, opts) |> conclude(claimed, payment, opts)
 
@@ -202,16 +209,24 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     end
   end
 
-  defp outcome(%RefundSchema{attempt: 1} = refund, payment, opts),
-    do: refund |> create(payment, opts) |> RefundOutcome.classify()
-
   defp outcome(refund, payment, opts) do
+    cond do
+      opts[:last_attempt] -> adopt(refund, payment, fn -> {:failed, "retries_exhausted"} end)
+      refund.attempt == 1 -> created(refund, payment, opts)
+      true -> adopt(refund, payment, fn -> created(refund, payment, opts) end)
+    end
+  end
+
+  defp adopt(refund, payment, when_not_made) do
     case made_earlier(refund, payment) do
-      {:ok, nil} -> refund |> create(payment, opts) |> RefundOutcome.classify()
+      {:ok, nil} -> when_not_made.()
       {:ok, made} -> RefundOutcome.classify({:ok, made})
       {:error, reason} -> {:retry, reason}
     end
   end
+
+  defp created(refund, payment, opts),
+    do: refund |> create(payment, opts) |> RefundOutcome.classify()
 
   # The charge is expanded so an adopted refund carries Stripe's refunded
   # total as a created one does.
@@ -301,7 +316,7 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     retry_later(refund, opts)
   end
 
-  defp conclude({:failed, code}, refund, _payment, _opts), do: fail(refund, code, [])
+  defp conclude({:failed, code}, refund, _payment, _opts), do: fail(refund, code)
 
   defp record_success(refund, payment, stripe_refund, opts) do
     attrs = %{status: :succeeded, stripe_refund_id: stripe_refund["id"], settled_at: now()}
@@ -338,16 +353,16 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     end
   end
 
-  defp fail(refund, code, settle_opts) do
+  defp fail(claimed, code) do
     attrs = %{status: :failed, failure_code: code, settled_at: now()}
 
-    case RefundQueries.settle(refund, attrs, settle_opts) do
+    case RefundQueries.settle_claimed(claimed, attrs) do
       {:ok, failed} ->
         FailureNotice.deliver(failed, code)
         {:error, :refund_failed}
 
       {:error, :not_pending} ->
-        refund.id |> RefundQueries.get() |> settled()
+        claimed.id |> RefundQueries.get() |> settled()
     end
   end
 
