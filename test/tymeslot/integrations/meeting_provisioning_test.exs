@@ -264,7 +264,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
           video_integration_id: video.id,
           calendar_integration_id: Keyword.get(opts, :mapped_calendar, calendar.id),
           provider_event_id: Keyword.get(opts, :provider_event_id),
-          inserted_at: Keyword.get(opts, :inserted_at, DateTime.utc_now(:second))
+          inserted_at: Keyword.get(opts, :inserted_at, DateTime.utc_now(:second)),
+          email_verified_at: Keyword.get(opts, :email_verified_at)
         )
 
       %{user: user, calendar: calendar, video: video, meeting: meeting}
@@ -416,6 +417,60 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
   # Graph mails the attendees of an organiser's event on every write to it, so
   # the booking's event is created with its Teams meeting rather than given it
   # by a second write (issue #191).
+  # A booking held until its attendee verifies their email, or pays, sets
+  # off its jobs only then, however long after it was made.
+  describe "MeetingProvisioning with Teams, for a booking released after it was made" do
+    test "has the event of a booking verified just now created with the meeting" do
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(
+          provider_event_id: nil,
+          inserted_at: DateTime.add(DateTime.utc_now(:second), -3600, :second),
+          email_verified_at: DateTime.utc_now(:second)
+        )
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert %{online_meeting: %{isOnlineMeeting: true}} =
+               MeetingProvisioning.booking_event_video_fields(meeting)
+
+      assert MeetingProvisioning.booking_room_placement(meeting) == :awaiting_calendar_event
+    end
+
+    test "waits for the event of a booking paid for just now" do
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(
+          provider_event_id: nil,
+          inserted_at: DateTime.add(DateTime.utc_now(:second), -3600, :second)
+        )
+
+      insert(:booking_payment,
+        meeting_id: meeting.id,
+        status: :paid,
+        paid_at: DateTime.utc_now(:second)
+      )
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert MeetingProvisioning.booking_room_placement(meeting) == :awaiting_calendar_event
+    end
+
+    test "gives up on the event of a booking verified long ago" do
+      an_hour_ago = DateTime.add(DateTime.utc_now(:second), -3600, :second)
+
+      %{calendar: calendar, meeting: meeting} =
+        teams_booking(
+          provider_event_id: nil,
+          inserted_at: an_hour_ago,
+          email_verified_at: an_hour_ago
+        )
+
+      stub_booking_calendar(meeting, calendar.id)
+
+      assert MeetingProvisioning.booking_event_video_fields(meeting) == %{}
+      assert MeetingProvisioning.booking_room_placement(meeting) == :own_event
+    end
+  end
+
   describe "MeetingProvisioning.booking_event_video_fields/1 with Teams" do
     test "has the event created with the meeting while the meeting waits for it" do
       %{calendar: calendar, meeting: meeting} =

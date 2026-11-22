@@ -48,11 +48,12 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   the event. The Meet is therefore made with the event, as on the dashboard.
   Any other combination gets a room of its own from the video provider.
 
-  Both jobs time their wait for each other from when the booking was made
-  (`inserted_at`). A booking whose jobs start later, once its email is
-  verified or its payment arrives, is past that wait when they run: its
-  event is created without the room, and the video provider makes the room
-  on its own.
+  Both jobs time their wait for each other from when the booking's jobs
+  were set off: when it was made, or, for a booking held until then, when
+  its email was verified or its payment arrived. A booking held for the
+  host's approval writes its calendar event as a tentative hold when it is
+  requested, so its video job, set off by the approval, finds the event
+  already there.
   """
 
   require Logger
@@ -69,6 +70,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviders
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Workers.CalendarEventWorker
 
@@ -79,7 +81,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   # How far apart two nodes' clocks may read: the calendar job and the video
   # job each measure the wait on their own node's clock against the same
-  # `inserted_at`.
+  # instant (`provisioning_started_at/1`).
   @clock_skew_seconds 5
 
   @type plan ::
@@ -196,14 +198,19 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
     which `Tymeslot.Workers.CalendarEventWorker` has not written yet, or,
     for Google Meet, whose conference Google has not finished making.
     Creating a separate room meanwhile is exactly the duplicate this avoids,
-    so the caller waits, for up to two minutes from the booking; after that
-    the answer becomes `:own_event`.
+    so the caller waits, for up to two minutes from when the booking's jobs
+    were set off (see the moduledoc); after that the answer becomes
+    `:own_event`.
   * `:own_event`: any other combination, including a video account that is
     not the calendar's (a host can connect several accounts): the room is
     made by the video provider on its own.
   * `{:error, :calendar_unavailable}`: the booking's Google event could not
     be read. Whether it carries a Meet is unknown, and a room of its own
-    could be a second one, so the caller retries rather than make one.
+    could be a second one, so the caller retries rather than make one, for
+    as long as it would wait for the event. After that, or at once when the
+    failure cannot heal by itself (the calendar's access is refused or gone,
+    or it waits to be reconnected), the answer is `:own_event`: a second
+    link is the lesser harm than none.
   """
   @spec booking_room_placement(MeetingSchema.t()) ::
           {:calendar_event, String.t()}
@@ -296,7 +303,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   def booking_event_update_fields(%MeetingSchema{provider_event_id: event_id} = meeting)
       when is_binary(event_id) and event_id != "" do
-    with false <- match?({:ok, :inline, _video, _calendar}, video_on_booking_calendar(meeting)),
+    with false <- booking_meet_on_event?(meeting),
          {:ok, cached} <-
            ProviderCalendarEventQueries.get_by_identifiers(meeting.calendar_integration_id, [
              event_id
@@ -314,6 +321,16 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   def booking_event_update_fields(_meeting), do: %{}
 
+  @doc """
+  Whether the booking's room is the Meet conference on its Google event: its
+  Meet integration is of the same Google account as the calendar the
+  booking is written to, so the video job takes the event's Meet as the
+  room (`booking_room_placement/1`) rather than make one.
+  """
+  @spec booking_meet_on_event?(MeetingSchema.t()) :: boolean()
+  def booking_meet_on_event?(%MeetingSchema{} = meeting),
+    do: match?({:ok, :inline, _video, _calendar}, video_on_booking_calendar(meeting))
+
   # The booking's video integration, how the calendar it is written to
   # carries its room (`@same_account_rules`), and that calendar, when both
   # are the same account. A video integration the video job would refuse
@@ -330,7 +347,9 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
          {:ok, calendar} <- Calendar.get_integration(cal_id, user_id),
          true <- same_account?(calendar, video, calendar_provider) do
       calendar_id = booking_calendar.calendar_path || unnamed_calendar(meeting, calendar)
-      {:ok, how, video, %{integration_id: cal_id, calendar_id: calendar_id}}
+
+      {:ok, how, video,
+       %{integration_id: cal_id, calendar_id: calendar_id, needs_reauth: calendar.needs_reauth}}
     else
       _other -> :error
     end
@@ -357,11 +376,41 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
       {:ok, url} -> {:calendar_meet, event_id, url}
       :pending -> waiting_or_own_event(meeting, @calendar_event_grace_seconds)
       :none -> :own_event
-      {:error, _reason} -> {:error, :calendar_unavailable}
+      {:error, reason} -> unreadable_event(meeting, calendar, reason)
     end
   end
 
   defp with_event_meet(placement, _meeting, _calendar), do: placement
+
+  # Read failures no retry within the wait can heal: the calendar's access is
+  # refused, revoked or unreadable, or the integration or its client is gone.
+  # A calendar waiting to be reconnected fails the same way, whatever error
+  # its read happens to give.
+  @lasting_read_failures [
+    :unauthorized,
+    :authentication_error,
+    :token_expired,
+    :not_a_calendar_user,
+    :refused,
+    :requires_reencryption,
+    :integration_not_found,
+    :no_calendar_integration,
+    :no_calendar_client,
+    :unaddressable,
+    :unsupported
+  ]
+
+  defp unreadable_event(_meeting, %{needs_reauth: true}, _reason), do: :own_event
+
+  defp unreadable_event(_meeting, _calendar, reason) when reason in @lasting_read_failures,
+    do: :own_event
+
+  defp unreadable_event(meeting, _calendar, _reason) do
+    case waiting_or_own_event(meeting, @calendar_event_grace_seconds) do
+      :awaiting_calendar_event -> {:error, :calendar_unavailable}
+      :own_event -> :own_event
+    end
+  end
 
   # The event is addressed by its Google id within the booking calendar; the
   # booking's own `uid` is its cancel and reschedule capability and is never
@@ -384,9 +433,12 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
           reason: LogFormat.reason(other)
         )
 
-        {:error, :calendar_unavailable}
+        read_failure(other)
     end
   end
+
+  defp read_failure({:error, reason}) when is_atom(reason), do: {:error, reason}
+  defp read_failure(_other), do: {:error, :unreadable}
 
   # ── Private helpers ──────────────────────────────────────────────────────────
 
@@ -416,10 +468,26 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   defp booking_event_placement(meeting, _cal_id, grace_seconds),
     do: waiting_or_own_event(meeting, grace_seconds)
 
-  defp waiting_or_own_event(%MeetingSchema{inserted_at: inserted_at}, grace_seconds) do
-    if DateTime.diff(Clock.utc_now(), inserted_at, :second) < grace_seconds,
+  defp waiting_or_own_event(meeting, grace_seconds) do
+    if DateTime.diff(Clock.utc_now(), provisioning_started_at(meeting), :second) < grace_seconds,
       do: :awaiting_calendar_event,
       else: :own_event
+  end
+
+  # When the booking's calendar and video jobs were set off, both in the
+  # write that made or released the booking: at booking, or once the
+  # attendee verified their email or their payment arrived.
+  defp provisioning_started_at(%MeetingSchema{} = meeting) do
+    [meeting.inserted_at, meeting.email_verified_at, paid_at(meeting)]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.max(DateTime)
+  end
+
+  defp paid_at(%MeetingSchema{id: meeting_id}) do
+    case MeetingPayments.payment_for_meeting(meeting_id) do
+      %{paid_at: %DateTime{} = paid_at} -> paid_at
+      _unpaid -> nil
+    end
   end
 
   # The video providers whose meeting the calendar of the same account can

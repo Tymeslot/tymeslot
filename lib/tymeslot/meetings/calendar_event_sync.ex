@@ -269,17 +269,26 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       else: create_replacement(meeting, event_id, attempt)
   end
 
-  # Checked again on a fresh read just before the write, since a room placed
-  # on the event since this job read the meeting would go with the
-  # conference. Nothing is recorded afterwards, so there is no lock to take.
+  # Decided and written under the meeting's row lock, which a location change
+  # and `VideoRoomAttachment.persist/2` also wait for: taking the conference
+  # off keeps the event id, so a move back to Meet mid-write would record the
+  # Meet being removed. The move now lands after the write, or before it and
+  # the conference stays.
   defp clear_conference(meeting, event_id, attempt) do
-    with {:ok, current} <- MeetingQueries.get_meeting(meeting.id),
-         :replace <- replacement_step(current, event_id) do
-      current |> CalendarEventConference.clear() |> flag_if_unauthorized(current)
-    else
-      {:error, :not_found} -> {:error, :meeting_not_found}
-      step -> run_replacement_step(step, meeting, event_id, attempt)
-    end
+    {:ok, outcome} =
+      Repo.transaction(fn ->
+        with {:ok, current} <- MeetingQueries.get_meeting_for_update(meeting.id),
+             :replace <- replacement_step(current, event_id) do
+          current
+          |> CalendarEventConference.clear_unless_retaken()
+          |> flag_if_unauthorized(current)
+        else
+          {:error, :not_found} -> {:error, :meeting_not_found}
+          step -> {:step, step}
+        end
+      end)
+
+    with {:step, step} <- outcome, do: run_replacement_step(step, meeting, event_id, attempt)
   end
 
   # What replacing `event_id` still takes, judged from `meeting` as it stands.
