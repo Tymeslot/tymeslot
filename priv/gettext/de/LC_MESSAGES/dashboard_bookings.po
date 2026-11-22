@@ -159,11 +159,6 @@ msgstr "Termin abgesagt und Rückerstattung veranlasst."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
-msgstr "Termin abgesagt, aber die Rückerstattung konnte nicht veranlasst werden. Bitte veranlassen Sie die Rückerstattung manuell in Ihrem Stripe-Dashboard."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr "Termin erfolgreich abgesagt"
 
@@ -981,3 +976,18 @@ msgstr "Eine Rückerstattung ist nicht möglich, da die Zahlung außerhalb der E
 #, elixir-autogen, elixir-format
 msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
 msgstr "Eine Rückerstattung ist nicht möglich, da die Zahlung angefochten wird. Klären Sie die Anfechtung zuerst in Stripe."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "A refund of %{amount} is already being processed."
+msgstr "Eine Rückerstattung von %{amount} wird bereits bearbeitet."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled, but Stripe declined the refund. Check the payment in your Stripe dashboard."
+msgstr "Termin abgesagt, aber Stripe hat die Rückerstattung abgelehnt. Prüfen Sie die Zahlung in Ihrem Stripe-Dashboard."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
+msgstr "Termin abgesagt. Die Rückerstattung wird bearbeitet; sobald sie erfolgt ist, erhält der Teilnehmer eine E-Mail."

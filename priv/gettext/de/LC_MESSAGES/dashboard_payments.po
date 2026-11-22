@@ -540,3 +540,28 @@ msgstr[1] "%{count} laufende Bezahlvorgänge werden beim Trennen abgebrochen."
 #, elixir-autogen, elixir-format
 msgid "A checkout is in progress in your current currency. Try again in a few minutes."
 msgstr "In Ihrer aktuellen Währung läuft gerade ein Bezahlvorgang. Versuchen Sie es in ein paar Minuten erneut."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} being processed"
+msgstr "%{amount} in Bearbeitung"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "A refund for this payment is already being processed."
+msgstr "Für diese Zahlung wird bereits eine Rückerstattung bearbeitet."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refund processing"
+msgstr "Rückerstattung in Bearbeitung"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Refund submitted. Stripe has not confirmed it yet; Tymeslot keeps trying and emails the attendee once it goes through."
+msgstr "Rückerstattung veranlasst. Stripe hat sie noch nicht bestätigt; Tymeslot versucht es weiter und benachrichtigt den Teilnehmer per E-Mail, sobald sie erfolgt ist."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe declined this refund. Check the payment in your Stripe dashboard."
+msgstr "Stripe hat diese Rückerstattung abgelehnt. Prüfen Sie die Zahlung in Ihrem Stripe-Dashboard."

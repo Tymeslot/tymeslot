@@ -159,11 +159,6 @@ msgstr "Riunione annullata e rimborso emesso."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
-msgstr "Riunione annullata ma non è stato possibile emettere il rimborso. Emetti il rimborso manualmente dalla dashboard di Stripe."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr "Riunione annullata con successo"
 
@@ -981,3 +976,18 @@ msgstr "Non è possibile alcun rimborso, perché il pagamento risale a più di 6
 #, elixir-autogen, elixir-format
 msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
 msgstr "Non è possibile alcun rimborso, perché il pagamento è oggetto di una contestazione. Risolvi prima la contestazione in Stripe."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "A refund of %{amount} is already being processed."
+msgstr "Un rimborso di %{amount} è già in corso."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled, but Stripe declined the refund. Check the payment in your Stripe dashboard."
+msgstr "Riunione annullata, ma Stripe ha rifiutato il rimborso. Controlla il pagamento nella dashboard di Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
+msgstr "Riunione annullata. Il rimborso è in corso e il partecipante riceverà un'email quando andrà a buon fine."

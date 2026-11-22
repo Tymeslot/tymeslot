@@ -159,11 +159,6 @@ msgstr "Зустріч скасовано, а кошти повернено."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
-msgstr "Зустріч скасовано, але не вдалося повернути кошти. Будь ласка, зробіть це вручну на панелі керування Stripe."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr "Зустріч успішно скасовано"
 
@@ -991,3 +986,18 @@ msgstr "Повернення коштів неможливе, оскільки �
 #, elixir-autogen, elixir-format
 msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
 msgstr "Повернення коштів неможливе, оскільки щодо платежу відкрито спір. Спершу врегулюйте його в Stripe."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "A refund of %{amount} is already being processed."
+msgstr "Повернення %{amount} уже обробляється."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled, but Stripe declined the refund. Check the payment in your Stripe dashboard."
+msgstr "Зустріч скасовано, але Stripe відхилив повернення коштів. Перевірте платіж на панелі керування Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
+msgstr "Зустріч скасовано. Повернення коштів обробляється, і щойно кошти буде повернено, учасник отримає лист."
