@@ -82,7 +82,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
     # UI for an already-cancelled meeting, which is exactly what we
     # want — the alternative (rendering cancel + silently no-oping on
     # click) would confuse attendees and organisers alike.
-    assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+    assert {:error, {:redirect, %{to: "/canceller", flash: flash}}} =
              live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel")
 
     assert flash["error"] == "This booking has already been cancelled or moved."
@@ -135,7 +135,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
     # — "has already started" / "has already occurred" depending on
     # the offset. Either way the user is kicked home with a flash
     # rather than landing on a stale cancel page.
-    assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+    assert {:error, {:redirect, %{to: "/canceller", flash: flash}}} =
              live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel")
 
     assert flash["error"] =~ "already"
@@ -300,7 +300,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
     meeting =
       insert(:meeting, organizer_user: user, organizer_user_id: user.id, status: :cancelled)
 
-    assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+    assert {:error, {:redirect, %{to: "/canceller", flash: flash}}} =
              live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel?locale=de")
 
     assert flash["error"] == "Diese Buchung wurde bereits storniert oder verschoben."
@@ -309,7 +309,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
   @tag :capture_log
   test "an unknown meeting is reported without the internal wording",
        %{conn: conn, profile: profile} do
-    assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+    assert {:error, {:redirect, %{to: "/canceller", flash: flash}}} =
              live(conn, "/#{profile.username}/meeting/#{UUID.generate()}/cancel")
 
     assert flash["error"] == "This meeting could not be found. Please refresh and try again."
@@ -327,7 +327,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
         approval_resolved_at: DateTime.utc_now(:second)
       )
 
-    assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+    assert {:error, {:redirect, %{to: "/canceller", flash: flash}}} =
              live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel?locale=de")
 
     assert flash["error"] == "Ein abgelaufener Termin kann nicht abgesagt werden"

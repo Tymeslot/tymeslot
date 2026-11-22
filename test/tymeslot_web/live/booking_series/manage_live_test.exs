@@ -515,7 +515,7 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
       host()
 
       for uid <- [UUID.generate(), "not-a-uuid"] do
-        assert {:error, {:redirect, %{to: "/", flash: %{"error" => message}}}} =
+        assert {:error, {:redirect, %{to: "/grace-host", flash: %{"error" => message}}}} =
                  live(conn, "/grace-host/series/#{uid}")
 
         assert message =~ "This series could not be found"
