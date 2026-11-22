@@ -260,7 +260,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
       # appears only here. connect.stripe.com is the redirect target of the
       # Connect onboarding form post; Chrome enforces form-action on
       # redirects, so omitting it blocks Stripe onboarding entirely.
-      "form-action 'self' https://billing.stripe.com https://checkout.stripe.com https://connect.stripe.com"
+      "form-action 'self' https://accounts.google.com https://billing.stripe.com https://checkout.stripe.com https://connect.stripe.com"
     ]
     |> Enum.reject(&(&1 == nil))
     |> Enum.join("; ")
