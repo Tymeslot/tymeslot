@@ -18,6 +18,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
   @moduletag :bookings
 
   alias ErrorTracker.Error
+  alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Notifications.EmailHandlers
@@ -485,6 +486,29 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
       end)
 
       assert :ok = outcome_job(meeting, "expired")
+    end
+
+    test "tells the invitee of a request whose deadline fell at its start, once it has started" do
+      # Asked for inside the approval window, the request's deadline is its
+      # start: it expires as the meeting begins, and its email runs after.
+      start = DateTime.add(DateTime.utc_now(:second), -10, :minute)
+
+      meeting =
+        held_meeting(%{
+          start_time: start,
+          end_time: DateTime.add(start, 1, :hour),
+          approval_deadline_at: start
+        })
+
+      {:ok, _expired} = Approval.expire(meeting)
+      [outcome] = all_enqueued(worker: EmailWorker, args: %{"variant" => "expired"})
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_request_outcome, fn :expired, sent ->
+        assert sent.id == meeting.id
+        {:ok, :sent}
+      end)
+
+      assert :ok = perform_job(EmailWorker, outcome.args)
     end
 
     test "refuses to tell an invitee a confirmed booking was declined" do

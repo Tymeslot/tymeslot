@@ -136,8 +136,7 @@ defmodule Tymeslot.BookingSeries.Notifications do
   Schedules the booker's one email saying their series request was
   declined or expired. The host, who declined it or let it lapse, is sent
   nothing, as for a single request. An expiry's email is dropped unsent once
-  the last of the `released` sessions has started
-  (`Tymeslot.Notifications.Relevance.series_expiry/1`).
+  it no longer matters (`Tymeslot.Notifications.Relevance.series_expiry/1`).
   """
   @spec schedule_series_request_outcome(SeriesSchema.t(), [Meeting.t()], :declined | :expired) ::
           :ok | {:error, term()}

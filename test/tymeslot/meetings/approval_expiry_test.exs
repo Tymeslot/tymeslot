@@ -179,14 +179,30 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
       assert {:discard, "No longer relevant"} = perform_job(EmailWorker, outcome.args)
     end
 
-    test "the expiry email stays owed until the requested meeting starts" do
-      start = DateTime.add(DateTime.utc_now(:second), 2, :day)
+    test "the expiry email of a meeting weeks ahead stays owed until it starts" do
+      start = DateTime.add(DateTime.utc_now(:second), 30, :day)
       meeting = overdue_meeting(%{start_time: start, end_time: DateTime.add(start, 1, :hour)})
 
       {:ok, _expired} = Approval.expire(meeting)
 
       [outcome] = all_enqueued(worker: EmailWorker, args: %{"variant" => "expired"})
       assert outcome.args["relevant_until"] == DateTime.to_iso8601(meeting.start_time)
+    end
+
+    test "the expiry email of a request due at its start stays owed for a week past it" do
+      start = DateTime.add(DateTime.utc_now(:second), -1, :hour)
+
+      meeting =
+        overdue_meeting(%{
+          start_time: start,
+          end_time: DateTime.add(start, 1, :hour),
+          approval_deadline_at: start
+        })
+
+      {:ok, _expired} = Approval.expire(meeting)
+
+      [outcome] = all_enqueued(worker: EmailWorker, args: %{"variant" => "expired"})
+      assert outcome.args["relevant_until"] == DateTime.to_iso8601(DateTime.add(start, 7, :day))
     end
 
     test "the expiry email of a booking moved back into the gate is owed however late" do

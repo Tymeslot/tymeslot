@@ -5,7 +5,7 @@ defmodule Tymeslot.Notifications.Relevance do
   Most notifications are owed however late they run: they record that
   somebody acted. A few exist only to prompt or inform somebody before a
   moment (a reminder before the meeting, a nudge before an approval
-  deadline, word that a request expired while its meeting was still ahead),
+  deadline, word that a request expired),
   and delivered after it they are noise. A sweep catching up on old rows, a
   restored backup or a long outage would otherwise send them all at once.
 
@@ -22,10 +22,11 @@ defmodule Tymeslot.Notifications.Relevance do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.EventTypes
 
-  # A lapsed reschedule request is announced at its deadline, which is never
-  # before the meeting's start, so the start cannot bound it. The grace covers
-  # any realistic delay in a sweep or a mail queue.
-  @lapse_grace_seconds 7 * 86_400
+  # News of a request that lapsed is announced at its deadline, which can fall
+  # on or after the meeting's start, so the start alone cannot bound it. The
+  # grace past the deadline covers any realistic delay in a sweep or a mail
+  # queue.
+  @late_news_grace_seconds 7 * 86_400
 
   @requested EventTypes.to_event_type(:meeting_requested)
   @request_expired EventTypes.to_event_type(:meeting_request_expired)
@@ -64,7 +65,7 @@ defmodule Tymeslot.Notifications.Relevance do
   @spec reschedule_lapse(map()) :: DateTime.t() | nil
   def reschedule_lapse(meeting) do
     case MeetingState.reschedule_request_deadline(meeting) do
-      %DateTime{} = deadline -> DateTime.add(deadline, @lapse_grace_seconds, :second)
+      %DateTime{} = deadline -> after_grace(deadline)
       nil -> nil
     end
   end
@@ -78,8 +79,11 @@ defmodule Tymeslot.Notifications.Relevance do
   def approval_request(%{approval_deadline_at: deadline}), do: deadline
 
   @doc """
-  The news that a booking request expired: the meeting's start, after which
-  "your requested time will not happen" tells nobody anything.
+  The news that a booking request expired: the meeting's start, or the grace
+  past the approval deadline if that is later. A request made inside its
+  approval window has its deadline capped at the start, so it expires as the
+  meeting starts and the start alone would drop every such notice; the grace
+  keeps it owed while a backlog months old is still dropped.
 
   `nil` for a booking a reschedule sent back into the gate
   (`first_announced_at` set): its expiry cancels a meeting people were told
@@ -87,22 +91,35 @@ defmodule Tymeslot.Notifications.Relevance do
   owed however late.
   """
   @spec request_expiry(map()) :: DateTime.t() | nil
-  def request_expiry(%{first_announced_at: nil, start_time: start}), do: start
+  def request_expiry(%{first_announced_at: nil} = meeting), do: expiry_news_until([meeting])
   def request_expiry(_regated), do: nil
 
   @doc """
-  The news that a series request expired: the start of its last session,
-  until when some of the series was still ahead. `nil` when any session
-  had been announced as confirmed, as for `request_expiry/1`.
+  The news that a series request expired: the start of its last session, or
+  the grace past the latest approval deadline if that is later, as for
+  `request_expiry/1`. `nil` when any session had been announced as
+  confirmed.
   """
   @spec series_expiry([map()]) :: DateTime.t() | nil
   def series_expiry([_first | _rest] = sessions) do
     if Enum.all?(sessions, &is_nil(&1.first_announced_at)),
-      do: sessions |> Enum.map(& &1.start_time) |> Enum.max(DateTime),
+      do: expiry_news_until(sessions),
       else: nil
   end
 
   def series_expiry([]), do: nil
+
+  defp expiry_news_until(sessions) do
+    graced_deadlines =
+      for %{approval_deadline_at: %DateTime{} = deadline} <- sessions, do: after_grace(deadline)
+
+    sessions
+    |> Enum.map(& &1.start_time)
+    |> Enum.concat(graced_deadlines)
+    |> Enum.max(DateTime)
+  end
+
+  defp after_grace(deadline), do: DateTime.add(deadline, @late_news_grace_seconds, :second)
 
   @doc "A reminder to vote in a poll: the poll's deadline."
   @spec poll_deadline(map()) :: DateTime.t() | nil
