@@ -12,8 +12,9 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
   Providers without a server-side meeting object (Google Meet, MiroTalk,
   Custom) resolve to `:ok` immediately, so enqueuing for them is a cheap no-op.
-  So does a Teams meeting attached to the booking's own calendar event, which
-  calendar sync keeps in step instead.
+  So does a room that is the booking's own calendar event (a Teams meeting on
+  the booking's Outlook event, or the Meet conference Google made for its
+  Google event), which calendar sync keeps in step instead.
 
   The meeting is re-read on every attempt so the provider always receives the
   current times — never stale args captured at enqueue time. A meeting that no
@@ -149,17 +150,19 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   def release(meeting)
 
   # A room that is the booking's own calendar event (a Teams meeting on the
-  # same Microsoft account) is not the provider's to delete: deleting it would
-  # delete the booking's event, which calendar sync still owns. Graph keeps the
-  # online meeting on that event for good once set, so the only way to take
-  # the join link off it is a new event, and that is calendar sync's job. It
-  # runs in the calendar queue, one write per meeting at a time, so it cannot
-  # race the update the same location change enqueued there. The video queue
-  # does not wait for it, though: a later move back to Teams can attach a
-  # room to the event while it is being replaced. Both sides re-check the
-  # meeting under its row lock before recording anything
-  # (`Tymeslot.Meetings.CalendarEventSync.replace/3`,
-  # `Tymeslot.Meetings.VideoRoomAttachment.persist/2`), so whichever records
+  # same Microsoft account, or a Meet conference Google made for a Google
+  # event of the same Google account) is not the provider's to delete:
+  # deleting it would delete the booking's event, which calendar sync still
+  # owns. Taking the join link off the event is calendar sync's job
+  # (`Tymeslot.Meetings.CalendarEventSync.replace/3`): Graph keeps the online
+  # meeting on an Outlook event for good once set, so that event is replaced
+  # with a new one, while a Google event has its conference taken off in
+  # place. It runs in the calendar queue, one write per meeting at a time, so
+  # it cannot race the update the same location change enqueued there. The
+  # video queue does not wait for it, though: a later move back to the same
+  # provider can attach a room to the event meanwhile. Both sides check the
+  # meeting again before writing (`CalendarEventSync.replace/3`,
+  # `Tymeslot.Meetings.VideoRoomAttachment.persist/2`), so whichever writes
   # first, the other gives way.
   def release(%{id: meeting_id, video_room_id: event_id, provider_event_id: event_id})
       when is_binary(meeting_id) and is_binary(event_id) do

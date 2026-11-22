@@ -562,7 +562,8 @@ defmodule Tymeslot.Integrations.Calendar.Events do
           | Tymeslot.MeetingTypes.MeetingTypeSchema.t()
           | Tymeslot.Meetings.MeetingSchema.t()
         ) ::
-          {:ok, %{integration_id: pos_integer(), calendar_path: String.t()}} | {:error, term()}
+          {:ok, %{integration_id: pos_integer(), calendar_path: String.t() | nil}}
+          | {:error, term()}
   def get_booking_integration_info(context) do
     behaviour_module().get_booking_integration_info(context)
   end

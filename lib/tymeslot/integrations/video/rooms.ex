@@ -34,7 +34,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
       its own
     - `:adopt_calendar_meeting`: true when that event may have been created
       with the meeting already on it (a booking's, see
-      `MeetingProvisioning.booking_online_meeting/1`), so the provider reads
+      `MeetingProvisioning.booking_event_video_fields/1`), so the provider reads
       it first and writes only when the meeting is not there
   """
   # The outcome is kept on the integration: a refusal its server will repeat

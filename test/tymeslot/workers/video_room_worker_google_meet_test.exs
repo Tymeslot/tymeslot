@@ -40,6 +40,12 @@ defmodule Tymeslot.Workers.VideoRoomWorkerGoogleMeetTest do
         video_integration_id: integration.id
       )
 
+    # Booked to no calendar, so the Meet is a space of its own rather than
+    # the conference Google makes on a booking's Google event.
+    stub(Tymeslot.CalendarMock, :get_booking_integration_info, fn _meeting ->
+      {:error, :no_integration}
+    end)
+
     expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
       space = %{"name" => "spaces/NgPxrxVDQF8B", "meetingUri" => @meeting_url}
       {:ok, %Req.Response{status: 200, body: Jason.encode!(space)}}
