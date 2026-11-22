@@ -11,20 +11,17 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
   use Tymeslot.DataCase, async: true
 
-  import Mox
-
   @moduletag :payments
   @moduletag :bookings
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.FailAndExpire
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
-
-  setup :verify_on_exit!
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   defp held_paid_meeting(attrs \\ %{}) do
     user = insert(:user)
@@ -66,8 +63,17 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
     )
   end
 
-  defp expect_refund(result \\ {:ok, %{id: "re_TEST"}}) do
-    expect(StripeAdapterMock, :create_refund, fn _params, _opts -> result end)
+  defp expect_refund(result \\ nil) do
+    StripeStub.expect(
+      :create_refund,
+      1,
+      result ||
+        StripeFixtures.object("refund_with_charge", %{
+          "id" => "re_TEST",
+          "amount" => 5000,
+          "charge" => %{"amount_refunded" => 5000}
+        })
+    )
   end
 
   describe "before the payment completes" do
@@ -175,7 +181,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
     test "a declined request is still declined when its refund failed and left it paid" do
       meeting = held_paid_meeting()
-      expect_refund({:error, :outside_refund_window})
+      expect_refund({:error_fixture, "invalid_request_error"})
 
       assert {:ok, _declined} = Approval.decline(meeting, nil)
 
@@ -188,10 +194,11 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
       test_pid = self()
 
       # A stub rather than a missing expectation: the release runs its refund
-      # step inside a rescue, so an unexpected Mox call would be swallowed.
-      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
+      # step inside a rescue, so an unexpected Stripe request would be
+      # swallowed.
+      StripeStub.stub(:create_refund, fn _request ->
         send(test_pid, :refund_attempted)
-        {:ok, %{id: "re_unexpected"}}
+        StripeFixtures.object("refund_with_charge", %{"id" => "re_unexpected"})
       end)
 
       assert {:ok, _declined} = Approval.decline(meeting, nil)

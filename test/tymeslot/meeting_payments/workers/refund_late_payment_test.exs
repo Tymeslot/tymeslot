@@ -15,19 +15,19 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   @moduletag :capture_log
 
   import Ecto.Query, only: [from: 2]
-  import Mox, only: [expect: 3, stub: 3, verify_on_exit!: 1]
   import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.Factory
 
   alias Ecto.Changeset
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.Refunds
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
-  setup :verify_on_exit!
   setup :capture_admin_alerts
 
   setup do
@@ -45,17 +45,15 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   end
 
   test "refunds the payment in full and emails the attendee once", %{payment: payment} do
-    expect(StripeAdapterMock, :create_refund, fn params, opts ->
-      assert params.charge == payment.stripe_charge_id
-      assert params.amount == 5000
-      assert opts[:connect_account] == "acct_LATE"
-      assert opts[:idempotency_key] == "late_payment_refund:#{payment.id}:late:5000"
-      assert opts[:connect_timeout] == 3_000
-      assert opts[:recv_timeout] == 5_000
-      {:ok, %{"id" => "re_LATE"}}
-    end)
+    StripeStub.expect(:create_refund, refund("re_LATE"))
 
     assert :ok = perform(payment)
+
+    assert [%{form: form, headers: headers}] = StripeStub.requests(:create_refund)
+    assert form["charge"] == payment.stripe_charge_id
+    assert form["amount"] == "5000"
+    assert headers["stripe-account"] == "acct_LATE"
+    assert headers["idempotency-key"] == "late_payment_refund:#{payment.id}:late:5000"
 
     assert Repo.reload!(payment).status == :refunded
     assert refund_emails(payment) == 1
@@ -63,9 +61,9 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   end
 
   test "a failed attempt short of the last is retried quietly", %{payment: payment} do
-    expect(StripeAdapterMock, :create_refund, fn _params, _opts -> {:error, :stripe_down} end)
+    StripeStub.expect(:create_refund, {:error_fixture, "api_error"})
 
-    assert {:error, :stripe_down} = perform(payment, attempt: 3)
+    assert {:error, %StripeError{type: "api_error"}} = perform(payment, attempt: 3)
 
     assert Repo.reload!(payment).status == :paid
     assert refund_emails(payment) == 0
@@ -74,9 +72,9 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
   test "a refund that fails on the last attempt alerts an admin and stays on the host's list",
        %{host: host, payment: payment} do
-    expect(StripeAdapterMock, :create_refund, fn _params, _opts -> {:error, :stripe_down} end)
+    StripeStub.expect(:create_refund, {:error_fixture, "api_error"})
 
-    assert {:error, :stripe_down} = perform(payment, attempt: 10)
+    assert {:error, %StripeError{type: "api_error"}} = perform(payment, attempt: 10)
 
     payment_id = payment.id
 
@@ -98,24 +96,29 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
     |> Changeset.change(stripe_charge_id: nil, stripe_payment_intent_id: "pi_LATE")
     |> Repo.update!()
 
-    expect(StripeAdapterMock, :retrieve_payment_intent, fn "pi_LATE", opts ->
-      assert opts[:connect_account] == "acct_LATE"
-      {:error, :stripe_down}
+    # A retryable error on a GET is attempted three times.
+    StripeStub.expect(:retrieve_payment_intent, 3, fn request ->
+      assert request.path == "/v1/payment_intents/pi_LATE"
+      assert request.headers["stripe-account"] == "acct_LATE"
+      {:error_fixture, "api_error"}
     end)
 
-    assert {:error, :stripe_down} = perform(payment)
+    assert {:error, %StripeError{type: "api_error"}} = perform(payment)
     assert is_nil(Repo.reload!(payment).stripe_charge_id)
 
-    expect(StripeAdapterMock, :retrieve_payment_intent, fn "pi_LATE", _opts ->
-      {:ok, %{"latest_charge" => %{"id" => "ch_BACKFILLED"}}}
-    end)
+    StripeStub.expect(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{
+        "id" => "pi_LATE",
+        "latest_charge" => %{"id" => "ch_BACKFILLED"}
+      })
+    )
 
-    expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-      assert params.charge == "ch_BACKFILLED"
-      {:ok, %{"id" => "re_LATE"}}
-    end)
+    StripeStub.expect(:create_refund, refund("re_LATE"))
 
     assert :ok = perform(payment, attempt: 2)
+
+    assert [%{form: %{"charge" => "ch_BACKFILLED"}}] = StripeStub.requests(:create_refund)
 
     refunded = Repo.reload!(payment)
     assert refunded.stripe_charge_id == "ch_BACKFILLED"
@@ -189,7 +192,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
       assert RefundLatePayment.expected_outcome?(reason)
     end
 
-    refute RefundLatePayment.expected_outcome?(:stripe_down)
+    refute RefundLatePayment.expected_outcome?(%StripeError{type: "api_error"})
   end
 
   # Stripe accepts the refund, then the transaction that records it dies
@@ -199,17 +202,17 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
        %{payment: payment} do
     stripe = start_supervised!({Agent, fn -> %{refunds: %{}, keys: []} end})
 
-    stub(StripeAdapterMock, :create_refund, fn params, opts ->
-      key = opts[:idempotency_key]
+    StripeStub.stub(:create_refund, fn request ->
+      key = request.headers["idempotency-key"]
 
       first? =
         Agent.get_and_update(stripe, fn state ->
-          refunds = Map.put_new(state.refunds, key, params.amount)
+          refunds = Map.put_new(state.refunds, key, request.form["amount"])
           {not Map.has_key?(state.refunds, key), %{refunds: refunds, keys: [key | state.keys]}}
         end)
 
       if first?, do: raise(DBConnection.ConnectionError, "connection lost")
-      {:ok, %{"id" => "re_#{key}"}}
+      refund("re_#{key}")
     end)
 
     assert {:error, %DBConnection.ConnectionError{}} = perform(payment)
@@ -238,7 +241,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   end
 
   test "sends no second email when the refund was already emailed", %{payment: payment} do
-    expect(StripeAdapterMock, :create_refund, fn _params, _opts -> {:ok, %{"id" => "re_HOST"}} end)
+    StripeStub.expect(:create_refund, refund("re_HOST"))
 
     {:ok, _refunded} =
       Refunds.issue_host_refund(payment.id, payment.host_user_id, 5000, "host_refund:test:5000")
@@ -300,11 +303,18 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
     assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
 
-    expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, _opts ->
-      {:ok, %{id: "re_REST", amount: 2000, charge: %{amount_refunded: 2000}}}
-    end)
+    StripeStub.expect(
+      :create_refund,
+      StripeFixtures.object("refund_with_charge", %{
+        "id" => "re_REST",
+        "amount" => 2000,
+        "charge" => %{"amount_refunded" => 2000}
+      })
+    )
 
     assert :ok = perform(payment)
+
+    assert [%{form: %{"amount" => "2000"}}] = StripeStub.requests(:create_refund)
 
     assert %{status: :refunded, refunded_amount_cents: 5000} = Repo.reload!(payment)
     assert MeetingPayments.list_outstanding_refunds_for_host(host.id) == []
@@ -316,6 +326,8 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
     assert total == 14_580
   end
+
+  defp refund(id), do: StripeFixtures.object("refund", %{"id" => id})
 
   defp perform(payment, opts \\ []) do
     perform_job(RefundLatePayment, %{booking_payment_id: payment.id},

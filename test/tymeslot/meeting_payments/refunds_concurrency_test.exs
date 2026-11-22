@@ -1,20 +1,17 @@
 defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
   # async: false is required so the Ecto sandbox runs in shared mode (all
-  # processes share the test DB connection) and Mox runs in global mode
-  # (spawned Tasks can call the mock without explicit allowance).
+  # processes share the test DB connection); the spawned Tasks reach the Stripe
+  # stub through their `$callers`.
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :database
   @moduletag :payments
 
-  import Mox
-
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Refunds
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
-
-  setup :verify_on_exit!
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   defp paid_booking_payment(attrs \\ %{}) do
     defaults = %{
@@ -53,8 +50,10 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
       # Allow up to 2 Stripe calls (one per task). If both tasks race through
       # the lock, Stripe is called twice with distinct idempotency keys and
       # distinct amounts-after context.
-      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
-        {:ok, %{id: "re_concurrent_#{System.unique_integer([:positive])}"}}
+      StripeStub.stub(:create_refund, fn _request ->
+        StripeFixtures.object("refund", %{
+          "id" => "re_concurrent_#{System.unique_integer([:positive])}"
+        })
       end)
 
       tasks =
@@ -106,20 +105,18 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
       # fresh refund of a fully refunded charge.
       calls = :counters.new(1, [:atomics])
 
-      expect(StripeAdapterMock, :create_refund, 2, fn _params, _opts ->
+      StripeStub.expect(:create_refund, 2, fn _request ->
         :counters.add(calls, 1, 1)
 
         case :counters.get(calls, 1) do
           1 ->
-            {:ok, %{id: "re_winner"}}
+            StripeFixtures.object("refund", %{"id" => "re_winner"})
 
           _replay ->
-            {:error,
-             %Stripe.Error{
-               source: :stripe,
-               code: :invalid_request_error,
-               message: "Charge has already been refunded"
-             }}
+            StripeFixtures.error_body("invalid_request_error", %{
+              "code" => "charge_already_refunded",
+              "message" => "Charge has already been refunded"
+            })
         end
       end)
 

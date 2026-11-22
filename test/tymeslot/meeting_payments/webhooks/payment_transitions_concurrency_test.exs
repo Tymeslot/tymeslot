@@ -24,7 +24,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   alias Ecto.UUID
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated
   alias Tymeslot.MeetingPayments.Webhooks.ChargeRefunded
@@ -33,10 +32,15 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Test.RaceConductor
 
   @account "acct_RACE_HOST"
   @succeeded [:tymeslot, :meeting_payments, :booking_payment, :succeeded]
+
+  # The raced handlers run in processes the test did not start.
+  setup {StripeStub, :shared!}
 
   setup do
     user =
@@ -158,9 +162,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
       Repo.update!(Changeset.change(payment, stripe_payment_intent_id: "pi_RACE_DOUBLE"))
     end)
 
-    Mox.stub(StripeAdapterMock, :retrieve_payment_intent, fn _id, _opts ->
-      {:ok, %{"latest_charge" => "ch_RACE_DISPUTE"}}
-    end)
+    StripeStub.stub(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{
+        "latest_charge" => "ch_RACE_DISPUTE"
+      })
+    )
 
     results =
       race([
@@ -198,9 +205,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   test "an expiry arriving while a completion commits leaves the booking paid", ctx do
     {meeting, payment} = awaiting_payment_booking(ctx.user, "cs_RACE_EXPIRY")
 
-    Mox.stub(StripeAdapterMock, :retrieve_payment_intent, fn _id, _opts ->
-      {:ok, %{"latest_charge" => "ch_RACE_EXPIRY"}}
-    end)
+    StripeStub.stub(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{
+        "latest_charge" => "ch_RACE_EXPIRY"
+      })
+    )
 
     results =
       race([
@@ -234,9 +244,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   test "a late completion and a new booking of an overlapping slot: one ends up live", ctx do
     {meeting, payment} = expired_booking(ctx.user, "cs_RACE_LATE")
 
-    Mox.stub(StripeAdapterMock, :retrieve_payment_intent, fn _id, _opts ->
-      {:ok, %{"latest_charge" => "ch_RACE_LATE"}}
-    end)
+    StripeStub.stub(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{
+        "latest_charge" => "ch_RACE_LATE"
+      })
+    )
 
     results =
       race([

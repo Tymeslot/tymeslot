@@ -5,16 +5,14 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
   @moduletag :database
   @moduletag :payments
 
-  import Mox
-
   alias Ecto.UUID
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Refunds
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Workers.SendBookingPaymentRefunded
-
-  setup :verify_on_exit!
 
   @key "refund_test:attempt"
 
@@ -187,18 +185,18 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "transitions paid → refunded and updates refunded_amount_cents" do
       payment = paid_booking_payment()
 
-      expect(StripeAdapterMock, :create_refund, fn params, opts ->
-        assert params.charge == payment.stripe_charge_id
-        assert params.amount == 5000
-        assert params.refund_application_fee == true
-        assert params.metadata.meeting_id == payment.meeting_id
-        assert params.metadata.booking_payment_id == payment.id
-        assert opts[:connect_account] == payment.stripe_account_id
-        assert opts[:idempotency_key] == @key
-        {:ok, %{id: "re_full"}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_full"))
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 5000, @key)
+
+      assert [%{form: form, headers: headers}] = StripeStub.requests(:create_refund)
+      assert form["charge"] == payment.stripe_charge_id
+      assert form["amount"] == "5000"
+      assert form["refund_application_fee"] == "true"
+      assert form["metadata"]["meeting_id"] == to_string(payment.meeting_id)
+      assert form["metadata"]["booking_payment_id"] == payment.id
+      assert headers["stripe-account"] == payment.stripe_account_id
+      assert headers["idempotency-key"] == @key
       assert updated.status == :refunded
       assert updated.refunded_amount_cents == 5000
 
@@ -212,13 +210,14 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "transitions paid → partially_refunded and tracks running total" do
       payment = paid_booking_payment()
 
-      expect(StripeAdapterMock, :create_refund, fn params, opts ->
-        assert params.amount == 2000
-        assert opts[:idempotency_key] == @key
-        {:ok, %{id: "re_partial"}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_partial"))
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 2000, @key)
+
+      assert [%{form: %{"amount" => "2000"}, headers: headers}] =
+               StripeStub.requests(:create_refund)
+
+      assert headers["idempotency-key"] == @key
       assert updated.status == :partially_refunded
       assert updated.refunded_amount_cents == 2000
     end
@@ -226,13 +225,14 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "second partial reaching total transitions to refunded" do
       payment = paid_booking_payment(%{refunded_amount_cents: 2000, status: :partially_refunded})
 
-      expect(StripeAdapterMock, :create_refund, fn params, opts ->
-        assert params.amount == 3000
-        assert opts[:idempotency_key] == @key
-        {:ok, %{id: "re_top_up"}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_top_up"))
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 3000, @key)
+
+      assert [%{form: %{"amount" => "3000"}, headers: headers}] =
+               StripeStub.requests(:create_refund)
+
+      assert headers["idempotency-key"] == @key
       assert updated.status == :refunded
       assert updated.refunded_amount_cents == 5000
     end
@@ -240,9 +240,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "second partial below total stays partially_refunded" do
       payment = paid_booking_payment(%{refunded_amount_cents: 1000, status: :partially_refunded})
 
-      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
-        {:ok, %{id: "re_partial2"}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_partial2"))
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 1500, @key)
       assert updated.status == :partially_refunded
@@ -303,8 +301,8 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "rejects a disputed payment with :under_dispute and makes no Stripe call" do
       # A disputed charge cannot be refunded via the Refund API. Local
       # validation must short-circuit so the host gets a meaningful error
-      # instead of a wasted Stripe round-trip — Mox verify_on_exit! enforces
-      # that no create_refund call is made.
+      # instead of a wasted Stripe round-trip; no Stripe stub is installed, so
+      # any request fails the test.
       payment = paid_booking_payment(%{status: :disputed})
 
       assert {:error, :under_dispute} = Refunds.issue_refund(payment, 100, @key)
@@ -315,24 +313,24 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "omits refund_application_fee when application_fee_cents is 0" do
       payment = paid_booking_payment(%{application_fee_cents: 0})
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        refute Map.has_key?(params, :refund_application_fee)
-        {:ok, %{id: "re_zero_fee"}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_zero_fee"))
 
       assert {:ok, updated} = Refunds.issue_refund(payment, 1000, @key)
+
+      assert [%{form: form}] = StripeStub.requests(:create_refund)
+      refute Map.has_key?(form, "refund_application_fee")
       assert updated.status == :partially_refunded
     end
 
     test "includes refund_application_fee=true when application_fee_cents > 0" do
       payment = paid_booking_payment(%{application_fee_cents: 25})
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.refund_application_fee == true
-        {:ok, %{id: "re_with_fee"}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_with_fee"))
 
       assert {:ok, _payment} = Refunds.issue_refund(payment, 1000, @key)
+
+      assert [%{form: %{"refund_application_fee" => "true"}}] =
+               StripeStub.requests(:create_refund)
     end
   end
 
@@ -340,11 +338,10 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "returns the Stripe error and does not update the row" do
       payment = paid_booking_payment()
 
-      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
-        {:error, :stripe_failure}
-      end)
+      StripeStub.expect(:create_refund, {:error_fixture, "api_error"})
 
-      assert {:error, :stripe_failure} = Refunds.issue_refund(payment, 1000, @key)
+      assert {:error, %StripeError{type: "api_error"}} =
+               Refunds.issue_refund(payment, 1000, @key)
 
       reloaded = BookingPaymentQueries.by_charge_id(payment.stripe_charge_id)
       assert reloaded.status == :paid
@@ -356,9 +353,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "enqueues a SendBookingPaymentRefunded job after a successful refund" do
       payment = paid_booking_payment()
 
-      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
-        {:ok, %{id: "re_email"}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_email"))
 
       assert {:ok, _updated} = Refunds.issue_refund(payment, 5000, @key)
 
@@ -371,11 +366,10 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "does not enqueue email when Stripe call fails" do
       payment = paid_booking_payment()
 
-      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
-        {:error, :stripe_failure}
-      end)
+      StripeStub.expect(:create_refund, {:error_fixture, "api_error"})
 
-      assert {:error, :stripe_failure} = Refunds.issue_refund(payment, 5000, @key)
+      assert {:error, %StripeError{type: "api_error"}} =
+               Refunds.issue_refund(payment, 5000, @key)
 
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end
@@ -385,12 +379,12 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "passes the supplied reason through to Stripe" do
       payment = paid_booking_payment()
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.reason == "requested_by_customer"
-        {:ok, %{id: "re_reason"}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_reason"))
 
       assert {:ok, _payment} = Refunds.issue_refund(payment, 500, @key, "requested_by_customer")
+
+      assert [%{form: %{"reason" => "requested_by_customer"}}] =
+               StripeStub.requests(:create_refund)
     end
 
     test "omits the reason param when none is supplied" do
@@ -398,12 +392,12 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
       # Stripe rejects a blank `reason` ("cannot be unset"), so the param must
       # be absent entirely rather than sent as nil/empty.
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        refute Map.has_key?(params, :reason)
-        {:ok, %{id: "re_no_reason"}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_no_reason"))
 
       assert {:ok, _payment} = Refunds.issue_refund(payment, 500, @key)
+
+      assert [%{form: form}] = StripeStub.requests(:create_refund)
+      refute Map.has_key?(form, "reason")
     end
   end
 
@@ -414,27 +408,30 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "asks Stripe under the same key and records the refund once" do
       payment = paid_booking_payment(%{refunded_amount_cents: 5000, status: :refunded})
 
-      expect(StripeAdapterMock, :create_refund, fn %{amount: 5000}, opts ->
-        assert opts[:idempotency_key] == @key
-        {:ok, %{id: "re_replayed", amount: 5000, charge: %{amount_refunded: 5000}}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_replayed", 5000, 5000))
 
       assert {:ok, %{refunded_amount_cents: 5000, status: :refunded}} =
                Refunds.issue_refund(payment, 5000, @key)
 
+      assert [%{form: %{"amount" => "5000"}, headers: headers}] =
+               StripeStub.requests(:create_refund)
+
+      assert headers["idempotency-key"] == @key
       assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 5000
     end
 
     test "records the refund once while the balance still covers it" do
       payment = paid_booking_payment(%{refunded_amount_cents: 2000, status: :partially_refunded})
 
-      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, opts ->
-        assert opts[:idempotency_key] == @key
-        {:ok, %{id: "re_replayed", amount: 2000, charge: %{amount_refunded: 2000}}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_replayed", 2000, 2000))
 
       assert {:ok, %{refunded_amount_cents: 2000, status: :partially_refunded}} =
                Refunds.issue_refund(payment, 2000, @key)
+
+      assert [%{form: %{"amount" => "2000"}, headers: headers}] =
+               StripeStub.requests(:create_refund)
+
+      assert headers["idempotency-key"] == @key
     end
 
     test "makes no Stripe call for an amount the recorded total cannot hold" do
@@ -456,20 +453,20 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
     test "refuses more than the remainder without asking Stripe" do
       # Within the recorded total, but none of it is a refund Stripe made,
-      # so there is nothing a replayed key could return. Mox fails the test
-      # on any Stripe call.
+      # so there is nothing a replayed key could return. Any Stripe request
+      # fails the test.
       assert {:error, :invalid_amount} = Refunds.issue_refund(after_lost_dispute(), 2500, @key)
     end
 
     test "records a refund of the remainder against Stripe's refunds" do
       payment = after_lost_dispute()
 
-      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, _opts ->
-        {:ok, %{id: "re_rest", amount: 2000, charge: %{amount_refunded: 2000}}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_rest", 2000, 2000))
 
       assert {:ok, %{refunded_amount_cents: 5000, disputed_lost_cents: 3000, status: :refunded}} =
                Refunds.issue_refund(payment, 2000, @key)
+
+      assert [%{form: %{"amount" => "2000"}}] = StripeStub.requests(:create_refund)
     end
 
     test "replays a refund of the remainder the webhook already recorded" do
@@ -480,13 +477,15 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
           status: :refunded
         })
 
-      expect(StripeAdapterMock, :create_refund, fn %{amount: 2000}, opts ->
-        assert opts[:idempotency_key] == @key
-        {:ok, %{id: "re_rest", amount: 2000, charge: %{amount_refunded: 2000}}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_rest", 2000, 2000))
 
       assert {:ok, %{refunded_amount_cents: 5000, status: :refunded}} =
                Refunds.issue_refund(payment, 2000, @key)
+
+      assert [%{form: %{"amount" => "2000"}, headers: headers}] =
+               StripeStub.requests(:create_refund)
+
+      assert headers["idempotency-key"] == @key
     end
   end
 
@@ -494,11 +493,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
     test "refunds a payment the host took" do
       payment = paid_booking_payment()
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.charge == payment.stripe_charge_id
-        assert params.amount == 1500
-        {:ok, %{id: "re_host"}}
-      end)
+      StripeStub.expect(:create_refund, refund("re_host"))
 
       assert {:ok, updated} =
                MeetingPayments.refund_payment_for_host(
@@ -507,6 +502,10 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
                  1500,
                  @key
                )
+
+      assert [%{form: form}] = StripeStub.requests(:create_refund)
+      assert form["charge"] == payment.stripe_charge_id
+      assert form["amount"] == "1500"
 
       assert updated.refunded_amount_cents == 1500
       assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 1500
@@ -596,22 +595,30 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
   end
 
   defp expect_stripe_rejects_fresh_refund(amount) do
-    expect(StripeAdapterMock, :create_refund, fn %{amount: ^amount}, opts ->
-      assert opts[:idempotency_key] == @key
+    StripeStub.expect(:create_refund, fn request ->
+      assert request.form["amount"] == Integer.to_string(amount)
+      assert request.headers["idempotency-key"] == @key
 
-      {:error,
-       %Stripe.Error{
-         source: :stripe,
-         code: :invalid_request_error,
-         message: "Refund amount is greater than unrefunded amount on charge"
-       }}
+      StripeFixtures.error_body("invalid_request_error", %{
+        "message" => "Refund amount is greater than unrefunded amount on charge"
+      })
     end)
   end
 
+  # Stripe's answer to a refund. With `amount_refunded` it carries the
+  # expanded charge the refund total is read from.
+  defp refund(id), do: StripeFixtures.object("refund", %{"id" => id})
+
+  defp refund(id, amount, amount_refunded) do
+    StripeFixtures.object("refund_with_charge", %{
+      "id" => id,
+      "amount" => amount,
+      "charge" => %{"amount_refunded" => amount_refunded}
+    })
+  end
+
   defp stub_successful_stripe_refund do
-    stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
-      {:ok, %{id: "re_should_not_happen"}}
-    end)
+    StripeStub.stub(:create_refund, refund("re_should_not_happen"))
   end
 
   defp assert_untouched(payment) do
