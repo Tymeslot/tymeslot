@@ -133,6 +133,7 @@ defmodule Tymeslot.Workers.AccountDeletionWorkerTest do
       assert_received {:send_alert, :account_deletion_stalled, payload}
       assert payload.user_id == user.id
       assert payload.stripe_request_id == "req_perm"
+      assert payload.summary =~ "refused by Stripe"
       assert Repo.get(UserSchema, user.id)
     end
 
@@ -154,7 +155,8 @@ defmodule Tymeslot.Workers.AccountDeletionWorkerTest do
                  max_attempts: 5
                )
 
-      assert_received {:send_alert, :account_deletion_stalled, _payload}
+      assert_received {:send_alert, :account_deletion_stalled, payload}
+      assert payload.summary == "Account deletion failed after every retry"
     end
   end
 
