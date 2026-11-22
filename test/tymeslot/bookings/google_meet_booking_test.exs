@@ -29,9 +29,10 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Bookings.{Cancel, Orchestrator, Reschedule, RescheduleLocation}
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
-  alias Tymeslot.Meetings.{EmailVerification, MeetingSchema}
+  alias Tymeslot.Meetings.{CalendarEventSync, EmailVerification, MeetingSchema}
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.GoogleMeetFake
@@ -135,24 +136,7 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     use_runtime_calendar()
     GoogleMeetFake.start()
 
-    run_calendar_jobs()
-    assert :ok = run_video_job(meeting)
-    run_calendar_jobs()
-    assert_one_event_carrying_the_meet(meeting)
-
-    original = Repo.get!(MeetingSchema, meeting.id)
-
-    moved =
-      original
-      |> Changeset.change(
-        video_room_id: nil,
-        meeting_url: nil,
-        video_integration_id: nil,
-        location: "Somewhere in person"
-      )
-      |> Repo.update!()
-
-    assert :ok = RescheduleLocation.release_abandoned_room(moved, original)
+    original = book_onto_meet_then_move_off(meeting)
     run_calendar_jobs()
 
     # Written in place, with the conference left out at
@@ -210,22 +194,11 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     use_runtime_calendar()
     GoogleMeetFake.start()
 
-    run_calendar_jobs()
-    assert :ok = run_video_job(meeting)
-    run_calendar_jobs()
-    assert_one_event_carrying_the_meet(meeting)
+    original = book_onto_meet_then_move_off(meeting)
 
-    original = Repo.get!(MeetingSchema, meeting.id)
-
-    moved =
-      original
-      |> Changeset.change(video_room_id: nil, meeting_url: nil, video_integration_id: nil)
-      |> Repo.update!()
-
-    assert :ok = RescheduleLocation.release_abandoned_room(moved, original)
-
-    moved
-    |> Changeset.change(video_integration_id: original.video_integration_id)
+    MeetingSchema
+    |> Repo.get!(meeting.id)
+    |> Changeset.change(video_integration_id: original.video_integration_id, location: nil)
     |> Repo.update!()
 
     run_calendar_jobs()
@@ -241,6 +214,78 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     assert back.video_room_id == original.provider_event_id
     assert back.provider_event_id == original.provider_event_id
     assert back.meeting_url == @meet_url
+  end
+
+  # The decision to take the Meet off was made before the booking moved back,
+  # so the write removes it; the video job reads the event as the write left
+  # it and gives the booking a Meet of its own, never the Meet just removed.
+  # The video job's wait for an in-flight write is not exercised here: the
+  # sandbox runs the whole test on one connection, where the lock is
+  # re-entrant.
+  test "a booking moved back to Meet while the Meet is taken off never takes the removed Meet",
+       %{meeting: meeting} do
+    use_runtime_calendar()
+
+    move_back = fn ->
+      MeetingSchema
+      |> Repo.get!(meeting.id)
+      |> Changeset.change(video_integration_id: meeting.video_integration_id, location: nil)
+      |> Repo.update!()
+    end
+
+    GoogleMeetFake.start(on_conference_removal: move_back)
+    original = book_onto_meet_then_move_off(meeting)
+
+    assert :ok = CalendarEventSync.replace(meeting.id, original.provider_event_id, 1)
+    assert :ok = run_video_job(meeting)
+
+    assert [{:put, put_uri, put_body}, {:post, %URI{host: "meet.googleapis.com"}, _space}] =
+             for(
+               {method, _uri, _body} = req <- GoogleMeetFake.requests(),
+               method != :get,
+               do: req
+             )
+
+    assert URI.decode_query(put_uri.query)["conferenceDataVersion"] == "1"
+    refute Map.has_key?(put_body, "conferenceData")
+
+    back = Repo.get!(MeetingSchema, meeting.id)
+    assert back.video_integration_id == meeting.video_integration_id
+    assert back.video_room_id == "space-1"
+    assert back.meeting_url == @space_url
+  end
+
+  # The cache write-through runs in the same transaction, and a database
+  # failure there aborts it: the job gets the error to retry, not a crash.
+  test "a transaction aborted while the Meet is taken off returns its error", %{
+    meeting: meeting
+  } do
+    use_runtime_calendar()
+    GoogleMeetFake.start()
+
+    original = book_onto_meet_then_move_off(meeting)
+
+    insert(:provider_calendar_event,
+      calendar_integration:
+        Repo.get!(CalendarIntegrationSchema, original.calendar_integration_id),
+      uid: original.provider_event_id,
+      provider_event_id: original.provider_event_id,
+      provider_calendar_id: @calendar_id
+    )
+
+    Repo.query!("""
+    CREATE FUNCTION fail_cached_event_update() RETURNS trigger AS $$
+    BEGIN RAISE EXCEPTION 'provider_calendar_events unavailable'; END;
+    $$ LANGUAGE plpgsql
+    """)
+
+    Repo.query!("""
+    CREATE TRIGGER fail_cached_event_update BEFORE UPDATE ON provider_calendar_events
+    FOR EACH ROW EXECUTE FUNCTION fail_cached_event_update()
+    """)
+
+    assert {:error, :rollback} =
+             CalendarEventSync.replace(meeting.id, original.provider_event_id, 1)
   end
 
   test "the attendee's confirmation email carries the Meet on the booking's event", %{
@@ -422,6 +467,50 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == created["id"]
   end
 
+  # A 400 for another reason than the Meet would be refused again without
+  # it, so the event is not written a second time.
+  test "a calendar refusing the event itself does not have it written again without the Meet",
+       %{meeting: meeting} do
+    use_runtime_calendar()
+    GoogleMeetFake.start(refuse_events: true)
+
+    assert %{discard: 1} = Oban.drain_queue(queue: :calendar_events)
+
+    assert [{:post, _refused, %{"conferenceData" => _asked}}] =
+             for(
+               {method, _uri, _body} = req <- GoogleMeetFake.requests(),
+               method != :get,
+               do: req
+             )
+
+    assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == nil
+  end
+
+  # An update that runs before the booking's create finds no event, and
+  # creates it as the first create would, Meet included.
+  test "an update that finds no event creates it, without the Meet a calendar refuses", %{
+    meeting: meeting
+  } do
+    use_runtime_calendar()
+    GoogleMeetFake.start(refuse_conference: true)
+
+    assert :ok = CalendarEventSync.update(meeting.id, 1)
+
+    assert [
+             {:put, _missing, _update},
+             {:post, _refused, %{"conferenceData" => _asked}},
+             {:post, _created, created}
+           ] =
+             for(
+               {method, _uri, _body} = req <- GoogleMeetFake.requests(),
+               method != :get,
+               do: req
+             )
+
+    refute Map.has_key?(created, "conferenceData")
+    assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == created["id"]
+  end
+
   defp assert_one_event_carrying_the_meet(meeting) do
     requests = GoogleMeetFake.requests()
 
@@ -449,6 +538,31 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     assert updated.video_room_id == created["id"]
     assert updated.meeting_url == @meet_url
     assert updated.uid == meeting.uid
+  end
+
+  # The booking's event is written with its Meet and the booking takes it;
+  # then the booking leaves Meet. Returns the booking as it was on the Meet,
+  # with every Google request so far already collected.
+  defp book_onto_meet_then_move_off(meeting) do
+    run_calendar_jobs()
+    assert :ok = run_video_job(meeting)
+    run_calendar_jobs()
+    assert_one_event_carrying_the_meet(meeting)
+
+    original = Repo.get!(MeetingSchema, meeting.id)
+
+    moved =
+      original
+      |> Changeset.change(
+        video_room_id: nil,
+        meeting_url: nil,
+        video_integration_id: nil,
+        location: "Somewhere in person"
+      )
+      |> Repo.update!()
+
+    assert :ok = RescheduleLocation.release_abandoned_room(moved, original)
+    original
   end
 
   defp book(user, meeting_type) do

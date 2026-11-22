@@ -20,7 +20,8 @@ defmodule Tymeslot.Meetings.CalendarEventConference do
   alias Tymeslot.Integrations.Calendar.Management, as: CalendarManagement
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.CalendarEventCache
+  alias Tymeslot.Meetings.{CalendarEventCache, MeetingQueries, MeetingSchema}
+  alias Tymeslot.Repo
 
   @doc "Whether the meeting's calendar event is a Google event."
   @spec google?(map()) :: boolean()
@@ -35,12 +36,51 @@ defmodule Tymeslot.Meetings.CalendarEventConference do
   def google?(_meeting), do: false
 
   @doc """
-  As `clear/1`, unless the meeting is back on a Meet its event carries
-  (`MeetingProvisioning.booking_meet_on_event?/1`): its video job takes that
-  conference as the booking's room, so it stays on the event.
+  Takes the Meet conference off the Google event of the meeting `meeting_id`,
+  as the meeting stands once its conference lock is held
+  (`MeetingQueries.lock_event_conference/1`): only when `decide` answers
+  `:clear` for it, and `{:skipped, answer}` for any other answer.
+
+  Taking the conference off keeps the event id, so a booking moved back to
+  Meet while the write is in flight could have its video job read the Meet
+  just before it goes and take it as the booking's room. The video job waits
+  for this lock before it reads the event
+  (`MeetingProvisioning.booking_room_placement/1`), so it reads the event as
+  the write left it, and a move back read here keeps the conference. Nothing
+  else waits for the lock: a cancel or a reschedule never waits on Google,
+  as it would on the meeting's row lock.
+
+  A meeting gone meanwhile is `{:error, :meeting_not_found}`. A transaction
+  that fails to commit (a failed cache write-through aborts it) is returned
+  as its error, for the job to retry.
   """
-  @spec clear_unless_retaken(map()) :: :ok | {:error, term()}
-  def clear_unless_retaken(meeting) do
+  @spec clear_under_lock(String.t(), (MeetingSchema.t() -> :clear | answer)) ::
+          :ok | {:skipped, answer} | {:error, term()}
+        when answer: term()
+  def clear_under_lock(meeting_id, decide) do
+    transaction =
+      Repo.transaction(fn ->
+        MeetingQueries.lock_event_conference(meeting_id)
+
+        with {:ok, meeting} <- MeetingQueries.get_meeting(meeting_id),
+             :clear <- decide.(meeting) do
+          clear_unless_retaken(meeting)
+        else
+          {:error, :not_found} -> {:error, :meeting_not_found}
+          answer -> {:skipped, answer}
+        end
+      end)
+
+    case transaction do
+      {:ok, result} -> result
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # The meeting back on a Meet its event carries
+  # (`MeetingProvisioning.booking_meet_on_event?/1`) keeps it: its video job
+  # takes that conference as the booking's room.
+  defp clear_unless_retaken(meeting) do
     if MeetingProvisioning.booking_meet_on_event?(meeting) do
       Logger.info("Meeting is back on the Meet its calendar event carries, keeping it",
         meeting_id: meeting.id
@@ -52,12 +92,9 @@ defmodule Tymeslot.Meetings.CalendarEventConference do
     end
   end
 
-  @doc """
-  Writes the meeting's event as it stands, without a conference. An event
-  Google no longer has carries no conference either, so it counts as done.
-  """
-  @spec clear(map()) :: :ok | {:error, term()}
-  def clear(meeting) do
+  # Writes the meeting's event as it stands, without a conference. An event
+  # Google no longer has carries no conference either, so it counts as done.
+  defp clear(meeting) do
     Logger.info("Taking the Meet conference off the calendar event", meeting_id: meeting.id)
 
     event_data =

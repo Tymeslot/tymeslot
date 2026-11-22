@@ -68,6 +68,13 @@ defmodule Tymeslot.Meetings do
   defdelegate guest_rsvp_summary(guests), to: Guests, as: :summarize
 
   @doc """
+  Returns once no write taking the meeting's Meet conference off its Google
+  event is in flight, so a read of that event that follows sees the write's
+  result (`Tymeslot.Meetings.CalendarEventConference.clear_under_lock/2`).
+  """
+  defdelegate await_event_conference_writes(meeting_id), to: MeetingQueries
+
+  @doc """
   Which of the calendar event `uids` belong to the organiser's group meetings
   with live seats, in one query.
   """

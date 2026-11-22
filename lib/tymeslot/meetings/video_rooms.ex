@@ -78,8 +78,8 @@ defmodule Tymeslot.Meetings.VideoRooms do
     - {:error, :video_integration_missing} if no video integration configured
     - {:error, :calendar_event_pending} if the room belongs on the booking's
       calendar event (a Teams meeting, or a Google Meet conference) and that
-      event, or its Meet conference, is not written yet, or the event was
-      replaced while the meeting was being attached to it
+      event, or its Meet conference, is not written yet or cannot be read
+      yet, or the event was replaced while the meeting was being attached to it
     - {:error, :video_integration_inactive} if integration is disabled
     - {:error, :video_integration_needs_reauth} if its owner has been asked
       to reconnect the integration, so no call is made
@@ -391,9 +391,8 @@ defmodule Tymeslot.Meetings.VideoRooms do
       :own_event ->
         {:ok, []}
 
-      # `{:calendar_meet, ...}`, or `{:error, :calendar_unavailable}` retried
-      calendar_meet_or_error ->
-        calendar_meet_or_error
+      {:calendar_meet, _event_id, _meet_url} = calendar_meet ->
+        calendar_meet
     end
   end
 

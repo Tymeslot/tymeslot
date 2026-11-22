@@ -71,6 +71,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviders
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Workers.CalendarEventWorker
 
@@ -196,28 +197,26 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
     leave the guest's link and the event's link pointing at different rooms.
   * `:awaiting_calendar_event`: the room belongs on the booking's event,
     which `Tymeslot.Workers.CalendarEventWorker` has not written yet, or,
-    for Google Meet, whose conference Google has not finished making.
+    for Google Meet, whose conference Google has not finished making, or
+    which could not be read, so whether it carries a Meet is unknown.
     Creating a separate room meanwhile is exactly the duplicate this avoids,
     so the caller waits, for up to two minutes from when the booking's jobs
     were set off (see the moduledoc); after that the answer becomes
-    `:own_event`.
+    `:own_event`. A read failure that cannot heal by itself (the calendar's
+    access is refused or gone, or it waits to be reconnected) is `:own_event`
+    at once: a second link is the lesser harm than none.
   * `:own_event`: any other combination, including a video account that is
     not the calendar's (a host can connect several accounts): the room is
     made by the video provider on its own.
-  * `{:error, :calendar_unavailable}`: the booking's Google event could not
-    be read. Whether it carries a Meet is unknown, and a room of its own
-    could be a second one, so the caller retries rather than make one, for
-    as long as it would wait for the event. After that, or at once when the
-    failure cannot heal by itself (the calendar's access is refused or gone,
-    or it waits to be reconnected), the answer is `:own_event`: a second
-    link is the lesser harm than none.
+
+  A Meet being taken off the booking's event is waited for before the event
+  is read (`Tymeslot.Meetings.CalendarEventConference.clear_under_lock/2`).
   """
   @spec booking_room_placement(MeetingSchema.t()) ::
           {:calendar_event, String.t()}
           | {:calendar_meet, String.t(), String.t()}
           | :awaiting_calendar_event
           | :own_event
-          | {:error, :calendar_unavailable}
   def booking_room_placement(%MeetingSchema{} = meeting) do
     case video_on_booking_calendar(meeting) do
       {:ok, :attach, _video, %{integration_id: cal_id}} ->
@@ -372,6 +371,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   # once rather than holding the booking's confirmation for the rest of the
   # wait.
   defp with_event_meet({:calendar_event, event_id}, meeting, calendar) do
+    Meetings.await_event_conference_writes(meeting.id)
+
     case event_meet_url(meeting, event_id, calendar) do
       {:ok, url} -> {:calendar_meet, event_id, url}
       :pending -> waiting_or_own_event(meeting, @calendar_event_grace_seconds)
@@ -405,12 +406,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   defp unreadable_event(_meeting, _calendar, reason) when reason in @lasting_read_failures,
     do: :own_event
 
-  defp unreadable_event(meeting, _calendar, _reason) do
-    case waiting_or_own_event(meeting, @calendar_event_grace_seconds) do
-      :awaiting_calendar_event -> {:error, :calendar_unavailable}
-      :own_event -> :own_event
-    end
-  end
+  defp unreadable_event(meeting, _calendar, _reason),
+    do: waiting_or_own_event(meeting, @calendar_event_grace_seconds)
 
   # The event is addressed by its Google id within the booking calendar; the
   # booking's own `uid` is its cancel and reschedule capability and is never

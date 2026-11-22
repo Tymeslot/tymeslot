@@ -15,7 +15,10 @@ defmodule Tymeslot.Test.GoogleMeetFake do
 
   Options of `start/1`: `refuse_conference: true` refuses a Meet the way a
   calendar that allows no Meet conferences does, by refusing the whole
-  create; `meet_pending: true` never finishes making it.
+  create; `refuse_events: true` refuses every create for a reason that is not
+  its conference; `meet_pending: true` never finishes making it;
+  `on_conference_removal: fun` calls `fun` as a write that takes an event's
+  conference off arrives, before Google applies it.
 
   Requests are reported to the test that called `start/1`; `requests/0`
   collects them. The organiser's calendar is `calendar_id/0`, a Meet Google
@@ -47,7 +50,9 @@ defmodule Tymeslot.Test.GoogleMeetFake do
     test_pid = self()
     refuse_conference? = Keyword.get(opts, :refuse_conference, false)
     meet_pending? = Keyword.get(opts, :meet_pending, false)
+    refuse_events? = Keyword.get(opts, :refuse_events, false)
     {:ok, events} = Agent.start_link(fn -> %{} end)
+    on_conference_removal = Keyword.get(opts, :on_conference_removal, fn -> :ok end)
 
     stub(Tymeslot.HTTPClientMock, :request, fn method, url, body, _headers, _opts ->
       uri = URI.parse(url)
@@ -60,11 +65,15 @@ defmodule Tymeslot.Test.GoogleMeetFake do
 
         {:post, "www.googleapis.com"}
         when refuse_conference? and is_map_key(sent, "conferenceData") ->
-          {:ok,
-           %Req.Response{
-             status: 400,
-             body: ~s({"error":{"message":"Invalid conference type value."}})
-           }}
+          bad_request(~s({"error":{"message":"Invalid conference type value."}}))
+
+        {:post, "www.googleapis.com"} when refuse_events? ->
+          bad_request(
+            ~s({"error":{"message":"Bad Request","errors":[{"reason":"invalid","message":"Invalid attendee email."}]}})
+          )
+
+        {:put, "www.googleapis.com"} ->
+          put_event(events, uri, sent, on_conference_removal)
 
         {:delete, "www.googleapis.com"} ->
           delete_event(events, uri)
@@ -106,6 +115,16 @@ defmodule Tymeslot.Test.GoogleMeetFake do
       event when meet_pending? -> {:ok, %Req.Response{status: 200, body: Jason.encode!(event)}}
       event -> {:ok, %Req.Response{status: 200, body: Jason.encode!(made_meet(event))}}
     end
+  end
+
+  defp bad_request(body), do: {:ok, %Req.Response{status: 400, body: body}}
+
+  defp put_event(events, uri, sent, on_conference_removal) do
+    if URI.decode_query(uri.query || "")["conferenceDataVersion"] == "1" and
+         not is_map_key(sent, "conferenceData"),
+       do: on_conference_removal.()
+
+    write_event(events, :put, uri, sent)
   end
 
   defp delete_event(events, uri) do

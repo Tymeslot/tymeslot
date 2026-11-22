@@ -149,15 +149,15 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
     end
 
     # Whether the event carries a Meet is unknown, and a Meet of its own could
-    # be a second one, so a read that may yet succeed is retried while the
-    # room would wait for the event.
-    test "retries rather than make a Meet of its own while the event cannot be read" do
+    # be a second one, so a read that may yet succeed is waited out like the
+    # event itself.
+    test "waits rather than make a Meet of its own while the event cannot be read" do
       booking = meet_booking(provider_event_id: "google-event-1")
       stub_unreadable_event(booking, {:error, :rate_limited})
 
       at_seconds(10, fn ->
         assert MeetingProvisioning.booking_room_placement(booking.meeting) ==
-                 {:error, :calendar_unavailable}
+                 :awaiting_calendar_event
       end)
     end
 

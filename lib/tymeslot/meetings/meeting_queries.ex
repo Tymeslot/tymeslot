@@ -80,6 +80,38 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     end
   end
 
+  # The class of the advisory lock a booking's Meet conference is taken off
+  # its Google event under (`lock_event_conference/1`). Arbitrary but must
+  # stay stable.
+  @event_conference_lock_class 715_004
+
+  @doc """
+  Takes the lock a booking's Meet conference is taken off its Google event
+  under, for the rest of the current transaction. Keyed on the meeting and
+  taken by nothing else, so a cancel, a reschedule or the recording of a room
+  never waits for it, as they would for the meeting's row lock. Re-entrant
+  within the transaction. Must be called inside a transaction.
+  """
+  @spec lock_event_conference(String.t()) :: :ok
+  def lock_event_conference(meeting_id) when is_binary(meeting_id) do
+    Repo.query!("SELECT pg_advisory_xact_lock($1, hashtext($2))", [
+      @event_conference_lock_class,
+      meeting_id
+    ])
+
+    :ok
+  end
+
+  @doc """
+  Returns once no write taking `meeting_id`'s Meet conference off its event
+  is in flight (`lock_event_conference/1`), without holding anything after.
+  """
+  @spec await_event_conference_writes(String.t()) :: :ok
+  def await_event_conference_writes(meeting_id) when is_binary(meeting_id) do
+    Repo.transaction(fn -> lock_event_conference(meeting_id) end)
+    :ok
+  end
+
   @doc "Gets a single meeting by UID."
   @spec get_meeting_by_uid(String.t()) :: {:ok, Meeting.t()} | {:error, :not_found}
   def get_meeting_by_uid(uid) do

@@ -269,26 +269,15 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       else: create_replacement(meeting, event_id, attempt)
   end
 
-  # Decided and written under the meeting's row lock, which a location change
-  # and `VideoRoomAttachment.persist/2` also wait for: taking the conference
-  # off keeps the event id, so a move back to Meet mid-write would record the
-  # Meet being removed. The move now lands after the write, or before it and
-  # the conference stays.
+  # Judged again from the meeting as it stands under the conference lock
+  # (`CalendarEventConference.clear_under_lock/2`).
   defp clear_conference(meeting, event_id, attempt) do
-    {:ok, outcome} =
-      Repo.transaction(fn ->
-        with {:ok, current} <- MeetingQueries.get_meeting_for_update(meeting.id),
-             :replace <- replacement_step(current, event_id) do
-          current
-          |> CalendarEventConference.clear_unless_retaken()
-          |> flag_if_unauthorized(current)
-        else
-          {:error, :not_found} -> {:error, :meeting_not_found}
-          step -> {:step, step}
-        end
-      end)
+    decide = fn current -> with :replace <- replacement_step(current, event_id), do: :clear end
 
-    with {:step, step} <- outcome, do: run_replacement_step(step, meeting, event_id, attempt)
+    case CalendarEventConference.clear_under_lock(meeting.id, decide) do
+      {:skipped, step} -> run_replacement_step(step, meeting, event_id, attempt)
+      result -> flag_if_unauthorized(result, meeting)
+    end
   end
 
   # What replacing `event_id` still takes, judged from `meeting` as it stands.
@@ -455,7 +444,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       |> Map.merge(MeetingProvisioning.booking_event_video_fields(meeting))
       |> with_creation_key(meeting)
 
-    case CalendarEvents.create_event(create_data, meeting) do
+    case create_booking_event(create_data, meeting) do
       {:ok, created} ->
         CalendarEventMapping.persist_or_compensate(meeting, created)
 
@@ -537,7 +526,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
   # Use the meeting context to create in the correct calendar
   defp create_with_event_data(event_data, meeting, meeting_id, attempt) do
-    case CalendarEvents.create_event(event_data, meeting) do
+    case create_booking_event(event_data, meeting) do
       {:ok, created} ->
         Logger.info("Calendar event created successfully", meeting_id: meeting_id)
 
@@ -545,7 +534,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
       # `If-None-Match: *` found an event already at this meeting's own UID, so
       # it is this booking's event, written by a concurrent update job (see
-      # `handle_missing_event/3`). Retrying the create can only fail the same
+      # `handle_missing_event/4`). Retrying the create can only fail the same
       # way, and on the last attempt would email the owner a sync error for an
       # event that exists. Update it instead, from a fresh read of the meeting:
       # this job's copy may predate the video link the other job carried.
@@ -556,21 +545,32 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
         update(meeting_id, attempt)
 
-      # Google decides per calendar which conferences an event may carry, and
-      # refuses the whole event for one it does not allow. The booking still
-      # needs its event: it is created without the Meet, and the video job
-      # makes a Meet of its own once it stops waiting for one on the event.
-      {:error, :refused} when is_map_key(event_data, :conference_data) ->
+      {:error, error_type} ->
+        handle_create_event_error(error_type, meeting, meeting_id, attempt)
+    end
+  end
+
+  # Google decides per calendar which conferences an event may carry, and
+  # refuses the whole event for one it does not allow. The booking still
+  # needs its event: it is created without the Meet, and the video job makes
+  # a Meet of its own once it stops waiting for one on the event. Any other
+  # refusal is the event's own, and is not met by writing it again.
+  defp create_booking_event(event_data, meeting) do
+    case CalendarEvents.create_event(event_data, meeting) do
+      {:error, :conference_refused} when is_map_key(event_data, :conference_data) ->
         Logger.warning("Calendar refused the event's Meet conference, creating it without one",
-          meeting_id: meeting_id
+          meeting_id: meeting.id
         )
 
         event_data
         |> Map.delete(:conference_data)
-        |> create_with_event_data(meeting, meeting_id, attempt)
+        |> create_booking_event(meeting)
 
-      {:error, error_type} ->
-        handle_create_event_error(error_type, meeting, meeting_id, attempt)
+      {:error, :conference_refused} ->
+        {:error, :refused}
+
+      result ->
+        result
     end
   end
 

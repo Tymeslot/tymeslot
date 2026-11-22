@@ -46,6 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
                           :meeting_not_found,
                           :rate_limited,
                           :refused,
+                          :conference_refused,
                           :rule_not_supported_by_outlook,
                           :day_missing_in_some_months
                         ] ++
