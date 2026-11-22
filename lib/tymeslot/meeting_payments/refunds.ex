@@ -3,6 +3,13 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   Issues refunds against `booking_payments` rows via the Stripe Refund
   API and reconciles the local row.
 
+  `request_refund/4` records a refund (`RefundSchema`) under the payment's
+  row lock, with no Stripe call, and with it a job that makes it
+  (`Workers.ExecuteRefund`). `execute/2` makes one attempt outside any
+  transaction (`RefundExecutor`), and `refund_now/4` does both, for a caller
+  that waits on the answer. A pending refund counts against the refundable
+  balance until it settles.
+
   The contract shared by `issue_refund/4` (system refunds, unscoped) and
   `issue_host_refund/5` (a host refunding a payment they took):
 
@@ -35,18 +42,17 @@ defmodule Tymeslot.MeetingPayments.Refunds do
       `Tymeslot.Workers.SendBookingPaymentRefunded`.
   """
 
-  require Logger
-
-  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Stripe
   alias Tymeslot.Integrations.Stripe.Refunds, as: StripeRefunds
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.MeetingPayments.RefundedTotal
-  alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.MeetingPayments.RefundExecutor
+  alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.RefundSchema
+  alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Repo
-  alias Tymeslot.Workers.SendBookingPaymentRefunded
 
   @refund_window_days 60
 
@@ -63,6 +69,23 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   @stripe_receive_timeout_ms 5_000
   @stripe_deadline_ms 10_000
 
+  # A requested refund's safety job runs this long after the request, by
+  # when a caller making the refund itself has normally settled it.
+  @safety_delay_seconds 120
+
+  @requestable_sources RefundSchema.requestable_sources()
+
+  @type refund_source :: :host | :cancellation | :approval_release | :late_payment | :series_host
+  @type refusal ::
+          :not_found
+          | :not_paid
+          | :outside_refund_window
+          | :under_dispute
+          | :already_refunded
+          | :invalid_amount
+          | :missing_charge
+          | :refund_in_progress
+
   @type refund_error ::
           :not_paid
           | :outside_refund_window
@@ -73,14 +96,129 @@ defmodule Tymeslot.MeetingPayments.Refunds do
           | term()
 
   @doc """
-  Returns the remaining refundable balance in cents for a booking payment.
-
-  Computes `max(amount_cents - refunded_amount_cents, 0)`.
+  Returns the remaining refundable balance in cents for a booking payment:
+  what is neither refunded nor in a pending refund
+  (`RefundedTotal.refundable_cents/2`). Reads the pending refunds of a
+  stored payment.
   """
   @spec refundable_remaining_cents(BookingPaymentSchema.t()) :: non_neg_integer()
-  def refundable_remaining_cents(%{amount_cents: amount, refunded_amount_cents: refunded})
-      when is_integer(amount) and is_integer(refunded),
-      do: max(amount - refunded, 0)
+  def refundable_remaining_cents(payment),
+    do: RefundedTotal.refundable_cents(payment, pending_cents(payment))
+
+  defp pending_cents(%BookingPaymentSchema{__meta__: %{state: :loaded}, id: id}),
+    do: RefundQueries.pending_cents(id)
+
+  defp pending_cents(_unsaved), do: 0
+
+  @doc """
+  Records a refund of `amount_cents` of `payment`, decided by `source`, and
+  the job that makes it. Asks nothing of Stripe; `execute/2` or the job does.
+
+  One transaction, joining the caller's when there is one: the payment is
+  locked, then `refusal/1` applies, a refunded payment is
+  `:already_refunded`, and the amount must be a positive integer within the
+  refundable balance (`refundable_remaining_cents/1`). An amount over it is
+  `:refund_in_progress` while other refunds are pending, else
+  `:invalid_amount`. A missing charge id is no refusal here: the attempt
+  backfills it.
+
+  Options:
+
+    * `:host_user_id`: the host acting. Only a payment they took is found,
+      decided under the lock; any other is `{:error, :not_found}`. Recorded
+      as who asked.
+    * `:reason`: the Stripe `reason` param.
+    * `:legacy_idempotency_key`: the key the refund's first attempt is sent
+      under, for a refund already sent under one elsewhere.
+    * `:schedule_in` (default #{@safety_delay_seconds}): seconds until the
+      job runs; `:enqueue_now` runs it at once, for a caller that does not
+      make the refund itself.
+  """
+  @spec request_refund(BookingPaymentSchema.t(), pos_integer(), refund_source(), keyword()) ::
+          {:ok, RefundSchema.t()} | {:error, refusal()}
+  def request_refund(%BookingPaymentSchema{} = payment, amount_cents, source, opts)
+      when source in @requestable_sources do
+    opts =
+      Keyword.validate!(opts, [
+        :host_user_id,
+        :reason,
+        :legacy_idempotency_key,
+        :schedule_in,
+        enqueue_now: false
+      ])
+
+    Repo.transaction(fn ->
+      with {:ok, locked} <- lock(payment.id, opts[:host_user_id]),
+           :ok <- refusal(locked),
+           :ok <- requestable(locked, amount_cents, RefundQueries.pending_cents(locked.id)),
+           {:ok, refund} <- insert_request(locked, amount_cents, source, opts) do
+        refund
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  @doc """
+  Makes one attempt at a recorded refund, outside any transaction; see
+  `RefundExecutor.run/2` for the steps and options. Returns the refund once
+  it succeeded, `{:pending, refund}` while it waits for another attempt,
+  `{:error, :refund_failed}` once it failed, and `{:error, :missing_charge}`
+  when the last attempt found no charge to refund.
+  """
+  @spec execute(RefundSchema.t(), keyword()) ::
+          {:ok, RefundSchema.t()}
+          | {:pending, RefundSchema.t()}
+          | {:error, refusal() | :refund_failed}
+  defdelegate execute(refund, opts), to: RefundExecutor, as: :run
+
+  @doc """
+  Records a refund (`request_refund/4`) and makes its first attempt at once
+  (`execute/2`), for a caller waiting on the outcome.
+  """
+  @spec refund_now(BookingPaymentSchema.t(), pos_integer(), refund_source(), keyword()) ::
+          {:ok, RefundSchema.t()}
+          | {:pending, RefundSchema.t()}
+          | {:error, refusal() | :refund_failed}
+  def refund_now(payment, amount_cents, source, opts) do
+    with {:ok, refund} <- request_refund(payment, amount_cents, source, opts),
+         do: execute(refund, deadline_ms: @stripe_deadline_ms)
+  end
+
+  defp lock(id, nil), do: BookingPaymentQueries.get_for_update(id)
+  defp lock(id, host_user_id), do: BookingPaymentQueries.get_for_update(id, host_user_id)
+
+  defp requestable(%{status: :refunded}, _amount_cents, _pending), do: {:error, :already_refunded}
+
+  defp requestable(payment, amount_cents, pending) do
+    cond do
+      not is_integer(amount_cents) or amount_cents <= 0 -> {:error, :invalid_amount}
+      amount_cents <= RefundedTotal.refundable_cents(payment, pending) -> :ok
+      pending > 0 -> {:error, :refund_in_progress}
+      true -> {:error, :invalid_amount}
+    end
+  end
+
+  defp insert_request(payment, amount_cents, source, opts) do
+    changeset =
+      RefundSchema.request_changeset(%RefundSchema{}, %{
+        booking_payment_id: payment.id,
+        amount_cents: amount_cents,
+        source: source,
+        reason: opts[:reason],
+        requested_by_user_id: opts[:host_user_id],
+        legacy_idempotency_key: opts[:legacy_idempotency_key]
+      })
+
+    schedule_in =
+      if opts[:enqueue_now], do: 0, else: opts[:schedule_in] || @safety_delay_seconds
+
+    with {:ok, refund} <- RefundQueries.insert(changeset),
+         {:ok, _job} <-
+           Oban.insert(ExecuteRefund.new(%{refund_id: refund.id}, schedule_in: schedule_in)) do
+      {:ok, refund}
+    end
+  end
 
   @doc """
   What a host's cancellation of one booking refunds by default: the
@@ -268,8 +406,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
            :ok <- refusal(locked),
            {:ok, stripe_refund} <- refund_at_stripe(locked, amount_cents, reason, key),
            {:ok, updated_payment} <-
-             update_payment_after_refund(locked, amount_cents, stripe_refund) do
-        enqueue_refund_email(updated_payment)
+             RefundExecutor.record_refunded(locked, amount_cents, stripe_refund) do
+        RefundExecutor.enqueue_refund_email(updated_payment)
         updated_payment
       else
         {:error, rollback_reason} -> Repo.rollback(rollback_reason)
@@ -332,93 +470,14 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   defp validate_charge(_payment), do: {:error, :missing_charge}
 
   defp create_stripe_refund(payment, amount_cents, reason, key) do
-    params =
-      %{
-        charge: payment.stripe_charge_id,
-        amount: amount_cents,
-        metadata: refund_metadata(payment),
-        expand: ["charge"]
-      }
-      |> maybe_put_reason(reason)
-      |> maybe_refund_application_fee(payment)
-
-    StripeRefunds.create(params,
+    payment
+    |> RefundExecutor.stripe_params(amount_cents, reason)
+    |> StripeRefunds.create(
       connect_account: payment.stripe_account_id,
       idempotency_key: key,
       connect_timeout: @stripe_connect_timeout_ms,
       receive_timeout: @stripe_receive_timeout_ms,
       deadline_ms: @stripe_deadline_ms
     )
-  end
-
-  # A series payment names its series instead of a meeting.
-  defp refund_metadata(%{series_id: series_id} = payment) when is_binary(series_id),
-    do: %{series_id: series_id, booking_payment_id: payment.id}
-
-  defp refund_metadata(payment),
-    do: %{meeting_id: payment.meeting_id, booking_payment_id: payment.id}
-
-  # Stripe rejects a blank `reason` ("cannot be unset") — only include it when
-  # the caller supplies a non-empty value, otherwise omit the param entirely.
-  defp maybe_put_reason(params, reason) when is_binary(reason) and reason != "",
-    do: Map.put(params, :reason, reason)
-
-  defp maybe_put_reason(params, _reason), do: params
-
-  defp maybe_refund_application_fee(params, %{application_fee_cents: fee})
-       when is_integer(fee) and fee > 0,
-       do: Map.put(params, :refund_application_fee, true)
-
-  defp maybe_refund_application_fee(params, _payment), do: params
-
-  defp update_payment_after_refund(payment, amount_cents, stripe_refund) do
-    new_total = refunded_total(payment, amount_cents, stripe_refund)
-
-    new_status =
-      cond do
-        new_total >= payment.amount_cents -> :refunded
-        new_total > 0 -> :partially_refunded
-        true -> payment.status
-      end
-
-    case BookingPaymentQueries.update(payment, %{
-           refunded_amount_cents: new_total,
-           status: new_status
-         }) do
-      {:ok, updated} = result ->
-        Telemetry.emit_status_changed(payment.status, updated.status, :host_refund)
-        result
-
-      {:error, _changeset} = err ->
-        err
-    end
-  end
-
-  # Stripe's refunded total for the charge, which counts this refund once
-  # however often its key is replayed, and never below the recorded refunds
-  # (the webhook's rule). A response without the expanded charge falls back
-  # to adding the refund to the recorded refunds.
-  defp refunded_total(payment, _amount_cents, %{"charge" => %{"amount_refunded" => stripe_total}})
-       when is_integer(stripe_total),
-       do: RefundedTotal.with_stripe_refunded(payment, stripe_total)
-
-  defp refunded_total(payment, amount_cents, _stripe_refund),
-    do: RefundedTotal.with_refund_added(payment, amount_cents)
-
-  defp enqueue_refund_email(payment) do
-    case %{booking_payment_id: payment.id}
-         |> SendBookingPaymentRefunded.new()
-         |> Oban.insert() do
-      {:ok, _job} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to enqueue refund email",
-          booking_payment_id: payment.id,
-          reason: LogFormat.reason(reason)
-        )
-
-        :ok
-    end
   end
 end

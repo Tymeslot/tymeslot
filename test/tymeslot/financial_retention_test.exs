@@ -230,6 +230,16 @@ defmodule Tymeslot.FinancialRetentionTest do
       assert Repo.reload(current)
     end
 
+    test "deletes a booking payment's refund records with it" do
+      expired = retained_booking_payment(paid_at: @end_of_2026)
+      refund = insert(:booking_payment_refund, booking_payment: expired, status: :succeeded)
+
+      assert {:ok, %{booking_payments_deleted: 1}} =
+               FinancialRetention.purge_expired(@first_day_purged)
+
+      refute Repo.reload(refund)
+    end
+
     test "counts from the end of the year, so January and December rows expire together" do
       january = retained_booking_payment(paid_at: ~U[2026-01-03 10:00:00Z])
       december = retained_booking_payment(paid_at: ~U[2026-12-30 10:00:00Z])

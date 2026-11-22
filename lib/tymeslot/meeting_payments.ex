@@ -46,6 +46,7 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.Currency
   alias Tymeslot.MeetingPayments.HeldMeetings
   alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
@@ -427,10 +428,7 @@ defmodule Tymeslot.MeetingPayments do
   def payment_for_meeting(meeting_id, host_user_id),
     do: BookingPaymentQueries.for_meeting_for_host(meeting_id, host_user_id)
 
-  @doc """
-  Returns the remaining refundable balance in cents for a booking payment; see
-  `Refunds.refundable_remaining_cents/1`.
-  """
+  @doc "The balance in cents still refundable; see `Refunds.refundable_remaining_cents/1`."
   @spec refundable_remaining_cents(booking_payment()) :: non_neg_integer()
   defdelegate refundable_remaining_cents(payment), to: Refunds
 
@@ -474,27 +472,17 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate parse_refund_amount(payment, params), to: Refunds
 
   @doc """
-  Issues a full or partial refund for a booking payment, whoever took it.
-
-  Unscoped; see `Refunds.issue_refund/4`. A refund a signed-in user asks for
-  must go through `refund_payment_for_host/5`.
-
-  `key` is the Stripe idempotency key for this one refund, fixed when the
-  refund is decided and carrying the amount, so that a retry gets the same
-  refund back; see `Tymeslot.MeetingPayments.Refunds`.
+  Refunds a booking payment, whoever took it, under the Stripe idempotency
+  key `key`. Unscoped; see `Refunds.issue_refund/4`. A refund a signed-in
+  user asks for must go through `refund_payment_for_host/5`.
   """
   @spec issue_refund(booking_payment(), integer(), String.t(), String.t() | nil) ::
           {:ok, booking_payment()} | {:error, Refunds.refund_error()}
   defdelegate issue_refund(payment, amount_cents, key, reason \\ nil), to: Refunds
 
   @doc """
-  Refunds a booking payment on behalf of the host who took it.
-
-  Only that host may refund it. Ownership is decided under the payment's row
-  lock, in the same transaction as the refund itself. Another host's payment,
-  an unknown id and a malformed id all return `{:error, :not_found}`.
-
-  `key` is the Stripe idempotency key, as for `issue_refund/4`.
+  Refunds a booking payment for the host who took it; any other payment is
+  `{:error, :not_found}`. See `Refunds.issue_host_refund/5`.
   """
   @spec refund_payment_for_host(term(), integer(), integer(), String.t(), String.t() | nil) ::
           {:ok, booking_payment()} | {:error, :not_found | Refunds.refund_error()}
@@ -507,6 +495,21 @@ defmodule Tymeslot.MeetingPayments do
               ),
               to: Refunds,
               as: :issue_host_refund
+
+  @doc "Records a refund and the job that makes it; see `Refunds.request_refund/4`."
+  @spec request_refund(booking_payment(), pos_integer(), Refunds.refund_source(), keyword()) ::
+          {:ok, RefundSchema.t()} | {:error, Refunds.refusal()}
+  defdelegate request_refund(payment, amount_cents, source, opts \\ []), to: Refunds
+
+  @doc "Makes one attempt at a recorded refund; see `Refunds.execute/2`."
+  @spec execute_refund(RefundSchema.t(), keyword()) ::
+          {:ok | :pending, RefundSchema.t()} | {:error, Refunds.refusal() | :refund_failed}
+  defdelegate execute_refund(refund, opts \\ []), to: Refunds, as: :execute
+
+  @doc "Records a refund and makes it at once; see `Refunds.refund_now/4`."
+  @spec refund_now(booking_payment(), pos_integer(), Refunds.refund_source(), keyword()) ::
+          {:ok | :pending, RefundSchema.t()} | {:error, Refunds.refusal() | :refund_failed}
+  defdelegate refund_now(payment, amount_cents, source, opts \\ []), to: Refunds
 
   # ---------------------------------------------------------------------------
   # Checkout

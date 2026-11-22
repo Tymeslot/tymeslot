@@ -23,6 +23,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.MeetingTypes.LocationOption
@@ -491,5 +492,11 @@ defmodule Tymeslot.Factory do
       status: :paid,
       paid_at: DateTime.utc_now(:second)
     )
+  end
+
+  # A refund recorded but not yet made; give it a `booking_payment`.
+  @spec booking_payment_refund_factory() :: RefundSchema.t()
+  def booking_payment_refund_factory do
+    %RefundSchema{amount_cents: 1000, source: :host, status: :pending, attempt: 0}
   end
 end

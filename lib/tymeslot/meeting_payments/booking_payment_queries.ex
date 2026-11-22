@@ -253,10 +253,10 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
           totals: [%{currency: String.t(), amount_cents: non_neg_integer()}]
         }
   def outstanding_refunds_summary_for_host(host_user_id) do
-    # `amount_cents - refunded_amount_cents` is the SQL twin of
-    # `Refunds.refundable_remaining_cents/1`; the `where` above guarantees it
-    # is positive, so the `max(_, 0)` clamp has nothing to do here. The sum is
-    # typed because Ecto cannot infer a type through the subtraction and would
+    # `amount_cents - refunded_amount_cents` is the recorded balance, before
+    # the pending refunds `Refunds.refundable_remaining_cents/1` also takes
+    # off; the `where` above guarantees it is positive, so the `max(_, 0)`
+    # clamp has nothing to do here. The sum is typed because Ecto cannot infer a type through the subtraction and would
     # otherwise hand back a `Decimal` where every other amount in the codebase
     # is an integer count of cents.
     query =

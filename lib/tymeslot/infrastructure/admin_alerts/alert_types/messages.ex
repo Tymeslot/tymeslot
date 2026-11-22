@@ -213,6 +213,17 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       "Stripe dashboard), or once the cause is fixed retry Oban job #{job_id}"
   end
 
+  # The refund row is settled `failed`, so nothing retries it; the payment
+  # id is what the operator needs to find the charge.
+  def format_message(:refund_failed, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Refund #{get.(:refund_id)} (#{get.(:source)}) of booking payment " <>
+      "#{get.(:booking_payment_id)} failed: #{get.(:failure_code)}. The attendee is still " <>
+      "owed the money; refund the booking from the host's payments settings or the " <>
+      "Stripe dashboard"
+  end
+
   # The job is unique per account, so once the cause is fixed the way to try
   # again is to retry this one.
   def format_message(:connect_revocation_failed, metadata) do

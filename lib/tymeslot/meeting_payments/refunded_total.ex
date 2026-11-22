@@ -25,6 +25,16 @@ defmodule Tymeslot.MeetingPayments.RefundedTotal do
       do: max(refunded - lost, 0)
 
   @doc """
+  What may still be refunded while refunds of `pending_cents` are in
+  flight. The whole already counts a lost dispute's part, so it is not
+  taken off again.
+  """
+  @spec refundable_cents(BookingPaymentSchema.t(), non_neg_integer()) :: non_neg_integer()
+  def refundable_cents(%{amount_cents: amount, refunded_amount_cents: refunded}, pending_cents)
+      when is_integer(amount) and is_integer(refunded) and is_integer(pending_cents),
+      do: max(amount - refunded - pending_cents, 0)
+
+  @doc """
   The whole once Stripe reports `stripe_total` refunded on the charge.
   Never below the refunds already recorded, so a late or replayed report
   cannot undo one.
