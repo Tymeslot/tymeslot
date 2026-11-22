@@ -62,6 +62,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.SeatRelease
+  alias Tymeslot.Bookings.SlotActivation
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.BookingSeries
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -325,7 +326,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       exclude_from_conflicts: fn ->
         if last_live_seat?(old_meeting, participant), do: old_meeting.uid
       end,
-      on_booked: fn _booking -> vacate_old_seat(old_meeting, participant) end,
+      on_booked: fn booking -> settle_move(booking, old_meeting, participant) end,
       join_only: FixedDates.sessions?(meeting_type)
     )
     |> handle_move(old_meeting, participant)
@@ -345,11 +346,41 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
       match?({:ok, %{cancelled_at: nil}}, ParticipantQueries.get(participant.id))
   end
 
-  # Runs inside the seat transaction: cancels the old seat, then the old
-  # meeting if that seat was its last. The outcome reaches `after_commit/3`
-  # as the booking's `:on_booked_result`. A failure to cancel an emptied old
-  # meeting rolls the whole move back: its time may already have been
-  # treated as free.
+  # Runs inside the seat transaction: vacates the old seat and brings a held
+  # target slot to life. The outcome reaches `after_commit/3` as the
+  # booking's `:on_booked_result`.
+  defp settle_move(booking, old_meeting, participant) do
+    with {:ok, vacated} <- vacate_old_seat(old_meeting, participant),
+         {:ok, slot} <- activate_if_held(booking) do
+      {:ok, %{vacated: vacated, slot: slot}}
+    end
+  end
+
+  # A slot held for email verification (its only seats are still held) is
+  # joinable, and the mover's seat, confirmed already, is its first to count.
+  # The slot was read under its row lock by `book_seat/3`, in this
+  # transaction, so its status is authoritative here: `SlotActivation`
+  # confirms it and schedules what a slot coming to life owes (the calendar
+  # event's creation, reminders, the video room). It sends no confirmation:
+  # the mover moved rather than booked, and `after_commit/3` sends their
+  # reschedule emails, which tell the organiser of the slot too. Returns the
+  # confirmed slot, or `nil` when the slot was live or this move created it.
+  defp activate_if_held(%{
+         created_meeting?: false,
+         meeting: %MeetingSchema{status: :awaiting_verification} = slot,
+         participant: seat
+       }) do
+    with {:ok, _no_fan_out} <-
+           SlotActivation.activate_seat_in_transaction(slot, seat, emails: false) do
+      MeetingQueries.get_meeting(slot.id)
+    end
+  end
+
+  defp activate_if_held(_booking), do: {:ok, nil}
+
+  # Cancels the old seat, then the old meeting if that seat was its last. A
+  # failure to cancel an emptied old meeting rolls the whole move back: its
+  # time may already have been treated as free.
   defp vacate_old_seat(old_meeting, participant) do
     with {:ok, _cancelled_seat} <- cancel_old_seat(old_meeting, participant) do
       SeatRelease.cancel_if_emptied(old_meeting)
@@ -482,14 +513,18 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     }
   end
 
+  # A held slot the move brought to life had its jobs scheduled with the
+  # move (`activate_if_held/1`); it is announced like any other slot here.
+  defp after_commit(
+         old_meeting,
+         old_participant,
+         %{on_booked_result: %{slot: %{} = slot}} = booked
+       ) do
+    booked = %{booked | meeting: slot}
+    finish_move(old_meeting, old_participant, booked)
+  end
+
   defp after_commit(old_meeting, old_participant, booked) do
-    # Both slots belong to the same meeting type, so one broadcast covers
-    # the freed seat and the taken seat alike; the cache holds availability
-    # per organiser, and both slots are theirs.
-    SeatEffects.broadcast_and_invalidate(old_meeting)
-
-    old_slot_freed? = finish_old_meeting(old_meeting, booked.on_booked_result)
-
     SeatEffects.schedule_calendar_job(booked.meeting, booked.created_meeting?)
 
     # A move never defers its own notification to the video-room worker —
@@ -499,6 +534,17 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     # without the one email confirming the old slot is gone. The room is
     # still worth having ready, quietly, for whoever opens the new event.
     if booked.created_meeting?, do: SeatEffects.schedule_new_slot_effects(booked.meeting)
+
+    finish_move(old_meeting, old_participant, booked)
+  end
+
+  defp finish_move(old_meeting, old_participant, booked) do
+    # Both slots belong to the same meeting type, so one broadcast covers
+    # the freed seat and the taken seat alike; the cache holds availability
+    # per organiser, and both slots are theirs.
+    SeatEffects.broadcast_and_invalidate(old_meeting)
+
+    old_slot_freed? = finish_old_meeting(old_meeting, booked.on_booked_result.vacated)
 
     Seats.seat_rescheduled(booked.meeting, booked.participant, old_meeting, old_participant,
       old_slot_freed: old_slot_freed?

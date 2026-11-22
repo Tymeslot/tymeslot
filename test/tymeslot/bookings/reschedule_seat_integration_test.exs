@@ -23,6 +23,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
   alias Ecto.Changeset
   alias Tymeslot.Bookings.{CalendarCheck, CancelSeat, Create, RescheduleSeat}
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
@@ -483,6 +484,78 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
     assert new_meeting.venue_id == venue.id
     assert new_meeting.location == "Main Hall (1 Market Square)"
     refute new_meeting.address_to_arrange
+  end
+
+  # A slot whose only seat awaits its booker's email verification is held:
+  # it occupies its time but has no calendar event, reminders or room, and
+  # the organiser has not heard of it. The mover's confirmed seat is its
+  # first to count, so the move brings it to life, and the held seat lapsing
+  # afterwards takes only that seat with it.
+  test "a seat moving onto a held slot brings it to life, and the held seat lapsing leaves it standing",
+       %{user: user, meeting_type: meeting_type, mover: mover} do
+    start_time = new_slot_start()
+    deadline = DateTime.add(DateTime.utc_now(:second), 30, :minute)
+
+    held_slot =
+      insert(:group_meeting,
+        status: :awaiting_verification,
+        verification_deadline_at: deadline,
+        organizer_user_id: user.id,
+        organizer_email: user.email,
+        meeting_type_id: meeting_type.id,
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute),
+        duration: 30,
+        capacity: 2,
+        reminders: [%{"value" => 1, "unit" => "hours"}]
+      )
+
+    held_seat =
+      insert(:participant,
+        meeting: held_slot,
+        email: "held@example.com",
+        verification_deadline_at: deadline
+      )
+
+    assert {:ok, %{meeting: %{id: slot_id, status: :confirmed}, participant: moved}} =
+             move(mover, new_slot_params())
+
+    assert slot_id == held_slot.id
+
+    assert %{status: :confirmed, email_verified_at: %DateTime{}} =
+             Repo.get!(MeetingSchema, slot_id)
+
+    assert_enqueued(
+      worker: CalendarEventWorker,
+      args: %{"action" => "create", "meeting_id" => slot_id}
+    )
+
+    refute_enqueued(
+      worker: CalendarEventWorker,
+      args: %{"action" => "update", "meeting_id" => slot_id}
+    )
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{"action" => "send_reminder_emails", "meeting_id" => slot_id}
+    )
+
+    # The mover moved: they hear of it as a move, not as a new booking.
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{"action" => "send_seat_reschedule_emails", "participant_id" => moved.id}
+    )
+
+    refute_enqueued(
+      worker: EmailWorker,
+      args: %{"action" => "send_seat_confirmation_emails", "participant_id" => moved.id}
+    )
+
+    assert {:ok, _released} = EmailVerification.expire_seat(held_seat)
+
+    assert %{status: :confirmed, cancelled_at: nil} = Repo.get!(MeetingSchema, slot_id)
+    assert [%{id: moved_id}] = ParticipantQueries.list_live_for_meeting(slot_id)
+    assert moved_id == moved.id
   end
 
   describe "the move is checked like a booking of the new time" do
