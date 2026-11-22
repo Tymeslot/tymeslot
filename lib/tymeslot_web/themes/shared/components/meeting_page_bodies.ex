@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingPageBodies do
   attr :meeting_kept, :boolean, default: false
 
   attr :booking_path, :string,
-    default: "/",
+    required: true,
     doc: "the booking page to send the guest back to (`PathHandlers.meeting_booking_path/2`)"
 
   @spec cancel(map()) :: Phoenix.LiveView.Rendered.t()
@@ -130,7 +130,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingPageBodies do
   attr :locale, :string, required: true
 
   attr :booking_path, :string,
-    default: "/",
+    required: true,
     doc: "the booking page to send the guest back to (`PathHandlers.meeting_booking_path/2`)"
 
   @spec cancel_confirmed(map()) :: Phoenix.LiveView.Rendered.t()

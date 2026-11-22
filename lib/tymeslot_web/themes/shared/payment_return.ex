@@ -269,17 +269,15 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   and its meeting type when that still exists.
   """
   @spec booking_path(Tymeslot.Profiles.ProfileSchema.t() | nil, Meeting.t()) :: String.t()
-  def booking_path(%{username: username}, meeting)
-      when is_binary(username) and username != "" do
-    address = BookingPages.address_for_meeting(meeting, username)
-
-    case meeting_type_slug(meeting) do
-      nil -> "/" <> address
-      slug -> "/" <> address <> "/" <> slug
+  def booking_path(profile, meeting) do
+    case PathHandlers.meeting_booking_path(profile, meeting) do
+      "/" -> "/"
+      path -> with_type_slug(path, meeting_type_slug(meeting))
     end
   end
 
-  def booking_path(_profile, _meeting), do: "/"
+  defp with_type_slug(path, nil), do: path
+  defp with_type_slug(path, slug), do: path <> "/" <> slug
 
   defp meeting_type_slug(%{meeting_type_id: id, organizer_user_id: user_id})
        when is_integer(id) and is_integer(user_id) do

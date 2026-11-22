@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
   attr :legal_links, :map, required: true
 
   attr :booking_path, :string,
-    default: "/",
+    required: true,
     doc: "the booking page to send the guest back to (`PathHandlers.meeting_booking_path/2`)"
 
   attr :meeting, :map, required: true

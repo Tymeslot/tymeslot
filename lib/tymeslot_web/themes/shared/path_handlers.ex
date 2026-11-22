@@ -508,8 +508,9 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   as the `:booking_path` assign.
   """
   @spec meeting_booking_path(map() | nil, map()) :: String.t()
-  def meeting_booking_path(%{username: username}, meeting) when is_binary(username),
-    do: address_path(BookingPages.address_for_meeting(meeting, username))
+  def meeting_booking_path(%{username: username}, meeting)
+      when is_binary(username) and username != "",
+      do: address_path(BookingPages.address_for_meeting(meeting, username))
 
   def meeting_booking_path(_no_profile, _meeting), do: "/"
 
