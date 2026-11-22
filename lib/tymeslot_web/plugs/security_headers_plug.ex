@@ -257,9 +257,11 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
       frame_ancestors && "frame-ancestors #{frame_ancestors}",
       "base-uri 'self'",
       # Chrome enforces form-action on the redirect that answers a form post,
-      # so every host a form post redirects to is listed here. Accepting an
-      # invitation with a social sign-in posts to a controller that redirects
-      # to the provider (accounts.google.com, github.com). Payments and
+      # so a host a form post redirects to must be listed here. Accepting an
+      # invitation with Google or GitHub posts to a controller that redirects
+      # to the provider (accounts.google.com, github.com). The generic OAuth
+      # provider's host comes from operator config and is not listed, so an
+      # invitation accepted through it is still blocked. Payments and
       # billing leave the app by top-level navigation, so Stripe appears only
       # here; connect.stripe.com is the redirect target of the Connect
       # onboarding form post.
