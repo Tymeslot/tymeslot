@@ -11,10 +11,16 @@ defmodule Tymeslot.Integrations.Stripe.FormEncoder do
 
   @doc "Encodes `params` (a map or keyword list) as a form body."
   @spec encode(map() | keyword()) :: String.t()
-  def encode(params) when is_map(params) or is_list(params) do
-    params
-    |> flatten("")
-    |> URI.encode_query()
+  def encode(params) when is_map(params) do
+    params |> flatten(nil) |> URI.encode_query()
+  end
+
+  def encode(params) when is_list(params) do
+    if Keyword.keyword?(params) do
+      params |> flatten(nil) |> URI.encode_query()
+    else
+      raise ArgumentError, "expected a map or keyword list, got: #{inspect(params)}"
+    end
   end
 
   defp flatten(%{__struct__: _} = struct, path), do: unsupported(struct, path)
@@ -39,7 +45,7 @@ defmodule Tymeslot.Integrations.Stripe.FormEncoder do
 
   defp flatten(value, path), do: unsupported(value, path)
 
-  defp join("", key), do: to_string(key)
+  defp join(nil, key), do: to_string(key)
   defp join(path, key), do: "#{path}[#{key}]"
 
   defp unsupported(value, path) do

@@ -117,23 +117,39 @@ defmodule Tymeslot.Integrations.Stripe.FormEncoderEquivalenceTest do
 
   test "matches Stripe.URI.encode_query/1 for every shape Tymeslot sends" do
     mismatches =
-      Enum.reject(@corpus, fn params ->
-        FormEncoder.encode(params) == Stripe.URI.encode_query(params)
-      end)
+      for params <- @corpus,
+          ours = FormEncoder.encode(params),
+          theirs = Stripe.URI.encode_query(params),
+          ours != theirs,
+          do: {params, ours, theirs}
 
     assert mismatches == []
   end
 
   property "matches Stripe.URI.encode_query/1 for generated nested params" do
-    check all(params <- map_of(key(), value(3), max_length: 4), max_runs: 300) do
+    check all(params <- container(3), max_runs: 300) do
       assert FormEncoder.encode(params) == Stripe.URI.encode_query(params)
     end
   end
 
-  defp key, do: atom(:alphanumeric)
+  defp key, do: one_of([atom(:alphanumeric), string(:alphanumeric, min_length: 1)])
 
   defp leaf do
-    one_of([string(:printable, max_length: 8), integer(), boolean(), constant(nil)])
+    one_of([
+      string(:printable, max_length: 8),
+      integer(),
+      float(),
+      boolean(),
+      atom(:alphanumeric),
+      constant(nil)
+    ])
+  end
+
+  defp container(depth) do
+    one_of([
+      map_of(key(), value(depth - 1), max_length: 3),
+      list_of({atom(:alphanumeric), value(depth - 1)}, max_length: 3)
+    ])
   end
 
   defp value(0), do: leaf()
@@ -141,7 +157,7 @@ defmodule Tymeslot.Integrations.Stripe.FormEncoderEquivalenceTest do
   defp value(depth) do
     one_of([
       leaf(),
-      map_of(key(), value(depth - 1), max_length: 3),
+      container(depth),
       list_of(value(depth - 1), max_length: 3)
     ])
   end

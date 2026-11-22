@@ -70,4 +70,8 @@ defmodule Tymeslot.Integrations.Stripe.FormEncoderTest do
   test "a tuple value raises naming its path" do
     assert_raise ArgumentError, ~r/a\[0\]/, fn -> FormEncoder.encode(%{a: [{1, 2}]}) end
   end
+
+  test "a top-level list that is not a keyword list raises" do
+    assert_raise ArgumentError, ~r/map or keyword list/, fn -> FormEncoder.encode(["x"]) end
+  end
 end
