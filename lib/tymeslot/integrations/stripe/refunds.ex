@@ -1,9 +1,7 @@
 defmodule Tymeslot.Integrations.Stripe.Refunds do
   @moduledoc """
-  Stripe `Refunds` calls. Each function sends one request and returns
-  `{:ok, map}` with Stripe's object string-keyed, or `{:error, reason}` as
-  `Tymeslot.Integrations.Stripe.Client.run/1` does. `opts` are the request
-  options (`:api_key`, `:connect_account`, `:idempotency_key` and the timeouts).
+  Stripe `Refunds` calls; return shape and options are described in
+  `Tymeslot.Integrations.Stripe`.
 
   Operations, as named in telemetry and test stubs: `create_refund`, `list_refunds`, `retrieve_refund`.
   """
@@ -11,21 +9,27 @@ defmodule Tymeslot.Integrations.Stripe.Refunds do
   alias Tymeslot.Integrations.Stripe.Client
   alias Tymeslot.Integrations.Stripe.Request
 
-  @doc "`create_refund`."
-  @spec create(map() | keyword(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def create(params, opts),
-    do: Client.run(Request.new(:create_refund, :post, ["refunds"], params, opts))
+  @doc """
+  Creates a refund (POST /v1/refunds). Connect refunds pass `connect_account:`; pass an `idempotency_key:` from `IdempotencyKey.for_intent/3`.
+  """
+  @spec create(map() | keyword(), keyword()) :: Client.result()
+  def create(params, opts \\ []) do
+    Client.run(Request.new(:create_refund, :post, ["refunds"], params, opts))
+  end
 
-  @doc "`list_refunds`."
-  @spec list(map() | keyword(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def list(params, opts),
-    do: Client.run(Request.new(:list_refunds, :get, ["refunds"], params, opts))
+  @doc """
+  Lists refunds (GET /v1/refunds); `Pagination` walks all pages.
+  """
+  @spec list(map() | keyword(), keyword()) :: Client.result()
+  def list(params, opts \\ []) do
+    Client.run(Request.new(:list_refunds, :get, ["refunds"], params, opts))
+  end
 
-  @doc "`retrieve_refund`."
-  @spec retrieve(String.t(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def retrieve(id, opts),
-    do: Client.run(Request.new(:retrieve_refund, :get, ["refunds", id], %{}, opts))
+  @doc """
+  Retrieves a refund (GET /v1/refunds/:id).
+  """
+  @spec retrieve(String.t(), keyword()) :: Client.result()
+  def retrieve(id, opts \\ []) do
+    Client.run(Request.new(:retrieve_refund, :get, ["refunds", id], %{}, opts))
+  end
 end

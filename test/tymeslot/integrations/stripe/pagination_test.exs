@@ -51,7 +51,9 @@ defmodule Tymeslot.Integrations.Stripe.PaginationTest do
       Enum.map(Pagination.stream(&Charges.list/2, %{customer: "cus_1"}, @opts), & &1["id"])
 
     assert ids == ["ch_1", "ch_2", "ch_3", "ch_4", "ch_5"]
-    assert Enum.map(requested_queries(), & &1["starting_after"]) == [nil, "ch_2", "ch_4"]
+    queries = requested_queries()
+    assert Enum.map(queries, & &1["starting_after"]) == [nil, "ch_2", "ch_4"]
+    assert Enum.map(queries, & &1["customer"]) == ["cus_1", "cus_1", "cus_1"]
   end
 
   test "limit defaults to 100 and a caller's limit is kept" do
@@ -61,6 +63,31 @@ defmodule Tymeslot.Integrations.Stripe.PaginationTest do
 
     Enum.to_list(Pagination.stream(&Charges.list/2, %{limit: 7}, @opts))
     assert Enum.uniq(Enum.map(requested_queries(), & &1["limit"])) == ["7"]
+  end
+
+  test "string-keyed params are accepted; a caller's limit and starting_after are honoured" do
+    serve_pages()
+
+    params = %{"limit" => 5, "starting_after" => "ch_2"}
+    ids = Enum.map(Pagination.stream(&Charges.list/2, params, @opts), & &1["id"])
+
+    assert ids == ["ch_3", "ch_4", "ch_5"]
+    queries = requested_queries()
+    assert Enum.map(queries, & &1["starting_after"]) == ["ch_2", "ch_4"]
+    assert Enum.uniq(Enum.map(queries, & &1["limit"])) == ["5"]
+  end
+
+  test "has_more with no data ends the walk" do
+    list_fun = fn _params, _opts -> {:ok, %{"data" => [], "has_more" => true}} end
+
+    assert Enum.to_list(Pagination.stream(list_fun, %{}, [])) == []
+    assert {:ok, []} = Pagination.collect(list_fun, %{}, [])
+  end
+
+  test "a response without data raises a clear error" do
+    list_fun = fn _params, _opts -> {:ok, %{"object" => "list"}} end
+
+    assert_raise ArgumentError, ~r/"data"/, fn -> Pagination.collect(list_fun, %{}, []) end
   end
 
   test "collect returns the objects" do
@@ -79,6 +106,12 @@ defmodule Tymeslot.Integrations.Stripe.PaginationTest do
     list_fun = fn _params, _opts -> {:error, :missing_api_key} end
 
     assert {:error, :missing_api_key} = Pagination.collect(list_fun, %{}, [])
+  end
+
+  test "stream raises ArgumentError for a reason that is not a Stripe error" do
+    list_fun = fn _params, _opts -> {:error, :missing_api_key} end
+
+    assert_raise ArgumentError, fn -> Enum.to_list(Pagination.stream(list_fun, %{}, [])) end
   end
 
   test "stream raises the error when a page fails" do

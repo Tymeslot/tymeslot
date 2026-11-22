@@ -1,9 +1,7 @@
 defmodule Tymeslot.Integrations.Stripe.CheckoutSessions do
   @moduledoc """
-  Stripe `CheckoutSessions` calls. Each function sends one request and returns
-  `{:ok, map}` with Stripe's object string-keyed, or `{:error, reason}` as
-  `Tymeslot.Integrations.Stripe.Client.run/1` does. `opts` are the request
-  options (`:api_key`, `:connect_account`, `:idempotency_key` and the timeouts).
+  Stripe `CheckoutSessions` calls; return shape and options are described in
+  `Tymeslot.Integrations.Stripe`.
 
   Operations, as named in telemetry and test stubs: `create_checkout_session`, `retrieve_checkout_session`, `expire_checkout_session`.
   """
@@ -11,36 +9,39 @@ defmodule Tymeslot.Integrations.Stripe.CheckoutSessions do
   alias Tymeslot.Integrations.Stripe.Client
   alias Tymeslot.Integrations.Stripe.Request
 
-  @doc "`create_checkout_session`."
-  @spec create(map() | keyword(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def create(params, opts),
-    do:
-      Client.run(
-        Request.new(:create_checkout_session, :post, ["checkout", "sessions"], params, opts)
-      )
+  @doc """
+  Creates a Checkout session (POST /v1/checkout/sessions). Connect sessions pass `connect_account:`.
+  """
+  @spec create(map() | keyword(), keyword()) :: Client.result()
+  def create(params, opts \\ []) do
+    Client.run(
+      Request.new(:create_checkout_session, :post, ["checkout", "sessions"], params, opts)
+    )
+  end
 
-  @doc "`retrieve_checkout_session`."
-  @spec retrieve(String.t(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def retrieve(id, opts),
-    do:
-      Client.run(
-        Request.new(:retrieve_checkout_session, :get, ["checkout", "sessions", id], %{}, opts)
-      )
+  @doc """
+  Retrieves a Checkout session (GET /v1/checkout/sessions/:id).
+  """
+  @spec retrieve(String.t(), keyword()) :: Client.result()
+  def retrieve(id, opts \\ []) do
+    Client.run(
+      Request.new(:retrieve_checkout_session, :get, ["checkout", "sessions", id], %{}, opts)
+    )
+  end
 
-  @doc "`expire_checkout_session`."
-  @spec expire(String.t(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def expire(id, opts),
-    do:
-      Client.run(
-        Request.new(
-          :expire_checkout_session,
-          :post,
-          ["checkout", "sessions", id, "expire"],
-          %{},
-          opts
-        )
+  @doc """
+  Expires an open Checkout session (POST /v1/checkout/sessions/:id/expire).
+  """
+  @spec expire(String.t(), keyword()) :: Client.result()
+  def expire(id, opts \\ []) do
+    Client.run(
+      Request.new(
+        :expire_checkout_session,
+        :post,
+        ["checkout", "sessions", id, "expire"],
+        %{},
+        opts
       )
+    )
+  end
 end

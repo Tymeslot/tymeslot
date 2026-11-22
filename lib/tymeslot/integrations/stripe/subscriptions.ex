@@ -1,9 +1,7 @@
 defmodule Tymeslot.Integrations.Stripe.Subscriptions do
   @moduledoc """
-  Stripe `Subscriptions` calls. Each function sends one request and returns
-  `{:ok, map}` with Stripe's object string-keyed, or `{:error, reason}` as
-  `Tymeslot.Integrations.Stripe.Client.run/1` does. `opts` are the request
-  options (`:api_key`, `:connect_account`, `:idempotency_key` and the timeouts).
+  Stripe `Subscriptions` calls; return shape and options are described in
+  `Tymeslot.Integrations.Stripe`.
 
   Operations, as named in telemetry and test stubs: `create_subscription`, `retrieve_subscription`, `list_subscriptions`, `update_subscription`, `cancel_subscription`.
   """
@@ -11,34 +9,43 @@ defmodule Tymeslot.Integrations.Stripe.Subscriptions do
   alias Tymeslot.Integrations.Stripe.Client
   alias Tymeslot.Integrations.Stripe.Request
 
-  @doc "`create_subscription`. No feature uses this yet; the live test suite does."
-  @spec create(map() | keyword(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def create(params, opts),
-    do: Client.run(Request.new(:create_subscription, :post, ["subscriptions"], params, opts))
+  @doc """
+  Creates a subscription (POST /v1/subscriptions). No feature uses this yet; the live test suite does.
+  """
+  @spec create(map() | keyword(), keyword()) :: Client.result()
+  def create(params, opts \\ []) do
+    Client.run(Request.new(:create_subscription, :post, ["subscriptions"], params, opts))
+  end
 
-  @doc "`retrieve_subscription`."
-  @spec retrieve(String.t(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def retrieve(id, opts),
-    do: Client.run(Request.new(:retrieve_subscription, :get, ["subscriptions", id], %{}, opts))
+  @doc """
+  Retrieves a subscription (GET /v1/subscriptions/:id).
+  """
+  @spec retrieve(String.t(), keyword()) :: Client.result()
+  def retrieve(id, opts \\ []) do
+    Client.run(Request.new(:retrieve_subscription, :get, ["subscriptions", id], %{}, opts))
+  end
 
-  @doc "`list_subscriptions`."
-  @spec list(map() | keyword(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def list(params, opts),
-    do: Client.run(Request.new(:list_subscriptions, :get, ["subscriptions"], params, opts))
+  @doc """
+  Lists subscriptions (GET /v1/subscriptions); `Pagination` walks all pages.
+  """
+  @spec list(map() | keyword(), keyword()) :: Client.result()
+  def list(params, opts \\ []) do
+    Client.run(Request.new(:list_subscriptions, :get, ["subscriptions"], params, opts))
+  end
 
-  @doc "`update_subscription`."
-  @spec update(String.t(), map() | keyword(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def update(id, params, opts),
-    do: Client.run(Request.new(:update_subscription, :post, ["subscriptions", id], params, opts))
+  @doc """
+  Updates a subscription (POST /v1/subscriptions/:id).
+  """
+  @spec update(String.t(), map() | keyword(), keyword()) :: Client.result()
+  def update(id, params, opts \\ []) do
+    Client.run(Request.new(:update_subscription, :post, ["subscriptions", id], params, opts))
+  end
 
-  @doc "`cancel_subscription`."
-  @spec cancel(String.t(), map() | keyword(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def cancel(id, params, opts),
-    do:
-      Client.run(Request.new(:cancel_subscription, :delete, ["subscriptions", id], params, opts))
+  @doc """
+  Cancels a subscription immediately (DELETE /v1/subscriptions/:id); `params` may carry `invoice_now` and `prorate`.
+  """
+  @spec cancel(String.t(), map() | keyword(), keyword()) :: Client.result()
+  def cancel(id, params, opts \\ []) do
+    Client.run(Request.new(:cancel_subscription, :delete, ["subscriptions", id], params, opts))
+  end
 end

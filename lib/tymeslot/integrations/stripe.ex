@@ -6,7 +6,14 @@ defmodule Tymeslot.Integrations.Stripe do
   this namespace directly (`Stripe.Refunds.create/2`, `Stripe.Charges.retrieve/2`
   and so on). Each returns `{:ok, map}` with Stripe's object string-keyed, or
   `{:error, %Tymeslot.Integrations.Stripe.Error{}}`, or `{:error, :missing_api_key}`
-  when no secret key is configured.
+  when no secret key is configured (`Tymeslot.Integrations.Stripe.Client.result/0`).
+
+  Every resource function takes an optional trailing `opts` keyword list:
+  `:api_key` (otherwise the configured key), `:connect_account` (sent as the
+  `Stripe-Account` header), `:idempotency_key` (POSTs get a random one when
+  none is given; use `Stripe.IdempotencyKey.for_intent/3` for a stable one)
+  and the timeouts `:deadline_ms`, `:receive_timeout` and `:connect_timeout`.
+  An unknown option raises `ArgumentError`.
 
   `Client`, `Request`, `FormEncoder` and `RetryPolicy` are internal: they build,
   encode, send and retry one call, and nothing outside this namespace uses them.

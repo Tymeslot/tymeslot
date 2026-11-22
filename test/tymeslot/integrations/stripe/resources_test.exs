@@ -80,22 +80,20 @@ defmodule Tymeslot.Integrations.Stripe.ResourcesTest do
 
   defp header(headers, name), do: for({^name, v} <- headers, do: v)
 
-  for {{_call, operation, method, path, _params}, index} <- Enum.with_index(@table) do
-    @index index
-    @operation operation
-    @method method
-    @path path
+  for row <- @table do
+    @row row
+    {_call, operation, method, path, _params} = row
 
     test "#{operation} sends #{method} #{path}" do
       capture()
-      {{module, function, args}, _operation, _method, _path, params} = Enum.at(@table, @index)
+      {{module, function, args}, operation, method, path, params} = @row
 
       assert {:ok, %{"id" => "obj_1"}} = apply(module, function, args ++ [@opts])
 
-      assert_received {:req, method, path, query, body, headers}
-      assert method == @method
-      assert path == @path
-      assert header(headers, "x-tymeslot-stripe-operation") == [Atom.to_string(@operation)]
+      assert_received {:req, sent_method, sent_path, query, body, headers}
+      assert sent_method == method
+      assert sent_path == path
+      assert header(headers, "x-tymeslot-stripe-operation") == [Atom.to_string(operation)]
 
       sent = if method == "POST", do: body, else: query
       assert Query.decode(sent) == stringify(params)
@@ -108,6 +106,16 @@ defmodule Tymeslot.Integrations.Stripe.ResourcesTest do
     capture()
 
     assert {:ok, _object} = Accounts.retrieve_connected("acct_1", @opts)
+
+    assert_received {:req, "GET", "/v1/account", _query, _body, headers}
+    assert header(headers, "stripe-account") == ["acct_1"]
+  end
+
+  test "retrieve_connected accepts an equal connect_account" do
+    capture()
+
+    assert {:ok, _object} =
+             Accounts.retrieve_connected("acct_1", [connect_account: "acct_1"] ++ @opts)
 
     assert_received {:req, "GET", "/v1/account", _query, _body, headers}
     assert header(headers, "stripe-account") == ["acct_1"]
