@@ -256,11 +256,14 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
       # frameable). Otherwise pin the computed value.
       frame_ancestors && "frame-ancestors #{frame_ancestors}",
       "base-uri 'self'",
-      # Payments and billing leave the app by top-level navigation, so Stripe
-      # appears only here. connect.stripe.com is the redirect target of the
-      # Connect onboarding form post; Chrome enforces form-action on
-      # redirects, so omitting it blocks Stripe onboarding entirely.
-      "form-action 'self' https://accounts.google.com https://billing.stripe.com https://checkout.stripe.com https://connect.stripe.com"
+      # Chrome enforces form-action on the redirect that answers a form post,
+      # so every host a form post redirects to is listed here. Accepting an
+      # invitation with a social sign-in posts to a controller that redirects
+      # to the provider (accounts.google.com, github.com). Payments and
+      # billing leave the app by top-level navigation, so Stripe appears only
+      # here; connect.stripe.com is the redirect target of the Connect
+      # onboarding form post.
+      "form-action 'self' https://accounts.google.com https://github.com https://billing.stripe.com https://checkout.stripe.com https://connect.stripe.com"
     ]
     |> Enum.reject(&(&1 == nil))
     |> Enum.join("; ")
