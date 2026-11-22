@@ -21,11 +21,12 @@ defmodule Tymeslot.Meetings.ApprovalTest do
   alias Ecto.UUID
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Validation.Constraints
   alias Tymeslot.Workers.SendBookingPaymentRefunded
 
@@ -461,10 +462,10 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       meeting = paid_held_meeting()
       payment = BookingPaymentQueries.by_meeting_id(meeting.id)
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.charge == payment.stripe_charge_id
-        assert params.amount == 5000
-        {:ok, %{id: "re_declined"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == payment.stripe_charge_id
+        assert request.form["amount"] == "5000"
+        StripeFixtures.object("refund", %{"id" => "re_declined"})
       end)
 
       assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
@@ -484,11 +485,11 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       payment = BookingPaymentQueries.by_meeting_id(meeting.id)
 
       # Exactly one call expected: if the guard let a second decline reach
-      # `release/3`, this would raise `Mox.UnexpectedCallError` instead of
+      # `release/3`, this would fail on a second Stripe request instead of
       # quietly double-refunding the invitee.
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.charge == payment.stripe_charge_id
-        {:ok, %{id: "re_declined_once"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == payment.stripe_charge_id
+        StripeFixtures.object("refund", %{"id" => "re_declined_once"})
       end)
 
       assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
@@ -504,9 +505,9 @@ defmodule Tymeslot.Meetings.ApprovalTest do
     test "an expiry refunds the full remaining balance too" do
       meeting = paid_held_meeting()
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.amount == 5000
-        {:ok, %{id: "re_expired"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["amount"] == "5000"
+        StripeFixtures.object("refund", %{"id" => "re_expired"})
       end)
 
       assert {:ok, _expired} = Approval.expire(meeting)
@@ -521,10 +522,10 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       test_pid = self()
 
       # A stub rather than a missing expectation: the release runs its refund
-      # step inside a rescue, so an unexpected Mox call would be swallowed.
-      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
+      # step inside a rescue, so an unexpected Stripe call would be swallowed.
+      StripeStub.stub(:create_refund, fn _request ->
         send(test_pid, :refund_attempted)
-        {:ok, %{id: "re_unexpected"}}
+        StripeFixtures.object("refund", %{"id" => "re_unexpected"})
       end)
 
       assert {:ok, _declined} = Approval.decline(meeting, "No payment on this one")
@@ -570,9 +571,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
     test "a refund failure leaves the meeting released rather than raising" do
       meeting = paid_held_meeting()
 
-      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
-        {:error, :outside_refund_window}
-      end)
+      StripeStub.expect(:create_refund, 1, {:error_fixture, "invalid_request_error"})
 
       assert {:ok, expired} = Approval.expire(meeting)
       assert expired.status == :expired

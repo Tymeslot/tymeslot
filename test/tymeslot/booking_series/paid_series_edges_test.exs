@@ -24,7 +24,6 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
@@ -33,6 +32,8 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
   alias Tymeslot.Meetings.ApprovalRefunds
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SeriesAnnouncementWorker
@@ -49,8 +50,13 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
 
     stub(CalendarMock, :get_booking_integration_info, fn _context -> {:error, :no_integration} end)
 
-    stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-      {:ok, %{"latest_charge" => "ch_SERIES"}}
+    StripeStub.stub(:retrieve_payment_intent, fn request ->
+      assert request.path == "/v1/payment_intents/pi_SERIES"
+
+      StripeFixtures.object("payment_intent_with_latest_charge", %{
+        "id" => "pi_SERIES",
+        "latest_charge" => "ch_SERIES"
+      })
     end)
 
     host = paid_host()
@@ -189,10 +195,10 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
   test "abandoning the checkout from the first session ends the series' checkout" do
     [first | _rest] = meetings()
 
-    expect(StripeAdapterMock, :expire_checkout_session, fn id, opts ->
-      assert id == session_id()
-      assert opts[:connect_account] == account()
-      {:ok, %{}}
+    StripeStub.expect(:expire_checkout_session, 1, fn request ->
+      assert request.path == "/v1/checkout/sessions/#{session_id()}/expire"
+      assert request.headers["stripe-account"] == account()
+      StripeFixtures.object("checkout_session_expired", %{"id" => session_id()})
     end)
 
     assert :ok = MeetingPayments.abandon_checkout(first.id)

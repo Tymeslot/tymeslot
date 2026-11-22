@@ -17,8 +17,8 @@ defmodule Tymeslot.Meetings.ApprovalErrorTrackingTest do
 
   alias ErrorTracker.Error
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.StripeStub
 
   setup :verify_on_exit!
 
@@ -59,13 +59,12 @@ defmodule Tymeslot.Meetings.ApprovalErrorTrackingTest do
     meeting = paid_held_meeting()
     payment = BookingPaymentQueries.by_meeting_id(meeting.id)
 
-    expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
-      {:error, :outside_refund_window}
-    end)
+    StripeStub.expect(:create_refund, 1, {:error_fixture, "invalid_request_error"})
 
     capture_log(fn -> assert {:ok, _expired} = Approval.expire(meeting) end)
 
-    assert [%Error{kind: "Elixir.Tymeslot.Infrastructure.ErrorTracking.HandledError"} = error] =
+    # A Stripe error is an exception, so it is recorded as itself.
+    assert [%Error{kind: "Elixir.Tymeslot.Integrations.Stripe.Error"} = error] =
              recorded_errors()
 
     assert [%{context: context}] = error.occurrences
@@ -77,9 +76,7 @@ defmodule Tymeslot.Meetings.ApprovalErrorTrackingTest do
   test "a post-release step that raises is recorded with the step and meeting" do
     meeting = paid_held_meeting()
 
-    expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
-      raise "stripe client bug"
-    end)
+    StripeStub.expect(:create_refund, 1, fn _request -> raise "stripe client bug" end)
 
     capture_log(fn -> assert {:ok, _expired} = Approval.expire(meeting) end)
 

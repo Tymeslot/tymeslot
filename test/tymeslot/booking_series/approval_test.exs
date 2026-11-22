@@ -29,7 +29,6 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
   alias Tymeslot.BookingSeries.Notifications, as: SeriesNotifications
   alias Tymeslot.CalendarMock
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
@@ -38,6 +37,8 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
   alias Tymeslot.Meetings.Workers.ApprovalSweepWorker
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.SeriesAnnouncementWorker
 
@@ -373,8 +374,13 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       )
 
       # The completed webhook backfills the charge the refund is made on.
-      stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-        {:ok, %{"latest_charge" => "ch_SERIES"}}
+      StripeStub.stub(:retrieve_payment_intent, fn request ->
+        assert request.path == "/v1/payment_intents/pi_SERIES"
+
+        StripeFixtures.object("payment_intent_with_latest_charge", %{
+          "id" => "pi_SERIES",
+          "latest_charge" => "ch_SERIES"
+        })
       end)
 
       host = Paid.paid_host()
@@ -421,10 +427,10 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       pay(series)
       payment = MeetingPayments.payment_for_series(series.id)
 
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.charge == "ch_SERIES"
-        assert params.amount == 3 * Paid.price_cents()
-        {:ok, %{id: "re_SERIES"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == "ch_SERIES"
+        assert request.form["amount"] == to_string(3 * Paid.price_cents())
+        StripeFixtures.object("refund", %{"id" => "re_SERIES"})
       end)
 
       assert {:ok, _declined} = SeriesApproval.decline(series, host.user, nil)
@@ -479,9 +485,9 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       assert {:ok, %{status: :awaiting_approval}} =
                Reschedule.execute(second.uid, move_to(15), host.user.id)
 
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.amount == Paid.price_cents()
-        {:ok, %{id: "re_SESSION"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["amount"] == to_string(Paid.price_cents())
+        StripeFixtures.object("refund", %{"id" => "re_SESSION"})
       end)
 
       assert {:ok, %MeetingSchema{status: :cancelled}} =
@@ -500,9 +506,9 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
     end
 
     defp expect_one_full_refund do
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.amount == 3 * Paid.price_cents()
-        {:ok, %{id: "re_SERIES"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["amount"] == to_string(3 * Paid.price_cents())
+        StripeFixtures.object("refund", %{"id" => "re_SERIES"})
       end)
     end
   end

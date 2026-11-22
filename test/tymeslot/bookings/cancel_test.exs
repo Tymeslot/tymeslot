@@ -14,9 +14,10 @@ defmodule Tymeslot.Bookings.CancelTest do
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SendBookingPaymentRefunded
@@ -221,10 +222,10 @@ defmodule Tymeslot.Bookings.CancelTest do
       meeting = insert_held_paid_request(user)
       payment = BookingPaymentQueries.by_meeting_id(meeting.id)
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.charge == payment.stripe_charge_id
-        assert params.amount == 5000
-        {:ok, %{id: "re_withdrawn"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == payment.stripe_charge_id
+        assert request.form["amount"] == "5000"
+        StripeFixtures.object("refund", %{"id" => "re_withdrawn"})
       end)
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
@@ -253,11 +254,11 @@ defmodule Tymeslot.Bookings.CancelTest do
       test_pid = self()
 
       # A stub rather than a missing expectation: the withdrawal runs its
-      # refund step inside a rescue, so an unexpected Mox call would be
+      # refund step inside a rescue, so an unexpected Stripe call would be
       # swallowed and this test would pass over the refund it exists to catch.
-      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
+      StripeStub.stub(:create_refund, fn _request ->
         send(test_pid, :refund_attempted)
-        {:ok, %{id: "re_unexpected"}}
+        StripeFixtures.object("refund", %{"id" => "re_unexpected"})
       end)
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
@@ -306,12 +307,12 @@ defmodule Tymeslot.Bookings.CancelTest do
       test_pid = self()
 
       # A stub rather than a missing expectation: the withdrawal runs its
-      # refund step inside a rescue, so an unexpected Mox call would be
+      # refund step inside a rescue, so an unexpected Stripe call would be
       # swallowed and every assertion below would still pass over a refund
       # that had just gone out.
-      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
+      StripeStub.stub(:create_refund, fn _request ->
         send(test_pid, :refund_attempted)
-        {:ok, %{id: "re_unexpected"}}
+        StripeFixtures.object("refund", %{"id" => "re_unexpected"})
       end)
 
       assert {:ok, cancelled} = Cancel.execute(Repo.get_by!(MeetingSchema, uid: meeting.uid))
@@ -360,10 +361,10 @@ defmodule Tymeslot.Bookings.CancelTest do
       meeting = insert_held_paid_request(user)
       payment = BookingPaymentQueries.by_meeting_id(meeting.id)
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.charge == payment.stripe_charge_id
-        assert params.amount == 5000
-        {:ok, %{id: "re_external"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == payment.stripe_charge_id
+        assert request.form["amount"] == "5000"
+        StripeFixtures.object("refund", %{"id" => "re_external"})
       end)
 
       assert {:ok, cancelled} = Cancel.execute_external(meeting)

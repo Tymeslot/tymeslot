@@ -45,7 +45,9 @@ defmodule Tymeslot.StripeConnectTestHelpers do
   end
 
   @type exchange_outcome ::
-          String.t() | {:error, :invalid_grant | :oauth_failed} | (-> String.t() | {:error, atom()})
+          String.t()
+          | {:error, :invalid_grant | :oauth_failed}
+          | (-> String.t() | {:error, atom()})
   @type deauthorize_outcome ::
           :ok | {:error, :not_connected | :controlled_account | :oauth_failed}
 

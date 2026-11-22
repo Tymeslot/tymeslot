@@ -8,7 +8,7 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
 
     * persist the meeting with status `awaiting_payment`,
     * create a booking_payment snapshot,
-    * call Stripe Checkout via the StripeAdapter mock,
+    * call Stripe Checkout through the Stripe integration,
     * return `{:ok, :payment_required, %{meeting:, checkout_url:}}`.
 
   No emails or calendar jobs should be enqueued before payment.
@@ -28,10 +28,11 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountRetirement
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoomWorker
@@ -81,12 +82,17 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
   describe "submit_booking/2 — paid event type" do
     test "returns :payment_required tuple, persists awaiting_payment meeting, no email/video jobs",
          %{user: user, meeting_type: meeting_type} do
-      expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
-        assert opts[:connect_account] == "acct_HOST"
-        assert hd(params.line_items).price_data.currency == "eur"
-        assert hd(params.line_items).price_data.unit_amount == 5000
-        assert params.payment_intent_data.application_fee_amount == 25
-        {:ok, %{id: "cs_TEST", url: "https://checkout.stripe.com/cs_TEST"}}
+      StripeStub.expect(:create_checkout_session, 1, fn request ->
+        assert request.headers["stripe-account"] == "acct_HOST"
+        item = hd(request.form["line_items"])
+        assert item["price_data"]["currency"] == "eur"
+        assert item["price_data"]["unit_amount"] == "5000"
+        assert request.form["payment_intent_data"]["application_fee_amount"] == "25"
+
+        StripeFixtures.object("checkout_session_payment", %{
+          "id" => "cs_TEST",
+          "url" => "https://checkout.stripe.com/cs_TEST"
+        })
       end)
 
       params = %{
@@ -187,9 +193,7 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
       # The Stripe call now runs outside the booking DB transaction, so the
       # meeting is no longer rolled back. Instead the orchestrator expires it on
       # checkout failure so the slot is released immediately.
-      expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
-        {:error, :stripe_unreachable}
-      end)
+      StripeStub.expect(:create_checkout_session, 1, {:error_fixture, "api_error"})
 
       params = %{
         form_data: %{
@@ -217,24 +221,15 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
       assert MeetingQueries.count_awaiting_payment_for_organizer(user.id) == 0
     end
 
-    test "returns the semantic :checkout_failed atom when Stripe returns a Stripe.Error struct",
+    test "returns the semantic :checkout_failed atom when the connection to Stripe fails",
          %{user: user, meeting_type: meeting_type} do
-      # stripity_stripe returns {:error, %Stripe.Error{}} — a struct that is
-      # neither a known atom nor a binary. `Create.classify_error/1` folds
-      # any `{:checkout_failed, reason}` tuple (regardless of the inner
-      # reason's shape) to the single `:checkout_failed` atom, so the
-      # Stripe.Error internals (e.g. "Network timeout") never reach the
-      # booker — the web layer renders a fixed payment-oriented message for
-      # this atom.
-      expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
-        {:error,
-         %{
-           __struct__: Stripe.Error,
-           source: :network,
-           code: :network_error,
-           message: "Network timeout"
-         }}
-      end)
+      # The client returns a `Stripe.Error` struct, neither a known atom nor
+      # a binary. `Create.classify_error/1` folds any `{:checkout_failed,
+      # reason}` tuple (regardless of the inner reason's shape) to the single
+      # `:checkout_failed` atom, so the error's internals never reach the
+      # booker; the web layer renders a fixed payment-oriented message for
+      # this atom. A lost connection is sent 3 times in all.
+      StripeStub.expect(:create_checkout_session, 3, {:transport_error, :timeout})
 
       params = %{
         form_data: %{
