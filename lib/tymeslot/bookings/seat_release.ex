@@ -47,10 +47,13 @@ defmodule Tymeslot.Bookings.SeatRelease do
   seats' latest), no video room, and a new calendar identity, so that the
   event a later activation creates is a new event rather than the deleted
   one written again, which a provider keeping deleted events by id (Google)
-  refuses. It keeps its `email_verified_at`, the record that the organiser
-  knew of the meeting: its status hides it while held, and should its last
-  held seat lapse it ends as the cancelled meeting it was to them, in their
-  history, rather than as a hold nobody saw.
+  refuses. A pending reschedule request is cleared with the rest: it asked
+  the confirmed guests, now gone, for a new time, and left standing it would
+  void the slot's time, so that no held seat could be verified. The slot
+  keeps its `email_verified_at`, the record that the organiser knew of the
+  meeting: its status hides it while held, and should its last held seat
+  lapse it ends as the cancelled meeting it was to them, in their history,
+  rather than as a hold nobody saw.
   """
 
   require Logger
@@ -58,6 +61,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
   alias Ecto.UUID
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Cancel
+  alias Tymeslot.Bookings.Workers.RescheduleRequestExpiryWorker
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -187,7 +191,8 @@ defmodule Tymeslot.Bookings.SeatRelease do
   What `Tymeslot.Bookings.Cancel.finalise_cancellation/1` undoes for a
   cancelled slot, bar the announcement, which is the leaving seat's (see the
   module doc): the organiser's availability, the calendar event, the video
-  room, the reminders, and any room creation not yet run. Each step is
+  room, the reminders, any room creation not yet run, and the expiry of a
+  reschedule request the slot no longer carries. Each step is
   best effort and never fails the caller, as there.
   """
   @spec finish_return_to_held(Meeting.t()) :: :ok
@@ -196,6 +201,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
     :ok = Meetings.release_calendar_event(confirmed_meeting)
     release_video_room(confirmed_meeting)
     Jobs.delete_meeting_jobs(VideoRoomWorker, confirmed_meeting.id)
+    Jobs.delete_meeting_jobs(RescheduleRequestExpiryWorker, confirmed_meeting.id)
     Events.slot_returned_to_held(confirmed_meeting)
   end
 
@@ -228,6 +234,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
   defp return_to_held(meeting, deadline) do
     changes = [
       verification_deadline_at: deadline,
+      reschedule_requested_at: nil,
       calendar_uid: UUID.generate(),
       provider_event_id: nil,
       meeting_url: nil,

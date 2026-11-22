@@ -21,7 +21,9 @@ defmodule Tymeslot.Bookings.HeldSeatsKeepSlotIntegrationTest do
   @moduletag :integration
 
   alias Tymeslot.Bookings.CancelSeat
+  alias Tymeslot.Bookings.RescheduleRequestExpiry
   alias Tymeslot.Bookings.RescheduleSeat
+  alias Tymeslot.Bookings.Workers.RescheduleRequestExpiryWorker
   alias Tymeslot.Emails.Templates.SeatUpdateForOrganizer
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings
@@ -235,6 +237,27 @@ defmodule Tymeslot.Bookings.HeldSeatsKeepSlotIntegrationTest do
     assert %{status: :cancelled} = reload(ctx.slot)
     assert %{cancelled_at: %DateTime{}} = reload(ctx.confirmed)
     refute Repo.get(ParticipantSchema, ctx.held.id)
+  end
+
+  # The host's request asked the confirmed guest, now gone, for a new time.
+  # Left standing, it would void the slot's time and refuse the held seat.
+  test "a reschedule request pending on the slot is cleared when it is held again", ctx do
+    requested_at = DateTime.utc_now(:second)
+
+    Repo.update_all(where(MeetingSchema, id: ^ctx.slot.id),
+      set: [reschedule_requested_at: requested_at]
+    )
+
+    :ok = RescheduleRequestExpiry.schedule(reload(ctx.slot))
+    assert_enqueued(worker: RescheduleRequestExpiryWorker, args: %{"meeting_id" => ctx.slot.id})
+
+    assert {:ok, :meeting_cancelled} = CancelSeat.execute(ctx.confirmed.management_token)
+
+    assert %{status: :awaiting_verification, reschedule_requested_at: nil} = reload(ctx.slot)
+    refute_enqueued(worker: RescheduleRequestExpiryWorker, args: %{"meeting_id" => ctx.slot.id})
+
+    assert {:ok, :verified, %MeetingSchema{status: :confirmed}} =
+             EmailVerification.verify_seat(ctx.held)
   end
 
   test "with no held seat left, the last guest cancelling cancels the slot", ctx do
