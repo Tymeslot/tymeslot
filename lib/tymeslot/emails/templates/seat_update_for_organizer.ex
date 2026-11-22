@@ -105,6 +105,30 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     }
   end
 
+  # The last confirmed seat, beside seats still awaiting their bookers' email
+  # verification: the meeting is off for the organiser, but the held seats
+  # still occupy the time, so it is not called free. The organiser never sees
+  # a held seat, so nothing more is said of them.
+  defp copy(:cancelled, %{slot_held: true} = details) do
+    name = details.attendee_name
+
+    %{
+      eyebrow: dgettext("emails_booking_changes", "Cancelled"),
+      title: dgettext("emails_booking_changes", "The last participant cancelled their spot"),
+      lead:
+        dgettext(
+          "emails_booking_changes",
+          "%{name} cancelled their spot. No one else has confirmed a spot on this slot, so the meeting has been cancelled.",
+          name: name
+        ),
+      subject:
+        dgettext("emails_booking_changes", "Meeting cancelled: %{name} cancelled - %{date}",
+          name: name,
+          date: short_date(details)
+        )
+    }
+  end
+
   # The last seat: its leaving cancelled the meeting. This is the organiser's
   # only email about it, so it says both facts.
   defp copy(:cancelled, %{slot_freed: true} = details) do
@@ -193,6 +217,16 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
           Map.get(details, :organizer_time_format)
         )
     )
+  end
+
+  # As for a cancellation (`copy/2`): held seats keep the earlier time
+  # occupied, so it is not called free.
+  defp old_slot_freed_note(%{old_slot_held: true}) do
+    " " <>
+      dgettext(
+        "emails_booking_changes",
+        "No one else has confirmed a spot at the earlier time, so that meeting has been cancelled."
+      )
   end
 
   defp old_slot_freed_note(%{old_slot_freed: true}) do

@@ -14,6 +14,16 @@ defmodule Tymeslot.Notifications.Events.Seats do
   alias Tymeslot.Notifications.Events.Guard
   alias Tymeslot.Notifications.Orchestrator
 
+  @typedoc """
+  What a seat's leaving did to its slot, for the organiser's email about it:
+  `:goes_ahead` while other seats remain; `:freed` when it was the last seat
+  and the meeting was cancelled, its time free again; `:held` when it was
+  the last confirmed seat but seats awaiting their bookers' email
+  verification remain, so the meeting is off for the organiser while the
+  time stays taken (`Tymeslot.Bookings.SeatRelease`).
+  """
+  @type slot_outcome :: :goes_ahead | :freed | :held
+
   @doc """
   Handles a seat being booked on a group meeting.
 
@@ -92,9 +102,10 @@ defmodule Tymeslot.Notifications.Events.Seats do
   @doc """
   Handles a participant cancelling their seat on a group meeting.
 
-  Schedules the seat-cancellation emails. `slot_freed: true` marks the last
-  leaver: their leaving cancelled the meeting, and the organiser's email
-  about the seat says so (it is the organiser's only email about it).
+  Schedules the seat-cancellation emails. `slot:` (a `t:slot_outcome/0`,
+  `:goes_ahead` by default) marks the last leaver: their leaving cancelled
+  the meeting, and the organiser's email about the seat says so (it is the
+  organiser's only email about it).
 
   Integrations hear `meeting.cancelled` for this seat. For the last leaver
   that is the only one: the meeting-level cancellation that follows finds no
@@ -111,7 +122,7 @@ defmodule Tymeslot.Notifications.Events.Seats do
         Orchestrator.schedule_seat_cancellation(
           meeting,
           participant,
-          Keyword.get(opts, :slot_freed, false)
+          Keyword.get(opts, :slot, :goes_ahead)
         )
       else
         {:ok, :announced_with_series}
@@ -130,8 +141,8 @@ defmodule Tymeslot.Notifications.Events.Seats do
   and the matching cancellation and invitation for their guests.
   `old_participant` is the seat row the move cancelled on `old_meeting`;
   each seat is its own calendar entry, so the old one is named by that row,
-  not by the old meeting. `old_slot_freed: true` says the move emptied, and
-  so cancelled, the old meeting.
+  not by the old meeting. `old_slot:` (a `t:slot_outcome/0`, `:goes_ahead` by
+  default) says whether the move emptied, and so cancelled, the old meeting.
 
   Integrations hear `meeting.rescheduled` for the new seat, the way a solo
   booking's move is one rescheduled booking rather than a cancellation and a
@@ -147,7 +158,7 @@ defmodule Tymeslot.Notifications.Events.Seats do
         meeting,
         participant,
         old_participant,
-        Keyword.get(opts, :old_slot_freed, false)
+        Keyword.get(opts, :old_slot, :goes_ahead)
       )
 
     dispatch(

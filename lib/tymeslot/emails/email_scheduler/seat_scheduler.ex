@@ -12,6 +12,7 @@ defmodule Tymeslot.Emails.EmailScheduler.SeatScheduler do
 
   alias Tymeslot.Emails.EmailActions
   alias Tymeslot.Emails.EmailScheduler.Helpers
+  alias Tymeslot.Notifications.Events.Seats
   alias Tymeslot.Workers.EmailWorker
 
   # The per-seat action names live in `Tymeslot.Emails.EmailActions` with
@@ -112,15 +113,18 @@ defmodule Tymeslot.Emails.EmailScheduler.SeatScheduler do
   end
 
   @doc """
-  Schedules the cancellation emails for a single group-booking seat.
-  `slot_freed?` says the seat was the last one and its leaving cancelled the
-  meeting.
+  Schedules the cancellation emails for a single group-booking seat. `slot`
+  says what the seat's leaving did to its slot
+  (`t:Tymeslot.Notifications.Events.Seats.slot_outcome/0`), carried as
+  `"slot_freed"` (the meeting was cancelled with it) and `"slot_held"` (held
+  seats still occupy its time).
   """
-  @spec schedule_seat_cancellation_emails(term(), term(), boolean()) ::
+  @spec schedule_seat_cancellation_emails(term(), term(), Seats.slot_outcome()) ::
           :ok | {:error, term()}
-  def schedule_seat_cancellation_emails(meeting_id, participant_id, slot_freed?) do
+  def schedule_seat_cancellation_emails(meeting_id, participant_id, slot) do
     schedule_seat_email(seat_action(:seat_cancellation), meeting_id, participant_id, %{
-      "slot_freed" => slot_freed?
+      "slot_freed" => slot != :goes_ahead,
+      "slot_held" => slot == :held
     })
   end
 
@@ -131,19 +135,22 @@ defmodule Tymeslot.Emails.EmailScheduler.SeatScheduler do
   cancelled row it moved from, whose own calendar entry (UID, revision and
   time) the job cancels for the participant and their guests. A seat move
   never rewrites that row, so it is read when the job runs.
-  `old_slot_freed?` says the move emptied, and so cancelled, the old meeting.
+  `old_slot` says what the move did to the old slot, carried as
+  `schedule_seat_cancellation_emails/3` carries it, under `"old_slot_freed"`
+  and `"old_slot_held"`.
   """
-  @spec schedule_seat_reschedule_emails(term(), term(), term(), boolean()) ::
+  @spec schedule_seat_reschedule_emails(term(), term(), term(), Seats.slot_outcome()) ::
           :ok | {:error, term()}
   def schedule_seat_reschedule_emails(
         meeting_id,
         participant_id,
         old_participant_id,
-        old_slot_freed?
+        old_slot
       ) do
     schedule_seat_email(seat_action(:seat_reschedule), meeting_id, participant_id, %{
       "old_participant_id" => old_participant_id,
-      "old_slot_freed" => old_slot_freed?
+      "old_slot_freed" => old_slot != :goes_ahead,
+      "old_slot_held" => old_slot == :held
     })
   end
 

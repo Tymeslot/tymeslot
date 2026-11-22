@@ -711,3 +711,18 @@ msgstr "Twoi goście zostali powiadomieni o odwołaniu."
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr "Spotkanie wideo"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} cancelled their spot. No one else has confirmed a spot on this slot, so the meeting has been cancelled."
+msgstr "%{name} odwołał(a) swoje miejsce. Nikt inny nie potwierdził miejsca w tym terminie, więc spotkanie zostało odwołane."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled: %{name} cancelled - %{date}"
+msgstr "Spotkanie odwołane: %{name} rezygnuje z miejsca – %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "No one else has confirmed a spot at the earlier time, so that meeting has been cancelled."
+msgstr "Nikt inny nie potwierdził miejsca w poprzednim terminie, więc tamto spotkanie zostało odwołane."

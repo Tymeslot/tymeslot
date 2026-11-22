@@ -9,6 +9,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.ApprovalJobs
+  alias Tymeslot.Notifications.Events.Seats
 
   alias Tymeslot.Notifications.{
     GuestNotifications,
@@ -296,17 +297,22 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
-  Schedules the cancellation email job for one seat on a group meeting.
+  Schedules the cancellation email job for one seat on a group meeting;
+  `slot` is what the seat's leaving did to its slot
+  (`t:Seats.slot_outcome/0`).
   """
-  @spec schedule_seat_cancellation(%{atom() => term()}, %{atom() => term()}, boolean()) ::
-          {:ok, atom()} | {:error, term()}
-  def schedule_seat_cancellation(meeting, participant, slot_freed?) do
+  @spec schedule_seat_cancellation(
+          %{atom() => term()},
+          %{atom() => term()},
+          Seats.slot_outcome()
+        ) :: {:ok, atom()} | {:error, term()}
+  def schedule_seat_cancellation(meeting, participant, slot) do
     worker_module = get_email_worker_module()
 
     case worker_module.schedule_seat_cancellation_emails(
            meeting.id,
            participant.id,
-           slot_freed?
+           slot
          ) do
       :ok -> {:ok, :seat_cancellation_scheduled}
       {:error, reason} -> {:error, reason}
@@ -316,22 +322,23 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @doc """
   Schedules the reschedule email job for one seat on a group meeting:
   `participant` is the seat at its new time, `old_participant` the seat it
-  moved from.
+  moved from, and `old_slot` what the move did to the old slot
+  (`t:Seats.slot_outcome/0`).
   """
   @spec schedule_seat_reschedule(
           %{atom() => term()},
           %{atom() => term()},
           %{atom() => term()},
-          boolean()
+          Seats.slot_outcome()
         ) :: {:ok, atom()} | {:error, term()}
-  def schedule_seat_reschedule(meeting, participant, old_participant, old_slot_freed?) do
+  def schedule_seat_reschedule(meeting, participant, old_participant, old_slot) do
     worker_module = get_email_worker_module()
 
     case worker_module.schedule_seat_reschedule_emails(
            meeting.id,
            participant.id,
            old_participant.id,
-           old_slot_freed?
+           old_slot
          ) do
       :ok -> {:ok, :seat_reschedule_scheduled}
       {:error, reason} -> {:error, reason}

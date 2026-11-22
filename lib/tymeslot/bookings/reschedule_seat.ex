@@ -547,10 +547,10 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     # per organiser, and both slots are theirs.
     SeatEffects.broadcast_and_invalidate(old_meeting)
 
-    old_slot_freed? = finish_old_meeting(old_meeting, booked.on_booked_result.vacated)
+    old_slot = finish_old_meeting(old_meeting, booked.on_booked_result.vacated)
 
     Seats.seat_rescheduled(booked.meeting, booked.participant, old_meeting, old_participant,
-      old_slot_freed: old_slot_freed?
+      old_slot: old_slot
     )
 
     {:ok, booked}
@@ -558,21 +558,22 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   # If the move emptied the old meeting, it was cancelled with the move, or
   # held for verification again beside held seats, and that is finished here
-  # (calendar event deleted), returning `true`: the organiser's one email
-  # about the move then also says the old slot is empty and free. Otherwise
+  # (calendar event deleted). The returned `t:Seats.slot_outcome/0` is what
+  # the organiser's one email about the move then says of the old slot:
+  # empty and free, or cancelled while held seats keep its time. Otherwise
   # the old event is refreshed so its attendee list drops the mover.
   defp finish_old_meeting(_old_meeting, {:cancelled, cancelled_meeting}) do
     Cancel.finalise_cancellation(cancelled_meeting)
-    true
+    :freed
   end
 
   defp finish_old_meeting(_old_meeting, {:held, confirmed_meeting}) do
     SeatRelease.finish_return_to_held(confirmed_meeting)
-    true
+    :held
   end
 
   defp finish_old_meeting(old_meeting, :seats_remain) do
     CalendarJobs.schedule_job(old_meeting, "update")
-    false
+    :goes_ahead
   end
 end

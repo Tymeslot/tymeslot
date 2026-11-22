@@ -22,6 +22,7 @@ defmodule Tymeslot.Bookings.HeldSeatsKeepSlotIntegrationTest do
 
   alias Tymeslot.Bookings.CancelSeat
   alias Tymeslot.Bookings.RescheduleSeat
+  alias Tymeslot.Emails.Templates.SeatUpdateForOrganizer
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.EmailVerification
@@ -127,20 +128,46 @@ defmodule Tymeslot.Bookings.HeldSeatsKeepSlotIntegrationTest do
 
       assert_held_again(ctx)
 
-      # The organiser's one email about it says the slot is empty.
-      assert_enqueued(
-        worker: EmailWorker,
-        args: %{
-          "action" => "send_seat_cancellation_emails",
-          "participant_id" => ctx.confirmed.id,
-          "slot_freed" => true
-        }
-      )
-
       assert [%{args: %{"event_type" => "meeting.cancelled"}}] =
                all_enqueued(worker: WebhookWorker)
 
       verify_brings_slot_back(ctx)
+    end
+
+    test "the organiser's one email says the meeting is cancelled, not that the time is free",
+         ctx do
+      assert {:ok, :meeting_cancelled} = CancelSeat.execute(ctx.confirmed.management_token)
+
+      seat_args = %{
+        "action" => "send_seat_cancellation_emails",
+        "meeting_id" => ctx.slot.id,
+        "participant_id" => ctx.confirmed.id,
+        "slot_freed" => true,
+        "slot_held" => true
+      }
+
+      assert_enqueued(worker: EmailWorker, args: seat_args)
+
+      test_pid = self()
+
+      stub(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, fn _to, _det ->
+        {:ok, "sent"}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_seat_update_to_organizer, fn :cancelled, _to, det ->
+        send(test_pid, {:organizer, det})
+        {:ok, "sent"}
+      end)
+
+      assert :ok = perform_job(EmailWorker, seat_args)
+      assert_received {:organizer, details}
+
+      email = SeatUpdateForOrganizer.render(:cancelled, "host@example.com", details)
+
+      assert email.text_body =~
+               "No one else has confirmed a spot on this slot, so the meeting has been cancelled."
+
+      refute email.text_body =~ "free again"
     end
   end
 
@@ -159,10 +186,15 @@ defmodule Tymeslot.Bookings.HeldSeatsKeepSlotIntegrationTest do
 
       assert_held_again(ctx)
 
-      # The mover's one email tells the organiser the earlier time is empty.
+      # The mover's one email tells the organiser the earlier meeting is off,
+      # though held seats keep its time.
       assert_enqueued(
         worker: EmailWorker,
-        args: %{"action" => "send_seat_reschedule_emails", "old_slot_freed" => true}
+        args: %{
+          "action" => "send_seat_reschedule_emails",
+          "old_slot_freed" => true,
+          "old_slot_held" => true
+        }
       )
 
       verify_brings_slot_back(ctx)

@@ -711,3 +711,18 @@ msgstr "Ваших гостей було повідомлено про скас�
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr "Відеодзвінок"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} cancelled their spot. No one else has confirmed a spot on this slot, so the meeting has been cancelled."
+msgstr "%{name} скасував(-ла) своє місце. Ніхто інший не підтвердив місце в цьому слоті, тому зустріч скасовано."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled: %{name} cancelled - %{date}"
+msgstr "Зустріч скасовано: %{name} скасував(-ла) – %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "No one else has confirmed a spot at the earlier time, so that meeting has been cancelled."
+msgstr "Ніхто інший не підтвердив місце на попередній час, тому ту зустріч скасовано."

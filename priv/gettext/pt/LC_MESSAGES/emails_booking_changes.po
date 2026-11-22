@@ -707,3 +707,18 @@ msgstr "Seus convidados foram avisados do cancelamento."
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr "Chamada de vídeo"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} cancelled their spot. No one else has confirmed a spot on this slot, so the meeting has been cancelled."
+msgstr "%{name} cancelou a vaga. Ninguém mais tem vaga confirmada neste horário, então a reunião foi cancelada."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled: %{name} cancelled - %{date}"
+msgstr "Reunião cancelada: %{name} cancelou - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "No one else has confirmed a spot at the earlier time, so that meeting has been cancelled."
+msgstr "Ninguém mais tem vaga confirmada no horário anterior, então aquela reunião foi cancelada."

@@ -126,11 +126,11 @@ defmodule Tymeslot.Bookings.CancelSeat do
     case outcome do
       {:cancelled, cancelled_meeting} ->
         Cancel.finalise_cancellation(cancelled_meeting, told)
-        Seats.seat_cancelled(meeting, participant, [slot_freed: true] ++ told)
+        Seats.seat_cancelled(meeting, participant, [slot: :freed] ++ told)
 
       {:held, confirmed_meeting} ->
         SeatRelease.finish_return_to_held(confirmed_meeting)
-        Seats.seat_cancelled(meeting, participant, [slot_freed: true] ++ told)
+        Seats.seat_cancelled(meeting, participant, [slot: :held] ++ told)
 
       :seats_remain ->
         CalendarJobs.schedule_job(meeting, "update")
@@ -223,17 +223,21 @@ defmodule Tymeslot.Bookings.CancelSeat do
 
   # `SeatRelease.release/1` decides under the meeting row lock whether this
   # was the last seat. The seat's cancellation emails go out either way; when
-  # the meeting goes with them, cancelled or held again, they carry
-  # `slot_freed: true`, and the
-  # organiser's one email about it says the slot is now empty and free (the
-  # meeting-level cancellation of an emptied meeting sends the organiser
-  # nothing, see `MeetingEmails`).
+  # the meeting goes with them they say so: the organiser's one email about it
+  # says the slot is empty and free (`slot: :freed`), or, when held seats keep
+  # its time, that the meeting is cancelled (`slot: :held`). The meeting-level
+  # cancellation of an emptied meeting sends the organiser nothing, see
+  # `MeetingEmails`.
   defp after_commit(meeting, cancelled) do
     publish_seat_change(meeting)
 
     case SeatRelease.release(meeting) do
-      {:ok, ended} when ended in [:meeting_cancelled, :returned_to_held] ->
-        Seats.seat_cancelled(meeting, cancelled, slot_freed: true)
+      {:ok, :meeting_cancelled} ->
+        Seats.seat_cancelled(meeting, cancelled, slot: :freed)
+        {:ok, :meeting_cancelled}
+
+      {:ok, :returned_to_held} ->
+        Seats.seat_cancelled(meeting, cancelled, slot: :held)
         {:ok, :meeting_cancelled}
 
       {:ok, :seats_remain} ->
