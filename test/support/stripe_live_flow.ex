@@ -157,6 +157,8 @@ defmodule Tymeslot.StripeLiveFlow do
     %{
       type: e.type,
       code: e.code,
+      decline_code: e.decline_code,
+      param: e.param,
       status: e.status,
       request_id: e.request_id,
       message: redact(e.message)
@@ -200,21 +202,28 @@ defmodule Tymeslot.StripeLiveFlow do
     operation |> Request.new(method, path, params, opts) |> Client.run()
   end
 
-  @doc "Turns an error whose message matches `pattern` into a skip, keeping Stripe's wording."
+  @doc """
+  Turns an error whose message matches `pattern` into a skip, keeping Stripe's
+  wording. An error that names a `param` is a fault in our request, never an
+  account setting, so it stays an error.
+  """
   @spec skip_if(term(), Regex.t()) :: term()
-  def skip_if({:error, %Error{message: message}} = result, pattern)
+  def skip_if({:error, %Error{message: message, param: nil}} = result, pattern)
       when is_binary(message) do
     if Regex.match?(pattern, message), do: {:skip, redact(message)}, else: result
   end
 
   def skip_if(result, _pattern), do: result
 
-  @doc "Best-effort deletion of everything the run created, recorded as `cleanup` steps."
+  @doc """
+  Best-effort deletion of everything the run created, newest first so a
+  subscription goes before its customer, recorded as `cleanup` steps.
+  """
   @spec cleanup(pid()) :: :ok
   def cleanup(report) do
     flow = %__MODULE__{report: report, name: "cleanup", live?: true}
 
-    for {kind, id} <- report |> StripeLiveReport.tracked() |> Enum.reverse() do
+    for {kind, id} <- StripeLiveReport.tracked(report) do
       step(flow, "#{kind} #{id}", fn -> remove(kind, id) end)
     end
 

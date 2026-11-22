@@ -47,18 +47,42 @@ defmodule Tymeslot.StripeLiveReport do
     Agent.update(report, &%{&1 | captures: [{fixture, live} | &1.captures]})
   end
 
-  @doc "Writes the report and, when `recorded?`, the captured fixtures."
+  @doc """
+  Writes the report and, when `recorded?`, the captured fixtures. The report
+  goes first; a failure while recording is itself recorded in it.
+  """
   @spec write!(report(), boolean()) :: :ok
   def write!(report, recorded?) do
-    state = Agent.get(report, & &1)
-    steps = Enum.reverse(state.steps)
-    if recorded?, do: write_fixtures!(state.captures)
+    write_report!(report, recorded?)
 
+    if recorded? do
+      try do
+        write_fixtures!(Agent.get(report, & &1.captures))
+      rescue
+        exception ->
+          record(report, %{
+            flow: "recording",
+            operation: "write fixtures",
+            status: :failed,
+            duration_ms: 0,
+            error: %{type: "exception", message: Exception.message(exception)},
+            drift: nil,
+            note: "fixtures were not (fully) written"
+          })
+
+          write_report!(report, recorded?)
+      end
+    end
+
+    :ok
+  end
+
+  defp write_report!(report, recorded?) do
+    steps = steps(report)
     File.mkdir_p!(@dir)
     json = report_map(steps, recorded?)
     File.write!(Path.join(@dir, "report.json"), Jason.encode!(json, pretty: true))
     File.write!(Path.join(@dir, "report.md"), markdown(json, steps))
-    :ok
   end
 
   defp report_map(steps, recorded?) do
@@ -96,9 +120,7 @@ defmodule Tymeslot.StripeLiveReport do
           step.operation,
           step.status,
           "#{step.duration_ms} ms",
-          [err[:type], err[:code], err[:status], err[:request_id]]
-          |> Enum.reject(&is_nil/1)
-          |> Enum.join(" / "),
+          error_cell(step, err),
           drift_cell(step)
         ]
 
@@ -113,6 +135,20 @@ defmodule Tymeslot.StripeLiveReport do
     ]
   end
 
+  defp error_cell(step, err) do
+    base =
+      [err[:type], err[:code], err[:decline_code], err[:status], err[:request_id]]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.join(" / ")
+
+    if step.status == :failed do
+      detail = [err[:message], err[:param] && "param: #{err[:param]}"]
+      Enum.join([base | Enum.reject(detail, &(&1 in [nil, false]))], " | ")
+    else
+      base
+    end
+  end
+
   defp drift_cell(%{drift: [_first | _rest] = drift}), do: Enum.join(drift, ", ")
   defp drift_cell(_step), do: ""
 
@@ -125,7 +161,24 @@ defmodule Tymeslot.StripeLiveReport do
         []
 
       skipped ->
-        ["\n## Skipped\n\n", Enum.map(skipped, &"- #{&1.flow}: #{&1.operation}: #{&1.note}\n")]
+        [
+          "\n## Skipped\n\n",
+          Enum.map(skipped, &"- #{&1.flow}: #{&1.operation}: #{&1.note}\n"),
+          connect_limitation(skipped)
+        ]
+    end
+  end
+
+  # The Express account the connect flow creates is never onboarded. Stripe's
+  # sandbox may accept its charges before `card_payments` is active, but is
+  # not required to, so a skip of a connect payment step can be this.
+  defp connect_limitation(skipped) do
+    if Enum.any?(skipped, &(&1.flow == "connect" and &1.operation =~ "(connect)")) do
+      "\nThe connect payment steps use an Express account that is created but never onboarded. " <>
+        "Stripe's sandbox may refuse its charges until `card_payments` is active; if a reason above " <>
+        "says so, the step needs an onboarded test account, not a code change.\n"
+    else
+      []
     end
   end
 

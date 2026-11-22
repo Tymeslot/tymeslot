@@ -121,6 +121,38 @@ defmodule Tymeslot.Integrations.Stripe.LiveSupportTest do
     end
   end
 
+  describe "token links and labels" do
+    test "recording redacts Stripe-hosted links under url and pdf keys" do
+      live = %{
+        "receipt_url" => "https://pay.stripe.com/receipts/payment/CAcaFw",
+        "invoice_pdf" => "https://pay.stripe.com/invoice/acct_1/test_x/pdf",
+        "hosted_invoice_url" => "https://invoice.stripe.com/i/acct_1/test_x",
+        "manage_url" => "https://billing.stripe.com/p/session/test_x",
+        "return_url" => "https://example.test/back"
+      }
+
+      assert StripeLiveContract.sanitise(live, %{}) == %{
+               "receipt_url" => "redacted",
+               "invoice_pdf" => "redacted",
+               "hosted_invoice_url" => "redacted",
+               "manage_url" => "redacted",
+               "return_url" => "https://example.test/back"
+             }
+    end
+
+    test "every recording step label is used by exactly one step in the suite" do
+      suite = File.read!(Path.expand("live_test.exs", __DIR__))
+
+      counts =
+        for label <- StripeLiveContract.recorded_labels() do
+          pattern = ~r/step\(\s*flow,\s*#{Regex.escape(inspect(label))}/
+          {label, length(Regex.scan(pattern, suite))}
+        end
+
+      assert Enum.reject(counts, fn {_label, count} -> count == 1 end) == []
+    end
+  end
+
   describe "StripeLiveFlow" do
     setup do
       report = StripeLiveReport.start()
@@ -175,6 +207,21 @@ defmodule Tymeslot.Integrations.Stripe.LiveSupportTest do
       StripeLiveFlow.step(flow, "Charges.retrieve", fn -> {:ok, charge} end)
 
       assert [{"charge", _live}] = Agent.get(report, & &1.captures)
+    end
+
+    test "a skip pattern never hides an error that names a param", %{flow: flow, report: report} do
+      by_message = %Error{type: "invalid_request_error", message: "Set your tax settings first"}
+      by_param = %Error{by_message | param: "automatic_tax"}
+
+      assert {:skip, "Set your tax settings first"} =
+               StripeLiveFlow.skip_if({:error, by_message}, ~r/tax settings/)
+
+      assert {:error, ^by_param} = StripeLiveFlow.skip_if({:error, by_param}, ~r/tax settings/)
+
+      StripeLiveFlow.step(flow, "bad param", fn -> {:error, by_param} end)
+
+      assert [%{error: %{param: "automatic_tax", decline_code: nil}}] =
+               StripeLiveReport.steps(report)
     end
 
     test "without a key every step is skipped and the function never runs", %{report: report} do

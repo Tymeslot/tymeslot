@@ -33,6 +33,7 @@ defmodule Tymeslot.Integrations.Stripe.LiveTest do
   alias Tymeslot.StripeLiveReport
 
   @missing_connect ~r/connect/i
+  @tax_settings ~r/tax (settings|registration)|origin address|head office/i
   @connect_not_ready ~r/connect|capabilit|onboard|cannot currently|not enabled/i
 
   setup_all do
@@ -87,11 +88,11 @@ defmodule Tymeslot.Integrations.Stripe.LiveTest do
     unix = System.os_time(:second)
 
     customer =
-      step(flow, "Customers.create", fn ->
+      step(flow, "Customers.create (subscription flow)", fn ->
         flow |> create_customer(unix) |> then(&track(flow, :customer, &1))
       end)
 
-    cust = [{"Customers.create", customer}]
+    cust = [{"Customers.create (subscription flow)", customer}]
 
     product =
       step(flow, "products.create", fn ->
@@ -160,7 +161,7 @@ defmodule Tymeslot.Integrations.Stripe.LiveTest do
     step(flow, "Subscriptions.update (automatic tax)", [needs: sub_dep], fn ->
       id(sub)
       |> Subscriptions.update(%{automatic_tax: %{enabled: true}})
-      |> skip_if(~r/tax/i)
+      |> skip_if(@tax_settings)
     end)
 
     step(flow, "Subscriptions.cancel", [needs: sub_dep], fn ->
@@ -172,8 +173,12 @@ defmodule Tymeslot.Integrations.Stripe.LiveTest do
         Invoices.list(%{customer: id(customer), limit: 3})
       end)
 
-    invoice = first_of(invoices, "Invoices.list")
-    inv = [{"Invoices.list (first invoice)", invoice}]
+    invoice =
+      step(flow, "First invoice exists", [needs: [{"Invoices.list", invoices}]], fn ->
+        first_of(invoices, "Invoices.list")
+      end)
+
+    inv = [{"First invoice exists", invoice}]
 
     step(flow, "Invoices.retrieve", [needs: inv], fn -> Invoices.retrieve(id(invoice)) end)
 
@@ -213,8 +218,13 @@ defmodule Tymeslot.Integrations.Stripe.LiveTest do
         PaymentIntents.retrieve(id(intent), %{expand: ["latest_charge"]})
       end)
 
-    charge_id = latest_charge_id(retrieved)
-    ch = [{"PaymentIntents.retrieve", if(charge_id, do: retrieved, else: {:error, :no_charge})}]
+    charge =
+      step(flow, "Latest charge present", [needs: [{"PaymentIntents.retrieve", retrieved}]], fn ->
+        latest_charge(retrieved)
+      end)
+
+    charge_id = id(charge)
+    ch = [{"Latest charge present", charge}]
 
     step(flow, "Charges.retrieve", [needs: ch], fn -> Charges.retrieve(charge_id) end)
 
@@ -341,12 +351,16 @@ defmodule Tymeslot.Integrations.Stripe.LiveTest do
         end
       )
 
-    charge_id = latest_charge_id(retrieved)
+    charge =
+      step(
+        flow,
+        "Latest charge present (connect)",
+        [needs: [{"PaymentIntents.retrieve (connect)", retrieved}]],
+        fn -> latest_charge(retrieved) end
+      )
 
-    ch = [
-      {"PaymentIntents.retrieve (connect)",
-       if(charge_id, do: retrieved, else: {:error, :no_charge})}
-    ]
+    charge_id = id(charge)
+    ch = [{"Latest charge present (connect)", charge}]
 
     step(flow, "Charges.retrieve (connect)", [needs: ch], fn ->
       Charges.retrieve(charge_id, opts.())
@@ -440,8 +454,12 @@ defmodule Tymeslot.Integrations.Stripe.LiveTest do
   defp id({:ok, %{"id" => id}}), do: id
   defp id(_other), do: nil
 
-  defp latest_charge_id({:ok, %{"latest_charge" => %{"id" => id}}}), do: id
-  defp latest_charge_id(_other), do: nil
+  defp latest_charge({:ok, %{"latest_charge" => %{"id" => _id} = charge}}), do: {:ok, charge}
+
+  defp latest_charge(_other) do
+    {:error,
+     {:exception, %RuntimeError{message: "the payment intent has no expanded latest_charge"}}}
+  end
 
   defp first_of({:ok, %{"data" => [first | _rest]}}, _label), do: {:ok, first}
   defp first_of({:ok, _empty}, label), do: {:skip, "#{label} returned no objects"}

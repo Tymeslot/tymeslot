@@ -12,6 +12,7 @@ defmodule Tymeslot.StripeLiveContract do
   # returns a list whose first element is the fixture's object.
   @fixtures %{
     "Customers.create" => "customer",
+    "Customers.create (subscription flow)" => "customer",
     "Customers.delete" => "customer_deleted",
     "CheckoutSessions.create (subscription)" => "checkout_session_subscription",
     "CheckoutSessions.expire (subscription)" => "checkout_session_expired",
@@ -33,7 +34,9 @@ defmodule Tymeslot.StripeLiveContract do
     "Refunds.create (connect)" => "refund_with_charge"
   }
 
-  @redacted_keys ~w(client_secret secret url hosted_invoice_url)
+  @redacted_keys ~w(client_secret secret url hosted_invoice_url receipt_url invoice_pdf)
+  # A link under a `*_url` or `*_pdf` key that opens a Stripe-hosted page carries a token.
+  @hosted_page ~r{^https://(pay|invoice|checkout|billing|connect)\.stripe\.com}
   # `<prefix>_<token>` with a digit in the token: an object id (`cus_test1`,
   # `price_1Abc`), where an enum value such as `card_declined` has none.
   @object_id ~r/^([a-z]+(?:_[a-z]+)*)_(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{5,}$/
@@ -44,7 +47,6 @@ defmodule Tymeslot.StripeLiveContract do
     "Customers.create",
     "Customers.delete",
     "CheckoutSessions.create (subscription)",
-    "CheckoutSessions.expire (subscription)",
     "Subscriptions.retrieve",
     "Subscriptions.update (cancel at period end)",
     "Subscriptions.cancel",
@@ -57,7 +59,9 @@ defmodule Tymeslot.StripeLiveContract do
     "Refunds.create",
     "Refunds.retrieve",
     "Accounts.retrieve_connected",
-    "CheckoutSessions.create (connect)"
+    "CheckoutSessions.create (connect)",
+    # The README describes this fixture in payment mode, so the connect flow records it.
+    "CheckoutSessions.expire (connect)"
   ]
   @email ~r/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/
 
@@ -69,6 +73,10 @@ defmodule Tymeslot.StripeLiveContract do
       name -> name
     end
   end
+
+  @doc "The labels of the steps fixtures are recorded from."
+  @spec recorded_labels() :: [String.t()]
+  def recorded_labels, do: @recorded_by
 
   @doc "Whether the step is the one its fixture is recorded from."
   @spec recorded_by?(String.t()) :: boolean()
@@ -160,8 +168,11 @@ defmodule Tymeslot.StripeLiveContract do
 
   defp clean(map, ids) when is_map(map) do
     Map.new(map, fn
-      {key, value} when key in @redacted_keys and is_binary(value) -> {key, "redacted"}
-      {key, value} -> {key, clean(value, ids)}
+      {key, value} when is_binary(value) ->
+        {key, if(redact_key?(key, value), do: "redacted", else: clean(value, ids))}
+
+      {key, value} ->
+        {key, clean(value, ids)}
     end)
   end
 
@@ -174,6 +185,11 @@ defmodule Tymeslot.StripeLiveContract do
   end
 
   defp clean(other, _ids), do: other
+
+  defp redact_key?(key, value) do
+    key in @redacted_keys or
+      (String.ends_with?(key, ["_url", "_pdf"]) and Regex.match?(@hosted_page, value))
+  end
 
   @doc """
   Marks each named fixture's README row as recorded on `date`, replacing only
