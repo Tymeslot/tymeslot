@@ -273,10 +273,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     """
   end
 
-  defp refundable_remaining(%{amount_cents: amount, refunded_amount_cents: refunded}),
-    do: max(amount - refunded, 0)
-
-  defp refundable_remaining(_payment), do: 0
+  defp refundable_remaining(nil), do: 0
+  defp refundable_remaining(payment), do: MeetingPayments.refundable_remaining_cents(payment)
 
   attr :booking_payment, :map, default: nil
 

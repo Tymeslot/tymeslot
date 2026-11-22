@@ -59,7 +59,8 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
       assert {:ok, %{amount_cents: 2_000}} = Refunds.request_refund(payment, 2_000, :host, [])
     end
 
-    test "the remaining balance leaves out pending refunds", %{payment: payment} do
+    test "the remaining balance of a payment loaded without its pending refunds reads them",
+         %{payment: payment} do
       insert(:booking_payment_refund, booking_payment: payment, amount_cents: 3_000)
 
       insert(:booking_payment_refund,
@@ -68,7 +69,9 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
         status: :failed
       )
 
-      assert Refunds.refundable_remaining_cents(payment) == 2_000
+      loaded = Repo.reload!(payment)
+      assert loaded.pending_refund_cents == nil
+      assert Refunds.refundable_remaining_cents(loaded) == 2_000
     end
 
     test "an amount over the balance with nothing pending is invalid", %{payment: payment} do

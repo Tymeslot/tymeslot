@@ -46,6 +46,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
           paid_at: DateTime.t() | nil,
           refunded_amount_cents: integer(),
           disputed_lost_cents: integer(),
+          pending_refund_cents: non_neg_integer() | nil,
           last_event_id: String.t() | nil,
           stripe_dispute_id: String.t() | nil,
           dispute_closed_at: DateTime.t() | nil,
@@ -81,6 +82,10 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     # `Tymeslot.MeetingPayments.RefundedTotal`.
     field :refunded_amount_cents, :integer, default: 0
     field :disputed_lost_cents, :integer, default: 0
+    # What the payment's pending refunds add up to, filled in by the queries
+    # that list payments for a host (`BookingPaymentQueries`); `nil` when the
+    # query that loaded the row did not read it.
+    field :pending_refund_cents, :integer, virtual: true
 
     field :last_event_id, :string
 

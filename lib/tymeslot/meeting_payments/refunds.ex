@@ -98,17 +98,19 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   @doc """
   Returns the remaining refundable balance in cents for a booking payment:
   what is neither refunded nor in a pending refund
-  (`RefundedTotal.refundable_cents/2`). Reads the pending refunds of a
-  stored payment.
+  (`RefundedTotal.refundable_cents/2`). The pending refunds are the
+  payment's `pending_refund_cents`, as the host-facing queries fill it in;
+  a payment loaded without it is looked up by its id, once.
   """
   @spec refundable_remaining_cents(BookingPaymentSchema.t()) :: non_neg_integer()
-  def refundable_remaining_cents(payment),
-    do: RefundedTotal.refundable_cents(payment, pending_cents(payment))
+  def refundable_remaining_cents(%{pending_refund_cents: pending} = payment)
+      when is_integer(pending),
+      do: RefundedTotal.refundable_cents(payment, pending)
 
-  defp pending_cents(%BookingPaymentSchema{__meta__: %{state: :loaded}, id: id}),
-    do: RefundQueries.pending_cents(id)
+  def refundable_remaining_cents(%{id: id} = payment) when is_binary(id),
+    do: RefundedTotal.refundable_cents(payment, RefundQueries.pending_cents(id))
 
-  defp pending_cents(_unsaved), do: 0
+  def refundable_remaining_cents(payment), do: RefundedTotal.refundable_cents(payment, 0)
 
   @doc """
   Records a refund of `amount_cents` of `payment`, decided by `source`, and

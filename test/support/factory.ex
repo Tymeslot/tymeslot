@@ -480,7 +480,8 @@ defmodule Tymeslot.Factory do
       currency: "eur",
       application_fee_cents: 25,
       status: :pending,
-      refunded_amount_cents: 0
+      refunded_amount_cents: 0,
+      pending_refund_cents: 0
     }
   end
 

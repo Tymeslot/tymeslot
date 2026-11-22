@@ -13,6 +13,26 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
   @outstanding_refunds_limit 50
 
+  # What the pending refunds of the payment `id` add up to, correlated to the
+  # row the enclosing query reads.
+  defmacrop pending_refund_sum(id) do
+    quote do
+      fragment(
+        "(SELECT COALESCE(SUM(r.amount_cents), 0)::integer FROM booking_payment_refunds AS r WHERE r.booking_payment_id = ? AND r.status = 'pending')",
+        unquote(id)
+      )
+    end
+  end
+
+  @doc """
+  Fills in each payment's `pending_refund_cents` (what its pending refunds
+  add up to) as `query` reads it, so the refundable balance of a listed
+  payment needs no query of its own.
+  """
+  @spec with_pending_refund_cents(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def with_pending_refund_cents(query),
+    do: from(b in query, select_merge: %{pending_refund_cents: pending_refund_sum(b.id)})
+
   @doc """
   Fetches a `booking_payment` by id and acquires a `SELECT … FOR UPDATE` row
   lock for the duration of the current transaction.
@@ -67,8 +87,14 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   @spec get_for_host(term(), integer()) :: BookingPaymentSchema.t() | nil
   def get_for_host(id, host_user_id) when is_integer(host_user_id) do
     case cast_id(id) do
-      {:ok, uuid} -> Repo.get_by(BookingPaymentSchema, id: uuid, host_user_id: host_user_id)
-      {:error, :not_found} -> nil
+      {:ok, uuid} ->
+        BookingPaymentSchema
+        |> where([b], b.id == ^uuid and b.host_user_id == ^host_user_id)
+        |> with_pending_refund_cents()
+        |> Repo.one()
+
+      {:error, :not_found} ->
+        nil
     end
   end
 
@@ -109,8 +135,13 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   def for_meeting_for_host(meeting_id, host_user_id) when is_integer(host_user_id) do
     case cast_id(meeting_id) do
       {:ok, uuid} ->
-        Repo.get_by(BookingPaymentSchema, meeting_id: uuid, host_user_id: host_user_id) ||
-          series_payment(uuid, dynamic([bp], bp.host_user_id == ^host_user_id))
+        own =
+          BookingPaymentSchema
+          |> where([b], b.meeting_id == ^uuid and b.host_user_id == ^host_user_id)
+          |> with_pending_refund_cents()
+          |> Repo.one()
+
+        own || series_payment(uuid, dynamic([bp], bp.host_user_id == ^host_user_id))
 
       {:error, :not_found} ->
         nil
@@ -123,6 +154,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     |> where([_bp, m], m.id == ^meeting_id)
     |> where(^scope)
     |> preload(:series)
+    |> with_pending_refund_cents()
     |> Repo.one()
   end
 
@@ -200,7 +232,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
         order_by: [desc: b.inserted_at],
         limit: ^limit
 
-    Repo.all(query)
+    query |> with_pending_refund_cents() |> Repo.all()
   end
 
   @doc """
@@ -233,7 +265,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
         limit: ^limit,
         preload: [meeting: m]
 
-    Repo.all(query)
+    query |> with_pending_refund_cents() |> Repo.all()
   end
 
   @doc """
@@ -253,12 +285,12 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
           totals: [%{currency: String.t(), amount_cents: non_neg_integer()}]
         }
   def outstanding_refunds_summary_for_host(host_user_id) do
-    # `amount_cents - refunded_amount_cents` is the recorded balance, before
-    # the pending refunds `Refunds.refundable_remaining_cents/1` also takes
-    # off; the `where` above guarantees it is positive, so the `max(_, 0)`
-    # clamp has nothing to do here. The sum is typed because Ecto cannot infer a type through the subtraction and would
-    # otherwise hand back a `Decimal` where every other amount in the codebase
-    # is an integer count of cents.
+    # What is neither refunded nor in a pending refund, the SQL twin of
+    # `Refunds.refundable_remaining_cents/1`; the `where` above guarantees it
+    # is positive, so the `max(_, 0)` clamp has nothing to do here. The sum
+    # is typed because Ecto cannot infer a type through the subtraction and
+    # would otherwise hand back a `Decimal` where every other amount in the
+    # codebase is an integer count of cents.
     query =
       from b in outstanding_refunds_query(host_user_id),
         group_by: b.currency,
@@ -266,7 +298,11 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
         select: %{
           currency: b.currency,
           count: count(b.id),
-          amount_cents: type(sum(b.amount_cents - b.refunded_amount_cents), :integer)
+          amount_cents:
+            type(
+              sum(b.amount_cents - b.refunded_amount_cents - pending_refund_sum(b.id)),
+              :integer
+            )
         }
 
     rows = Repo.all(query)
@@ -304,7 +340,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
         where:
           b.host_user_id == ^host_user_id and
             b.status in ^BookingPaymentSchema.refundable_statuses() and
-            b.refunded_amount_cents < b.amount_cents,
+            b.refunded_amount_cents + pending_refund_sum(b.id) < b.amount_cents,
         where: is_nil(b.series_id) or not exists(series_sessions_going_ahead())
 
     MeetingState.where_released(query, :meeting)

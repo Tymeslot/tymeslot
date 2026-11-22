@@ -175,6 +175,40 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
     end
   end
 
+  describe "a pending refund" do
+    test "lowers the balance a listed payment shows, read with the list" do
+      meeting = cancelled_meeting()
+      payment = payment_for(1, meeting)
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2000)
+
+      assert [listed] = MeetingPayments.list_outstanding_refunds_for_host(1)
+      assert listed.pending_refund_cents == 2000
+      assert MeetingPayments.refundable_remaining_cents(listed) == 3000
+
+      assert [recent] = MeetingPayments.list_payments_for_host(1)
+      assert MeetingPayments.refundable_remaining_cents(recent) == 3000
+
+      assert %{pending_refund_cents: 2000} = MeetingPayments.payment_for_meeting(meeting.id, 1)
+
+      assert %{totals: [%{currency: "eur", amount_cents: 3000}]} =
+               MeetingPayments.outstanding_refunds_summary_for_host(1)
+    end
+
+    test "that covers the balance takes the booking off the list" do
+      payment = payment_for(1, cancelled_meeting())
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 5000)
+
+      insert(:booking_payment_refund,
+        booking_payment: payment,
+        amount_cents: 900,
+        status: :failed
+      )
+
+      assert MeetingPayments.list_outstanding_refunds_for_host(1) == []
+      assert %{count: 0, totals: []} = MeetingPayments.outstanding_refunds_summary_for_host(1)
+    end
+  end
+
   describe "outstanding_refunds_summary_for_host/1" do
     test "counts the rows and totals what is still owed" do
       payment_for(1, cancelled_meeting(), %{amount_cents: 5000})
