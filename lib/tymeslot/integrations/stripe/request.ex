@@ -14,7 +14,9 @@ defmodule Tymeslot.Integrations.Stripe.Request do
 
   `deadline_ms` bounds the whole call, retries and waits included; the
   client caps each attempt's waits at the time left (see
-  `Tymeslot.Integrations.Stripe.RetryPolicy.attempt_timeouts/2`).
+  `Tymeslot.Integrations.Stripe.RetryPolicy.attempt_timeouts/2`). The
+  connect timeout is fixed per connection pool and not capped, so a call may
+  overrun its deadline by up to one `connect_timeout`.
   """
 
   alias Tymeslot.Integrations.Stripe.FormEncoder
@@ -56,8 +58,9 @@ defmodule Tymeslot.Integrations.Stripe.Request do
 
   Options: `:api_key`, `:connect_account`, `:idempotency_key`, `:deadline_ms`,
   `:receive_timeout`, `:connect_timeout`. Raises `ArgumentError` for a path
-  segment that is not a non-empty binary and for an unknown option, so a
-  misspelt option fails loudly instead of being ignored.
+  segment that is not a non-empty binary, for an unknown option, so a
+  misspelt option fails loudly instead of being ignored, and for a
+  `connect_timeout` that leaves no time inside `deadline_ms`.
   """
   @spec new(atom(), method(), [String.t()], map() | keyword(), keyword()) :: t()
   def new(operation, method, path, params, opts \\ [])
@@ -65,11 +68,20 @@ defmodule Tymeslot.Integrations.Stripe.Request do
              (is_map(params) or is_list(params)) do
     Enum.each(path, &validate_segment!/1)
     opts = Keyword.validate!(opts, @options)
+    validate_timeouts!(opts[:connect_timeout], opts[:deadline_ms])
 
     struct!(
       __MODULE__,
       [operation: operation, method: method, path: path, params: params] ++ opts
     )
+  end
+
+  defp validate_timeouts!(connect_timeout, deadline_ms) when connect_timeout < deadline_ms,
+    do: :ok
+
+  defp validate_timeouts!(connect_timeout, deadline_ms) do
+    raise ArgumentError,
+          "expected connect_timeout (#{connect_timeout}) to be less than deadline_ms (#{deadline_ms})"
   end
 
   defp validate_segment!(segment) when is_binary(segment) and segment != "", do: :ok

@@ -62,7 +62,8 @@ defmodule Tymeslot.Integrations.Stripe.RetryPolicyTest do
 
       request =
         Request.new(:test_operation, Keyword.fetch!(request_fields, :method), ["things"], %{},
-          deadline_ms: Keyword.get(request_fields, :deadline_ms, 10_000)
+          deadline_ms: Keyword.get(request_fields, :deadline_ms, 10_000),
+          connect_timeout: 100
         )
 
       inputs = %{

@@ -188,9 +188,12 @@ defmodule Tymeslot.Integrations.Stripe.ClientTest do
     refute_received {:stripe_request, _}
   end
 
-  test "a raise in the HTTP stack is a connection error, retried and logged once" do
+  test "Finch failing to provide a connection is a connection error, retried and logged once" do
     LogCapture.attach()
-    stub_stripe(fn _call, _conn -> raise "pool checkout timed out for sk_test_x" end)
+
+    stub_stripe(fn _call, _conn ->
+      raise "Finch was unable to provide a connection within the timeout due to excess queuing"
+    end)
 
     assert {:error, %Error{type: "api_connection_error", status: nil} = error} =
              Client.run(refund_request())
@@ -203,7 +206,24 @@ defmodule Tymeslot.Integrations.Stripe.ClientTest do
       Enum.filter(LogCapture.drain(), &(LogCapture.dump(&1) =~ "Stripe request failed"))
 
     assert [event] = failures
-    assert LogCapture.user_metadata(event).attempts == 3
+    assert %{attempts: 3, reason: RuntimeError} = LogCapture.user_metadata(event)
+  end
+
+  test "Finch having no pool is a connection error" do
+    stub_stripe(fn _call, _conn -> raise Finch.Error, :pool_not_available end)
+
+    assert {:error, %Error{type: "api_connection_error", reason: {:raised, Finch.Error}}} =
+             Client.run(refund_request())
+  end
+
+  test "any other exception propagates as the bug it is, without a retry" do
+    for exception <- [ArgumentError, RuntimeError] do
+      stub_stripe(fn _call, _conn -> raise exception, "bad option" end)
+
+      assert_raise exception, "bad option", fn -> Client.run(refund_request()) end
+      assert_received {:stripe_request, _request}
+      refute_received {:stripe_request, _request}
+    end
   end
 
   test "an exit in the HTTP stack is a connection error carrying only its reason" do
@@ -224,7 +244,7 @@ defmodule Tymeslot.Integrations.Stripe.ClientTest do
     stub_stripe(fn _call, conn -> json(conn, 200, @refund_body) end)
 
     assert {:error, %Error{type: "api_connection_error", reason: :deadline_exceeded}} =
-             Client.run(refund_request(deadline_ms: 0))
+             Client.run(%{refund_request() | deadline_ms: 0})
 
     refute_received {:stripe_request, _request}
   end
@@ -310,7 +330,8 @@ defmodule Tymeslot.Integrations.Stripe.ClientTest do
              error_type: "invalid_request_error",
              code: "parameter_missing",
              request_id: nil,
-             attempts: 1
+             attempts: 1,
+             reason: nil
            }
   end
 

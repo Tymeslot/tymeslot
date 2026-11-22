@@ -28,7 +28,9 @@ defmodule Tymeslot.Integrations.Stripe.RetryPolicy do
 
   `deadline_ms` bounds the whole call, not only the decision to retry:
   `attempt_timeouts/2` caps each attempt's receive and pool checkout waits at
-  the time left, and once none is left no further attempt starts.
+  the time left, and once none is left no further attempt starts. The connect
+  timeout is fixed per connection pool and not capped, so a call may overrun
+  its deadline by up to one `connect_timeout`.
   """
 
   alias Tymeslot.Integrations.Stripe.Request

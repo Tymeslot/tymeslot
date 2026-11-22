@@ -8,19 +8,25 @@ defmodule Tymeslot.Integrations.Stripe.Client do
   without one an idempotency key that every retry reuses, sends the request and
   asks `Tymeslot.Integrations.Stripe.RetryPolicy` whether to try again and how
   long each attempt may wait. A failure is described by
-  `Tymeslot.Integrations.Stripe.Error`; a raise or exit from the HTTP stack
-  counts as a transport failure, so it is retried and returned like one.
+  `Tymeslot.Integrations.Stripe.Error`. An exit from the HTTP stack, and the
+  exceptions Finch raises when it cannot provide a connection, count as
+  transport failures, so they are retried and returned like one; any other
+  exception is a bug and propagates.
 
-  The request's `deadline_ms` bounds the whole call, from before a pooled
-  connection is leased to the last response: each attempt's receive and pool
-  checkout waits are capped at the time left, and no attempt starts once it is
-  gone.
+  The request's `deadline_ms` is measured from before a pooled connection is
+  leased to the last response. Each attempt's receive and pool checkout waits
+  are capped at the time left, and no attempt starts once it is gone. Two waits
+  are not capped: the connect timeout, which is fixed per pool, so a call may
+  overrun its deadline by up to one `connect_timeout`; and the lease from
+  `FinchPool`'s janitor, which counts against the deadline but is bounded only
+  by the janitor's own timeout.
 
   The whole call is one telemetry span, `[:tymeslot, :integrations, :stripe,
   :request]`, with metadata `operation`, `method`, `connect?` and, on stop,
   `attempts`, `status`, `request_id` and `error_type`. A final failure logs one
-  warning with the same keys plus Stripe's error `code`. Neither ever carries
-  the key, a header or a body.
+  warning with the same keys plus Stripe's error `code` and the transport
+  `reason` (an atom or exception module). Neither ever carries the key, a
+  header or a body.
 
   Settings (`config :tymeslot, Tymeslot.Integrations.Stripe`): `base_url`,
   `retry_base_ms`, `req_options` (merged into the Req request; the test suite
@@ -40,6 +46,14 @@ defmodule Tymeslot.Integrations.Stripe.Client do
 
   @event [:tymeslot, :integrations, :stripe, :request]
   @transport_options [:finch, :connect_options]
+
+  # What Finch raises, rather than returns, when it cannot provide a
+  # connection: a checkout that waited past `pool_timeout`, and an HTTP/2
+  # request that never got an answer.
+  @finch_runtime_errors [
+    "Finch was unable to provide a connection",
+    "no response was received even after waiting"
+  ]
 
   @doc """
   Sends `request`, retrying as `RetryPolicy` decides.
@@ -104,7 +118,9 @@ defmodule Tymeslot.Integrations.Stripe.Client do
 
   # Req refuses `:finch` together with `:connect_options`, so the connect
   # timeout reaches the shared `Tymeslot.Finch` instance as a tagged pool
-  # (see `FinchPool`). A test plug opens no socket and needs neither.
+  # (see `FinchPool`). Without a lease the same settings go to a pool Req
+  # starts itself, still as `:finch` options so the pool timeout can be set
+  # per attempt. A test plug opens no socket and needs neither.
   defp with_transport(request, settings, req_options, fun) do
     connect_options = [timeout: request.connect_timeout]
 
@@ -113,7 +129,7 @@ defmodule Tymeslot.Integrations.Stripe.Client do
     else
       FinchPool.with_pool(settings[:base_url], connect_options, fn
         {:ok, finch} -> fun.(finch: finch)
-        :error -> fun.(connect_options: connect_options)
+        :error -> fun.(finch: Req.Finch.pool_options(connect_options: connect_options))
       end)
     end
   end
@@ -199,29 +215,32 @@ defmodule Tymeslot.Integrations.Stripe.Client do
      }}
   end
 
-  defp timeout_options(transport, timeouts) do
-    case Keyword.fetch(transport, :finch) do
-      {:ok, finch} ->
-        [
-          receive_timeout: timeouts.receive_timeout,
-          finch: Keyword.put(finch, :pool_timeout, timeouts.pool_timeout)
-        ]
-
-      :error ->
-        [receive_timeout: timeouts.receive_timeout]
-    end
+  defp timeout_options([finch: finch], timeouts) do
+    [
+      receive_timeout: timeouts.receive_timeout,
+      finch: Keyword.put(finch, :pool_timeout, timeouts.pool_timeout)
+    ]
   end
 
-  # Finch raises when no pooled connection frees up in time, and a pool can
-  # exit under a call. Only the exception's module or the exit's reason atom is
-  # kept: an exception message or a Req struct can carry request headers.
+  defp timeout_options([], timeouts), do: [receive_timeout: timeouts.receive_timeout]
+
+  # Only the exception's module or the exit's reason atom is kept: an
+  # exception message or a Req struct can carry request headers.
   defp send_once(req) do
     Req.request(req)
   rescue
-    exception -> {:error, {:raised, exception.__struct__}}
+    exception in [Finch.Error, RuntimeError] ->
+      if transport_raise?(exception),
+        do: {:error, {:raised, exception.__struct__}},
+        else: reraise(exception, __STACKTRACE__)
   catch
     :exit, reason -> {:error, {:exit, exit_reason(reason)}}
   end
+
+  defp transport_raise?(%Finch.Error{}), do: true
+
+  defp transport_raise?(%RuntimeError{message: message}),
+    do: String.starts_with?(message, @finch_runtime_errors)
 
   defp exit_reason(reason) when is_atom(reason), do: reason
   defp exit_reason({reason, _detail}) when is_atom(reason), do: reason
@@ -271,9 +290,14 @@ defmodule Tymeslot.Integrations.Stripe.Client do
       error_type: summary.error_type,
       code: error.code,
       request_id: summary.request_id,
-      attempts: summary.attempts
+      attempts: summary.attempts,
+      reason: log_reason(error.reason)
     )
   end
+
+  defp log_reason({tag, detail}) when tag in [:raised, :exit] and is_atom(detail), do: detail
+  defp log_reason(reason) when is_atom(reason), do: reason
+  defp log_reason(_reason), do: :other
 
   defp pause(0), do: :ok
   defp pause(delay_ms), do: Process.sleep(delay_ms)

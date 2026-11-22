@@ -101,6 +101,19 @@ defmodule Tymeslot.Integrations.Stripe.RequestTest do
                Request.new(:retrieve_charge, :get, ["charges"], %{})
     end
 
+    test "raises for a connect timeout that leaves no time inside the deadline" do
+      assert_raise ArgumentError,
+                   ~r/connect_timeout \(3000\) to be less than deadline_ms \(3000\)/,
+                   fn ->
+                     Request.new(:retrieve_charge, :get, ["charges"], %{}, deadline_ms: 3_000)
+                   end
+    end
+
+    test "accepts a connect timeout inside the deadline" do
+      assert %Request{deadline_ms: 3_001, connect_timeout: 3_000} =
+               Request.new(:retrieve_charge, :get, ["charges"], %{}, deadline_ms: 3_001)
+    end
+
     test "keeps the default timeouts unless given" do
       request = Request.new(:retrieve_charge, :get, ["charges"], %{}, receive_timeout: 1_000)
 
