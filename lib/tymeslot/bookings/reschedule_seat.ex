@@ -44,7 +44,9 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   conflict check leave the old meeting out in that case, and only then.
   While other seats remain on it, the old meeting goes ahead at its old time
   and still occupies the host, so a new slot overlapping it is refused like
-  any other clash. Cancelling it in the same transaction is what makes
+  any other clash. A seat still awaiting its booker's email verification is
+  one of those: the old meeting is then held for verification again rather
+  than cancelled, and a held slot occupies its time as any slot does. Cancelling it in the same transaction is what makes
   leaving it out safe: committed separately, a booker could join the old
   meeting between the move and its cancellation, and the host would hold
   two overlapping meetings.
@@ -332,17 +334,18 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     |> handle_move(old_meeting, participant)
   end
 
-  # Whether the mover is the old meeting's only live seat, so the move
-  # cancels the old meeting with it. Asked inside the seat transaction under
-  # the old meeting's row lock (`:also_lock`), where nobody can join or leave
-  # the old meeting before the move commits, so the old meeting is left out
-  # of the conflict check only when `vacate_old_seat/2` does cancel it.
+  # Whether the mover is the old meeting's only seat, held seats counted, so
+  # the move cancels the old meeting with it. Asked inside the seat
+  # transaction under the old meeting's row lock (`:also_lock`), where nobody
+  # can join or leave the old meeting before the move commits, so the old
+  # meeting is left out of the conflict check only when `vacate_old_seat/2`
+  # does cancel it: beside a held seat it is held again, still on its time.
   # A planned session is never vacated: it stays when its last participant
   # moves away (`SeatRelease.cancel_if_emptied/1`).
   defp last_live_seat?(%{planned: true}, _participant), do: false
 
   defp last_live_seat?(old_meeting, participant) do
-    ParticipantQueries.count_live_for_meeting(old_meeting.id) == 1 and
+    ParticipantQueries.count_live_held_for_meeting(old_meeting.id) == 1 and
       match?({:ok, %{cancelled_at: nil}}, ParticipantQueries.get(participant.id))
   end
 
@@ -553,13 +556,18 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     {:ok, booked}
   end
 
-  # If the move emptied the old meeting, it was cancelled with the move and
-  # its cancellation is finished here (calendar event deleted), returning
-  # `true`: the organiser's one email about the move then also says the old
-  # slot is empty and free. Otherwise the old event is refreshed so its
-  # attendee list drops the mover.
+  # If the move emptied the old meeting, it was cancelled with the move, or
+  # held for verification again beside held seats, and that is finished here
+  # (calendar event deleted), returning `true`: the organiser's one email
+  # about the move then also says the old slot is empty and free. Otherwise
+  # the old event is refreshed so its attendee list drops the mover.
   defp finish_old_meeting(_old_meeting, {:cancelled, cancelled_meeting}) do
     Cancel.finalise_cancellation(cancelled_meeting)
+    true
+  end
+
+  defp finish_old_meeting(_old_meeting, {:held, confirmed_meeting}) do
+    SeatRelease.finish_return_to_held(confirmed_meeting)
     true
   end
 

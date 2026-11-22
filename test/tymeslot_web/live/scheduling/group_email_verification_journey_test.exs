@@ -218,11 +218,12 @@ defmodule TymeslotWeb.Live.Scheduling.GroupEmailVerificationJourneyTest do
     assert [{_name, "bea@example.com"}] = verification.to
 
     # Ana gives up her spot from her confirmation email's link: she was the
-    # last confirmed attendee, so the meeting is cancelled.
+    # last confirmed attendee, so the meeting is off for the organiser, but
+    # Bea's held seat keeps the slot, held for verification again.
     conn = post(build_conn(), cancel_path(confirmation))
     assert html_response(conn, 200) =~ "Spot cancelled"
 
-    assert Repo.reload!(slot).status == :cancelled
+    assert Repo.reload!(slot).status == :awaiting_verification
     drain()
 
     emails = drain_mailbox()
@@ -233,11 +234,16 @@ defmodule TymeslotWeb.Live.Scheduling.GroupEmailVerificationJourneyTest do
              Enum.any?(email.to, &match?({_, "bea@example.com"}, &1))
            end)
 
-    # Bea was never part of the meeting, so she is told nothing, and her
-    # link now reads as expired rather than offering to confirm.
+    # Bea was never part of Ana's meeting, so she is told nothing, and her
+    # link still offers to confirm, inside her own window. Confirming brings
+    # the slot back to life with her as its first attendee.
     {:ok, verify_view, _html} = live(build_conn(), verify_path(verification))
-    assert render(verify_view) =~ "This booking has expired"
-    refute has_element?(verify_view, "[data-testid='confirm-booking']")
+
+    assert verify_view |> element("[data-testid='confirm-booking']") |> render_click() =~
+             "Your booking is confirmed"
+
+    assert Repo.reload!(slot).status == :confirmed
+    assert_enqueued(worker: WebhookWorker, args: %{"event_type" => "meeting.created"})
   end
 
   @tag :capture_log

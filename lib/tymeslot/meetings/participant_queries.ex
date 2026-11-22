@@ -184,6 +184,32 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
   end
 
   @doc """
+  Counts the live (not cancelled) participants of a meeting. Held: includes
+  seats awaiting email verification, each of which still occupies the slot.
+  """
+  @spec count_live_held_for_meeting(binary()) :: non_neg_integer()
+  def count_live_held_for_meeting(meeting_id) do
+    meeting_id
+    |> live_for_meeting()
+    |> exclude(:order_by)
+    |> select([p], count(p.id))
+    |> Repo.one()
+  end
+
+  @doc """
+  The latest verification deadline among a meeting's seats still awaiting
+  email verification, or `nil` when no seat on it is held.
+  """
+  @spec latest_held_deadline(binary()) :: DateTime.t() | nil
+  def latest_held_deadline(meeting_id) do
+    Participant
+    |> where([p], p.meeting_id == ^meeting_id)
+    |> live_unverified()
+    |> select([p], max(p.verification_deadline_at))
+    |> Repo.one()
+  end
+
+  @doc """
   Counts the seats taken on a meeting: live participants plus their guests,
   except guests who declined, whose seats are free again. Visible: excludes
   seats awaiting email verification.

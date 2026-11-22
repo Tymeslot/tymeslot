@@ -257,7 +257,7 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
       end
     end
 
-    test "a seat verified after its slot was cancelled reads expired", ctx do
+    test "a seat verified after the slot's last visible seat left brings the slot back", ctx do
       slot = slot(ctx, :confirmed)
       first = visible_seat(slot, "first@example.com")
       second = held_seat(slot, "second@example.com")
@@ -266,13 +266,13 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
         {:ok, "sent"}
       end)
 
-      # The last visible seat leaving cancels the slot and the held seat.
+      # The last visible seat leaving holds the slot again, the held seat kept.
       assert {:ok, :meeting_cancelled} = CancelSeat.execute(first.management_token)
-      calendar_before = calendar_actions(slot)
+      assert reload(slot).status == :awaiting_verification
 
-      assert {:error, :expired} = EmailVerification.verify_seat(second)
-      assert reload(second).email_verified_at == nil
-      assert calendar_actions(slot) == calendar_before
+      assert {:ok, :verified, %{status: :confirmed}} = EmailVerification.verify_seat(second)
+      assert %{email_verified_at: %DateTime{}} = reload(second)
+      assert "create" in calendar_actions(slot)
     end
 
     test "a held seat on a slot no longer occupying its time reads expired", ctx do

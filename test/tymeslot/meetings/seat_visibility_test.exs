@@ -186,15 +186,15 @@ defmodule Tymeslot.Meetings.SeatVisibilityTest do
     assert meeting_id == meeting.id
   end
 
-  test "the last visible seat leaving cancels the slot and the held seat with it", %{
+  test "the last visible seat leaving holds the slot again, keeping the held seat", %{
     meeting: meeting,
     verified: verified,
     unverified: unverified
   } do
     assert {:ok, :meeting_cancelled} = CancelSeat.execute(verified.management_token)
 
-    assert Repo.get!(MeetingSchema, meeting.id).status == :cancelled
-    assert {:ok, %{cancelled_at: %DateTime{}}} = ParticipantQueries.get(unverified.id)
+    assert Repo.get!(MeetingSchema, meeting.id).status == :awaiting_verification
+    assert {:ok, %{cancelled_at: nil}} = ParticipantQueries.get(unverified.id)
 
     refute_enqueued(worker: EmailWorker, args: %{"participant_id" => unverified.id})
 
@@ -238,7 +238,7 @@ defmodule Tymeslot.Meetings.SeatVisibilityTest do
     assert {:error, :expired} = EmailVerification.verify_seat(released)
   end
 
-  test "an unverified seat does not keep a slot alive", %{
+  test "an unverified seat keeps a slot held, not live, once its last visible seat moves away", %{
     meeting: meeting,
     verified: verified,
     unverified: unverified
@@ -258,7 +258,7 @@ defmodule Tymeslot.Meetings.SeatVisibilityTest do
              )
 
     assert new_meeting.id != meeting.id
-    assert Repo.get!(MeetingSchema, meeting.id).status == :cancelled
-    assert {:ok, %{cancelled_at: %DateTime{}}} = ParticipantQueries.get(unverified.id)
+    assert Repo.get!(MeetingSchema, meeting.id).status == :awaiting_verification
+    assert {:ok, %{cancelled_at: nil}} = ParticipantQueries.get(unverified.id)
   end
 end
