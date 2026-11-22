@@ -34,8 +34,8 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   executions: a wait of a dozen seconds would otherwise enter recovery and
   announce the booking without its link. The wait is bounded by the meeting,
   not the job: `Tymeslot.Integrations.MeetingProvisioning.booking_room_placement/1`
-  stops asking for it two minutes after the booking, and the room is then
-  made by the video provider on its own.
+  stops asking for it two minutes after the booking's jobs were set off, and
+  the room is then made by the video provider on its own.
   """
 
   use Oban.Worker,

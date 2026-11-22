@@ -48,11 +48,12 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   the event. The Meet is therefore made with the event, as on the dashboard.
   Any other combination gets a room of its own from the video provider.
 
-  Both jobs time their wait for each other from when the booking was made
-  (`inserted_at`). A booking whose jobs start later, once its email is
-  verified or its payment arrives, is past that wait when they run: its
-  event is created without the room, and the video provider makes the room
-  on its own.
+  Both jobs time their wait for each other from when the booking's jobs
+  were set off: when it was made, or, for a booking held until then, when
+  its email was verified or its payment arrived. A booking held for the
+  host's approval writes its calendar event as a tentative hold when it is
+  requested, so its video job, set off by the approval, finds the event
+  already there.
   """
 
   require Logger
@@ -69,6 +70,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviders
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Workers.CalendarEventWorker
 
@@ -79,7 +81,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   # How far apart two nodes' clocks may read: the calendar job and the video
   # job each measure the wait on their own node's clock against the same
-  # `inserted_at`.
+  # instant (`provisioning_started_at/1`).
   @clock_skew_seconds 5
 
   @type plan ::
@@ -196,8 +198,9 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
     which `Tymeslot.Workers.CalendarEventWorker` has not written yet, or,
     for Google Meet, whose conference Google has not finished making.
     Creating a separate room meanwhile is exactly the duplicate this avoids,
-    so the caller waits, for up to two minutes from the booking; after that
-    the answer becomes `:own_event`.
+    so the caller waits, for up to two minutes from when the booking's jobs
+    were set off (see the moduledoc); after that the answer becomes
+    `:own_event`.
   * `:own_event`: any other combination, including a video account that is
     not the calendar's (a host can connect several accounts): the room is
     made by the video provider on its own.
@@ -465,10 +468,26 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   defp booking_event_placement(meeting, _cal_id, grace_seconds),
     do: waiting_or_own_event(meeting, grace_seconds)
 
-  defp waiting_or_own_event(%MeetingSchema{inserted_at: inserted_at}, grace_seconds) do
-    if DateTime.diff(Clock.utc_now(), inserted_at, :second) < grace_seconds,
+  defp waiting_or_own_event(meeting, grace_seconds) do
+    if DateTime.diff(Clock.utc_now(), provisioning_started_at(meeting), :second) < grace_seconds,
       do: :awaiting_calendar_event,
       else: :own_event
+  end
+
+  # When the booking's calendar and video jobs were set off, both in the
+  # write that made or released the booking: at booking, or once the
+  # attendee verified their email or their payment arrived.
+  defp provisioning_started_at(%MeetingSchema{} = meeting) do
+    [meeting.inserted_at, meeting.email_verified_at, paid_at(meeting)]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.max(DateTime)
+  end
+
+  defp paid_at(%MeetingSchema{id: meeting_id}) do
+    case MeetingPayments.payment_for_meeting(meeting_id) do
+      %{paid_at: %DateTime{} = paid_at} -> paid_at
+      _unpaid -> nil
+    end
   end
 
   # The video providers whose meeting the calendar of the same account can

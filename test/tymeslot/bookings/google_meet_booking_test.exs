@@ -31,7 +31,7 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
   alias Tymeslot.Bookings.{Cancel, Orchestrator, Reschedule, RescheduleLocation}
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Runtime.Operations
-  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.{EmailVerification, MeetingSchema}
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.GoogleMeetFake
@@ -168,6 +168,39 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     assert put_uri.path =~ "/events/#{original.provider_event_id}"
     assert URI.decode_query(put_uri.query)["conferenceDataVersion"] == "1"
     refute Map.has_key?(put_body, "conferenceData")
+  end
+
+  # A booking held for its attendee's email sets off both jobs only once the
+  # address is verified, which can be long after it was made; the wait for
+  # its event runs from then, so the event is still created with the Meet.
+  test "a booking verified long after it was made still gets the Meet on its event", %{
+    user: user,
+    meeting_type: meeting_type
+  } do
+    Repo.delete_all(Oban.Job)
+
+    verified_type =
+      meeting_type |> Changeset.change(requires_email_verification: true) |> Repo.update!()
+
+    assert {:ok, held} = submit(user, verified_type, "16:00")
+    assert held.status == :awaiting_verification
+    refute_enqueued(worker: CalendarEventWorker)
+
+    use_runtime_calendar()
+    GoogleMeetFake.start()
+
+    held
+    |> Changeset.change(inserted_at: DateTime.add(held.inserted_at, -3600, :second))
+    |> Repo.update!()
+
+    assert {:ok, :verified, verified} =
+             EmailVerification.verify(Repo.get!(MeetingSchema, held.id))
+
+    run_calendar_jobs()
+    assert :ok = run_video_job(verified)
+    run_calendar_jobs()
+
+    assert_one_event_carrying_the_meet(held)
   end
 
   # The Meet is the booking's room again by the time the calendar job would
@@ -419,20 +452,7 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
   end
 
   defp book(user, meeting_type) do
-    params = %{
-      form_data: %{"name" => "Ada Attendee", "email" => "ada@example.com", "message" => ""},
-      meeting_params: %{
-        date: Date.add(Date.utc_today(), 2),
-        time: "14:00",
-        duration: "30min",
-        user_timezone: "Europe/London",
-        organizer_user_id: user.id,
-        meeting_type_id: meeting_type.id,
-        with_video_room: true
-      }
-    }
-
-    assert {:ok, booked} = Orchestrator.submit_booking(params, organizer_user_id: user.id)
+    assert {:ok, booked} = submit(user, meeting_type)
 
     assert_enqueued(worker: VideoRoomWorker, args: %{"meeting_id" => booked.id})
 
@@ -442,6 +462,23 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingTest do
     )
 
     booked
+  end
+
+  defp submit(user, meeting_type, time \\ "14:00") do
+    params = %{
+      form_data: %{"name" => "Ada Attendee", "email" => "ada@example.com", "message" => ""},
+      meeting_params: %{
+        date: Date.add(Date.utc_today(), 2),
+        time: time,
+        duration: "30min",
+        user_timezone: "Europe/London",
+        organizer_user_id: user.id,
+        meeting_type_id: meeting_type.id,
+        with_video_room: true
+      }
+    }
+
+    Orchestrator.submit_booking(params, organizer_user_id: user.id)
   end
 
   # As if the booking had been made `minutes` ago, past the wait for its event.
