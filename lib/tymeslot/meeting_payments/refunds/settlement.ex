@@ -278,22 +278,16 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
 
   # Records a refund Stripe made of the `locked` payment, its charge
   # showing `charge_total` refunded: the refunded total, never below the
-  # refunds already recorded, and the status that follows from it, whose
-  # change is reported to telemetry with `reason`.
+  # refunds already recorded, and the status that follows from it
+  # (`RefundedTotal.status_for/2`, under which an open dispute stands),
+  # whose change is reported to telemetry with `reason`.
   defp record_refunded(locked, charge_total, reason) do
     new_total = RefundedTotal.with_stripe_refunded(locked, charge_total)
-
-    new_status =
-      cond do
-        new_total >= locked.amount_cents -> :refunded
-        new_total > 0 -> :partially_refunded
-        true -> locked.status
-      end
 
     with {:ok, updated} <-
            BookingPaymentQueries.update(locked, %{
              refunded_amount_cents: new_total,
-             status: new_status
+             status: RefundedTotal.status_for(locked, new_total)
            }) do
       Telemetry.emit_status_changed(locked.status, updated.status, reason)
       {:ok, updated}

@@ -13,6 +13,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
   import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
@@ -400,6 +401,41 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
 
       assert %{refunded_amount_cents: 1_500, status: :partially_refunded} = Repo.reload!(payment)
       refute_enqueued(worker: SendBookingPaymentRefunded)
+    end
+
+    test "a dashboard refund made during a dispute raises the total and keeps the payment disputed",
+         %{payment: payment, refund: refund} do
+      Repo.delete!(refund)
+      payment = Repo.update!(Changeset.change(payment, status: :disputed))
+
+      dashboard =
+        StripeFixtures.object("refund_with_charge", %{
+          "id" => "re_DISPUTED_DASHBOARD",
+          "amount" => 1_500,
+          "metadata" => %{},
+          "charge" => %{"amount_refunded" => 1_500}
+        })
+
+      StripeStub.expect(:list_refunds, StripeFixtures.list([dashboard]))
+
+      assert :ok = ChargeRefunded.handle(connect_charge_event(1_500))
+
+      assert [%{source: :external, stripe_refund_id: "re_DISPUTED_DASHBOARD"}] =
+               RefundQueries.list_for_payment(payment.id)
+
+      assert %{refunded_amount_cents: 1_500, status: :disputed} = Repo.reload!(payment)
+      assert Refunds.refusal(Repo.reload!(payment)) == {:error, :under_dispute}
+    end
+
+    test "settling a pending refund during a dispute keeps the payment disputed",
+         %{payment: payment, refund: refund} do
+      payment = Repo.update!(Changeset.change(payment, status: :disputed))
+      StripeStub.expect(:list_refunds, StripeFixtures.list([made_for(refund, 2_000)]))
+
+      assert :ok = ChargeRefunded.handle(connect_charge_event(2_000))
+
+      assert %{status: :succeeded} = RefundQueries.get(refund.id)
+      assert %{refunded_amount_cents: 2_000, status: :disputed} = Repo.reload!(payment)
     end
 
     test "a transient refund list error retries the event", %{payment: payment, refund: refund} do
