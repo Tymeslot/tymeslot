@@ -24,8 +24,8 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfill do
   that handled disputes left a lost one in one of those two statuses. The
   dispute markers (`stripe_dispute_id`, `dispute_closed_at`) cannot narrow
   it further: disputes closed before those columns existed carry none. A
-  `disputed` row is left out: its dispute is still open, or its close
-  never reached the row, and the dispute webhook records either.
+  `disputed` row is out of scope: a refund on it is refused while it is
+  `disputed` (`:under_dispute`), so it cannot be refunded too much.
 
   Each candidate costs one Stripe call to list its disputes, and one more
   to read the charge when one was lost; a payment with no lost dispute is
@@ -100,48 +100,47 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfill do
   end
 
   @doc """
-  What `payment` should record given its charge's `disputes` and `charge`
-  as Stripe returns them: `:none` without a lost dispute, otherwise
-  `{:lost, correction}`, or `{:clamped, correction}` when the lost
-  disputes add up to more than the amount paid and the share is cut to it.
-
-  The refunded total is the charge's refunds plus the loss, within the
-  amount paid (`RefundedTotal.with_dispute_lost/2`), and never below the
-  total `payment` holds.
+  What the lost disputes among `disputes` (as Stripe lists them for a
+  charge) took back, in cents; 0 when none was lost.
   """
-  @spec correction(BookingPaymentSchema.t(), [map()], map()) ::
-          :none | {:lost | :clamped, correction()}
-  def correction(payment, disputes, %{"amount_refunded" => stripe_refunded})
-      when is_list(disputes) and is_integer(stripe_refunded) do
-    case lost_sum(disputes) do
-      0 ->
-        :none
-
-      sum ->
-        recorded =
-          RefundedTotal.with_dispute_lost(
-            %{payment | refunded_amount_cents: stripe_refunded, disputed_lost_cents: 0},
-            sum
-          )
-
-        whole = max(payment.refunded_amount_cents, recorded.refunded_amount_cents)
-        lost = min(recorded.disputed_lost_cents, whole)
-        kind = if lost < sum, do: :clamped, else: :lost
-
-        {kind,
-         %{
-           disputed_lost_cents: lost,
-           refunded_amount_cents: whole,
-           status: RefundedTotal.status_for(payment, whole)
-         }}
-    end
-  end
-
-  defp lost_sum(disputes) do
+  @spec lost_total([map()]) :: non_neg_integer()
+  def lost_total(disputes) when is_list(disputes) do
     disputes
     |> Enum.filter(&match?(%{"status" => "lost"}, &1))
     |> Enum.map(&Map.fetch!(&1, "amount"))
     |> Enum.sum()
+  end
+
+  @doc """
+  What `payment` should record once its charge's disputes took back
+  `lost_cents` and Stripe returns its `charge`: `{:lost, correction}`, or
+  `{:clamped, correction}` when `lost_cents` exceeds the amount paid and
+  the share is cut to it.
+
+  The refunded total is the charge's refunds plus the loss, within the
+  amount paid (`RefundedTotal.with_dispute_lost/2`), and never below the
+  total `payment` holds. The share is within that total either way, as
+  the `disputed_lost_within_refunded` check requires.
+  """
+  @spec correction(BookingPaymentSchema.t(), pos_integer(), map()) ::
+          {:lost | :clamped, correction()}
+  def correction(payment, lost_cents, %{"amount_refunded" => stripe_refunded})
+      when is_integer(lost_cents) and lost_cents > 0 and is_integer(stripe_refunded) do
+    recorded =
+      RefundedTotal.with_dispute_lost(
+        %{payment | refunded_amount_cents: stripe_refunded, disputed_lost_cents: 0},
+        lost_cents
+      )
+
+    whole = max(payment.refunded_amount_cents, recorded.refunded_amount_cents)
+    kind = if recorded.disputed_lost_cents < lost_cents, do: :clamped, else: :lost
+
+    {kind,
+     %{
+       disputed_lost_cents: recorded.disputed_lost_cents,
+       refunded_amount_cents: whole,
+       status: RefundedTotal.status_for(payment, whole)
+     }}
   end
 
   defp candidates do
@@ -170,17 +169,17 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfill do
 
     with {:ok, disputes} <-
            Pagination.collect(&Disputes.list/2, %{charge: payment.stripe_charge_id}, stripe_opts) do
-      if lost_sum(disputes) > 0 do
-        with {:ok, charge} <- Charges.retrieve(payment.stripe_charge_id, stripe_opts) do
-          record(payment, correction(payment, disputes, charge), opts)
-        end
-      else
-        :none
+      case lost_total(disputes) do
+        0 ->
+          :none
+
+        lost_cents ->
+          with {:ok, charge} <- Charges.retrieve(payment.stripe_charge_id, stripe_opts) do
+            record(payment, correction(payment, lost_cents, charge), opts)
+          end
       end
     end
   end
-
-  defp record(_payment, :none, _opts), do: :none
 
   defp record(payment, {_kind, correction} = result, opts) do
     if opts[:dry_run] do

@@ -4,14 +4,13 @@ defmodule Tymeslot.Release do
 
   `migrate/1`, `strip_upload_metadata/0`, `verify_proxy/1` and
   `backfill_dispute_losses/1` run in a one-shot helper VM, `bin/tymeslot
-  eval`, and need no running node. Every
-  other helper acts on the running node and goes through `bin/tymeslot
-  rpc`: under `eval` it raises rather than boot a second copy of the
-  application (its Oban queues, endpoint and start-up tasks) beside the
-  live one. The mix tasks under `Mix.Tasks.Tymeslot.*` delegate here so the
-  implementation stays in one place and behaves identically across dev
-  (`mix tymeslot.promote_admin`) and production (`bin/tymeslot rpc
-  'Tymeslot.Release.promote_admin("…")'`).
+  eval`, and need no running node. Every other helper acts on the running
+  node and goes through `bin/tymeslot rpc`: under `eval` it raises rather
+  than boot a second copy of the application (its Oban queues, endpoint
+  and start-up tasks) beside the live one. The mix tasks under
+  `Mix.Tasks.Tymeslot.*` delegate here so the implementation stays in one
+  place and behaves identically across dev (`mix tymeslot.promote_admin`)
+  and production (`bin/tymeslot rpc 'Tymeslot.Release.promote_admin("…")'`).
   """
 
   alias Ecto.Migrator
@@ -241,7 +240,8 @@ defmodule Tymeslot.Release do
   Under `eval` it starts only the repo and the HTTP client, as `migrate/1`
   and `verify_proxy/1` do; through `rpc` it uses the running node's. It
   makes one or two Stripe calls per candidate payment (its disputes, and
-  its charge when one was lost), `:pause_ms` (default 100) apart; `:limit` caps how many are read. The candidates
+  its charge when one was lost), `:pause_ms` (default 100) apart; `:limit`
+  caps how many are read. The candidates
   (`Tymeslot.MeetingPayments.DisputeLossBackfill`) can be counted first:
 
       SELECT count(*) FROM booking_payments

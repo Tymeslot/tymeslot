@@ -509,8 +509,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   order after `after_id` (`nil` for the first page): a charge, something
   refunded, no dispute loss recorded, and a refunded status. Only the
   fields `Tymeslot.MeetingPayments.DisputeLossBackfill` reads are loaded
-  (the others hold their defaults);
-  its moduledoc says why these rows.
+  (the others hold their defaults); its moduledoc says why these rows.
   """
   @spec dispute_loss_candidates(Ecto.UUID.t() | nil, pos_integer()) :: [
           BookingPaymentSchema.t()
@@ -532,7 +531,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   @doc """
   Writes `correction` (the lost dispute share, refunded total and status)
   to `payment`, only while the row still has no loss recorded and the
-  refunded total `payment` was read with. Writes nothing else.
+  refunded total and status `payment` was read with. Writes nothing else.
   `{:ok, :unchanged}` when the guard matched no row: another process
   changed the row first.
   """
@@ -542,7 +541,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
           status: BookingPaymentSchema.status()
         }) :: {:ok, :recorded | :unchanged}
   def record_dispute_loss(
-        %BookingPaymentSchema{id: id, refunded_amount_cents: read_total},
+        %BookingPaymentSchema{id: id, refunded_amount_cents: read_total, status: read_status},
         %{disputed_lost_cents: lost, refunded_amount_cents: total, status: status}
       )
       when is_integer(lost) and lost > 0 and is_integer(total) and total >= read_total do
@@ -550,7 +549,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
       from b in BookingPaymentSchema,
         where:
           b.id == ^id and b.disputed_lost_cents == 0 and
-            b.refunded_amount_cents == ^read_total
+            b.refunded_amount_cents == ^read_total and b.status == ^read_status
 
     case Repo.update_all(query,
            set: [disputed_lost_cents: lost, refunded_amount_cents: total, status: status]

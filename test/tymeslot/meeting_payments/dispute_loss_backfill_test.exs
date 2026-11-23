@@ -206,6 +206,27 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
     assert reloaded.disputed_lost_cents == 0
   end
 
+  test "a status changed while Stripe answers is left as it is" do
+    payment = refunded_payment(stripe_charge_id: "ch_status")
+
+    StripeStub.expect(:list_disputes, disputes("ch_status", [{"lost", 3_000}]))
+
+    StripeStub.expect(:retrieve_charge, fn _request ->
+      # A dispute webhook opens a new dispute between the read and the write.
+      Repo.update_all(from(b in BookingPaymentSchema, where: b.id == ^payment.id),
+        set: [status: :disputed]
+      )
+
+      charge("ch_status", 0)
+    end)
+
+    assert %{lost: 1, updated: 0, unchanged: 1} = run!(dry_run: false)
+
+    reloaded = reload(payment)
+    assert reloaded.status == :disputed
+    assert reloaded.disputed_lost_cents == 0
+  end
+
   test "a Stripe failure is reported and the run continues" do
     [first, second] =
       Enum.sort_by(
@@ -264,6 +285,23 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
     assert [_one] = StripeStub.requests(:list_disputes)
   end
 
+  describe "lost_total/1" do
+    @describetag :unit
+
+    defp dispute(status, amount), do: %{"status" => status, "amount" => amount}
+
+    test "won and warning_closed disputes take nothing" do
+      assert DisputeLossBackfill.lost_total([dispute("won", 3_000)]) == 0
+      assert DisputeLossBackfill.lost_total([dispute("warning_closed", 3_000)]) == 0
+      assert DisputeLossBackfill.lost_total([]) == 0
+    end
+
+    test "only the lost disputes of a mixed list are summed" do
+      disputes = [dispute("warning_closed", 1_000), dispute("lost", 2_500), dispute("lost", 500)]
+      assert DisputeLossBackfill.lost_total(disputes) == 3_000
+    end
+  end
+
   describe "correction/3" do
     @describetag :unit
 
@@ -275,15 +313,10 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
         status: :partially_refunded
       }
 
-    defp dispute(status, amount), do: %{"status" => status, "amount" => amount}
     defp stripe_charge(refunded), do: %{"amount_refunded" => refunded}
 
     test "a loss alone keeps the total and takes its share of it" do
-      assert DisputeLossBackfill.correction(
-               payment(6_000),
-               [dispute("lost", 6_000)],
-               stripe_charge(0)
-             ) ==
+      assert DisputeLossBackfill.correction(payment(6_000), 6_000, stripe_charge(0)) ==
                {:lost,
                 %{
                   disputed_lost_cents: 6_000,
@@ -293,11 +326,7 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
     end
 
     test "refunds made before the loss are added to it" do
-      assert DisputeLossBackfill.correction(
-               payment(4_000),
-               [dispute("lost", 3_000)],
-               stripe_charge(4_000)
-             ) ==
+      assert DisputeLossBackfill.correction(payment(4_000), 3_000, stripe_charge(4_000)) ==
                {:lost,
                 %{
                   disputed_lost_cents: 3_000,
@@ -308,50 +337,47 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
 
     test "the total never falls below the one held" do
       assert {:lost, %{refunded_amount_cents: 9_000, disputed_lost_cents: 3_000}} =
-               DisputeLossBackfill.correction(
-                 payment(9_000),
-                 [dispute("lost", 3_000)],
-                 stripe_charge(2_000)
-               )
+               DisputeLossBackfill.correction(payment(9_000), 3_000, stripe_charge(2_000))
     end
 
     test "refunds and loss together stop at the amount paid" do
       assert {:lost,
               %{disputed_lost_cents: 6_000, refunded_amount_cents: 10_000, status: :refunded}} =
-               DisputeLossBackfill.correction(
-                 payment(6_000),
-                 [dispute("lost", 6_000)],
-                 stripe_charge(10_000)
-               )
+               DisputeLossBackfill.correction(payment(6_000), 6_000, stripe_charge(10_000))
     end
 
     test "a loss larger than the amount paid is clamped to it" do
-      assert DisputeLossBackfill.correction(
-               payment(3_000, 5_000),
-               [dispute("lost", 6_000)],
-               stripe_charge(0)
-             ) ==
+      assert DisputeLossBackfill.correction(payment(3_000, 5_000), 6_000, stripe_charge(0)) ==
                {:clamped,
                 %{disputed_lost_cents: 5_000, refunded_amount_cents: 5_000, status: :refunded}}
     end
 
-    test "won and warning_closed disputes take nothing" do
-      for status <- ["won", "warning_closed"] do
-        assert DisputeLossBackfill.correction(
-                 payment(4_000),
-                 [dispute(status, 3_000)],
-                 stripe_charge(4_000)
-               ) == :none
-      end
+    test "the share always fits the check constraint and the total is never lowered" do
+      amount = 10_000
+      steps = [1, 2_500, 5_000, 9_999, 10_000]
 
-      assert DisputeLossBackfill.correction(payment(4_000), [], stripe_charge(4_000)) == :none
-    end
+      cases =
+        for stored <- steps,
+            stripe_refunded <- [0 | steps],
+            lost <- steps ++ [15_000],
+            do: {stored, stripe_refunded, lost}
 
-    test "only the lost disputes of a mixed list are summed" do
-      disputes = [dispute("warning_closed", 1_000), dispute("lost", 2_500), dispute("lost", 500)]
+      assert length(cases) == 180
 
-      assert {:lost, %{disputed_lost_cents: 3_000, refunded_amount_cents: 4_000}} =
-               DisputeLossBackfill.correction(payment(4_000), disputes, stripe_charge(1_000))
+      violations =
+        Enum.reject(cases, fn {stored, stripe_refunded, lost} ->
+          {_kind, c} =
+            DisputeLossBackfill.correction(
+              payment(stored, amount),
+              lost,
+              stripe_charge(stripe_refunded)
+            )
+
+          c.disputed_lost_cents > 0 and c.disputed_lost_cents <= c.refunded_amount_cents and
+            c.refunded_amount_cents <= amount and c.refunded_amount_cents >= stored
+        end)
+
+      assert violations == []
     end
   end
 end
