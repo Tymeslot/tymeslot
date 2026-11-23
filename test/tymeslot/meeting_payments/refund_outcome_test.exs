@@ -17,9 +17,9 @@ defmodule Tymeslot.MeetingPayments.RefundOutcomeTest do
     end
 
     for status <- ["failed", "canceled"] do
-      test "#{status} fails the refund with its status as the code" do
+      test "#{status} fails the refund with its status as the code and its id" do
         assert RefundOutcome.classify({:ok, %{"id" => "re_1", "status" => unquote(status)}}) ==
-                 {:failed, "refund_" <> unquote(status)}
+                 {:failed, "refund_" <> unquote(status), "re_1"}
       end
     end
   end

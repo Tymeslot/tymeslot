@@ -8,8 +8,12 @@ defmodule Tymeslot.MeetingPayments.RefundOutcome do
     * `{:retry, reason}`: a later attempt may succeed. An idempotency error
       is one too, since the next attempt re-reads Stripe's refunds and sends
       under a new key; so is a missing API key, which configuration can fix.
-    * `{:failed, code}`: Stripe refused the refund, or ended it as `failed`
-      or `canceled`; no attempt will turn that round.
+    * `{:failed, code}`: Stripe refused the refund; no attempt will turn
+      that round.
+    * `{:failed, code, stripe_refund_id}`: Stripe made the refund and ended
+      it as `failed` or `canceled`, with code `"refund_<status>"`. The id is
+      recorded with the failure, which marks it as Stripe's own verdict on
+      that refund, so a later report of it as made is known to be older.
   """
 
   alias Tymeslot.Integrations.Stripe.Error, as: StripeError
@@ -21,14 +25,15 @@ defmodule Tymeslot.MeetingPayments.RefundOutcome do
           {:succeeded, map()}
           | {:retry, StripeError.t() | :missing_api_key}
           | {:failed, String.t()}
+          | {:failed, String.t(), String.t()}
           | {:unlistable, StripeError.t()}
 
   @spec classify({:ok, map()} | {:error, StripeError.t() | :missing_api_key}) :: t()
   def classify({:ok, %{"status" => status} = refund}) when status in @committed,
     do: {:succeeded, refund}
 
-  def classify({:ok, %{"status" => status}}) when status in @ended,
-    do: {:failed, "refund_" <> status}
+  def classify({:ok, %{"status" => status, "id" => id}}) when status in @ended,
+    do: {:failed, "refund_" <> status, id}
 
   def classify({:error, %StripeError{} = error}) do
     cond do

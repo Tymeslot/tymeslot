@@ -216,7 +216,7 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
   the refund, and gets `{:error, :not_pending}`.
   """
   @spec settle_claimed(RefundSchema.t(), map()) ::
-          {:ok, RefundSchema.t()} | {:error, :not_pending | Changeset.t()}
+          {:ok, RefundSchema.t()} | {:error, :not_pending | :stripe_refund_taken | Changeset.t()}
   def settle_claimed(%RefundSchema{} = claimed, attrs) do
     claimed
     |> claimed_by()

@@ -362,24 +362,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
 
     test "charge.refunded with embedded refunds makes no Stripe call",
          %{payment: payment, refund: refund} do
-      event =
-        "charge.refunded"
-        |> StripeWebhookFixtures.event()
-        |> Map.put("account", @account)
-        |> update_in(["data", "object"], fn charge ->
-          charge
-          |> Map.merge(%{"id" => "ch_RECONCILE", "amount" => 5_000, "amount_refunded" => 2_000})
-          |> put_in(["refunds", "data"], [
-            %{
-              "id" => "re_EMBEDDED",
-              "object" => "refund",
-              "amount" => 2_000,
-              "charge" => "ch_RECONCILE",
-              "metadata" => %{"tymeslot_refund_id" => refund.id},
-              "status" => "succeeded"
-            }
-          ])
-        end)
+      event = embedded_event(refund, "re_EMBEDDED")
 
       assert :ok = ChargeRefunded.handle(event)
 
@@ -480,26 +463,44 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       payment: payment,
       refund: refund
     } do
-      event =
-        "charge.refunded"
-        |> StripeWebhookFixtures.event()
-        |> Map.put("account", @account)
-        |> update_in(["data", "object"], fn charge ->
-          charge
-          |> Map.merge(%{"id" => "ch_RECONCILE", "amount" => 5_000, "amount_refunded" => 2_000})
-          |> put_in(["refunds", "data"], [
-            %{
-              "id" => "re_RECONCILE",
-              "object" => "refund",
-              "amount" => 2_000,
-              "charge" => "ch_RECONCILE",
-              "metadata" => %{"tymeslot_refund_id" => refund.id},
-              "status" => "succeeded"
-            }
-          ])
-        end)
+      event = embedded_event(refund, "re_RECONCILE")
 
       assert :ok = ChargeRefunded.handle(event)
+
+      assert %{status: :failed, failure_code: "refund_failed"} = RefundQueries.get(refund.id)
+      assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
+      refute_enqueued(worker: SendBookingPaymentRefunded)
+    end
+
+    test "a stale embedded report does not put back a refund an attempt found failed", %{
+      payment: payment
+    } do
+      refund = insert(:booking_payment_refund, booking_payment: payment, attempt: 1)
+
+      failed =
+        StripeFixtures.object("refund_with_charge", %{
+          "id" => "re_ADOPT_FAILED",
+          "amount" => refund.amount_cents,
+          "status" => "failed",
+          "metadata" => %{"tymeslot_refund_id" => refund.id},
+          "charge" => %{"id" => "ch_RECONCILE", "amount_refunded" => 0}
+        })
+
+      StripeStub.expect(:list_refunds, StripeFixtures.list([failed]))
+
+      assert {:error, :refund_failed} = Refunds.execute(refund, [])
+
+      assert %{
+               status: :failed,
+               failure_code: "refund_failed",
+               stripe_refund_id: "re_ADOPT_FAILED"
+             } =
+               RefundQueries.get(refund.id)
+
+      assert :ok =
+               refund
+               |> embedded_event("re_ADOPT_FAILED", refund.amount_cents)
+               |> ChargeRefunded.handle()
 
       assert %{status: :failed, failure_code: "refund_failed"} = RefundQueries.get(refund.id)
       assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
@@ -526,6 +527,28 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       assert %{status: :failed} = RefundQueries.get(refund.id)
       assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
     end
+  end
+
+  # A charge.refunded at the 2020-08-27 version, its refunds embedded: one,
+  # made for `refund` as `stripe_refund_id`, reported succeeded.
+  defp embedded_event(refund, stripe_refund_id, amount \\ 2_000) do
+    "charge.refunded"
+    |> StripeWebhookFixtures.event()
+    |> Map.put("account", @account)
+    |> update_in(["data", "object"], fn charge ->
+      charge
+      |> Map.merge(%{"id" => "ch_RECONCILE", "amount" => 5_000, "amount_refunded" => amount})
+      |> put_in(["refunds", "data"], [
+        %{
+          "id" => stripe_refund_id,
+          "object" => "refund",
+          "amount" => amount,
+          "charge" => "ch_RECONCILE",
+          "metadata" => %{"tymeslot_refund_id" => refund.id},
+          "status" => "succeeded"
+        }
+      ])
+    end)
   end
 
   # The attendee's email went out, so the job no longer holds its unique

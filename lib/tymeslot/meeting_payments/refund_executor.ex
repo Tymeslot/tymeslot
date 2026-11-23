@@ -310,6 +310,9 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
 
   defp conclude({:failed, code}, refund, _payment, _opts), do: fail(refund, code)
 
+  defp conclude({:failed, code, stripe_refund_id}, refund, _payment, _opts),
+    do: fail(refund, code, stripe_refund_id)
+
   defp conclude({:unlistable, reason}, refund, _payment, _opts) do
     Logger.warning("Refund attempt cannot read the charge's refunds, left pending",
       refund_id: refund.id,
@@ -344,13 +347,24 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     end
   end
 
-  defp fail(claimed, code) do
-    attrs = %{status: :failed, failure_code: code, settled_at: now()}
+  # A refund Stripe ended records its Stripe refund, which marks the
+  # failure as Stripe's verdict on it (`RefundSchema.ended_at_stripe_codes/0`).
+  # One another row already holds is failed without it.
+  defp fail(claimed, code, stripe_refund_id \\ nil) do
+    attrs = %{
+      status: :failed,
+      failure_code: code,
+      stripe_refund_id: stripe_refund_id,
+      settled_at: now()
+    }
 
     case RefundQueries.settle_claimed(claimed, attrs) do
       {:ok, failed} ->
         FailureNotice.deliver(failed, code)
         {:error, :refund_failed}
+
+      {:error, :stripe_refund_taken} ->
+        fail(claimed, code)
 
       {:error, :not_pending} ->
         claimed.id |> RefundQueries.get() |> settled()
