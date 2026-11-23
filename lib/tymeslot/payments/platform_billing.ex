@@ -4,6 +4,10 @@ defmodule Tymeslot.Payments.PlatformBilling do
   their own beyond the Stripe request: the parameters a new customer gets, and
   the idempotency key each call is sent under.
 
+  This is the API a subscription manager (`:subscription_manager`) calls for
+  them, directly; every other Stripe call goes to the resource modules of
+  `Tymeslot.Integrations.Stripe`.
+
   Results are Stripe's objects as Stripe sent them (string-keyed maps), or
   `{:error, %Tymeslot.Integrations.Stripe.Error{}}`, or
   `{:error, :missing_api_key}`.

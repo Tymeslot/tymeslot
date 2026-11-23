@@ -21,8 +21,8 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionHandler do
 
       _other ->
         # The platform account only ever creates subscription-mode sessions
-        # (`Payments.create_stripe_subscription_checkout/1`); paid
-        # bookings run through the separate Connect checkout and its own
+        # (`Tymeslot.Payments.PlatformBilling.create_subscription_checkout/1`);
+        # paid bookings run through the separate Connect checkout and its own
         # webhook endpoint. A non-subscription mode here is unexpected, so
         # it is logged loudly rather than silently treated as a success.
         Logger.warning("Ignoring checkout.session.completed for unexpected mode",
