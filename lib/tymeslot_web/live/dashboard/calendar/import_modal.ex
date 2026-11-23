@@ -1,17 +1,20 @@
 defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
   @moduledoc """
   The calendar's import modal, one view per stage of `IcsImport`:
-  choose a file, read it, pick a calendar, follow the import, read the
-  result, and the surface's drop zone (the upload form and overlay). Its
+  choose a file, read it, narrow one holding too many events to a date
+  range, pick a calendar, follow the import, read the result, and the
+  surface's drop zone (the upload form and overlay). Its
   strings are in `dashboard_calendar_import`, with `IcsImportFlow`'s.
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CalendarGrid.IcsImport
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
+  alias TymeslotWeb.Helpers.LocaleFormat
 
-  @choosing [:choose, :reading, :ready]
+  @choosing [:choose, :reading, :too_many, :ready]
   @result_variants %{info: :success, warning: :warning, error: :error}
 
   attr :ics_import, :map, required: true
@@ -115,6 +118,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
             <span data-testid="calendar-import-error">{@ics_import.error}</span>
           </.info_box>
 
+          <.too_many
+            :if={@ics_import.stage == :too_many}
+            overview={@ics_import.overview}
+            from={@ics_import.from}
+            target={@target}
+          />
+
           <div :if={@ics_import.summary} data-testid="calendar-import-summary">
             <p class="text-token-sm text-tymeslot-700">
               {dngettext(
@@ -129,6 +139,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
                   "1 of them repeats.",
                   "%{count} of them repeat.",
                   @ics_import.summary.series
+                )}
+              </span>
+              <span :if={@ics_import.summary.left_out > 0}>
+                {dngettext(
+                  "dashboard_calendar_import",
+                  "1 event before %{date} is left out.",
+                  "%{count} events before %{date} are left out.",
+                  @ics_import.summary.left_out,
+                  date: long_date(@ics_import.summary.from)
                 )}
               </span>
             </p>
@@ -161,7 +180,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
       <:footer>
         <div class="flex gap-2">
           <.action_button
-            :if={@choices != [] and @choosing}
+            :if={@choices != [] and @ics_import.stage == :too_many}
+            id="calendar-import-narrow"
+            variant={:primary}
+            disabled={is_nil(@ics_import.from)}
+            phx-click="calendar:ics_narrow"
+            phx-target={@target}
+          >
+            {dgettext("dashboard_calendar_import", "Continue")}
+          </.action_button>
+          <.action_button
+            :if={@choices != [] and @choosing and @ics_import.stage != :too_many}
             id="calendar-import-start"
             variant={:primary}
             disabled={@ics_import.stage != :ready}
@@ -180,6 +209,118 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
     </.modal>
     """
   end
+
+  attr :overview, :map, required: true, doc: "from `IcsImport.Cutoff.overview/3`"
+  attr :from, Date, required: true, doc: "the suggestion chosen, or `nil`"
+  attr :target, :any, required: true
+
+  # A file with more events than one import writes: what it holds, and the
+  # dates it can be imported from, each with the events it keeps. Only those
+  # that fit can be chosen.
+  defp too_many(assigns) do
+    assigns =
+      assign(assigns,
+        max: IcsImport.max_events(),
+        none_fit: not Enum.any?(assigns.overview.suggestions, & &1.importable)
+      )
+
+    ~H"""
+    <div id="calendar-import-too-many" class="space-y-3">
+      <p class="text-token-sm text-tymeslot-700">
+        {dgettext(
+          "dashboard_calendar_import",
+          "This file holds %{count} events, from %{first} to %{last}. One import can copy up to %{max}.",
+          count: @overview.events,
+          first: long_date(@overview.first),
+          last: long_date(@overview.last),
+          max: @max
+        )}
+      </p>
+      <p class="text-token-xs text-tymeslot-500">
+        {dgettext(
+          "dashboard_calendar_import",
+          "Past events are rarely needed for scheduling, so you can leave them out. A repeating event counts once, however often it repeats."
+        )}
+      </p>
+
+      <form
+        id="calendar-import-cutoff"
+        novalidate
+        phx-change="calendar:ics_cutoff"
+        phx-target={@target}
+      >
+        <fieldset class="space-y-2">
+          <legend class="mb-2 text-token-sm font-semibold text-tymeslot-800">
+            {dgettext("dashboard_calendar_import", "Import events from")}
+          </legend>
+          <label
+            :for={suggestion <- @overview.suggestions}
+            class="flex min-h-11 items-start gap-2 text-token-sm text-tymeslot-800"
+            data-testid="calendar-import-cutoff-option"
+          >
+            <.input
+              type="radio"
+              name="from"
+              value={Date.to_iso8601(suggestion.from)}
+              checked={suggestion.from == @from}
+              disabled={not suggestion.importable}
+              class="mt-0.5"
+            />
+            <span>
+              <span class="font-semibold">
+                {dgettext("dashboard_calendar_import", "%{date} onwards",
+                  date: long_date(suggestion.from)
+                )}
+              </span>
+              <span class="block text-token-xs text-tymeslot-500">
+                {suggestion_note(suggestion, @max)}
+              </span>
+            </span>
+          </label>
+        </fieldset>
+      </form>
+
+      <.info_box :if={@none_fit} variant={:warning}>
+        {dgettext(
+          "dashboard_calendar_import",
+          "Even the events from today onwards are more than one import can copy. Export a shorter date range from your calendar app and import it in parts."
+        )}
+      </.info_box>
+
+      <p class="text-token-xs text-tymeslot-500">
+        {dgettext(
+          "dashboard_calendar_import",
+          "To keep a whole calendar, with no limit and in step with its changes, subscribe to it by URL instead."
+        )}
+        <.link
+          navigate={~p"/dashboard/calendar-integration"}
+          class="font-semibold text-turquoise-700 underline"
+        >
+          {dgettext("dashboard_calendar_import", "Add a calendar subscription")}
+        </.link>
+      </p>
+    </div>
+    """
+  end
+
+  defp suggestion_note(%{events: 0}, _max),
+    do: dgettext("dashboard_calendar_import", "No events from this date on")
+
+  defp suggestion_note(%{importable: false, events: count}, max),
+    do:
+      dngettext(
+        "dashboard_calendar_import",
+        "1 event, more than %{max}",
+        "%{count} events, more than %{max}",
+        count,
+        max: max
+      )
+
+  defp suggestion_note(%{events: count}, _max),
+    do: dngettext("dashboard_calendar_import", "1 event", "%{count} events", count)
+
+  defp long_date(date),
+    do: LocaleFormat.format_date(date, Gettext.get_locale(TymeslotWeb.Gettext))
 
   attr :uploads, :map, required: true
   attr :target, :any, required: true
