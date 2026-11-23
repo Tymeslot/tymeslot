@@ -27,10 +27,10 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   the attendee did get to have and lets the host choose none, partial, or
   full). That contrast breaks for a request that re-entered the gate: a
   reschedule of an already-`:confirmed`, paid meeting resets it to
-  `:awaiting_approval` (`Tymeslot.Bookings.Reschedule.reenters_gate?/1`), and if that
-  re-request is then declined or expires, there genuinely *is* a confirmed
-  meeting to weigh against a partial refund — the one the attendee already
-  had, activated, and were told about. Auto-refunding it in full would make
+  `:awaiting_approval` (`Tymeslot.Bookings.RescheduleGate.attributes/3`),
+  and if that re-request is then declined or expires, there genuinely *is*
+  a confirmed meeting to weigh against a partial refund — the one the
+  attendee already had, activated, and were told about. Auto-refunding it in full would make
   that choice for the host silently, so this checks `first_announced_at` and
   skips the automatic refund when it is set, leaving the payment refundable
   from the dashboard's payments screen instead. A payment row that was never

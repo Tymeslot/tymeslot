@@ -2,12 +2,14 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   @moduledoc """
   Sends the attendee email confirming a booking-payment refund.
 
-  Enqueued by `Tymeslot.MeetingPayments.RefundExecutor` in the transaction
-  that settles a recorded refund (full or partial) as succeeded, whatever
-  decided it, so one refund sends one email; and by
-  `Tymeslot.MeetingPayments.Workers.RefundLatePayment` for a refund made
-  under its old key that `charge.refunded` recorded. That webhook reconciles
-  `refunded_amount_cents` and `status` but does not enqueue the email.
+  Enqueued by `Tymeslot.MeetingPayments.Refunds.Settlement` in the
+  transaction that settles a recorded refund (full or partial) as
+  succeeded, whatever decided it and whoever settles it (a refund attempt,
+  or `charge.refunded` reconciling a pending refund), so one refund sends
+  one email; and by `Tymeslot.MeetingPayments.Workers.RefundLatePayment`
+  for a refund made under its old key that `charge.refunded` recorded. A
+  refund made outside Tymeslot (in the Stripe dashboard), which
+  `charge.refunded` records as external, sends no email.
 
   Loads a fresh booking-payment row inside `perform/1` so the email reflects
   the row's committed state, not whatever was in flight when the job was

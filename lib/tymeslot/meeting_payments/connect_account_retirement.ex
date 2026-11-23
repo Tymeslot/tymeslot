@@ -94,8 +94,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
   The form does not clear them by omission
   (`Tymeslot.MeetingTypes.FormMapper.build_attrs/3`), the changeset does not
   fail unrelated saves over the stored flag
-  (`MeetingTypeSchema.validate_payment_fields/2`), and `Bookings.Create`
-  refuses a paid booking outright while charges are off, so nothing is taken
+  (`Tymeslot.MeetingTypes.PaymentValidation.validate_changeset/2`), and
+  `Bookings.Create` refuses a paid booking outright while charges are off, so nothing is taken
   in the meantime. Clearing them here, as `MeetingPayments.change_default_currency/2`
   does for a currency change, would destroy that state for the far more common
   case of a temporary disconnect.
