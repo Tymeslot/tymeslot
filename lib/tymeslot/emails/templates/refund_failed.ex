@@ -2,9 +2,10 @@ defmodule Tymeslot.Emails.Templates.RefundFailed do
   @moduledoc """
   Host-facing email sent when a refund the host decided failed for good
   (`Tymeslot.Workers.SendRefundFailed`), in the host's own language: Stripe
-  declined it or never completed it. Worded for a single booking or for a
-  series, whose cancelled sessions stay cancelled. The money is still with
-  the host, who settles it from Stripe.
+  declined it or never completed it. Worded for a refund of the host's own
+  choosing, or for one that went with cancelling sessions of a series,
+  which stay cancelled. The money is still with the host, who settles it
+  from Stripe.
 
   Built from a normalised `RefundContext` struct, as the dispute alert is
   (`Tymeslot.Emails.Templates.ChargeDisputeOpened`).
@@ -34,8 +35,8 @@ defmodule Tymeslot.Emails.Templates.RefundFailed do
   defmodule RefundContext do
     @moduledoc """
     Normalised data for the failed refund email. `host_user_id` picks the
-    language it is written in; `series?` whether the payment paid for a
-    series.
+    language it is written in; `series_cancellation?` whether the refund
+    went with cancelling sessions of a series.
     """
 
     @enforce_keys [:host_email, :amount_cents, :currency]
@@ -48,7 +49,7 @@ defmodule Tymeslot.Emails.Templates.RefundFailed do
       :attendee_name,
       :attendee_email,
       :meeting_title,
-      series?: false
+      series_cancellation?: false
     ]
 
     @type t :: %__MODULE__{
@@ -60,7 +61,7 @@ defmodule Tymeslot.Emails.Templates.RefundFailed do
             attendee_name: String.t() | nil,
             attendee_email: String.t() | nil,
             meeting_title: String.t() | nil,
-            series?: boolean()
+            series_cancellation?: boolean()
           }
   end
 
@@ -77,7 +78,7 @@ defmodule Tymeslot.Emails.Templates.RefundFailed do
         context.attendee_name || context.attendee_email ||
           dgettext("emails_payments", "the attendee")
 
-      intro = intro(context.series?, amount, attendee)
+      intro = intro(context.series_cancellation?, amount, attendee)
       details = details(context, amount)
       payments_url = UrlBuilder.build_url("/dashboard/payments")
 

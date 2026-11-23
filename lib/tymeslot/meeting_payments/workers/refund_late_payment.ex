@@ -5,8 +5,9 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   Such a job refunds, in full, a payment that completed after its booking
   had expired and its slot had been given to someone else, or for a host
   whose account is pending deletion (`reason: "late"`), or what a decided
-  dispute left with the host (`reason: "after_dispute"`). Those refunds are
-  now recorded by the webhooks themselves (`Refunds.request_remaining_refund/2`).
+  dispute left with the host (`reason: "after_dispute"`). Nothing inserts
+  such jobs: the webhooks record those refunds themselves
+  (`Refunds.request_remaining_refund/2`).
 
   A run records the refund of the remaining balance
   (`Refunds.request_refund/4`, source `:late_payment`) and leaves it to

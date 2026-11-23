@@ -16,9 +16,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsRefundPendingTest do
   import Tymeslot.ConfigTestHelpers, only: [setup_config: 2]
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
+  alias Tymeslot.Repo
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
   alias Tymeslot.Workers.SendBookingPaymentRefunded
@@ -175,6 +177,28 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsRefundPendingTest do
 
     assert has_element?(view, "#refund-pending", "€50.00 being processed")
     assert has_element?(view, "#refund-modal button[type=submit][disabled]")
+  end
+
+  # A pending refund is no reason to open the dialog on a payment Tymeslot
+  # could not refund anyway.
+  test "a payment past the refund window with a pending refund is still refused", %{
+    conn: conn,
+    payment: payment
+  } do
+    payment
+    |> Changeset.change(paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day))
+    |> Repo.update!()
+
+    insert(:booking_payment_refund, booking_payment: payment, amount_cents: 5000)
+
+    view = open(conn)
+
+    view
+    |> with_target("#payments-settings")
+    |> render_click("open_refund_modal", %{"id" => payment.id})
+
+    refute has_element?(view, "#refund-modal")
+    assert render(view) =~ "This payment can no longer be refunded from Tymeslot."
   end
 
   test "a refund Stripe declines says so and emails the host", %{conn: conn, payment: payment} do

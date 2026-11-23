@@ -83,7 +83,7 @@ defmodule Tymeslot.Workers.SendRefundFailed do
       attendee_name: payment.attendee_name,
       attendee_email: payment.attendee_email,
       meeting_title: meeting_title(meeting, payment),
-      series?: is_binary(payment.series_id)
+      series_cancellation?: refund.source == :series_host
     }
   end
 

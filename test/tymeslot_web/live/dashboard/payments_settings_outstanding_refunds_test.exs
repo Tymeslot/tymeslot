@@ -335,6 +335,21 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
       refute has_element?(view, refund_button(payment))
     end
 
+    # Part of the balance is still left to refund beside the pending part.
+    test "a row with part of its balance being processed still offers the rest", %{
+      conn: conn
+    } do
+      host = connected_host()
+      payment = cancelled_payment_for(host)
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2000)
+
+      {view, _html} = open_payments(conn, host)
+
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "€20.00 being processed")
+      assert has_element?(view, refund_button(payment))
+      refute has_element?(view, "#outstanding-refund-#{payment.id}", "Refund processing")
+    end
+
     # Tymeslot is still making it: the host is not offered a second one.
     test "a row whose refund is still being processed says so in place of the button", %{
       conn: conn

@@ -65,15 +65,38 @@ defmodule Tymeslot.Workers.SendRefundFailedTest do
     assert email.text_body =~ "/dashboard/payments"
   end
 
-  test "a series payment says its sessions stay cancelled", %{payment: payment, refund: refund} do
+  test "a series cancellation's refund says its sessions stay cancelled", %{
+    payment: payment,
+    refund: refund
+  } do
     series = insert(:booking_series)
     payment |> Changeset.change(meeting_id: nil, series_id: series.id) |> Repo.update!()
+    refund = refund |> Changeset.change(source: :series_host) |> Repo.update!()
 
     assert :ok = run(refund)
 
     assert_received {:email, email}
     assert email.text_body =~ "You cancelled sessions of a series"
     assert email.text_body =~ "The sessions stay cancelled."
+  end
+
+  # Refunded from the payments page, nothing was cancelled with it.
+  test "a refund the host made of a series payment says nothing was cancelled", %{
+    payment: payment,
+    refund: refund
+  } do
+    series = insert(:booking_series)
+    payment |> Changeset.change(meeting_id: nil, series_id: series.id) |> Repo.update!()
+    refund = refund |> Changeset.change(source: :host) |> Repo.update!()
+
+    assert :ok = run(refund)
+
+    assert_received {:email, email}
+
+    assert email.text_body =~
+             "Stripe declined or could not complete the refund of €100.00 to Ada Lovelace for their booking."
+
+    refute email.text_body =~ "cancelled"
   end
 
   test "is written in the host's own language", %{payment: payment, refund: refund} do

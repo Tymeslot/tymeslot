@@ -185,6 +185,32 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRefundTest do
       assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 0
     end
 
+    # Recorded from the payments page after the dialog opened: the refund the
+    # dialog offered no longer fits, and Stripe is never asked.
+    test "a refund the payment no longer allows keeps the meeting cancelled and says why",
+         %{conn: conn, user: user} do
+      {meeting, payment} = paid_meeting(user, "Raced Refund")
+      StripeStub.stub(:create_refund, {:error_fixture, "api_error"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2000)
+
+      view
+      |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "full"})
+      |> render_submit()
+
+      html = render(view)
+
+      assert html =~
+               "Cancelled without a refund: the payment&#39;s refundable balance changed meanwhile. Check it on the payments page."
+
+      refute html =~ "Stripe declined"
+      assert StripeStub.requests(:create_refund) == []
+      assert Repo.get(MeetingSchema, meeting.id).status == :cancelled
+    end
+
     test "the dialog says when a refund of the booking is already being processed",
          %{conn: conn, user: user} do
       {meeting, payment} = paid_meeting(user, "Partly Pending")

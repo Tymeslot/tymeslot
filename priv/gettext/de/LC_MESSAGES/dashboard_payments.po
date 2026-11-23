@@ -541,6 +541,7 @@ msgstr[1] "%{count} laufende Bezahlvorgänge werden beim Trennen abgebrochen."
 msgid "A checkout is in progress in your current currency. Try again in a few minutes."
 msgstr "In Ihrer aktuellen Währung läuft gerade ein Bezahlvorgang. Versuchen Sie es in ein paar Minuten erneut."
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "%{amount} being processed"

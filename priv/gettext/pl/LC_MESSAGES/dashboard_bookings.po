@@ -997,3 +997,8 @@ msgstr "Spotkanie odwołane, ale Stripe odrzucił zwrot. Sprawdź płatność w 
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
 msgstr "Spotkanie odwołane. Zwrot jest w toku; gdy zostanie zrealizowany, uczestnik otrzyma e-mail."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment's refundable balance changed meanwhile. Check it on the payments page."
+msgstr "Odwołano bez zwrotu, ponieważ w międzyczasie zmieniła się kwota płatności pozostała do zwrotu. Sprawdź ją na stronie płatności."

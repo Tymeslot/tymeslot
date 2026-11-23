@@ -991,3 +991,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment's refundable balance changed meanwhile. Check it on the payments page."
+msgstr ""

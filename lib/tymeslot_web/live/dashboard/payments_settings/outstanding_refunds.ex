@@ -26,9 +26,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
   carries no cancellation date.
 
   A row whose refund is recorded and still pending stays listed, owed until
-  it settles, with a "Refund processing" badge in place of any button.
-  Every other row offers the same `open_refund_modal` event as the payments
-  table. A row only carries that button when both halves of the question say yes:
+  it settles: with the pending amount noted beside the Refund button while
+  some of the balance is left to refund, and a "Refund processing" badge
+  in place of any button once the pending refunds hold all of it. Rows
+  offer the same `open_refund_modal` event as the payments table. A row only carries that button when both halves of the question say yes:
   the payment itself is still refundable (`MeetingPayments.refundable?/1`
   covers balance, age and dispute state), *and* the host still has a live
   Connect account to refund from. Everything else gets the "Refund in Stripe"
@@ -132,6 +133,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
                   <.pill :if={row_action(p, @account) == :processing} tone={:neutral} size={:sm}>
                     {dgettext("dashboard_payments", "Refund processing")}
                   </.pill>
+                  <span
+                    :if={row_action(p, @account) == :refund and MeetingPayments.refund_pending?(p)}
+                    class="text-token-xs text-tymeslot-500 mr-2"
+                  >
+                    {dgettext("dashboard_payments", "%{amount} being processed",
+                      amount: format_amount(MeetingPayments.pending_refund_cents(p), p.currency)
+                    )}
+                  </span>
                   <.action_button
                     :if={row_action(p, @account) == :refund}
                     variant={:secondary}
@@ -158,14 +167,15 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
     """
   end
 
-  # A pending refund is Tymeslot's to finish. Otherwise two independent
-  # questions, and the in-app Refund button needs both answered yes: whether
-  # the payment can still be refunded at all, and whether there is a Connect
-  # account left to refund it from.
+  # Two independent questions, and the in-app Refund button needs both
+  # answered yes: whether the payment can still be refunded at all (its
+  # pending refunds aside), and whether there is a Connect account left to
+  # refund it from. A pending refund that leaves nothing to refund is
+  # Tymeslot's to finish.
   defp row_action(payment, account) do
     cond do
-      MeetingPayments.refund_pending?(payment) -> :processing
       MeetingPayments.refundable?(payment) and connected_for_refunds?(account) -> :refund
+      MeetingPayments.refund_pending?(payment) -> :processing
       true -> :in_stripe
     end
   end

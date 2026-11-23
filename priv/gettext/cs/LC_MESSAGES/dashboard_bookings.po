@@ -1001,3 +1001,8 @@ msgstr "Schůzka byla zrušena, ale Stripe vrácení platby odmítl. Zkontrolujt
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
 msgstr "Schůzka byla zrušena. Vrácení platby se zpracovává a po jeho dokončení dostane účastník e-mail."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment's refundable balance changed meanwhile. Check it on the payments page."
+msgstr "Zrušeno bez vrácení platby, protože se mezitím změnil vratný zůstatek platby. Zkontrolujte ho v sekci Platby."

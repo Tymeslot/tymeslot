@@ -991,3 +991,8 @@ msgstr "Termin abgesagt, aber Stripe hat die Rückerstattung abgelehnt. Prüfen 
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
 msgstr "Termin abgesagt. Die Rückerstattung wird bearbeitet; sobald sie erfolgt ist, erhält der Teilnehmer eine E-Mail."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment's refundable balance changed meanwhile. Check it on the payments page."
+msgstr "Ohne Rückerstattung abgesagt, da sich der erstattungsfähige Betrag der Zahlung inzwischen geändert hat. Prüfen Sie ihn auf der Seite „Zahlungen“."

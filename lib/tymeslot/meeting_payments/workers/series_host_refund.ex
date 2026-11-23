@@ -3,8 +3,8 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   Runs jobs queued before 1.49; delete after that release.
 
   Such a job refunds `amount_cents` of a series payment for its host, after
-  the host cancelled the series' remaining sessions
-  (`Tymeslot.BookingSeries.Cancel`, which now records the refund itself).
+  the host cancelled the series' remaining sessions. Nothing inserts such
+  jobs: `Tymeslot.BookingSeries.Cancel` records the refund itself.
 
   A run records the refund (`Refunds.request_refund/4`, source
   `:series_host`, scoped to the host) and leaves it to `ExecuteRefund`,

@@ -991,3 +991,8 @@ msgstr "Riunione annullata, ma Stripe ha rifiutato il rimborso. Controlla il pag
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
 msgstr "Riunione annullata. Il rimborso è in corso e il partecipante riceverà un'email quando andrà a buon fine."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment's refundable balance changed meanwhile. Check it on the payments page."
+msgstr "Annullata senza rimborso, perché nel frattempo il saldo rimborsabile del pagamento è cambiato. Controllalo nella pagina Pagamenti."
