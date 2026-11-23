@@ -47,7 +47,18 @@ defmodule TymeslotWeb.Live.Scheduling.TimezoneChangeAvailabilityTest do
     # Tuesday, so no earlier window may still be open. From a Wednesday the
     # next Monday is the first window in both zones.
     freeze_clock_midweek()
+    keep_test_week_in_one_month()
     :ok
+  end
+
+  # Monday and Tuesday must sit on one month grid. When the Monday after the
+  # frozen Wednesday ends its month, Tuesday opens the next one and the grid
+  # never offers it, so move the whole test a week on.
+  defp keep_test_week_in_one_month do
+    monday = next_monday()
+
+    if Date.add(monday, 1).month != monday.month,
+      do: freeze_clock(DateTime.add(Clock.utc_now(), 7, :day))
   end
 
   # Greyed-out days are a calendar of days; a week of times has no day to grey.
