@@ -107,9 +107,11 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfill do
   def lost_total(disputes) when is_list(disputes) do
     disputes
     |> Enum.filter(&match?(%{"status" => "lost"}, &1))
-    |> Enum.map(&Map.fetch!(&1, "amount"))
-    |> Enum.sum()
+    |> Enum.reduce(0, &add_amount/2)
   end
+
+  defp add_amount(%{"amount" => amount}, total) when is_integer(amount) and amount >= 0,
+    do: total + amount
 
   @doc """
   What `payment` should record once its charge's disputes took back

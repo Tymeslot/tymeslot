@@ -48,6 +48,7 @@ defmodule Tymeslot.Integrations.Stripe.FormEncoder do
   defp join(nil, key), do: to_string(key)
   defp join(path, key), do: "#{path}[#{key}]"
 
+  @spec unsupported(term(), String.t() | nil) :: no_return()
   defp unsupported(value, path) do
     raise ArgumentError,
           "cannot form-encode #{inspect(value)} at #{inspect(path)}"

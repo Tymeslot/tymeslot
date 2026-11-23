@@ -57,9 +57,11 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliation do
       when is_list(rows) and is_list(stripe_refunds) do
     stripe_refunds
     |> Enum.filter(&stale_committed?(&1, row_for(&1, rows)))
-    |> Enum.map(& &1["amount"])
-    |> Enum.sum()
+    |> Enum.reduce(0, &add_amount/2)
   end
+
+  defp add_amount(%{"amount" => amount}, total) when is_integer(amount) and amount >= 0,
+    do: total + amount
 
   @spec plan([RefundSchema.t()], [map()]) :: [action()]
   def plan(rows, stripe_refunds) when is_list(rows) and is_list(stripe_refunds),

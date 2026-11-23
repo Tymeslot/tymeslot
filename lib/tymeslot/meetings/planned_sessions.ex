@@ -213,8 +213,14 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   path, which tells everyone booked on it.
   """
   @spec cancel(Meeting.t(), integer()) :: {:ok, Meeting.t()} | {:error, term()}
-  def cancel(%Meeting{planned: true, organizer_user_id: user_id} = session, user_id),
-    do: Cancellation.cancel(session, user_id, :none)
+  def cancel(%Meeting{planned: true, organizer_user_id: user_id} = session, user_id) do
+    # Cancelled with no refund, so none is left pending
+    # (`{:ok, cancelled, :refund_pending}` is never returned).
+    case Cancellation.cancel(session, user_id, :none) do
+      {:ok, %Meeting{} = cancelled} -> {:ok, cancelled}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   def cancel(_session, _user_id), do: {:error, :not_found}
 
