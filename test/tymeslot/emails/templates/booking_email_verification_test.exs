@@ -139,6 +139,28 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerificationTest do
     refute email.text_body =~ "/meeting/"
   end
 
+  # A slot's own deadline is its first seat's; every later seat is held
+  # until its own.
+  test "the seat email names the seat's deadline, not the slot's" do
+    slot = meeting(%{attendee_name: nil, attendee_email: nil, attendee_locale: nil})
+
+    seat = %ParticipantSchema{
+      name: "Mia Seat",
+      email: "mia@example.com",
+      timezone: "Europe/Ljubljana",
+      locale: "en",
+      verification_deadline_at: ~U[2026-08-31 08:15:00Z]
+    }
+
+    email = BookingEmailVerification.render_seat(slot, seat, @verify_url)
+
+    # 08:15 UTC is 10:15 in Ljubljana in summer; the slot's is 30 August.
+    for body <- [email.html_body, email.text_body] do
+      assert body =~ "by 31 August 2026 at 10:15 AM CEST"
+      refute body =~ "30 August 2026 at 12:30 PM"
+    end
+  end
+
   # A seat shares its slot's time with other attendees, so the email holds
   # the booker's place, not the time.
   test "the seat email holds the booker's place, not the time" do
