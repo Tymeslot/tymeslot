@@ -125,7 +125,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
     <div class="text-center">
       <Containers.icon_badge icon={outcome_icon(@state)} />
 
-      <h1 class="display-md mt-6">{outcome_title(@state)}</h1>
+      <h1 class="display-md mt-6">{outcome_title(@state, @seat)}</h1>
 
       <p class="mt-3 text-token-base text-tymeslot-600">
         {outcome_body(@state, @meeting, @seat)}
@@ -154,6 +154,14 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   defp outcome_icon(:loading), do: "hero-envelope"
   defp outcome_icon(_state), do: "hero-question-mark-circle"
 
+  # A seat's release and its lapse write the same row (`cancelled_at`, no
+  # status of its own), so a seat that is gone reads the same whichever it
+  # was, in words true of both.
+  defp outcome_title(:expired, %{}),
+    do: dgettext("booking_manage", "This booking is no longer held")
+
+  defp outcome_title(state, _seat), do: outcome_title(state)
+
   defp outcome_title(:verified), do: dgettext("booking_manage", "Your booking is confirmed")
 
   defp outcome_title(:verified_request),
@@ -167,10 +175,14 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   defp outcome_title(:loading), do: dgettext("booking_manage", "Checking your link…")
   defp outcome_title(_state), do: dgettext("booking_manage", "This link is not valid")
 
-  # A released seat frees a place on its slot, not the slot's time, which
-  # other attendees may still hold.
+  # A seat that is released or gone frees a place on its slot, not the
+  # slot's time, which other attendees may still hold.
   defp outcome_body(:released, _meeting, %{}) do
     dgettext("booking_manage", "The booking was cancelled and your place released.")
+  end
+
+  defp outcome_body(:expired, _meeting, %{}) do
+    dgettext("booking_manage", "This booking is no longer available, so your place was released.")
   end
 
   defp outcome_body(state, meeting, _seat), do: outcome_body(state, meeting)

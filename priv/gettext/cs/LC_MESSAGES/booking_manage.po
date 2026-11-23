@@ -802,3 +802,13 @@ msgstr[2] "Zamítnout všech %{count} termínů"
 #, elixir-autogen, elixir-format
 msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
 msgstr "Pokud neodpovíte do %{deadline}, žádost propadne a všechny termíny se uvolní."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer available, so your place was released."
+msgstr "Tato rezervace už není k dispozici, proto bylo vaše místo uvolněno."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer held"
+msgstr "Tato rezervace už není podržena"

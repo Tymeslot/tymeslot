@@ -802,3 +802,13 @@ msgstr[2] "Odrzuć wszystkie %{count} sesji"
 #, elixir-autogen, elixir-format
 msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
 msgstr "Czas na odpowiedź mija: %{deadline}. Jeśli do tego czasu nie odpowiesz, prośba wygaśnie, a wszystkie sesje zostaną zwolnione."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer available, so your place was released."
+msgstr "Ta rezerwacja nie jest już dostępna, więc twoje miejsce zostało zwolnione."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer held"
+msgstr "Ta rezerwacja nie jest już aktywna"

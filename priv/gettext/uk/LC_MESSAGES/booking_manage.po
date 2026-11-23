@@ -802,3 +802,13 @@ msgstr[2] "Відхилити всі %{count} сесій"
 #, elixir-autogen, elixir-format
 msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
 msgstr "Якщо ви не відповісте до %{deadline}, запит утратить чинність, а всі сесії звільняться."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer available, so your place was released."
+msgstr "Це бронювання більше недоступне, тому ваше місце звільнено."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer held"
+msgstr "Це бронювання більше не зарезервоване"
