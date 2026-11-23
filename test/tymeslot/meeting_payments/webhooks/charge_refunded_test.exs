@@ -1,7 +1,9 @@
 defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :payments
+  @moduletag :webhooks
   @moduletag :integration
 
   # Every booking_payment is charged on this connected account, and every
@@ -12,10 +14,22 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.Stripe.Error, as: StripeError
+  alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.Webhooks.ChargeRefunded
   alias Tymeslot.Repo
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
+  alias Tymeslot.StripeWebhookFixtures
+  alias Tymeslot.Workers.SendBookingPaymentRefunded
+
+  # At the pinned API version the charge carries no refunds, so each event
+  # lists them; these tests are about the total, so Stripe lists none.
+  setup do
+    StripeStub.stub(:list_refunds, StripeFixtures.list([]))
+    :ok
+  end
 
   describe "handle/1" do
     test "marks booking_payment refunded when full amount has been refunded" do
@@ -290,6 +304,184 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       assert reloaded.refunded_amount_cents == 0
       assert reloaded.last_event_id == nil
     end
+  end
+
+  describe "handle/1 reconciling the charge's refunds" do
+    setup do
+      payment =
+        insert(:paid_booking_payment,
+          stripe_account_id: @account,
+          stripe_charge_id: "ch_RECONCILE",
+          amount_cents: 5_000
+        )
+
+      refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
+
+      %{payment: payment, refund: refund}
+    end
+
+    test "charge.refunded settles a pending outbox refund and emails the attendee once",
+         %{payment: payment, refund: refund} do
+      StripeStub.expect(:list_refunds, StripeFixtures.list([made_for(refund, 2_000)]))
+
+      assert :ok = ChargeRefunded.handle(connect_charge_event(2_000))
+
+      assert [%{query: query}] = StripeStub.requests(:list_refunds)
+      assert query["charge"] == "ch_RECONCILE"
+
+      assert %{status: :succeeded, stripe_refund_id: "re_RECONCILE"} =
+               RefundQueries.get(refund.id)
+
+      assert %{refunded_amount_cents: 2_000, status: :partially_refunded} = Repo.reload!(payment)
+      assert [_one] = all_enqueued(worker: SendBookingPaymentRefunded)
+      mark_emails_sent()
+
+      assert {:ok, %{status: :succeeded}} = Refunds.execute(refund, [])
+
+      assert StripeStub.requests(:create_refund) == []
+      refute_enqueued(worker: SendBookingPaymentRefunded)
+      assert %{refunded_amount_cents: 2_000} = Repo.reload!(payment)
+    end
+
+    test "an attempt whose answer arrives after the webhook settled the refund sends no second email",
+         %{payment: payment, refund: refund} do
+      StripeStub.expect(:list_refunds, StripeFixtures.list([made_for(refund, 2_000)]))
+
+      StripeStub.expect(:create_refund, fn request ->
+        assert :ok = ChargeRefunded.handle(connect_charge_event(2_000))
+        assert [_one] = all_enqueued(worker: SendBookingPaymentRefunded)
+        mark_emails_sent()
+        StripeStubResponses.refund(request, "re_RECONCILE")
+      end)
+
+      assert {:ok, %{status: :succeeded}} = Refunds.execute(refund, [])
+
+      assert %{refunded_amount_cents: 2_000} = Repo.reload!(payment)
+      refute_enqueued(worker: SendBookingPaymentRefunded)
+    end
+
+    test "charge.refunded with embedded refunds makes no Stripe call",
+         %{payment: payment, refund: refund} do
+      event =
+        "charge.refunded"
+        |> StripeWebhookFixtures.event()
+        |> Map.put("account", @account)
+        |> update_in(["data", "object"], fn charge ->
+          charge
+          |> Map.merge(%{"id" => "ch_RECONCILE", "amount" => 5_000, "amount_refunded" => 2_000})
+          |> put_in(["refunds", "data"], [
+            %{
+              "id" => "re_EMBEDDED",
+              "object" => "refund",
+              "amount" => 2_000,
+              "charge" => "ch_RECONCILE",
+              "metadata" => %{"tymeslot_refund_id" => refund.id},
+              "status" => "succeeded"
+            }
+          ])
+        end)
+
+      assert :ok = ChargeRefunded.handle(event)
+
+      assert StripeStub.requests() == []
+
+      assert %{status: :succeeded, stripe_refund_id: "re_EMBEDDED"} =
+               RefundQueries.get(refund.id)
+
+      assert %{refunded_amount_cents: 2_000, status: :partially_refunded} = Repo.reload!(payment)
+    end
+
+    test "a dashboard refund is recorded as external", %{payment: payment, refund: refund} do
+      Repo.delete!(refund)
+
+      dashboard =
+        StripeFixtures.object("refund_with_charge", %{
+          "id" => "re_DASHBOARD",
+          "amount" => 1_500,
+          "metadata" => %{},
+          "charge" => %{"amount_refunded" => 1_500}
+        })
+
+      StripeStub.expect(:list_refunds, StripeFixtures.list([dashboard]))
+
+      assert :ok = ChargeRefunded.handle(connect_charge_event(1_500))
+
+      assert [
+               %{
+                 source: :external,
+                 status: :succeeded,
+                 amount_cents: 1_500,
+                 stripe_refund_id: "re_DASHBOARD"
+               }
+             ] = RefundQueries.list_for_payment(payment.id)
+
+      assert %{refunded_amount_cents: 1_500, status: :partially_refunded} = Repo.reload!(payment)
+      refute_enqueued(worker: SendBookingPaymentRefunded)
+    end
+
+    test "a transient refund list error retries the event", %{payment: payment, refund: refund} do
+      event = connect_charge_event(2_000)
+      StripeStub.expect(:list_refunds, 3, {:transport_error, :timeout})
+
+      assert {:error, :retry_later, %StripeError{type: "api_connection_error"}} =
+               ChargeRefunded.handle(event)
+
+      assert %{status: :pending} = RefundQueries.get(refund.id)
+      assert %{refunded_amount_cents: 0, last_event_id: nil} = Repo.reload!(payment)
+
+      StripeStub.expect(:list_refunds, StripeFixtures.list([made_for(refund, 2_000)]))
+
+      assert :ok = ChargeRefunded.handle(event)
+
+      assert %{status: :succeeded} = RefundQueries.get(refund.id)
+      assert %{refunded_amount_cents: 2_000} = Repo.reload!(payment)
+      assert [_one] = all_enqueued(worker: SendBookingPaymentRefunded)
+    end
+
+    test "a refund list Stripe refuses for good still records the total",
+         %{payment: payment, refund: refund} do
+      StripeStub.expect(
+        :list_refunds,
+        {403, %{"error" => %{"type" => "invalid_request_error", "code" => "account_invalid"}}}
+      )
+
+      assert :ok = ChargeRefunded.handle(connect_charge_event(2_000))
+
+      assert %{status: :pending} = RefundQueries.get(refund.id)
+      assert %{refunded_amount_cents: 2_000} = Repo.reload!(payment)
+    end
+  end
+
+  # The attendee's email went out, so the job no longer holds its unique
+  # slot and a second one would be enqueued.
+  defp mark_emails_sent do
+    Repo.update_all(
+      from(j in Oban.Job, where: j.worker == "Tymeslot.Workers.SendBookingPaymentRefunded"),
+      set: [state: "completed"]
+    )
+  end
+
+  # The refund Stripe made for `refund`, listed with its charge expanded.
+  defp made_for(refund, charge_refunded) do
+    StripeFixtures.object("refund_with_charge", %{
+      "id" => "re_RECONCILE",
+      "amount" => refund.amount_cents,
+      "metadata" => %{"tymeslot_refund_id" => refund.id},
+      "charge" => %{"id" => "ch_RECONCILE", "amount_refunded" => charge_refunded}
+    })
+  end
+
+  defp connect_charge_event(amount_refunded) do
+    charge =
+      StripeFixtures.object("charge", %{
+        "id" => "ch_RECONCILE",
+        "amount" => 5_000,
+        "amount_refunded" => amount_refunded
+      })
+
+    "charge.refunded"
+    |> StripeWebhookFixtures.connect_event(charge, @account)
+    |> Jason.decode!()
   end
 
   defp refund_event(event_id, charge_id, amount_refunded) do

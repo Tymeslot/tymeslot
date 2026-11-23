@@ -111,6 +111,22 @@ defmodule Tymeslot.MeetingPayments.RefundSchema do
     check_constraint(changeset, :legacy_since, name: :legacy_key_dated)
   end
 
+  @doc """
+  A refund made outside Tymeslot, recorded from Stripe as `succeeded`:
+  `attrs` carry its payment, amount, Stripe refund id and `settled_at`.
+  """
+  @spec external_changeset(t(), map()) :: Ecto.Changeset.t()
+  def external_changeset(refund, attrs) do
+    refund
+    |> cast(attrs, [:booking_payment_id, :amount_cents, :stripe_refund_id, :settled_at])
+    |> validate_required([:booking_payment_id, :amount_cents, :stripe_refund_id, :settled_at])
+    |> validate_number(:amount_cents, greater_than: 0)
+    |> put_change(:source, :external)
+    |> put_change(:status, :succeeded)
+    |> foreign_key_constraint(:booking_payment_id)
+    |> check_constraint(:amount_cents, name: :amount_positive)
+  end
+
   @doc "The end of a refund: `succeeded` with Stripe's refund id, or `failed` with a code."
   @spec settle_changeset(t(), map()) :: Ecto.Changeset.t()
   def settle_changeset(refund, attrs) do

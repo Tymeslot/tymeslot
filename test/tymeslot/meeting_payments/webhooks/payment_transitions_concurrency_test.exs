@@ -119,6 +119,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   end
 
   test "a lost dispute racing a refund adds to the refund rather than writing over it", ctx do
+    # charge.refunded lists the charge's refunds; Tymeslot recorded none.
+    StripeStub.stub(:list_refunds, StripeFixtures.list([]))
+
     payment =
       unboxed(fn ->
         insert(:paid_booking_payment,

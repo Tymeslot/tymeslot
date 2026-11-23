@@ -189,6 +189,7 @@ defmodule TymeslotWeb.StripeConnectWebhookTest do
         )
 
       StripeStub.stub(:retrieve_payment_intent, {:transport_error, :timeout})
+      StripeStub.stub(:list_refunds, StripeFixtures.list([]))
 
       assert build_conn() |> post_connect(payload) |> response(503) == ""
       assert Repo.reload!(bp).refunded_amount_cents == 0

@@ -10,6 +10,10 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   that waits on the answer. A pending refund counts against the refundable
   balance until it settles, so a second refund cannot spend the same money.
 
+  How a refund ended at Stripe is recorded by `Refunds.Settlement`, for an
+  attempt and for the refund webhooks alike (`reconcile/2`), so each refund
+  settles once.
+
   A payment `refusal/1` rules out is refused before anything is recorded:
   one never paid (`:not_paid`), one past the 60-day refund window
   (`:outside_refund_window`), and one Stripe holds for a dispute
@@ -22,6 +26,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   alias Tymeslot.MeetingPayments.RefundedTotal
   alias Tymeslot.MeetingPayments.RefundExecutor
   alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.Refunds.Settlement
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Repo
@@ -180,6 +185,28 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   """
   @spec execute(RefundSchema.t(), keyword()) :: attempt_result()
   defdelegate execute(refund, opts), to: RefundExecutor, as: :run
+
+  @doc """
+  Records `refund` as made at Stripe; see `Refunds.Settlement.settle_succeeded/2`.
+  """
+  @spec settle_succeeded(RefundSchema.t(), map()) :: Settlement.settled() | {:error, term()}
+  defdelegate settle_succeeded(refund, stripe_refund), to: Settlement
+
+  @doc """
+  Settles a pending refund failed as Stripe reported it; see
+  `Refunds.Settlement.settle_failed/3`.
+  """
+  @spec settle_failed(RefundSchema.t(), map(), String.t()) ::
+          Settlement.settled() | {:error, term()}
+  defdelegate settle_failed(refund, stripe_refund, code), to: Settlement
+
+  @doc """
+  Brings a payment's recorded refunds in line with the refunds Stripe
+  reports for its charge, for the refund webhooks; see
+  `Refunds.Settlement.reconcile/2`.
+  """
+  @spec reconcile(BookingPaymentSchema.t(), [map()]) :: :ok | {:error, term()}
+  defdelegate reconcile(payment, stripe_refunds), to: Settlement
 
   @doc """
   Records a refund (`request_refund/4`) and makes its first attempt at once

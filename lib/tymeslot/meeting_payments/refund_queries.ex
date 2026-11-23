@@ -151,6 +151,50 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
   end
 
   @doc """
+  Settles a pending refund with `attrs`, whichever attempt holds it, for a
+  settlement learnt from Stripe rather than by an attempt. A refund already
+  settled returns `{:error, :not_pending}`, and a Stripe refund another row
+  holds `{:error, :stripe_refund_taken}`.
+  """
+  @spec settle_pending(RefundSchema.t(), map()) ::
+          {:ok, RefundSchema.t()} | {:error, :not_pending | :stripe_refund_taken | Changeset.t()}
+  def settle_pending(%RefundSchema{id: id}, attrs) do
+    pending = from(r in RefundSchema, where: r.id == ^id and r.status == :pending)
+    settle_where(pending, %RefundSchema{}, attrs, [])
+  end
+
+  @doc """
+  Settles a succeeded refund `failed` with `attrs`, once Stripe reports it
+  failed after accepting it. One not `succeeded` returns
+  `{:error, :not_succeeded}`.
+  """
+  @spec fail_succeeded(RefundSchema.t(), map()) ::
+          {:ok, RefundSchema.t()} | {:error, :not_succeeded | Changeset.t()}
+  def fail_succeeded(%RefundSchema{id: id}, attrs) do
+    succeeded = from(r in RefundSchema, where: r.id == ^id and r.status == :succeeded)
+
+    with {:error, :not_pending} <- settle_where(succeeded, %RefundSchema{}, attrs, []),
+         do: {:error, :not_succeeded}
+  end
+
+  @doc """
+  Inserts a refund made outside Tymeslot (`RefundSchema.external_changeset/2`),
+  or nothing when its Stripe refund is already recorded, returning
+  `{:ok, nil}` then.
+  """
+  @spec insert_external(Changeset.t()) :: {:ok, RefundSchema.t() | nil} | {:error, Changeset.t()}
+  def insert_external(%Changeset{} = changeset) do
+    case Repo.insert(changeset,
+           on_conflict: :nothing,
+           conflict_target:
+             {:unsafe_fragment, "(stripe_refund_id) WHERE stripe_refund_id IS NOT NULL"}
+         ) do
+      {:ok, %RefundSchema{id: nil}} -> {:ok, nil}
+      other -> other
+    end
+  end
+
+  @doc """
   As `settle/2`, but only while the `claimed` attempt is the latest: an
   attempt whose lease ran out and was claimed again since no longer decides
   the refund, and gets `{:error, :not_pending}`.

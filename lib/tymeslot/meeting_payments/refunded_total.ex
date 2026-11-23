@@ -54,6 +54,36 @@ defmodule Tymeslot.MeetingPayments.RefundedTotal do
     do: whole(payment, stripe_refunded_cents(payment) + amount_cents, payment.disputed_lost_cents)
 
   @doc """
+  The whole once a recorded refund of `amount_cents` is reported failed at
+  Stripe, which gives the money back to the host. The only way the refunds
+  are lowered; the dispute's part is kept.
+  """
+  @spec with_refund_failed(BookingPaymentSchema.t(), pos_integer()) :: non_neg_integer()
+  def with_refund_failed(payment, amount_cents) when is_integer(amount_cents),
+    do:
+      whole(
+        payment,
+        max(stripe_refunded_cents(payment) - amount_cents, 0),
+        payment.disputed_lost_cents
+      )
+
+  @doc """
+  The status a payment takes once its whole is `total`. A disputed payment
+  stays disputed: the dispute owns the status, and the total only tracks
+  the money.
+  """
+  @spec status_for(BookingPaymentSchema.t(), non_neg_integer()) :: BookingPaymentSchema.status()
+  def status_for(%{status: :disputed}, _total), do: :disputed
+
+  def status_for(%{amount_cents: amount}, total) when is_integer(total) do
+    cond do
+      total >= amount -> :refunded
+      total > 0 -> :partially_refunded
+      true -> :paid
+    end
+  end
+
+  @doc """
   The attributes recording a lost dispute over `disputed_cents`. A charge
   is disputed once, so a second report of the loss (another event for the
   same dispute) records it once.

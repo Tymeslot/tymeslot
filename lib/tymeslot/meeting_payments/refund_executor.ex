@@ -35,10 +35,10 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
        step 4 also adopts a refund of its payment and amount made since
        `legacy_since` and recorded on no row.
     6. Settles by the outcome (`RefundOutcome`): a refund Stripe accepted
-       is added to the payment's refunded total in one short transaction
-       under the payment's lock, which also enqueues the attendee's email;
-       one to retry releases the lease; a refusal settles the refund
-       `failed` and sends `Refunds.FailureNotice`.
+       is recorded by `Refunds.Settlement.settle_succeeded/2`, as the
+       webhooks record one, so whichever learns of it first sends the
+       attendee's one email; one to retry releases the lease; a refusal
+       settles the refund `failed` and sends `Refunds.FailureNotice`.
   """
 
   require Logger
@@ -49,15 +49,12 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ChargeBackfill
-  alias Tymeslot.MeetingPayments.RefundedTotal
   alias Tymeslot.MeetingPayments.RefundOutcome
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds.FailureNotice
+  alias Tymeslot.MeetingPayments.Refunds.Settlement
   alias Tymeslot.MeetingPayments.RefundSchema
-  alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
-  alias Tymeslot.Repo
-  alias Tymeslot.Workers.SendBookingPaymentRefunded
 
   # One page; a booking payment sees nowhere near this many refunds.
   @list_limit 100
@@ -68,16 +65,6 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
   # `legacy_since` a little earlier.
   @legacy_key_kept_seconds 24 * 60 * 60
   @clock_margin_seconds 5 * 60
-
-  # What a refund's source reports a status change as.
-  @status_change_reasons %{
-    host: :host_refund,
-    cancellation: :cancellation_refund,
-    approval_release: :approval_release_refund,
-    late_payment: :late_payment_refund,
-    series_host: :series_host_refund,
-    external: :external_refund
-  }
 
   @type result ::
           {:ok, RefundSchema.t()}
@@ -116,36 +103,6 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     end
   end
 
-  # Records a refund of `amount_cents` Stripe made of the `locked` payment,
-  # as `stripe_refund`: the refunded total and the status that follows from
-  # it, whose change is reported to telemetry with `reason`. Called in the
-  # transaction holding the payment's row lock.
-  @spec record_refunded(
-          BookingPaymentSchema.t(),
-          pos_integer(),
-          map(),
-          Telemetry.status_change_reason()
-        ) :: {:ok, BookingPaymentSchema.t()} | {:error, Ecto.Changeset.t()}
-  defp record_refunded(locked, amount_cents, stripe_refund, reason) do
-    new_total = refunded_total(locked, amount_cents, stripe_refund)
-
-    new_status =
-      cond do
-        new_total >= locked.amount_cents -> :refunded
-        new_total > 0 -> :partially_refunded
-        true -> locked.status
-      end
-
-    with {:ok, updated} <-
-           BookingPaymentQueries.update(locked, %{
-             refunded_amount_cents: new_total,
-             status: new_status
-           }) do
-      Telemetry.emit_status_changed(locked.status, updated.status, reason)
-      {:ok, updated}
-    end
-  end
-
   # The params of a refund of `amount_cents` of `payment` at Stripe, with the
   # charge expanded so the answer carries Stripe's refunded total.
   @spec stripe_params(BookingPaymentSchema.t(), pos_integer(), String.t() | nil) :: map()
@@ -158,24 +115,6 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     }
     |> put_reason(reason)
     |> put_refund_application_fee(payment)
-  end
-
-  # Enqueues the attendee's refund email for `payment`. A failed insert is
-  # logged and does not undo the refund.
-  @spec enqueue_refund_email(BookingPaymentSchema.t()) :: :ok
-  defp enqueue_refund_email(payment) do
-    case %{booking_payment_id: payment.id} |> SendBookingPaymentRefunded.new() |> Oban.insert() do
-      {:ok, _job} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to enqueue refund email",
-          booking_payment_id: payment.id,
-          reason: LogFormat.reason(reason)
-        )
-
-        :ok
-    end
   end
 
   defp settled(nil), do: {:error, :not_found}
@@ -355,8 +294,8 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
 
   defp put_refund_application_fee(params, _payment), do: params
 
-  defp conclude({:succeeded, stripe_refund}, refund, payment, opts),
-    do: record_success(refund, payment, stripe_refund, opts)
+  defp conclude({:succeeded, stripe_refund}, refund, _payment, opts),
+    do: record_success(refund, stripe_refund, opts)
 
   defp conclude({:retry, reason}, refund, _payment, opts) do
     Logger.warning("Refund attempt failed, to be retried",
@@ -382,38 +321,13 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     {:stuck, refund}
   end
 
-  defp record_success(refund, payment, stripe_refund, opts) do
-    attrs = %{status: :succeeded, stripe_refund_id: stripe_refund["id"], settled_at: now()}
-
-    recorded =
-      Repo.transaction(fn ->
-        with {:ok, locked} <- BookingPaymentQueries.get_for_update(payment.id),
-             prior = RefundQueries.get_for_update(refund.id),
-             {:ok, settled} <- RefundQueries.settle(refund, attrs),
-             {:ok, _updated} <-
-               record_refunded(
-                 locked,
-                 refund.amount_cents,
-                 stripe_refund,
-                 Map.fetch!(@status_change_reasons, refund.source)
-               ) do
-          enqueue_refund_email(locked)
-          {settled, prior}
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
-
-    case recorded do
-      {:ok, {settled, %RefundSchema{status: :failed} = failed}} ->
-        failure_reversed(failed, settled)
+  defp record_success(refund, stripe_refund, opts) do
+    case Settlement.settle_succeeded(refund, stripe_refund) do
+      {:ok, settled, _settled_or_already} ->
         {:ok, settled}
 
-      {:ok, {settled, _pending}} ->
-        {:ok, settled}
-
-      {:error, :not_pending} ->
-        refund.id |> RefundQueries.get() |> settled()
+      {:error, :not_found} ->
+        {:error, :not_found}
 
       # Stripe made the refund; the next attempt adopts it and records it.
       {:error, reason} ->
@@ -426,19 +340,6 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
         RefundQueries.release(refund)
         retry_later(refund, opts)
     end
-  end
-
-  # Money Stripe moved stands, even over a refund another attempt failed
-  # meanwhile (`RefundQueries.settle/2`); that failure was reported, so its
-  # reversal is too, once committed.
-  defp failure_reversed(failed, settled) do
-    Logger.warning("Refund settled failed was made at Stripe after all; recorded",
-      refund_id: settled.id,
-      failure_code: failed.failure_code,
-      stripe_refund_id: settled.stripe_refund_id
-    )
-
-    FailureNotice.reversed(settled, failed.failure_code)
   end
 
   defp fail(claimed, code) do
@@ -458,16 +359,6 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     unless opts[:from_job], do: ExecuteRefund.reschedule(refund.id, in: 0)
     {:pending, refund}
   end
-
-  # Stripe's refunded total for the charge, which counts this refund once
-  # however often it is answered, and never below the recorded refunds. A
-  # refund without the expanded charge is added to the recorded refunds.
-  defp refunded_total(payment, _amount_cents, %{"charge" => %{"amount_refunded" => total}})
-       when is_integer(total),
-       do: RefundedTotal.with_stripe_refunded(payment, total)
-
-  defp refunded_total(payment, amount_cents, _stripe_refund),
-    do: RefundedTotal.with_refund_added(payment, amount_cents)
 
   defp now, do: DateTime.utc_now(:second)
 end

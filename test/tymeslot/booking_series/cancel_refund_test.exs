@@ -70,8 +70,9 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
     end)
   end
 
-  # The next attempt lists the charge's refunds and finds the one made for
-  # `refund`, its charge showing Stripe's refunded total.
+  # The charge's refunds, as the next attempt or `charge.refunded` lists
+  # them: the one made for `refund`, its charge showing Stripe's refunded
+  # total.
   defp expect_listed_refund(refund, charge_refunded) do
     StripeStub.expect(
       :list_refunds,
@@ -233,7 +234,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert Repo.reload!(payment).refunded_amount_cents == 7_000
     end
 
-    test "a refund the webhook recorded before the retry is not recorded again", %{
+    test "a refund the webhook recorded before the retry is not asked for or recorded again", %{
       host: host,
       series: series,
       payment: payment
@@ -246,17 +247,19 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       timeout_after_stripe_refunds(2_000)
       assert {:error, :pending} = run_refund_job()
 
-      # Stripe reports the refund it made, so the payment records it.
-      assert :ok = ChargeRefunded.handle(charge_refunded_event("evt_REFUNDED", 2_000))
-      assert Repo.reload!(payment).refunded_amount_cents == 2_000
-
-      # The retry finds the refund Stripe made for this row and records it,
-      # at Stripe's total, without asking for another.
+      # Stripe reports the refund it made, and the webhook finds it among
+      # the charge's refunds and records it on its row, at Stripe's total.
       [refund] = refunds(payment)
       expect_listed_refund(refund, 2_000)
+      assert :ok = ChargeRefunded.handle(charge_refunded_event("evt_REFUNDED", 2_000))
+      assert %{status: :succeeded} = RefundQueries.get(refund.id)
+      assert Repo.reload!(payment).refunded_amount_cents == 2_000
+
+      # The retry finds the refund settled and asks Stripe for nothing.
       assert :ok = run_refund_job(attempt: 2)
 
       assert length(StripeStub.requests(:create_refund)) == 3
+      assert length(StripeStub.requests(:list_refunds)) == 1
       assert %{refunded_amount_cents: 2_000, status: :partially_refunded} = Repo.reload!(payment)
       assert %{status: :succeeded} = RefundQueries.get(refund.id)
       assert refund_failed_jobs() == []

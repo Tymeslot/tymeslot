@@ -15,7 +15,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookRegistry do
     ChargeRefunded,
     CheckoutSessionAsyncPaymentFailed,
     CheckoutSessionCompleted,
-    CheckoutSessionExpired
+    CheckoutSessionExpired,
+    RefundUpdated
   }
 
   @spec handler_for(String.t()) :: module() | :ignore | nil
@@ -35,6 +36,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookRegistry do
       "checkout.session.async_payment_failed" => CheckoutSessionAsyncPaymentFailed,
       "checkout.session.expired" => CheckoutSessionExpired,
       "charge.refunded" => ChargeRefunded,
+      # A refund that changed after Stripe accepted it. Stripe's older
+      # `charge.refund.updated` carries the same refund object, so an
+      # endpoint subscribed to it instead is handled alike.
+      "refund.updated" => RefundUpdated,
+      "charge.refund.updated" => RefundUpdated,
       "charge.dispute.created" => ChargeDisputeCreated,
       "charge.dispute.closed" => ChargeDisputeClosed,
       "account.updated" => AccountUpdated,

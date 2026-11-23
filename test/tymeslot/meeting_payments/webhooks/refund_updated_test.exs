@@ -1,0 +1,171 @@
+defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
+  # async: false: admin alerts are captured through application env.
+  use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
+
+  @moduletag :payments
+  @moduletag :webhooks
+  @moduletag :integration
+  @moduletag :capture_log
+
+  import Tymeslot.AdminAlertsCaptureHelpers
+  import Tymeslot.Factory
+
+  alias Ecto.UUID
+  alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.RefundSchema
+  alias Tymeslot.MeetingPayments.Webhooks.RefundUpdated
+  alias Tymeslot.MeetingPayments.Webhooks.WebhookRegistry
+  alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeWebhookFixtures
+  alias Tymeslot.Workers.SendBookingPaymentRefunded
+  alias Tymeslot.Workers.SendRefundFailed
+
+  @account "acct_TEST_HOST"
+
+  setup :capture_admin_alerts
+
+  defp refunded_payment(attrs \\ []) do
+    insert(
+      :paid_booking_payment,
+      [
+        stripe_account_id: @account,
+        stripe_charge_id: "ch_UPDATED",
+        amount_cents: 5_000,
+        refunded_amount_cents: 5_000,
+        status: :refunded
+      ] ++ attrs
+    )
+  end
+
+  defp succeeded_refund(payment) do
+    insert(:booking_payment_refund,
+      booking_payment: payment,
+      amount_cents: 5_000,
+      status: :succeeded,
+      stripe_refund_id: "re_UPDATED",
+      settled_at: DateTime.utc_now(:second)
+    )
+  end
+
+  defp refund_event(refund, status, metadata \\ nil) do
+    object =
+      StripeFixtures.object("refund", %{
+        "id" => "re_UPDATED",
+        "amount" => refund.amount_cents,
+        "charge" => "ch_UPDATED",
+        "status" => status,
+        "metadata" => metadata || %{"tymeslot_refund_id" => refund.id}
+      })
+
+    "refund.updated"
+    |> StripeWebhookFixtures.connect_event(object, @account)
+    |> Jason.decode!()
+  end
+
+  test "is the handler for refund.updated and charge.refund.updated" do
+    assert WebhookRegistry.handler_for("refund.updated") == RefundUpdated
+    assert WebhookRegistry.handler_for("charge.refund.updated") == RefundUpdated
+  end
+
+  test "refund.updated to failed takes a succeeded refund off the total" do
+    payment = refunded_payment()
+    refund = succeeded_refund(payment)
+
+    assert :ok = RefundUpdated.handle(refund_event(refund, "failed"))
+
+    assert %{status: :failed, failure_code: "refund_failed"} = RefundQueries.get(refund.id)
+    assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
+
+    refund_id = refund.id
+
+    assert_received {:send_alert, :refund_failed,
+                     %{refund_id: ^refund_id, failure_code: "refund_failed"}}
+
+    assert_enqueued(worker: SendRefundFailed, args: %{refund_id: refund_id})
+    assert StripeStub.requests() == []
+  end
+
+  test "refund.updated for a disputed payment keeps the disputed status" do
+    payment =
+      refunded_payment(
+        status: :disputed,
+        refunded_amount_cents: 5_000,
+        disputed_lost_cents: 0
+      )
+
+    refund = succeeded_refund(payment)
+
+    assert :ok = RefundUpdated.handle(refund_event(refund, "canceled"))
+
+    assert %{status: :failed, failure_code: "refund_canceled"} = RefundQueries.get(refund.id)
+    assert %{refunded_amount_cents: 0, status: :disputed} = Repo.reload!(payment)
+  end
+
+  test "refund.updated replayed is a no-op" do
+    payment = refunded_payment()
+    refund = succeeded_refund(payment)
+    event = refund_event(refund, "failed")
+
+    assert :ok = RefundUpdated.handle(event)
+    assert_received {:send_alert, :refund_failed, _alert}
+
+    assert :ok = RefundUpdated.handle(event)
+
+    assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
+    refute_received {:send_alert, :refund_failed, _alert}
+    assert [_one] = all_enqueued(worker: SendRefundFailed)
+  end
+
+  # A charge Tymeslot never made: its payment intent names no booking.
+  test "refund.updated for an unknown charge is acknowledged" do
+    StripeStub.expect(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{"metadata" => %{}})
+    )
+
+    refund = build(:booking_payment_refund, id: UUID.generate())
+
+    assert :ok = RefundUpdated.handle(refund_event(refund, "failed"))
+
+    assert Repo.aggregate(RefundSchema, :count) == 0
+    refute_received {:send_alert, _type, _alert}
+  end
+
+  test "refund.updated to failed settles a pending refund failed and tells the host" do
+    payment = refunded_payment(refunded_amount_cents: 0, status: :paid)
+    refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
+
+    assert :ok = RefundUpdated.handle(refund_event(refund, "failed"))
+
+    assert %{status: :failed, failure_code: "refund_failed", stripe_refund_id: "re_UPDATED"} =
+             RefundQueries.get(refund.id)
+
+    assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
+    assert_enqueued(worker: SendRefundFailed, args: %{refund_id: refund.id})
+    refute_enqueued(worker: SendBookingPaymentRefunded)
+  end
+
+  test "refund.updated to succeeded settles a pending refund and emails the attendee" do
+    payment = refunded_payment(refunded_amount_cents: 0, status: :paid)
+    refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
+
+    assert :ok = RefundUpdated.handle(refund_event(refund, "succeeded"))
+
+    assert %{status: :succeeded, stripe_refund_id: "re_UPDATED"} = RefundQueries.get(refund.id)
+    assert %{refunded_amount_cents: 2_000, status: :partially_refunded} = Repo.reload!(payment)
+    assert_enqueued(worker: SendBookingPaymentRefunded, args: %{booking_payment_id: payment.id})
+  end
+
+  test "refund.updated for a failed dashboard refund records nothing" do
+    payment = refunded_payment()
+    refund = build(:booking_payment_refund, id: nil, amount_cents: 1_000)
+
+    assert :ok = RefundUpdated.handle(refund_event(refund, "failed", %{}))
+
+    assert RefundQueries.list_for_payment(payment.id) == []
+    assert %{refunded_amount_cents: 5_000} = Repo.reload!(payment)
+  end
+end
