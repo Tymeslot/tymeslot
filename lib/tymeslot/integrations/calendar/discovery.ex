@@ -88,7 +88,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   (the debug provider) has a fixed calendar list, so there is nothing to
   rediscover.
   """
-  @spec discovers_calendars?(%{provider: String.t()}) :: boolean()
+  @spec discovers_calendars?(%{:provider => String.t(), optional(atom()) => any()}) :: boolean()
   def discovers_calendars?(%{provider: provider}) do
     with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
          {:ok, provider_module} <- provider_module_for(provider_atom) do
