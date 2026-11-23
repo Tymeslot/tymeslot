@@ -492,6 +492,56 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     |> Repo.update_all(set: [attendee_email: nil, attendee_name: nil, updated_at: now])
   end
 
+  @doc """
+  Up to `limit` payments that may count a lost dispute as refunds, in id
+  order after `after_id` (`nil` for the first page): a charge, something
+  refunded, no dispute loss recorded, and a refunded status. Only the
+  fields `Tymeslot.MeetingPayments.DisputeLossBackfill` reads are loaded;
+  its moduledoc says why these rows.
+  """
+  @spec dispute_loss_candidates(Ecto.UUID.t() | nil, pos_integer()) :: [
+          BookingPaymentSchema.t()
+        ]
+  def dispute_loss_candidates(after_id, limit) when is_integer(limit) and limit > 0 do
+    BookingPaymentSchema
+    |> where(
+      [b],
+      not is_nil(b.stripe_charge_id) and b.disputed_lost_cents == 0 and
+        b.refunded_amount_cents > 0 and b.status in [:refunded, :partially_refunded]
+    )
+    |> after_id(after_id)
+    |> order_by([b], asc: b.id)
+    |> limit(^limit)
+    |> select(
+      [b],
+      struct(b, [:id, :stripe_charge_id, :stripe_account_id, :refunded_amount_cents])
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Records `lost_cents` as the payment's lost dispute share, only while it
+  has none recorded and its refunded total still covers it. Writes nothing
+  else. `{:ok, :unchanged}` when the guard matched no row: another process
+  recorded the loss (or lowered the total) first.
+  """
+  @spec record_dispute_loss(Ecto.UUID.t(), pos_integer()) :: {:ok, :recorded | :unchanged}
+  def record_dispute_loss(id, lost_cents) when is_integer(lost_cents) and lost_cents > 0 do
+    query =
+      from b in BookingPaymentSchema,
+        where:
+          b.id == ^id and b.disputed_lost_cents == 0 and
+            b.refunded_amount_cents >= ^lost_cents
+
+    case Repo.update_all(query, set: [disputed_lost_cents: lost_cents]) do
+      {1, _rows} -> {:ok, :recorded}
+      {0, _rows} -> {:ok, :unchanged}
+    end
+  end
+
+  defp after_id(query, nil), do: query
+  defp after_id(query, id), do: where(query, [b], b.id > ^id)
+
   defp dated_before(query, cutoff) do
     where(
       query,

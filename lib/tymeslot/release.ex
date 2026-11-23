@@ -2,8 +2,9 @@ defmodule Tymeslot.Release do
   @moduledoc """
   Helpers callable from a packaged release where `mix` is not available.
 
-  `migrate/1`, `strip_upload_metadata/0` and `verify_proxy/1` run in a
-  one-shot helper VM, `bin/tymeslot eval`, and need no running node. Every
+  `migrate/1`, `strip_upload_metadata/0`, `verify_proxy/1` and
+  `backfill_dispute_losses/1` run in a one-shot helper VM, `bin/tymeslot
+  eval`, and need no running node. Every
   other helper acts on the running node and goes through `bin/tymeslot
   rpc`: under `eval` it raises rather than boot a second copy of the
   application (its Oban queues, endpoint and start-up tasks) beside the
@@ -19,7 +20,10 @@ defmodule Tymeslot.Release do
   alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Auth.{AdminRoles, AdminUserQueries, UserQueries, UserSchema}
   alias Tymeslot.Infrastructure.{FinchPool, ProxyVerifier}
+  alias Tymeslot.Integrations.Stripe
   alias Tymeslot.Media.UploadMetadataSweep
+  alias Tymeslot.MeetingPayments.DisputeLossBackfill
+  alias Tymeslot.Repo
 
   @doc """
   Runs every pending migration of `app`'s repos (its `:ecto_repos`), each
@@ -217,6 +221,93 @@ defmodule Tymeslot.Release do
       IO.puts(ProxyVerifier.report(result))
 
       if result.traffic_flows_through_proxy, do: :ok, else: {:error, :proxy_not_verified}
+    end
+  end
+
+  @doc """
+  Reads from Stripe what disputes lost before 1.48.0 took from each booking
+  payment, and records it apart from the refunds (`disputed_lost_cents`).
+  Until it runs, such a payment counts the loss as refunds made at Stripe.
+  It changes nothing else on the row. Run it once on a deployment that took
+  payments before 1.48.0; a dry run first shows what it would record:
+
+      bin/tymeslot eval 'Tymeslot.Release.backfill_dispute_losses()'                  # dry run
+      bin/tymeslot eval 'Tymeslot.Release.backfill_dispute_losses(dry_run: false)'    # write
+
+  Under `eval` it starts only the repo and the HTTP client, as `migrate/1`
+  and `verify_proxy/1` do; through `rpc` it uses the running node's. It
+  makes one Stripe call per candidate payment, `:pause_ms` (default 100)
+  apart; `:limit` caps how many are read. The candidates
+  (`Tymeslot.MeetingPayments.DisputeLossBackfill`) can be counted first:
+
+      SELECT count(*) FROM booking_payments
+      WHERE stripe_charge_id IS NOT NULL AND disputed_lost_cents = 0
+        AND refunded_amount_cents > 0
+        AND status IN ('refunded', 'partially_refunded');
+
+  It prints a line per payment recorded (or, in a dry run, to be recorded)
+  and per failed Stripe call, with the payment id, charge id and cents, and
+  a summary. Running it again is safe: a recorded loss is never read or
+  written twice. `eval` exits 0 whatever this returns, so the verdict is
+  the last line printed, which starts `DRY RUN:` or `DONE:`, or `FAILED:`
+  when no Stripe secret key is configured and nothing was read.
+  """
+  @spec backfill_dispute_losses(keyword()) :: :ok | {:error, :missing_api_key}
+  def backfill_dispute_losses(opts \\ []) do
+    if Stripe.configured?() do
+      dry_run? = Keyword.get(opts, :dry_run, true)
+      ensure_http_started()
+
+      summary =
+        with_repo(fn ->
+          opts
+          |> Keyword.put(:dry_run, dry_run?)
+          |> Keyword.put(:on_outcome, &print_dispute_loss/1)
+          |> DisputeLossBackfill.run()
+        end)
+
+      IO.puts(dispute_loss_summary(summary, dry_run?))
+    else
+      IO.puts("FAILED: no Stripe secret key is configured (STRIPE_SECRET_KEY); nothing was read")
+      {:error, :missing_api_key}
+    end
+  end
+
+  defp print_dispute_loss({:error, payment, reason}),
+    do: IO.puts("ERROR #{payment.id} #{payment.stripe_charge_id}: #{error_text(reason)}")
+
+  defp print_dispute_loss({written, payment, cents}),
+    do:
+      IO.puts("#{dispute_loss_label(written)} #{payment.id} #{payment.stripe_charge_id} #{cents}")
+
+  defp dispute_loss_label(:recorded), do: "RECORDED"
+  defp dispute_loss_label(:would_record), do: "WOULD RECORD"
+  defp dispute_loss_label(:unchanged), do: "ALREADY RECORDED"
+
+  defp error_text(%{__exception__: true} = error), do: Exception.message(error)
+  defp error_text(reason), do: inspect(reason)
+
+  defp dispute_loss_summary(summary, dry_run?) do
+    counts =
+      "#{summary.candidates} candidates, #{summary.lost} with a lost dispute, " <>
+        "#{summary.clamped} clamped to the refunded total, #{length(summary.errors)} errors"
+
+    if dry_run? do
+      "DRY RUN: #{counts}; nothing written, run with dry_run: false to record"
+    else
+      "DONE: #{counts}; #{summary.updated} recorded, #{summary.unchanged} already recorded"
+    end
+  end
+
+  # With the application up (`rpc`, mix, tests) the repo is already running,
+  # and `Ecto.Migrator.with_repo/2` would restart its pool afterwards; under
+  # `eval` it starts the repo alone, as `migrate/2` does.
+  defp with_repo(fun) do
+    if List.keymember?(Application.started_applications(), :tymeslot, 0) do
+      fun.()
+    else
+      {:ok, result, _apps} = Migrator.with_repo(Repo, fn _repo -> fun.() end)
+      result
     end
   end
 
