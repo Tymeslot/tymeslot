@@ -12,7 +12,7 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
   The work is split up so the dashboard can show what a file holds before
   anything is written:
 
-    * `plan/1` parses the file and turns it into the events to write,
+    * `plan/3` parses the file and turns it into the events to write,
     * `target/3` checks the calendar chosen is the user's and writable, and
     * `run/3` writes a plan to it.
 
@@ -30,6 +30,7 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
   series is created, so `run/3` reports how many series it wrote without them.
   """
 
+  alias Tymeslot.CalendarGrid.IcsImport.Cutoff
   alias Tymeslot.CalendarGrid.IcsImport.Series
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar
@@ -48,6 +49,10 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
   # Every event is a provider write, made one after another so as not to trip
   # a provider's own rate limit; a thousand takes a few minutes.
   @max_events 1_000
+  # A file with more events is still read, so it can be narrowed to those
+  # from a date on (`IcsImport.Cutoff`). Past this many VEVENTs, about as many
+  # as `@max_bytes` holds, it is refused unread.
+  @max_file_events 20_000
   # A timed event is never written without a zone: Google requires one on a
   # series, and a UTC instant is exactly what a zoneless time was read as.
   @utc "Etc/UTC"
@@ -72,7 +77,9 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
   @type plan :: %{
           events: [event_data()],
           series: non_neg_integer(),
-          cancelled: non_neg_integer()
+          cancelled: non_neg_integer(),
+          from: Date.t() | nil,
+          left_out: non_neg_integer()
         }
 
   @type target :: %{
@@ -81,7 +88,12 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
           calendar_id: String.t() | nil
         }
 
-  @type plan_error :: :too_large | :invalid_file | :no_events | :too_many_events
+  @type plan_error ::
+          :too_large
+          | :invalid_file
+          | :no_events
+          | :too_many_events
+          | {:too_many_events, Cutoff.overview()}
 
   @type import_error :: :already_running
 
@@ -96,13 +108,17 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
           halted: atom() | nil
         }
 
-  @doc "The largest file `plan/1` accepts, in bytes."
+  @doc "The largest file `plan/3` accepts, in bytes."
   @spec max_bytes() :: pos_integer()
   def max_bytes, do: @max_bytes
 
-  @doc "The most events one file may hold."
+  @doc "The most events one import writes."
   @spec max_events() :: pos_integer()
   def max_events, do: @max_events
+
+  @doc "The most events a file may hold to be read at all."
+  @spec max_file_events() :: pos_integer()
+  def max_file_events, do: @max_file_events
 
   @doc """
   Parses an `.ics` document into the events an import would write, reading
@@ -110,35 +126,60 @@ defmodule Tymeslot.CalendarGrid.IcsImport do
 
   Cancelled events are left out and counted under `:cancelled`; `:series`
   counts the recurring ones among `:events`.
+
+  A plan holds at most `max_events/0` events. A file with more is
+  `{:error, {:too_many_events, overview}}`, where the overview
+  (`IcsImport.Cutoff.overview/3`) says how many events each suggested cutoff
+  would keep; one with more than `max_file_events/0` is refused unread, as
+  `{:error, :too_many_events}`.
+
+  Options:
+
+    * `:from` - a date: only the events still running from its start on, in
+      `timezone`, are planned (see `IcsImport.Cutoff`), and the rest are
+      counted under `:left_out`. The cap applies to the events kept.
   """
-  @spec plan(binary(), String.t()) :: {:ok, plan()} | {:error, plan_error()}
-  def plan(content, timezone \\ @utc)
+  @spec plan(binary(), String.t(), keyword()) :: {:ok, plan()} | {:error, plan_error()}
+  def plan(content, timezone \\ @utc, opts \\ [])
 
-  def plan(content, _timezone) when is_binary(content) and byte_size(content) > @max_bytes,
-    do: {:error, :too_large}
+  def plan(content, _timezone, _opts)
+      when is_binary(content) and byte_size(content) > @max_bytes,
+      do: {:error, :too_large}
 
-  def plan(content, timezone) when is_binary(content) do
+  def plan(content, timezone, opts) when is_binary(content) do
     # Counted before parsing, which costs far more than the count: a file of
     # tens of thousands of events is refused without being read.
-    if vevent_count(content) > @max_events do
+    if vevent_count(content) > @max_file_events do
       {:error, :too_many_events}
     else
-      build_plan(content, timezone)
+      build_plan(content, timezone, Keyword.get(opts, :from))
     end
   end
 
-  defp build_plan(content, timezone) do
+  defp build_plan(content, timezone, from) do
     with {:ok, raw_events} <- parse(content) do
       zone = if Timezones.valid?(timezone), do: timezone, else: @utc
       raw_events = Enum.map(raw_events, &anchor_floating(&1, zone))
       {cancelled, live} = Enum.split_with(raw_events, &cancelled?/1)
+      events = build_events(live, cancelled)
+      {kept, left_out} = Cutoff.narrow(events, from, zone)
 
-      case build_events(live, cancelled) do
-        [] ->
+      cond do
+        kept == [] ->
           {:error, :no_events}
 
-        events ->
-          {:ok, %{events: events, series: count_series(events), cancelled: length(cancelled)}}
+        length(kept) > @max_events ->
+          {:error, {:too_many_events, Cutoff.overview(events, zone, @max_events)}}
+
+        true ->
+          {:ok,
+           %{
+             events: kept,
+             series: count_series(kept),
+             cancelled: length(cancelled),
+             from: from,
+             left_out: left_out
+           }}
       end
     end
   end

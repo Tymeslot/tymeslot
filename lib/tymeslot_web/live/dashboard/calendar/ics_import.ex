@@ -6,9 +6,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
     * `:choose`: waiting for a file, picked in the modal or dropped anywhere
       on the calendar (the upload belongs to the surface root, see
       `ImportModal.drop_zone/1`, so a drop works with the modal closed);
-    * `:reading`: the file is planned by `IcsImportFlow.plan/2` in
+    * `:reading`: the file is planned by `IcsImportFlow.plan/3` in
       an async task (`:ics_import_plan`), so a large file never holds up the
       dashboard;
+    * `:too_many`: the file holds more events than one import writes, so
+      the organiser chooses a date to import from (`from`, one of the
+      `overview`'s importable suggestions) and the file, kept as `content`,
+      is planned again from then on;
     * `:ready`: its events are counted (`summary`) and a writable calendar
       is chosen (`calendar_key`, a `CalendarDirectory.key/2`);
     * `:running`: `DashboardLive` writes the events through
@@ -100,6 +104,28 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
   end
 
   def handle(
+        "calendar:ics_cutoff",
+        %{"from" => from},
+        %{assigns: %{ics_import: %{stage: :too_many} = state}} = socket
+      )
+      when is_binary(from) do
+    case Enum.find(
+           state.overview.suggestions,
+           &(&1.importable and Date.to_iso8601(&1.from) == from)
+         ) do
+      nil -> {:noreply, socket}
+      suggestion -> {:noreply, assign(socket, :ics_import, %{state | from: suggestion.from})}
+    end
+  end
+
+  def handle(
+        "calendar:ics_narrow",
+        _params,
+        %{assigns: %{ics_import: %{stage: :too_many, from: %Date{} = from}}} = socket
+      ),
+      do: {:noreply, plan_file(socket, from: from)}
+
+  def handle(
         "calendar:ics_start",
         _params,
         %{assigns: %{ics_import: %{stage: :ready} = state}} = socket
@@ -168,6 +194,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
         file_name: nil,
         plan: nil,
         summary: nil,
+        content: nil,
+        overview: nil,
+        from: nil,
         calendar_key: default_key(socket.assigns),
         done: 0,
         total: 0,
@@ -208,8 +237,21 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
   defp to_choose(socket, extra),
     do: update_state(socket, &clear(&1, Map.put(extra, :stage, :choose)))
 
-  defp clear(state, extra),
-    do: Map.merge(%{state | plan: nil, summary: nil, error: nil, result: nil}, extra)
+  defp clear(state, extra) do
+    Map.merge(
+      %{
+        state
+        | plan: nil,
+          summary: nil,
+          error: nil,
+          result: nil,
+          content: nil,
+          overview: nil,
+          from: nil
+      },
+      extra
+    )
+  end
 
   # The upload's own progress callback: the file's arrival, not the form's
   # change event, is what the upload is sure to report.
@@ -228,28 +270,34 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
     end
   end
 
-  # Only the file is read here; parsing a large one takes seconds, so it
-  # runs in an async task and `async/3` takes the result.
   defp read(socket) do
     case IcsImportFlow.consume(socket) do
       {:ok, file_name, content} ->
-        timezone = socket.assigns.timezone
-        # A later file of the same name must not take this one's plan.
-        ref = make_ref()
-
         socket
-        |> update_state(&clear(&1, %{stage: :reading, file_name: file_name, read_ref: ref}))
-        |> cancel_async(:ics_import_plan)
-        |> start_async(
-          :ics_import_plan,
-          Tasks.with_context(fn -> {ref, IcsImportFlow.plan(content, timezone)} end)
-        )
+        |> update_state(&clear(&1, %{file_name: file_name, content: content}))
+        |> plan_file([])
 
       # Nothing finished uploading: leave the socket alone (a refused file was
       # reported at validation).
       :none ->
         socket
     end
+  end
+
+  # Only the file is read in `read/1`; parsing a large one takes seconds, so
+  # it is planned in an async task and `async/3` takes the result.
+  defp plan_file(%{assigns: %{ics_import: %{content: content}}} = socket, opts) do
+    timezone = socket.assigns.timezone
+    # A later file of the same name must not take this one's plan.
+    ref = make_ref()
+
+    socket
+    |> update_state(&Map.merge(&1, %{stage: :reading, read_ref: ref, error: nil}))
+    |> cancel_async(:ics_import_plan)
+    |> start_async(
+      :ics_import_plan,
+      Tasks.with_context(fn -> {ref, IcsImportFlow.plan(content, timezone, opts)} end)
+    )
   end
 
   # The calendar chosen when the modal opened may have gone (disconnected,
@@ -269,9 +317,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImport do
           plan: plan,
           summary: IcsImportFlow.summary(plan),
           error: nil,
+          content: nil,
+          overview: nil,
           calendar_key: key
       }
     end)
+  end
+
+  # The earliest suggestion that fits is chosen to begin with: it keeps the
+  # most of the file.
+  defp apply_plan(socket, {:error, {:too_many_events, overview}}) do
+    from = Enum.find_value(overview.suggestions, &(&1.importable && &1.from))
+
+    update_state(
+      socket,
+      &%{&1 | stage: :too_many, overview: overview, from: from, error: nil}
+    )
   end
 
   defp apply_plan(socket, {:error, reason}),

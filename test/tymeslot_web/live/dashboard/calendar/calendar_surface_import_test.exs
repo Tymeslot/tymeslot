@@ -326,6 +326,77 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
     end
   end
 
+  describe "a file with more events than one import writes" do
+    # 1,001 events on 1 May 2026 and a dentist's appointment in November; the
+    # clock stands at 14 October 2026.
+    defp oversized do
+      busy =
+        for n <- 1..1_001 do
+          "BEGIN:VEVENT\r\nUID:busy#{n}@example.com\r\nSUMMARY:Busy #{n}\r\n" <>
+            "DTSTART:20260501T090000Z\r\nDTEND:20260501T100000Z\r\nEND:VEVENT"
+        end
+
+      dentist =
+        "BEGIN:VEVENT\r\nUID:dentist@example.com\r\nSUMMARY:Dentist\r\n" <>
+          "DTSTART:20261105T090000Z\r\nDTEND:20261105T093000Z\r\nEND:VEVENT"
+
+      Enum.join(["BEGIN:VCALENDAR", "VERSION:2.0"] ++ busy ++ [dentist, "END:VCALENDAR"], "\r\n")
+    end
+
+    defp option(lv, from), do: element(lv, ~s(#calendar-import-cutoff input[value="#{from}"]))
+
+    test "offers the dates it fits from, and imports the events from the one chosen", %{
+      conn: conn
+    } do
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :create_event, 1, fn data, _context ->
+        send(test_pid, {:written, data, self()})
+        {:ok, CreatedEvent.new(data.uid)}
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_import(lv)
+      upload(lv, oversized())
+
+      dialogue = lv |> element("#calendar-import-too-many") |> render()
+      assert dialogue =~ "This file holds 1002 events, from 1 May 2026 to 5 November 2026."
+      assert dialogue =~ "A repeating event counts once"
+      assert dialogue =~ "subscribe to it by URL"
+      refute has_element?(lv, "#calendar-import-start")
+
+      # From 12 and 6 months back the busy day is kept and the file is still
+      # too large; from 3 months back it is left out, so that is chosen.
+      assert render(option(lv, "2025-10-14")) =~ "disabled"
+      assert render(option(lv, "2026-04-14")) =~ "disabled"
+      assert render(option(lv, "2026-07-14")) =~ "checked"
+      assert dialogue =~ "1002 events, more than 1000"
+
+      # A date that does not fit is never taken, whatever the form sends.
+      lv |> form("#calendar-import-cutoff") |> render_change(%{"from" => "2025-10-14"})
+      assert render(option(lv, "2026-07-14")) =~ "checked"
+
+      lv |> form("#calendar-import-cutoff") |> render_change(%{"from" => "2026-10-14"})
+      assert render(option(lv, "2026-10-14")) =~ "checked"
+
+      lv |> element("#calendar-import-narrow") |> render_click()
+      render_async(lv)
+
+      refute has_element?(lv, "#calendar-import-too-many")
+      summary = lv |> element(~s([data-testid="calendar-import-summary"])) |> render()
+      assert summary =~ "Found 1 event."
+      assert summary =~ "1001 events before 14 October 2026 are left out."
+
+      start_import(lv)
+
+      assert_receive {:written, %{summary: "Dentist"}, task}, @task_timeout
+      await_task(task)
+
+      settle(lv)
+      assert has_element?(lv, "#calendar-import-result", "Imported 1 event.")
+    end
+  end
+
   describe "refusals" do
     test "a file that is not an .ics", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
