@@ -78,7 +78,7 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
                StripeStub.requests(:create_checkout_session)
 
       assert headers["stripe-account"] == "acct_HOST"
-      assert headers["idempotency-key"] == "checkout:#{meeting.id}"
+      assert headers["idempotency-key"] == "tymeslot:checkout:#{meeting.id}"
 
       assert [%{"price_data" => %{"product_data" => %{"name" => name}}}] = form["line_items"]
       assert is_binary(name) and name != ""

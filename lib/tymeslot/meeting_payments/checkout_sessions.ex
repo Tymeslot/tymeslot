@@ -25,6 +25,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Stripe.CheckoutSessions, as: StripeCheckoutSessions
+  alias Tymeslot.Integrations.Stripe.IdempotencyKey
 
   alias Tymeslot.MeetingPayments.{
     ApplicationFee,
@@ -79,7 +80,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       owner: %{meeting_id: meeting.id},
       reference: meeting.id,
       metadata: %{meeting_id: meeting.id},
-      idempotency_key: "checkout:#{meeting.id}",
+      idempotency_key: IdempotencyKey.for_intent(:checkout, meeting.id),
       unit_price_cents: nil,
       quantity: 1
     }
@@ -91,7 +92,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       owner: %{series_id: series.id, meeting_id: nil},
       reference: "series:#{series.id}",
       metadata: %{series_id: series.id},
-      idempotency_key: "checkout:series:#{series.id}",
+      idempotency_key: IdempotencyKey.for_intent(:series_checkout, series.id),
       unit_price_cents: series.unit_price_cents,
       quantity: length(meetings)
     }
@@ -114,7 +115,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     # `ReconcileAwaitingPayments` sweeper is the cleanup net (a `pending` row
     # past its grace period with no session id is treated as stale and the
     # meeting expires). Idempotency on the Stripe side is preserved by the
-    # `checkout:<meeting_id>` idempotency key, so a retried booking for the same
+    # `:checkout` intent key for the meeting, so a retried booking for the same
     # meeting collapses to a single Stripe session.
     with {:ok, host} <- fetch_host(meeting.organizer_user_id),
          :ok <- check_payments_access(host.id),

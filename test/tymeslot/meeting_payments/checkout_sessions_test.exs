@@ -94,7 +94,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
 
       assert [%{headers: headers, form: form}] = StripeStub.requests(:create_checkout_session)
       assert headers["stripe-account"] == "acct_HOST"
-      assert headers["idempotency-key"] == "checkout:#{meeting.id}"
+      assert headers["idempotency-key"] == "tymeslot:checkout:#{meeting.id}"
       assert hd(form["line_items"])["price_data"]["currency"] == "eur"
       assert hd(form["line_items"])["price_data"]["unit_amount"] == "5000"
       assert form["payment_intent_data"]["application_fee_amount"] == "25"

@@ -74,18 +74,31 @@ defmodule Tymeslot.Payments.StripeApiTest do
   end
 
   describe "keys and parameters the platform calls carry" do
-    test "create_stripe_customer keeps the day-scoped key and default metadata" do
+    test "a customer created for a checkout is keyed by that checkout" do
       StripeStub.expect(:create_customer, StripeFixtures.object("customer"))
 
-      assert {:ok, _customer} = Payments.create_stripe_customer("a@example.com")
+      assert {:ok, _customer} =
+               Payments.create_stripe_customer(%{email: "a@example.com"}, intent_id: "req_1")
 
       assert [%{form: form, headers: headers}] = StripeStub.requests(:create_customer)
       assert form["email"] == "a@example.com"
       assert form["metadata"] == %{"is_business" => "pending"}
-      assert headers["idempotency-key"] == legacy_key("customer_create", "a@example.com")
+      assert headers["idempotency-key"] == "tymeslot:customer:req_1"
     end
 
-    test "create_stripe_subscription_checkout keys on the checkout request id" do
+    test "a customer created without an intent gets a per-call key" do
+      StripeStub.expect(:create_customer, 2, StripeFixtures.object("customer"))
+
+      assert {:ok, _customer} = Payments.create_stripe_customer("a@example.com")
+      assert {:ok, _customer} = Payments.create_stripe_customer("a@example.com")
+
+      assert [first, second] = StripeStub.requests(:create_customer)
+      assert "tymeslot-" <> _rest = first.headers["idempotency-key"]
+      assert "tymeslot-" <> _rest = second.headers["idempotency-key"]
+      refute first.headers["idempotency-key"] == second.headers["idempotency-key"]
+    end
+
+    test "a subscription checkout is keyed by its checkout request" do
       StripeStub.expect(
         :create_checkout_session,
         StripeFixtures.object("checkout_session_subscription")
@@ -100,28 +113,29 @@ defmodule Tymeslot.Payments.StripeApiTest do
 
       assert [%{form: form, headers: headers}] = StripeStub.requests(:create_checkout_session)
       assert [%{"price" => "price_1"}] = form["line_items"]
-      assert headers["idempotency-key"] == legacy_key("subscription_checkout", "req_1")
+      assert headers["idempotency-key"] == "tymeslot:subscription_checkout:req_1"
     end
 
-    test "cancel at period end posts the flag under the default key, or the caller's" do
+    test "cancelling at period end sends a fresh key each call" do
       StripeStub.expect(:update_subscription, 2, StripeFixtures.object("subscription_canceling"))
 
       assert {:ok, _subscription} = Payments.cancel_stripe_subscription("sub_1", [])
+      assert {:ok, _subscription} = Payments.cancel_stripe_subscription("sub_1", [])
 
-      assert {:ok, _subscription} =
-               Payments.cancel_stripe_subscription("sub_1", idempotency_key: "own")
+      assert [first, second] = StripeStub.requests(:update_subscription)
 
-      assert [default, own] = StripeStub.requests(:update_subscription)
-
-      for request <- [default, own] do
+      for request <- [first, second] do
         assert %{method: :post, path: "/v1/subscriptions/sub_1"} = request
         assert request.form == %{"cancel_at_period_end" => "true"}
       end
 
-      assert default.headers["idempotency-key"] ==
-               legacy_key("subscription_cancel_at_period_end", "sub_1")
+      refute first.headers["idempotency-key"] == second.headers["idempotency-key"]
+    end
 
-      assert own.headers["idempotency-key"] == "own"
+    test "cancel rejects an idempotency key option" do
+      assert_raise ArgumentError, fn ->
+        Payments.cancel_stripe_subscription("sub_1", idempotency_key: "own")
+      end
     end
 
     test "cancel now deletes without a key" do
@@ -160,15 +174,4 @@ defmodule Tymeslot.Payments.StripeApiTest do
 
   defp response_fixture(:list), do: StripeFixtures.list([])
   defp response_fixture(name), do: StripeFixtures.object(name)
-
-  # The day-scoped key format the platform calls send.
-  defp legacy_key(operation, identifier) do
-    hash =
-      :sha256
-      |> :crypto.hash(identifier)
-      |> Base.encode16(case: :lower)
-      |> binary_part(0, 16)
-
-    "#{operation}_#{hash}_#{Calendar.strftime(Date.utc_today(), "%Y%m%d")}"
-  end
 end

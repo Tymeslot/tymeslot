@@ -235,9 +235,14 @@ defmodule Tymeslot.Payments do
   # `Tymeslot.Integrations.Stripe` and `Tymeslot.Payments.PlatformBilling`
   # directly.
 
-  @doc "Creates a Stripe customer from an email or a params map."
-  @spec create_stripe_customer(String.t() | map()) :: stripe_result()
-  defdelegate create_stripe_customer(email_or_params), to: PlatformBilling, as: :create_customer
+  @doc """
+  Creates a Stripe customer from an email or a params map; `intent_id:` keys
+  the call by what it is created for.
+  """
+  @spec create_stripe_customer(String.t() | map(), keyword()) :: stripe_result()
+  defdelegate create_stripe_customer(email_or_params, opts \\ []),
+    to: PlatformBilling,
+    as: :create_customer
 
   @doc "Deletes a Stripe customer."
   @spec delete_stripe_customer(String.t()) :: stripe_result()
@@ -263,7 +268,7 @@ defmodule Tymeslot.Payments do
   @spec list_stripe_subscriptions(map()) :: stripe_result()
   def list_stripe_subscriptions(params), do: Subscriptions.list(params, [])
 
-  @doc "Cancels a Stripe subscription, now or at period end per `opts`."
+  @doc "Cancels a Stripe subscription, now or at period end (`:at_period_end`, default true)."
   @spec cancel_stripe_subscription(String.t(), keyword()) :: stripe_result()
   defdelegate cancel_stripe_subscription(subscription_id, opts),
     to: PlatformBilling,

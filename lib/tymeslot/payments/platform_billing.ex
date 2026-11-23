@@ -11,19 +11,33 @@ defmodule Tymeslot.Payments.PlatformBilling do
 
   require Logger
 
-  alias Ecto.UUID
-  alias Tymeslot.Integrations.Stripe.{CheckoutSessions, Client, Customers, Subscriptions}
+  alias Tymeslot.Integrations.Stripe.{
+    CheckoutSessions,
+    Client,
+    Customers,
+    IdempotencyKey,
+    Subscriptions
+  }
+
   alias Tymeslot.Security.SecurityLogger
 
   @doc """
   Creates a Stripe customer for an email, or from a params map carrying
   `:email` and optionally `:metadata`, `:name`, `:phone` and `:address`.
   Without `:metadata` the customer is marked `is_business: pending`.
-  """
-  @spec create_customer(String.t() | map()) :: Client.result()
-  def create_customer(email) when is_binary(email), do: create_customer(%{email: email})
 
-  def create_customer(params) when is_map(params) do
+  `intent_id:` names what the customer is created for (a checkout request),
+  so a repeat of that request replays Stripe's answer instead of creating a
+  second customer; without it each call gets its own key.
+  """
+  @spec create_customer(String.t() | map(), keyword()) :: Client.result()
+  def create_customer(email_or_params, opts \\ [])
+
+  def create_customer(email, opts) when is_binary(email),
+    do: create_customer(%{email: email}, opts)
+
+  def create_customer(params, opts) when is_map(params) do
+    opts = Keyword.validate!(opts, [:intent_id])
     email = params.email
     Logger.info("Creating Stripe customer", email_masked: SecurityLogger.mask_email(email))
 
@@ -36,68 +50,51 @@ defmodule Tymeslot.Payments.PlatformBilling do
         Map.take(params, [:name, :phone, :address])
       )
 
-    Customers.create(customer_params,
-      idempotency_key: legacy_idempotency_key("customer_create", email)
-    )
+    Customers.create(customer_params, key_opts(:customer, opts[:intent_id]))
   end
 
   @doc """
   Creates a Checkout session in subscription mode, keyed on the
   `"checkout_request_id"` in its metadata, so a repeated request for the same
-  checkout returns the same session.
+  checkout returns the same session. Without one, the call gets its own key.
   """
   @spec create_subscription_checkout(map()) :: Client.result()
   def create_subscription_checkout(params) when is_map(params) do
     Logger.info("Creating Stripe subscription checkout session")
 
-    request_id =
-      params
-      |> Map.get(:metadata, %{})
-      |> Map.get("checkout_request_id", UUID.generate())
+    metadata = Map.get(params, :metadata, %{})
 
-    CheckoutSessions.create(params,
-      idempotency_key: legacy_idempotency_key("subscription_checkout", request_id)
-    )
+    request_id =
+      Map.get(metadata, "checkout_request_id") || Map.get(metadata, :checkout_request_id)
+
+    if is_nil(request_id) do
+      Logger.debug("Subscription checkout has no checkout request id; sending a per-call key")
+    end
+
+    CheckoutSessions.create(params, key_opts(:subscription_checkout, request_id))
   end
 
   @doc """
   Cancels a subscription at the end of its period (the default) or, with
   `at_period_end: false`, at once.
 
-  A period-end cancel is keyed on the operation, subscription and day; a
-  caller whose repeated cancels on the same day are each meant to reach Stripe
-  passes its own `:idempotency_key`. A cancel now is a DELETE, which carries
-  no key.
+  Neither call carries a chosen key: setting the flag reads the same to
+  Stripe however often it is sent, and a second cancel now answers "already
+  cancelled". Each call gets its own key, so a stored failure is never
+  replayed to a retry. Passing `:idempotency_key` raises `ArgumentError`.
   """
   @spec cancel_subscription(String.t(), keyword()) :: Client.result()
   def cancel_subscription(subscription_id, opts) when is_binary(subscription_id) do
+    opts = Keyword.validate!(opts, [:at_period_end])
     Logger.info("Canceling Stripe subscription", subscription_id: subscription_id)
 
     if Keyword.get(opts, :at_period_end, true) do
-      idempotency_key =
-        Keyword.get_lazy(opts, :idempotency_key, fn ->
-          legacy_idempotency_key("subscription_cancel_at_period_end", subscription_id)
-        end)
-
-      Subscriptions.update(subscription_id, %{cancel_at_period_end: true},
-        idempotency_key: idempotency_key
-      )
+      Subscriptions.update(subscription_id, %{cancel_at_period_end: true}, [])
     else
       Subscriptions.cancel(subscription_id, %{}, [])
     end
   end
 
-  # The day-scoped key these calls are sent under:
-  # `<operation>_<first 16 hex of sha256(identifier)>_<YYYYMMDD>`. It is not
-  # the intent key `Stripe.IdempotencyKey` formats for other calls; these
-  # three keep this format until they move to intent keys, so both formats
-  # are in use meanwhile.
-  defp legacy_idempotency_key(operation, identifier) do
-    digest = :sha256 |> :crypto.hash(to_string(identifier)) |> Base.encode16(case: :lower)
-
-    Enum.join(
-      [operation, binary_part(digest, 0, 16), Calendar.strftime(Date.utc_today(), "%Y%m%d")],
-      "_"
-    )
-  end
+  defp key_opts(_kind, nil), do: []
+  defp key_opts(kind, id), do: [idempotency_key: IdempotencyKey.for_intent(kind, id)]
 end

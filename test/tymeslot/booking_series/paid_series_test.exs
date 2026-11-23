@@ -120,7 +120,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
     assert form["payment_intent_data"]["metadata"]["series_id"] == to_string(series.id)
     assert form["success_url"] =~ "/payment-processing/#{first.id}?session_id="
     assert form["cancel_url"] =~ "/payment-cancelled/#{first.id}?"
-    assert headers["idempotency-key"] == "checkout:series:#{series.id}"
+    assert headers["idempotency-key"] == "tymeslot:series_checkout:#{series.id}"
 
     # Nothing is done for a held session until it is paid for.
     assert calendar_creates() == []
