@@ -118,6 +118,12 @@ defmodule Tymeslot.Jobs do
   defdelegate delete_meeting_jobs(worker_module, meeting_id), to: ObanJobQueries
 
   @doc """
+  Deletes every pending job a worker holds for one group-meeting seat, on any
+  queue.
+  """
+  defdelegate delete_participant_jobs(worker_module, participant_id), to: ObanJobQueries
+
+  @doc """
   Whether a job of `worker` for one meeting has not finished yet: it is queued,
   scheduled, running, waiting to retry or suspended. Lets a caller tell that a
   write the worker was queued to make has yet to land.

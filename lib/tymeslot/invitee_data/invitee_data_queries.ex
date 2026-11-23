@@ -52,8 +52,9 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   The uids of meetings still to take place that `email` is booked into, as
   the booker, a group seat or a guest.
 
-  A booking still held for email confirmation is left out: the organiser
-  must not learn of it before it is confirmed, and it may never be.
+  A booking still held for email confirmation is left out, whether a
+  one-to-one booking or a group seat, on a held slot or a live one: the
+  organiser must not learn of it before it is confirmed, and it may never be.
   """
   @spec upcoming_meeting_uids(String.t(), scope(), DateTime.t()) :: [String.t()]
   def upcoming_meeting_uids(email, scope, %DateTime{} = now) do
@@ -62,7 +63,9 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
     seated =
       from(m in Meeting,
         join: p in Participant,
-        on: p.meeting_id == m.id and is_nil(p.cancelled_at),
+        on:
+          p.meeting_id == m.id and is_nil(p.cancelled_at) and
+            (is_nil(p.verification_deadline_at) or not is_nil(p.email_verified_at)),
         where: fragment("lower(?)", p.email) == ^email
       )
 
@@ -92,6 +95,25 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
     from(m in Meeting, where: fragment("lower(?)", m.attendee_email) == ^email)
     |> MeetingState.where_awaiting_verification()
     |> scope_meetings(scope)
+    |> Repo.all()
+  end
+
+  @doc """
+  The group seats taken under `email` that are still held for email
+  confirmation, ordered by slot so that releasing them locks the slots in a
+  stable order.
+  """
+  @spec held_seats_for_email(String.t(), scope()) :: [Participant.t()]
+  def held_seats_for_email(email, scope) do
+    from(p in Participant,
+      join: m in assoc(p, :meeting),
+      as: :meeting,
+      where:
+        fragment("lower(?)", p.email) == ^email and is_nil(p.cancelled_at) and
+          not is_nil(p.verification_deadline_at) and is_nil(p.email_verified_at),
+      order_by: [p.meeting_id, p.id]
+    )
+    |> scope_joined_meeting(scope)
     |> Repo.all()
   end
 

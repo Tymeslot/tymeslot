@@ -617,3 +617,8 @@ msgstr "Ви попросили %{name} обрати новий час для ц
 #, elixir-autogen, elixir-format
 msgid "You asked for this meeting to be moved, and the request lapsed before anyone still on it picked a new time. Its original time had already been given up, so the meeting has expired. The participants have been told and can book again from your booking page."
 msgstr "Ви попросили перенести цю зустріч, але запит утратив чинність раніше, ніж хтось із її учасників, що ще залишалися, обрав новий час. Початковий час уже було звільнено, тому зустріч протерміновано. Учасників повідомлено, і вони можуть знову забронювати зустріч на вашій сторінці бронювання."
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold your place until then."
+msgstr "Ваше бронювання ще не підтверджено. Натисніть кнопку нижче до %{deadline}, щоб підтвердити його. Доти ми зберігатимемо за вами місце."

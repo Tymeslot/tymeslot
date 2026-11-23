@@ -909,11 +909,6 @@ msgstr "Este horario ya no está disponible. Elige otro."
 msgid "email confirmation cannot be combined with payment"
 msgstr "la confirmación del correo no se puede combinar con el pago"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email confirmation"
-msgstr "las reservas de grupo no pueden requerir confirmación del correo"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "would give a reserved booking link; choose another name or set a custom link"

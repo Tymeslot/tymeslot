@@ -19,6 +19,7 @@ defmodule Tymeslot.Meetings.Workers.EmailVerificationExpiryWorkerTest do
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.EmailVerificationJobs
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.Workers.EmailVerificationExpiryWorker
 
   defp reload(meeting), do: Repo.get!(MeetingSchema, meeting.id)
@@ -118,5 +119,83 @@ defmodule Tymeslot.Meetings.Workers.EmailVerificationExpiryWorkerTest do
     {:ok, :verified, _verified} = EmailVerification.verify(meeting)
 
     refute_enqueued(worker: EmailVerificationExpiryWorker)
+  end
+
+  describe "a held group seat" do
+    defp held_seat(deadline, attrs \\ []) do
+      slot =
+        insert(:group_meeting,
+          status: :awaiting_verification,
+          verification_deadline_at: deadline
+        )
+
+      insert(:participant, [meeting: slot, verification_deadline_at: deadline] ++ attrs)
+    end
+
+    defp seat_args(seat), do: %{"participant_id" => seat.id}
+
+    defp reload_seat(seat), do: Repo.get!(ParticipantSchema, seat.id)
+
+    defp ago, do: DateTime.add(DateTime.utc_now(:second), -60)
+
+    test "scheduling places the seat's job at its deadline, beside the slot's own" do
+      seat = held_seat(DateTime.add(DateTime.utc_now(:second), 30, :minute))
+      slot = Repo.get!(MeetingSchema, seat.meeting_id)
+
+      assert :ok = EmailVerificationJobs.schedule_expiry(slot)
+      assert :ok = EmailVerificationJobs.schedule_seat_expiry(seat)
+
+      assert_enqueued(
+        worker: EmailVerificationExpiryWorker,
+        args: seat_args(seat),
+        scheduled_at: seat.verification_deadline_at
+      )
+
+      assert_enqueued(worker: EmailVerificationExpiryWorker, args: args(slot))
+
+      assert :ok = EmailVerificationJobs.cancel_seat(seat)
+      refute_enqueued(worker: EmailVerificationExpiryWorker, args: seat_args(seat))
+      assert_enqueued(worker: EmailVerificationExpiryWorker, args: args(slot))
+    end
+
+    test "a held seat past its deadline is expired, and its emptied slot with it" do
+      seat = held_seat(ago())
+
+      assert :ok = perform_job(EmailVerificationExpiryWorker, seat_args(seat))
+
+      assert %{cancelled_at: %DateTime{}} = reload_seat(seat)
+      assert Repo.get!(MeetingSchema, seat.meeting_id).status == :expired
+    end
+
+    test "a verified seat is left alone" do
+      seat = held_seat(ago(), email_verified_at: ago())
+
+      assert {:discard, reason} = perform_job(EmailVerificationExpiryWorker, seat_args(seat))
+      assert EmailVerificationExpiryWorker.expected_outcome?(reason)
+      assert reload_seat(seat).cancelled_at == nil
+    end
+
+    test "a cancelled seat is left alone" do
+      seat = held_seat(ago(), cancelled_at: ago())
+
+      assert {:discard, reason} = perform_job(EmailVerificationExpiryWorker, seat_args(seat))
+      assert EmailVerificationExpiryWorker.expected_outcome?(reason)
+    end
+
+    test "a seat's job running before its deadline does nothing" do
+      seat = held_seat(DateTime.add(DateTime.utc_now(:second), 30, :minute))
+
+      assert {:discard, "Verification not due yet: " <> _deadline} =
+               perform_job(EmailVerificationExpiryWorker, seat_args(seat))
+
+      assert reload_seat(seat).cancelled_at == nil
+    end
+
+    test "a deleted seat is an expected discard" do
+      assert {:discard, reason} =
+               perform_job(EmailVerificationExpiryWorker, %{"participant_id" => UUID.generate()})
+
+      assert EmailVerificationExpiryWorker.expected_outcome?(reason)
+    end
   end
 end

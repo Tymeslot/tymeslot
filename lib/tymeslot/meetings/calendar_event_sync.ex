@@ -82,16 +82,23 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         # Another worker may already have created the event. OAuth providers
         # persist that mapping in provider_event_id; legacy flows may still
         # carry an external identifier in calendar_uid (copied from uid when
-        # the column was added).
-        if calendar_mapping?(meeting) do
-          Logger.info("Meeting already has a calendar mapping, switching to update",
-            meeting_id: meeting_id,
-            provider_identifier: calendar_event_identifier(meeting)
-          )
+        # the column was added). A group slot held for verification again
+        # since this was scheduled has no event until a seat counts on it,
+        # and that seat schedules its own create.
+        cond do
+          MeetingState.awaiting_verification?(meeting) ->
+            skip_stale_update(meeting_id)
 
-          update(meeting_id, attempt)
-        else
-          create_event_for_meeting(meeting, meeting_id, attempt)
+          calendar_mapping?(meeting) ->
+            Logger.info("Meeting already has a calendar mapping, switching to update",
+              meeting_id: meeting_id,
+              provider_identifier: calendar_event_identifier(meeting)
+            )
+
+            update(meeting_id, attempt)
+
+          true ->
+            create_event_for_meeting(meeting, meeting_id, attempt)
         end
 
       {:error, :not_found} ->
@@ -123,11 +130,11 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     end
   end
 
-  # The meeting was cancelled, or its slot voided, after this update was
-  # scheduled. Its event was deleted then, and an update recreates an event
-  # it cannot find, which would put the meeting back on the calendar.
+  # The meeting was cancelled, or its slot voided or held again, after this
+  # write was scheduled. Its event was deleted then, and an update recreates
+  # an event it cannot find, which would put the meeting back on the calendar.
   defp skip_stale_update(meeting_id) do
-    Logger.info("Meeting no longer expects a calendar event, skipping stale update",
+    Logger.info("Meeting no longer expects a calendar event, skipping stale write",
       meeting_id: meeting_id
     )
 
@@ -386,15 +393,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   defp present_identifier?(identifier) when is_binary(identifier), do: byte_size(identifier) > 0
   defp present_identifier?(_identifier), do: false
 
-  # Never `meeting.uid`: that is the booking's cancel/reschedule capability,
-  # and whatever is returned here is sent to the provider and logged.
-  defp calendar_event_identifier(meeting) do
-    if present_identifier?(meeting.provider_event_id) do
-      meeting.provider_event_id
-    else
-      meeting.calendar_uid
-    end
-  end
+  defp calendar_event_identifier(meeting), do: CalendarEventMapping.event_identifier(meeting)
 
   # Names this create of the meeting's event, so that a provider which can
   # replay a create (Outlook's `transactionId`) answers a retry with the event

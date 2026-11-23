@@ -103,6 +103,35 @@ defmodule Tymeslot.Meetings.MeetingTransitionQueries do
     end
   end
 
+  @doc """
+  Holds a confirmed group slot for email verification again, atomically: the
+  way back from `transition_from_awaiting_verification/3` for a slot whose
+  last counting seat has left while held seats remain on it
+  (`Tymeslot.Bookings.SeatRelease`).
+
+  Guarded on `status = 'confirmed'`; any other row is left alone and
+  `{:error, :not_confirmed}` returned. Both statuses sit in the unique index
+  on confirmed-or-held slots, so no unique violation can arise here.
+  """
+  @spec transition_to_awaiting_verification(Ecto.UUID.t(), keyword()) ::
+          {:ok, Meeting.t()} | {:error, :not_confirmed}
+  def transition_to_awaiting_verification(meeting_id, changes) when is_list(changes) do
+    now = DateTime.utc_now(:second)
+
+    query =
+      from(m in Meeting,
+        where: m.id == ^meeting_id and m.status == :confirmed,
+        select: m
+      )
+
+    changes = Keyword.merge(changes, status: :awaiting_verification, updated_at: now)
+
+    case Repo.update_all(query, set: changes) do
+      {1, [meeting]} -> {:ok, meeting}
+      {0, _none} -> {:error, :not_confirmed}
+    end
+  end
+
   defp where_deadline_after(query, nil), do: query
 
   defp where_deadline_after(query, %DateTime{} = now),

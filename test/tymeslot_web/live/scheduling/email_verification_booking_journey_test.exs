@@ -341,7 +341,7 @@ defmodule TymeslotWeb.Live.Scheduling.EmailVerificationBookingJourneyTest do
 
   # The form and the domain separately are covered by the modules named in the
   # moduledoc; this joins them: what the editor saves, the domain then guards.
-  test "the toggle cannot be combined with payment or group bookings", %{conn: conn} do
+  test "the toggle cannot be combined with payment", %{conn: conn} do
     {:ok, dashboard} = setup_dashboard_user(%{conn: conn})
     {conn, user} = {dashboard[:conn], dashboard[:user]}
     meeting_type = insert(:meeting_type, user: user)
@@ -362,13 +362,8 @@ defmodule TymeslotWeb.Live.Scheduling.EmailVerificationBookingJourneyTest do
 
     assert DataCase.errors_on(paid)[:requires_email_verification]
 
-    assert {:error, group} = MeetingTypes.update_meeting_type(saved, %{max_participants: 3})
-
-    assert "group bookings cannot require email confirmation" in DataCase.errors_on(group).max_participants
-
     unchanged = MeetingTypes.get_meeting_type(meeting_type.id, user.id)
     refute unchanged.payment_required
-    assert unchanged.max_participants in [nil, 1]
   end
 
   # -- helpers ---------------------------------------------------------------

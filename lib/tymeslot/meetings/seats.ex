@@ -23,7 +23,10 @@ defmodule Tymeslot.Meetings.Seats do
   @amber_threshold 0.5
   @red_threshold 0.2
 
-  @doc "Seats taken on a meeting: live participants plus their guests who hold a seat."
+  @doc """
+  Seats taken on a meeting: live participants plus their guests who hold a
+  seat. Visible: excludes seats awaiting email verification.
+  """
   @spec seats_taken(binary()) :: non_neg_integer()
   def seats_taken(meeting_id), do: ParticipantQueries.count_seats_taken(meeting_id)
 
@@ -48,12 +51,13 @@ defmodule Tymeslot.Meetings.Seats do
   @doc """
   Seats still free on a meeting, never negative. The organiser may lower
   `max_participants` below the seats already booked; existing bookings
-  stand and the slot simply reads as full.
+  stand and the slot simply reads as full. Held: seats awaiting email
+  verification count against capacity.
   """
   @spec seats_left(MeetingSchema.t(), pos_integer()) :: non_neg_integer()
   def seats_left(%MeetingSchema{id: meeting_id}, max_participants)
       when is_integer(max_participants) do
-    max(max_participants - seats_taken(meeting_id), 0)
+    max(max_participants - ParticipantQueries.count_seats_held(meeting_id), 0)
   end
 
   @doc """
@@ -71,18 +75,23 @@ defmodule Tymeslot.Meetings.Seats do
 
   @doc """
   `seats_left/2` for each of `meetings` against its own `capacity`, keyed by
-  meeting id, in one query.
+  meeting id, in one query. Held, like `seats_left/2`.
   """
   @spec seats_left_by_meeting([MeetingSchema.t()]) :: %{binary() => non_neg_integer()}
   def seats_left_by_meeting(meetings) do
-    counts = meetings |> Enum.map(& &1.id) |> counts_by_meeting()
-    Map.new(meetings, &{&1.id, max(&1.capacity - counts[&1.id].seats_taken, 0)})
+    counts = meetings |> Enum.map(& &1.id) |> ParticipantQueries.held_counts_by_meeting()
+
+    Map.new(meetings, fn meeting ->
+      taken = counts |> Map.get(meeting.id, %{seats_taken: 0}) |> Map.fetch!(:seats_taken)
+      {meeting.id, max(meeting.capacity - taken, 0)}
+    end)
   end
 
   @doc """
   Map of meeting `start_time` to seats taken for confirmed meetings of the
   given meeting type whose start falls in `[from_utc, to_utc)`. Slots with
-  no participants are absent from the map.
+  no participants are absent from the map. Held: includes seats awaiting
+  email verification (the public capacity).
   """
   @spec seat_counts_for_range(integer(), DateTime.t(), DateTime.t()) ::
           %{DateTime.t() => non_neg_integer()}

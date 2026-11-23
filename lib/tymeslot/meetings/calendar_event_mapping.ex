@@ -19,6 +19,19 @@ defmodule Tymeslot.Meetings.CalendarEventMapping do
   require Logger
 
   @doc """
+  The identifier the meeting's event is addressed by on its provider:
+  `provider_event_id` when one is recorded, else `calendar_uid`.
+
+  Never `meeting.uid`: that is the booking's cancel/reschedule capability,
+  and whatever is returned here is sent to the provider and logged.
+  """
+  @spec event_identifier(MeetingSchema.t()) :: String.t() | nil
+  def event_identifier(%{provider_event_id: id}) when is_binary(id) and byte_size(id) > 0,
+    do: id
+
+  def event_identifier(meeting), do: meeting.calendar_uid
+
+  @doc """
   Persists the provider mapping after a successful create. If persistence
   fails, the provider event already exists but the meeting doesn't carry its
   UID/provider_event_id — so a worker retry of `create` would create a

@@ -13,6 +13,7 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   alias Ecto.Changeset
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Repo
 
@@ -149,10 +150,19 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   (`capacity > 1`, start time after `now`), returning how many were updated.
 
   A meeting never ends up with a capacity below the seats already taken on
-  it (live participants plus their guests who have not declined, the count
-  `ParticipantQueries.count_seats_taken/1` makes; the SQL below restates it,
-  because Ecto's `update/3` takes no subquery in `set:`): lowering the limit under
-  that leaves the slot exactly full, and nobody is cancelled. Solo meetings
+  it (live participants plus their guests who have not declined, including
+  seats awaiting email verification: the count
+  `ParticipantQueries.count_seats_held/1` makes; the SQL below restates it,
+  because Ecto's `update/3` takes no subquery in `set:`): lowering the limit
+  under that leaves the slot exactly full, and nobody is cancelled.
+
+  Counting held seats here is deliberate, though it lets the organiser infer
+  them: lowered to 3 on a slot with 2 counted and 2 held seats, the slot's
+  capacity becomes 4, and the dashboard reads "2/4 seats taken". Stretching
+  only to the counted seats would leave held seats over capacity, to be
+  confirmed into a slot already full. The inference reveals no more than the
+  public page does, which offers a held seat's place to nobody (a held seat
+  takes capacity by design), and nothing about who holds it. Solo meetings
   (`capacity == 1`) are never touched, so a one-to-one booking stays private
   whatever the type becomes.
   """
@@ -170,6 +180,7 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
           capacity:
             fragment(
               """
+              -- held seats: unverified ones count against capacity too
               GREATEST(?::integer, (
                 SELECT count(DISTINCT p.id) + count(g.id)
                 FROM meeting_participants AS p
@@ -252,9 +263,11 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
       [meeting: m],
       m.planned or
         exists(
-          from(p in Participant,
-            where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
-            select: 1
+          ParticipantQueries.where_visible(
+            from(p in Participant,
+              where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
+              select: 1
+            )
           )
         )
     )

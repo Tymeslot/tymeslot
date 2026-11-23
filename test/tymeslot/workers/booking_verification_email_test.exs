@@ -14,7 +14,9 @@ defmodule Tymeslot.Workers.BookingVerificationEmailTest do
   import Tymeslot.WorkerTestHelpers, only: [persisted_job: 2]
 
   alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
+  alias Tymeslot.Emails.EmailScheduler.SeatScheduler
   alias Tymeslot.Meetings.EmailVerificationToken
+  alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Workers.EmailWorker
 
   setup :set_mox_from_context
@@ -93,7 +95,8 @@ defmodule Tymeslot.Workers.BookingVerificationEmailTest do
   test "a booking verified or expired before the job ran gets no email" do
     for status <- [:confirmed, :expired] do
       meeting = held_meeting(%{status: status})
-      assert {:discard, _reason} = perform(meeting)
+      assert {:discard, reason} = perform(meeting)
+      assert EmailHandlers.expected_discard?(reason)
     end
 
     refute_received {:email, _email}
@@ -129,6 +132,94 @@ defmodule Tymeslot.Workers.BookingVerificationEmailTest do
       assert :ok = MeetingScheduler.schedule_verification_email(meeting.id)
       assert :ok = MeetingScheduler.schedule_verification_email(meeting.id, 2)
       assert :ok = MeetingScheduler.schedule_verification_email(meeting.id, 2)
+
+      sends = all_enqueued(worker: EmailWorker) |> Enum.map(& &1.args["send"]) |> Enum.sort()
+      assert sends == [1, 2]
+    end
+  end
+
+  describe "a seat verification email" do
+    defp held_seat(seat_attrs \\ %{}, slot_attrs \\ %{}) do
+      user = insert(:user)
+
+      slot =
+        insert(
+          :group_meeting,
+          Map.merge(
+            %{organizer_user: user, organizer_user_id: user.id, status: :confirmed},
+            slot_attrs
+          )
+        )
+
+      seat =
+        insert(
+          :participant,
+          Map.merge(
+            %{
+              meeting: slot,
+              meeting_id: slot.id,
+              verification_deadline_at: DateTime.add(DateTime.utc_now(:second), 20, :minute)
+            },
+            seat_attrs
+          )
+        )
+
+      {slot, seat}
+    end
+
+    defp seat_args(slot, seat, extra \\ %{}) do
+      Map.merge(
+        %{
+          "action" => "send_seat_email_verification",
+          "meeting_id" => slot.id,
+          "participant_id" => seat.id
+        },
+        extra
+      )
+    end
+
+    test "is sent once, with a token that opens the seat" do
+      {slot, seat} = held_seat()
+      job = persisted_job(EmailWorker, seat_args(slot, seat))
+
+      assert :ok = EmailWorker.perform(job)
+      assert_received {:email, email}
+      assert email.to == [{seat.name, seat.email}]
+
+      token = email.text_body |> String.split("/verify-booking/") |> List.last()
+      token = token |> String.split(~r/\s/) |> hd()
+      assert {:ok, {:seat, participant, _meeting}} = EmailVerificationToken.verify(token)
+      assert participant.id == seat.id
+
+      assert :ok = EmailWorker.perform(job)
+      refute_received {:email, _email}
+    end
+
+    test "is not sent for a verified, cancelled or lapsed seat, or a cancelled or voided slot" do
+      now = DateTime.utc_now(:second)
+
+      cases = [
+        held_seat(%{email_verified_at: now}),
+        held_seat(%{cancelled_at: now}),
+        held_seat(%{verification_deadline_at: DateTime.add(now, -60)}),
+        held_seat(%{}, %{status: :cancelled}),
+        held_seat(%{}, %{reschedule_requested_at: now})
+      ]
+
+      for {slot, seat} <- cases do
+        assert {:discard, reason} = perform_job(EmailWorker, seat_args(slot, seat))
+        assert EmailHandlers.expected_discard?(reason)
+      end
+
+      refute_received {:email, _email}
+    end
+
+    test "scheduling twice inserts one job, and a resend is its own" do
+      {slot, seat} = held_seat()
+
+      assert :ok = SeatScheduler.schedule_seat_verification_email(slot.id, seat.id)
+      assert :ok = SeatScheduler.schedule_seat_verification_email(slot.id, seat.id)
+      assert :ok = SeatScheduler.schedule_seat_verification_email(slot.id, seat.id, 2)
 
       sends = all_enqueued(worker: EmailWorker) |> Enum.map(& &1.args["send"]) |> Enum.sort()
       assert sends == [1, 2]

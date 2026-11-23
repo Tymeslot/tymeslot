@@ -927,11 +927,6 @@ msgstr "Tento čas už není k dispozici. Vyberte prosím jiný."
 msgid "email confirmation cannot be combined with payment"
 msgstr "potvrzení e-mailu nelze kombinovat s platbou"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email confirmation"
-msgstr "skupinové rezervace nemohou vyžadovat potvrzení e-mailu"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "would give a reserved booking link; choose another name or set a custom link"

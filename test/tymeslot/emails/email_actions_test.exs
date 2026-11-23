@@ -26,7 +26,7 @@ defmodule Tymeslot.Emails.EmailActionsTest do
     send_poll_vote_digest send_poll_participant_link send_poll_vote_receipt
     send_poll_invitation
     send_poll_new_times send_poll_cancelled
-    send_seat_session_moved
+    send_seat_session_moved send_seat_email_verification
     send_registration_closed send_booking_link_email
     send_series_confirmation send_series_cancellation send_series_request
     send_series_request_outcome send_series_request_nudge
@@ -94,7 +94,7 @@ defmodule Tymeslot.Emails.EmailActionsTest do
   test "every per-seat action is a registered action" do
     seats =
       ~w(seat_confirmation seat_cancellation seat_meeting_cancellation seat_reschedule
-         seat_reschedule_request seat_reminder)a
+         seat_reschedule_request seat_reminder seat_email_verification)a
 
     assert Enum.reject(seats, &(EmailActions.seat_action(&1) in EmailActions.names())) == []
   end

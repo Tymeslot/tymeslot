@@ -71,6 +71,20 @@ defmodule Tymeslot.Meetings.RealBookingTest do
     refute booked?(user)
   end
 
+  test "a group seat awaiting email verification does not count" do
+    user = host()
+    meeting = group_meeting(user)
+    insert(:participant, meeting: meeting, email: user.email)
+
+    insert(:participant,
+      meeting: meeting,
+      email: "guest@example.com",
+      verification_deadline_at: DateTime.add(DateTime.utc_now(:second), 30, :minute)
+    )
+
+    refute booked?(user)
+  end
+
   test "a cancelled group meeting does not count, whatever its participants" do
     user = host()
 
