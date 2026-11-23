@@ -16,7 +16,7 @@ msgstr ""
 msgid "1 of them repeats."
 msgid_plural "%{count} of them repeat."
 msgstr[0] "1 z nich się powtarza."
-msgstr[1] "%{count} z nich się powtarza."
+msgstr[1] "%{count} z nich się powtarzają."
 msgstr[2] "%{count} z nich się powtarza."
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
@@ -80,17 +80,17 @@ msgstr "Importuj do"
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Importing %{done} of %{total} events..."
-msgstr "Importowanie wydarzeń: %{done} z %{total}..."
+msgstr "Importowanie wydarzeń: %{done} z %{total}…"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Reading the file..."
-msgstr "Odczytywanie pliku..."
+msgstr "Odczytywanie pliku…"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
 msgid "You can close this window; the import carries on."
-msgstr "Możesz zamknąć to okno; import będzie trwał dalej."
+msgstr "Możesz zamknąć to okno, a import będzie trwał dalej."
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
@@ -117,7 +117,7 @@ msgstr[0] ""
 msgstr[1] ""
 "%{count} z nich powtarzają się w dniu, którego nie mają niektóre miesiące, więc Outlook przeniósłby je na ostatni dzień miesiąca."
 msgstr[2] ""
-"%{count} z nich powtarzają się w dniu, którego nie mają niektóre miesiące, więc Outlook przeniósłby je na ostatni dzień miesiąca."
+"%{count} z nich powtarza się w dniu, którego nie mają niektóre miesiące, więc Outlook przeniósłby je na ostatni dzień miesiąca."
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
@@ -158,7 +158,7 @@ msgstr "Nie udało się przesłać pliku. Spróbuj ponownie."
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
 msgid "The import could not be finished. Some of its events may already be in your calendar."
-msgstr "Nie udało się dokończyć importu. Niektóre z jego wydarzeń mogą już być w Twoim kalendarzu."
+msgstr "Nie udało się dokończyć importu. Niektóre z jego wydarzeń mogą już być w twoim kalendarzu."
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
@@ -168,7 +168,7 @@ msgstr "Import został zatrzymany, ponieważ nie można było zapisywać w kalen
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
 msgid "The import stopped because your calendar is not responding. Please try again later."
-msgstr "Import został przerwany, ponieważ Twój kalendarz nie odpowiada. Spróbuj ponownie później."
+msgstr "Import został przerwany, ponieważ twój kalendarz nie odpowiada. Spróbuj ponownie później."
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
