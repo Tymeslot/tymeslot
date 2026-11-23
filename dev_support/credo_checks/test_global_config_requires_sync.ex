@@ -44,7 +44,7 @@ defmodule CredoChecks.TestGlobalConfigRequiresSync do
         use MyApp.DataCase, async: true
 
         setup do
-          with_config(:tymeslot, :stripe_provider, StubProvider)
+          with_config(:tymeslot, :subscription_manager, StubManager)
         end
       end
 
@@ -58,7 +58,7 @@ defmodule CredoChecks.TestGlobalConfigRequiresSync do
         use MyApp.DataCase, async: false
 
         setup do
-          with_config(:tymeslot, :stripe_provider, StubProvider)
+          with_config(:tymeslot, :subscription_manager, StubManager)
         end
       end
 
