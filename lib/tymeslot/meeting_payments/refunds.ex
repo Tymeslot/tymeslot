@@ -42,7 +42,10 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   # when a caller making the refund itself has normally settled it.
   @safety_delay_seconds 120
 
-  @requestable_sources RefundSchema.requestable_sources()
+  # `RefundSchema.requestable_sources/0`, written out so that reading it
+  # adds no compile-time dependency on the schema; a test keeps the two
+  # lists the same.
+  @requestable_sources [:host, :cancellation, :approval_release, :late_payment, :series_host]
 
   @type refund_source :: :host | :cancellation | :approval_release | :late_payment | :series_host
   @type refusal ::

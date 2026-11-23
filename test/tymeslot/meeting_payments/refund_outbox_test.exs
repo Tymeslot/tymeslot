@@ -54,6 +54,13 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
       assert_enqueued(worker: ExecuteRefund, args: %{"refund_id" => refund.id})
     end
 
+    test "every source the refund schema accepts for a request can be requested",
+         %{payment: payment} do
+      for source <- RefundSchema.requestable_sources() do
+        assert {:ok, %{source: ^source}} = Refunds.request_refund(payment, 500, source, [])
+      end
+    end
+
     test "a pending refund counts against the remainder", %{payment: payment} do
       insert(:booking_payment_refund, booking_payment: payment, amount_cents: 3_000)
 
