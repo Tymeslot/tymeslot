@@ -139,15 +139,31 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
   Settles a refund Stripe made with `attrs` (`RefundSchema.settle_changeset/2`)
   and clears its lease, whichever attempt holds it: money Stripe moved
   stands however it was learnt of, so a refund settled `failed` is settled
-  again, its failure code cleared. A refund already `succeeded` is left
-  alone and returns `{:error, :not_pending}`, and a Stripe refund another
-  row holds `{:error, :stripe_refund_taken}`.
+  again, its failure code cleared. Not, though, a refund failed because
+  Stripe reported this same Stripe refund ended
+  (`RefundSchema.ended_at_stripe_codes/0`, its id recorded on the row):
+  the answer settling it is then older than Stripe's verdict. A refund
+  already `succeeded`, or so failed, is left alone and returns
+  `{:error, :not_pending}`, and a Stripe refund another row holds
+  `{:error, :stripe_refund_taken}`.
   """
   @spec settle(RefundSchema.t(), map()) ::
           {:ok, RefundSchema.t()} | {:error, :not_pending | :stripe_refund_taken | Changeset.t()}
-  def settle(%RefundSchema{id: id} = refund, attrs) do
-    made = from(r in RefundSchema, where: r.id == ^id and r.status in [:pending, :failed])
-    settle_where(made, refund, attrs, failure_code: nil)
+  def settle(%RefundSchema{id: id}, attrs) do
+    final = RefundSchema.ended_at_stripe_codes()
+    stripe_id = attrs[:stripe_refund_id] || ""
+
+    made =
+      from(r in RefundSchema,
+        where: r.id == ^id,
+        where:
+          r.status == :pending or
+            (r.status == :failed and
+               not (coalesce(r.failure_code, "") in ^final and
+                      coalesce(r.stripe_refund_id, "") == ^stripe_id))
+      )
+
+    settle_where(made, attrs, failure_code: nil)
   end
 
   @doc """
@@ -160,7 +176,7 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
           {:ok, RefundSchema.t()} | {:error, :not_pending | :stripe_refund_taken | Changeset.t()}
   def settle_pending(%RefundSchema{id: id}, attrs) do
     pending = from(r in RefundSchema, where: r.id == ^id and r.status == :pending)
-    settle_where(pending, %RefundSchema{}, attrs, [])
+    settle_where(pending, attrs, [])
   end
 
   @doc """
@@ -173,7 +189,7 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
   def fail_succeeded(%RefundSchema{id: id}, attrs) do
     succeeded = from(r in RefundSchema, where: r.id == ^id and r.status == :succeeded)
 
-    with {:error, :not_pending} <- settle_where(succeeded, %RefundSchema{}, attrs, []),
+    with {:error, :not_pending} <- settle_where(succeeded, attrs, []),
          do: {:error, :not_succeeded}
   end
 
@@ -205,11 +221,14 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
     claimed
     |> claimed_by()
     |> where([r], r.status == :pending)
-    |> settle_where(claimed, attrs, [])
+    |> settle_where(attrs, [])
   end
 
-  defp settle_where(query, refund, attrs, also_set) do
-    case RefundSchema.settle_changeset(refund, attrs) do
+  # The changeset is cast onto a blank refund, so every attribute given is
+  # written: the row as the caller holds it may already carry some of them
+  # (its Stripe refund id, a settled time in the same second).
+  defp settle_where(query, attrs, also_set) do
+    case RefundSchema.settle_changeset(%RefundSchema{}, attrs) do
       %Changeset{valid?: true, changes: changes} ->
         set =
           also_set

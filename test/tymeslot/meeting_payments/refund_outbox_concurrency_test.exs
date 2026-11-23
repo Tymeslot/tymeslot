@@ -180,6 +180,24 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxConcurrencyTest do
                      %{refund_id: ^refund_id, failure_code: "refund_failed"}}
   end
 
+  test "a refund Stripe reported failed is not recorded as made from an older answer",
+       %{payment: payment} do
+    refund =
+      insert(:booking_payment_refund,
+        booking_payment: payment,
+        amount_cents: 2_000,
+        status: :failed,
+        failure_code: "refund_failed",
+        stripe_refund_id: "re_ENDED",
+        settled_at: DateTime.utc_now(:second)
+      )
+
+    attrs = %{status: :succeeded, stripe_refund_id: "re_ENDED", settled_at: DateTime.utc_now()}
+
+    assert {:error, :not_pending} = RefundQueries.settle(refund, attrs)
+    assert %{status: :failed, failure_code: "refund_failed"} = RefundQueries.get(refund.id)
+  end
+
   test "two rows settling one Stripe refund: the second is refused, not raised",
        %{payment: payment} do
     first = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)

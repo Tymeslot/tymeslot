@@ -29,6 +29,9 @@ defmodule Tymeslot.MeetingPayments.RefundSchema do
   @sources @requestable_sources ++ [:external]
   @statuses [:pending, :succeeded, :failed]
 
+  # The failure codes of a refund Stripe itself ended (`RefundOutcome`).
+  @ended_at_stripe_codes ["refund_failed", "refund_canceled"]
+
   @type source ::
           :host | :cancellation | :approval_release | :late_payment | :series_host | :external
   @type status :: :pending | :succeeded | :failed
@@ -70,6 +73,14 @@ defmodule Tymeslot.MeetingPayments.RefundSchema do
 
     timestamps(type: :utc_datetime)
   end
+
+  @doc """
+  The failure codes of a refund Stripe reported `failed` or `canceled`.
+  Stripe never revives such a refund, so a refund failed with one of them
+  is final: a report saying otherwise is an older one arriving late.
+  """
+  @spec ended_at_stripe_codes() :: [String.t(), ...]
+  def ended_at_stripe_codes, do: @ended_at_stripe_codes
 
   @doc "The sources a caller may request a refund under."
   @spec requestable_sources() :: [source(), ...]

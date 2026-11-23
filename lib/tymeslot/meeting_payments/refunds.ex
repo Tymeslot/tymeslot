@@ -209,6 +209,14 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   defdelegate reconcile(payment, stripe_refunds), to: Settlement
 
   @doc """
+  What an older report of a payment's charge refunds still counts as
+  committed of refunds Stripe has since reported ended; see
+  `Refunds.Settlement.stale_committed_cents/2`.
+  """
+  @spec stale_committed_cents(BookingPaymentSchema.t(), [map()]) :: non_neg_integer()
+  defdelegate stale_committed_cents(payment, stripe_refunds), to: Settlement
+
+  @doc """
   Records a refund (`request_refund/4`) and makes its first attempt at once
   (`execute/2`), for a caller waiting on the outcome.
   """

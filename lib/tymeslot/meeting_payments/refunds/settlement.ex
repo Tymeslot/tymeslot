@@ -48,9 +48,10 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
   `{:error, :charge_not_expanded}` is returned.
 
   A refund settled `failed` is settled again, since money Stripe moved
-  stands, and its reversal is reported (`FailureNotice.reversed/2`). One
-  already `succeeded` is `{:ok, refund, :already_settled}` and nothing else
-  happens. Returns `{:error, :stripe_refund_taken}` for a Stripe refund
+  stands, and its reversal is reported (`FailureNotice.reversed/2`),
+  unless Stripe itself reported it ended: then `stripe_refund` is the
+  older word. One already `succeeded`, or failed by Stripe, is
+  `{:ok, refund, :already_settled}` and nothing else happens. Returns `{:error, :stripe_refund_taken}` for a Stripe refund
   another row records, and `{:error, :not_found}` for a refund gone.
   """
   @spec settle_succeeded(RefundSchema.t(), map()) :: settled() | {:error, term()}
@@ -243,6 +244,18 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
       end
     end)
   end
+
+  @doc """
+  What `stripe_refunds`, as an older report of `payment`'s charge shows
+  them, still count as committed of refunds Stripe has since reported
+  ended (`RefundReconciliation.stale_committed_cents/2`).
+  """
+  @spec stale_committed_cents(BookingPaymentSchema.t(), [map()]) :: non_neg_integer()
+  def stale_committed_cents(%BookingPaymentSchema{id: id}, stripe_refunds),
+    do:
+      id
+      |> RefundQueries.list_for_payment()
+      |> RefundReconciliation.stale_committed_cents(stripe_refunds)
 
   defp carry_out(_payment, {:settle_succeeded, refund, stripe_refund}),
     do: settle_succeeded(refund, stripe_refund)

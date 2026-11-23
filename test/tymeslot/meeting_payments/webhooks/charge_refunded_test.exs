@@ -452,6 +452,82 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
     end
   end
 
+  # Stripe has since reported the refund failed, and refund.updated took it
+  # off the total; this charge.refunded was sent before that.
+  describe "handle/1 arriving after a refund it reports failed" do
+    setup do
+      payment =
+        insert(:paid_booking_payment,
+          stripe_account_id: @account,
+          stripe_charge_id: "ch_RECONCILE",
+          amount_cents: 5_000
+        )
+
+      refund =
+        insert(:booking_payment_refund,
+          booking_payment: payment,
+          amount_cents: 2_000,
+          status: :failed,
+          failure_code: "refund_failed",
+          stripe_refund_id: "re_RECONCILE",
+          settled_at: DateTime.utc_now(:second)
+        )
+
+      %{payment: payment, refund: refund}
+    end
+
+    test "a stale embedded report does not put the refund back", %{
+      payment: payment,
+      refund: refund
+    } do
+      event =
+        "charge.refunded"
+        |> StripeWebhookFixtures.event()
+        |> Map.put("account", @account)
+        |> update_in(["data", "object"], fn charge ->
+          charge
+          |> Map.merge(%{"id" => "ch_RECONCILE", "amount" => 5_000, "amount_refunded" => 2_000})
+          |> put_in(["refunds", "data"], [
+            %{
+              "id" => "re_RECONCILE",
+              "object" => "refund",
+              "amount" => 2_000,
+              "charge" => "ch_RECONCILE",
+              "metadata" => %{"tymeslot_refund_id" => refund.id},
+              "status" => "succeeded"
+            }
+          ])
+        end)
+
+      assert :ok = ChargeRefunded.handle(event)
+
+      assert %{status: :failed, failure_code: "refund_failed"} = RefundQueries.get(refund.id)
+      assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
+      refute_enqueued(worker: SendBookingPaymentRefunded)
+    end
+
+    test "a stale event total gives way to the charge's current one", %{
+      payment: payment,
+      refund: refund
+    } do
+      failed =
+        StripeFixtures.object("refund_with_charge", %{
+          "id" => "re_RECONCILE",
+          "amount" => 2_000,
+          "status" => "failed",
+          "metadata" => %{"tymeslot_refund_id" => refund.id},
+          "charge" => %{"id" => "ch_RECONCILE", "amount_refunded" => 0}
+        })
+
+      StripeStub.expect(:list_refunds, StripeFixtures.list([failed]))
+
+      assert :ok = ChargeRefunded.handle(connect_charge_event(2_000))
+
+      assert %{status: :failed} = RefundQueries.get(refund.id)
+      assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
+    end
+  end
+
   # The attendee's email went out, so the job no longer holds its unique
   # slot and a second one would be enqueued.
   defp mark_emails_sent do

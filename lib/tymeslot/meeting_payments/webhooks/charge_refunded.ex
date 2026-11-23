@@ -14,6 +14,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
   refunds only: what a lost dispute took is added to it (`RefundedTotal`).
   The total is never lowered here, so a late or replayed event cannot undo
   a refund recorded since; only `refund.updated` takes a failed refund off.
+  Nor may a late event put one back: listed refunds give the charge's
+  current total, and an event's embedded refunds have those Stripe has
+  since reported ended taken off the event's total
+  (`Refunds.stale_committed_cents/2`).
   The reconcile runs first because the event id is recorded with the
   total: a redelivery after a failed reconcile repeats both, and one after
   success is a no-op.
@@ -68,9 +72,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
         {:ok, :idempotent_replay}
 
       payment ->
-        with {:ok, refunds} <- charge_refunds(event, object),
+        with {:ok, refunds, charge_total} <- charge_refunds(event, object, payment),
              :ok <- Refunds.reconcile(payment, refunds) do
-          classify(update_payment(payment, event_id, object["amount_refunded"] || 0))
+          classify(update_payment(payment, event_id, charge_total))
         else
           {:error, reason} -> {{:error, :retry_later, reason}, :error}
         end
@@ -79,22 +83,26 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
 
   defp do_handle(_other), do: {{:error, :permanent, :invalid_event}, :error}
 
-  # Each refund carries its charge, whose `amount_refunded` is the total a
-  # refund settled from it records (`Refunds.Settlement.settle_succeeded/2`):
-  # refunds embedded in the event are given the event's charge, from the
-  # same moment, and listed ones are listed with theirs expanded.
-  defp charge_refunds(_event, %{"refunds" => %{"data" => refunds}} = object)
+  # The charge's refunds and its refunded total. Each refund carries its
+  # charge, whose `amount_refunded` is the total a refund settled from it
+  # records (`Refunds.Settlement.settle_succeeded/2`): refunds embedded in
+  # the event are given the event's charge, its total less what Stripe has
+  # ended since, and listed ones are listed with theirs expanded, current.
+  defp charge_refunds(_event, %{"refunds" => %{"data" => refunds}} = object, payment)
        when is_list(refunds) do
-    charge = Map.delete(object, "refunds")
-    {:ok, Enum.map(refunds, &Map.put(&1, "charge", charge))}
+    total =
+      max((object["amount_refunded"] || 0) - Refunds.stale_committed_cents(payment, refunds), 0)
+
+    charge = object |> Map.delete("refunds") |> Map.put("amount_refunded", total)
+    {:ok, Enum.map(refunds, &Map.put(&1, "charge", charge)), total}
   end
 
-  defp charge_refunds(event, %{"id" => charge_id}) do
+  defp charge_refunds(event, %{"id" => charge_id} = object, _payment) do
     params = %{charge: charge_id, limit: @refunds_listed, expand: ["data.charge"]}
 
     case StripeRefunds.list(params, connect_account: event["account"]) do
       {:ok, %{"data" => refunds}} when is_list(refunds) ->
-        {:ok, refunds}
+        {:ok, refunds, Enum.find_value(refunds, &listed_total/1) || event_total(object)}
 
       {:error, reason} = error ->
         if StripeError.retryable?(reason) do
@@ -105,10 +113,17 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
             reason: LogFormat.reason(reason)
           )
 
-          {:ok, []}
+          {:ok, [], event_total(object)}
         end
     end
   end
+
+  defp listed_total(%{"charge" => %{"amount_refunded" => total}}) when is_integer(total),
+    do: total
+
+  defp listed_total(_refund), do: nil
+
+  defp event_total(object), do: object["amount_refunded"] || 0
 
   defp classify(:ok), do: {:ok, :ok}
   defp classify({:error, reason}), do: {{:error, :retry_later, reason}, :error}

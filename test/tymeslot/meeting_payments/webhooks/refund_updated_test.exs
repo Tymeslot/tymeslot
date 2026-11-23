@@ -13,12 +13,14 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
 
   alias Ecto.UUID
   alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.RefundUpdated
   alias Tymeslot.MeetingPayments.Webhooks.WebhookRegistry
   alias Tymeslot.Repo
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.StripeWebhookFixtures
   alias Tymeslot.Workers.SendBookingPaymentRefunded
   alias Tymeslot.Workers.SendRefundFailed
@@ -225,6 +227,28 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
 
     assert [%{source: :external, status: :failed}] = RefundQueries.list_for_payment(payment.id)
     assert %{refunded_amount_cents: 1_000, status: :partially_refunded} = Repo.reload!(payment)
+  end
+
+  # The attempt's answer was sent before the refund failed at Stripe, and
+  # arrives after refund.updated recorded the failure.
+  test "an attempt answered before Stripe failed the refund does not undo the failure" do
+    payment = refunded_payment(refunded_amount_cents: 0, status: :paid)
+    refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
+
+    StripeStub.expect(:create_refund, fn request ->
+      assert :ok = deliver(stripe_refund(refund, "failed"), 0)
+
+      request
+      |> StripeStubResponses.refund("re_UPDATED")
+      |> Map.put("status", "pending")
+    end)
+
+    assert {:error, :refund_failed} = Refunds.execute(refund, [])
+
+    assert %{status: :failed, failure_code: "refund_failed"} = RefundQueries.get(refund.id)
+    assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
+    refute_enqueued(worker: SendBookingPaymentRefunded)
+    refute_received {:send_alert, :refund_failure_reversed, _alert}
   end
 
   describe "a refund Stripe will not read again" do

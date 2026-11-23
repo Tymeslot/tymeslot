@@ -14,11 +14,12 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliation do
       (`:settle_failed`);
     * a succeeded row whose refund Stripe reports `failed` or `canceled`
       has the money back with the host (`:fail_after_success`);
-    * a row Tymeslot settled failed without Stripe saying so (its attempts
-      ran out, say) whose refund Stripe made is reversed
-      (`:settle_succeeded`). A row failed because Stripe reported its
-      refund failed stays failed: Stripe never revives such a refund, so a
-      report saying otherwise is an older one arriving late;
+    * a failed row whose refund Stripe made is reversed
+      (`:settle_succeeded`), unless the row failed because Stripe reported
+      that same refund ended: Stripe never revives such a refund, so a
+      report saying otherwise is an older one arriving late. A row failed
+      on anything else (its attempts ran out, or another attempt's refund
+      failed) records no Stripe refund, and is reversed;
     * a refund belonging to no row is recorded (`:record_external`) only
       when it names neither a row nor a payment, as one a host made in the
       Stripe dashboard does, and only once committed. One naming its
@@ -34,9 +35,6 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliation do
   @committed ["succeeded", "pending", "requires_action"]
   @ended ["failed", "canceled"]
 
-  # The failure codes a refund Stripe ended gets (`RefundOutcome`).
-  @ended_at_stripe Enum.map(@ended, &("refund_" <> &1))
-
   @type action ::
           {:settle_succeeded, RefundSchema.t(), stripe_refund :: map()}
           | {:settle_failed, RefundSchema.t(), stripe_refund :: map()}
@@ -47,6 +45,21 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliation do
   @spec ended?(map()) :: boolean()
   def ended?(%{"status" => status}), do: status in @ended
   def ended?(_stripe_refund), do: false
+
+  @doc """
+  What `stripe_refunds`, an older report, still count as committed of the
+  refunds Stripe has since reported ended: the amounts of those whose row
+  failed with Stripe's own verdict. Taken off that report's charge total,
+  which counted them then.
+  """
+  @spec stale_committed_cents([RefundSchema.t()], [map()]) :: non_neg_integer()
+  def stale_committed_cents(rows, stripe_refunds)
+      when is_list(rows) and is_list(stripe_refunds) do
+    stripe_refunds
+    |> Enum.filter(&stale_committed?(&1, row_for(&1, rows)))
+    |> Enum.map(& &1["amount"])
+    |> Enum.sum()
+  end
 
   @spec plan([RefundSchema.t()], [map()]) :: [action()]
   def plan(rows, stripe_refunds) when is_list(rows) and is_list(stripe_refunds),
@@ -86,8 +99,11 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliation do
          %RefundSchema{status: :failed, failure_code: code} = row,
          %{"status" => status} = refund
        )
-       when status in @committed and code not in @ended_at_stripe,
-       do: [{:settle_succeeded, row, refund}]
+       when status in @committed do
+    if ended_by_stripe?(row, code, refund),
+      do: [],
+      else: [{:settle_succeeded, row, refund}]
+  end
 
   defp action(%RefundSchema{}, _refund), do: []
 
@@ -101,6 +117,21 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliation do
   end
 
   defp action(nil, _refund), do: []
+
+  defp stale_committed?(
+         %{"status" => status, "amount" => amount} = refund,
+         %RefundSchema{status: :failed, failure_code: code} = row
+       )
+       when status in @committed and is_integer(amount),
+       do: ended_by_stripe?(row, code, refund)
+
+  defp stale_committed?(_refund, _row), do: false
+
+  # Whether the row failed because Stripe reported this very refund ended.
+  # A row an attempt failed on another refund's verdict records no Stripe
+  # refund, so a refund an earlier attempt made still reverses it.
+  defp ended_by_stripe?(row, code, refund),
+    do: code in RefundSchema.ended_at_stripe_codes() and row.stripe_refund_id == refund["id"]
 
   defp metadata(%{"metadata" => %{} = metadata}), do: metadata
   defp metadata(_refund), do: %{}

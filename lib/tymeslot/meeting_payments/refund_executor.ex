@@ -323,8 +323,10 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
 
   defp record_success(refund, stripe_refund, opts) do
     case Settlement.settle_succeeded(refund, stripe_refund) do
+      # Already settled, possibly failed: Stripe's later verdict stands
+      # over this attempt's answer.
       {:ok, settled, _settled_or_already} ->
-        {:ok, settled}
+        settled(settled)
 
       {:error, :not_found} ->
         {:error, :not_found}

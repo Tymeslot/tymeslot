@@ -95,6 +95,15 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliationTest do
              ]
     end
 
+    test "failed on another attempt's refund is settled succeeded by one Stripe made" do
+      failed = row(status: :failed, failure_code: "refund_failed")
+      refund = made_for(failed, "succeeded")
+
+      assert RefundReconciliation.plan([failed], [refund]) == [
+               {:settle_succeeded, failed, refund}
+             ]
+    end
+
     test "Stripe failed stays failed whatever an older report says" do
       failed = row(status: :failed, failure_code: "refund_failed", stripe_refund_id: "re_1")
 
@@ -153,5 +162,34 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliationTest do
              {:fail_after_success, succeeded, failed},
              {:record_external, dashboard}
            ]
+  end
+
+  describe "stale_committed_cents/2" do
+    test "counts what an older report still shows committed of refunds Stripe failed" do
+      stripe_failed =
+        row(status: :failed, failure_code: "refund_failed", stripe_refund_id: "re_1")
+
+      tymeslot_failed = row(status: :failed, failure_code: "retries_exhausted")
+      succeeded = row(status: :succeeded, stripe_refund_id: "re_3")
+
+      report = [
+        made_for(stripe_failed, "succeeded"),
+        stripe_refund("succeeded", %{"tymeslot_refund_id" => tymeslot_failed.id}, "re_2"),
+        stripe_refund("succeeded", %{}, "re_3"),
+        stripe_refund("failed", %{}, "re_4")
+      ]
+
+      assert RefundReconciliation.stale_committed_cents(
+               [stripe_failed, tymeslot_failed, succeeded],
+               report
+             ) == 2_000
+    end
+
+    test "is zero when the report already shows the refund ended" do
+      failed = row(status: :failed, failure_code: "refund_canceled", stripe_refund_id: "re_1")
+
+      assert RefundReconciliation.stale_committed_cents([failed], [made_for(failed, "canceled")]) ==
+               0
+    end
   end
 end
