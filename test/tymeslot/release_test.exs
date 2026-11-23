@@ -157,12 +157,21 @@ defmodule Tymeslot.ReleaseTest do
         insert(:paid_booking_payment,
           stripe_charge_id: "ch_release",
           amount_cents: 10_000,
-          refunded_amount_cents: 10_000,
-          status: :refunded
+          refunded_amount_cents: 4_000,
+          status: :partially_refunded
         )
 
-      lost = StripeFixtures.object("dispute_lost", %{"charge" => "ch_release", "amount" => 4_000})
+      lost = StripeFixtures.object("dispute_lost", %{"charge" => "ch_release", "amount" => 3_000})
       StripeStub.stub(:list_disputes, StripeFixtures.list([lost], url: "/v1/disputes"))
+
+      StripeStub.stub(
+        :retrieve_charge,
+        StripeFixtures.object("charge", %{
+          "id" => "ch_release",
+          "amount" => 10_000,
+          "amount_refunded" => 4_000
+        })
+      )
 
       %{payment: payment}
     end
@@ -171,21 +180,23 @@ defmodule Tymeslot.ReleaseTest do
       output = capture_io(fn -> assert :ok = Release.backfill_dispute_losses(pause_ms: 0) end)
       lines = String.split(output, "\n", trim: true)
 
-      assert "WOULD RECORD #{payment.id} ch_release 4000" in lines
+      assert "WOULD CORRECT #{payment.id} ch_release lost 3000, refunded 4000 -> 7000" in lines
       assert List.last(lines) =~ ~r/^DRY RUN: 1 candidates, 1 with a lost dispute/
-      assert Repo.get!(BookingPaymentSchema, payment.id).disputed_lost_cents == 0
+      assert Repo.get!(BookingPaymentSchema, payment.id).refunded_amount_cents == 4_000
     end
 
-    test "records the losses when dry_run is false", %{payment: payment} do
+    test "corrects the payments when dry_run is false", %{payment: payment} do
       output =
         capture_io(fn ->
           assert :ok = Release.backfill_dispute_losses(dry_run: false, pause_ms: 0)
         end)
 
       lines = String.split(output, "\n", trim: true)
-      assert "RECORDED #{payment.id} ch_release 4000" in lines
-      assert List.last(lines) =~ ~r/^DONE: .*; 1 recorded, 0 already recorded$/
-      assert Repo.get!(BookingPaymentSchema, payment.id).disputed_lost_cents == 4_000
+      assert "CORRECTED #{payment.id} ch_release lost 3000, refunded 4000 -> 7000" in lines
+      assert List.last(lines) =~ ~r/^DONE: .*; 1 corrected, 0 changed meanwhile$/
+
+      assert %{disputed_lost_cents: 3_000, refunded_amount_cents: 7_000} =
+               Repo.get!(BookingPaymentSchema, payment.id)
     end
 
     test "reports a missing Stripe key before reading anything", %{payment: payment} do

@@ -13,6 +13,18 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
   @outstanding_refunds_limit 50
 
+  # What `DisputeLossBackfill` reads of a candidate; nothing about the
+  # attendee.
+  @dispute_loss_fields [
+    :id,
+    :stripe_charge_id,
+    :stripe_account_id,
+    :amount_cents,
+    :refunded_amount_cents,
+    :disputed_lost_cents,
+    :status
+  ]
+
   # What the pending refunds of the payment `id` add up to, correlated to the
   # row the enclosing query reads.
   defmacrop pending_refund_sum(id) do
@@ -496,7 +508,8 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   Up to `limit` payments that may count a lost dispute as refunds, in id
   order after `after_id` (`nil` for the first page): a charge, something
   refunded, no dispute loss recorded, and a refunded status. Only the
-  fields `Tymeslot.MeetingPayments.DisputeLossBackfill` reads are loaded;
+  fields `Tymeslot.MeetingPayments.DisputeLossBackfill` reads are loaded
+  (the others hold their defaults);
   its moduledoc says why these rows.
   """
   @spec dispute_loss_candidates(Ecto.UUID.t() | nil, pos_integer()) :: [
@@ -512,28 +525,36 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     |> after_id(after_id)
     |> order_by([b], asc: b.id)
     |> limit(^limit)
-    |> select(
-      [b],
-      struct(b, [:id, :stripe_charge_id, :stripe_account_id, :refunded_amount_cents])
-    )
+    |> select([b], struct(b, @dispute_loss_fields))
     |> Repo.all()
   end
 
   @doc """
-  Records `lost_cents` as the payment's lost dispute share, only while it
-  has none recorded and its refunded total still covers it. Writes nothing
-  else. `{:ok, :unchanged}` when the guard matched no row: another process
-  recorded the loss (or lowered the total) first.
+  Writes `correction` (the lost dispute share, refunded total and status)
+  to `payment`, only while the row still has no loss recorded and the
+  refunded total `payment` was read with. Writes nothing else.
+  `{:ok, :unchanged}` when the guard matched no row: another process
+  changed the row first.
   """
-  @spec record_dispute_loss(Ecto.UUID.t(), pos_integer()) :: {:ok, :recorded | :unchanged}
-  def record_dispute_loss(id, lost_cents) when is_integer(lost_cents) and lost_cents > 0 do
+  @spec record_dispute_loss(BookingPaymentSchema.t(), %{
+          disputed_lost_cents: pos_integer(),
+          refunded_amount_cents: pos_integer(),
+          status: BookingPaymentSchema.status()
+        }) :: {:ok, :recorded | :unchanged}
+  def record_dispute_loss(
+        %BookingPaymentSchema{id: id, refunded_amount_cents: read_total},
+        %{disputed_lost_cents: lost, refunded_amount_cents: total, status: status}
+      )
+      when is_integer(lost) and lost > 0 and is_integer(total) and total >= read_total do
     query =
       from b in BookingPaymentSchema,
         where:
           b.id == ^id and b.disputed_lost_cents == 0 and
-            b.refunded_amount_cents >= ^lost_cents
+            b.refunded_amount_cents == ^read_total
 
-    case Repo.update_all(query, set: [disputed_lost_cents: lost_cents]) do
+    case Repo.update_all(query,
+           set: [disputed_lost_cents: lost, refunded_amount_cents: total, status: status]
+         ) do
       {1, _rows} -> {:ok, :recorded}
       {0, _rows} -> {:ok, :unchanged}
     end

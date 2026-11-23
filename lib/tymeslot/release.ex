@@ -225,19 +225,23 @@ defmodule Tymeslot.Release do
   end
 
   @doc """
-  Reads from Stripe what disputes lost before 1.48.0 took from each booking
-  payment, and records it apart from the refunds (`disputed_lost_cents`).
-  Until it runs, such a payment counts the loss as refunds made at Stripe.
-  It changes nothing else on the row. Run it once on a deployment that took
-  payments before 1.48.0; a dry run first shows what it would record:
+  Corrects the refund figures of booking payments whose dispute was lost
+  before 1.48.0, from what Stripe records. Until it runs, such a payment
+  counts the loss as refunds made at Stripe, and one refunded before the
+  loss holds too small a refunded total, so the host may refund more than
+  is left. For each payment with a lost dispute it records the dispute's
+  share (`disputed_lost_cents`) and sets the refunded total and status to
+  what Stripe's refunds plus the loss give (never lower than before); it
+  changes nothing else on the row. Run it once on a deployment that took
+  payments before 1.48.0; a dry run first shows what it would change:
 
       bin/tymeslot eval 'Tymeslot.Release.backfill_dispute_losses()'                  # dry run
       bin/tymeslot eval 'Tymeslot.Release.backfill_dispute_losses(dry_run: false)'    # write
 
   Under `eval` it starts only the repo and the HTTP client, as `migrate/1`
   and `verify_proxy/1` do; through `rpc` it uses the running node's. It
-  makes one Stripe call per candidate payment, `:pause_ms` (default 100)
-  apart; `:limit` caps how many are read. The candidates
+  makes one or two Stripe calls per candidate payment (its disputes, and
+  its charge when one was lost), `:pause_ms` (default 100) apart; `:limit` caps how many are read. The candidates
   (`Tymeslot.MeetingPayments.DisputeLossBackfill`) can be counted first:
 
       SELECT count(*) FROM booking_payments
@@ -245,10 +249,11 @@ defmodule Tymeslot.Release do
         AND refunded_amount_cents > 0
         AND status IN ('refunded', 'partially_refunded');
 
-  It prints a line per payment recorded (or, in a dry run, to be recorded)
-  and per failed Stripe call, with the payment id, charge id and cents, and
-  a summary. Running it again is safe: a recorded loss is never read or
-  written twice. `eval` exits 0 whatever this returns, so the verdict is
+  It prints a line per payment corrected (or, in a dry run, to be
+  corrected) with the payment id, charge id, lost cents and the refunded
+  total before and after, a line per failed Stripe call, and a summary.
+  Running it again is safe: a payment with a loss recorded is never read
+  or written again. `eval` exits 0 whatever this returns, so the verdict is
   the last line printed, which starts `DRY RUN:` or `DONE:`, or `FAILED:`
   when no Stripe secret key is configured and nothing was read.
   """
@@ -276,13 +281,17 @@ defmodule Tymeslot.Release do
   defp print_dispute_loss({:error, payment, reason}),
     do: IO.puts("ERROR #{payment.id} #{payment.stripe_charge_id}: #{error_text(reason)}")
 
-  defp print_dispute_loss({written, payment, cents}),
-    do:
-      IO.puts("#{dispute_loss_label(written)} #{payment.id} #{payment.stripe_charge_id} #{cents}")
+  defp print_dispute_loss({written, payment, correction}) do
+    IO.puts(
+      "#{dispute_loss_label(written)} #{payment.id} #{payment.stripe_charge_id} " <>
+        "lost #{correction.disputed_lost_cents}, refunded " <>
+        "#{payment.refunded_amount_cents} -> #{correction.refunded_amount_cents}"
+    )
+  end
 
-  defp dispute_loss_label(:recorded), do: "RECORDED"
-  defp dispute_loss_label(:would_record), do: "WOULD RECORD"
-  defp dispute_loss_label(:unchanged), do: "ALREADY RECORDED"
+  defp dispute_loss_label(:recorded), do: "CORRECTED"
+  defp dispute_loss_label(:would_record), do: "WOULD CORRECT"
+  defp dispute_loss_label(:unchanged), do: "CHANGED MEANWHILE"
 
   defp error_text(%{__exception__: true} = error), do: Exception.message(error)
   defp error_text(reason), do: inspect(reason)
@@ -290,12 +299,12 @@ defmodule Tymeslot.Release do
   defp dispute_loss_summary(summary, dry_run?) do
     counts =
       "#{summary.candidates} candidates, #{summary.lost} with a lost dispute, " <>
-        "#{summary.clamped} clamped to the refunded total, #{length(summary.errors)} errors"
+        "#{summary.clamped} clamped to the amount paid, #{length(summary.errors)} errors"
 
     if dry_run? do
-      "DRY RUN: #{counts}; nothing written, run with dry_run: false to record"
+      "DRY RUN: #{counts}; nothing written, run with dry_run: false to correct"
     else
-      "DONE: #{counts}; #{summary.updated} recorded, #{summary.unchanged} already recorded"
+      "DONE: #{counts}; #{summary.updated} corrected, #{summary.unchanged} changed meanwhile"
     end
   end
 

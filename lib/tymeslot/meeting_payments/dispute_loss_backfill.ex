@@ -1,42 +1,57 @@
 defmodule Tymeslot.MeetingPayments.DisputeLossBackfill do
   @moduledoc """
-  Records `disputed_lost_cents` for payments whose dispute was lost before
-  the column existed, reading the loss from Stripe.
+  Rebuilds the refund figures of payments whose dispute was lost before
+  `disputed_lost_cents` existed, from what Stripe records.
 
-  Those rows started at 0 although `refunded_amount_cents` already holds
-  what the dispute took, so `RefundedTotal` reads that share as refunds
-  made at Stripe. The amount is on no row (Connect webhook payloads are not
-  kept), but Stripe lists a charge's disputes with their status and amount.
+  Those rows started at 0 and hold a refunded total the older handlers
+  wrote as the larger of the refunds and the disputed amount, not their
+  sum: a payment refunded 4_000 and then disputed and lost over 3_000
+  holds 4_000, not 7_000. `RefundedTotal` reads such a total as refunds
+  made at Stripe, so the host may refund more than is left. The loss is on
+  no row (Connect webhook payloads are not kept), but Stripe lists a
+  charge's disputes, and the charge's `amount_refunded` counts its refunds
+  alone. From the two each row gets what a loss recorded today gives it
+  (`RefundedTotal.with_dispute_lost/2`): the dispute's share, a refunded
+  total of refunds plus that share within the amount paid, and the status
+  that total implies. The total is never lowered.
+
   An operator runs this once per deployment that takes payments, through
   `Tymeslot.Release.backfill_dispute_losses/1`; it is never run at boot,
   since it calls the deployment's own Stripe account.
 
   The candidates are payments with a charge, something refunded, no loss
   recorded, and status `refunded` or `partially_refunded`. Every release
-  that handled disputes left a lost one in one of those two statuses,
-  derived from a refunded total that already counts the loss. The dispute
-  markers (`stripe_dispute_id`, `dispute_closed_at`) cannot narrow it
-  further: disputes closed before those columns existed carry none. A
+  that handled disputes left a lost one in one of those two statuses. The
+  dispute markers (`stripe_dispute_id`, `dispute_closed_at`) cannot narrow
+  it further: disputes closed before those columns existed carry none. A
   `disputed` row is left out: its dispute is still open, or its close
-  never reached the row, and either way its refunded total holds no loss
-  this could pick out.
+  never reached the row, and the dispute webhook records either.
 
-  Each candidate costs one Stripe list call; a payment with no lost
-  dispute is left as it is. The write is guarded on `disputed_lost_cents =
-  0`, so a second run, or a dispute webhook recording the loss meanwhile,
-  writes nothing more. No transaction or row lock is held across a Stripe
-  call: candidates are read a page at a time by id.
+  Each candidate costs one Stripe call to list its disputes, and one more
+  to read the charge when one was lost; a payment with no lost dispute is
+  left as it is. The write is guarded on `disputed_lost_cents = 0` and on
+  the refunded total read, so a second run, or a webhook changing the row
+  meanwhile, writes nothing. No transaction or row lock is held across a
+  Stripe call: candidates are read a page at a time by id.
   """
 
+  alias Tymeslot.Integrations.Stripe.Charges
   alias Tymeslot.Integrations.Stripe.Disputes
   alias Tymeslot.Integrations.Stripe.Pagination
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.RefundedTotal
 
   @page_size 100
 
+  @type correction :: %{
+          disputed_lost_cents: pos_integer(),
+          refunded_amount_cents: pos_integer(),
+          status: BookingPaymentSchema.status()
+        }
+
   @type outcome ::
-          {:recorded | :would_record | :unchanged, BookingPaymentSchema.t(), pos_integer()}
+          {:recorded | :would_record | :unchanged, BookingPaymentSchema.t(), correction()}
           | {:error, BookingPaymentSchema.t(), term()}
 
   @type summary :: %{
@@ -49,20 +64,20 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfill do
         }
 
   @doc """
-  Reads every candidate's disputes from Stripe and records what lost ones
-  took. Options:
+  Reads every candidate's disputes from Stripe and rebuilds the refund
+  figures of those with a lost one. Options:
 
     * `:dry_run` (default `true`): read from Stripe, write nothing, and
-      count what would be recorded as `lost`;
-    * `:pause_ms` (default 100): the pause between Stripe calls;
+      count what would be corrected as `lost`;
+    * `:pause_ms` (default 100): the pause between candidates;
     * `:limit` (default `nil`, every candidate): how many candidates to read;
     * `:on_outcome`: called with each payment's `t:outcome/0` other than
       "no lost dispute", for reporting.
 
   `lost` counts payments with a lost dispute, `updated` those written,
-  `clamped` those whose loss was cut to the refunded total, `unchanged`
-  those another process recorded first. A failed Stripe call goes into
-  `errors` with the payment id, and the run carries on.
+  `clamped` those whose loss was cut to the amount paid, `unchanged` those
+  another process changed first. A failed Stripe call goes into `errors`
+  with the payment id, and the run carries on.
   """
   @spec run(keyword()) :: summary()
   def run(opts \\ []) do
@@ -85,25 +100,48 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfill do
   end
 
   @doc """
-  What the lost disputes in `disputes` took from `payment`: `:none`,
-  `{:lost, cents}`, or `{:clamped, cents}` when their sum exceeds the
-  refunded total and is cut to it, so the share stays within the whole
-  (the `disputed_lost_within_refunded` check).
-  """
-  @spec lost_cents([map()], %{refunded_amount_cents: non_neg_integer()}) ::
-          :none | {:lost | :clamped, pos_integer()}
-  def lost_cents(disputes, %{refunded_amount_cents: refunded}) when is_list(disputes) do
-    sum =
-      disputes
-      |> Enum.filter(&match?(%{"status" => "lost"}, &1))
-      |> Enum.map(&Map.fetch!(&1, "amount"))
-      |> Enum.sum()
+  What `payment` should record given its charge's `disputes` and `charge`
+  as Stripe returns them: `:none` without a lost dispute, otherwise
+  `{:lost, correction}`, or `{:clamped, correction}` when the lost
+  disputes add up to more than the amount paid and the share is cut to it.
 
-    cond do
-      sum <= 0 or refunded <= 0 -> :none
-      sum > refunded -> {:clamped, refunded}
-      true -> {:lost, sum}
+  The refunded total is the charge's refunds plus the loss, within the
+  amount paid (`RefundedTotal.with_dispute_lost/2`), and never below the
+  total `payment` holds.
+  """
+  @spec correction(BookingPaymentSchema.t(), [map()], map()) ::
+          :none | {:lost | :clamped, correction()}
+  def correction(payment, disputes, %{"amount_refunded" => stripe_refunded})
+      when is_list(disputes) and is_integer(stripe_refunded) do
+    case lost_sum(disputes) do
+      0 ->
+        :none
+
+      sum ->
+        recorded =
+          RefundedTotal.with_dispute_lost(
+            %{payment | refunded_amount_cents: stripe_refunded, disputed_lost_cents: 0},
+            sum
+          )
+
+        whole = max(payment.refunded_amount_cents, recorded.refunded_amount_cents)
+        lost = min(recorded.disputed_lost_cents, whole)
+        kind = if lost < sum, do: :clamped, else: :lost
+
+        {kind,
+         %{
+           disputed_lost_cents: lost,
+           refunded_amount_cents: whole,
+           status: RefundedTotal.status_for(payment, whole)
+         }}
     end
+  end
+
+  defp lost_sum(disputes) do
+    disputes
+    |> Enum.filter(&match?(%{"status" => "lost"}, &1))
+    |> Enum.map(&Map.fetch!(&1, "amount"))
+    |> Enum.sum()
   end
 
   defp candidates do
@@ -128,22 +166,28 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfill do
   defp pause(_ms), do: :ok
 
   defp backfill(payment, opts) do
-    case Pagination.collect(&Disputes.list/2, %{charge: payment.stripe_charge_id},
-           connect_account: payment.stripe_account_id
-         ) do
-      {:ok, disputes} -> record(payment, lost_cents(disputes, payment), opts)
-      {:error, reason} -> {:error, reason}
+    stripe_opts = [connect_account: payment.stripe_account_id]
+
+    with {:ok, disputes} <-
+           Pagination.collect(&Disputes.list/2, %{charge: payment.stripe_charge_id}, stripe_opts) do
+      if lost_sum(disputes) > 0 do
+        with {:ok, charge} <- Charges.retrieve(payment.stripe_charge_id, stripe_opts) do
+          record(payment, correction(payment, disputes, charge), opts)
+        end
+      else
+        :none
+      end
     end
   end
 
   defp record(_payment, :none, _opts), do: :none
 
-  defp record(payment, {_kind, cents} = loss, opts) do
+  defp record(payment, {_kind, correction} = result, opts) do
     if opts[:dry_run] do
-      {:would_record, loss}
+      {:would_record, result}
     else
-      {:ok, written} = BookingPaymentQueries.record_dispute_loss(payment.id, cents)
-      {written, loss}
+      {:ok, written} = BookingPaymentQueries.record_dispute_loss(payment, correction)
+      {written, result}
     end
   end
 
@@ -161,8 +205,8 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfill do
         on_outcome.({:error, payment, reason})
         %{summary | errors: [{payment.id, reason} | summary.errors]}
 
-      {written, {kind, cents}} ->
-        on_outcome.({written, payment, cents})
+      {written, {kind, correction}} ->
+        on_outcome.({written, payment, correction})
 
         summary
         |> Map.update!(:lost, &(&1 + 1))
