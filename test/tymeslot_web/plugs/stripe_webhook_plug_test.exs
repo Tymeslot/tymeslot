@@ -111,7 +111,6 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
       secret = "whsec_e2e_valid"
 
       with_config(:tymeslot,
-        stripe_provider: Tymeslot.Payments.Stripe,
         stripe_webhook_secret: secret
       )
 
@@ -134,7 +133,6 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
       secret = "whsec_e2e_invalid"
 
       with_config(:tymeslot,
-        stripe_provider: Tymeslot.Payments.Stripe,
         stripe_webhook_secret: secret
       )
 

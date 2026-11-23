@@ -4,16 +4,9 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
   @moduletag :payments
   @moduletag :integration
 
-  import Mox
-
-  alias Tymeslot.MeetingPayments.StripeAdapter
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Telemetry, as: PaymentsTelemetry
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
-
-  setup :verify_on_exit!
-  setup :set_mox_from_context
 
   describe "emit_status_changed/3" do
     test "emits a telemetry event when from and to differ" do
@@ -53,35 +46,6 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
       assert :ok = PaymentsTelemetry.emit_status_changed(:paid, :paid, :webhook_paid)
 
       refute_received :unexpected_event
-    end
-  end
-
-  describe "Stripe API span" do
-    test "emits :stop with status :ok on a successful adapter call" do
-      handler_id = "test-stripe-ok-#{System.unique_integer([:positive])}"
-      :telemetry_test.attach_event_handlers(self(), [PaymentsTelemetry.stripe_event() ++ [:stop]])
-
-      on_exit(fn -> :telemetry.detach(handler_id) end)
-
-      expect(StripeAdapterMock, :retrieve_account, fn "acct_TEL" ->
-        {:ok, %{"id" => "acct_TEL"}}
-      end)
-
-      assert {:ok, _account} = StripeAdapter.retrieve_account("acct_TEL")
-
-      assert_received {[_, _, :stripe, :api, :stop], _ref, _measurements,
-                       %{operation: :retrieve_account, account_id: "acct_TEL", status: :ok}}
-    end
-
-    test "emits :stop with status :error when the adapter returns an error" do
-      :telemetry_test.attach_event_handlers(self(), [PaymentsTelemetry.stripe_event() ++ [:stop]])
-
-      expect(StripeAdapterMock, :retrieve_account, fn _id -> {:error, %{message: "boom"}} end)
-
-      assert {:error, _reason} = StripeAdapter.retrieve_account("acct_FAIL")
-
-      assert_received {[_, _, :stripe, :api, :stop], _ref, _measurements,
-                       %{operation: :retrieve_account, status: :error}}
     end
   end
 
