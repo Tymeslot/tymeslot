@@ -201,13 +201,10 @@ defmodule Tymeslot.ReleaseTest do
 
     test "reports a missing Stripe key before reading anything", %{payment: payment} do
       key = Application.get_env(:tymeslot, :stripe_secret_key)
-      legacy = Application.get_env(:stripity_stripe, :api_key)
       Application.delete_env(:tymeslot, :stripe_secret_key)
-      Application.delete_env(:stripity_stripe, :api_key)
 
       on_exit(fn ->
         if key, do: Application.put_env(:tymeslot, :stripe_secret_key, key)
-        if legacy, do: Application.put_env(:stripity_stripe, :api_key, legacy)
       end)
 
       output =

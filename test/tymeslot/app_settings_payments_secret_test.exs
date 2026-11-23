@@ -23,8 +23,11 @@ defmodule Tymeslot.AppSettingsPaymentsSecretTest do
   setup :capture_admin_alerts
 
   setup do
-    setup_config(:stripity_stripe, :api_key, "stripe-key-configured")
-    setup_config(:tymeslot, stripe_secret_key: nil, meeting_payments_enabled: false)
+    setup_config(:tymeslot,
+      stripe_secret_key: "stripe-key-configured",
+      meeting_payments_enabled: false
+    )
+
     :ok
   end
 

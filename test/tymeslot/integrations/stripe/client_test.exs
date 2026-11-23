@@ -261,7 +261,6 @@ defmodule Tymeslot.Integrations.Stripe.ClientTest do
 
   test "a missing key returns :missing_api_key without a request" do
     with_config(:tymeslot, :stripe_secret_key, nil)
-    with_config(:stripity_stripe, :api_key, nil)
     stub_stripe(fn _call, conn -> json(conn, 200, @refund_body) end)
 
     request = Request.new(:create_refund, :post, ["refunds"], %{charge: "ch_1"})

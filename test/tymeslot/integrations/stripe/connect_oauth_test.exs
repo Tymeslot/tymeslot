@@ -15,7 +15,7 @@ defmodule Tymeslot.Integrations.Stripe.ConnectOAuthTest do
   @platform_key "sk_test_platform_key"
 
   setup do
-    with_config(:stripity_stripe, api_key: @platform_key)
+    with_config(:tymeslot, stripe_secret_key: @platform_key)
     with_config(:tymeslot, stripe_connect_client_id: "ca_CLIENT")
     :ok
   end

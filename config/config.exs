@@ -612,9 +612,6 @@ config :tymeslot, Tymeslot.Integrations.Stripe,
   req_options: [],
   tag_requests: false
 
-# Kept only for the stripity_stripe library until it is removed.
-config :stripity_stripe, api_version: "2025-11-17.clover"
-
 # Payment rate limiting configuration
 config :tymeslot, :payment_rate_limits,
   # Maximum number of payment initiation attempts per user

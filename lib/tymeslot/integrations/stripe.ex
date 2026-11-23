@@ -30,18 +30,10 @@ defmodule Tymeslot.Integrations.Stripe do
   """
   @spec secret_key() :: String.t() | nil
   def secret_key do
-    Enum.find_value(
-      [
-        Application.get_env(:tymeslot, :stripe_secret_key),
-        # Temporary: `STRIPE_SECRET_KEY` is still read into the stripity_stripe
-        # app env at runtime, until the runtime config moves to the key above.
-        Application.get_env(:stripity_stripe, :api_key)
-      ],
-      fn
-        key when is_binary(key) and key != "" -> key
-        _unset -> nil
-      end
-    )
+    case Application.get_env(:tymeslot, :stripe_secret_key) do
+      key when is_binary(key) and key != "" -> key
+      _unset -> nil
+    end
   end
 
   @doc "Whether a secret key is configured."

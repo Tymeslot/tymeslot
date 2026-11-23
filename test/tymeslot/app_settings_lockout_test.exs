@@ -290,7 +290,7 @@ defmodule Tymeslot.AppSettingsLockoutTest do
   # to complete Stripe Connect onboarding.
   describe "lockout protection — meeting payments write-path guard" do
     test "refuses to enable meeting_payments_enabled with no Stripe platform key configured" do
-      Application.put_env(:stripity_stripe, :api_key, "sk_test_fake")
+      Application.put_env(:tymeslot, :stripe_secret_key, "sk_test_fake")
 
       assert {:error, :would_lock_out} =
                AppSettings.update(%{meeting_payments_enabled: true})
@@ -299,10 +299,10 @@ defmodule Tymeslot.AppSettingsLockoutTest do
     end
 
     test "allows enabling meeting_payments_enabled once a Stripe platform key is configured" do
-      Application.put_env(:stripity_stripe, :api_key, "sk_test_51Hxxxxxxxxxxxxxxxxxxxxxx")
+      Application.put_env(:tymeslot, :stripe_secret_key, "sk_test_51Hxxxxxxxxxxxxxxxxxxxxxx")
 
       on_exit(fn ->
-        Application.put_env(:stripity_stripe, :api_key, "sk_test_fake")
+        Application.put_env(:tymeslot, :stripe_secret_key, "sk_test_fake")
       end)
 
       assert {:ok, _settings} = AppSettings.update(%{meeting_payments_enabled: true})
@@ -315,14 +315,14 @@ defmodule Tymeslot.AppSettingsLockoutTest do
       # the guard must only refuse a write that itself turns payments on, not
       # every subsequent update to unrelated settings.
       Application.put_env(:tymeslot, :meeting_payments_enabled, true)
-      Application.put_env(:stripity_stripe, :api_key, "sk_test_fake")
+      Application.put_env(:tymeslot, :stripe_secret_key, "sk_test_fake")
 
       assert {:ok, _settings} = AppSettings.update(%{email_brand_name: "X"})
     end
 
     test "locked_states for password_auth_enabled is unaffected by an unconfigured payments toggle" do
       Application.put_env(:tymeslot, :meeting_payments_enabled, true)
-      Application.put_env(:stripity_stripe, :api_key, "sk_test_fake")
+      Application.put_env(:tymeslot, :stripe_secret_key, "sk_test_fake")
       insert(:user, is_admin: true, password_hash: nil, google_user_id: "google-789")
 
       values = AppSettings.effective_values()
