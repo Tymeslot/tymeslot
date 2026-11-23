@@ -138,4 +138,28 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerificationTest do
     refute email.html_body =~ "uid-9f3b7c1d-secret"
     refute email.text_body =~ "/meeting/"
   end
+
+  # A seat shares its slot's time with other attendees, so the email holds
+  # the booker's place, not the time.
+  test "the seat email holds the booker's place, not the time" do
+    slot = meeting(%{attendee_name: nil, attendee_email: nil, attendee_locale: nil})
+
+    seat = %ParticipantSchema{
+      name: "Mia Seat",
+      email: "mia@example.com",
+      timezone: "Europe/Ljubljana",
+      locale: "en",
+      verification_deadline_at: ~U[2026-08-30 10:30:00Z]
+    }
+
+    email = BookingEmailVerification.render_seat(slot, seat, @verify_url)
+
+    for body <- [email.html_body, email.text_body] do
+      assert body =~ "we will hold your place until then"
+      refute body =~ "hold the time"
+    end
+
+    assert BookingEmailVerification.render(meeting(), @verify_url).text_body =~
+             "we will hold the time for you until then"
+  end
 end
