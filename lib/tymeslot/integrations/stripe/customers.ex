@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Stripe.Customers do
   Stripe `Customers` calls; return shape and options are described in
   `Tymeslot.Integrations.Stripe`.
 
-  Operations, as named in telemetry and test stubs: `create_customer`, `delete_customer`.
+  Operations, as named in telemetry and test stubs: `create_customer`, `list_customers`, `delete_customer`.
   """
 
   alias Tymeslot.Integrations.Stripe.Client
@@ -15,6 +15,14 @@ defmodule Tymeslot.Integrations.Stripe.Customers do
   @spec create(map() | keyword(), keyword()) :: Client.result()
   def create(params, opts \\ []) do
     Client.run(Request.new(:create_customer, :post, ["customers"], params, opts))
+  end
+
+  @doc """
+  Lists customers (GET /v1/customers), newest first.
+  """
+  @spec list(map() | keyword(), keyword()) :: Client.result()
+  def list(params, opts \\ []) do
+    Client.run(Request.new(:list_customers, :get, ["customers"], params, opts))
   end
 
   @doc """

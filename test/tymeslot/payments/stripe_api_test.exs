@@ -86,6 +86,50 @@ defmodule Tymeslot.Payments.StripeApiTest do
       assert headers["idempotency-key"] == "tymeslot:customer:req_1"
     end
 
+    test "find_stripe_customer returns the newest customer of that user for the email" do
+      older =
+        StripeFixtures.object("customer", %{
+          "id" => "cus_old",
+          "created" => 1,
+          "metadata" => %{"user_id" => "7"}
+        })
+
+      newer =
+        StripeFixtures.object("customer", %{
+          "id" => "cus_new",
+          "created" => 2,
+          "metadata" => %{"user_id" => "7"}
+        })
+
+      other =
+        StripeFixtures.object("customer", %{
+          "id" => "cus_other",
+          "created" => 3,
+          "metadata" => %{"user_id" => "8"}
+        })
+
+      StripeStub.expect(:list_customers, StripeFixtures.list([other, older, newer]))
+
+      assert {:ok, %{"id" => "cus_new"}} = Payments.find_stripe_customer("a@example.com", 7)
+
+      assert [%{query: query}] = StripeStub.requests(:list_customers)
+      assert query["email"] == "a@example.com"
+      assert query["limit"] == "10"
+    end
+
+    test "find_stripe_customer ignores another user's customer with the same email" do
+      other = StripeFixtures.object("customer", %{"metadata" => %{"user_id" => "8"}})
+      StripeStub.expect(:list_customers, StripeFixtures.list([other]))
+
+      assert {:ok, nil} = Payments.find_stripe_customer("a@example.com", 7)
+    end
+
+    test "find_stripe_customer returns Stripe's error" do
+      StripeStub.expect(:list_customers, {:error_fixture, "invalid_request_error"})
+
+      assert {:error, %Error{}} = Payments.find_stripe_customer("a@example.com", 7)
+    end
+
     test "a customer created without an intent gets a per-call key" do
       StripeStub.expect(:create_customer, 2, StripeFixtures.object("customer"))
 

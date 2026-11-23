@@ -26,6 +26,7 @@ defmodule Tymeslot.Integrations.Stripe.ResourcesTest do
   # {{module, function, leading args}, operation, method, path, decoded params}
   @table [
     {{Customers, :create, [@params]}, :create_customer, "POST", "/v1/customers", @params},
+    {{Customers, :list, [@params]}, :list_customers, "GET", "/v1/customers", @params},
     {{Customers, :delete, ["cus_1"]}, :delete_customer, "DELETE", "/v1/customers/cus_1", %{}},
     {{Subscriptions, :create, [@params]}, :create_subscription, "POST", "/v1/subscriptions",
      @params},

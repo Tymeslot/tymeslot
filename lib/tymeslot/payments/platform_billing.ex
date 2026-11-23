@@ -15,6 +15,7 @@ defmodule Tymeslot.Payments.PlatformBilling do
     CheckoutSessions,
     Client,
     Customers,
+    Error,
     IdempotencyKey,
     Subscriptions
   }
@@ -51,6 +52,26 @@ defmodule Tymeslot.Payments.PlatformBilling do
       )
 
     Customers.create(customer_params, key_opts(:customer, opts[:intent_id]))
+  end
+
+  @doc """
+  Finds the customer already created for a user: the newest of those sharing
+  `email` whose `"user_id"` metadata is `user_id`. `{:ok, nil}` when there is
+  none, so a user who starts a second checkout does not get a second
+  customer. Only customers created with a `"user_id"` metadata entry can
+  match.
+  """
+  @spec find_customer(String.t(), integer() | String.t()) ::
+          {:ok, map() | nil} | {:error, Error.t() | :missing_api_key}
+  def find_customer(email, user_id) when is_binary(email) do
+    user_id = to_string(user_id)
+
+    with {:ok, %{"data" => customers}} <- Customers.list(%{email: email, limit: 10}) do
+      {:ok,
+       customers
+       |> Enum.filter(&(get_in(&1, ["metadata", "user_id"]) == user_id))
+       |> Enum.max_by(&Map.get(&1, "created", 0), fn -> nil end)}
+    end
   end
 
   @doc """

@@ -244,6 +244,11 @@ defmodule Tymeslot.Payments do
     to: PlatformBilling,
     as: :create_customer
 
+  @doc "Finds the Stripe customer already created for a user, or `{:ok, nil}`."
+  @spec find_stripe_customer(String.t(), integer() | String.t()) ::
+          {:ok, map() | nil} | {:error, term()}
+  defdelegate find_stripe_customer(email, user_id), to: PlatformBilling, as: :find_customer
+
   @doc "Deletes a Stripe customer."
   @spec delete_stripe_customer(String.t()) :: stripe_result()
   def delete_stripe_customer(customer_id), do: Customers.delete(customer_id, [])
