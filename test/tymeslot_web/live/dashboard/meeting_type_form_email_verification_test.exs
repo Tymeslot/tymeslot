@@ -108,6 +108,26 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormEmailVerificationTest do
     assert %{requires_email_verification: true, max_participants: 3} = saved(meeting_type)
   end
 
+  test "the toggle is disabled while a series is on", %{conn: conn, user: user} do
+    meeting_type =
+      insert(:meeting_type,
+        user: user,
+        series_mode: :flexible,
+        series_min_occurrences: 2,
+        series_max_occurrences: 4
+      )
+
+    view = open_form(conn, meeting_type)
+
+    assert has_element?(view, "[data-testid='requires-email-verification-toggle'][disabled]")
+    assert render(view) =~ "Turn off series booking to ask invitees to confirm their email."
+
+    forge_toggle(view, meeting_type)
+
+    assert_forged_toggle_ignored(view)
+    refute saved(meeting_type).requires_email_verification
+  end
+
   test "turning verification off is always allowed", %{conn: conn, user: user} do
     # Both settings at once: a factory insert skips the changeset rule.
     meeting_type =
