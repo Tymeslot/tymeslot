@@ -29,7 +29,14 @@ defmodule Tymeslot.Integrations.Stripe.Refunds do
   Retrieves a refund (GET /v1/refunds/:id).
   """
   @spec retrieve(String.t(), keyword()) :: Client.result()
-  def retrieve(id, opts \\ []) do
-    Client.run(Request.new(:retrieve_refund, :get, ["refunds", id], %{}, opts))
+  def retrieve(id, opts \\ []), do: retrieve(id, %{}, opts)
+
+  @doc """
+  Retrieves a refund (GET /v1/refunds/:id) with `params`, such as
+  `%{expand: ["charge"]}`.
+  """
+  @spec retrieve(String.t(), map() | keyword(), keyword()) :: Client.result()
+  def retrieve(id, params, opts) do
+    Client.run(Request.new(:retrieve_refund, :get, ["refunds", id], params, opts))
   end
 end

@@ -43,6 +43,11 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliation do
           | {:fail_after_success, RefundSchema.t(), stripe_refund :: map()}
           | {:record_external, stripe_refund :: map()}
 
+  @doc "Whether Stripe reports `stripe_refund` ended: `failed` or `canceled`."
+  @spec ended?(map()) :: boolean()
+  def ended?(%{"status" => status}), do: status in @ended
+  def ended?(_stripe_refund), do: false
+
   @spec plan([RefundSchema.t()], [map()]) :: [action()]
   def plan(rows, stripe_refunds) when is_list(rows) and is_list(stripe_refunds),
     do: Enum.flat_map(stripe_refunds, &(&1 |> row_for(rows) |> action(&1)))

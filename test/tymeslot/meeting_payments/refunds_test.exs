@@ -8,6 +8,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
   alias Ecto.UUID
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
@@ -217,7 +218,9 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
                BookingPaymentQueries.get(payment.id)
     end
 
-    test "an answer without the expanded charge adds the refund to the recorded ones" do
+    # Adding the amount instead could count it twice, over a total
+    # charge.refunded already raised; the next attempt adopts it expanded.
+    test "an answer without the expanded charge records nothing and is retried" do
       payment = paid_booking_payment(%{refunded_amount_cents: 2000, status: :partially_refunded})
 
       StripeStub.expect(
@@ -225,9 +228,11 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
         StripeFixtures.object("refund", %{"id" => "re_unexpanded"})
       )
 
-      assert {:ok, _refund} = Refunds.refund_now(payment, 1500, :host, [])
+      assert {:pending, refund} = Refunds.refund_now(payment, 1500, :host, [])
 
-      assert %{status: :partially_refunded, refunded_amount_cents: 3500} =
+      assert %{status: :pending, executing_until: nil} = RefundQueries.get(refund.id)
+
+      assert %{status: :partially_refunded, refunded_amount_cents: 2000} =
                BookingPaymentQueries.get(payment.id)
     end
 

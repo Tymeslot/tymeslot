@@ -50,20 +50,39 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
     )
   end
 
-  defp refund_event(refund, status, metadata \\ nil) do
-    object =
-      StripeFixtures.object("refund", %{
-        "id" => "re_UPDATED",
-        "amount" => refund.amount_cents,
-        "charge" => "ch_UPDATED",
-        "status" => status,
-        "metadata" => metadata || %{"tymeslot_refund_id" => refund.id}
-      })
+  # The refund as Stripe sends it in the event: its charge an id.
+  defp stripe_refund(refund, status, metadata \\ nil) do
+    StripeFixtures.object("refund", %{
+      "id" => "re_UPDATED",
+      "amount" => refund.amount_cents,
+      "charge" => "ch_UPDATED",
+      "status" => status,
+      "metadata" => metadata || %{"tymeslot_refund_id" => refund.id}
+    })
+  end
 
+  defp event_for(stripe_refund) do
     "refund.updated"
-    |> StripeWebhookFixtures.connect_event(object, @account)
+    |> StripeWebhookFixtures.connect_event(stripe_refund, @account)
     |> Jason.decode!()
   end
+
+  # The refund as the handler reads it again: its charge expanded, showing
+  # Stripe's refunded total now.
+  defp current(stripe_refund, charge_refunded) do
+    Map.put(stripe_refund, "charge", %{
+      "id" => "ch_UPDATED",
+      "object" => "charge",
+      "amount_refunded" => charge_refunded
+    })
+  end
+
+  defp deliver(stripe_refund, charge_refunded) do
+    StripeStub.expect(:retrieve_refund, current(stripe_refund, charge_refunded))
+    RefundUpdated.handle(event_for(stripe_refund))
+  end
+
+  @refused {403, %{"error" => %{"type" => "invalid_request_error", "code" => "account_invalid"}}}
 
   test "is the handler for refund.updated and charge.refund.updated" do
     assert WebhookRegistry.handler_for("refund.updated") == RefundUpdated
@@ -74,7 +93,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
     payment = refunded_payment()
     refund = succeeded_refund(payment)
 
-    assert :ok = RefundUpdated.handle(refund_event(refund, "failed"))
+    assert :ok = deliver(stripe_refund(refund, "failed"), 0)
+
+    assert [%{path: "/v1/refunds/re_UPDATED", query: query, headers: headers}] =
+             StripeStub.requests(:retrieve_refund)
+
+    assert query["expand"] == ["charge"]
+    assert headers["stripe-account"] == @account
 
     assert %{status: :failed, failure_code: "refund_failed"} = RefundQueries.get(refund.id)
     assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
@@ -85,7 +110,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
                      %{refund_id: ^refund_id, failure_code: "refund_failed"}}
 
     assert_enqueued(worker: SendRefundFailed, args: %{refund_id: refund_id})
-    assert StripeStub.requests() == []
   end
 
   test "refund.updated for a disputed payment keeps the disputed status" do
@@ -98,7 +122,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
 
     refund = succeeded_refund(payment)
 
-    assert :ok = RefundUpdated.handle(refund_event(refund, "canceled"))
+    assert :ok = deliver(stripe_refund(refund, "canceled"), 0)
 
     assert %{status: :failed, failure_code: "refund_canceled"} = RefundQueries.get(refund.id)
     assert %{refunded_amount_cents: 0, status: :disputed} = Repo.reload!(payment)
@@ -107,7 +131,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
   test "refund.updated replayed is a no-op" do
     payment = refunded_payment()
     refund = succeeded_refund(payment)
-    event = refund_event(refund, "failed")
+    failed = stripe_refund(refund, "failed")
+    StripeStub.stub(:retrieve_refund, current(failed, 0))
+    event = event_for(failed)
 
     assert :ok = RefundUpdated.handle(event)
     assert_received {:send_alert, :refund_failed, _alert}
@@ -128,8 +154,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
 
     refund = build(:booking_payment_refund, id: UUID.generate())
 
-    assert :ok = RefundUpdated.handle(refund_event(refund, "failed"))
+    assert :ok = RefundUpdated.handle(event_for(stripe_refund(refund, "failed")))
 
+    assert StripeStub.requests(:retrieve_refund) == []
     assert Repo.aggregate(RefundSchema, :count) == 0
     refute_received {:send_alert, _type, _alert}
   end
@@ -138,7 +165,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
     payment = refunded_payment(refunded_amount_cents: 0, status: :paid)
     refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
 
-    assert :ok = RefundUpdated.handle(refund_event(refund, "failed"))
+    assert :ok = deliver(stripe_refund(refund, "failed"), 0)
 
     assert %{status: :failed, failure_code: "refund_failed", stripe_refund_id: "re_UPDATED"} =
              RefundQueries.get(refund.id)
@@ -152,20 +179,88 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
     payment = refunded_payment(refunded_amount_cents: 0, status: :paid)
     refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
 
-    assert :ok = RefundUpdated.handle(refund_event(refund, "succeeded"))
+    assert :ok = deliver(stripe_refund(refund, "succeeded"), 2_000)
 
     assert %{status: :succeeded, stripe_refund_id: "re_UPDATED"} = RefundQueries.get(refund.id)
     assert %{refunded_amount_cents: 2_000, status: :partially_refunded} = Repo.reload!(payment)
     assert_enqueued(worker: SendBookingPaymentRefunded, args: %{booking_payment_id: payment.id})
   end
 
+  # As after charge.refunded recorded the charge's total but could not list
+  # its refunds, leaving the row pending.
+  test "a refund already in the total is settled without being counted again" do
+    payment = refunded_payment(refunded_amount_cents: 2_000, status: :partially_refunded)
+    refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
+
+    assert :ok = deliver(stripe_refund(refund, "succeeded"), 2_000)
+
+    assert %{status: :succeeded} = RefundQueries.get(refund.id)
+    assert %{refunded_amount_cents: 2_000, status: :partially_refunded} = Repo.reload!(payment)
+  end
+
   test "refund.updated for a failed dashboard refund records nothing" do
     payment = refunded_payment()
     refund = build(:booking_payment_refund, id: nil, amount_cents: 1_000)
 
-    assert :ok = RefundUpdated.handle(refund_event(refund, "failed", %{}))
+    assert :ok = deliver(stripe_refund(refund, "failed", %{}), 5_000)
 
     assert RefundQueries.list_for_payment(payment.id) == []
     assert %{refunded_amount_cents: 5_000} = Repo.reload!(payment)
+  end
+
+  # charge.refunded for the dashboard refund is still on its way.
+  test "a dashboard refund recorded from refund.updated and then failed leaves the earlier total" do
+    payment = refunded_payment(refunded_amount_cents: 1_000, status: :partially_refunded)
+    dashboard = build(:booking_payment_refund, id: nil, amount_cents: 1_500)
+
+    assert :ok = deliver(stripe_refund(dashboard, "pending", %{}), 2_500)
+
+    assert [%{source: :external, status: :succeeded, amount_cents: 1_500}] =
+             RefundQueries.list_for_payment(payment.id)
+
+    assert %{refunded_amount_cents: 2_500} = Repo.reload!(payment)
+    refute_enqueued(worker: SendBookingPaymentRefunded)
+
+    assert :ok = deliver(stripe_refund(dashboard, "failed", %{}), 1_000)
+
+    assert [%{source: :external, status: :failed}] = RefundQueries.list_for_payment(payment.id)
+    assert %{refunded_amount_cents: 1_000, status: :partially_refunded} = Repo.reload!(payment)
+  end
+
+  describe "a refund Stripe will not read again" do
+    test "a transient read retries the event" do
+      payment = refunded_payment()
+      refund = succeeded_refund(payment)
+      StripeStub.expect(:retrieve_refund, 3, {:transport_error, :timeout})
+
+      assert {:error, :retry_later, _reason} =
+               RefundUpdated.handle(event_for(stripe_refund(refund, "failed")))
+
+      assert %{status: :succeeded} = RefundQueries.get(refund.id)
+      assert %{refunded_amount_cents: 5_000} = Repo.reload!(payment)
+    end
+
+    test "is settled from the event when it ended" do
+      payment = refunded_payment()
+      refund = succeeded_refund(payment)
+      StripeStub.expect(:retrieve_refund, @refused)
+
+      assert :ok = RefundUpdated.handle(event_for(stripe_refund(refund, "failed")))
+
+      assert %{status: :failed} = RefundQueries.get(refund.id)
+      assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
+    end
+
+    test "is left to its attempts when committed" do
+      payment = refunded_payment(refunded_amount_cents: 2_000, status: :partially_refunded)
+      refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
+      StripeStub.expect(:retrieve_refund, @refused)
+
+      assert :ok = RefundUpdated.handle(event_for(stripe_refund(refund, "succeeded")))
+
+      assert %{status: :pending} = RefundQueries.get(refund.id)
+      assert %{refunded_amount_cents: 2_000} = Repo.reload!(payment)
+      refute_enqueued(worker: SendBookingPaymentRefunded)
+    end
   end
 end

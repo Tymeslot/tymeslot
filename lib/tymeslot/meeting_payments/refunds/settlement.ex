@@ -39,11 +39,13 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
   @doc """
   Records `refund` as made at Stripe as `stripe_refund`, in one short
   transaction under its payment's row lock: the refund is settled
-  `succeeded`, its amount added to the payment's refunded total, and the
-  attendee's email enqueued. Stripe's total for the charge is used when
-  `stripe_refund` carries the charge (`"charge"` as a map with
-  `"amount_refunded"`), as it counts the refund once however often it is
-  reported; without it the amount is added to the refunds recorded.
+  `succeeded`, the payment's refunded total raised to Stripe's total for
+  the charge, and the attendee's email enqueued. `stripe_refund` must
+  carry its charge expanded (`"charge"` as a map with `"amount_refunded"`):
+  Stripe's total counts the refund once however often it is reported,
+  where adding its amount would count it again on top of a total that
+  already holds it. Without it nothing is recorded and
+  `{:error, :charge_not_expanded}` is returned.
 
   A refund settled `failed` is settled again, since money Stripe moved
   stands, and its reversal is reported (`FailureNotice.reversed/2`). One
@@ -53,6 +55,11 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
   """
   @spec settle_succeeded(RefundSchema.t(), map()) :: settled() | {:error, term()}
   def settle_succeeded(%RefundSchema{} = refund, stripe_refund) do
+    with {:ok, charge_total} <- charge_total(stripe_refund, refund.booking_payment_id),
+         do: record_succeeded(refund, stripe_refund, charge_total)
+  end
+
+  defp record_succeeded(refund, stripe_refund, charge_total) do
     attrs = %{status: :succeeded, stripe_refund_id: stripe_refund["id"], settled_at: now()}
 
     recorded =
@@ -63,8 +70,7 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
              {:ok, _updated} <-
                record_refunded(
                  locked,
-                 refund.amount_cents,
-                 stripe_refund,
+                 charge_total,
                  Map.fetch!(@status_change_reasons, refund.source)
                ) do
           enqueue_refund_email(locked)
@@ -171,20 +177,36 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
   @doc """
   Records `stripe_refund`, made of `payment` outside Tymeslot (in the
   Stripe dashboard), as a succeeded `:external` refund, or nothing when it
-  is already recorded. Nobody is emailed, and the refunded total is left to
-  the charge's own report (`charge.refunded`).
+  is already recorded. In one transaction under the payment's row lock the
+  refunded total is raised to Stripe's total for the charge, as for
+  `settle_succeeded/2`, so a later failure of the refund
+  (`fail_after_success/2`) takes off money that was counted. Nobody is
+  emailed. `stripe_refund` must carry its charge expanded, or nothing is
+  recorded and `{:error, :charge_not_expanded}` is returned.
   """
   @spec record_external(BookingPaymentSchema.t(), map()) ::
-          {:ok, RefundSchema.t() | nil} | {:error, Ecto.Changeset.t()}
+          {:ok, RefundSchema.t() | nil} | {:error, term()}
   def record_external(%BookingPaymentSchema{id: payment_id}, stripe_refund) do
-    %RefundSchema{}
-    |> RefundSchema.external_changeset(%{
-      booking_payment_id: payment_id,
-      amount_cents: stripe_refund["amount"],
-      stripe_refund_id: stripe_refund["id"],
-      settled_at: made_at(stripe_refund)
-    })
-    |> RefundQueries.insert_external()
+    changeset =
+      RefundSchema.external_changeset(%RefundSchema{}, %{
+        booking_payment_id: payment_id,
+        amount_cents: stripe_refund["amount"],
+        stripe_refund_id: stripe_refund["id"],
+        settled_at: made_at(stripe_refund)
+      })
+
+    with {:ok, charge_total} <- charge_total(stripe_refund, payment_id) do
+      Repo.transaction(fn ->
+        with {:ok, locked} <- BookingPaymentQueries.get_for_update(payment_id),
+             {:ok, %RefundSchema{} = recorded} <- RefundQueries.insert_external(changeset),
+             {:ok, _updated} <- record_refunded(locked, charge_total, :external_refund) do
+          recorded
+        else
+          {:ok, nil} -> nil
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+    end
   end
 
   @doc """
@@ -241,11 +263,12 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
     end
   end
 
-  # Records a refund of `amount_cents` Stripe made of the `locked` payment,
-  # as `stripe_refund`: the refunded total and the status that follows from
-  # it, whose change is reported to telemetry with `reason`.
-  defp record_refunded(locked, amount_cents, stripe_refund, reason) do
-    new_total = refunded_total(locked, amount_cents, stripe_refund)
+  # Records a refund Stripe made of the `locked` payment, its charge
+  # showing `charge_total` refunded: the refunded total, never below the
+  # refunds already recorded, and the status that follows from it, whose
+  # change is reported to telemetry with `reason`.
+  defp record_refunded(locked, charge_total, reason) do
+    new_total = RefundedTotal.with_stripe_refunded(locked, charge_total)
 
     new_status =
       cond do
@@ -277,15 +300,21 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
     end
   end
 
-  # Stripe's refunded total for the charge, which counts this refund once
-  # however often it is answered, and never below the recorded refunds. A
-  # refund without the expanded charge is added to the recorded refunds.
-  defp refunded_total(payment, _amount_cents, %{"charge" => %{"amount_refunded" => total}})
+  # Stripe's refunded total for the refund's charge. Every caller asks for
+  # the charge expanded, so its absence is a fault, refused rather than
+  # guessed at.
+  defp charge_total(%{"charge" => %{"amount_refunded" => total}}, _payment_id)
        when is_integer(total),
-       do: RefundedTotal.with_stripe_refunded(payment, total)
+       do: {:ok, total}
 
-  defp refunded_total(payment, amount_cents, _stripe_refund),
-    do: RefundedTotal.with_refund_added(payment, amount_cents)
+  defp charge_total(stripe_refund, payment_id) do
+    Logger.error("Stripe refund without its charge expanded; not recorded",
+      booking_payment_id: payment_id,
+      stripe_refund_id: stripe_refund["id"]
+    )
+
+    {:error, :charge_not_expanded}
+  end
 
   # Enqueues the attendee's refund email for `payment`. A failed insert is
   # logged and does not undo the refund.

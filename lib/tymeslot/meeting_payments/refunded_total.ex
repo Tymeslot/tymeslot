@@ -48,11 +48,6 @@ defmodule Tymeslot.MeetingPayments.RefundedTotal do
         payment.disputed_lost_cents
       )
 
-  @doc "The whole once a refund of `amount_cents` is added to the recorded refunds."
-  @spec with_refund_added(BookingPaymentSchema.t(), pos_integer()) :: non_neg_integer()
-  def with_refund_added(payment, amount_cents) when is_integer(amount_cents),
-    do: whole(payment, stripe_refunded_cents(payment) + amount_cents, payment.disputed_lost_cents)
-
   @doc """
   The whole once a recorded refund of `amount_cents` is reported failed at
   Stripe, which gives the money back to the host. The only way the refunds
