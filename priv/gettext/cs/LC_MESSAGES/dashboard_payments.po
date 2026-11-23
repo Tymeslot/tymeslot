@@ -133,7 +133,7 @@ msgstr "Odpojeno"
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Disputed"
-msgstr "Reklamováno"
+msgstr "Ve sporu"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -336,7 +336,7 @@ msgstr "Tato platba již byla vrácena v plné výši."
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "This payment is under dispute and must be handled in your Stripe dashboard."
-msgstr "Tato platba je reklamována a je nutné ji vyřešit v nástěnce Stripe."
+msgstr "K této platbě probíhá spor, který je nutné vyřešit v nástěnce Stripe."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex
 #, elixir-autogen, elixir-format
