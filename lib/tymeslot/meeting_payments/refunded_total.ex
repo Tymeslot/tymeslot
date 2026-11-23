@@ -18,7 +18,14 @@ defmodule Tymeslot.MeetingPayments.RefundedTotal do
 
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
 
-  @doc "The refunds made at Stripe, without what a lost dispute took."
+  @doc """
+  The refunds made at Stripe, without what a lost dispute took.
+
+  Exact only while refunds and the dispute's part together stay within the
+  amount paid. The whole is capped at that amount, so for a refunded charge
+  later disputed and lost this understates the refunds made, down to 0 for
+  a full refund followed by a full lost dispute.
+  """
   @spec stripe_refunded_cents(BookingPaymentSchema.t()) :: non_neg_integer()
   def stripe_refunded_cents(%{refunded_amount_cents: refunded, disputed_lost_cents: lost})
       when is_integer(refunded) and is_integer(lost),

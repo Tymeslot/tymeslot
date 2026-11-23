@@ -13,11 +13,10 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesRefundTotalsTest do
 
   import Ecto.Query, only: [from: 2]
   import Mox
-  import Tymeslot.AuthTestHelpers
   import Tymeslot.ConfigTestHelpers
+  import Tymeslot.DashboardTestHelpers, only: [meetings_dashboard: 2, open_series_modal: 2]
 
   alias Ecto.Changeset
-  alias Plug.Test
   alias Tymeslot.CalendarMock
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
@@ -48,27 +47,23 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesRefundTotalsTest do
     event = Paid.completed_event("evt_PAID", series.id, 4 * Paid.price_cents())
     assert :ok = CheckoutSessionCompleted.handle(event)
 
-    %{payment: MeetingPayments.payment_for_series(series.id), view: dashboard(conn, host)}
-  end
-
-  defp dashboard(conn, host) do
-    host.user
-    |> Changeset.change(onboarding_completed_at: DateTime.utc_now(:second))
-    |> Repo.update!()
-
-    conn = conn |> Test.init_test_session(%{}) |> fetch_session() |> log_in_user(host.user)
-    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
-    view
+    %{
+      payment: MeetingPayments.payment_for_series(series.id),
+      view: meetings_dashboard(conn, host.user)
+    }
   end
 
   defp open_series(view) do
-    [first | _rest] =
-      Repo.all(
-        from(m in MeetingSchema, where: not is_nil(m.series_id), order_by: m.series_position)
+    first =
+      Repo.one!(
+        from(m in MeetingSchema,
+          where: not is_nil(m.series_id),
+          order_by: m.series_position,
+          limit: 1
+        )
       )
 
-    view |> element("#view-series-#{first.id}") |> render_click()
-    assert has_element?(view, "#series-modal [data-testid=series-modal]")
+    open_series_modal(view, first)
   end
 
   defp record_refunds(payment, refunded_cents, lost_cents) do
