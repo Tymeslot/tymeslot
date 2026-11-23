@@ -566,3 +566,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Stripe declined this refund. Check the payment in your Stripe dashboard."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: %{refunded}, plus %{lost} lost in a dispute"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: nothing; %{lost} lost in a dispute"
+msgstr ""

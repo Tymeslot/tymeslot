@@ -422,3 +422,13 @@ msgid "%{count} session cancelled. Refund of %{amount} is being processed."
 msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processed."
 msgstr[0] "%{count} séance annulée. Le remboursement de %{amount} est en cours."
 msgstr[1] "%{count} séances annulées. Le remboursement de %{amount} est en cours."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{lost} lost in a dispute"
+msgstr "%{lost} perdus lors d'un litige"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{refunded} refunded so far, plus %{lost} lost in a dispute"
+msgstr "%{refunded} remboursés à ce jour, plus %{lost} perdus lors d'un litige"

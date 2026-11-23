@@ -570,3 +570,13 @@ msgstr "Žádost o vrácení platby byla odeslána, Stripe ji ale zatím nepotv
 #, elixir-autogen, elixir-format
 msgid "Stripe declined this refund. Check the payment in your Stripe dashboard."
 msgstr "Stripe toto vrácení platby odmítl. Zkontrolujte platbu na nástěnce Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: %{refunded}, plus %{lost} lost in a dispute"
+msgstr "Již vráceno: %{refunded}, navíc %{lost} strženo po prohraném sporu"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: nothing; %{lost} lost in a dispute"
+msgstr "Již vráceno: nic; %{lost} strženo po prohraném sporu"

@@ -9,7 +9,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
 
   A refund still pending counts against what can be refunded, and is shown
   as being processed; while pending refunds hold all that remains, the
-  submit is disabled.
+  submit is disabled. What a lost dispute took back is shown apart from
+  the refunds, since the host made no refund of it.
   """
 
   use TymeslotWeb, :html
@@ -163,10 +164,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
         {dgettext("dashboard_payments", "Original charge:")}
         <strong>{format_amount(@payment.amount_cents, @payment.currency)}</strong>
       </p>
-      <p>
-        {dgettext("dashboard_payments", "Already refunded:")}
-        <strong>{format_amount(@payment.refunded_amount_cents, @payment.currency)}</strong>
-      </p>
+      <.already_refunded
+        refunded={MeetingPayments.stripe_refunded_cents(@payment)}
+        lost={@payment.disputed_lost_cents}
+        currency={@payment.currency}
+      />
       <p :if={@pending > 0} id="refund-pending">
         {dgettext("dashboard_payments", "%{amount} being processed",
           amount: format_amount(@pending, @payment.currency)
@@ -177,6 +179,41 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
         <strong>{format_amount(@remaining, @payment.currency)}</strong>
       </p>
     </div>
+    """
+  end
+
+  attr :refunded, :integer, required: true
+  attr :lost, :integer, required: true
+  attr :currency, :string, required: true
+
+  # The refunds made, and apart from them what a lost dispute took back.
+  defp already_refunded(%{lost: 0} = assigns) do
+    ~H"""
+    <p>
+      {dgettext("dashboard_payments", "Already refunded:")}
+      <strong>{format_amount(@refunded, @currency)}</strong>
+    </p>
+    """
+  end
+
+  defp already_refunded(%{refunded: 0} = assigns) do
+    ~H"""
+    <p>
+      {dgettext("dashboard_payments", "Already refunded: nothing; %{lost} lost in a dispute",
+        lost: format_amount(@lost, @currency)
+      )}
+    </p>
+    """
+  end
+
+  defp already_refunded(assigns) do
+    ~H"""
+    <p>
+      {dgettext("dashboard_payments", "Already refunded: %{refunded}, plus %{lost} lost in a dispute",
+        refunded: format_amount(@refunded, @currency),
+        lost: format_amount(@lost, @currency)
+      )}
+    </p>
     """
   end
 end

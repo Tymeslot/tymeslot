@@ -566,3 +566,13 @@ msgstr "Rückerstattung veranlasst. Stripe hat sie noch nicht bestätigt; Tymesl
 #, elixir-autogen, elixir-format
 msgid "Stripe declined this refund. Check the payment in your Stripe dashboard."
 msgstr "Stripe hat diese Rückerstattung abgelehnt. Prüfen Sie die Zahlung in Ihrem Stripe-Dashboard."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: %{refunded}, plus %{lost} lost in a dispute"
+msgstr "Bereits erstattet: %{refunded}, dazu %{lost} durch eine Anfechtung verloren"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: nothing; %{lost} lost in a dispute"
+msgstr "Bereits erstattet: nichts; %{lost} durch eine Anfechtung verloren"

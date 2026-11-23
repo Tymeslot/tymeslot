@@ -439,3 +439,13 @@ msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processe
 msgstr[0] "Zrušen %{count} termín. Vrácení %{amount} se zpracovává."
 msgstr[1] "Zrušeny %{count} termíny. Vrácení %{amount} se zpracovává."
 msgstr[2] "Zrušeno %{count} termínů. Vrácení %{amount} se zpracovává."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{lost} lost in a dispute"
+msgstr "%{lost} strženo po prohraném sporu"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{refunded} refunded so far, plus %{lost} lost in a dispute"
+msgstr "Dosud vráceno %{refunded}, navíc %{lost} strženo po prohraném sporu"

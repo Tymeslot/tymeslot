@@ -566,3 +566,13 @@ msgstr "Demande de remboursement envoyée. Stripe ne l’a pas encore confirmée
 #, elixir-autogen, elixir-format
 msgid "Stripe declined this refund. Check the payment in your Stripe dashboard."
 msgstr "Stripe a refusé ce remboursement. Vérifiez le paiement dans votre tableau de bord Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: %{refunded}, plus %{lost} lost in a dispute"
+msgstr "Déjà remboursé : %{refunded}, plus %{lost} perdus lors d’un litige"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: nothing; %{lost} lost in a dispute"
+msgstr "Déjà remboursé : rien ; %{lost} perdus lors d’un litige"

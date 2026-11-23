@@ -422,3 +422,13 @@ msgid "%{count} session cancelled. Refund of %{amount} is being processed."
 msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processed."
 msgstr[0] "%{count} Termin abgesagt. Die Rückerstattung von %{amount} wird bearbeitet."
 msgstr[1] "%{count} Termine abgesagt. Die Rückerstattung von %{amount} wird bearbeitet."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{lost} lost in a dispute"
+msgstr "%{lost} durch eine Anfechtung verloren"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{refunded} refunded so far, plus %{lost} lost in a dispute"
+msgstr "Bisher %{refunded} erstattet, dazu %{lost} durch eine Anfechtung verloren"

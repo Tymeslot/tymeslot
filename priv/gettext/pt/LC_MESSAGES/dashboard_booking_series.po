@@ -167,7 +167,7 @@ msgstr "%{amount} pagos"
 #: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "%{amount} refunded so far"
-msgstr "%{amount} reembolsados até agora"
+msgstr "%{amount} reembolsado até agora"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
 #, elixir-autogen, elixir-format
@@ -422,3 +422,13 @@ msgid "%{count} session cancelled. Refund of %{amount} is being processed."
 msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processed."
 msgstr[0] "%{count} sessão cancelada. O reembolso de %{amount} está em processamento."
 msgstr[1] "%{count} sessões canceladas. O reembolso de %{amount} está em processamento."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{lost} lost in a dispute"
+msgstr "%{lost} perdido em disputa"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{refunded} refunded so far, plus %{lost} lost in a dispute"
+msgstr "%{refunded} reembolsado até agora, além de %{lost} perdido em disputa"

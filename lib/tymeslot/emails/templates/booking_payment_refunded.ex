@@ -35,6 +35,10 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
 
     Building this struct in the worker keeps the template free of any
     knowledge of database schemas or Stripe payloads.
+
+    `refunded_amount_cents` is what was refunded, without any share a lost
+    dispute took back, and `is_full_refund?` compares that with the
+    payment.
     """
 
     @enforce_keys [

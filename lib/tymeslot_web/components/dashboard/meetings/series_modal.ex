@@ -89,13 +89,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.SeriesModal do
               amount: format_amount(@overview.payment.amount_cents, @overview.payment.currency)
             )}
             <span class="block text-tymeslot-500">
-              {dgettext("dashboard_booking_series", "%{amount} refunded so far",
-                amount:
-                  format_amount(
-                    @overview.payment.refunded_amount_cents,
-                    @overview.payment.currency
-                  )
-              )}
+              {refunded_so_far(@overview.payment)}
             </span>
             <span
               :if={MeetingPayments.refund_pending?(@overview.payment)}
@@ -230,6 +224,36 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.SeriesModal do
     do: %{meeting | status: :cancelled}
 
   defp badge_meeting(%{meeting: meeting}), do: meeting
+
+  # The refunds made, and apart from them what a lost dispute took back.
+  defp refunded_so_far(payment) do
+    refunded_so_far(
+      MeetingPayments.stripe_refunded_cents(payment),
+      payment.disputed_lost_cents,
+      payment.currency
+    )
+  end
+
+  defp refunded_so_far(refunded, 0, currency),
+    do:
+      dgettext("dashboard_booking_series", "%{amount} refunded so far",
+        amount: format_amount(refunded, currency)
+      )
+
+  defp refunded_so_far(0, lost, currency),
+    do:
+      dgettext("dashboard_booking_series", "%{lost} lost in a dispute",
+        lost: format_amount(lost, currency)
+      )
+
+  defp refunded_so_far(refunded, lost, currency),
+    do:
+      dgettext(
+        "dashboard_booking_series",
+        "%{refunded} refunded so far, plus %{lost} lost in a dispute",
+        refunded: format_amount(refunded, currency),
+        lost: format_amount(lost, currency)
+      )
 
   defp type_name(%{meeting_type: %{name: name}}), do: name
   defp type_name(_series), do: nil

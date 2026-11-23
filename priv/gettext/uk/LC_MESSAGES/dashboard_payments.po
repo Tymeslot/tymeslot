@@ -570,3 +570,13 @@ msgstr "Запит на повернення коштів надіслано. St
 #, elixir-autogen, elixir-format
 msgid "Stripe declined this refund. Check the payment in your Stripe dashboard."
 msgstr "Stripe відхилив це повернення коштів. Перевірте платіж на панелі керування Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: %{refunded}, plus %{lost} lost in a dispute"
+msgstr "Уже повернено: %{refunded}, ще %{lost} втрачено внаслідок спору"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: nothing; %{lost} lost in a dispute"
+msgstr "Уже повернено: нічого; %{lost} втрачено внаслідок спору"

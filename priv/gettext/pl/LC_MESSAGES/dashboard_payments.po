@@ -566,3 +566,13 @@ msgstr "Zlecono zwrot. Stripe jeszcze go nie potwierdził; Tymeslot ponawia pró
 #, elixir-autogen, elixir-format
 msgid "Stripe declined this refund. Check the payment in your Stripe dashboard."
 msgstr "Stripe odrzucił ten zwrot. Sprawdź płatność w panelu Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: %{refunded}, plus %{lost} lost in a dispute"
+msgstr "Już zwrócono: %{refunded}, a dodatkowo w sporze utracono %{lost}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: nothing; %{lost} lost in a dispute"
+msgstr "Już zwrócono: nic; w sporze utracono %{lost}"

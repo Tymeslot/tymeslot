@@ -566,3 +566,13 @@ msgstr "Reembolso enviado. Stripe todavía no lo confirmó; Tymeslot sigue inten
 #, elixir-autogen, elixir-format
 msgid "Stripe declined this refund. Check the payment in your Stripe dashboard."
 msgstr "Stripe rechazó este reembolso. Revisa el pago en tu panel de Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: %{refunded}, plus %{lost} lost in a dispute"
+msgstr "Ya reembolsado: %{refunded}, más %{lost} perdidos en una disputa"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Already refunded: nothing; %{lost} lost in a dispute"
+msgstr "Ya reembolsado: nada; %{lost} perdidos en una disputa"

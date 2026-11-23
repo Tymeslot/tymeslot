@@ -45,6 +45,7 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
   alias Tymeslot.MeetingPayments.HeldMeetings
+  alias Tymeslot.MeetingPayments.RefundedTotal
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.RefundSchema
@@ -432,6 +433,14 @@ defmodule Tymeslot.MeetingPayments do
   @spec payment_for_meeting(term(), integer()) :: booking_payment() | nil
   def payment_for_meeting(meeting_id, host_user_id),
     do: BookingPaymentQueries.for_meeting_for_host(meeting_id, host_user_id)
+
+  @doc """
+  What was refunded at Stripe, in cents, without what a lost dispute took
+  back; see `RefundedTotal.stripe_refunded_cents/1`. The figure to show as
+  "refunded".
+  """
+  @spec stripe_refunded_cents(booking_payment()) :: non_neg_integer()
+  defdelegate stripe_refunded_cents(payment), to: RefundedTotal
 
   @doc "The balance in cents still refundable; see `Refunds.refundable_remaining_cents/1`."
   @spec refundable_remaining_cents(booking_payment()) :: non_neg_integer()

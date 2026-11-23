@@ -439,3 +439,13 @@ msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processe
 msgstr[0] "Odwołano %{count} sesję. Zwrot %{amount} jest w toku."
 msgstr[1] "Odwołano %{count} sesje. Zwrot %{amount} jest w toku."
 msgstr[2] "Odwołano %{count} sesji. Zwrot %{amount} jest w toku."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{lost} lost in a dispute"
+msgstr "W sporze utracono %{lost}"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{refunded} refunded so far, plus %{lost} lost in a dispute"
+msgstr "Dotąd zwrócono %{refunded}, a dodatkowo w sporze utracono %{lost}"
