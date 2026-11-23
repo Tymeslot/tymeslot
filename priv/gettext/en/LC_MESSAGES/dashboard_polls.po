@@ -1011,3 +1011,23 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep editing"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving?"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your changes to this poll are not saved yet. Leaving now discards them."
+msgstr ""

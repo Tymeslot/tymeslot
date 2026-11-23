@@ -15,7 +15,9 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   The editor keeps its own state across re-renders: a vote arriving while the
   host edits refreshes the poll it is given, not what the host has typed.
   On a save it tells the owning `PollsComponent` (`poll_edited: true`), which
-  closes the editor and reloads the poll.
+  closes the editor and reloads the poll. A link elsewhere followed with
+  changes unsaved is held by the `UnsavedChanges` hook while the
+  `PollsComponent` asks (`LeavePollEditorModal`).
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -96,7 +98,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollEditor do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="space-y-4" data-testid="poll-editor">
+    <div
+      id={"poll-editor-#{@poll.id}"}
+      class="space-y-4"
+      phx-hook="UnsavedChanges"
+      data-leave-event="leave"
+      data-leave-target={@parent_myself}
+      data-testid="poll-editor"
+    >
       <form
         id={"poll-details-form-#{@poll.id}"}
         phx-submit="save"
