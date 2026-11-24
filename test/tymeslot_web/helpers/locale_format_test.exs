@@ -49,6 +49,18 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       date = ~D[2026-03-15]
       assert LocaleFormat.format_date(date, "ja") == "15 March 2026"
     end
+
+    test "writes the first of a month as an ordinal in French, Italian and Portuguese" do
+      assert LocaleFormat.format_date(~D[2026-10-01], "fr") == "1er octobre 2026"
+      assert LocaleFormat.format_date(~D[2026-10-01], "it") == "1° ottobre 2026"
+      assert LocaleFormat.format_date(~D[2026-10-01], "pt") == "1º de outubro de 2026"
+    end
+
+    test "keeps the first of a month a plain number elsewhere, with German's single stop" do
+      assert LocaleFormat.format_date(~D[2026-10-01], "en") == "1 October 2026"
+      assert LocaleFormat.format_date(~D[2026-10-01], "de") == "1. Oktober 2026"
+      assert LocaleFormat.format_date(~D[2026-10-01], "cs") == "1. října 2026"
+    end
   end
 
   describe "format_time/2" do
@@ -487,6 +499,37 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     test "keeps the period after the day in Czech" do
       assert LocaleFormat.format_date_range(~D[2026-04-10], ~D[2026-04-12], "cs") ==
                "10.–12. dubna 2026"
+    end
+
+    test "writes the first of a month as an ordinal at either end of the range" do
+      assert LocaleFormat.format_date_range(~D[2026-10-01], ~D[2026-10-03], "fr") ==
+               "1er–3 octobre 2026"
+
+      assert LocaleFormat.format_date_range(~D[2026-09-30], ~D[2026-10-01], "it") ==
+               "30 settembre – 1° ottobre 2026"
+
+      assert LocaleFormat.format_date_range(~D[2026-10-01], ~D[2026-10-03], "pt") ==
+               "1º–3 de outubro de 2026"
+
+      assert LocaleFormat.format_date_range(~D[2026-09-30], ~D[2026-10-01], "pt") ==
+               "30 de setembro – 1º de outubro de 2026"
+    end
+
+    test "keeps the first of a month a plain number elsewhere, with German's single stop" do
+      assert LocaleFormat.format_date_range(~D[2026-10-01], ~D[2026-10-03], "en") ==
+               "1–3 October 2026"
+
+      assert LocaleFormat.format_date_range(~D[2026-09-30], ~D[2026-10-01], "de") ==
+               "30. September – 1. Oktober 2026"
+    end
+  end
+
+  describe "weekday and short dates" do
+    test "write the first of a month as an ordinal in French, Italian and Portuguese" do
+      assert LocaleFormat.format_weekday_date(~D[2026-10-01], "fr") == "jeudi 1er octobre 2026"
+      assert LocaleFormat.format_short_date(~D[2026-10-01], "it") == "1° ott"
+      assert LocaleFormat.format_short_date(~D[2026-10-01], "pt") == "1º de out"
+      assert LocaleFormat.format_short_date(~D[2026-10-01], "de") == "1. Okt"
     end
   end
 
