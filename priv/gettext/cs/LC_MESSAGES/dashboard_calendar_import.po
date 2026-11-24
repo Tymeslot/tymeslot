@@ -277,3 +277,13 @@ msgid_plural "Importing %{done} of %{count} events..."
 msgstr[0] "Importuje se %{done} z 1 události…"
 msgstr[1] "Importuje se %{done} z %{count} událostí…"
 msgstr[2] "Importuje se %{done} z %{count} událostí…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "From each of these dates, this file holds either more events than one import can copy or none at all. Export a shorter date range from your calendar app and import it in parts."
+msgstr "Od každého z těchto dat obsahuje tento soubor buď víc událostí, než dokáže zkopírovat jeden import, nebo vůbec žádné. Vyexportujte z kalendářové aplikace kratší časové období a importujte ho po částech."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "None of the events in this file fall within these dates: they all ended before the earliest one. Export a shorter date range from your calendar app and import it in parts."
+msgstr "Žádná událost v tomto souboru nespadá do období od těchto dat: všechny skončily před nejdřívějším z nich. Vyexportujte z kalendářové aplikace kratší časové období a importujte ho po částech."

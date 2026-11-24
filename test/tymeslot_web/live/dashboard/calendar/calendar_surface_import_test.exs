@@ -371,6 +371,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       assert render(option(lv, "2026-04-14")) =~ "disabled"
       assert render(option(lv, "2026-07-14")) =~ "checked"
       assert dialogue =~ "1002 events, more than 1000"
+      refute dialogue =~ "Export a shorter date range"
 
       # A date that does not fit is never taken, whatever the form sends.
       lv |> form("#calendar-import-cutoff") |> render_change(%{"from" => "2025-10-14"})
@@ -394,6 +395,48 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
 
       settle(lv)
       assert has_element?(lv, "#calendar-import-result", "Imported 1 event.")
+    end
+
+    @all_ended "None of the events in this file fall within these dates"
+    @too_many_from_today "Even the events from today onwards are more than one import can copy."
+    @too_many_or_none "From each of these dates, this file holds either more events"
+
+    # The dialogue for a file no date offered fits, with Continue disabled.
+    defp none_fit_dialogue(conn, content) do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_import(lv)
+      upload(lv, content)
+
+      assert render(element(lv, "#calendar-import-narrow")) =~ "disabled"
+      lv |> element("#calendar-import-too-many") |> render()
+    end
+
+    test "says so when every event ended before the earliest date offered", %{conn: conn} do
+      dialogue = none_fit_dialogue(conn, oversized("20250105", "20250106"))
+
+      assert dialogue =~ "No events from this date on"
+      assert dialogue =~ @all_ended
+      refute dialogue =~ @too_many_from_today
+      refute dialogue =~ @too_many_or_none
+    end
+
+    test "says so when even the events from today on are too many", %{conn: conn} do
+      dialogue = none_fit_dialogue(conn, oversized("20261105", "20261106"))
+
+      assert dialogue =~ @too_many_from_today
+      refute dialogue =~ @all_ended
+      refute dialogue =~ @too_many_or_none
+    end
+
+    test "says so when each date keeps too many events or none", %{conn: conn} do
+      # From 12 and 6 months back all 1,002 are kept; from 3 months back none.
+      dialogue = none_fit_dialogue(conn, oversized("20260501", "20260502"))
+
+      assert dialogue =~ "1002 events, more than 1000"
+      assert dialogue =~ "No events from this date on"
+      assert dialogue =~ @too_many_or_none
+      refute dialogue =~ @too_many_from_today
+      refute dialogue =~ @all_ended
     end
 
     test "in Italian, puts the elided article before a range from the 8th to the 11th", %{

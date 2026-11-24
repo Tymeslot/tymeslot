@@ -214,17 +214,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
   end
 
   attr :overview, :map, required: true, doc: "from `IcsImport.Cutoff.overview/3`"
-  attr :from, Date, required: true, doc: "the suggestion chosen, or `nil`"
+  attr :from, :any, required: true, doc: "the suggestion chosen, a `Date`, or `nil`"
   attr :target, :any, required: true
 
   # A file with more events than one import writes: what it holds, and the
   # dates it can be imported from, each with the events it keeps. Only those
-  # that fit can be chosen.
+  # that fit can be chosen, and when none does a notice says why.
   defp too_many(assigns) do
     assigns =
       assign(assigns,
         max: IcsImport.max_events(),
-        none_fit: not Enum.any?(assigns.overview.suggestions, & &1.importable)
+        none_fit: none_fit(assigns.overview.suggestions)
       )
 
     ~H"""
@@ -287,10 +287,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
       </form>
 
       <.info_box :if={@none_fit} variant={:warning}>
-        {dgettext(
-          "dashboard_calendar_import",
-          "Even the events from today onwards are more than one import can copy. Export a shorter date range from your calendar app and import it in parts."
-        )}
+        {none_fit_notice(@none_fit)}
       </.info_box>
 
       <p class="text-token-xs text-tymeslot-500">
@@ -308,6 +305,39 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
     </div>
     """
   end
+
+  # Why no suggestion can be chosen, nil when one can. The suggestions keep
+  # fewer events the later they start, so the latest decides whether even
+  # today on is too many.
+  defp none_fit(suggestions) do
+    cond do
+      Enum.any?(suggestions, & &1.importable) -> nil
+      Enum.all?(suggestions, &(&1.events == 0)) -> :all_ended
+      Enum.max_by(suggestions, & &1.from, Date).events > 0 -> :too_many_from_today
+      true -> :too_many_or_none
+    end
+  end
+
+  defp none_fit_notice(:all_ended),
+    do:
+      dgettext(
+        "dashboard_calendar_import",
+        "None of the events in this file fall within these dates: they all ended before the earliest one. Export a shorter date range from your calendar app and import it in parts."
+      )
+
+  defp none_fit_notice(:too_many_from_today),
+    do:
+      dgettext(
+        "dashboard_calendar_import",
+        "Even the events from today onwards are more than one import can copy. Export a shorter date range from your calendar app and import it in parts."
+      )
+
+  defp none_fit_notice(:too_many_or_none),
+    do:
+      dgettext(
+        "dashboard_calendar_import",
+        "From each of these dates, this file holds either more events than one import can copy or none at all. Export a shorter date range from your calendar app and import it in parts."
+      )
 
   defp suggestion_note(%{events: 0}, _max),
     do: dgettext("dashboard_calendar_import", "No events from this date on")
