@@ -56,8 +56,8 @@ defmodule Tymeslot.Integrations.Stripe.Client do
     "no response was received even after waiting"
   ]
 
-  @typedoc "What every Stripe call returns: the string-keyed object, or why it failed."
-  @type result :: {:ok, map()} | {:error, Error.t() | :missing_api_key}
+  @typedoc "What every Stripe call returns; see `t:Tymeslot.Integrations.Stripe.result/0`."
+  @type result :: Stripe.result()
 
   @doc """
   Sends `request`, retrying as `RetryPolicy` decides.

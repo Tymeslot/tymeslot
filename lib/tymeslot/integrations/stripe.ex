@@ -6,7 +6,7 @@ defmodule Tymeslot.Integrations.Stripe do
   this namespace directly (`Stripe.Refunds.create/2`, `Stripe.Charges.retrieve/2`
   and so on). Each returns `{:ok, map}` with Stripe's object string-keyed, or
   `{:error, %Tymeslot.Integrations.Stripe.Error{}}`, or `{:error, :missing_api_key}`
-  when no secret key is configured (`Tymeslot.Integrations.Stripe.Client.result/0`).
+  when no secret key is configured (`t:result/0`).
 
   Every resource function takes an optional trailing `opts` keyword list:
   `:api_key` (otherwise the configured key), `:connect_account` (sent as the
@@ -23,6 +23,11 @@ defmodule Tymeslot.Integrations.Stripe do
   live under `config :tymeslot, Tymeslot.Integrations.Stripe` and are read at
   runtime, so test and deployment config can override them.
   """
+
+  alias Tymeslot.Integrations.Stripe.Error
+
+  @typedoc "What every Stripe call returns: the string-keyed object, or why it failed."
+  @type result :: {:ok, map()} | {:error, Error.t() | :missing_api_key}
 
   @doc """
   The platform's secret key, or `nil` when none is set. A blank value counts as
