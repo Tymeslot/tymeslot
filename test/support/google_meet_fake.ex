@@ -9,7 +9,8 @@ defmodule Tymeslot.Test.GoogleMeetFake do
   (`conferenceDataVersion=1` with a `createRequest`) is answered while the
   Meet is still being made, and the Meet's link is there on the next read. A
   write without `conferenceDataVersion=1` leaves the event's conference as
-  it is, and times come back with their offset in the event's time zone.
+  it is, and times come back with their offset in the event's time zone. A
+  calendar's event list, read for availability, is empty.
   The Meet API makes the space `space-1`, and finds no call to end in any
   space.
 
@@ -108,8 +109,13 @@ defmodule Tymeslot.Test.GoogleMeetFake do
   defp event_key(uri, id), do: {calendar_of(uri), id}
 
   defp read_event(events, uri, meet_pending?) do
-    key = event_key(uri, uri.path |> String.split("/") |> List.last())
+    case uri.path |> String.split("/") |> List.last() do
+      "events" -> {:ok, %Req.Response{status: 200, body: ~s({"items":[]})}}
+      id -> read_one_event(events, event_key(uri, id), meet_pending?)
+    end
+  end
 
+  defp read_one_event(events, key, meet_pending?) do
     case Agent.get(events, &Map.get(&1, key)) do
       nil -> {:ok, %Req.Response{status: 404, body: ~s({"error":{"message":"Not Found"}})}}
       event when meet_pending? -> {:ok, %Req.Response{status: 200, body: Jason.encode!(event)}}

@@ -1,6 +1,7 @@
 defmodule Tymeslot.Meetings.CalendarEventConference do
   @moduledoc """
-  Taking a booking's Meet conference off its Google event, in place.
+  Putting a booking's Meet conference on its Google event, or taking it off,
+  in place.
 
   A room that is the booking's own calendar event is released by
   `Tymeslot.Meetings.CalendarEventSync.replace/3`. Outlook keeps a Teams
@@ -10,6 +11,12 @@ defmodule Tymeslot.Meetings.CalendarEventConference do
   duplicate. Google takes a conference off an event in place instead: the
   event is written with `conferenceDataVersion=1` and no `conferenceData`
   (`Tymeslot.Integrations.Calendar.Google.ConferenceData.remove/0`).
+
+  An event written before its booking was put on Meet (a booking moved onto
+  Meet, or back to it once its Meet was taken off) is asked for one in place
+  in the same way (`request_under_lock/2`). Both writes run under the
+  meeting's conference lock (`MeetingQueries.lock_event_conference/1`), so a
+  removal and a request queued by two moves never interleave.
   """
 
   require Logger
@@ -20,7 +27,7 @@ defmodule Tymeslot.Meetings.CalendarEventConference do
   alias Tymeslot.Integrations.Calendar.Management, as: CalendarManagement
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.{CalendarEventCache, MeetingQueries, MeetingSchema}
+  alias Tymeslot.Meetings.{CalendarEventCache, MeetingQueries, MeetingSchema, MeetingState}
   alias Tymeslot.Repo
 
   @doc "Whether the meeting's calendar event is a Google event."
@@ -58,16 +65,45 @@ defmodule Tymeslot.Meetings.CalendarEventConference do
           :ok | {:skipped, answer} | {:error, term()}
         when answer: term()
   def clear_under_lock(meeting_id, decide) do
+    under_lock(meeting_id, fn meeting ->
+      case decide.(meeting) do
+        :clear -> clear_unless_retaken(meeting)
+        answer -> {:skipped, answer}
+      end
+    end)
+  end
+
+  @doc """
+  Asks the Google event `event_id` of the meeting `meeting_id` for a Meet
+  conference, as the meeting stands once its conference lock is held: only
+  while the meeting is still on a Meet its event carries
+  (`MeetingProvisioning.booking_meet_on_event?/1`), still has `event_id` as
+  its event and has no room yet. Otherwise `{:skipped, :changed}`.
+
+  The request goes out as `ConferenceData.booking_create_request/0`, so a
+  later move off Meet recognises the conference as the booking's and takes
+  it off again, and the video job waiting for the Meet times its wait from
+  the request. Errors are as for `clear_under_lock/2`, plus the calendar's
+  own refusal (`:conference_refused` for a calendar that allows no Meet).
+  """
+  @spec request_under_lock(String.t(), String.t()) ::
+          :ok | {:skipped, :changed} | {:error, term()}
+  def request_under_lock(meeting_id, event_id) do
+    under_lock(meeting_id, fn meeting ->
+      if awaits_event_meet?(meeting, event_id),
+        do: request(meeting),
+        else: {:skipped, :changed}
+    end)
+  end
+
+  defp under_lock(meeting_id, fun) do
     transaction =
       Repo.transaction(fn ->
         MeetingQueries.lock_event_conference(meeting_id)
 
-        with {:ok, meeting} <- MeetingQueries.get_meeting(meeting_id),
-             :clear <- decide.(meeting) do
-          clear_unless_retaken(meeting)
-        else
+        case MeetingQueries.get_meeting(meeting_id) do
+          {:ok, meeting} -> fun.(meeting)
           {:error, :not_found} -> {:error, :meeting_not_found}
-          answer -> {:skipped, answer}
         end
       end)
 
@@ -76,6 +112,16 @@ defmodule Tymeslot.Meetings.CalendarEventConference do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  defp awaits_event_meet?(
+         %MeetingSchema{provider_event_id: event_id, video_room_id: nil} = meeting,
+         event_id
+       ),
+       do:
+         MeetingState.expects_calendar_event?(meeting) and
+           MeetingProvisioning.booking_meet_on_event?(meeting)
+
+  defp awaits_event_meet?(_meeting, _event_id), do: false
 
   # The meeting back on a Meet its event carries
   # (`MeetingProvisioning.booking_meet_on_event?/1`) keeps it: its video job
@@ -97,14 +143,7 @@ defmodule Tymeslot.Meetings.CalendarEventConference do
   defp clear(meeting) do
     Logger.info("Taking the Meet conference off the calendar event", meeting_id: meeting.id)
 
-    event_data =
-      meeting
-      |> CalendarEventBuilder.build_event_data(
-        attendees: Meetings.attendees_for_calendar(meeting)
-      )
-      |> Map.put(:conference_data, ConferenceData.remove())
-
-    case CalendarEvents.update_event(meeting.provider_event_id, event_data, meeting) do
+    case write_conference(meeting, ConferenceData.remove()) do
       {:error, :not_found} ->
         Logger.info("Calendar event already gone, no conference to take off",
           meeting_id: meeting.id
@@ -112,11 +151,29 @@ defmodule Tymeslot.Meetings.CalendarEventConference do
 
         :ok
 
-      {:error, _reason} = error ->
-        error
+      result ->
+        result
+    end
+  end
 
-      _updated ->
-        CalendarEventCache.write_through_update(meeting, event_data)
+  defp request(meeting) do
+    Logger.info("Asking the calendar event for a Meet conference", meeting_id: meeting.id)
+    write_conference(meeting, ConferenceData.booking_create_request())
+  end
+
+  # Writes the meeting's event as it stands, with `conference_data` as its
+  # conference change.
+  defp write_conference(meeting, conference_data) do
+    event_data =
+      meeting
+      |> CalendarEventBuilder.build_event_data(
+        attendees: Meetings.attendees_for_calendar(meeting)
+      )
+      |> Map.put(:conference_data, conference_data)
+
+    case CalendarEvents.update_event(meeting.provider_event_id, event_data, meeting) do
+      {:error, _reason} = error -> error
+      _updated -> CalendarEventCache.write_through_update(meeting, event_data)
     end
   end
 end
