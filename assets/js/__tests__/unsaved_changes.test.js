@@ -157,6 +157,23 @@ describe('UnsavedChanges on an explicit-submit editor', () => {
   test('does not take leaving the field as saving it', () => {
     editor.type();
     editor.leave();
+    sidebar.click();
+    expect(sidebar.followed).not.toHaveBeenCalled();
+  });
+
+  test('lets links go once a save the server started itself is confirmed', () => {
+    editor.type();
+    editor.leave();
+    editor.clean();
+    sidebar.click();
+    expect(sidebar.followed).toHaveBeenCalledTimes(1);
+    expect(unloadIsBlocked()).toBe(false);
+  });
+
+  test('keeps holding links when more was typed after the field was left', () => {
+    editor.type();
+    editor.leave();
+    editor.type();
     editor.clean();
     sidebar.click();
     expect(sidebar.followed).not.toHaveBeenCalled();

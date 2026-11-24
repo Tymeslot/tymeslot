@@ -21,6 +21,12 @@
  *     `@myself`, or this element's own component when absent). The server
  *     saves or asks, and pushes `unsaved:proceed` once the way is clear,
  *     which follows the held link.
+ *
+ * Either way, leaving a field counts as sending it: a `phx-change` the
+ * editor debounces is dispatched on blur, so the server holds the draft
+ * from then on, and a save it starts itself (on leaving, or on another
+ * control of the editor) covers what was typed. Leaving a field never makes
+ * the element clean on its own; only the server's `autosave:clean` does.
  */
 
 // Set while a held link is followed, so that no guard holds it again.
@@ -64,11 +70,8 @@ export const UnsavedChanges = {
     this.el.addEventListener("submit", this.onSend);
     window.addEventListener("beforeunload", this.onBeforeUnload);
 
-    if (leaveEvent) {
-      document.addEventListener("click", this.onClick, true);
-    } else {
-      this.el.addEventListener("focusout", this.onSend);
-    }
+    this.el.addEventListener("focusout", this.onSend);
+    if (leaveEvent) document.addEventListener("click", this.onClick, true);
 
     this.handleEvent("autosave:clean", ({ id }) => {
       if (id === this.el.id && this.sent === this.edits) this.dirty = false;
