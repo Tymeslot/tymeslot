@@ -29,7 +29,6 @@ defmodule TymeslotWeb.E2E.PasswordResetTest do
     session =
       session
       |> visit("/auth/login")
-      |> wait_for_live()
       |> click(by_css("button[phx-value-to='reset_password']"))
       |> fill(by_label("Email Address"), user.email)
       |> click(by_css("button[type='submit']"))
@@ -51,7 +50,6 @@ defmodule TymeslotWeb.E2E.PasswordResetTest do
     session =
       session
       |> visit("/auth/reset-password/#{token}")
-      |> wait_for_live()
       |> fill(by_css("#password-input"), new_password)
       |> fill(by_css("#confirm-password-input"), new_password)
       |> click(by_css("button[type='submit']"))
@@ -62,7 +60,6 @@ defmodule TymeslotWeb.E2E.PasswordResetTest do
     # Log in with the new password
     session
     |> visit("/auth/login")
-    |> wait_for_live()
     |> fill(by_label("Email Address"), user.email)
     |> fill(by_css("#password-input"), new_password)
     |> click(by_css("button[type='submit']"))

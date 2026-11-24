@@ -20,7 +20,6 @@ defmodule TymeslotWeb.E2E.MeetingCancellationTest do
     session =
       session
       |> visit("/#{profile.username}/meeting/#{meeting.uid}/cancel")
-      |> wait_for_live()
       |> assert_has(by_css("[data-testid='cancel-meeting']"))
       |> click(by_css("[data-testid='cancel-meeting']"))
 

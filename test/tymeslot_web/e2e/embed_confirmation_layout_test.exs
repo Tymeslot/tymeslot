@@ -32,7 +32,6 @@ defmodule TymeslotWeb.E2E.EmbedConfirmationLayoutTest do
       session
       |> set_viewport_size(%{width: 1000, height: @height})
       |> visit("/#{profile.username}/#{slug}?theme=2")
-      |> wait_for_live()
       |> pick_first_slot()
       |> submit_booking_form()
       |> assert_has(by_css("[data-testid='location-arranged-note']"))

@@ -146,7 +146,6 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     session
     |> set_viewport_size(%{width: 390, height: 844})
     |> visit("/dashboard/calendar?view=day&date=#{iso}")
-    |> wait_for_live()
     |> assert_has(by_css("#calendar-canvas[aria-busy='false']"))
     # The phone chrome, not the desktop toolbar.
     |> assert_has(by_css("#calendar-phone-header"))
@@ -204,7 +203,6 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
       session
       |> resize_to_mobile()
       |> visit("/dashboard/calendar")
-      |> wait_for_live()
       |> assert_has(by_css("#calendar-canvas[aria-busy='false']"))
       # The stored default is a week, which a phone shows as 3 days.
       |> assert_has(by_css("#calendar-tab-three_day[aria-current='page']"))
@@ -251,7 +249,6 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     session
     |> set_viewport_size(%{width: 390, height: 844})
     |> visit("/dashboard/calendar?view=agenda")
-    |> wait_for_live()
     |> assert_has(by_css("#calendar-canvas[aria-busy='false']"))
     |> assert_has(by_css("#calendar-canvas .cal-agenda"))
     |> tap(

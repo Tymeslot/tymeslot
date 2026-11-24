@@ -10,7 +10,6 @@ defmodule TymeslotWeb.E2E.SelectTest do
   """
   use TymeslotWeb.BrowserCase, async: false
 
-  import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.E2E.BookerSteps
 
   alias Ecto.Changeset
@@ -33,7 +32,6 @@ defmodule TymeslotWeb.E2E.SelectTest do
       session =
         session
         |> visit("/dashboard/embed")
-        |> wait_for_live()
         |> assert_has(by_css("#embed-layout-trigger"))
         |> assert_value("#embed-layout-field", "column")
 
@@ -71,7 +69,6 @@ defmodule TymeslotWeb.E2E.SelectTest do
       session =
         session
         |> visit("/dashboard/embed")
-        |> wait_for_live()
         |> click(by_css("#embed-layout-trigger"))
         |> assert_open("embed-layout")
 
@@ -88,10 +85,7 @@ defmodule TymeslotWeb.E2E.SelectTest do
     test "a button out of view leaves Escape to the page", %{session: session} do
       {session, _user} = log_in_via_browser(session)
 
-      session =
-        session
-        |> visit("/dashboard/embed")
-        |> wait_for_live()
+      session = visit(session, "/dashboard/embed")
 
       evaluate_script(session, """
       const probe = () => {
@@ -133,7 +127,6 @@ defmodule TymeslotWeb.E2E.SelectTest do
       session =
         session
         |> visit("/#{profile.username}/#{slug}?theme=1")
-        |> wait_for_live()
         |> pick_first_slot()
         |> assert_has(by_css("#cq-input-#{@question}-trigger"))
 
@@ -170,7 +163,6 @@ defmodule TymeslotWeb.E2E.SelectTest do
         session
         |> set_viewport_size(%{width: 360, height: 640})
         |> visit("/#{profile.username}/#{slug}?theme=2")
-        |> wait_for_live()
         |> pick_first_slot()
         |> mark_embedded()
         |> assert_has(by_css("#cq-input-#{@question}-trigger"))
@@ -202,7 +194,6 @@ defmodule TymeslotWeb.E2E.SelectTest do
       session =
         session
         |> visit("/#{profile.username}/#{slug}?theme=1")
-        |> wait_for_live()
         |> tap(
           &evaluate_script(
             &1,
@@ -260,29 +251,12 @@ defmodule TymeslotWeb.E2E.SelectTest do
     assert_has(session, by_css("##{id}-trigger[aria-expanded='false']"))
   end
 
-  defp assert_value(session, field, value) do
-    eventually(
-      fn ->
-        assert [^value] =
-                 evaluate_script(session, """
-                 return [document.querySelector("#{field} [data-select-value]").value];
-                 """)
-      end,
-      timeout: 3000
-    )
-
-    session
+  defp assert_value(session, field, expected) do
+    assert(session, value(by_css("#{field} [data-select-value]"), expected), timeout: 3000)
   end
 
   defp assert_active_element(session, id) do
-    eventually(
-      fn ->
-        assert [^id] = evaluate_script(session, "return [document.activeElement.id];")
-      end,
-      timeout: 3000
-    )
-
-    session
+    assert(session, focused(by_css("##{id}")), timeout: 3000)
   end
 
   defp organiser_with_long_question do

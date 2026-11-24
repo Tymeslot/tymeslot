@@ -15,10 +15,7 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
 
     new_password = "NewSecurePass456!"
 
-    session =
-      session
-      |> visit("/dashboard/account")
-      |> wait_for_live()
+    session = visit(session, "/dashboard/account")
 
     # Open the password change form. Submitting it empty first shows the
     # form's own errors: it sets `novalidate`, so the browser lets the empty
@@ -66,7 +63,6 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
     session
     |> resize_to_mobile()
     |> visit("/dashboard/account")
-    |> wait_for_live()
     |> assert_has(by_css("button[phx-click='toggle_password_form']"))
     |> assert_no_horizontal_overflow("account settings at 320px")
   end

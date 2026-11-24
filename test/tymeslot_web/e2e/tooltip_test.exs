@@ -12,7 +12,7 @@ defmodule TymeslotWeb.E2E.TooltipTest do
     session: session
   } do
     {session, _user} = log_in_via_browser(session)
-    session = session |> visit("/dashboard/account") |> wait_for_live()
+    session = visit(session, "/dashboard/account")
 
     # Hover shows it, and it is a real popover carrying the text.
     trigger = by_css("button[aria-describedby='language-automatic-tip']")

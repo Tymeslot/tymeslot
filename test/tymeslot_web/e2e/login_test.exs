@@ -9,7 +9,6 @@ defmodule TymeslotWeb.E2E.LoginTest do
 
     session
     |> visit("/auth/login")
-    |> wait_for_live()
     |> fill(by_label("Email Address"), user.email)
     |> fill(by_css("#password-input"), default_password())
     |> click(by_css("button[type='submit']"))
@@ -22,7 +21,6 @@ defmodule TymeslotWeb.E2E.LoginTest do
 
     session
     |> visit("/auth/login")
-    |> wait_for_live()
     |> fill(by_label("Email Address"), user.email)
     |> fill(by_css("#password-input"), "WrongPassword99!")
     |> click(by_css("button[type='submit']"))
@@ -35,7 +33,6 @@ defmodule TymeslotWeb.E2E.LoginTest do
   test "an empty login is answered by the app's own message", %{session: session} do
     session
     |> visit("/auth/login")
-    |> wait_for_live()
     |> refute_has(filter(by_css(".bg-red-50"), visible: true))
     |> click(by_css("button[type='submit']"))
     |> assert_has(filter(by_css(".bg-red-50"), visible: true))
@@ -46,7 +43,6 @@ defmodule TymeslotWeb.E2E.LoginTest do
     session
     |> resize_to_mobile()
     |> visit("/auth/login")
-    |> wait_for_live()
     |> assert_has(by_css("#password-input"))
     |> assert_no_horizontal_overflow("login page at 320px")
   end

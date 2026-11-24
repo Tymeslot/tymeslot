@@ -33,7 +33,6 @@ defmodule TymeslotWeb.E2E.EmbedQuillPopupScheduleTest do
       session
       |> set_viewport_size(%{width: 640, height: 600})
       |> visit("/#{profile.username}?theme=#{@quill_theme_id}")
-      |> wait_for_live()
       |> advance_to_schedule()
       |> mark_embedded()
       |> assert_has(by_css("[data-testid='time-slot']") |> filter(visible: true) |> first())

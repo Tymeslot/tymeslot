@@ -33,7 +33,6 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
       session
       |> set_viewport_size(%{width: 390, height: 844})
       |> visit("/#{profile.username}")
-      |> wait_for_live()
       |> advance_to_schedule(nil)
       |> assert_has(by_css(@free_slot) |> filter(visible: true) |> first())
       |> assert_no_horizontal_overflow("Paper week view at 390px")

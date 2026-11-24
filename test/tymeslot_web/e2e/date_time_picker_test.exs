@@ -169,7 +169,6 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
       session =
         session
         |> visit("/dashboard/meeting-settings")
-        |> wait_for_live()
         |> click(by_css("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']"))
         |> click(filter(by_css("[role='tab']"), has_text: "Questions"))
         |> click(filter(by_css("button"), has_text: "Add question"))
@@ -206,7 +205,6 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
       session =
         session
         |> visit("/#{profile.username}/#{slug}?theme=1")
-        |> wait_for_live()
         |> pick_first_slot()
         |> assert_has(by_css("#cq-input-#{@question}-trigger"))
         |> click(by_css("#cq-input-#{@question}-trigger"))
@@ -245,7 +243,6 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
 
       session
       |> visit("/#{profile.username}/#{slug}?theme=2")
-      |> wait_for_live()
       |> pick_first_slot()
       |> assert_has(by_css("#cq-input-#{@question}"))
       |> fill(by_css("#cq-input-#{@question}"), Date.to_iso8601(date))
@@ -266,7 +263,6 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
       session =
         session
         |> visit("/#{profile.username}/#{slug}?theme=1")
-        |> wait_for_live()
         |> tap(
           &evaluate_script(
             &1,
@@ -320,7 +316,6 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
 
     session
     |> visit("/dashboard/calendar")
-    |> wait_for_live()
     |> assert_has(by_css("#calendar-create-zone"))
     |> simulate_grid_drag()
     |> assert_has(by_css("#create-event-start-date-field"))

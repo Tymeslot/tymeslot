@@ -95,7 +95,6 @@ defmodule TymeslotWeb.E2E.CalendarPowerTest do
     session
     |> set_viewport_size(%{width: 1280, height: 800})
     |> visit("/dashboard/calendar#{query}")
-    |> wait_for_live()
     |> assert_has(by_css("#calendar-canvas[aria-busy='false']"))
   end
 

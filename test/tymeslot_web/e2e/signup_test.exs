@@ -17,7 +17,6 @@ defmodule TymeslotWeb.E2E.SignupTest do
     session =
       session
       |> visit("/auth/signup")
-      |> wait_for_live()
       |> fill(by_css("input[name='user[email]']"), email)
       |> fill(by_css("#password-input"), default_password())
       |> click(by_css("button[type='submit']"))
@@ -40,7 +39,6 @@ defmodule TymeslotWeb.E2E.SignupTest do
     # Log in with the new account
     session
     |> visit("/auth/login")
-    |> wait_for_live()
     |> fill(by_label("Email Address"), email)
     |> fill(by_css("#password-input"), default_password())
     |> click(by_css("button[type='submit']"))
@@ -52,7 +50,6 @@ defmodule TymeslotWeb.E2E.SignupTest do
     session
     |> resize_to_mobile()
     |> visit("/auth/signup")
-    |> wait_for_live()
     |> assert_has(by_css("input[name='user[email]']"))
     |> assert_no_horizontal_overflow("signup page at 320px")
   end

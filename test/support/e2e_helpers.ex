@@ -48,7 +48,6 @@ defmodule TymeslotWeb.E2EHelpers do
     session =
       session
       |> visit("/auth/login")
-      |> wait_for_live()
       |> fill(by_label("Email Address"), user.email)
       |> fill(by_css("#password-input"), @default_password)
       |> click(by_css("button[type='submit']"))

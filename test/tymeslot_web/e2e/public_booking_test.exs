@@ -27,10 +27,7 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
     slug = Slugs.to_slug(meeting_type)
 
     # Visit the public booking page
-    session =
-      session
-      |> visit("/#{profile.username}/#{slug}")
-      |> wait_for_live()
+    session = visit(session, "/#{profile.username}/#{slug}")
 
     # Select a calendar day (pick the first available day).
     # Multiple enabled days match the selector — grab the first and click it directly.

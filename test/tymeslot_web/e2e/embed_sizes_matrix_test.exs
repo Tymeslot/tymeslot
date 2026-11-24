@@ -51,7 +51,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
       acc
       |> set_viewport_size(%{width: width, height: @height})
       |> visit("/#{profile.username}")
-      |> wait_for_live()
       |> assert_has(by_css(".overview-content-area"))
       |> assert_no_horizontal_overflow("overview width=#{width}px")
     end)
@@ -69,7 +68,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: @height})
         |> visit("/#{profile.username}?theme=#{theme.id}")
-        |> wait_for_live()
         |> assert_no_horizontal_overflow("#{theme.name} overview width=#{width}px")
         |> advance_to_schedule()
         |> assert_no_horizontal_overflow("#{theme.name} schedule width=#{width}px")
@@ -89,7 +87,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: @height})
         |> visit("/#{profile.username}?theme=#{theme.id}")
-        |> wait_for_live()
         |> pick_first("[data-testid='duration-option'][data-duration='#{slug}']")
         |> assert_has(by_css("[data-testid='next-step']:not([disabled])"))
         |> click_next_step()
@@ -110,7 +107,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
-        |> wait_for_live()
         |> assert_has(by_css("[data-testid='length-step']"))
         |> assert_no_horizontal_overflow(context)
         |> assert_cta_reachable(context)
@@ -132,7 +128,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}?theme=#{theme.id}")
-        |> wait_for_live()
         |> assert_no_horizontal_overflow(context)
         |> assert_cta_reachable(context)
     end
@@ -155,7 +150,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
-        |> wait_for_live()
         |> assert_has(by_css("[data-testid='schedule-actions']"))
         |> assert_no_horizontal_overflow(context)
         |> assert_no_actions_calendar_overlap(context)
@@ -183,7 +177,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
-        |> wait_for_live()
         |> assert_has(
           by_css("[data-fact='slot'], [data-fact='date']")
           |> filter(visible: true)
@@ -221,7 +214,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
-        |> wait_for_live()
         |> assert_has(by_css("[data-testid='schedule-actions']"))
         |> assert_actions_within_viewport(context)
         |> assert_no_vertical_page_scroll(context)
@@ -245,7 +237,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: 463})
         |> visit("/#{profile.username}?theme=#{theme.id}")
-        |> wait_for_live()
         |> mark_embedded()
         |> advance_to_schedule()
         |> pick_first_visible_day()
@@ -268,7 +259,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
-        |> wait_for_live()
         |> assert_has(by_css("[data-testid='session-list']"))
         |> assert_has(by_css("[data-testid='schedule-actions']"))
         |> assert_no_horizontal_overflow(context)
@@ -309,7 +299,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     session
     |> set_viewport_size(%{width: 1280, height: 1100})
     |> visit("/#{profile.username}/#{slug}")
-    |> wait_for_live()
     |> assert_has(by_css(".branding-footer"))
     |> assert_no_horizontal_overflow("quill schedule with branding banner")
     |> assert_branding_footer_within_viewport("quill schedule with banner")
@@ -322,7 +311,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     session
     |> set_viewport_size(%{width: 640, height: @height})
     |> visit("/#{profile.username}/#{slug}")
-    |> wait_for_live()
     |> pick_first_slot()
     |> assert_has(by_css(".custom-question-yes-no"))
     |> set_viewport_size(%{width: 320, height: @height})
@@ -337,7 +325,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     session
     |> set_viewport_size(%{width: 640, height: @height})
     |> visit("/#{profile.username}/#{slug}")
-    |> wait_for_live()
     |> pick_first_slot()
     |> assert_has(by_css("[data-testid='booking-form']"))
     |> set_viewport_size(%{width: 320, height: @height})

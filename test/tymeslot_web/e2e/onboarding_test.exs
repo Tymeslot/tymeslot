@@ -101,7 +101,6 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
     session
     |> set_viewport_size(%{width: width, height: height})
     |> visit("/auth/login")
-    |> wait_for_live()
     |> fill(by_label("Email Address"), user.email)
     |> fill(by_css("#password-input"), default_password())
     |> click(by_css("button[type='submit']"))
@@ -130,7 +129,6 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
 
     session
     |> visit("/onboarding/connect_calendar")
-    |> wait_for_live()
     |> assert(attached(by_css(~s([data-week-state="ready"]))))
     |> click(by_css("#{@continue}:not([disabled])"))
   end

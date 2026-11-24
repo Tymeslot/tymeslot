@@ -10,7 +10,6 @@ defmodule TymeslotWeb.E2E.CreateEventTypeTest do
     session =
       session
       |> visit("/dashboard/meeting-settings")
-      |> wait_for_live()
       |> click(filter(by_css("button"), has_text: "Add Meeting Type"))
       |> fill(by_css("input[name='meeting_type[name]']"), "Quick Chat")
       |> fill(by_css("input[name='meeting_type[duration]']"), "30")
@@ -27,7 +26,6 @@ defmodule TymeslotWeb.E2E.CreateEventTypeTest do
     session
     |> resize_to_mobile()
     |> visit("/dashboard/meeting-settings")
-    |> wait_for_live()
     |> assert_has(filter(by_css("h2"), has_text: "Quick Chat"))
     |> assert_no_horizontal_overflow("meeting settings at 320px")
   end

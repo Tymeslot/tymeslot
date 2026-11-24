@@ -29,7 +29,6 @@ defmodule TymeslotWeb.E2E.ThemeCustomisationPanelTest do
 
     session
     |> visit("/dashboard/pages/customize/1")
-    |> wait_for_live()
     |> click(
       filter(
         by_css(
