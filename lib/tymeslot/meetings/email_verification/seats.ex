@@ -57,7 +57,10 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   a pending reschedule request has voided the slot's time; either way the
   seat is still held and the booker may try again. A seat no longer
   held is answered for as stored: `{:ok, :already_verified, slot}` while it
-  counts, `{:error, :expired}` once released or cancelled.
+  stands verified, including on a slot a pending reschedule request has
+  voided, as a one-to-one booking in that state is already confirmed,
+  `{:error, :expired}` once released or cancelled, or once its slot no
+  longer occupies its time.
   """
   @spec verify_seat(Participant.t()) :: EmailVerification.verify_result()
   def verify_seat(%Participant{} = seat) do
@@ -156,11 +159,15 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
     end
   end
 
+  # A pending reschedule request leaves a verified seat standing, so it reads
+  # as confirmed, as `EmailVerification.verify/1` answers a one-to-one
+  # booking awaiting a new time.
   defp answer_as_stored(seat) do
     with {:ok, %Participant{email_verified_at: %DateTime{}} = current} <-
            ParticipantQueries.get(seat.id),
          {:ok, slot} <- MeetingQueries.get_meeting(seat.meeting_id),
-         true <- EmailVerification.seat_live?(slot, current) do
+         standing when standing in [:live, :slot_void] <-
+           EmailVerification.seat_standing(slot, current) do
       {:ok, :already_verified, slot}
     else
       _gone_released_or_never_verified -> {:error, :expired}

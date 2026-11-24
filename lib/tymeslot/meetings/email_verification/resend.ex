@@ -12,6 +12,10 @@ defmodule Tymeslot.Meetings.EmailVerification.Resend do
   with the booking. The count and the email job commit together, so a resend
   that could not be queued (`:not_scheduled`) costs the booker nothing. A
   resend at or after the deadline releases the hold, as its expiry would.
+  A seat whose slot a pending reschedule request has voided is refused
+  (`:slot_void`) before anything is counted: the email would never go out
+  (its job is discarded on a slot whose time does not hold) and its link
+  could not confirm the seat meanwhile, so the booker keeps the resend.
   What differs between a booking and a seat (where the count lives, which
   email is scheduled, how the hold is released) is dispatched on the struct.
   """
@@ -42,7 +46,8 @@ defmodule Tymeslot.Meetings.EmailVerification.Resend do
 
     counted =
       Repo.transaction(fn ->
-        with {:ok, counted} <- count(hold, now),
+        with :ok <- ensure_time_holds(hold, now),
+             {:ok, counted} <- count(hold, now),
              :ok <- schedule(counted) do
           counted
         else
@@ -63,6 +68,24 @@ defmodule Tymeslot.Meetings.EmailVerification.Resend do
     do: max(@max_resends + 1 - sent, 0)
 
   def resends_left(%{verification_emails_sent: nil}), do: @max_resends
+
+  # Read under the slot's row lock, so a reschedule request written
+  # meanwhile is either seen here or waits for the count to commit. A seat
+  # that is no longer held, or a slot gone altogether, is left for the count
+  # to refuse.
+  defp ensure_time_holds(%Participant{} = seat, now) do
+    case MeetingQueries.get_meeting_for_update(seat.meeting_id) do
+      {:ok, slot} ->
+        if EmailVerification.seat_standing(slot, seat, now) == :slot_void,
+          do: {:error, :slot_void},
+          else: :ok
+
+      {:error, :not_found} ->
+        :ok
+    end
+  end
+
+  defp ensure_time_holds(%Meeting{}, _now), do: :ok
 
   defp count(%Meeting{id: id}, now),
     do: MeetingTransitionQueries.count_verification_email(id, now, @max_resends + 1)
@@ -95,6 +118,11 @@ defmodule Tymeslot.Meetings.EmailVerification.Resend do
       {:ok, current} -> refusal(current, now)
       {:error, :not_found} -> {:error, :not_awaiting_verification}
     end
+  end
+
+  defp outcome({:error, :slot_void}, hold, _now) do
+    Logger.info("Verification email not resent: the slot awaits a new time", log_ids(hold))
+    {:error, :slot_void}
   end
 
   defp outcome({:error, reason}, hold, _now) do

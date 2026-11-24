@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -85,21 +86,37 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
   hold is capped at the meeting's start, so a booking made close to it is
   held for less. The date is always there, as on the verify page, so a hold
   running past midnight never reads as a time already gone.
+
+  A booking on a group meeting type is a seat (`:check_inbox_message_seat`):
+  what is held is the booker's place, as the seat's verification email says,
+  not the time, which other attendees may share.
   """
   @spec check_inbox_message(map(), Catalog.theme_key() | nil) :: String.t()
   def check_inbox_message(assigns, theme_key \\ nil) do
     email = assigns[:email]
     by_deadline = deadline_text(assigns[:verification_deadline_at], assigns[:user_timezone])
     bindings = %{email: email, by_deadline: by_deadline}
+    voice = Voice.of(theme_key)
 
-    Voice.line(Voice.of(theme_key), :check_inbox_message, bindings, fn ->
-      dgettext(
-        "booking_confirmation",
-        "We have sent a link to %{email}. Click it by %{by_deadline} to confirm your booking. Until then the time is held for you.",
-        email: email,
-        by_deadline: by_deadline
-      )
-    end)
+    if MeetingTypes.group_type?(assigns[:meeting_type]) do
+      Voice.line(voice, :check_inbox_message_seat, bindings, fn ->
+        dgettext(
+          "booking_confirmation",
+          "We have sent a link to %{email}. Click it by %{by_deadline} to confirm your booking. Until then your place is held for you.",
+          email: email,
+          by_deadline: by_deadline
+        )
+      end)
+    else
+      Voice.line(voice, :check_inbox_message, bindings, fn ->
+        dgettext(
+          "booking_confirmation",
+          "We have sent a link to %{email}. Click it by %{by_deadline} to confirm your booking. Until then the time is held for you.",
+          email: email,
+          by_deadline: by_deadline
+        )
+      end)
+    end
   end
 
   # A booking awaiting verification always carries its deadline

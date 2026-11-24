@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Themes.Shared.VerificationResend do
 
   # A press in these states is refused without asking anyone: a resend just
   # went out, or there is nothing left to resend.
-  @refused_states [:sent, :limit_reached, :expired, :used]
+  @refused_states [:sent, :limit_reached, :expired, :place_released, :used]
 
   @doc """
   Records a booking just made: what is held when it waits for verification,
@@ -116,22 +116,24 @@ defmodule TymeslotWeb.Themes.Shared.VerificationResend do
 
   def ready(socket, _stale_token), do: {:noreply, socket}
 
+  defp resend_for(socket, hold), do: outcome(socket, hold, resend_hold(hold))
+
   # A booking or seat gone altogether was deleted after it lapsed unverified.
-  defp resend_for(socket, {:meeting, id}) do
+  defp resend_hold({:meeting, id}) do
     case Meetings.get_meeting(id) do
-      {:ok, meeting} -> outcome(socket, EmailVerification.resend(meeting))
-      {:error, :not_found} -> show(socket, :expired)
+      {:ok, meeting} -> EmailVerification.resend(meeting)
+      {:error, :not_found} -> {:error, :expired}
     end
   end
 
-  defp resend_for(socket, {:seat, id}) do
+  defp resend_hold({:seat, id}) do
     case EmailVerification.fetch_seat(id) do
-      {:ok, seat} -> outcome(socket, EmailVerification.resend_seat(seat))
-      {:error, :not_found} -> show(socket, :expired)
+      {:ok, seat} -> EmailVerification.resend_seat(seat)
+      {:error, :not_found} -> {:error, :expired}
     end
   end
 
-  defp outcome(socket, {:ok, held}) do
+  defp outcome(socket, _hold, {:ok, held}) do
     token = make_ref()
     timer = Process.send_after(self(), {:verification_resend_ready, token}, @cooldown_ms)
     then = if EmailVerification.resends_left(held) == 0, do: :limit_reached
@@ -141,10 +143,18 @@ defmodule TymeslotWeb.Themes.Shared.VerificationResend do
     |> show(:sent)
   end
 
-  defp outcome(socket, {:error, :limit_reached}), do: show(socket, :limit_reached)
-  defp outcome(socket, {:error, :expired}), do: show(socket, :expired)
-  defp outcome(socket, {:error, :not_awaiting_verification}), do: show(socket, :used)
-  defp outcome(socket, {:error, :not_scheduled}), do: show(socket, :retry)
+  defp outcome(socket, _hold, {:error, :limit_reached}), do: show(socket, :limit_reached)
+
+  # A lapsed seat released a place on its slot, not the slot's time, which
+  # other attendees may still hold.
+  defp outcome(socket, {:seat, _id}, {:error, :expired}), do: show(socket, :place_released)
+  defp outcome(socket, _hold, {:error, :expired}), do: show(socket, :expired)
+
+  # The seat stays held while its slot awaits a new time, so the button
+  # stays for a later press.
+  defp outcome(socket, _hold, {:error, :slot_void}), do: show(socket, :awaiting_new_time)
+  defp outcome(socket, _hold, {:error, :not_awaiting_verification}), do: show(socket, :used)
+  defp outcome(socket, _hold, {:error, :not_scheduled}), do: show(socket, :retry)
 
   defp show(socket, state), do: assign(socket, verification_resend: state)
 end

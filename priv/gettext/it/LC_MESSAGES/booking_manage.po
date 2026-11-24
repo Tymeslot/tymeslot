@@ -807,3 +807,8 @@ msgstr "Questa prenotazione non è più disponibile, quindi il tuo posto è stat
 #, elixir-autogen, elixir-format
 msgid "This booking is no longer held"
 msgstr "Questa prenotazione non è più riservata"
+
+#: lib/tymeslot_web/live/booking_verification_live.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser is changing this meeting's time, so your booking cannot be confirmed for now. You can try again while your place is held."
+msgstr "L'organizzatore sta cambiando l'orario di questa riunione, quindi per ora non è possibile confermare la tua prenotazione. Puoi riprovare finché il tuo posto resta riservato."

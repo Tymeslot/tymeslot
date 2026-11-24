@@ -103,13 +103,16 @@ defmodule TymeslotWeb.BookingVerificationLive do
   defp split(meeting), do: {meeting, nil}
 
   # A seat verified and later cancelled, or whose slot was, reads as a link
-  # out of date, as a one-to-one booking does. A held seat released by its
-  # deadline or by its booker has no status to tell the two apart, so both
-  # read as expired. A held seat on a slot voided by a reschedule request is
-  # still held, so it reads as awaiting, and confirming it is refused until
-  # the request is withdrawn.
+  # out of date, as a one-to-one booking does; one whose slot awaits a new
+  # time still stands, confirmed, as a one-to-one booking awaiting one does.
+  # A held seat released by its deadline or by its booker has no status to
+  # tell the two apart, so both read as expired. A held seat on a slot
+  # voided by a reschedule request is still held, so it reads as awaiting,
+  # and confirming it is refused while the request is pending.
   defp state_for({:seat, %{email_verified_at: %DateTime{}} = seat, slot}) do
-    if EmailVerification.seat_live?(slot, seat), do: :already_verified, else: :invalid
+    if EmailVerification.seat_standing(slot, seat) == :gone,
+      do: :invalid,
+      else: :already_verified
   end
 
   defp state_for({:seat, seat, slot}) do
@@ -190,9 +193,8 @@ defmodule TymeslotWeb.BookingVerificationLive do
       {:error, :expired} ->
         load(socket)
 
-      # Still held: its work could not be queued, or a reschedule request
-      # has voided the slot's time for now.
-      {:error, reason} when reason in [:not_scheduled, :slot_void] ->
+      # Still held: its work could not be queued, so a retry may succeed.
+      {:error, :not_scheduled} ->
         socket
         |> show(held, :failed)
         |> put_flash(
@@ -200,6 +202,20 @@ defmodule TymeslotWeb.BookingVerificationLive do
           dgettext(
             "booking_manage",
             "We could not confirm your booking just now. Please try again."
+          )
+        )
+
+      # Still held, but a reschedule request has voided the slot's time: a
+      # retry is refused while the request is pending, and the seat lapses
+      # at its deadline unless the request is cleared before then.
+      {:error, :slot_void} ->
+        socket
+        |> show(held, :failed)
+        |> put_flash(
+          :error,
+          dgettext(
+            "booking_manage",
+            "The organiser is changing this meeting's time, so your booking cannot be confirmed for now. You can try again while your place is held."
           )
         )
     end

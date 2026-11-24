@@ -90,8 +90,10 @@ defmodule Tymeslot.Meetings.EmailVerification do
           | {:error, :not_scheduled}
           | {:error, :slot_void}
 
+  # `:slot_void` only for a seat: its slot's time is voided by a pending
+  # reschedule request, so nothing was sent or counted.
   @type resend_error ::
-          :limit_reached | :expired | :not_awaiting_verification | :not_scheduled
+          :limit_reached | :expired | :not_awaiting_verification | :not_scheduled | :slot_void
 
   @doc "Whether bookings on this meeting type must be verified by email."
   @spec required?(MeetingType.t() | map() | nil) :: boolean()

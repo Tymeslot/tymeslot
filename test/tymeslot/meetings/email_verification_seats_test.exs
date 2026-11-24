@@ -15,6 +15,7 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
   import Mox
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.SeatVerificationHelpers
   import Tymeslot.WorkerTestHelpers, only: [expect_mirotalk_group_success: 0]
 
   @moduletag :bookings
@@ -300,6 +301,20 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
       assert {:ok, :verified, _slot} = EmailVerification.verify_seat(seat)
       assert calendar_actions(slot) == ["update"]
     end
+
+    # As a one-to-one booking awaiting a new time reads as already confirmed.
+    test "a verified seat on a slot awaiting a new time is already verified", ctx do
+      slot = slot(ctx, :confirmed, reschedule_requested_at: DateTime.utc_now(:second))
+
+      seat =
+        held_seat(slot, "first@example.com", nil, email_verified_at: DateTime.utc_now(:second))
+
+      assert {:ok, :already_verified, %MeetingSchema{id: slot_id}} =
+               EmailVerification.verify_seat(seat)
+
+      assert slot_id == slot.id
+      assert_nothing_started()
+    end
   end
 
   describe "seat_standing/3" do
@@ -469,73 +484,6 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
     end
   end
 
-  describe "resend_seat/1" do
-    test "resending a seat's email sends the seat email and keeps the deadline", ctx do
-      slot = slot(ctx, :awaiting_verification)
-      seat = held_seat(slot, "first@example.com")
-
-      assert {:ok, %ParticipantSchema{verification_emails_sent: 2}} =
-               EmailVerification.resend_seat(seat)
-
-      assert_enqueued(
-        worker: EmailWorker,
-        args: %{
-          "action" => "send_seat_email_verification",
-          "meeting_id" => slot.id,
-          "participant_id" => seat.id,
-          "send" => 2
-        }
-      )
-
-      refute_enqueued(worker: EmailWorker, args: %{"action" => "send_booking_email_verification"})
-
-      assert %{verification_deadline_at: deadline, verification_emails_sent: 2} = reload(seat)
-      assert deadline == seat.verification_deadline_at
-      assert reload(slot).verification_emails_sent == nil
-    end
-
-    test "seat resends stop at the cap", ctx do
-      seat = ctx |> slot(:awaiting_verification) |> held_seat("first@example.com")
-
-      for send <- 2..4 do
-        assert {:ok, %{verification_emails_sent: ^send}} = EmailVerification.resend_seat(seat)
-      end
-
-      assert {:error, :limit_reached} = EmailVerification.resend_seat(seat)
-      assert reload(seat).verification_emails_sent == 4
-      assert length(all_enqueued(worker: EmailWorker)) == 3
-    end
-
-    test "a seat cannot be resent once verified, released or lapsed", ctx do
-      slot = slot(ctx, :confirmed)
-
-      verified =
-        held_seat(slot, "verified@example.com", nil, email_verified_at: DateTime.utc_now(:second))
-
-      released = held_seat(slot, "released@example.com")
-      {:ok, _released} = EmailVerification.release_seat(released)
-
-      lapsed =
-        held_seat(slot, "lapsed@example.com", DateTime.add(DateTime.utc_now(:second), -60))
-
-      assert {:error, :not_awaiting_verification} = EmailVerification.resend_seat(verified)
-      assert {:error, :not_awaiting_verification} = EmailVerification.resend_seat(released)
-      assert {:error, :expired} = EmailVerification.resend_seat(lapsed)
-      assert %{cancelled_at: %DateTime{}} = reload(lapsed)
-
-      assert all_enqueued(worker: EmailWorker) == []
-    end
-
-    test "a group slot's own email is never resent", ctx do
-      slot = slot(ctx, :awaiting_verification)
-      held_seat(slot, "first@example.com")
-
-      assert {:error, :not_awaiting_verification} = EmailVerification.resend(slot)
-      assert reload(slot).verification_emails_sent == nil
-      assert all_enqueued(worker: EmailWorker) == []
-    end
-  end
-
   describe "prune_unverified/1" do
     test "a seat released without verifying is deleted a day after its deadline", ctx do
       slot = slot(ctx, :confirmed)
@@ -579,43 +527,6 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
     refute_enqueued(worker: WebhookWorker)
   end
 
-  # A group slot for the context's type at its start time, with no seats. A
-  # held slot carries a verification deadline, as one booked through the gate
-  # does, which is what keeps it from the organiser.
-  defp slot(ctx, status, attrs \\ []) do
-    defaults = [
-      status: status,
-      verification_deadline_at: slot_deadline(status),
-      organizer_user_id: ctx.user.id,
-      organizer_email: ctx.user.email,
-      meeting_type_id: ctx.type.id,
-      start_time: ctx.start_time,
-      end_time: DateTime.add(ctx.start_time, 1, :hour),
-      duration: 60,
-      capacity: 3,
-      video_integration_id: nil
-    ]
-
-    insert(:group_meeting, Keyword.merge(defaults, attrs))
-  end
-
-  defp slot_deadline(:awaiting_verification),
-    do: DateTime.add(DateTime.utc_now(:second), 30, :minute)
-
-  defp slot_deadline(_status), do: nil
-
-  defp held_seat(slot, email, deadline \\ nil, attrs \\ []) do
-    deadline = deadline || DateTime.add(DateTime.utc_now(:second), 30, :minute)
-
-    insert(
-      :participant,
-      [meeting: slot, email: email, verification_deadline_at: deadline] ++ attrs
-    )
-  end
-
-  defp visible_seat(slot, email, attrs \\ []),
-    do: insert(:participant, [meeting: slot, email: email] ++ attrs)
-
   defp seat_confirmation_args(slot, seat) do
     %{
       "action" => "send_seat_confirmation_emails",
@@ -631,7 +542,4 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
     |> Enum.sort_by(& &1.id)
     |> Enum.map(& &1.args["action"])
   end
-
-  defp reload(%MeetingSchema{id: id}), do: Repo.get!(MeetingSchema, id)
-  defp reload(%ParticipantSchema{id: id}), do: Repo.get!(ParticipantSchema, id)
 end

@@ -23,6 +23,7 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Invitations
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.EmailVerificationToken
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
@@ -456,11 +457,42 @@ defmodule TymeslotWeb.BookingVerificationLiveTest do
       refute render(view) =~ "This booking is no longer held"
       html = quietly(fn -> confirm(view) end)
 
-      assert html =~ "We could not confirm your booking just now."
+      # A retry is refused while the request is pending, so the page does not
+      # ask for one now.
+      assert html =~ "The organiser is changing this meeting&#39;s time"
+      assert html =~ "You can try again while your place is held."
+      refute html =~ "We could not confirm your booking just now."
       refute html =~ "This booking is no longer held"
       assert has_element?(view, "[data-testid='confirm-booking']")
       assert %{email_verified_at: nil, cancelled_at: nil} = reload(seat)
       assert reload(slot).status == :confirmed
+    end
+
+    # As a one-to-one booking awaiting a new time reads as already confirmed.
+    test "a confirmed seat's link reads confirmed while its slot awaits a new time", %{
+      conn: conn,
+      user: user
+    } do
+      {slot, seat} =
+        held_seat(user, in_minutes(30), status: :confirmed, verification_deadline_at: nil)
+
+      {:ok, view, _html} = live(conn, seat_path(seat))
+
+      # Confirmed in another tab, then the host asked for a new time, before
+      # this tab's click.
+      {:ok, :verified, _slot} = EmailVerification.verify_seat(seat)
+
+      slot
+      |> reload()
+      |> Changeset.change(reschedule_requested_at: DateTime.utc_now(:second))
+      |> Repo.update!()
+
+      assert confirm(view) =~ "This booking is already confirmed"
+
+      {:ok, reloaded, _html} = live(conn, seat_path(seat))
+      html = render(reloaded)
+      assert html =~ "This booking is already confirmed"
+      refute html =~ "This link is not valid"
     end
 
     test "a seat link confirmed after its deadline releases the seat", %{
