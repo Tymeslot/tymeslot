@@ -572,6 +572,11 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     :held
   end
 
+  # Another leaver held the old slot first: the organiser was told then that
+  # its meeting is off, so the move's email adds nothing about it, and a held
+  # slot has no calendar event to refresh.
+  defp finish_old_meeting(_old_meeting, :already_held), do: :goes_ahead
+
   defp finish_old_meeting(old_meeting, :seats_remain) do
     CalendarJobs.schedule_job(old_meeting, "update")
     :goes_ahead

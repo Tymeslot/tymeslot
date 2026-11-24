@@ -116,15 +116,17 @@ defmodule Tymeslot.Emails.EmailScheduler.SeatScheduler do
   Schedules the cancellation emails for a single group-booking seat. `slot`
   says what the seat's leaving did to its slot
   (`t:Tymeslot.Notifications.Events.Seats.slot_outcome/0`), carried as
-  `"slot_freed"` (the meeting was cancelled with it) and `"slot_held"` (held
-  seats still occupy its time).
+  `"slot_freed"` (the meeting was cancelled with it), `"slot_held"` (held
+  seats still occupy its time) and `"organizer_told"` (another leaver had
+  already ended it for the organiser, who is sent nothing).
   """
   @spec schedule_seat_cancellation_emails(term(), term(), Seats.slot_outcome()) ::
           :ok | {:error, term()}
   def schedule_seat_cancellation_emails(meeting_id, participant_id, slot) do
     schedule_seat_email(seat_action(:seat_cancellation), meeting_id, participant_id, %{
       "slot_freed" => slot != :goes_ahead,
-      "slot_held" => slot == :held
+      "slot_held" => slot == :held,
+      "organizer_told" => slot == :already_held
     })
   end
 

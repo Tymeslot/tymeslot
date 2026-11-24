@@ -76,6 +76,9 @@ defmodule Tymeslot.Notifications.Email.SeatEmails do
   sends them nothing. `slot_held` marks the last confirmed seat beside seats
   still awaiting verification: the meeting is off for the organiser just the
   same, but its time is not free, and the email does not say it is.
+  `organizer_told` marks a seat leaving a slot another leaver had held
+  already: that leaver's email told the organiser the meeting is off, so
+  this job sends them nothing.
   """
   @spec handle_seat_cancellation_emails(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -83,7 +86,10 @@ defmodule Tymeslot.Notifications.Email.SeatEmails do
         %{"meeting_id" => meeting_id, "participant_id" => participant_id} = args,
         job_id
       ) do
-    slot = slot_flags(args["slot_freed"], args["slot_held"])
+    slot =
+      args["slot_freed"]
+      |> slot_flags(args["slot_held"])
+      |> Map.put(:organizer_told, args["organizer_told"] == true)
 
     SeatJobs.with_seat(
       meeting_id,
@@ -192,15 +198,18 @@ defmodule Tymeslot.Notifications.Email.SeatEmails do
       end)
 
     organizer_result =
-      DeliveryClaims.once(job_id, "seat_cancellation:organizer", fn ->
-        email_service.send_seat_update_to_organizer(
-          :cancelled,
-          meeting.organizer_email,
-          meeting
-          |> AppointmentBuilder.for_organizer_of_seat(recipient)
-          |> Map.merge(%{slot_freed: slot.freed, slot_held: slot.held})
-        )
-      end)
+      if slot.organizer_told,
+        do: :ok,
+        else:
+          DeliveryClaims.once(job_id, "seat_cancellation:organizer", fn ->
+            email_service.send_seat_update_to_organizer(
+              :cancelled,
+              meeting.organizer_email,
+              meeting
+              |> AppointmentBuilder.for_organizer_of_seat(recipient)
+              |> Map.merge(%{slot_freed: slot.freed, slot_held: slot.held})
+            )
+          end)
 
     guests_result =
       GuestNotifications.notify_seat_cancelled(

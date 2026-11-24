@@ -39,6 +39,13 @@ defmodule Tymeslot.Bookings.SeatRelease do
   A seat verifying meanwhile waits on the same row lock, so it finds the
   slot either still confirmed or already held.
 
+  Two leavers whose seat cancellations both committed before either asked
+  find the slot held by whichever asked first: the second finds it
+  `:awaiting_verification` and leaves it be (`:already_held`), since a held
+  slot ends only through its held seats. The meeting was already over for
+  the organiser, told so by the first leaver's email, so nothing more is
+  owed to them or to the calendar for the second.
+
   To the organiser and the integrations the meeting is over, exactly as if
   it had been cancelled: the leaving seat's own email and event say so, and
   `finish_return_to_held/1` removes what the confirmed slot had (calendar
@@ -84,7 +91,8 @@ defmodule Tymeslot.Bookings.SeatRelease do
   Returns `{:ok, :meeting_cancelled}` when it cancelled the meeting (having
   run the cancellation side effects), `{:ok, :returned_to_held}` when held
   seats kept it and it is held for verification again (having run
-  `finish_return_to_held/1`), `{:ok, :seats_remain}` when someone is
+  `finish_return_to_held/1`), `{:ok, :already_held}` when another leaver
+  had held it already (see the module doc), `{:ok, :seats_remain}` when someone is
   still on the slot, including the case where a booker took a seat while the
   leaver was committing, and `{:error, :release_check_failed}` when the
   emptiness check itself could not be completed — the meeting's status is
@@ -94,7 +102,7 @@ defmodule Tymeslot.Bookings.SeatRelease do
   the other outcomes.
   """
   @spec release(Meeting.t()) ::
-          {:ok, :meeting_cancelled | :returned_to_held | :seats_remain}
+          {:ok, :meeting_cancelled | :returned_to_held | :already_held | :seats_remain}
           | {:error, :release_check_failed}
   def release(%Meeting{} = meeting) do
     result =
@@ -114,8 +122,8 @@ defmodule Tymeslot.Bookings.SeatRelease do
         finish_return_to_held(confirmed_meeting)
         {:ok, :returned_to_held}
 
-      {:ok, :seats_remain} ->
-        {:ok, :seats_remain}
+      {:ok, remains} when remains in [:already_held, :seats_remain] ->
+        {:ok, remains}
 
       {:error, reason} ->
         # The seat is released either way; an emptied meeting that failed to
@@ -152,14 +160,16 @@ defmodule Tymeslot.Bookings.SeatRelease do
   transaction has committed: `Tymeslot.Bookings.Cancel.finalise_cancellation/1`
   on a `{:cancelled, meeting}`, and `finish_return_to_held/1` on a
   `{:held, meeting}`, which carries the meeting as it was before, still
-  naming the calendar event and video room it let go of.
+  naming the calendar event and video room it let go of. A slot already
+  held for verification is left to its held seats (`:already_held`), with
+  nothing for the caller to finish.
 
   For a caller whose own transaction must not commit unless the meeting is
   cancelled with it (a seat move that has already treated the old meeting's
   time as free): an `{:error, reason}` is the caller's to roll back.
   """
   @spec cancel_if_emptied(Meeting.t()) ::
-          {:ok, {:cancelled, Meeting.t()} | {:held, Meeting.t()} | :seats_remain}
+          {:ok, {:cancelled, Meeting.t()} | {:held, Meeting.t()} | :already_held | :seats_remain}
           | {:error, Ecto.Changeset.t() | :not_confirmed}
   def cancel_if_emptied(%Meeting{} = meeting) do
     locked = GroupMeetingQueries.lock_for_update(meeting.id)
@@ -173,6 +183,12 @@ defmodule Tymeslot.Bookings.SeatRelease do
       # (`Tymeslot.Meetings.PlannedSessions`).
       locked.planned ->
         {:ok, :seats_remain}
+
+      # Held by another leaver whose release ran first: it ends when its
+      # last held seat lapses or is released
+      # (`Tymeslot.Meetings.EmailVerification.expire_seat/1`), never here.
+      locked.status == :awaiting_verification ->
+        {:ok, :already_held}
 
       ParticipantQueries.count_live_for_meeting(meeting.id) > 0 ->
         {:ok, :seats_remain}
@@ -206,9 +222,10 @@ defmodule Tymeslot.Bookings.SeatRelease do
   end
 
   # A held seat keeps a confirmed slot, held again. A slot with no held seat
-  # is cancelled; so is one in any other status, which no live group slot
-  # holds in practice, its held seats going with it rather than outliving a
-  # slot `SlotActivation` could not bring back.
+  # is cancelled. A group slot is only ever confirmed here, as
+  # `cancel_if_emptied/1` leaves a held one to its seats; a slot in any other
+  # status is cancelled too, its held seats going with it rather than
+  # outliving a slot `SlotActivation` could not bring back.
   defp vacate(%Meeting{status: :confirmed} = slot, %DateTime{} = deadline),
     do: return_to_held(slot, deadline)
 

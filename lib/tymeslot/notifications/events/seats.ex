@@ -20,9 +20,12 @@ defmodule Tymeslot.Notifications.Events.Seats do
   and the meeting was cancelled, its time free again; `:held` when it was
   the last confirmed seat but seats awaiting their bookers' email
   verification remain, so the meeting is off for the organiser while the
-  time stays taken (`Tymeslot.Bookings.SeatRelease`).
+  time stays taken (`Tymeslot.Bookings.SeatRelease`); `:already_held` when
+  another leaver, gone at the same moment, had held it so already, and told
+  the organiser: the seat's own email still says nobody is left, and the
+  organiser gets none about it.
   """
-  @type slot_outcome :: :goes_ahead | :freed | :held
+  @type slot_outcome :: :goes_ahead | :freed | :held | :already_held
 
   @doc """
   Handles a seat being booked on a group meeting.

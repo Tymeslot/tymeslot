@@ -23,12 +23,14 @@ defmodule Tymeslot.Bookings.HeldSeatsKeepSlotIntegrationTest do
   alias Tymeslot.Bookings.CancelSeat
   alias Tymeslot.Bookings.RescheduleRequestExpiry
   alias Tymeslot.Bookings.RescheduleSeat
+  alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.Bookings.Workers.RescheduleRequestExpiryWorker
   alias Tymeslot.Emails.Templates.SeatUpdateForOrganizer
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.TestMocks
@@ -170,6 +172,95 @@ defmodule Tymeslot.Bookings.HeldSeatsKeepSlotIntegrationTest do
                "No one else has confirmed a spot on this slot, so the meeting has been cancelled."
 
       refute email.text_body =~ "free again"
+    end
+  end
+
+  # Each `CancelSeat` commits its seat's cancellation before it asks
+  # `SeatRelease`, so two guests leaving at once can both have given up their
+  # seats before either asks. The first to ask holds the slot again; the
+  # second must find it held and leave it to its held seat, rather than
+  # release that seat and cancel the slot.
+  describe "the last two confirmed guests leave at once while a seat is held" do
+    setup ctx do
+      %{second: insert(:participant, meeting: ctx.slot, email: "second@example.com")}
+    end
+
+    test "the second release leaves the held slot and its held seat alone", ctx do
+      {:ok, _cancelled} = ParticipantQueries.cancel(reload(ctx.confirmed))
+      {:ok, _cancelled} = ParticipantQueries.cancel(reload(ctx.second))
+
+      assert {:ok, :returned_to_held} = SeatRelease.release(ctx.slot)
+      held_slot = reload(ctx.slot)
+      assert %{status: :awaiting_verification} = held_slot
+
+      assert {:ok, :already_held} = SeatRelease.release(ctx.slot)
+
+      assert reload(ctx.slot) == held_slot
+      assert %{cancelled_at: nil, email_verified_at: nil} = reload(ctx.held)
+
+      refute_enqueued(
+        worker: CalendarEventWorker,
+        args: %{"action" => "delete", "meeting_id" => ctx.slot.id}
+      )
+    end
+
+    # The second guest's cancellation is replayed through `CancelSeat` so
+    # that what follows its release runs: its seat is put back live after the
+    # first release, and the release it then asks meets what the interleaving
+    # leaves it, its own seat given up and the slot held by the first. A held
+    # slot refuses `CancelSeat.execute/1` up front, so the replay gives the
+    # seat up in a transaction of its own and finishes it.
+    test "only the second guest is emailed: the organiser heard from the first", ctx do
+      {:ok, _cancelled} = ParticipantQueries.cancel(reload(ctx.confirmed))
+      {:ok, _cancelled} = ParticipantQueries.cancel(reload(ctx.second))
+      assert {:ok, :returned_to_held} = SeatRelease.release(ctx.slot)
+
+      Repo.update_all(where(ParticipantSchema, id: ^ctx.second.id), set: [cancelled_at: nil])
+
+      assert {:ok, %{outcome: :already_held} = released} =
+               Repo.transaction(fn ->
+                 {:ok, released} = CancelSeat.cancel_in_transaction(reload(ctx.second))
+                 released
+               end)
+
+      assert :ok = CancelSeat.finish(released)
+
+      assert %{status: :awaiting_verification} = reload(ctx.slot)
+      assert %{cancelled_at: nil, email_verified_at: nil} = reload(ctx.held)
+      assert %{cancelled_at: %DateTime{}} = reload(ctx.second)
+
+      refute_enqueued(
+        worker: CalendarEventWorker,
+        args: %{"action" => "update", "meeting_id" => ctx.slot.id}
+      )
+
+      seat_args = %{
+        "action" => "send_seat_cancellation_emails",
+        "meeting_id" => ctx.slot.id,
+        "participant_id" => ctx.second.id,
+        "slot_freed" => true,
+        "slot_held" => false,
+        "organizer_told" => true
+      }
+
+      assert_enqueued(worker: EmailWorker, args: seat_args)
+
+      test_pid = self()
+
+      stub(Tymeslot.EmailServiceMock, :send_cancellation_email_to_attendee, fn to, details ->
+        send(test_pid, {:attendee, to, details})
+        {:ok, "sent"}
+      end)
+
+      stub(Tymeslot.EmailServiceMock, :send_seat_update_to_organizer, fn kind, _to, _details ->
+        send(test_pid, {:organizer, kind})
+        {:ok, "sent"}
+      end)
+
+      assert :ok = perform_job(EmailWorker, seat_args)
+
+      assert_received {:attendee, "second@example.com", %{slot_freed: true}}
+      refute_received {:organizer, _kind}
     end
   end
 
