@@ -89,7 +89,7 @@ msgstr "Abstimmung als %{name}"
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes %{on_deadline}"
-msgstr "Abstimmung endet %{on_deadline}"
+msgstr "Abstimmung endet am %{on_deadline}"
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
