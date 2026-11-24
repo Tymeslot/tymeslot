@@ -69,7 +69,7 @@ defmodule TymeslotWeb.SessionController do
     |> UserAuth.delete_session()
     |> UserAuth.clear_unverified_user()
     |> put_flash(:info, dgettext("auth", "Logged out successfully."))
-    |> redirect(to: ~p"/")
+    |> redirect(to: ~p"/auth/login?signed_out=1")
   end
 
   @doc """

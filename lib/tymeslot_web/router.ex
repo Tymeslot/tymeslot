@@ -162,7 +162,7 @@ defmodule TymeslotWeb.Router do
     # screens (password reset, email verification) stay reachable. A page a
     # guarded route sent the visitor from is kept for after sign-in.
     scope "/" do
-      pipe_through TymeslotWeb.Plugs.ReturnTo
+      pipe_through [TymeslotWeb.Plugs.ReturnTo, TymeslotWeb.Plugs.AutoOAuthRedirect]
 
       live_session :auth,
         session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},

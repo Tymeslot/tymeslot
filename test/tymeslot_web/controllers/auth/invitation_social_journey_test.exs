@@ -189,7 +189,7 @@ defmodule TymeslotWeb.InvitationSocialJourneyTest do
 
     conn = sign_in(build_conn(), "github")
 
-    assert redirected_to(conn) == ~p"/?auth=login"
+    assert redirected_to(conn) == ~p"/auth/login?error=oauth"
     assert Flash.get(conn.assigns.flash, :info) =~ "Open the invitation link we emailed you"
     refute get_session(conn, :user_token)
 
