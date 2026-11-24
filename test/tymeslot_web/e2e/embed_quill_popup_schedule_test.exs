@@ -13,7 +13,7 @@ defmodule TymeslotWeb.E2E.EmbedQuillPopupScheduleTest do
   The page is marked embedded with `BookerSteps.mark_embedded/1`, as
   `EmbedSizesMatrixTest` does; the browser window stands in for the frame.
   """
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   import TymeslotWeb.E2E.BookerSteps
 

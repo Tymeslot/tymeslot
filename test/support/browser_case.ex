@@ -2,8 +2,9 @@ defmodule TymeslotWeb.BrowserCase do
   @moduledoc """
   Test case for Fluffy-based E2E browser tests.
 
-  Uses `Playwright.Test` with project-specific setup: sandbox sharing,
-  global Mox configuration, stateful component reset, and factory imports.
+  Uses `Playwright.Test` with project-specific setup: sandbox sharing, mocks,
+  stateful component reset (sync modules only), and factory imports. A
+  browser test runs `async: true` unless it changes node-wide state.
 
   Each test gets a Playwright browser session as `%{session: session}`.
 
@@ -24,8 +25,6 @@ defmodule TymeslotWeb.BrowserCase do
 
   alias Tymeslot.DataCase
   alias Tymeslot.TestMocks
-
-  import Tymeslot.ConfigTestHelpers
 
   using opts do
     quote do
@@ -51,19 +50,11 @@ defmodule TymeslotWeb.BrowserCase do
 
   setup tags do
     # Fluffy passes the sandbox metadata to the browser session (via the
-    # ecto_repos config), so browser requests share this owner's connection.
+    # ecto_repos config), so browser requests and LiveViews share this owner's
+    # connection and, through `Tymeslot.TestSandbox`, its mocks. The legal gate
+    # is switched off for the run in test_helper.exs.
     DataCase.setup_sandbox(tags)
     DataCase.reset_stateful_components(tags)
-
-    # Force-disable legal agreements for Core E2E tests. A downstream overlay
-    # can set enforce_legal_agreements: true, which overrides Core's test.exs
-    # value when the suite runs under that overlay. The runtime override below
-    # ensures Core E2E tests never see the legal gate.
-    with_config(:tymeslot, :enforce_legal_agreements, false)
-
-    # Browser requests are handled by a different OS process than the test,
-    # so Mox expectations must be set globally.
-    Mox.set_mox_global(tags)
     TestMocks.setup_all_mocks()
 
     :ok

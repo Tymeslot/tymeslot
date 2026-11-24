@@ -11,7 +11,7 @@ defmodule TymeslotWeb.E2E.EmbedConfirmationLayoutTest do
   The page is marked embedded with `BookerSteps.mark_embedded/1`, as
   `EmbedSizesMatrixTest` does for the other steps.
   """
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   import TymeslotWeb.E2E.BookerLayoutAssertions
   import TymeslotWeb.E2E.BookerSteps

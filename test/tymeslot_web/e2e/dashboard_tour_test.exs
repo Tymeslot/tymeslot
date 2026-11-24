@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.E2E.DashboardTourTest do
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   alias Tymeslot.Repo
 

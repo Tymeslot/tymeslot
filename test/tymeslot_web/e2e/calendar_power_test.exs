@@ -13,7 +13,7 @@ defmodule TymeslotWeb.E2E.CalendarPowerTest do
   stubbed at the provider boundary (`Tymeslot.CalendarMock`).
   """
 
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   @moduletag :e2e
   @moduletag Playwright.Test.use(viewport: %{width: 1280, height: 800})

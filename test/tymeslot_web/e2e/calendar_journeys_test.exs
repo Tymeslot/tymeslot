@@ -16,7 +16,7 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
   boundary (`Tymeslot.CalendarMock`).
   """
 
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   @moduletag :e2e
   @moduletag Playwright.Test.use(viewport: %{width: 1280, height: 800})
@@ -26,7 +26,6 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
 
   alias Fluffy.Playwright.Keyboard
   alias Tymeslot.CalendarMock
-  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings.MeetingSchema
@@ -49,7 +48,6 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
 
   setup do
     TestMocks.stub_no_calendar_events()
-    AvailabilityCache.clear_all()
     test_pid = self()
 
     Mox.stub(CalendarMock, :create_event, fn event_data, _context ->

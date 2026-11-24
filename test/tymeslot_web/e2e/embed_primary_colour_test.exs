@@ -16,7 +16,7 @@ defmodule TymeslotWeb.E2E.EmbedPrimaryColourTest do
   so the embed token takes its parent origin from `?parent-origin=`, as it
   does for an embedder that strips the Referer.
   """
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingTypes

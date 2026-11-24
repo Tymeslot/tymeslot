@@ -337,6 +337,10 @@ config :tymeslot, Tymeslot.Integrations.HealthCheck,
 # and navigation timeouts a stuck action waits out the test's 60 seconds.
 config :fluffy, endpoint: TymeslotWeb.Endpoint, ecto_repos: [Tymeslot.Repo]
 
+# Browser requests and LiveViews also get the test's Mox expectations and
+# stubs, so browser tests can run async (see Tymeslot.TestSandbox).
+config :fluffy, Fluffy.Sandbox, sandbox: Tymeslot.TestSandbox
+
 config :playwright, :test,
   browser_name: :chromium,
   action_timeout: 15_000,

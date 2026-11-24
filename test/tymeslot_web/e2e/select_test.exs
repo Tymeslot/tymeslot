@@ -8,7 +8,7 @@ defmodule TymeslotWeb.E2E.SelectTest do
   The touch device's native control is in `SelectTouchTest`, in a session of
   its own.
   """
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   import TymeslotWeb.E2E.BookerSteps
 

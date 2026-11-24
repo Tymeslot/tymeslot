@@ -76,7 +76,10 @@ defmodule TymeslotWeb.E2E.BookerSteps do
     session
     |> assert_has(by_test_id("booking-form"))
     |> fill(by_css("input[name='booking[name]']"), "Jane Doe")
-    |> fill(by_css("input[name='booking[email]']"), "jane@example.com")
+    |> fill(
+      by_css("input[name='booking[email]']"),
+      "jane+#{System.unique_integer([:positive])}@example.com"
+    )
     |> click(by_test_id("submit-booking"))
     |> assert_has(by_test_id("confirmation-heading"))
   end

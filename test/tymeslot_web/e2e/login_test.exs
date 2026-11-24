@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.E2E.LoginTest do
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   @moduletag :e2e
   @moduletag :auth

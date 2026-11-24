@@ -12,7 +12,7 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
   posts reach it. Each journey ends in the database, at the day and time the
   visitor clicked.
   """
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   alias Ecto.Changeset
   alias Tymeslot.Meetings.MeetingSchema

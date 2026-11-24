@@ -4,6 +4,13 @@ defmodule TymeslotWeb.Router do
   alias Plug.Conn
   alias TymeslotWeb.Plugs.LocalePlug
 
+  # In tests, a browser test's LiveView joins the test's database sandbox (and
+  # its mocks, `Tymeslot.TestSandbox`) before a live_session hook below reads
+  # the database. `live_view/0` adds the same hook, but after these.
+  @sandbox_hooks if Application.compile_env(:tymeslot, :environment) == :test,
+                   do: [Fluffy.Sandbox],
+                   else: []
+
   # =============================================================================
   # Healthcheck (early to avoid wildcard username routes)
   # =============================================================================
@@ -103,11 +110,13 @@ defmodule TymeslotWeb.Router do
 
       live_session :dev_onboarding,
         session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
-        on_mount: [
-          {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
-          TymeslotWeb.Hooks.AppLocaleHook,
-          TymeslotWeb.Hooks.ClientInfoHook
-        ] do
+        on_mount:
+          @sandbox_hooks ++
+            [
+              {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
+              TymeslotWeb.Hooks.AppLocaleHook,
+              TymeslotWeb.Hooks.ClientInfoHook
+            ] do
         live "/onboarding", OnboardingLive, :debug_welcome
         live "/onboarding/:step", OnboardingLive, :debug_step
       end
@@ -132,7 +141,7 @@ defmodule TymeslotWeb.Router do
 
     live_session :meeting_request,
       session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
-      on_mount: [TymeslotWeb.Hooks.LocaleHook, TymeslotWeb.Hooks.ClientInfoHook] do
+      on_mount: @sandbox_hooks ++ [TymeslotWeb.Hooks.LocaleHook, TymeslotWeb.Hooks.ClientInfoHook] do
       live "/meeting-request/:token", MeetingRequestLive, :show
     end
   end
@@ -145,7 +154,7 @@ defmodule TymeslotWeb.Router do
 
     live_session :booking_verification,
       session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
-      on_mount: [TymeslotWeb.Hooks.LocaleHook, TymeslotWeb.Hooks.ClientInfoHook] do
+      on_mount: @sandbox_hooks ++ [TymeslotWeb.Hooks.LocaleHook, TymeslotWeb.Hooks.ClientInfoHook] do
       live "/verify-booking/:token", BookingVerificationLive, :show
     end
   end
@@ -166,12 +175,14 @@ defmodule TymeslotWeb.Router do
 
       live_session :auth,
         session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
-        on_mount: [
-          TymeslotWeb.Hooks.LocaleHook,
-          {TymeslotWeb.Hooks.AuthLiveSessionHook,
-           {:redirect_if_authenticated, actions: [:login, :signup], events: ["submit_signup"]}},
-          TymeslotWeb.Hooks.RouteBundleHook
-        ] do
+        on_mount:
+          @sandbox_hooks ++
+            [
+              TymeslotWeb.Hooks.LocaleHook,
+              {TymeslotWeb.Hooks.AuthLiveSessionHook,
+               {:redirect_if_authenticated, actions: [:login, :signup], events: ["submit_signup"]}},
+              TymeslotWeb.Hooks.RouteBundleHook
+            ] do
         live "/auth/login", AuthLive, :login
         live "/auth/signup", AuthLive, :signup
         live "/auth/verify-email", AuthLive, :verify_email
@@ -296,7 +307,7 @@ defmodule TymeslotWeb.Router do
 
     live_session :authenticated,
       session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
-      on_mount: {TymeslotWeb.Hooks.DashboardHooks, :dashboard} do
+      on_mount: @sandbox_hooks ++ [{TymeslotWeb.Hooks.DashboardHooks, :dashboard}] do
       live "/dashboard", DashboardLive, :calendar
       live "/dashboard/overview", DashboardLive, :overview
       live "/dashboard/settings", DashboardLive, :settings
@@ -344,11 +355,13 @@ defmodule TymeslotWeb.Router do
 
     live_session :admin,
       session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
-      on_mount: [
-        {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
-        TymeslotWeb.Hooks.AppLocaleHook,
-        TymeslotWeb.Hooks.EnsureAdminHook
-      ] do
+      on_mount:
+        @sandbox_hooks ++
+          [
+            {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
+            TymeslotWeb.Hooks.AppLocaleHook,
+            TymeslotWeb.Hooks.EnsureAdminHook
+          ] do
       # One route per tab; `TymeslotWeb.AdminLive.Tabs` is the list these must
       # match. `/settings` is kept as an alias for the old single-tab URL so
       # existing bookmarks still land somewhere sensible.
@@ -372,7 +385,7 @@ defmodule TymeslotWeb.Router do
 
     live_session :onboarding,
       session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
-      on_mount: {TymeslotWeb.Hooks.DashboardHooks, :onboarding} do
+      on_mount: @sandbox_hooks ++ [{TymeslotWeb.Hooks.DashboardHooks, :onboarding}] do
       live "/onboarding", OnboardingLive, :index
       live "/onboarding/:step", OnboardingLive, :step
     end
@@ -388,11 +401,13 @@ defmodule TymeslotWeb.Router do
 
     live_session :meeting_management,
       session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
-      on_mount: [
-        TymeslotWeb.Hooks.LocaleHook,
-        TymeslotWeb.Hooks.ThemeHook,
-        TymeslotWeb.Hooks.ClientInfoHook
-      ] do
+      on_mount:
+        @sandbox_hooks ++
+          [
+            TymeslotWeb.Hooks.LocaleHook,
+            TymeslotWeb.Hooks.ThemeHook,
+            TymeslotWeb.Hooks.ClientInfoHook
+          ] do
       live "/:username/meeting/:meeting_uid/cancel", Themes.Core.Dispatcher, :cancel
 
       live "/:username/meeting/:meeting_uid/cancel-confirmed",
@@ -434,10 +449,12 @@ defmodule TymeslotWeb.Router do
 
     live_session :payment_return,
       session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
-      on_mount: [
-        TymeslotWeb.Hooks.LocaleHook,
-        TymeslotWeb.Hooks.ClientInfoHook
-      ] do
+      on_mount:
+        @sandbox_hooks ++
+          [
+            TymeslotWeb.Hooks.LocaleHook,
+            TymeslotWeb.Hooks.ClientInfoHook
+          ] do
       live "/themes/:theme_slug/payment-processing/:meeting_id",
            Themes.Shared.PaymentReturnLive.Processing
 
@@ -479,11 +496,13 @@ defmodule TymeslotWeb.Router do
 
     live_session :poll_voting,
       session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
-      on_mount: [
-        TymeslotWeb.Hooks.LocaleHook,
-        TymeslotWeb.Hooks.ThemeHook,
-        TymeslotWeb.Hooks.ClientInfoHook
-      ] do
+      on_mount:
+        @sandbox_hooks ++
+          [
+            TymeslotWeb.Hooks.LocaleHook,
+            TymeslotWeb.Hooks.ThemeHook,
+            TymeslotWeb.Hooks.ClientInfoHook
+          ] do
       live "/:username/poll/:token", Themes.Core.Dispatcher, :poll_voting
     end
   end
@@ -494,16 +513,18 @@ defmodule TymeslotWeb.Router do
 
     live_session :username_scheduling,
       session: {__MODULE__, :scheduling_session, []},
-      on_mount: [
-        TymeslotWeb.Hooks.EmbedAuthHook,
-        TymeslotWeb.Hooks.LocaleHook,
-        # Settles the booking URL before `ThemeHook`, which reads the
-        # organiser it found rather than looking them up again.
-        TymeslotWeb.Live.Scheduling.PageAddress,
-        TymeslotWeb.Hooks.ThemeHook,
-        TymeslotWeb.Hooks.ClientInfoHook,
-        TymeslotWeb.Hooks.PageViewHook
-      ] do
+      on_mount:
+        @sandbox_hooks ++
+          [
+            TymeslotWeb.Hooks.EmbedAuthHook,
+            TymeslotWeb.Hooks.LocaleHook,
+            # Settles the booking URL before `ThemeHook`, which reads the
+            # organiser it found rather than looking them up again.
+            TymeslotWeb.Live.Scheduling.PageAddress,
+            TymeslotWeb.Hooks.ThemeHook,
+            TymeslotWeb.Hooks.ClientInfoHook,
+            TymeslotWeb.Hooks.PageViewHook
+          ] do
       live "/:username", Themes.Core.Dispatcher, :overview
       live "/:username/thank-you", Themes.Core.Dispatcher, :confirmation
       # A meeting type of the username's page, or the start page of one of its

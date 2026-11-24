@@ -11,7 +11,7 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
   write is stubbed at the provider boundary (`Tymeslot.CalendarMock`).
   """
 
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   @moduletag :e2e
   @moduletag :calendar

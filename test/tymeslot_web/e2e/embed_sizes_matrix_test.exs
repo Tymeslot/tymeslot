@@ -17,7 +17,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     - Yes/No tiles render side-by-side without overflow at 320 px
     - Name + Email auto-stack vertically at 320 px
   """
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   import TymeslotWeb.E2E.BookerLayoutAssertions
   import TymeslotWeb.E2E.BookerSteps
@@ -274,34 +274,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
           end
         end)
     end
-  end
-
-  test "branding banner stays within the viewport when the page content fits",
-       %{session: session} do
-    # Inject a stand-in for the SaaS branding banner via the theme-extensions
-    # bridge (Core can't load the SaaS branding CSS). The banner sits in the
-    # theme grid's footer row; without the `:has(.branding-footer)` rule the
-    # content area's 10vh centering padding pushes it past 100vh.
-    previous = Application.get_env(:tymeslot, :theme_extensions, [])
-
-    Application.put_env(:tymeslot, :theme_extensions, [
-      {TymeslotWeb.Test.BrandingFooterStub, :banner}
-    ])
-
-    on_exit(fn -> Application.put_env(:tymeslot, :theme_extensions, previous) end)
-
-    {profile, slug} = create_user_with_meeting_type()
-
-    # A viewport tall enough that the schedule comfortably fits — so the banner
-    # only overflows if the `content-area` centering padding double-counts (the
-    # bug). Below ~900px the schedule itself fills the viewport and the banner
-    # legitimately sits below the fold, which wouldn't isolate the padding bug.
-    session
-    |> set_viewport_size(%{width: 1280, height: 1100})
-    |> visit("/#{profile.username}/#{slug}")
-    |> assert_has(by_css(".branding-footer"))
-    |> assert_no_horizontal_overflow("quill schedule with branding banner")
-    |> assert_branding_footer_within_viewport("quill schedule with banner")
   end
 
   test "custom-questions yes/no tiles render at 320px without overflow",

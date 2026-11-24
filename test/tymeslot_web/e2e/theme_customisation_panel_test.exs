@@ -12,7 +12,7 @@ defmodule TymeslotWeb.E2E.ThemeCustomisationPanelTest do
   `phx-value-*` directly from the element and never reproduces the bug, so
   this drives a real browser session instead.
   """
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   import Tymeslot.TestHelpers.Eventually
 

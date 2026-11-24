@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.E2E.SignupTest do
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Auth.Verification

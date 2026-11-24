@@ -154,10 +154,6 @@ defmodule TymeslotWeb do
       use Phoenix.LiveView,
         layout: {TymeslotWeb.Layouts, :app}
 
-      if Application.compile_env(:tymeslot, :environment) == :test do
-        on_mount Fluffy.Sandbox
-      end
-
       on_mount TymeslotWeb.Hooks.LoggerMetadataHook
 
       unquote(html_helpers())

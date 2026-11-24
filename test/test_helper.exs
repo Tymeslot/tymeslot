@@ -16,6 +16,11 @@ if System.get_env("E2E") == "true" do
     TymeslotWeb.Endpoint,
     Keyword.put(existing_endpoint_config, :server, true)
   )
+
+  # Core's browser tests never see the legal gate, even under a downstream
+  # overlay that sets `enforce_legal_agreements: true`. Set once for the run,
+  # not per test, so the browser tests can run async.
+  Application.put_env(:tymeslot, :enforce_legal_agreements, false)
 end
 
 # Start Ecto sandbox - ensure Repo is ready first

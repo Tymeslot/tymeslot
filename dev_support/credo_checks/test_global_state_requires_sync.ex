@@ -59,20 +59,17 @@ defmodule CredoChecks.TestGlobalStateRequiresSync do
   ## Inheriting through a case template
 
   Credo analyses one file at a time and cannot follow `use` or `import`, so
-  the offending module's own source can look completely inert. Two templates
-  under `test/support/` currently put Mox into global mode from their own
-  `setup`, and are the check's default `:templates` param:
+  the offending module's own source can look completely inert. One module
+  under `test/support/` currently puts Mox into global mode from its own
+  `setup`, and is the check's default `:templates` param:
 
-    * `TymeslotWeb.BrowserCase` — Wallaby drives the app from a separate OS
-      process, so Mox expectations must be visible to it.
     * `Tymeslot.Integrations.HealthCheckTestSetup` — `HealthCheck` dispatches
       across Oban workers and GenServer calls that may cross process
       boundaries.
 
-  A module reaches either through `use` (`BrowserCase` is an
-  `ExUnit.CaseTemplate`) or through `import` plus a `setup :fun_name` call
-  (`HealthCheckTestSetup` is a plain module of shared setup helpers, not a
-  template). This check treats both as adoption of the template: it cannot
+  A module reaches one through `use` (an `ExUnit.CaseTemplate`) or through
+  `import` plus a `setup :fun_name` call (`HealthCheckTestSetup` is a plain
+  module of shared setup helpers, not a template). This check treats both as adoption of the template: it cannot
   see which imported function a `setup :atom` actually names, so importing
   one of the listed modules is itself the signal.
 
@@ -173,7 +170,7 @@ defmodule CredoChecks.TestGlobalStateRequiresSync do
         templates:
           "Override the modules treated as putting Mox into global mode from their " <>
             "own setup, whether adopted via use or import. Defaults to " <>
-            "[TymeslotWeb.BrowserCase, Tymeslot.Integrations.HealthCheckTestSetup]."
+            "[Tymeslot.Integrations.HealthCheckTestSetup]."
       ]
     ]
 
@@ -182,10 +179,9 @@ defmodule CredoChecks.TestGlobalStateRequiresSync do
 
   @opt_out "credo:global-state-safe"
 
-  @default_templates [
-    TymeslotWeb.BrowserCase,
-    Tymeslot.Integrations.HealthCheckTestSetup
-  ]
+  # `TymeslotWeb.BrowserCase` is not one: its browser sessions get the test's
+  # mocks through `Tymeslot.TestSandbox`, not Mox's global mode.
+  @default_templates [Tymeslot.Integrations.HealthCheckTestSetup]
 
   @doc false
   @impl Credo.Check

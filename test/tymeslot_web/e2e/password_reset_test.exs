@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.E2E.PasswordResetTest do
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   @moduletag :e2e
   @moduletag :auth
@@ -30,6 +30,9 @@ defmodule TymeslotWeb.E2E.PasswordResetTest do
       session
       |> visit("/auth/login")
       |> click(by_css("button[phx-value-to='reset_password']"))
+      # The login form has an "Email Address" field too; filling before the
+      # view swaps in the reset form would sign in with no password.
+      |> assert_has(by_css("#reset-password-form"))
       |> fill(by_label("Email Address"), user.email)
       |> click(by_css("button[type='submit']"))
 

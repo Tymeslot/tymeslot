@@ -8,7 +8,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
   A booking page's Date question and the create-event modal are the two
   journeys; the rest pins what went wrong in the review of `<.select>`.
   """
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   import Ecto.Query, only: [where: 3]
   import Tymeslot.TestHelpers.Eventually

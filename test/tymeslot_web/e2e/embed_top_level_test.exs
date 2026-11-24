@@ -10,7 +10,7 @@ defmodule TymeslotWeb.E2E.EmbedTopLevelTest do
   itself for ever. The browser session here starts with no cookie, which is
   exactly that visitor.
   """
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles

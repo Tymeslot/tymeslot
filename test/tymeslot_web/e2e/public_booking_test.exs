@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.E2E.PublicBookingTest do
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Slugs

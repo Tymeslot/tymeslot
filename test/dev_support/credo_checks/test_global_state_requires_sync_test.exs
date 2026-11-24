@@ -129,7 +129,7 @@ defmodule CredoChecks.TestGlobalStateRequiresSyncTest do
       |> assert_issue()
     end
 
-    test "flags a module using the BrowserCase template while async: true" do
+    test "accepts a module using the BrowserCase template while async: true" do
       """
       defmodule Tymeslot.Web.LoginFlowTest do
         use TymeslotWeb.BrowserCase, async: true
@@ -137,7 +137,7 @@ defmodule CredoChecks.TestGlobalStateRequiresSyncTest do
       """
       |> to_source_file("test/tymeslot_web/e2e/login_flow_test.exs")
       |> run_check(TestGlobalStateRequiresSync)
-      |> assert_issue(fn issue -> assert issue.trigger == "async: true" end)
+      |> refute_issues()
     end
 
     test "flags a module importing the HealthCheckTestSetup template while async: true" do

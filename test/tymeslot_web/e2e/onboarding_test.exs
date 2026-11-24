@@ -15,7 +15,7 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
   OAuth return is.
   """
 
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   @moduletag :e2e
   @moduletag :onboarding

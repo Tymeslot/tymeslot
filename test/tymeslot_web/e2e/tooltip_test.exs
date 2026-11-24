@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.E2E.TooltipTest do
-  use TymeslotWeb.BrowserCase, async: false
+  use TymeslotWeb.BrowserCase, async: true
 
   alias Fluffy.Playwright.Keyboard
 
