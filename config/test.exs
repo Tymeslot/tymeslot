@@ -333,11 +333,14 @@ config :tymeslot, Tymeslot.Integrations.HealthCheck,
 # so Phoenix.Ecto.SQL.Sandbox and Fluffy.Sandbox can allow the request and
 # LiveView processes to share the test's DB connection. The browser reaches
 # the endpoint on its own listener, so TEST_PORT is respected.
-# Traces and screenshots of failed tests go to test-results/.
+# Traces and screenshots of failed tests go to test-results/. Without action
+# and navigation timeouts a stuck action waits out the test's 60 seconds.
 config :fluffy, endpoint: TymeslotWeb.Endpoint, ecto_repos: [Tymeslot.Repo]
 
 config :playwright, :test,
   browser_name: :chromium,
+  action_timeout: 15_000,
+  navigation_timeout: 15_000,
   trace: :retain_on_failure,
   screenshot: :only_on_failure
 
