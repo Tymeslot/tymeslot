@@ -44,7 +44,7 @@ defmodule TymeslotWeb.E2E.CalendarPowerTest do
   # mode), with a Google account holding "Work" and "Family".
   defp organiser(session) do
     {session, user} =
-      log_in_via_browser(session, %{dashboard_tour_seen_at: DateTime.utc_now(:second)})
+      log_in(session, %{dashboard_tour_seen_at: DateTime.utc_now(:second)})
 
     {:ok, profile} = Profiles.get_or_create_profile(user.id)
     {:ok, _profile} = Profiles.update_timezone(profile, "Etc/UTC")

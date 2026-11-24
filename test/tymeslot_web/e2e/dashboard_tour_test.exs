@@ -16,10 +16,10 @@ defmodule TymeslotWeb.E2E.DashboardTourTest do
   @tag Playwright.Test.use(viewport: %{width: 1280, height: 800})
   test "desktop viewport: tour appears, Next advances the step, Skip dismisses",
        %{session: session} do
-    {session, user} =
-      log_in_via_browser(session, %{dashboard_tour_seen_at: nil})
+    {session, user} = log_in(session, %{dashboard_tour_seen_at: nil})
 
     session
+    |> visit("/dashboard")
     |> assert_has(by_css("#dashboard-tour"))
     |> assert_has(by_css("#dashboard-tour[data-step-index='0']"))
     |> click(by_role(:button, name: "Next", exact: true))
@@ -33,8 +33,8 @@ defmodule TymeslotWeb.E2E.DashboardTourTest do
   @tag Playwright.Test.use(viewport: %{width: 390, height: 844})
   test "mobile viewport: hook reports too small, overlay is dismissed without marking seen",
        %{session: session} do
-    {session, user} =
-      log_in_via_browser(session, %{dashboard_tour_seen_at: nil})
+    {session, user} = log_in(session, %{dashboard_tour_seen_at: nil})
+    session = visit(session, "/dashboard")
 
     # The tour briefly renders on the initial LiveView response (the server
     # doesn't know the viewport yet) and is removed once the hook fires

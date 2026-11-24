@@ -24,7 +24,7 @@ defmodule TymeslotWeb.E2E.ThemeCustomisationPanelTest do
 
   test "picking a palette scheme and a background preset persists both",
        %{session: session} do
-    {session, user} = log_in_via_browser(session)
+    {session, user} = log_in(session)
     profile = Profiles.get_profile(user.id)
 
     session

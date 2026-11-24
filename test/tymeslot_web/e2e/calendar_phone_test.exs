@@ -34,7 +34,7 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
 
   # An organiser with one writable Google calendar.
   defp organiser(session) do
-    {session, user} = log_in_via_browser(session)
+    {session, user} = log_in(session)
 
     {:ok, _prefs} =
       CalendarPreferencesQueries.upsert(user.id, %{time_format: "24h"})

@@ -5,7 +5,7 @@ defmodule TymeslotWeb.E2E.CreateEventTypeTest do
   @moduletag :meeting_types
 
   test "user can create a meeting type from the dashboard", %{session: session} do
-    {session, _user} = log_in_via_browser(session)
+    {session, _user} = log_in(session)
 
     session =
       session

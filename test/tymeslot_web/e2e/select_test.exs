@@ -27,7 +27,7 @@ defmodule TymeslotWeb.E2E.SelectTest do
 
   describe "a dashboard form" do
     test "the keyboard commits a choice and phx-change hears it", %{session: session} do
-      {session, _user} = log_in_via_browser(session)
+      {session, _user} = log_in(session)
 
       session =
         session
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.E2E.SelectTest do
 
   describe "the list on a dashboard page" do
     test "pressing the button of an open list closes it", %{session: session} do
-      {session, _user} = log_in_via_browser(session)
+      {session, _user} = log_in(session)
 
       session =
         session
@@ -79,7 +79,7 @@ defmodule TymeslotWeb.E2E.SelectTest do
     end
 
     test "a button out of view leaves Escape to the page", %{session: session} do
-      {session, _user} = log_in_via_browser(session)
+      {session, _user} = log_in(session)
 
       session = visit(session, "/dashboard/embed")
 

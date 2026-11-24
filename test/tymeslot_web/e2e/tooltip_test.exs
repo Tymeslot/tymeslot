@@ -11,7 +11,7 @@ defmodule TymeslotWeb.E2E.TooltipTest do
   test "a tooltip shows on hover and on keyboard focus, and Escape dismisses it", %{
     session: session
   } do
-    {session, _user} = log_in_via_browser(session)
+    {session, _user} = log_in(session)
     session = visit(session, "/dashboard/account")
 
     # Hover shows it, and it is a real popover carrying the text.

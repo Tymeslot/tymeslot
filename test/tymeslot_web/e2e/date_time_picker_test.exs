@@ -163,7 +163,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
     test "switching the question from Date to Time gives the limit a time list", %{
       session: session
     } do
-      {session, user} = log_in_via_browser(session)
+      {session, user} = log_in(session)
       meeting_type = insert(:meeting_type, user: user)
 
       session
@@ -284,7 +284,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
   end
 
   defp open_create_modal(session) do
-    {session, user} = log_in_via_browser(session)
+    {session, user} = log_in(session)
     insert(:calendar_integration, user: user, is_active: true)
 
     session

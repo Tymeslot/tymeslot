@@ -9,10 +9,14 @@ defmodule TymeslotWeb.E2EHelpers do
   import Fluffy.Locator
   import Fluffy.Playwright, only: [evaluate: 3, evaluate: 4, set_viewport_size: 2]
 
+  alias Phoenix.ConnTest
+  alias Plug.Test, as: PlugTest
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.AuthTestHelpers
   alias Tymeslot.Factory
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
+  alias TymeslotWeb.Endpoint
 
   @default_password "Password123!"
 
@@ -33,7 +37,8 @@ defmodule TymeslotWeb.E2EHelpers do
   def default_password, do: @default_password
 
   @doc """
-  Logs in a user via the browser login form.
+  Logs in a user via the browser login form, for a test about the form or
+  what signing in shows; `log_in/2` skips the form.
 
   Creates a verified user (with onboarding completed and a profile) from the
   given attributes, then navigates to `/auth/login`, fills the form, and waits
@@ -54,6 +59,42 @@ defmodule TymeslotWeb.E2EHelpers do
       |> wait_for_dashboard()
 
     {session, user}
+  end
+
+  @doc """
+  Logs in a user without the login form, for a test that isn't about it.
+
+  Creates a verified user (with onboarding completed and a profile) from the
+  given attributes and gives the browser the session cookie a login would set:
+  the app's own `Tymeslot.AuthTestHelpers.log_in_user/2` signs the user in on
+  an in-process conn, and one request through the endpoint writes the cookie.
+  The browser stays where it is; the test visits its first page itself.
+
+  Returns `{session, user}`.
+  """
+  @spec log_in(Fluffy.Session.t(), map()) :: {Fluffy.Session.t(), UserSchema.t()}
+  def log_in(session, user_attrs \\ %{}) do
+    user = create_onboarded_user(user_attrs)
+    {log_in_as(session, user), user}
+  end
+
+  @doc """
+  Gives the browser the session cookie of `user`, as `log_in/2` does, for a
+  user the test has already created.
+  """
+  @spec log_in_as(Fluffy.Session.t(), UserSchema.t()) :: Fluffy.Session.t()
+  def log_in_as(session, user) do
+    conn =
+      ConnTest.build_conn()
+      |> PlugTest.init_test_session(%{})
+      |> AuthTestHelpers.log_in_user(user)
+      |> ConnTest.dispatch(Endpoint, :get, "/", nil)
+
+    cookies =
+      for {name, %{value: value}} <- conn.resp_cookies,
+          do: %{name: name, value: value, url: Fluffy.base_url(session)}
+
+    add_cookies(session, cookies)
   end
 
   @doc """

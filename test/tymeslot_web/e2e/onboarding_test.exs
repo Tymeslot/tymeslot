@@ -68,7 +68,8 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
     user = new_host()
 
     session
-    |> log_in(user)
+    |> log_in_as(user)
+    |> visit("/onboarding")
     |> link_step()
     |> calendar_step(user)
     |> meeting_step()
@@ -97,14 +98,6 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
 
     {:ok, _profile} = Profiles.create_profile(user.id)
     user
-  end
-
-  defp log_in(session, user) do
-    session
-    |> visit("/auth/login")
-    |> fill(by_label("Email Address"), user.email)
-    |> fill(by_css("#password-input"), default_password())
-    |> click(by_css("button[type='submit']"))
   end
 
   # Link: the suggested one is kept.

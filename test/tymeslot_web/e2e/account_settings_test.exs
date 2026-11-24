@@ -11,7 +11,7 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
     # or failed on the sequence number, i.e. on how many users earlier tests had
     # inserted, and so on test order.
     {session, user} =
-      log_in_via_browser(session, %{email: "firstname.lastname@example-company.com"})
+      log_in(session, %{email: "firstname.lastname@example-company.com"})
 
     new_password = "NewSecurePass456!"
 
