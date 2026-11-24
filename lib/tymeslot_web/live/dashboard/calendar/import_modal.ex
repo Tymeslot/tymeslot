@@ -331,12 +331,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
     LocaleFormat.with_article(LocaleFormat.format_date(date, locale), preposition, locale)
   end
 
-  # A date in a sentence, led by the article Italian puts before it.
-  defp long_date(date, preposition) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    LocaleFormat.with_article(LocaleFormat.format_date(date, locale), preposition, locale)
-  end
-
   attr :uploads, :map, required: true
   attr :target, :any, required: true
 
