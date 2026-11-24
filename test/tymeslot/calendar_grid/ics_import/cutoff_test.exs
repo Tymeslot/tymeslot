@@ -128,6 +128,65 @@ defmodule Tymeslot.CalendarGrid.IcsImport.CutoffTest do
       assert titles(plan) == ["Fifteen weeks"]
     end
 
+    test "reads a long COUNT from a first start long ago as the series' end" do
+      # The last of a daily series since 1900 falls on 31 May or 1 June 2026.
+      until_may = Date.diff(~D[2026-05-31], ~D[1900-01-01]) + 1
+
+      plan =
+        plan_from!([
+          timed("may@x", "Ends in May", "19000101T090000Z", "19000101T100000Z", [
+            "RRULE:FREQ=DAILY;COUNT=#{until_may}"
+          ]),
+          timed("june@x", "Ends in June", "19000101T090000Z", "19000101T100000Z", [
+            "RRULE:FREQ=DAILY;COUNT=#{until_may + 1}"
+          ])
+        ])
+
+      assert titles(plan) == ["Ends in June"]
+    end
+
+    test "steps through a COUNT over weekdays to its end" do
+      # Mondays and Wednesdays from 4 May 2026: the eighth is 27 May, the
+      # ninth 1 June.
+      plan =
+        plan_from!([
+          timed("eight@x", "Eight", "20260504T090000Z", "20260504T100000Z", [
+            "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=8"
+          ]),
+          timed("nine@x", "Nine", "20260504T090000Z", "20260504T100000Z", [
+            "RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=9"
+          ])
+        ])
+
+      assert titles(plan) == ["Nine"]
+    end
+
+    test "skips the months without the first start's day in a COUNT" do
+      # The 31st from January 2026: the third is 31 May, the fourth 31 July.
+      plan =
+        plan_from!([
+          timed("three@x", "Three", "20260131T090000Z", "20260131T100000Z", [
+            "RRULE:FREQ=MONTHLY;COUNT=3"
+          ]),
+          timed("four@x", "Four", "20260131T090000Z", "20260131T100000Z", [
+            "RRULE:FREQ=MONTHLY;COUNT=4"
+          ])
+        ])
+
+      assert titles(plan) == ["Four"]
+    end
+
+    test "keeps a COUNT too long to step through to its end" do
+      plan =
+        plan_from!([
+          timed("long@x", "Weekdays since 1900", "19000101T090000Z", "19000101T100000Z", [
+            "RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;COUNT=999999"
+          ])
+        ])
+
+      assert titles(plan) == ["Weekdays since 1900"]
+    end
+
     test "keeps an all-day series whose last occurrence is the date" do
       plan =
         plan_from!([
@@ -267,6 +326,26 @@ defmodule Tymeslot.CalendarGrid.IcsImport.CutoffTest do
                %{from: ~D[2026-08-23], events: 3 + 990 + 1, importable: true},
                %{from: ~D[2026-11-23], events: 1, importable: true}
              ]
+    end
+
+    # Each of these series runs on for centuries yet; stepping every
+    # occurrence since 1900, once per suggested date, takes minutes.
+    @tag timeout: 20_000
+    test "judges a COUNT series from long ago without stepping through it" do
+      series =
+        for n <- 1..(IcsImport.max_events() + 1) do
+          rule =
+            if rem(n, 2) == 0,
+              do: "RRULE:FREQ=DAILY;COUNT=999999",
+              else: "RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;COUNT=999999"
+
+          timed("s#{n}@x", "S#{n}", "19000101T090000Z", "19000101T100000Z", [rule])
+        end
+
+      assert {:error, {:too_many_events, overview}} = IcsImport.plan(ics(series), "Etc/UTC")
+
+      assert Enum.map(overview.suggestions, & &1.events) ==
+               List.duplicate(IcsImport.max_events() + 1, 4)
     end
 
     test "is refused unread past the most events a file may hold" do
