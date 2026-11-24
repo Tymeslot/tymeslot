@@ -4,10 +4,11 @@ defmodule Tymeslot.Payments do
   Provides a high-level interface for executing payment transactions.
 
   It makes no Stripe calls of its own on a caller's behalf: Stripe's API is
-  reached through `Tymeslot.Integrations.Stripe` and its resource modules,
-  and the platform account's subscription billing calls (customers,
-  subscription checkout, cancellation) through
-  `Tymeslot.Payments.PlatformBilling`.
+  reached through `Tymeslot.Integrations.Stripe` and its resource modules.
+  The platform account's subscription billing calls (customers, subscription
+  checkout, cancellation) belong to the configured subscription manager
+  (`Tymeslot.Payments.Behaviours.SubscriptionManager`), which makes them
+  through those same modules.
   """
 
   require Logger
