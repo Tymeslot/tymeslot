@@ -370,7 +370,7 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
     |> assert_has(by_css("#calendar-preview-cancel"))
     |> refute_has(by_css("#calendar-preview-accept"))
 
-    eventually(fn -> assert Repo.get!(MeetingSchema, held.id).status == "confirmed" end,
+    eventually(fn -> assert Repo.get!(MeetingSchema, held.id).status == :confirmed end,
       timeout: 5_000
     )
   end
