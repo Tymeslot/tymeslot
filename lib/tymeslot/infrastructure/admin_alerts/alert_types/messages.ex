@@ -225,7 +225,10 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
     "Refund #{get.(:refund_id)} (#{get.(:source)}) of booking payment " <>
       "#{get.(:booking_payment_id)} is still pending after #{get.(:attempt)} attempts: " <>
       "Tymeslot cannot tell whether Stripe made it. A new job keeps trying; check the " <>
-      "charge in the Stripe dashboard"
+      "charge in the Stripe dashboard, then record what Stripe did with " <>
+      ~s|Tymeslot.Release.settle_stuck_refund("#{get.(:refund_id)}", | <>
+      ~s|{:succeeded, "re_…", charge_refunded_cents}) through bin/tymeslot rpc, | <>
+      "or with :failed in place of the tuple if Stripe never made it"
   end
 
   # The job is unique per account, so once the cause is fixed the way to try

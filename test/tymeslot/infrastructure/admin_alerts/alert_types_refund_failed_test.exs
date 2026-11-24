@@ -39,6 +39,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesRefundFailedTest do
       assert msg =~ "Refund rf_1 (host) of booking payment bp_1"
       assert msg =~ "still pending after 9 attempts"
     end
+
+    test ":refund_stuck names the way to record what Stripe did" do
+      msg = AlertTypes.format_message(:refund_stuck, %{refund_id: "rf_1"})
+
+      assert msg =~ ~s|Tymeslot.Release.settle_stuck_refund("rf_1", |
+    end
   end
 
   describe "the alert for a failed refund made after all" do

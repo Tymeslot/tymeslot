@@ -81,7 +81,9 @@ defmodule Tymeslot.MeetingPayments.Refunds.FailureNotice do
   Reports `refund` to the admins as a `:refund_stuck` alert: a job's last
   attempt left it pending, or Stripe refuses to list its charge's refunds.
   It is not failed, as Stripe may have made it, and
-  `Workers.SweepPendingRefunds` hands it to a new job.
+  `Workers.SweepPendingRefunds` hands it to a new job. The alert names
+  `Tymeslot.Release.settle_stuck_refund/2`, by which an operator who has
+  checked the charge at Stripe records how the refund ended.
   """
   @spec stuck(RefundSchema.t()) :: :ok
   def stuck(%RefundSchema{} = refund) do

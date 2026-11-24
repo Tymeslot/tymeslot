@@ -21,7 +21,11 @@ defmodule Tymeslot.Release do
   alias Tymeslot.Infrastructure.{FinchPool, ProxyVerifier}
   alias Tymeslot.Integrations.Stripe
   alias Tymeslot.Media.UploadMetadataSweep
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.DisputeLossBackfill
+  alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.Repo
 
   @doc """
@@ -314,6 +318,111 @@ defmodule Tymeslot.Release do
     else
       "DONE: #{counts}; #{summary.updated} corrected, #{summary.unchanged} changed meanwhile"
     end
+  end
+
+  @doc """
+  Records how a refund ended that Tymeslot cannot ask Stripe about, once
+  an operator has looked at its charge in Stripe's dashboard. Such a
+  refund (a `:refund_stuck` alert names it) stays pending: Stripe refuses
+  to list the charge's refunds, as when the host revoked the Connect
+  account, so every attempt leaves it so, its amount stays held against
+  what may still be refunded, and the host sees it as being processed.
+
+  If Stripe made the refund, give its id and the charge's refunded total
+  as the dashboard shows it, in cents (`amount_refunded`, this refund
+  included); if Stripe never made it, or it failed there, give `:failed`:
+
+      bin/tymeslot rpc 'Tymeslot.Release.settle_stuck_refund("<refund id>", {:succeeded, "re_…", 2500})'
+      bin/tymeslot rpc 'Tymeslot.Release.settle_stuck_refund("<refund id>", :failed)'
+
+  It settles the refund as a Stripe report would
+  (`Tymeslot.MeetingPayments.Refunds.Settlement.settle_by_hand/2`), under
+  the same locks, so a webhook arriving meanwhile cannot settle it twice:
+  made, the payment's figures and status are raised and the attendee is
+  emailed; failed, the figures stay as they are and the admins and the
+  host are told the attendee is still owed the money. It runs on the
+  live node, since those emails and alerts go through its job queue.
+
+  It prints the refund and its payment's figures before and after, and a
+  last line starting `SETTLED:`, or `REFUSED:` with the reason when
+  nothing was written: an unknown refund, one not pending, one an attempt
+  is making now, or a malformed outcome.
+  """
+  @spec settle_stuck_refund(String.t(), term()) :: {:ok, RefundSchema.t()} | {:error, term()}
+  def settle_stuck_refund(refund_id, outcome) do
+    ensure_running!()
+
+    case RefundQueries.get(refund_id) do
+      nil ->
+        IO.puts("REFUSED: no refund has id #{inspect(refund_id)}")
+        {:error, :not_found}
+
+      refund ->
+        payment = BookingPaymentQueries.get(refund.booking_payment_id)
+        print_refund("BEFORE", refund, payment)
+
+        refund
+        |> Refunds.settle_by_hand(outcome)
+        |> settled_by_hand(refund, payment, outcome)
+    end
+  end
+
+  defp settled_by_hand({:ok, settled, written}, _refund, payment, _outcome) do
+    print_refund("AFTER", settled, BookingPaymentQueries.get(payment.id))
+
+    case written do
+      :settled ->
+        IO.puts("SETTLED: refund #{settled.id} is #{settled.status}")
+        {:ok, settled}
+
+      :already_settled ->
+        IO.puts("REFUSED: refund #{settled.id} was settled meanwhile; nothing written")
+        {:error, :not_pending}
+    end
+  end
+
+  defp settled_by_hand({:error, reason} = error, refund, payment, outcome) do
+    IO.puts("REFUSED: " <> refusal_text(reason, refund, payment, outcome))
+    error
+  end
+
+  defp refusal_text(:not_pending, refund, _payment, _outcome),
+    do: "refund #{refund.id} is #{refund.status}, not pending; nothing written"
+
+  defp refusal_text(:attempt_in_flight, refund, _payment, _outcome),
+    do:
+      "an attempt at refund #{refund.id} is under way; run this again once it has ended " <>
+        "(within five minutes) if the refund is still pending"
+
+  defp refusal_text(:invalid_outcome, _refund, _payment, outcome),
+    do:
+      "#{inspect(outcome)} is not an outcome: give " <>
+        ~s|{:succeeded, "re_…", charge_refunded_cents} or :failed|
+
+  defp refusal_text(:charge_total_out_of_range, refund, payment, _outcome),
+    do:
+      "the charge's refunded total includes this refund, so it is between " <>
+        "#{refund.amount_cents} and #{payment.amount_cents} (cents, Stripe's amount_refunded)"
+
+  defp refusal_text(:stripe_refund_taken, _refund, _payment, {:succeeded, stripe_id, _total}),
+    do: "Stripe refund #{stripe_id} is already recorded on another refund"
+
+  defp refusal_text(reason, _refund, _payment, _outcome), do: error_text(reason)
+
+  defp print_refund(label, refund, payment) do
+    IO.puts(
+      "#{label} refund #{refund.id} #{refund.status} (#{refund.source}): " <>
+        "#{refund.amount_cents} cents, attempt #{refund.attempt}, " <>
+        "stripe refund #{refund.stripe_refund_id || "none"}, " <>
+        "failure code #{refund.failure_code || "none"}"
+    )
+
+    IO.puts(
+      "#{label} payment #{payment.id} #{payment.status} (#{payment.currency}): " <>
+        "refunds made #{payment.stripe_refunded_cents}, lost in dispute " <>
+        "#{payment.disputed_lost_cents}, refunded #{payment.refunded_amount_cents} " <>
+        "of #{payment.amount_cents}"
+    )
   end
 
   # With the application up (`rpc`, mix, tests) the repo is already running,

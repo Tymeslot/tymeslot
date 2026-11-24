@@ -34,6 +34,10 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
     external: :external_refund
   }
 
+  # The failure code of a refund an operator settled failed
+  # (`settle_by_hand/2`).
+  @settled_by_hand "settled_by_hand"
+
   @type settled :: {:ok, RefundSchema.t(), :settled | :already_settled}
 
   @doc """
@@ -210,6 +214,77 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
       end)
     end
   end
+
+  @doc """
+  Settles a pending `refund` no attempt can, from what an operator read
+  off Stripe's dashboard: one whose charge's refunds Stripe will not list
+  (a Connect account that revoked access), which therefore stays pending
+  however often it is tried. `outcome` is one of:
+
+    * `{:succeeded, stripe_refund_id, charge_refunded_cents}`: Stripe made
+      the refund as `stripe_refund_id` (`re_…` or `pyr_…`), and its charge
+      shows `charge_refunded_cents` refunded in all (`amount_refunded`), a
+      total that includes this refund, so it lies between the refund's
+      amount and the amount paid. Settled as
+      `settle_succeeded/2` settles a refund Stripe reports, never lowering
+      the refunds already recorded.
+    * `:failed`: Stripe never made the refund, or made it and it failed.
+      Settled as `settle_failed/3` settles one Stripe reports ended, with
+      code `"settled_by_hand"`: the payment's figures stay as
+      they are, since a pending refund never raised them, and the failure
+      is reported to the admins and the host. Should Stripe report the
+      refund made after all, that report still settles it succeeded and
+      voids the failure (`FailureNotice.reversed/2`).
+
+  Refused, with nothing written: a refund not `pending`
+  (`{:error, :not_pending}`), one an attempt holds the lease of now
+  (`{:error, :attempt_in_flight}`), since its own answer may settle it, a
+  malformed outcome (`{:error, :invalid_outcome}`), and a charge total
+  outside the refund's bounds (`{:error, :charge_total_out_of_range}`).
+  A refund a webhook settles between the check and the write is
+  `{:ok, refund, :already_settled}`, as for any settlement.
+  """
+  @spec settle_by_hand(RefundSchema.t(), term()) ::
+          settled()
+          | {:error,
+             :not_pending
+             | :attempt_in_flight
+             | :invalid_outcome
+             | :charge_total_out_of_range
+             | term()}
+  def settle_by_hand(%RefundSchema{} = refund, outcome) do
+    with :ok <- valid_outcome(outcome),
+         :ok <- stuck(refund),
+         do: settle_outcome(refund, outcome)
+  end
+
+  defp valid_outcome({:succeeded, "re_" <> _id, total}) when is_integer(total), do: :ok
+  defp valid_outcome({:succeeded, "pyr_" <> _id, total}) when is_integer(total), do: :ok
+  defp valid_outcome(:failed), do: :ok
+  defp valid_outcome(_outcome), do: {:error, :invalid_outcome}
+
+  defp stuck(%RefundSchema{status: :pending} = refund) do
+    if RefundQueries.leased?(refund), do: {:error, :attempt_in_flight}, else: :ok
+  end
+
+  defp stuck(%RefundSchema{}), do: {:error, :not_pending}
+
+  defp settle_outcome(refund, {:succeeded, stripe_refund_id, total}) do
+    %{amount_cents: paid} = BookingPaymentQueries.get(refund.booking_payment_id)
+
+    if total in refund.amount_cents..paid//1 do
+      settle_succeeded(refund, %{
+        "id" => stripe_refund_id,
+        "status" => "succeeded",
+        "amount" => refund.amount_cents,
+        "charge" => %{"amount_refunded" => total}
+      })
+    else
+      {:error, :charge_total_out_of_range}
+    end
+  end
+
+  defp settle_outcome(refund, :failed), do: settle_failed(refund, %{}, @settled_by_hand)
 
   @doc """
   Brings `payment`'s recorded refunds in line with `stripe_refunds`, the

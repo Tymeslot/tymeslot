@@ -204,6 +204,13 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   defdelegate settle_failed(refund, stripe_refund, code), to: Settlement
 
   @doc """
+  Settles a pending refund no attempt can from what an operator read off
+  Stripe's dashboard; see `Refunds.Settlement.settle_by_hand/2`.
+  """
+  @spec settle_by_hand(RefundSchema.t(), term()) :: Settlement.settled() | {:error, term()}
+  defdelegate settle_by_hand(refund, outcome), to: Settlement
+
+  @doc """
   Brings a payment's recorded refunds in line with the refunds Stripe
   reports for its charge, for the refund webhooks; see
   `Refunds.Settlement.reconcile/2`.
