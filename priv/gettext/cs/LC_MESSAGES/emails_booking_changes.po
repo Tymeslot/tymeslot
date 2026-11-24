@@ -227,8 +227,8 @@ msgstr "Dobrý den, %{name}, naše schůzka byla zrušena. Omlouvám se za kompl
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Hi %{name} - you've given up your spot in %{meeting} on %{date}."
-msgstr "Dobrý den, %{name}, vzdali jste se svého místa na %{meeting} dne %{date}."
+msgid "Hi %{name} - you've given up your spot in %{meeting} on %{on_date}."
+msgstr "Dobrý den, %{name}, vzdali jste se svého místa na %{meeting} dne %{on_date}."
 
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex
 #, elixir-autogen, elixir-format

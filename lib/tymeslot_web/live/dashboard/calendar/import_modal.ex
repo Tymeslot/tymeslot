@@ -144,10 +144,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
               <span :if={@ics_import.summary.left_out > 0}>
                 {dngettext(
                   "dashboard_calendar_import",
-                  "1 event before %{date} is left out.",
-                  "%{count} events before %{date} are left out.",
+                  "1 event before %{before_date} is left out.",
+                  "%{count} events before %{before_date} are left out.",
                   @ics_import.summary.left_out,
-                  date: long_date(@ics_import.summary.from)
+                  before_date: long_date(@ics_import.summary.from, :a)
                 )}
               </span>
             </p>
@@ -268,8 +268,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
             />
             <span>
               <span class="font-semibold">
-                {dgettext("dashboard_calendar_import", "%{date} onwards",
-                  date: long_date(suggestion.from)
+                {LocaleFormat.capitalize_first(
+                  dgettext("dashboard_calendar_import", "%{from_date} onwards",
+                    from_date: long_date(suggestion.from, :da)
+                  )
                 )}
               </span>
               <span class="block text-token-xs text-tymeslot-500">
@@ -321,6 +323,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
 
   defp long_date(date),
     do: LocaleFormat.format_date(date, Gettext.get_locale(TymeslotWeb.Gettext))
+
+  # A date in a sentence, led by the article Italian puts before it.
+  defp long_date(date, preposition) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    LocaleFormat.with_article(LocaleFormat.format_date(date, locale), preposition, locale)
+  end
 
   attr :uploads, :map, required: true
   attr :target, :any, required: true

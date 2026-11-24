@@ -182,8 +182,8 @@ msgstr "Demasiadas importaciones. Espera un rato antes de importar otro archivo.
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
-msgid "%{date} onwards"
-msgstr "A partir del %{date}"
+msgid "%{from_date} onwards"
+msgstr "A partir del %{from_date}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
@@ -194,10 +194,10 @@ msgstr[1] "%{count} eventos"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
-msgid "1 event before %{date} is left out."
-msgid_plural "%{count} events before %{date} are left out."
-msgstr[0] "Queda fuera 1 evento anterior al %{date}."
-msgstr[1] "Quedan fuera %{count} eventos anteriores al %{date}."
+msgid "1 event before %{before_date} is left out."
+msgid_plural "%{count} events before %{before_date} are left out."
+msgstr[0] "Queda fuera 1 evento anterior al %{before_date}."
+msgstr[1] "Quedan fuera %{count} eventos anteriores al %{before_date}."
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format

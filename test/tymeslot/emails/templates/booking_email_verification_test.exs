@@ -100,6 +100,19 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerificationTest do
     refute email.html_body =~ "September 1, 2026"
   end
 
+  # Italian puts the article before the deadline, elided before a day read
+  # with a vowel, so it comes from the code rather than the translation.
+  test "an Italian deadline carries the article its day is read with" do
+    eighth = meeting(%{attendee_locale: "it", verification_deadline_at: ~U[2026-10-08 08:30:00Z]})
+    ninth = meeting(%{attendee_locale: "it", verification_deadline_at: ~U[2026-10-09 08:30:00Z]})
+
+    assert BookingEmailVerification.render(eighth, @verify_url).text_body =~
+             "entro l'8 ottobre 2026 alle 10:30"
+
+    assert BookingEmailVerification.render(ninth, @verify_url).text_body =~
+             "entro il 9 ottobre 2026 alle 10:30"
+  end
+
   test "the email carries no uid, no manage links and no attachment" do
     email = BookingEmailVerification.render(meeting(), @verify_url)
     uid = meeting().uid

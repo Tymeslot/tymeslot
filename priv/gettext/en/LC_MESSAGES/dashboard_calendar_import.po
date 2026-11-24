@@ -182,7 +182,7 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
-msgid "%{date} onwards"
+msgid "%{from_date} onwards"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
@@ -194,8 +194,8 @@ msgstr[1] ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
-msgid "1 event before %{date} is left out."
-msgid_plural "%{count} events before %{date} are left out."
+msgid "1 event before %{before_date} is left out."
+msgid_plural "%{count} events before %{before_date} are left out."
 msgstr[0] ""
 msgstr[1] ""
 

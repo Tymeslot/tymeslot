@@ -88,8 +88,8 @@ msgstr "Votando como %{name}"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
-msgstr "Votação aberta até %{deadline}"
+msgid "Voting closes %{on_deadline}"
+msgstr "Votação aberta até %{on_deadline}"
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format

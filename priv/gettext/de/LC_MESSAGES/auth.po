@@ -780,8 +780,8 @@ msgstr "Ihr Konto wird gelöscht und kann nicht mehr wiederhergestellt werden."
 
 #: lib/tymeslot_web/controllers/auth/account_restore_html.ex
 #, elixir-autogen, elixir-format
-msgid "Your account is in the process of being deleted (scheduled for %{date}). If you want to keep it, restore it here."
-msgstr "Ihr Konto wird gerade gelöscht (geplant für den %{date}). Wenn Sie es behalten möchten, stellen Sie es hier wieder her."
+msgid "Your account is in the process of being deleted (scheduled for %{for_date}). If you want to keep it, restore it here."
+msgstr "Ihr Konto wird gerade gelöscht (geplant für den %{for_date}). Wenn Sie es behalten möchten, stellen Sie es hier wieder her."
 
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format

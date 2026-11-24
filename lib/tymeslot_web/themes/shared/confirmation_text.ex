@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Profiles
   alias Tymeslot.Themes.Catalog
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.Voice
@@ -88,23 +89,26 @@ defmodule TymeslotWeb.Themes.Shared.ConfirmationText do
   @spec check_inbox_message(map(), Catalog.theme_key() | nil) :: String.t()
   def check_inbox_message(assigns, theme_key \\ nil) do
     email = assigns[:email]
-    deadline = deadline_text(assigns[:verification_deadline_at], assigns[:user_timezone])
-    bindings = %{email: email, deadline: deadline}
+    by_deadline = deadline_text(assigns[:verification_deadline_at], assigns[:user_timezone])
+    bindings = %{email: email, by_deadline: by_deadline}
 
     Voice.line(Voice.of(theme_key), :check_inbox_message, bindings, fn ->
       dgettext(
         "booking_confirmation",
-        "We have sent a link to %{email}. Click it by %{deadline} to confirm your booking. Until then the time is held for you.",
+        "We have sent a link to %{email}. Click it by %{by_deadline} to confirm your booking. Until then the time is held for you.",
         email: email,
-        deadline: deadline
+        by_deadline: by_deadline
       )
     end)
   end
 
   # A booking awaiting verification always carries its deadline
   # (`EmailVerification.gate_attributes/2`), so there is no fallback.
-  defp deadline_text(%DateTime{} = deadline, timezone),
-    do: LocalizationHelpers.format_meeting_datetime(deadline, timezone)
+  defp deadline_text(%DateTime{} = deadline, timezone) do
+    deadline
+    |> LocalizationHelpers.format_meeting_datetime(timezone)
+    |> LocaleFormat.with_article(:none, Gettext.get_locale(TymeslotWeb.Gettext))
+  end
 
   @doc """
   The sentence under a held booking's headline, in the voice of the theme

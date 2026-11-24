@@ -742,13 +742,13 @@ msgstr "Głosowanie zakończone"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closed %{deadline}"
-msgstr "Głosowanie zakończyło się: %{deadline}"
+msgid "Voting closed %{on_deadline}"
+msgstr "Głosowanie zakończyło się: %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
-msgstr "Głosowanie kończy się: %{deadline}"
+msgid "Voting closes %{on_deadline}"
+msgstr "Głosowanie kończy się: %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format

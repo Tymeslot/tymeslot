@@ -27,6 +27,8 @@ defmodule Tymeslot.Emails.Templates.SignupAttemptNotice do
     Text
   }
 
+  alias TymeslotWeb.Helpers.LocaleFormat
+
   # Account security information about an attempt the owner may not have made.
   @intent :alert
 
@@ -90,13 +92,16 @@ defmodule Tymeslot.Emails.Templates.SignupAttemptNotice do
   # The address belongs to an account waiting to be deleted: the owner can
   # still restore it, or sign up afresh once it is gone.
   defp explanation(%{deletion_scheduled_at: %DateTime{} = at} = user) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
     dgettext(
       "emails_account",
-      "Someone just tried to create a new Tymeslot account with this email address. It belongs to an account that is scheduled for deletion on %{date}. If it was you, sign in before then to restore that account, or sign up again after that date.",
-      date:
+      "Someone just tried to create a new Tymeslot account with this email address. It belongs to an account that is scheduled for deletion on %{on_date}. If it was you, sign in before then to restore that account, or sign up again after that date.",
+      on_date:
         at
         |> Policy.user_local_date(user.id)
-        |> Formatting.format_date(Gettext.get_locale(TymeslotWeb.Gettext))
+        |> Formatting.format_date(locale)
+        |> LocaleFormat.with_article(:none, locale)
     )
   end
 

@@ -735,12 +735,12 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closed %{deadline}"
+msgid "Voting closed %{on_deadline}"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
+msgid "Voting closes %{on_deadline}"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex

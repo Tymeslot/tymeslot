@@ -735,13 +735,13 @@ msgstr "Abstimmung beendet"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closed %{deadline}"
-msgstr "Abstimmung beendet am %{deadline}"
+msgid "Voting closed %{on_deadline}"
+msgstr "Abstimmung beendet am %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
-msgstr "Abstimmung endet am %{deadline}"
+msgid "Voting closes %{on_deadline}"
+msgstr "Abstimmung endet am %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format

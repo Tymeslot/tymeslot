@@ -192,8 +192,8 @@ msgstr "Příliš mnoho importů. Chvíli počkejte, než budete importovat dal�
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
-msgid "%{date} onwards"
-msgstr "Od %{date}"
+msgid "%{from_date} onwards"
+msgstr "Od %{from_date}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
@@ -205,11 +205,11 @@ msgstr[2] "%{count} událostí"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
-msgid "1 event before %{date} is left out."
-msgid_plural "%{count} events before %{date} are left out."
-msgstr[0] "1 událost starší než %{date} se vynechá."
-msgstr[1] "%{count} události starší než %{date} se vynechají."
-msgstr[2] "%{count} událostí starších než %{date} se vynechá."
+msgid "1 event before %{before_date} is left out."
+msgid_plural "%{count} events before %{before_date} are left out."
+msgstr[0] "1 událost starší než %{before_date} se vynechá."
+msgstr[1] "%{count} události starší než %{before_date} se vynechají."
+msgstr[2] "%{count} událostí starších než %{before_date} se vynechá."
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format

@@ -524,6 +524,29 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     end
   end
 
+  describe "with_article/3" do
+    test "elides the Italian article before the 8th and the 11th" do
+      assert LocaleFormat.with_article("8 ottobre 2026", :da, "it") == "dall'8 ottobre 2026"
+      assert LocaleFormat.with_article("11 marzo 2026", :none, "it") == "l'11 marzo 2026"
+      assert LocaleFormat.with_article("8 ottobre", :a, "it") == "all'8 ottobre"
+      assert LocaleFormat.with_article("11 marzo", :di, "it") == "dell'11 marzo"
+      assert LocaleFormat.with_article("8 ottobre", :in, "it") == "nell'8 ottobre"
+      assert LocaleFormat.with_article("11 marzo", :su, "it") == "sull'11 marzo"
+    end
+
+    test "keeps the full Italian article before every other day, the first included" do
+      assert LocaleFormat.with_article("9 ottobre 2026", :da, "it") == "dal 9 ottobre 2026"
+      assert LocaleFormat.with_article("1° ottobre 2026", :none, "it") == "il 1° ottobre 2026"
+      assert LocaleFormat.with_article("18 ottobre", :a, "it") == "al 18 ottobre"
+      assert LocaleFormat.with_article("28 ottobre", :di, "it") == "del 28 ottobre"
+    end
+
+    test "leaves the date unchanged in the other languages" do
+      assert LocaleFormat.with_article("8 octobre 2026", :da, "fr") == "8 octobre 2026"
+      assert LocaleFormat.with_article("11 March 2026", :none, "en") == "11 March 2026"
+    end
+  end
+
   describe "weekday and short dates" do
     test "write the first of a month as an ordinal in French, Italian and Portuguese" do
       assert LocaleFormat.format_weekday_date(~D[2026-10-01], "fr") == "jeudi 1er octobre 2026"

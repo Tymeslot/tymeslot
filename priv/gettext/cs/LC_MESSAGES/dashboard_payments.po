@@ -414,8 +414,8 @@ msgstr "Váš účet Stripe není připojený, proto je nutné tyto platby vrát
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled %{date}"
-msgstr "Zrušeno %{date}"
+msgid "Cancelled %{on_date}"
+msgstr "Zrušeno %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -424,8 +424,8 @@ msgstr "Vypršelo"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Expired, paid %{date}"
-msgstr "Vypršelo, zaplaceno %{date}"
+msgid "Expired, paid %{on_date}"
+msgstr "Vypršelo, zaplaceno %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -434,8 +434,8 @@ msgstr "Vypršelé rezervace byly zaplaceny, ale nikdy nepotvrzeny, například 
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Declined %{date}"
-msgstr "Odmítnuto %{date}"
+msgid "Declined %{on_date}"
+msgstr "Odmítnuto %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format

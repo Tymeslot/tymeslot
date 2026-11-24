@@ -746,13 +746,13 @@ msgstr "Hlasování ukončeno"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closed %{deadline}"
-msgstr "Hlasování skončilo: %{deadline}"
+msgid "Voting closed %{on_deadline}"
+msgstr "Hlasování skončilo: %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
-msgstr "Hlasování končí: %{deadline}"
+msgid "Voting closes %{on_deadline}"
+msgstr "Hlasování končí: %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format

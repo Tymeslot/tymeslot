@@ -33,6 +33,7 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -132,22 +133,28 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
   # it is the place, not the time, that is held.
   defp intro(%Meeting{verification_deadline_at: %DateTime{} = deadline} = meeting, held, locale) do
     {local, _zone} = DateTimeUtils.shift_or_utc(deadline, meeting.attendee_timezone)
-    intro_text(held, Formatting.format_meeting_datetime(%{start_time: local}, locale))
+
+    by_deadline =
+      %{start_time: local}
+      |> Formatting.format_meeting_datetime(locale)
+      |> LocaleFormat.with_article(:none, locale)
+
+    intro_text(held, by_deadline)
   end
 
-  defp intro_text(:booking, deadline) do
+  defp intro_text(:booking, by_deadline) do
     dgettext(
       "emails_booking_requests",
-      "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold the time for you until then.",
-      deadline: deadline
+      "Your booking is not confirmed yet. Click the button below by %{by_deadline} to confirm it, and we will hold the time for you until then.",
+      by_deadline: by_deadline
     )
   end
 
-  defp intro_text(:seat, deadline) do
+  defp intro_text(:seat, by_deadline) do
     dgettext(
       "emails_booking_requests",
-      "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold your place until then.",
-      deadline: deadline
+      "Your booking is not confirmed yet. Click the button below by %{by_deadline} to confirm it, and we will hold your place until then.",
+      by_deadline: by_deadline
     )
   end
 

@@ -735,13 +735,13 @@ msgstr "Votación cerrada"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closed %{deadline}"
-msgstr "La votación cerró el %{deadline}"
+msgid "Voting closed %{on_deadline}"
+msgstr "La votación cerró el %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
-msgstr "La votación cierra el %{deadline}"
+msgid "Voting closes %{on_deadline}"
+msgstr "La votación cierra el %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format

@@ -411,8 +411,8 @@ msgstr "Tu cuenta de Stripe no está conectada, así que estos reembolsos deben 
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled %{date}"
-msgstr "Reserva cancelada el %{date}"
+msgid "Cancelled %{on_date}"
+msgstr "Reserva cancelada el %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -421,8 +421,8 @@ msgstr "Vencida"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Expired, paid %{date}"
-msgstr "Vencida, pagada el %{date}"
+msgid "Expired, paid %{on_date}"
+msgstr "Vencida, pagada el %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -431,8 +431,8 @@ msgstr "Las reservas vencidas se pagaron, pero nunca se confirmaron. Por ejemplo
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Declined %{date}"
-msgstr "Rechazada el %{date}"
+msgid "Declined %{on_date}"
+msgstr "Rechazada el %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format

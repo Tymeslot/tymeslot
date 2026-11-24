@@ -781,8 +781,8 @@ msgstr "Ваш обліковий запис видаляється, і його
 
 #: lib/tymeslot_web/controllers/auth/account_restore_html.ex
 #, elixir-autogen, elixir-format
-msgid "Your account is in the process of being deleted (scheduled for %{date}). If you want to keep it, restore it here."
-msgstr "Ваш обліковий запис видаляється (заплановано на %{date}). Якщо ви хочете його зберегти, відновіть його тут."
+msgid "Your account is in the process of being deleted (scheduled for %{for_date}). If you want to keep it, restore it here."
+msgstr "Ваш обліковий запис видаляється (заплановано на %{for_date}). Якщо ви хочете його зберегти, відновіть його тут."
 
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format

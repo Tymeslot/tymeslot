@@ -226,7 +226,7 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Hi %{name} - you've given up your spot in %{meeting} on %{date}."
+msgid "Hi %{name} - you've given up your spot in %{meeting} on %{on_date}."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex

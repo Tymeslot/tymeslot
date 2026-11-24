@@ -38,13 +38,13 @@ msgstr "Conferma del pagamento in corso…"
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "If there's no answer by %{deadline}, the request lapses and you're refunded automatically."
-msgstr "Se non arriva risposta entro %{deadline}, la richiesta decade e il pagamento verrà rimborsato automaticamente."
+msgid "If there's no answer by %{by_deadline}, the request lapses and you're refunded automatically."
+msgstr "Se non arriva risposta entro %{by_deadline}, la richiesta decade e il pagamento verrà rimborsato automaticamente."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "If there's no answer by %{deadline}, the request lapses."
-msgstr "Se non arriva risposta entro %{deadline}, la richiesta decade."
+msgid "If there's no answer by %{by_deadline}, the request lapses."
+msgstr "Se non arriva risposta entro %{by_deadline}, la richiesta decade."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
@@ -83,8 +83,8 @@ msgstr "Torna alla prenotazione"
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "Thank you, your booking is confirmed for %{date}."
-msgstr "Grazie, la tua prenotazione è confermata per il %{date}."
+msgid "Thank you, your booking is confirmed for %{for_date}."
+msgstr "Grazie, la tua prenotazione è confermata per %{for_date}."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
@@ -135,7 +135,7 @@ msgstr[1] "%{name}, %{count} sessioni"
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "Thank you, your %{count} session is confirmed, the first on %{date}."
-msgid_plural "Thank you, your %{count} sessions are confirmed, the first on %{date}."
-msgstr[0] "Grazie, la tua %{count} sessione è confermata, la prima il %{date}."
-msgstr[1] "Grazie, le tue %{count} sessioni sono confermate, la prima il %{date}."
+msgid "Thank you, your %{count} session is confirmed, the first on %{on_date}."
+msgid_plural "Thank you, your %{count} sessions are confirmed, the first on %{on_date}."
+msgstr[0] "Grazie, la tua %{count} sessione è confermata, la prima %{on_date}."
+msgstr[1] "Grazie, le tue %{count} sessioni sono confermate, la prima %{on_date}."

@@ -411,8 +411,8 @@ msgstr "Votre compte Stripe n’est pas connecté ; ces remboursements doivent d
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled %{date}"
-msgstr "Annulée le %{date}"
+msgid "Cancelled %{on_date}"
+msgstr "Annulée le %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -421,8 +421,8 @@ msgstr "Expirée"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Expired, paid %{date}"
-msgstr "Expirée, payée le %{date}"
+msgid "Expired, paid %{on_date}"
+msgstr "Expirée, payée le %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -431,8 +431,8 @@ msgstr "Les réservations expirées ont été payées mais jamais confirmées, p
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Declined %{date}"
-msgstr "Refusée le %{date}"
+msgid "Declined %{on_date}"
+msgstr "Refusée le %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format

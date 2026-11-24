@@ -67,6 +67,27 @@ defmodule TymeslotWeb.Dashboard.Calendar.PeriodLabelsTest do
     end
   end
 
+  # Italian says "from" with the article merged into "da", elided before a day
+  # read with a vowel, and the article opens the title.
+  describe "an agenda's start in Italian" do
+    setup do
+      Gettext.put_locale(TymeslotWeb.Gettext, "it")
+      :ok
+    end
+
+    defp italian(fun, date),
+      do: fun.(:agenda, date, Period.days(:agenda, date, :monday, true), "it")
+
+    test "elides the article before the 8th and capitalises it" do
+      assert italian(&PeriodLabels.short_title/4, ~D[2026-10-08]) == "Dall'8 ott"
+      assert italian(&PeriodLabels.short_title/4, ~D[2026-10-09]) == "Dal 9 ott"
+    end
+
+    test "puts the article before the weekday when the weekday leads" do
+      assert italian(&PeriodLabels.title/4, ~D[2026-10-08]) == "Dal gio 8 ott"
+    end
+  end
+
   test "step_label/2 names what previous and next step by, for every view" do
     labels =
       for view <- Period.views(),

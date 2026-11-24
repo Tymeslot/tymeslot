@@ -356,6 +356,52 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   def format_day_of_month(1, locale), do: Map.get(@first_of_month, locale, "1")
   def format_day_of_month(day, _locale) when day in 2..31, do: Integer.to_string(day)
 
+  # Italian merges the definite article into the preposition before it, and
+  # elides it before a day read with a vowel: {before a consonant, before a vowel}.
+  @italian_articles %{
+    none: {"il ", "l'"},
+    a: {"al ", "all'"},
+    da: {"dal ", "dall'"},
+    di: {"del ", "dell'"},
+    in: {"nel ", "nell'"},
+    su: {"sul ", "sull'"}
+  }
+
+  # Of the days of a month, only 8 (otto) and 11 (undici) are read with a vowel.
+  # "1°" is read "primo" and takes "il".
+  @italian_vowel_day ~r/^(?:8|11)(?!\d)/
+
+  @typedoc """
+  The Italian preposition merged with the article before a date, or `:none`
+  for the bare article: `:da` gives "dal"/"dall'".
+  """
+  @type preposition :: :none | :a | :da | :di | :in | :su
+
+  @doc """
+  Puts the article that a date takes in a sentence before an already formatted
+  date that starts with its day, for the languages where the article depends on
+  how the day is read and so cannot be written into a translation.
+
+  Only Italian needs it. The article is merged with `preposition` and elided
+  before 8 and 11: "dall'8 ottobre", "l'11 marzo", but "dal 9 ottobre" and
+  "il 1° ottobre". Every other language gets `formatted_date` unchanged and
+  writes its own preposition in the translated sentence.
+
+  A placeholder that takes this value is named for its preposition
+  (`%{on_date}`, `%{until_date}`, `%{from_date}`), which tells the Italian
+  translation to write neither the preposition's article nor the article.
+  """
+  @spec with_article(String.t(), preposition(), String.t()) :: String.t()
+  def with_article(formatted_date, preposition, "it") do
+    {before_consonant, before_vowel} = Map.fetch!(@italian_articles, preposition)
+
+    if formatted_date =~ @italian_vowel_day,
+      do: before_vowel <> formatted_date,
+      else: before_consonant <> formatted_date
+  end
+
+  def with_article(formatted_date, _preposition, _locale), do: formatted_date
+
   @doc """
   Formats a date led by its full weekday name, in the locale's order and
   punctuation. The weekday keeps the case the locale gives it, so French and

@@ -226,8 +226,8 @@ msgstr "Hola %{name}: se canceló nuestra cita. Disculpa las molestias."
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Hi %{name} - you've given up your spot in %{meeting} on %{date}."
-msgstr "Hola %{name}: liberaste tu lugar en %{meeting} del %{date}."
+msgid "Hi %{name} - you've given up your spot in %{meeting} on %{on_date}."
+msgstr "Hola %{name}: liberaste tu lugar en %{meeting} del %{on_date}."
 
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex
 #, elixir-autogen, elixir-format
