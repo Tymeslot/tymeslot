@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.E2E.FlashAutoDismissTest do
   use TymeslotWeb.BrowserCase, async: false
 
+  alias Fluffy.Playwright.Clock
   alias Tymeslot.Announcements
   alias Tymeslot.AnnouncementsSingleTestCatalog
   alias Tymeslot.Repo
@@ -29,8 +30,12 @@ defmodule TymeslotWeb.E2E.FlashAutoDismissTest do
 
   test "the sign-in flash dismisses itself and leaves the announcement modal open",
        %{session: session} do
+    # The page's timers run on a fake clock, so the test moves the flash's six
+    # seconds on rather than waiting them out.
     {session, user} =
-      log_in_via_browser(session, %{
+      session
+      |> Clock.install()
+      |> log_in_via_browser(%{
         # Before the test announcement was published, so it is unseen.
         inserted_at: ~N[2025-12-01 00:00:00],
         dashboard_tour_seen_at: DateTime.utc_now(:second)
@@ -41,10 +46,9 @@ defmodule TymeslotWeb.E2E.FlashAutoDismissTest do
     |> assert_has(
       filter(by_css("#announcement-modal-modal"), has_text: "Single test announcement")
     )
-    # Removed once the dismissal has reached the server and come back. The
-    # flash outlives the default wait, and the assertion that it has gone must
-    # be allowed to wait it out.
-    |> assert(count(by_css("#app-flash-group-info"), 0), timeout: 10_000)
+    # Removed once the dismissal has reached the server and come back.
+    |> Clock.run_for(6_000)
+    |> assert(count(by_css("#app-flash-group-info"), 0))
     |> assert_has(
       filter(by_css("#announcement-modal-modal"), has_text: "Single test announcement")
     )

@@ -11,7 +11,9 @@ defmodule TymeslotWeb.E2E.BookerSteps do
   import Fluffy
   import Fluffy.Locator
   import Fluffy.Playwright, only: [all: 2]
-  import TymeslotWeb.E2EHelpers, only: [css_in: 2, evaluate_script: 2, evaluate_script: 3]
+
+  import TymeslotWeb.E2EHelpers,
+    only: [css_in: 2, evaluate_script: 2, evaluate_script: 3, test_id_in: 2]
 
   @doc """
   Walks the overview to the schedule. Choosing a meeting type is the way on
@@ -48,7 +50,7 @@ defmodule TymeslotWeb.E2E.BookerSteps do
     if all(session, filter(by_css(".journey--continuous"), visible: true)) !=
          [],
        do: session,
-       else: assert_has(session, by_css("[data-testid='back-step']"))
+       else: assert_has(session, by_test_id("back-step"))
   end
 
   @doc """
@@ -72,11 +74,11 @@ defmodule TymeslotWeb.E2E.BookerSteps do
   @spec submit_booking_form(Fluffy.Session.t()) :: Fluffy.Session.t()
   def submit_booking_form(session) do
     session
-    |> assert_has(by_css("[data-testid='booking-form']"))
+    |> assert_has(by_test_id("booking-form"))
     |> fill(by_css("input[name='booking[name]']"), "Jane Doe")
     |> fill(by_css("input[name='booking[email]']"), "jane@example.com")
-    |> click(by_css("[data-testid='submit-booking']"))
-    |> assert_has(by_css("[data-testid='confirmation-heading']"))
+    |> click(by_test_id("submit-booking"))
+    |> assert_has(by_test_id("confirmation-heading"))
   end
 
   @doc """
@@ -143,7 +145,7 @@ defmodule TymeslotWeb.E2E.BookerSteps do
   @spec click_next_step(Fluffy.Session.t(), Fluffy.FrameLocator.t() | nil) :: Fluffy.Session.t()
   def click_next_step(session, frame \\ nil) do
     evaluate_script(session, "document.documentElement.style.scrollBehavior = 'auto';", frame)
-    click(session, css_in(frame, "[data-testid='next-step']"))
+    click(session, test_id_in(frame, "next-step"))
   end
 
   @doc """

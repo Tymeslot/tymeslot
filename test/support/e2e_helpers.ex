@@ -20,7 +20,7 @@ defmodule TymeslotWeb.E2EHelpers do
   # themes are already guarded at in `EmbedSizesMatrixTest`. Keeping a single
   # floor across the suite means "fits on a phone" means the same thing
   # everywhere. The height matches the mobile viewport in `DashboardTourTest`.
-  @mobile_viewport {320, 844}
+  @mobile_viewport %{width: 320, height: 844}
 
   # Sub-pixel rounding can report scrollWidth one px over innerWidth even when
   # the page genuinely fits.
@@ -116,17 +116,22 @@ defmodule TymeslotWeb.E2EHelpers do
   end
 
   @doc """
-  Resizes the browser to the narrowest viewport the design system targets.
+  The narrowest viewport the design system targets, for a test that runs at it
+  throughout: `@tag Playwright.Test.use(viewport: E2EHelpers.mobile_viewport())`.
+  """
+  @spec mobile_viewport() :: %{width: pos_integer(), height: pos_integer()}
+  def mobile_viewport, do: @mobile_viewport
+
+  @doc """
+  Resizes the browser to `mobile_viewport/0`, for a test that switches to it
+  part way through.
 
   Resize *before* navigating rather than after. Measuring a page that was laid
   out wide and then squeezed races any width transition still in flight; a
   fresh load at the target width does not.
   """
   @spec resize_to_mobile(Fluffy.Session.t()) :: Fluffy.Session.t()
-  def resize_to_mobile(session) do
-    {width, height} = @mobile_viewport
-    set_viewport_size(session, %{width: width, height: height})
-  end
+  def resize_to_mobile(session), do: set_viewport_size(session, @mobile_viewport)
 
   @doc """
   Asserts no element extends past the right edge of the viewport.
@@ -179,6 +184,14 @@ defmodule TymeslotWeb.E2EHelpers do
   @spec css_in(Fluffy.FrameLocator.t() | nil, String.t()) :: Fluffy.Locator.t()
   def css_in(nil, selector), do: by_css(selector)
   def css_in(frame, selector), do: by_css(frame, selector)
+
+  @doc """
+  The element with `data-testid` `test_id`, in the page or inside `frame`, as
+  `css_in/2`.
+  """
+  @spec test_id_in(Fluffy.FrameLocator.t() | nil, String.t()) :: Fluffy.Locator.t()
+  def test_id_in(nil, test_id), do: by_test_id(test_id)
+  def test_id_in(frame, test_id), do: by_test_id(frame, test_id)
 
   @doc """
   Runs `script`, a function body, in the page and returns the value its

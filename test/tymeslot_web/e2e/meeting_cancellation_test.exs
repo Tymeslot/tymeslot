@@ -20,8 +20,8 @@ defmodule TymeslotWeb.E2E.MeetingCancellationTest do
     session =
       session
       |> visit("/#{profile.username}/meeting/#{meeting.uid}/cancel")
-      |> assert_has(by_css("[data-testid='cancel-meeting']"))
-      |> click(by_css("[data-testid='cancel-meeting']"))
+      |> assert_has(by_test_id("cancel-meeting"))
+      |> click(by_test_id("cancel-meeting"))
 
     # Should show cancellation confirmed page
     assert_has(session, filter(by_css("h1"), has_text: "Meeting Cancelled"))

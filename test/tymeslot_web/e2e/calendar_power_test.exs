@@ -16,6 +16,7 @@ defmodule TymeslotWeb.E2E.CalendarPowerTest do
   use TymeslotWeb.BrowserCase, async: false
 
   @moduletag :e2e
+  @moduletag Playwright.Test.use(viewport: %{width: 1280, height: 800})
   @moduletag :calendar
 
   alias Fluffy.Playwright.Keyboard
@@ -93,7 +94,6 @@ defmodule TymeslotWeb.E2E.CalendarPowerTest do
 
   defp open_calendar(session, query) do
     session
-    |> set_viewport_size(%{width: 1280, height: 800})
     |> visit("/dashboard/calendar#{query}")
     |> assert_has(by_css("#calendar-canvas[aria-busy='false']"))
   end

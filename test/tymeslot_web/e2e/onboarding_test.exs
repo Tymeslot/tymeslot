@@ -53,19 +53,22 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
     :ok
   end
 
+  # Every page of the walk is laid out at the test's viewport from the start.
+  @tag Playwright.Test.use(viewport: %{width: 1440, height: 1050})
   test "a new host walks the wizard to the dashboard at desktop width", %{session: session} do
-    walk_the_wizard(session, {1440, 1050})
+    walk_the_wizard(session)
   end
 
+  @tag Playwright.Test.use(viewport: %{width: 375, height: 812})
   test "a new host walks the wizard to the dashboard at phone width", %{session: session} do
-    walk_the_wizard(session, {375, 812})
+    walk_the_wizard(session)
   end
 
-  defp walk_the_wizard(session, size) do
+  defp walk_the_wizard(session) do
     user = new_host()
 
     session
-    |> log_in(user, size)
+    |> log_in(user)
     |> link_step()
     |> calendar_step(user)
     |> meeting_step()
@@ -96,10 +99,8 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
     user
   end
 
-  # Resized before the first page, so every page is laid out at this width.
-  defp log_in(session, user, {width, height}) do
+  defp log_in(session, user) do
     session
-    |> set_viewport_size(%{width: width, height: height})
     |> visit("/auth/login")
     |> fill(by_label("Email Address"), user.email)
     |> fill(by_css("#password-input"), default_password())

@@ -26,12 +26,12 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
 
   @free_slot "[data-testid='week-slot']:not([disabled])"
 
+  @tag Playwright.Test.use(viewport: %{width: 390, height: 844})
   test "a visitor books through Paper's week view on a phone", %{session: session} do
     profile = create_paper_week_profile()
 
     session =
       session
-      |> set_viewport_size(%{width: 390, height: 844})
       |> visit("/#{profile.username}")
       |> advance_to_schedule(nil)
       |> assert_has(by_css(@free_slot) |> filter(visible: true) |> first())
@@ -47,6 +47,7 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
     assert_booked_at("paper-phone@example.com", date, time)
   end
 
+  @tag Playwright.Test.use(viewport: %{width: 1280, height: 900})
   test "a visitor books through Paper's week view framed in an inline embed",
        %{session: session} do
     profile = create_paper_week_profile()
@@ -62,7 +63,6 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
 
     session =
       session
-      |> set_viewport_size(%{width: 1280, height: 900})
       |> visit("/#{profile.username}")
       |> frame(path, "1000px")
       |> assert_has(by_css(embed_frame(), "html[data-embedded][data-embed-layout='column']"))
@@ -122,7 +122,7 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
 
   defp advance_to_schedule(session, frame) do
     session
-    |> click(css_in(frame, "[data-testid='duration-option']") |> filter(visible: true) |> first())
+    |> click(test_id_in(frame, "duration-option") |> filter(visible: true) |> first())
     |> assert_has(css_in(frame, "[data-testid='paper-schedule'][data-calendar-view='week']"))
     |> assert_has(css_in(frame, "[data-testid='paper-week'] [data-testid='week-grid']"))
   end
@@ -149,29 +149,17 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
       )
       |> assert_has(css_in(frame, "[data-testid='paper-book'] [data-testid='booking-form']"))
 
-    refute_has(session, css_in(frame, "[data-testid='next-step']"))
+    refute_has(session, test_id_in(frame, "next-step"))
 
     after_pick.(session)
 
     # The details open with the focus on their heading, so Change time is what
     # has to move it back to the chosen time.
-    assert script_value(
-             session,
-             frame,
-             "return document.activeElement !== null && document.activeElement.id === \"paper-book-heading\"",
-             []
-           ),
-           "The details did not take the focus on opening"
-
-    session = click(session, css_in(frame, "[data-testid='paper-change-time']"))
-
-    assert script_value(
-             session,
-             frame,
-             "return document.activeElement !== null && document.activeElement.matches(\"[data-fact='slot'][aria-pressed='true']\")",
-             []
-           ),
-           "Change time left the focus off the chosen time"
+    session =
+      session
+      |> assert(focused(css_in(frame, "#paper-book-heading")))
+      |> click(test_id_in(frame, "paper-change-time"))
+      |> assert(focused(css_in(frame, "[data-fact='slot'][aria-pressed='true']")))
 
     # Enter in the email field submits: the field sends its value only on
     # blur, and implicit submission must not wait for the server to see it.
@@ -181,7 +169,7 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
       |> fill(css_in(frame, "input[name='booking[email]']"), email)
       |> press(css_in(frame, "input[name='booking[email]']"), "Enter")
 
-    assert_has(session, css_in(frame, "[data-testid='paper-confirmation']"))
+    assert_has(session, test_id_in(frame, "paper-confirmation"))
     picked
   end
 

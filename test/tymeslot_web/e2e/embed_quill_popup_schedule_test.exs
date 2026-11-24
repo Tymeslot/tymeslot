@@ -25,17 +25,17 @@ defmodule TymeslotWeb.E2E.EmbedQuillPopupScheduleTest do
 
   @quill_theme_id "1"
 
+  @tag Playwright.Test.use(viewport: %{width: 640, height: 600})
   test "embedded quill keeps next step in the frame and scrolls only the frame",
        %{session: session} do
     profile = create_user_with_meeting_type()
 
     session =
       session
-      |> set_viewport_size(%{width: 640, height: 600})
       |> visit("/#{profile.username}?theme=#{@quill_theme_id}")
       |> advance_to_schedule()
       |> mark_embedded()
-      |> assert_has(by_css("[data-testid='time-slot']") |> filter(visible: true) |> first())
+      |> assert_has(by_test_id("time-slot") |> filter(visible: true) |> first())
       # Brought into sight as a visitor would. The browser's own scroll stops
       # with a time at the bottom edge, ignoring scroll-padding, where the
       # pinned actions take its click. Instant, since smooth scrolling would
@@ -49,10 +49,11 @@ defmodule TymeslotWeb.E2E.EmbedQuillPopupScheduleTest do
       |> pick_first("[data-testid='time-slot']")
       |> assert_has(by_css("[data-testid='next-step']:not([disabled])"))
       |> tap(&evaluate_script(&1, "window.scrollTo(0, 0);"))
+      # Next stays pinned inside the frame at the top of the page.
+      |> assert(in_viewport(by_test_id("next-step"), ratio: 1))
 
     layout =
       evaluate_script(session, """
-      const next = document.querySelector("[data-testid='next-step']").getBoundingClientRect();
       const card = document.querySelector('.calendar-card');
       const scrollers = [card, ...card.querySelectorAll('*')]
         .filter((el) => ['auto', 'scroll'].includes(getComputedStyle(el).overflowY))
@@ -60,16 +61,12 @@ defmodule TymeslotWeb.E2E.EmbedQuillPopupScheduleTest do
       return {
         page: document.documentElement.scrollHeight,
         frame: window.innerHeight,
-        next_top: next.top,
-        next_bottom: next.bottom,
         scrollers: scrollers
       };
       """)
 
     # The page must outgrow the frame, or Next would be in view regardless.
     assert layout["page"] > layout["frame"]
-    assert layout["next_top"] >= 0
-    assert layout["next_bottom"] <= layout["frame"]
     assert layout["scrollers"] == []
   end
 

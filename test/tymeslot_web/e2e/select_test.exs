@@ -75,11 +75,7 @@ defmodule TymeslotWeb.E2E.SelectTest do
       session
       |> click(by_css("#embed-layout-trigger"))
       |> assert_closed("embed-layout")
-
-      assert [false] =
-               evaluate_script(session, """
-               return [document.getElementById("embed-layout-panel").matches(":popover-open")];
-               """)
+      |> refute_has(by_css("#embed-layout-panel:popover-open"))
     end
 
     test "a button out of view leaves Escape to the page", %{session: session} do
@@ -153,15 +149,15 @@ defmodule TymeslotWeb.E2E.SelectTest do
 
       session
       |> click(by_css("[data-intent='continue']"))
-      |> assert_has(by_css("[data-testid='booking-form']"))
+      |> assert_has(by_test_id("booking-form"))
     end
 
+    @tag Playwright.Test.use(viewport: %{width: 360, height: 640})
     test "the list stays inside a phone-width embed", %{session: session} do
       {profile, slug} = organiser_with_long_question()
 
       session =
         session
-        |> set_viewport_size(%{width: 360, height: 640})
         |> visit("/#{profile.username}/#{slug}?theme=2")
         |> pick_first_slot()
         |> mark_embedded()

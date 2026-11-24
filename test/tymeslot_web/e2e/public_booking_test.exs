@@ -40,26 +40,26 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
     # Select a time slot (pick the first available).
     # Multiple slots may be visible — wait for at least one then click the first.
     session =
-      assert_has(session, by_css("[data-testid='time-slot']") |> filter(visible: true) |> first())
+      assert_has(session, by_test_id("time-slot") |> filter(visible: true) |> first())
 
     session =
-      click(session, by_css("[data-testid='time-slot']") |> filter(visible: true) |> first())
+      click(session, by_test_id("time-slot") |> filter(visible: true) |> first())
 
     # Click next to go to booking form
-    session = click(session, by_css("[data-testid='next-step']"))
+    session = click(session, by_test_id("next-step"))
 
     # Fill in the booking form and submit straight from the email field. The
     # fields reach the server only on blur, so a click while the email field
     # still has focus must land on an enabled button and book first time.
     session =
       session
-      |> assert_has(by_css("[data-testid='booking-form']"))
+      |> assert_has(by_test_id("booking-form"))
       |> fill(by_css("input[name='booking[name]']"), "Jane Doe")
       |> fill(by_css("input[name='booking[email]']"), "jane@example.com")
 
-    session = click(session, by_css("[data-testid='submit-booking']"))
+    session = click(session, by_test_id("submit-booking"))
 
     # Should see confirmation
-    assert_has(session, by_css("[data-testid='confirmation-heading']"))
+    assert_has(session, by_test_id("confirmation-heading"))
   end
 end

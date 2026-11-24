@@ -13,10 +13,9 @@ defmodule TymeslotWeb.E2E.DashboardTourTest do
   # time they open the dashboard on a large enough screen. These two scenarios
   # exercise that branching end-to-end in a real browser.
 
+  @tag Playwright.Test.use(viewport: %{width: 1280, height: 800})
   test "desktop viewport: tour appears, Next advances the step, Skip dismisses",
        %{session: session} do
-    session = set_viewport_size(session, %{width: 1280, height: 800})
-
     {session, user} =
       log_in_via_browser(session, %{dashboard_tour_seen_at: nil})
 
@@ -31,10 +30,9 @@ defmodule TymeslotWeb.E2E.DashboardTourTest do
     assert %DateTime{} = Repo.reload!(user).dashboard_tour_seen_at
   end
 
+  @tag Playwright.Test.use(viewport: %{width: 390, height: 844})
   test "mobile viewport: hook reports too small, overlay is dismissed without marking seen",
        %{session: session} do
-    session = set_viewport_size(session, %{width: 390, height: 844})
-
     {session, user} =
       log_in_via_browser(session, %{dashboard_tour_seen_at: nil})
 

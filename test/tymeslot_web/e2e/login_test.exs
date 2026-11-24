@@ -39,9 +39,9 @@ defmodule TymeslotWeb.E2E.LoginTest do
     |> assert(page_url(&(&1.path == "/auth/login")))
   end
 
+  @tag Playwright.Test.use(viewport: TymeslotWeb.E2EHelpers.mobile_viewport())
   test "login page fits the narrowest supported viewport", %{session: session} do
     session
-    |> resize_to_mobile()
     |> visit("/auth/login")
     |> assert_has(by_css("#password-input"))
     |> assert_no_horizontal_overflow("login page at 320px")

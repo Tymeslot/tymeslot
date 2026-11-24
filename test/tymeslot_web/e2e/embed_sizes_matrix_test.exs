@@ -90,8 +90,8 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> pick_first("[data-testid='duration-option'][data-duration='#{slug}']")
         |> assert_has(by_css("[data-testid='next-step']:not([disabled])"))
         |> click_next_step()
-        |> assert_has(by_css("[data-testid='length-step']"))
-        |> assert(count(filter(by_css("[data-testid='length-option']"), visible: true), 3))
+        |> assert_has(by_test_id("length-step"))
+        |> assert(count(filter(by_test_id("length-option"), visible: true), 3))
         |> assert_no_horizontal_overflow("#{theme.name} length width=#{width}px")
     end
   end
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
-        |> assert_has(by_css("[data-testid='length-step']"))
+        |> assert_has(by_test_id("length-step"))
         |> assert_no_horizontal_overflow(context)
         |> assert_cta_reachable(context)
     end
@@ -150,7 +150,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
-        |> assert_has(by_css("[data-testid='schedule-actions']"))
+        |> assert_has(by_test_id("schedule-actions"))
         |> assert_no_horizontal_overflow(context)
         |> assert_no_actions_calendar_overlap(context)
         |> assert_cta_reachable(context)
@@ -191,7 +191,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         )
         |> assert_reachable("[data-fact='slot'], [data-fact='time']", "first time at #{context}")
         |> pick_first_free_slot()
-        |> assert_has(by_css("[data-testid='submit-booking']"))
+        |> assert_has(by_test_id("submit-booking"))
         |> assert_reachable("[data-testid='submit-booking']", "submit at #{context}")
         |> assert_no_horizontal_overflow("details at #{context}")
     end
@@ -214,7 +214,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
-        |> assert_has(by_css("[data-testid='schedule-actions']"))
+        |> assert_has(by_test_id("schedule-actions"))
         |> assert_actions_within_viewport(context)
         |> assert_no_vertical_page_scroll(context)
     end
@@ -240,7 +240,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> mark_embedded()
         |> advance_to_schedule()
         |> pick_first_visible_day()
-        |> assert_has(by_css("[data-testid='time-slot']") |> filter(visible: true) |> first())
+        |> assert_has(by_test_id("time-slot") |> filter(visible: true) |> first())
         |> assert_no_inner_scroll_region(context)
     end
   end
@@ -259,8 +259,8 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         acc
         |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
-        |> assert_has(by_css("[data-testid='session-list']"))
-        |> assert_has(by_css("[data-testid='schedule-actions']"))
+        |> assert_has(by_test_id("session-list"))
+        |> assert_has(by_test_id("schedule-actions"))
         |> assert_no_horizontal_overflow(context)
         |> assert_calendar_scrolls_with_session_list(context)
         |> assert_cta_reachable(context)
@@ -326,7 +326,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     |> set_viewport_size(%{width: 640, height: @height})
     |> visit("/#{profile.username}/#{slug}")
     |> pick_first_slot()
-    |> assert_has(by_css("[data-testid='booking-form']"))
+    |> assert_has(by_test_id("booking-form"))
     |> set_viewport_size(%{width: 320, height: @height})
     |> assert_no_horizontal_overflow("booking form width=320px")
     |> assert_name_email_stacked("booking form width=320px")

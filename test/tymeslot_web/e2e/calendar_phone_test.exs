@@ -130,6 +130,7 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     session
   end
 
+  @tag Playwright.Test.use(viewport: %{width: 390, height: 844})
   test "on a phone, + adds an event that opens as a sheet and shows in month and agenda", %{
     session: session
   } do
@@ -144,7 +145,6 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     {session, _integration} = organiser(session)
 
     session
-    |> set_viewport_size(%{width: 390, height: 844})
     |> visit("/dashboard/calendar?view=day&date=#{iso}")
     |> assert_has(by_css("#calendar-canvas[aria-busy='false']"))
     # The phone chrome, not the desktop toolbar.
@@ -194,6 +194,7 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     |> assert_no_horizontal_overflow("calendar, Agenda view at 390px")
   end
 
+  @tag Playwright.Test.use(viewport: TymeslotWeb.E2EHelpers.mobile_viewport())
   test "the phone calendar fits the narrowest supported viewport in every tab", %{
     session: session
   } do
@@ -201,7 +202,6 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
 
     session =
       session
-      |> resize_to_mobile()
       |> visit("/dashboard/calendar")
       |> assert_has(by_css("#calendar-canvas[aria-busy='false']"))
       # The stored default is a week, which a phone shows as 3 days.
@@ -229,6 +229,7 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     end
   end
 
+  @tag Playwright.Test.use(viewport: %{width: 390, height: 844})
   test "the agenda loads further weeks as it is scrolled, and the Calendars sheet is a bottom sheet",
        %{session: session} do
     {session, integration} = organiser(session)
@@ -247,7 +248,6 @@ defmodule TymeslotWeb.E2E.CalendarPhoneTest do
     )
 
     session
-    |> set_viewport_size(%{width: 390, height: 844})
     |> visit("/dashboard/calendar?view=agenda")
     |> assert_has(by_css("#calendar-canvas[aria-busy='false']"))
     |> assert_has(by_css("#calendar-canvas .cal-agenda"))

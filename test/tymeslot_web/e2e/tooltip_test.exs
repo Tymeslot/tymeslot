@@ -37,18 +37,9 @@ defmodule TymeslotWeb.E2E.TooltipTest do
   # The bubble was placed by the script, inside the viewport and not at the
   # popover's default centre of the screen.
   defp assert_placed_on_screen(session) do
-    rect =
-      evaluate_script(session, """
-      const b = document.querySelector("#{@tip}").getBoundingClientRect();
-      return {top: b.top, left: b.left, right: b.right, vw: innerWidth,
-              style: document.querySelector("#{@tip}").style.top};
-      """)
-
-    assert rect["style"] != ""
-    assert rect["top"] >= 0
-    assert rect["left"] >= 0
-    assert rect["right"] <= rect["vw"]
     session
+    |> assert(attribute(by_css(@tip), "style", ~r/\btop:/))
+    |> assert(in_viewport(by_css(@tip), ratio: 1))
   end
 
   # Presses Tab until the focused control is the one describing `tip_id`.

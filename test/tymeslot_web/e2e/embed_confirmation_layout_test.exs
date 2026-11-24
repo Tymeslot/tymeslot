@@ -34,7 +34,7 @@ defmodule TymeslotWeb.E2E.EmbedConfirmationLayoutTest do
       |> visit("/#{profile.username}/#{slug}?theme=2")
       |> pick_first_slot()
       |> submit_booking_form()
-      |> assert_has(by_css("[data-testid='location-arranged-note']"))
+      |> assert_has(by_test_id("location-arranged-note"))
       |> mark_embedded()
 
     for width <- [640, 800, 1000], reduce: session do

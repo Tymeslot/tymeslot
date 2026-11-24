@@ -46,9 +46,9 @@ defmodule TymeslotWeb.E2E.SignupTest do
     |> assert_has(by_css("#dashboard-root"))
   end
 
+  @tag Playwright.Test.use(viewport: TymeslotWeb.E2EHelpers.mobile_viewport())
   test "signup page fits the narrowest supported viewport", %{session: session} do
     session
-    |> resize_to_mobile()
     |> visit("/auth/signup")
     |> assert_has(by_css("input[name='user[email]']"))
     |> assert_no_horizontal_overflow("signup page at 320px")

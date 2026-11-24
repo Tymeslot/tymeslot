@@ -166,32 +166,20 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
       {session, user} = log_in_via_browser(session)
       meeting_type = insert(:meeting_type, user: user)
 
-      session =
-        session
-        |> visit("/dashboard/meeting-settings")
-        |> click(by_css("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']"))
-        |> click(filter(by_css("[role='tab']"), has_text: "Questions"))
-        |> click(filter(by_css("button"), has_text: "Add question"))
-        |> assert_has(by_css("#definition_type-trigger"))
-        |> choose_type("Date")
-        |> assert_has(by_css("#definition_max-field[data-picker-kind='date']"))
-        |> choose_type("Time")
-        |> assert_has(by_css("#definition_max-field[data-picker-kind='time']"))
-        |> click(by_css("#definition_max-trigger"))
-        |> assert_open("definition_max")
-        |> click(
-          filter(by_css("#definition_max-time-panel [role='option']"), has_text: "3:45 PM")
-        )
-
-      eventually(
-        fn ->
-          assert ["15:45"] =
-                   evaluate_script(session, """
-                   return [document.querySelector("#definition_max-field [data-picker-value]").value];
-                   """)
-        end,
-        timeout: 3000
-      )
+      session
+      |> visit("/dashboard/meeting-settings")
+      |> click(by_css("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']"))
+      |> click(filter(by_css("[role='tab']"), has_text: "Questions"))
+      |> click(filter(by_css("button"), has_text: "Add question"))
+      |> assert_has(by_css("#definition_type-trigger"))
+      |> choose_type("Date")
+      |> assert_has(by_css("#definition_max-field[data-picker-kind='date']"))
+      |> choose_type("Time")
+      |> assert_has(by_css("#definition_max-field[data-picker-kind='time']"))
+      |> click(by_css("#definition_max-trigger"))
+      |> assert_open("definition_max")
+      |> click(filter(by_css("#definition_max-time-panel [role='option']"), has_text: "3:45 PM"))
+      |> assert(value(by_css("#definition_max-field [data-picker-value]"), "15:45"))
     end
   end
 
@@ -211,24 +199,9 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
         |> assert_open("cq-input-#{@question}")
         |> click(by_css("#cq-input-#{@question}-date-panel [data-date='#{tomorrow}']"))
         |> assert_closed("cq-input-#{@question}")
-
-      assert [^tomorrow] =
-               evaluate_script(session, """
-               return [document.querySelector("#cq-input-#{@question}-field [data-picker-value]").value];
-               """)
-
-      # A validation re-render on the way must not cost the visible value.
-      eventually(
-        fn ->
-          assert [text] =
-                   evaluate_script(session, """
-                   return [document.getElementById("cq-input-#{@question}").value];
-                   """)
-
-          assert text != ""
-        end,
-        timeout: 3000
-      )
+        |> assert(value(by_css("#cq-input-#{@question}-field [data-picker-value]"), tomorrow))
+        # A validation re-render on the way must not cost the visible value.
+        |> refute(value(by_css("#cq-input-#{@question}"), ""))
 
       session
       |> click(by_css("[data-intent='continue']"))
@@ -247,7 +220,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
       |> assert_has(by_css("#cq-input-#{@question}"))
       |> fill(by_css("#cq-input-#{@question}"), Date.to_iso8601(date))
       |> Keyboard.press("Enter")
-      |> assert_has(by_css("[data-testid='booking-form']"))
+      |> assert_has(by_test_id("booking-form"))
     end
 
     test "the panel stays inside a phone-width embed iframe", %{session: session} do
