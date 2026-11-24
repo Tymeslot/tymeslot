@@ -225,14 +225,18 @@ defmodule Tymeslot.Release do
 
   @doc """
   Corrects the refund figures of booking payments whose dispute was lost
-  before 1.48.0, from what Stripe records. Until it runs, such a payment
+  before the refunds made had a column of their own, from what Stripe
+  records. Until it runs, a payment whose dispute was lost before 1.48.0
   counts the loss as refunds made at Stripe, and one refunded before the
   loss holds too small a refunded total, so the host may refund more than
-  is left. For each payment with a lost dispute it records the dispute's
-  share (`disputed_lost_cents`) and sets the refunded total and status to
-  what Stripe's refunds plus the loss give (never lower than before); it
-  changes nothing else on the row. Run it once on a deployment that took
-  payments before 1.48.0; a dry run first shows what it would change:
+  is left; one refunded and then lost over the same money since shows the
+  refunds as fewer than were made, down to none. For each payment with a
+  lost dispute it sets the refunds made (`stripe_refunded_cents`) from the
+  charge, records the dispute's share (`disputed_lost_cents`), and sets the
+  refunded total and status to what the two give (never lower than
+  before); it changes nothing else on the row. Run it once on a deployment
+  that took payments before the refunds had their column; a dry run first
+  shows what it would change:
 
       bin/tymeslot eval 'Tymeslot.Release.backfill_dispute_losses()'                  # dry run
       bin/tymeslot eval 'Tymeslot.Release.backfill_dispute_losses(dry_run: false)'    # write
@@ -245,15 +249,18 @@ defmodule Tymeslot.Release do
   (`Tymeslot.MeetingPayments.DisputeLossBackfill`) can be counted first:
 
       SELECT count(*) FROM booking_payments
-      WHERE stripe_charge_id IS NOT NULL AND disputed_lost_cents = 0
-        AND refunded_amount_cents > 0
-        AND status IN ('refunded', 'partially_refunded');
+      WHERE stripe_charge_id IS NOT NULL
+        AND ((disputed_lost_cents = 0 AND refunded_amount_cents > 0
+              AND status IN ('refunded', 'partially_refunded'))
+          OR (disputed_lost_cents > 0
+              AND stripe_refunded_cents + disputed_lost_cents = amount_cents));
 
   It prints a line per payment corrected (or, in a dry run, to be
-  corrected) with the payment id, charge id, lost cents and the refunded
-  total before and after, a line per failed Stripe call, and a summary.
-  Running it again is safe: a payment with a loss recorded is never read
-  or written again. `eval` exits 0 whatever this returns, so the verdict is
+  corrected) with the payment id, charge id, lost cents, and the refunds
+  made and the refunded total before and after, a line per failed Stripe
+  call, and a summary. Running it again is safe: it writes nothing to a
+  payment whose figures already match Stripe's, though it reads again
+  those whose refunds and loss add up to exactly the amount paid. `eval` exits 0 whatever this returns, so the verdict is
   the last line printed, which starts `DRY RUN:` or `DONE:`, or `FAILED:`
   when no Stripe secret key is configured and nothing was read.
   """
@@ -284,7 +291,8 @@ defmodule Tymeslot.Release do
   defp print_dispute_loss({written, payment, correction}) do
     IO.puts(
       "#{dispute_loss_label(written)} #{payment.id} #{payment.stripe_charge_id} " <>
-        "lost #{correction.disputed_lost_cents}, refunded " <>
+        "lost #{correction.disputed_lost_cents}, refunds made " <>
+        "#{payment.stripe_refunded_cents} -> #{correction.stripe_refunded_cents}, refunded " <>
         "#{payment.refunded_amount_cents} -> #{correction.refunded_amount_cents}"
     )
   end
@@ -298,7 +306,7 @@ defmodule Tymeslot.Release do
 
   defp dispute_loss_summary(summary, dry_run?) do
     counts =
-      "#{summary.candidates} candidates, #{summary.lost} with a lost dispute, " <>
+      "#{summary.candidates} candidates, #{summary.lost} with a lost dispute to correct, " <>
         "#{summary.clamped} clamped to the amount paid, #{length(summary.errors)} errors"
 
     if dry_run? do

@@ -9,11 +9,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
   a redelivery may get past answers `:retry_later`, one Stripe refuses for
   good is logged and the reconcile skipped.
 
-  Then sets `booking_payment.refunded_amount_cents` and `status` from the
-  cumulative `amount_refunded` Stripe reports on the charge, which counts
-  refunds only: what a lost dispute took is added to it (`RefundedTotal`).
-  The total is never lowered here, so a late or replayed event cannot undo
-  a refund recorded since; only `refund.updated` takes a failed refund off.
+  Then records the cumulative `amount_refunded` Stripe reports on the
+  charge as the payment's refunds made (`stripe_refunded_cents`), and sets
+  `refunded_amount_cents` and `status` from them: the charge counts
+  refunds only, so what a lost dispute took is added (`RefundedTotal`).
+  The refunds are never lowered here, so a late or replayed event cannot
+  undo a refund recorded since; only `refund.updated` takes a failed
+  refund off.
   Nor may a late event put one back: listed refunds give the charge's
   current total, and an event's embedded refunds have those Stripe has
   since reported ended taken off the event's total
@@ -133,13 +135,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
   defp update_payment(payment, event_id, amount_refunded) do
     result =
       LockedPayment.run(payment, event_id, fn locked ->
-        new_total = RefundedTotal.with_stripe_refunded(locked, amount_refunded)
+        figures = RefundedTotal.with_stripe_refunded(locked, amount_refunded)
 
-        case BookingPaymentQueries.update(locked, %{
-               refunded_amount_cents: new_total,
-               status: RefundedTotal.status_for(locked, new_total),
-               last_event_id: event_id
-             }) do
+        case BookingPaymentQueries.update(locked, Map.put(figures, :last_event_id, event_id)) do
           {:ok, updated} -> {:ok, {locked.status, updated.status}}
           {:error, _changeset} = error -> error
         end

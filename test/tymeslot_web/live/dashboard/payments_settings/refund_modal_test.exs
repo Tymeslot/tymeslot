@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModalTest do
         meeting_type_name: "Consult",
         amount_cents: 5000,
         refunded_amount_cents: 1500,
+        stripe_refunded_cents: 1500,
         currency: "eur",
         pending_refund_cents: 0
       }
@@ -87,10 +88,31 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModalTest do
     end
 
     test "the refund dialog separates a lost dispute from refunds" do
-      html = render_modal(payment(refunded_amount_cents: 10_000, disputed_lost_cents: 6_000))
+      html =
+        render_modal(
+          payment(
+            refunded_amount_cents: 10_000,
+            stripe_refunded_cents: 4_000,
+            disputed_lost_cents: 6_000
+          )
+        )
 
       assert html =~ "Already refunded: €40.00, plus €60.00 lost in a dispute"
       refute html =~ ~r/Already refunded:\s*<strong>/
+      assert html =~ ~r/Remaining refundable:\s*<strong>€0.00<\/strong>/
+    end
+
+    test "the refund dialog shows refunds a lost dispute over the same money repaid again" do
+      html =
+        render_modal(
+          payment(
+            refunded_amount_cents: 10_000,
+            stripe_refunded_cents: 10_000,
+            disputed_lost_cents: 10_000
+          )
+        )
+
+      assert html =~ "Already refunded: €100.00, plus €100.00 lost in a dispute"
       assert html =~ ~r/Remaining refundable:\s*<strong>€0.00<\/strong>/
     end
 
@@ -101,14 +123,21 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModalTest do
     end
 
     test "the refund dialog wording is unchanged without a dispute" do
-      html = render_modal(payment(refunded_amount_cents: 4_000, disputed_lost_cents: 0))
+      html = render_modal(payment(refunded_amount_cents: 4_000, stripe_refunded_cents: 4_000))
 
       assert html =~ ~r/Already refunded:\s*<strong>€40.00<\/strong>/
       refute html =~ "dispute"
     end
 
     test "pending refunds are not shown as refunded" do
-      html = render_modal(payment(refunded_amount_cents: 2_000, pending_refund_cents: 3_000))
+      html =
+        render_modal(
+          payment(
+            refunded_amount_cents: 2_000,
+            stripe_refunded_cents: 2_000,
+            pending_refund_cents: 3_000
+          )
+        )
 
       assert html =~ ~r/Already refunded:\s*<strong>€20.00<\/strong>/
       assert html =~ "€30.00 being processed"

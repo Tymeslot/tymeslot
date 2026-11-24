@@ -105,7 +105,51 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
     reloaded = reload(payment)
     assert reloaded.refunded_amount_cents == 9_000
     assert reloaded.disputed_lost_cents == 3_000
+    assert reloaded.stripe_refunded_cents == 6_000
     assert reloaded.status == :partially_refunded
+  end
+
+  test "refunds a recorded loss hid under the amount paid are read from the charge" do
+    # Refunded in full, then lost in a dispute over the same money, and
+    # recorded before the refunds had a column of their own: filled as the
+    # whole less the loss, which the cap left at nothing.
+    payment =
+      refunded_payment(
+        stripe_charge_id: "ch_hidden",
+        stripe_refunded_cents: 0,
+        disputed_lost_cents: 10_000
+      )
+
+    StripeStub.expect(:list_disputes, disputes("ch_hidden", [{"lost", 10_000}]))
+    StripeStub.expect(:retrieve_charge, charge("ch_hidden", 10_000))
+
+    assert %{candidates: 1, lost: 1, updated: 1, clamped: 0, errors: []} = run!(dry_run: false)
+
+    reloaded = reload(payment)
+    assert reloaded.stripe_refunded_cents == 10_000
+    assert reloaded.disputed_lost_cents == 10_000
+    assert reloaded.refunded_amount_cents == 10_000
+    assert reloaded.status == :refunded
+  end
+
+  test "a recorded loss whose refunds Stripe confirms is left as it is" do
+    payment =
+      refunded_payment(
+        stripe_charge_id: "ch_agrees",
+        stripe_refunded_cents: 4_000,
+        disputed_lost_cents: 6_000
+      )
+
+    StripeStub.expect(:list_disputes, disputes("ch_agrees", [{"lost", 6_000}]))
+    StripeStub.expect(:retrieve_charge, charge("ch_agrees", 4_000))
+
+    assert %{candidates: 1, lost: 0, updated: 0, unchanged: 0, errors: []} =
+             run!(dry_run: false)
+
+    reloaded = reload(payment)
+    assert reloaded.stripe_refunded_cents == 4_000
+    assert reloaded.disputed_lost_cents == 6_000
+    assert reloaded.refunded_amount_cents == 10_000
   end
 
   test "a won dispute changes nothing" do
@@ -151,7 +195,13 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
   end
 
   test "a second run is a no-op" do
-    payment = refunded_payment(stripe_charge_id: "ch_twice")
+    payment =
+      refunded_payment(
+        stripe_charge_id: "ch_twice",
+        refunded_amount_cents: 6_000,
+        status: :partially_refunded
+      )
+
     StripeStub.expect(:list_disputes, disputes("ch_twice", [{"lost", 6_000}]))
     StripeStub.expect(:retrieve_charge, charge("ch_twice", 0))
 
@@ -305,10 +355,12 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
   describe "correction/3" do
     @describetag :unit
 
+    # A row from before `disputed_lost_cents`: the loss is counted as refunds.
     defp payment(refunded, amount \\ 10_000),
       do: %BookingPaymentSchema{
         amount_cents: amount,
         refunded_amount_cents: refunded,
+        stripe_refunded_cents: refunded,
         disputed_lost_cents: 0,
         status: :partially_refunded
       }
@@ -319,6 +371,7 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
       assert DisputeLossBackfill.correction(payment(6_000), 6_000, stripe_charge(0)) ==
                {:lost,
                 %{
+                  stripe_refunded_cents: 0,
                   disputed_lost_cents: 6_000,
                   refunded_amount_cents: 6_000,
                   status: :partially_refunded
@@ -329,6 +382,7 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
       assert DisputeLossBackfill.correction(payment(4_000), 3_000, stripe_charge(4_000)) ==
                {:lost,
                 %{
+                  stripe_refunded_cents: 4_000,
                   disputed_lost_cents: 3_000,
                   refunded_amount_cents: 7_000,
                   status: :partially_refunded
@@ -349,7 +403,25 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
     test "a loss larger than the amount paid is clamped to it" do
       assert DisputeLossBackfill.correction(payment(3_000, 5_000), 6_000, stripe_charge(0)) ==
                {:clamped,
-                %{disputed_lost_cents: 5_000, refunded_amount_cents: 5_000, status: :refunded}}
+                %{
+                  stripe_refunded_cents: 0,
+                  disputed_lost_cents: 5_000,
+                  refunded_amount_cents: 5_000,
+                  status: :refunded
+                }}
+    end
+
+    test "a recorded loss gets the refunds the cap hid from the charge" do
+      recorded = %{payment(10_000) | stripe_refunded_cents: 0, disputed_lost_cents: 10_000}
+
+      assert DisputeLossBackfill.correction(recorded, 10_000, stripe_charge(10_000)) ==
+               {:lost,
+                %{
+                  stripe_refunded_cents: 10_000,
+                  disputed_lost_cents: 10_000,
+                  refunded_amount_cents: 10_000,
+                  status: :refunded
+                }}
     end
 
     test "the share always fits the check constraint and the total is never lowered" do
@@ -374,7 +446,10 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
             )
 
           c.disputed_lost_cents > 0 and c.disputed_lost_cents <= c.refunded_amount_cents and
-            c.refunded_amount_cents <= amount and c.refunded_amount_cents >= stored
+            c.refunded_amount_cents <= amount and c.refunded_amount_cents >= stored and
+            c.stripe_refunded_cents in 0..amount and
+            c.refunded_amount_cents ==
+              min(c.stripe_refunded_cents + c.disputed_lost_cents, amount)
         end)
 
       assert violations == []

@@ -181,8 +181,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
     do: %{status: derive_status_from_refund(payment, payment.refunded_amount_cents)}
 
   defp outcome_attrs(payment, :lost, disputed_amount) do
-    attrs = RefundedTotal.with_dispute_lost(payment, disputed_amount)
-    Map.put(attrs, :status, derive_status_from_refund(payment, attrs.refunded_amount_cents))
+    figures = RefundedTotal.with_dispute_lost(payment, disputed_amount)
+    %{figures | status: derive_status_from_refund(payment, figures.refunded_amount_cents)}
   end
 
   defp derive_status_from_refund(%{amount_cents: amount_cents}, refunded) do

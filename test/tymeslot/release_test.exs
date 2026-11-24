@@ -180,8 +180,8 @@ defmodule Tymeslot.ReleaseTest do
       output = capture_io(fn -> assert :ok = Release.backfill_dispute_losses(pause_ms: 0) end)
       lines = String.split(output, "\n", trim: true)
 
-      assert "WOULD CORRECT #{payment.id} ch_release lost 3000, refunded 4000 -> 7000" in lines
-      assert List.last(lines) =~ ~r/^DRY RUN: 1 candidates, 1 with a lost dispute/
+      assert "WOULD CORRECT #{payment.id} ch_release lost 3000, refunds made 4000 -> 4000, refunded 4000 -> 7000" in lines
+      assert List.last(lines) =~ ~r/^DRY RUN: 1 candidates, 1 with a lost dispute to correct/
       assert Repo.get!(BookingPaymentSchema, payment.id).refunded_amount_cents == 4_000
     end
 
@@ -192,7 +192,9 @@ defmodule Tymeslot.ReleaseTest do
         end)
 
       lines = String.split(output, "\n", trim: true)
-      assert "CORRECTED #{payment.id} ch_release lost 3000, refunded 4000 -> 7000" in lines
+
+      assert "CORRECTED #{payment.id} ch_release lost 3000, refunds made 4000 -> 4000, refunded 4000 -> 7000" in lines
+
       assert List.last(lines) =~ ~r/^DONE: .*; 1 corrected, 0 changed meanwhile$/
 
       assert %{disputed_lost_cents: 3_000, refunded_amount_cents: 7_000} =

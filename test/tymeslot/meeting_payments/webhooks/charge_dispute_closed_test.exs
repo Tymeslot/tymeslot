@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.Stripe.Error, as: StripeError
+  alias Tymeslot.MeetingPayments.RefundedTotal
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.Repo
   alias Tymeslot.StripeStub
@@ -192,6 +193,33 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosedTest do
       assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 5000
       assert reloaded.disputed_lost_cents == 5000
+    end
+
+    test "a lost dispute over a fully refunded charge keeps the refunds made" do
+      bp =
+        insert(:booking_payment,
+          stripe_account_id: @account,
+          status: :disputed,
+          amount_cents: 5000,
+          refunded_amount_cents: 5000,
+          stripe_charge_id: "ch_REFUNDED_THEN_LOST"
+        )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_closed_event(
+                   "evt_REFUNDED_THEN_LOST",
+                   "ch_REFUNDED_THEN_LOST",
+                   "lost",
+                   5000
+                 )
+               )
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == :refunded
+      assert reloaded.refunded_amount_cents == 5000
+      assert reloaded.disputed_lost_cents == 5000
+      assert RefundedTotal.stripe_refunded_cents(reloaded) == 5000
     end
   end
 

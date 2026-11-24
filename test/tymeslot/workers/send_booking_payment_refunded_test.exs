@@ -175,6 +175,27 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
       end)
     end
 
+    test "the refund email still goes out once a dispute over the same money is lost" do
+      payment =
+        insert_payment(%{
+          amount_cents: 10_000,
+          refunded_amount_cents: 10_000,
+          stripe_refunded_cents: 10_000,
+          disputed_lost_cents: 10_000,
+          status: :refunded
+        })
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      assert_email_sent(fn email ->
+        assert email.to == [{"Alice", "alice@example.com"}]
+        assert email.subject == "Refund Issued - €100.00"
+      end)
+    end
+
     test "no refund email when only a dispute took the money" do
       payment =
         insert_payment(%{

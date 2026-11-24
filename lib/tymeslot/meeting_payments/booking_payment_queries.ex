@@ -21,6 +21,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     :stripe_account_id,
     :amount_cents,
     :refunded_amount_cents,
+    :stripe_refunded_cents,
     :disputed_lost_cents,
     :status
   ]
@@ -505,11 +506,13 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   end
 
   @doc """
-  Up to `limit` payments that may count a lost dispute as refunds, in id
-  order after `after_id` (`nil` for the first page): a charge, something
-  refunded, no dispute loss recorded, and a refunded status. Only the
-  fields `Tymeslot.MeetingPayments.DisputeLossBackfill` reads are loaded
-  (the others hold their defaults); its moduledoc says why these rows.
+  Up to `limit` payments whose refund figures may misstate a lost dispute,
+  in id order after `after_id` (`nil` for the first page): a charge, and
+  either something refunded, no dispute loss recorded and a refunded
+  status, or a loss recorded whose refunds and loss add up to exactly the
+  amount paid. Only the fields
+  `Tymeslot.MeetingPayments.DisputeLossBackfill` reads are loaded (the
+  others hold their defaults); its moduledoc says why these rows.
   """
   @spec dispute_loss_candidates(Ecto.UUID.t() | nil, pos_integer()) :: [
           BookingPaymentSchema.t()
@@ -518,8 +521,11 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     BookingPaymentSchema
     |> where(
       [b],
-      not is_nil(b.stripe_charge_id) and b.disputed_lost_cents == 0 and
-        b.refunded_amount_cents > 0 and b.status in [:refunded, :partially_refunded]
+      not is_nil(b.stripe_charge_id) and
+        ((b.disputed_lost_cents == 0 and b.refunded_amount_cents > 0 and
+            b.status in [:refunded, :partially_refunded]) or
+           (b.disputed_lost_cents > 0 and
+              b.stripe_refunded_cents + b.disputed_lost_cents == b.amount_cents))
     )
     |> after_id(after_id)
     |> order_by([b], asc: b.id)
@@ -529,30 +535,43 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   end
 
   @doc """
-  Writes `correction` (the lost dispute share, refunded total and status)
-  to `payment`, only while the row still has no loss recorded and the
-  refunded total and status `payment` was read with. Writes nothing else.
-  `{:ok, :unchanged}` when the guard matched no row: another process
+  Writes `correction` (the refunds made, the lost dispute share, the
+  refunded total and the status) to `payment`, only while the row still
+  holds the figures and status `payment` was read with. Writes nothing
+  else. `{:ok, :unchanged}` when the guard matched no row: another process
   changed the row first.
   """
   @spec record_dispute_loss(BookingPaymentSchema.t(), %{
+          stripe_refunded_cents: non_neg_integer(),
           disputed_lost_cents: pos_integer(),
           refunded_amount_cents: pos_integer(),
           status: BookingPaymentSchema.status()
         }) :: {:ok, :recorded | :unchanged}
   def record_dispute_loss(
-        %BookingPaymentSchema{id: id, refunded_amount_cents: read_total, status: read_status},
-        %{disputed_lost_cents: lost, refunded_amount_cents: total, status: status}
+        %BookingPaymentSchema{id: id, refunded_amount_cents: read_total} = read,
+        %{
+          stripe_refunded_cents: refunds,
+          disputed_lost_cents: lost,
+          refunded_amount_cents: total,
+          status: status
+        }
       )
-      when is_integer(lost) and lost > 0 and is_integer(total) and total >= read_total do
+      when is_integer(refunds) and is_integer(lost) and lost > 0 and is_integer(total) and
+             total >= read_total do
     query =
       from b in BookingPaymentSchema,
         where:
-          b.id == ^id and b.disputed_lost_cents == 0 and
-            b.refunded_amount_cents == ^read_total and b.status == ^read_status
+          b.id == ^id and b.stripe_refunded_cents == ^read.stripe_refunded_cents and
+            b.disputed_lost_cents == ^read.disputed_lost_cents and
+            b.refunded_amount_cents == ^read_total and b.status == ^read.status
 
     case Repo.update_all(query,
-           set: [disputed_lost_cents: lost, refunded_amount_cents: total, status: status]
+           set: [
+             stripe_refunded_cents: refunds,
+             disputed_lost_cents: lost,
+             refunded_amount_cents: total,
+             status: status
+           ]
          ) do
       {1, _rows} -> {:ok, :recorded}
       {0, _rows} -> {:ok, :unchanged}

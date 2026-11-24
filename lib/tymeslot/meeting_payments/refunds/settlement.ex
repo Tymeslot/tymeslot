@@ -39,8 +39,9 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
   @doc """
   Records `refund` as made at Stripe as `stripe_refund`, in one short
   transaction under its payment's row lock: the refund is settled
-  `succeeded`, the payment's refunded total raised to Stripe's total for
-  the charge, and the attendee's email enqueued. `stripe_refund` must
+  `succeeded`, the payment's refunds made raised to Stripe's total for
+  the charge (and its refunded total with them), and the attendee's email
+  enqueued. `stripe_refund` must
   carry its charge expanded (`"charge"` as a map with `"amount_refunded"`):
   Stripe's total counts the refund once however often it is reported,
   where adding its amount would count it again on top of a total that
@@ -130,11 +131,11 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
   Settles a succeeded `refund` `failed`, once Stripe reports
   `stripe_refund` failed or canceled after accepting it: the money went
   back to the host. In one transaction under the payment's row lock, the
-  refund's amount is taken off the payment's refunded total
-  (`RefundedTotal.with_refund_failed/2`, the one place the total is
-  lowered) and its status follows; then the failure is reported
-  (`FailureNotice.deliver/2`), with code `"refund_<status>"`. A refund no
-  longer `succeeded` is `{:ok, refund, :already_settled}`.
+  refund's amount is taken off the payment's refunds made
+  (`RefundedTotal.with_refund_failed/2`, the one place a refund report
+  lowers them) and its refunded total and status follow; then the failure
+  is reported (`FailureNotice.deliver/2`), with code `"refund_<status>"`.
+  A refund no longer `succeeded` is `{:ok, refund, :already_settled}`.
   """
   @spec fail_after_success(RefundSchema.t(), map()) :: settled() | {:error, term()}
   def fail_after_success(%RefundSchema{} = refund, %{"status" => status}) do
@@ -179,7 +180,7 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
   Records `stripe_refund`, made of `payment` outside Tymeslot (in the
   Stripe dashboard), as a succeeded `:external` refund, or nothing when it
   is already recorded. In one transaction under the payment's row lock the
-  refunded total is raised to Stripe's total for the charge, as for
+  refunds made are raised to Stripe's total for the charge, as for
   `settle_succeeded/2`, so a later failure of the refund
   (`fail_after_success/2`) takes off money that was counted. Nobody is
   emailed. `stripe_refund` must carry its charge expanded, or nothing is
@@ -277,32 +278,25 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
   end
 
   # Records a refund Stripe made of the `locked` payment, its charge
-  # showing `charge_total` refunded: the refunded total, never below the
-  # refunds already recorded, and the status that follows from it
-  # (`RefundedTotal.status_for/2`, under which an open dispute stands),
-  # whose change is reported to telemetry with `reason`.
-  defp record_refunded(locked, charge_total, reason) do
-    new_total = RefundedTotal.with_stripe_refunded(locked, charge_total)
+  # showing `charge_total` refunded: the refunds made, never below those
+  # already recorded, with the refunded total and the status that follow
+  # (`RefundedTotal.with_stripe_refunded/2`, under which an open dispute
+  # stands).
+  defp record_refunded(locked, charge_total, reason),
+    do: write_figures(locked, RefundedTotal.with_stripe_refunded(locked, charge_total), reason)
 
-    with {:ok, updated} <-
-           BookingPaymentQueries.update(locked, %{
-             refunded_amount_cents: new_total,
-             status: RefundedTotal.status_for(locked, new_total)
-           }) do
+  defp take_off(locked, amount_cents),
+    do:
+      write_figures(
+        locked,
+        RefundedTotal.with_refund_failed(locked, amount_cents),
+        :webhook_refund_failed
+      )
+
+  # The status change is reported to telemetry with `reason`.
+  defp write_figures(locked, figures, reason) do
+    with {:ok, updated} <- BookingPaymentQueries.update(locked, figures) do
       Telemetry.emit_status_changed(locked.status, updated.status, reason)
-      {:ok, updated}
-    end
-  end
-
-  defp take_off(locked, amount_cents) do
-    new_total = RefundedTotal.with_refund_failed(locked, amount_cents)
-
-    with {:ok, updated} <-
-           BookingPaymentQueries.update(locked, %{
-             refunded_amount_cents: new_total,
-             status: RefundedTotal.status_for(locked, new_total)
-           }) do
-      Telemetry.emit_status_changed(locked.status, updated.status, :webhook_refund_failed)
       {:ok, updated}
     end
   end

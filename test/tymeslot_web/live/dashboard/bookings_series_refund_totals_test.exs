@@ -66,14 +66,18 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesRefundTotalsTest do
     open_series_modal(view, first)
   end
 
-  defp record_refunds(payment, refunded_cents, lost_cents) do
+  defp record_refunds(payment, stripe_refunded_cents, lost_cents) do
     payment
-    |> Changeset.change(refunded_amount_cents: refunded_cents, disputed_lost_cents: lost_cents)
+    |> Changeset.change(
+      stripe_refunded_cents: stripe_refunded_cents,
+      disputed_lost_cents: lost_cents,
+      refunded_amount_cents: min(stripe_refunded_cents + lost_cents, payment.amount_cents)
+    )
     |> Repo.update!()
   end
 
   test "the series modal separates a lost dispute", %{view: view, payment: payment} do
-    record_refunds(payment, 10_000, 6_000)
+    record_refunds(payment, 4_000, 6_000)
     open_series(view)
 
     assert has_element?(
@@ -83,11 +87,26 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesRefundTotalsTest do
            )
   end
 
+  test "the series modal shows refunds a lost dispute over the same money repaid again", %{
+    view: view,
+    payment: payment
+  } do
+    assert payment.amount_cents == 20_000
+    record_refunds(payment, 20_000, 20_000)
+    open_series(view)
+
+    assert has_element?(
+             view,
+             "[data-testid=series-payment]",
+             "€200.00 refunded so far, plus €200.00 lost in a dispute"
+           )
+  end
+
   test "the series modal says when only a dispute took money back", %{
     view: view,
     payment: payment
   } do
-    record_refunds(payment, 6_000, 6_000)
+    record_refunds(payment, 0, 6_000)
     open_series(view)
 
     assert has_element?(view, "[data-testid=series-payment]", "€60.00 lost in a dispute")
