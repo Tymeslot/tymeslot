@@ -186,7 +186,7 @@ msgstr "Перепідключити"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "Refreshing calendars..."
-msgstr "Оновлення календарів..."
+msgstr "Оновлення календарів…"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_tabs.ex
 #, elixir-autogen, elixir-format

@@ -85,7 +85,7 @@ msgstr "Importuje se %{done} z %{total} událostí..."
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Reading the file..."
-msgstr "Načítá se soubor..."
+msgstr "Načítá se soubor…"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format

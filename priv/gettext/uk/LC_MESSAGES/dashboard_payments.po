@@ -271,7 +271,7 @@ msgstr "Повернено"
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Refunding..."
-msgstr "Повернення..."
+msgstr "Повернення…"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format

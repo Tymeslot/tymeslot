@@ -192,7 +192,7 @@ msgstr "Понизити себе з адміністратора?"
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Demoting..."
-msgstr "Пониження..."
+msgstr "Пониження…"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
@@ -288,7 +288,7 @@ msgstr "Підвищити користувача до адміністрато�
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Promoting..."
-msgstr "Підвищення..."
+msgstr "Підвищення…"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format

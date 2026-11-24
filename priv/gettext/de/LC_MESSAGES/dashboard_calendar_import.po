@@ -83,7 +83,7 @@ msgstr "%{done} von %{total} Ereignissen importiert ..."
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Reading the file..."
-msgstr "Datei wird gelesen..."
+msgstr "Datei wird gelesen…"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format

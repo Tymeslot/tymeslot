@@ -85,7 +85,7 @@ msgstr "Zeitoptionen"
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Checking your calendar for conflicts…"
-msgstr "Kalender wird auf Konflikte geprüft …"
+msgstr "Kalender wird auf Konflikte geprüft…"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
@@ -915,7 +915,7 @@ msgstr "Zeitoption"
 #: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
 #, elixir-autogen, elixir-format
 msgid "Checking your calendar…"
-msgstr "Kalender wird geprüft …"
+msgstr "Kalender wird geprüft…"
 
 #: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
 #, elixir-autogen, elixir-format
