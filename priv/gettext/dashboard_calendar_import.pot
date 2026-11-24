@@ -77,11 +77,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Importing %{done} of %{total} events..."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Reading the file..."
 msgstr ""
 
@@ -241,17 +236,28 @@ msgstr ""
 msgid "The file is too large. Files up to %{size} MB can be imported. Export a shorter date range from your calendar app and try again."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
-#, elixir-autogen, elixir-format
-msgid "This file contains more than %{count} events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This file holds %{count} events, from %{first} to %{last}. One import can copy up to %{max}."
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
 msgid "To keep a whole calendar, with no limit and in step with its changes, subscribe to it by URL instead."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
+#, elixir-autogen, elixir-format
+msgid "This file contains more than 1 event, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
+msgid_plural "This file contains more than %{count} events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This file holds 1 event, from %{from_date} to %{to_date}. One import can copy up to %{max}."
+msgid_plural "This file holds %{count} events, from %{from_date} to %{to_date}. One import can copy up to %{max}."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Importing %{done} of 1 event..."
+msgid_plural "Importing %{done} of %{count} events..."
+msgstr[0] ""
+msgstr[1] ""

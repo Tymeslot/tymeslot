@@ -77,11 +77,6 @@ msgstr "Importar para"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Importing %{done} of %{total} events..."
-msgstr "Importando %{done} de %{total} eventos…"
-
-#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Reading the file..."
 msgstr "Lendo o arquivo…"
 
@@ -243,17 +238,28 @@ msgstr "Eventos passados raramente fazem falta para agendar, então você pode d
 msgid "The file is too large. Files up to %{size} MB can be imported. Export a shorter date range from your calendar app and try again."
 msgstr "O arquivo é grande demais. É possível importar arquivos de até %{size} MB. Exporte um período mais curto no seu app de calendário e tente novamente."
 
-#: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
-#, elixir-autogen, elixir-format
-msgid "This file contains more than %{count} events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
-msgstr "Este arquivo tem mais de %{count} eventos, um número grande demais para ser lido. Exporte um período mais curto no seu app de calendário ou, em vez disso, assine o calendário por URL."
-
-#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This file holds %{count} events, from %{first} to %{last}. One import can copy up to %{max}."
-msgstr "Este arquivo tem %{count} eventos, de %{first} a %{last}. Uma importação copia no máximo %{max}."
-
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
 msgid "To keep a whole calendar, with no limit and in step with its changes, subscribe to it by URL instead."
 msgstr "Para manter um calendário inteiro, sem limite e sempre em dia com as mudanças dele, assine-o por URL em vez de importá-lo."
+
+#: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
+#, elixir-autogen, elixir-format
+msgid "This file contains more than 1 event, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
+msgid_plural "This file contains more than %{count} events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
+msgstr[0] "Este arquivo tem mais de 1 evento, um número grande demais para ser lido. Exporte um período mais curto no seu app de calendário ou, em vez disso, assine o calendário por URL."
+msgstr[1] "Este arquivo tem mais de %{count} eventos, um número grande demais para ser lido. Exporte um período mais curto no seu app de calendário ou, em vez disso, assine o calendário por URL."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This file holds 1 event, from %{from_date} to %{to_date}. One import can copy up to %{max}."
+msgid_plural "This file holds %{count} events, from %{from_date} to %{to_date}. One import can copy up to %{max}."
+msgstr[0] "Este arquivo tem 1 evento, de %{from_date} a %{to_date}. Uma importação copia no máximo %{max}."
+msgstr[1] "Este arquivo tem %{count} eventos, de %{from_date} a %{to_date}. Uma importação copia no máximo %{max}."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Importing %{done} of 1 event..."
+msgid_plural "Importing %{done} of %{count} events..."
+msgstr[0] "Importando %{done} de 1 evento…"
+msgstr[1] "Importando %{done} de %{count} eventos…"

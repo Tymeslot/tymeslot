@@ -58,9 +58,12 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
           <div class="flex items-center gap-2 text-token-sm text-tymeslot-700">
             <.spinner />
             <span>
-              {dgettext("dashboard_calendar_import", "Importing %{done} of %{total} events...",
-                done: @ics_import.done,
-                total: @ics_import.total
+              {dngettext(
+                "dashboard_calendar_import",
+                "Importing %{done} of 1 event...",
+                "Importing %{done} of %{count} events...",
+                @ics_import.total,
+                done: @ics_import.done
               )}
             </span>
           </div>
@@ -227,12 +230,13 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
     ~H"""
     <div id="calendar-import-too-many" class="space-y-3">
       <p class="text-token-sm text-tymeslot-700">
-        {dgettext(
+        {dngettext(
           "dashboard_calendar_import",
-          "This file holds %{count} events, from %{first} to %{last}. One import can copy up to %{max}.",
-          count: @overview.events,
-          first: long_date(@overview.first),
-          last: long_date(@overview.last),
+          "This file holds 1 event, from %{from_date} to %{to_date}. One import can copy up to %{max}.",
+          "This file holds %{count} events, from %{from_date} to %{to_date}. One import can copy up to %{max}.",
+          @overview.events,
+          from_date: long_date(@overview.first, :da),
+          to_date: long_date(@overview.last, :a),
           max: @max
         )}
       </p>
@@ -321,8 +325,11 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
   defp suggestion_note(%{events: count}, _max),
     do: dngettext("dashboard_calendar_import", "1 event", "%{count} events", count)
 
-  defp long_date(date),
-    do: LocaleFormat.format_date(date, Gettext.get_locale(TymeslotWeb.Gettext))
+  # A date in a sentence, led by the article Italian puts before it.
+  defp long_date(date, preposition) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    LocaleFormat.with_article(LocaleFormat.format_date(date, locale), preposition, locale)
+  end
 
   # A date in a sentence, led by the article Italian puts before it.
   defp long_date(date, preposition) do

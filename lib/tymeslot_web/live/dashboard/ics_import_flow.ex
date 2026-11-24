@@ -119,10 +119,11 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
 
   def plan_error(:too_many_events),
     do:
-      dgettext(
+      dngettext(
         "dashboard_calendar_import",
+        "This file contains more than 1 event, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead.",
         "This file contains more than %{count} events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead.",
-        count: IcsImport.max_file_events()
+        IcsImport.max_file_events()
       )
 
   @doc "Why an import could not start, other than one already running."

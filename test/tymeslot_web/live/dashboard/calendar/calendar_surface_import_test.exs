@@ -329,16 +329,16 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
   describe "a file with more events than one import writes" do
     # 1,001 events on 1 May 2026 and a dentist's appointment in November; the
     # clock stands at 14 October 2026.
-    defp oversized do
+    defp oversized(busy_day \\ "20260501", dentist_day \\ "20261105") do
       busy =
         for n <- 1..1_001 do
           "BEGIN:VEVENT\r\nUID:busy#{n}@example.com\r\nSUMMARY:Busy #{n}\r\n" <>
-            "DTSTART:20260501T090000Z\r\nDTEND:20260501T100000Z\r\nEND:VEVENT"
+            "DTSTART:#{busy_day}T090000Z\r\nDTEND:#{busy_day}T100000Z\r\nEND:VEVENT"
         end
 
       dentist =
         "BEGIN:VEVENT\r\nUID:dentist@example.com\r\nSUMMARY:Dentist\r\n" <>
-          "DTSTART:20261105T090000Z\r\nDTEND:20261105T093000Z\r\nEND:VEVENT"
+          "DTSTART:#{dentist_day}T090000Z\r\nDTEND:#{dentist_day}T093000Z\r\nEND:VEVENT"
 
       Enum.join(["BEGIN:VCALENDAR", "VERSION:2.0"] ++ busy ++ [dentist, "END:VCALENDAR"], "\r\n")
     end
@@ -394,6 +394,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
 
       settle(lv)
       assert has_element?(lv, "#calendar-import-result", "Imported 1 event.")
+    end
+
+    test "in Italian, puts the elided article before a range from the 8th to the 11th", %{
+      conn: conn,
+      user: user
+    } do
+      user |> Changeset.change(locale: "it") |> Repo.update!()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_import(lv)
+      upload(lv, oversized("20260508", "20261111"))
+
+      dialogue = lv |> element("#calendar-import-too-many") |> render()
+      assert dialogue =~ "1002 eventi, dall&#39;8 maggio 2026 all&#39;11 novembre 2026."
     end
   end
 
